@@ -29,6 +29,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
@@ -99,6 +100,12 @@ instance ModelMeta BookingT where
   modelSchemaName = Just "atlas_app"
 
 type Booking = BookingT Identity
+
+bookingTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BookingT)
+bookingTable =
+  BST.setEntitySchema (Just "atlas_app")
+    <> B.setEntityName "booking"
+    <> B.modifyTableFields bookingTMod
 
 instance FromJSON Booking where
   parseJSON = A.genericParseJSON A.defaultOptions

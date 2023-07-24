@@ -16,11 +16,13 @@
 module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
+import qualified Database.Beam as B
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
 import qualified Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
+import qualified EulerHS.Prelude as EP
 import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
@@ -32,7 +34,10 @@ import Kernel.Types.Version
 import Kernel.Utils.Version
 import Lib.Utils
 import qualified Sequelize as Se
+import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Beam.Ride as BeamR
 import Storage.Tabular.Booking
 import Storage.Tabular.Person
 import Storage.Tabular.Ride
@@ -609,22 +614,22 @@ ridesCountAggTable = with $ do
   groupBy $ booking ^. BookingRiderId
   pure (booking ^. BookingRiderId, count @Int $ ride ^. RideId)
 
-fetchRidesCount :: Transactionable m => Id Person -> m (Maybe Int)
-fetchRidesCount personId =
-  join <$> do
-    Esq.findOne $ do
-      ridesCountAggQuery <- ridesCountAggTable
-      person :& (_, mbRidesCount) <-
-        from $
-          table @PersonT
-            `leftJoin` ridesCountAggQuery
-            `Esq.on` ( \(person :& (mbPersonId, _mbRidesCount)) ->
-                         just (person ^. PersonTId) ==. mbPersonId
-                     )
-      where_ $
-        person ^. PersonTId ==. val (toKey personId)
-          &&. person ^. PersonRole ==. val USER
-      pure mbRidesCount
+fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
+fetchRidesCount personId = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\(booking, _) -> (B.group_ (BeamB.riderId booking), B.as_ @Int B.countAll_)) $
+          B.filter_'
+            (\(_, ride) -> B.sqlBool_ (B.not_ (ride.status `B.in_` (B.val_ <$> [Ride.NEW, Ride.CANCELLED]))))
+            do
+              booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+              ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+              pure (booking', ride')
+  person <- findOneWithKV [Se.Is BeamP.id $ Se.Eq (getId personId)]
+  let res' = either (const []) EP.id res
+  maybe (pure Nothing) (\p -> pure (snd <$> find (\r -> (getId p.id) == fst r) res')) person
 
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do

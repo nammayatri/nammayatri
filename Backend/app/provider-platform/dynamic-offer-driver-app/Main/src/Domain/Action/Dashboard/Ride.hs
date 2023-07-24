@@ -84,6 +84,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   now <- getCurrentTime
   -- rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbfrom mbto
   rideItems <- QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbfrom mbto
+  logDebug ((T.pack $ "rideItems: ") <> (T.pack $ show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?

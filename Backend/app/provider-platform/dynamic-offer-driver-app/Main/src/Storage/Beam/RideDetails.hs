@@ -23,6 +23,7 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -59,6 +60,12 @@ instance ModelMeta RideDetailsT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type RideDetails = RideDetailsT Identity
+
+rideDetailsTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideDetailsT)
+rideDetailsTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "ride_detials"
+    <> B.modifyTableFields rideDetailsTMod
 
 instance FromJSON RideDetails where
   parseJSON = A.genericParseJSON A.defaultOptions

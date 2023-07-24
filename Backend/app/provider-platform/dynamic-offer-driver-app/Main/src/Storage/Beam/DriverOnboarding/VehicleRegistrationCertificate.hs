@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Domain.Types.Vehicle
@@ -88,6 +89,12 @@ instance ModelMeta VehicleRegistrationCertificateT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
+
+vehicleRegistrationCertificateTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleRegistrationCertificateT)
+vehicleRegistrationCertificateTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "vehicle_registration_certificate"
+    <> B.modifyTableFields vehicleRegistrationCertificateTMod
 
 instance FromJSON VehicleRegistrationCertificate where
   parseJSON = A.genericParseJSON A.defaultOptions

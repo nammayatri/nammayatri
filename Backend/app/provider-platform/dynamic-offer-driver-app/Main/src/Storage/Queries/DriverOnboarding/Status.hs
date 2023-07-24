@@ -63,6 +63,8 @@ imagesAggTableCTEbyDoctype imageType = with $ do
   groupBy $ image ^. ImagePersonId
   pure (image ^. ImagePersonId, count @Int $ image ^. ImageId)
 
+-- imagesAggTableCTEbyDoctype' = do
+
 imagesAggTableCTEbyDoctype' :: L.MonadFlow m => Image.ImageType -> m (Maybe (Text, Int))
 imagesAggTableCTEbyDoctype' imageType' = do
   dbConf <- getMasterBeamConfig

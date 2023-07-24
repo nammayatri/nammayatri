@@ -29,6 +29,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant (..))
@@ -94,6 +95,12 @@ instance ModelMeta RideT where
   modelFieldModification = rideTMod
   modelTableName = "ride"
   modelSchemaName = Just "atlas_app"
+
+rideTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideT)
+rideTable =
+  BST.setEntitySchema (Just "atlas_app")
+    <> B.setEntityName "ride"
+    <> B.modifyTableFields rideTMod
 
 type Ride = RideT Identity
 

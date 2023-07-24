@@ -19,7 +19,7 @@
 
 module Storage.Queries.DriverInformation where
 
-import Control.Applicative (liftA2)
+-- import Control.Applicative (liftA2)
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
@@ -37,12 +37,14 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
+-- import Storage.Tabular.DriverInformation
+-- import Storage.Tabular.Person
+
+import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverLocation as QDL
 import Storage.Queries.Person (findAllPersonWithDriverInfos)
-import Storage.Tabular.DriverInformation
-import Storage.Tabular.Person
 import qualified Prelude
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
@@ -202,7 +204,7 @@ deleteById :: (L.MonadFlow m, Log m) => Id Person.Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
 findAllWithLimitOffsetByMerchantId ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (L.MonadFlow m, Log m) =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
@@ -210,34 +212,32 @@ findAllWithLimitOffsetByMerchantId ::
   Id Merchant ->
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
-  runInReplica $
-    findAll $ do
-      (person :& driverInformation) <-
-        from $
-          table @PersonT
-            `innerJoin` table @DriverInformationT
-              `Esq.on` ( \(person :& driverInformation) ->
-                           driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
-                       )
-      where_ $
-        person ^. PersonRole ==. val Person.DRIVER
-          &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-          &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
-      orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
-      limit limitVal
-      offset offsetVal
-      return (person, driverInformation)
-  where
-    limitVal = maybe 100 fromIntegral mbLimit
-    offsetVal = maybe 0 fromIntegral mbOffset
-
-    filterBySearchString person (searchStr, searchStrDBHash) = do
-      let likeSearchStr = (%) ++. val searchStr ++. (%)
-      ( concat_ @Text [person ^. PersonFirstName, val " ", unMaybe $ person ^. PersonMiddleName, val " ", unMaybe $ person ^. PersonLastName]
-          `ilike` likeSearchStr
-        )
-        ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
-    unMaybe = maybe_ (val "") identity
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.orderBy_ (\(person, driverInfo) -> B.desc_ (driverInfo.createdAt)) $
+          B.limit_ (fromMaybe 100 mbLimit) $
+            B.offset_ (fromMaybe 0 mbOffset) $
+              B.filter_'
+                ( \(person, driverInfo) ->
+                    person.role B.==?. B.val_ Person.DRIVER
+                      B.&&?. person.merchantId B.==?. B.val_ (getId merchantId)
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, B.val_ "", B.fromMaybe_ (B.val_ "") person.middleName, B.val_ "", B.fromMaybe_ (B.val_ "") person.lastName] `B.like_` B.val_ ("%" <> searchString <> "%"))) mbSearchString
+                      B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
+                )
+                do
+                  person' <- B.all_ (SBC.person SBC.atlasDB)
+                  driverInfo' <- B.join_' (SBC.dInformation SBC.atlasDB) (\driverInfo'' -> BeamDI.driverId driverInfo'' B.==?. BeamP.id person')
+                  pure (person', driverInfo')
+  case res of
+    Right res' -> do
+      let p' = fst <$> res'
+          di' = snd <$> res'
+      p <- catMaybes <$> (mapM fromTType' p')
+      di <- catMaybes <$> (mapM fromTType' di')
+      pure $ zip p di
+    Left _ -> pure []
 
 getDriversWithOutdatedLocationsToMakeInactive :: (Transactionable m, EsqLocRepDBFlow m r) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do

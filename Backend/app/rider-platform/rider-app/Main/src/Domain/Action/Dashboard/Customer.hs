@@ -28,7 +28,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis (withCrossAppRedis)
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -124,7 +124,8 @@ customerInfo merchantShortId customerId = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
+  -- numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
+  numberOfRides <- fromMaybe 0 <$> QP.fetchRidesCount personId
   pure Common.CustomerInfoRes {numberOfRides}
 
 ---------------------------------------------------------------------

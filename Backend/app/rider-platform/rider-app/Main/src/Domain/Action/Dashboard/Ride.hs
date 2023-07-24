@@ -27,6 +27,7 @@ import Beckn.ACL.Status (buildStatusReq)
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as DTB
 import Domain.Types.Booking.BookingLocation (BookingLocation (..))
 import qualified Domain.Types.Booking.Type as DB
@@ -158,7 +159,8 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
-  rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
+  rideItems <- QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
+  logDebug ((T.pack $ "rideItems: ") <> (T.pack $ show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?

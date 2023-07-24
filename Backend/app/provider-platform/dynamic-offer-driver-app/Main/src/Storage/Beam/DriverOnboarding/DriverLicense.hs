@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -79,6 +80,12 @@ instance ModelMeta DriverLicenseT where
   modelFieldModification = driverLicenseTMod
   modelTableName = "driver_license"
   modelSchemaName = Just "atlas_driver_offer_bpp"
+
+driverLicenseTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLicenseT)
+driverLicenseTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "driver_license"
+    <> B.modifyTableFields driverLicenseTMod
 
 type DriverLicense = DriverLicenseT Identity
 

@@ -24,6 +24,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -53,6 +54,12 @@ instance ModelMeta DriverRCAssociationT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverRCAssociation = DriverRCAssociationT Identity
+
+driverRCAssociationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverRCAssociationT)
+driverRCAssociationTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "driver_rc_association"
+    <> B.modifyTableFields driverRCAssociationTMod
 
 instance FromJSON DriverRCAssociation where
   parseJSON = A.genericParseJSON A.defaultOptions
