@@ -166,29 +166,19 @@ export const makePascalCase = function (str){
     return changeToUpperCase;
 }
 
-export const decodeErrorCode = function (a) {
-    try {
-      var errorCodee = JSON.parse(a).errorCode;
-      return  errorCodee;
-    } catch (e) {
-      console.log(e);
-      return " ";
+  export const decodeError = function (er) {
+    return function (key){
+      try {
+        var errorPayload = JSON.parse(er)[key];
+        if(errorPayload === null)
+          return "";
+        return  errorPayload.toString();
+      } catch (e) {
+        console.log(e);
+        return "";
+      }
     }
   };
-
-export const decodeErrorMessage = function (a) {
-try {
-    var errorMessagee = JSON.parse(a).errorMessage;
-    if(errorMessagee == null)
-    {
-    return "";
-    }
-    return  errorMessagee;
-} catch (e) {
-    console.log(e);
-    return " ";
-}
-};
 
 export const toString = function (attr) {
 return JSON.stringify(attr);

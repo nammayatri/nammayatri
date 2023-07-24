@@ -59,8 +59,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume,waitingCountdownTimer)
+import Helpers.Utils (Merchant(..), decodeError, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -1911,7 +1911,7 @@ getEstimate action flowStatusAction count duration push state = do
               getEstimate action flowStatusAction (count - 1) duration push state
         Left err -> do
           let errResp = err.response
-              codeMessage = decodeErrorMessage errResp.errorMessage
+              codeMessage = decodeError errResp.errorMessage "errorMessage"
           if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
             _ <- pure $ firebaseLogEvent "ny_fs_active_booking_found_on_search"
             void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"

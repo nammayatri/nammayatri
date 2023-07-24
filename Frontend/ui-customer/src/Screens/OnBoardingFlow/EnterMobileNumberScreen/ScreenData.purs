@@ -40,6 +40,7 @@ initData = {
         letterSpacing : PX 1.0,
         mNumberEdtFocused : false,
         otpEdtFocused : false,
-        editTextVal : ""
+        editTextVal : "",
+        attemptLeft : ""
     }
 }

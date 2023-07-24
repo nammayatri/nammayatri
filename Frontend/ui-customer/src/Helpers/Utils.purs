@@ -122,11 +122,9 @@ foreign import hideSplash :: Effect Unit
 
 foreign import validateInputPattern :: String -> String -> Boolean
 
-foreign import decodeErrorCode :: String -> String
-
-foreign import decodeErrorMessage :: String -> String
-
 foreign import strLenWithSpecificCharacters :: String -> String -> Int
+
+foreign import decodeError :: String -> String -> String
 
 foreign import toString :: forall a. a -> String
 

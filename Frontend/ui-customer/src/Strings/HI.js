@@ -536,5 +536,7 @@ const hindiStrings = {
   "WE_WILL_GIVE_YOU_CALLBACK" : "हम आपको 24 घंटे के भीतर कॉलबैक देंगे",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "आपकी समस्या की सफलतापूर्वक रिपोर्ट कर दी गई है",
   "OTP_RESENT_SUCCESSFULLY" : "OTP सफलतापूर्वक पुनः भेजा गया",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "विवरण 10 से अधिक वर्णमाला वर्ण का होना चाहिए"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "विवरण 10 से अधिक वर्णमाला वर्ण का होना चाहिए",
+  "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "गलत OTP, कृपया पुन: प्रयास करें।",
+  "N_MORE_ATTEMPTS_LEFT" : " और प्रयास शेष हैं"
 }
