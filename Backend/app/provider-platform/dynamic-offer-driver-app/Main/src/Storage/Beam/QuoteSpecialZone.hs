@@ -41,13 +41,13 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     providerId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     distance :: B.C f Meters,
-    validTill :: B.C f Time.UTCTime,
+    validTill :: B.C f Time.LocalTime,
     estimatedFare :: B.C f Common.Money,
     fareParametersId :: B.C f Text,
     estimatedFinishTime :: B.C f Time.UTCTime,
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 

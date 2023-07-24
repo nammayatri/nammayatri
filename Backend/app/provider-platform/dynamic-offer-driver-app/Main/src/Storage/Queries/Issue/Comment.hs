@@ -2,13 +2,14 @@
 
 module Storage.Queries.Issue.Comment where
 
+import qualified Data.Time.LocalTime as T
 import Domain.Types.Issue.Comment as Comment
 import Domain.Types.Issue.IssueReport (IssueReport)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
 
@@ -25,6 +26,9 @@ create = createWithKV
 --   orderBy [desc $ comment ^. CommentCreatedAt]
 --   return comment
 
+findById :: (L.MonadFlow m, Log m) => Id Comment -> m (Maybe Comment)
+findById (Id id) = findOneWithKV [Se.Is BeamC.id $ Se.Eq id]
+
 findAllByIssueReportId :: (L.MonadFlow m, Log m) => Id IssueReport -> m [Comment]
 findAllByIssueReportId (Id issueReportId) = findAllWithOptionsKV [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
 
@@ -40,7 +44,7 @@ instance FromTType' BeamC.Comment Comment where
             issueReportId = Id issueReportId,
             authorId = Id authorId,
             comment = comment,
-            createdAt = createdAt
+            createdAt = T.localTimeToUTC T.utc createdAt
           }
 
 instance ToTType' BeamC.Comment Comment where
@@ -50,5 +54,5 @@ instance ToTType' BeamC.Comment Comment where
         BeamC.issueReportId = getId issueReportId,
         BeamC.authorId = getId authorId,
         BeamC.comment = comment,
-        BeamC.createdAt = createdAt
+        BeamC.createdAt = T.utcToLocalTime T.utc createdAt
       }
