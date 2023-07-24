@@ -805,7 +805,26 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating}}
+ratingCardViewState state = { data : { rating : state.data.ratingViewState.selectedRating 
+                              , driverName : state.data.rideRatingState.driverName 
+                              , rideId : state.data.rideRatingState.rideId 
+                              , finalAmount : state.data.rideRatingState.finalAmount 
+                              , rideStartTime : state.data.rideRatingState.rideStartTime 
+                              , rideStartDate : state.data.rideRatingState.rideStartDate 
+                              , rideEndTime : state.data.rideRatingState.rideEndTime 
+                              , source : state.data.rideRatingState.source 
+                              , destination : state.data.rideRatingState.destination 
+                              , vehicleNumber : state.data.rideRatingState.vehicleNumber 
+                              , status : state.data.rideRatingState.status 
+                              , shortRideId : state.data.rideRatingState.shortRideId 
+                              , bookingId : state.data.rideRatingState.bookingId 
+                              , rideEndTimeUTC : state.data.rideRatingState.rideEndTimeUTC 
+                              , dateDDMMYY : state.data.rideRatingState.dateDDMMYY 
+                              , offeredFare : state.data.rideRatingState.offeredFare 
+                              , distanceDifference : state.data.rideRatingState.distanceDifference 
+                              , feedback : state.data.rideRatingState.feedback 
+                              , title : "Rate your ride"
+                              }}
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation

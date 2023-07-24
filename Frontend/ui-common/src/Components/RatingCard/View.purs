@@ -145,8 +145,8 @@ rideRatingButtonConfig state = let
         , textSize = FontSize.a_16
         , width = MATCH_PARENT
         }
-      , isClickable = if state.ratingCardData.rating < 1 then false else true 
-      , alpha = if state.ratingCardData.rating < 1 then 0.4 else 1.0
+      , isClickable = if state.data.rating < 1 then false else true 
+      , alpha = if state.data.rating < 1 then 0.4 else 1.0
       , margin = (Margin 0 0 0 0)
       , height = (V 48)
       , gravity = CENTER_VERTICAL
@@ -169,14 +169,11 @@ starRatingView state push =
     , gravity CENTER
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
-    ][textView
+    -- , stroke if state.props.showFareBreakUp then ("1,"<>Color.grey900) else ("0,"<>Color.grey900)
+    ][
+      linearLayout
         [ height WRAP_CONTENT
-        , width $ V (screenWidth unit - 64)
-        , textSize FontSize.a_16
-        , text $ getString RATE_YOUR_EXPERIENCE
-        , color Color.black800
-        , maxLines 2
-        , fontStyle $ FontStyle.semiBold LanguageStyle
+        , width MATCH_PARENT
         , gravity CENTER
         , orientation HORIZONTAL
         , margin (MarginBottom 16)
@@ -185,13 +182,12 @@ starRatingView state push =
             [ height WRAP_CONTENT
             , width $ V (screenWidth unit - 64)
             , textSize FontSize.a_16
-            , text (getText state)
+            , text ""--state.data.
             , color Color.black800
             , maxLines 2
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , gravity CENTER_HORIZONTAL
             , lineHeight "20"
-            
             ]
           
           , imageView
@@ -214,7 +210,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 40
                               , width $ V 40
-                              , imageWithFallback if item <= state.ratingCardData.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]

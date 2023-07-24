@@ -17,17 +17,11 @@ ratingCardViewState :: RideDetailScreenState -> RatingCard.RatingCardState
 ratingCardViewState state = let
   config = RatingCard.config
   ratingCardConfig' = config {
-    props
-    {
-        currentStage = false
-      , showFareBreakUp = false
-      , enableFeedback = true
-      , isDriver = true
-    }
-    , ratingCardData  {
+     data{
      driverName = state.data.customerName,
      rating = state.props.rating,
-     feedback = state.props.feedback
+     feedback = state.props.feedback,
+     title = "Rate your ride with"
     }
   }
   in ratingCardConfig'

@@ -55,11 +55,12 @@ type RatingCardData =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , title :: String
   }
 
 config :: RatingCardState
 config = {
-  ratingCardData :{
+     data :{
       rideId : ""
     , rating : 0
     , driverName : ""
@@ -78,5 +79,6 @@ config = {
     , offeredFare : 0
     , distanceDifference : 0
     , feedback : ""
+    , title : ""
   }
 }
