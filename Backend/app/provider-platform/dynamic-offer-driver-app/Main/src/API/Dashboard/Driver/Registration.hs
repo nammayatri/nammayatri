@@ -32,6 +32,8 @@ type API =
     :<|> Common.RegisterRCAPI
     :<|> Common.GenerateAadhaarOtpAPI
     :<|> Common.VerifyAadhaarOtpAPI
+    :<|> Common.AuthAPI
+    :<|> Common.VerifyAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -42,6 +44,8 @@ handler merchantId =
     :<|> registerRC merchantId
     :<|> generateAadhaarOtp merchantId
     :<|> verifyAadhaarOtp merchantId
+    :<|> auth merchantId
+    :<|> verify
 
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
 documentsList merchantShortId = withFlowHandlerAPI . DReg.documentsList merchantShortId
@@ -63,3 +67,9 @@ generateAadhaarOtp merchantShortId driverId_ = withFlowHandlerAPI . DReg.generat
 
 verifyAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
 verifyAadhaarOtp merchantShortId driverId_ = withFlowHandlerAPI . DReg.verifyAadhaarOtp merchantShortId driverId_
+
+auth :: ShortId DM.Merchant -> Common.AuthReq -> FlowHandler Common.AuthRes
+auth merchantShortId = withFlowHandlerAPI . DReg.auth merchantShortId
+
+verify :: Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
+verify authId = withFlowHandlerAPI . DReg.verify authId

@@ -36,6 +36,8 @@ type API =
     :<|> RegisterRCAPI
     :<|> GenerateAadhaarOtpAPI
     :<|> VerifyAadhaarOtpAPI
+    :<|> AuthAPI
+    :<|> VerifyAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -46,6 +48,8 @@ handler merchantId =
     :<|> registerRC merchantId
     :<|> generateAadhaarOtp merchantId
     :<|> verifyAadhaarOtp merchantId
+    :<|> auth merchantId
+    :<|> verify merchantId
 
 type DocumentsListAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DOCUMENT_LIST :> Common.DocumentsListAPI
 
@@ -60,6 +64,10 @@ type RegisterRCAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'REGISTER_RC :> Common.R
 type GenerateAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'GENERATE_AADHAAR_OTP :> Common.GenerateAadhaarOtpAPI
 
 type VerifyAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'VERIFY_AADHAAR_OTP :> Common.VerifyAadhaarOtpAPI
+
+type AuthAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AUTH :> Common.AuthAPI
+
+type VerifyAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'VERIFY :> Common.VerifyAPI
 
 buildTransaction ::
   ( MonadFlow m,
@@ -124,3 +132,15 @@ verifyAadhaarOtp merchantShortId apiTokenInfo driverId req =
     transaction <- buildTransaction Common.VerifyAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPP checkedMerchantId (.drivers.verifyAadhaarOtp) driverId req
+
+auth :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AuthReq -> FlowHandler Common.AuthRes
+auth merchantShortId apiTokenInfo req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.auth) req
+
+verify :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
+verify merchantShortId apiTokenInfo authId req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.verify) authId req
