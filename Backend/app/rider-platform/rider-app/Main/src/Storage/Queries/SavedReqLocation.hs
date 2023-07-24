@@ -16,6 +16,7 @@ module Storage.Queries.SavedReqLocation where
 
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -23,6 +24,15 @@ import Storage.Tabular.SavedReqLocation
 
 create :: SavedReqLocation -> SqlDB ()
 create = Esq.create
+
+findByLatLonAndRiderId :: Transactionable m => Id Person -> LatLong -> m (Maybe SavedReqLocation)
+findByLatLonAndRiderId personId LatLong {..} = Esq.findOne $ do
+  saveReqLocation <- from $ table @SavedReqLocationT
+  where_ $
+    saveReqLocation ^. SavedReqLocationLat ==. val lat
+      &&. saveReqLocation ^. SavedReqLocationLon ==. val lon
+      &&. saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId)
+  return saveReqLocation
 
 findAllByRiderId :: Transactionable m => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId =
