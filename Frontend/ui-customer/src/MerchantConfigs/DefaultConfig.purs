@@ -107,7 +107,6 @@ config =
   , merchantLogo : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png"
   , logs : ["JUSPAY", "FIREBASE"]
   , showCorporateAddress : false
-  , imageUploadOptional : false
   , terminateBtnConfig : {
           visibility: false, 
           title : "Paytm",

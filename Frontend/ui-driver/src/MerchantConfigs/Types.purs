@@ -6,8 +6,9 @@ type AppConfig =
     primaryBackground :: String,
     fontType :: String,
     languageList :: Array Language,
-    popupBackground :: String
-  , defaultLanguage :: String
+    popupBackground :: String,
+    defaultLanguage :: String,
+    imageUploadOptional :: Boolean
   } 
 
 type Language =  {
