@@ -7,6 +7,7 @@ let esqDBCfg =
       , connectPassword = "atlas"
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_special_zone"
+      , connectionPoolCount = +25
       }
 
 let esqDBReplicaCfg =
@@ -16,6 +17,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
+      , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
