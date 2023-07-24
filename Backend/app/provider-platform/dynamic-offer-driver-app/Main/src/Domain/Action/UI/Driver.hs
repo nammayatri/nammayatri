@@ -721,6 +721,7 @@ buildDriver req merchantId = do
         SP.mobileNumber = mobileNumber,
         SP.mobileCountryCode = Just req.mobileCountryCode,
         SP.isNew = True,
+        SP.onboardedFromDashboard = False,
         SP.rating = Nothing,
         SP.deviceToken = Nothing,
         SP.language = Nothing,

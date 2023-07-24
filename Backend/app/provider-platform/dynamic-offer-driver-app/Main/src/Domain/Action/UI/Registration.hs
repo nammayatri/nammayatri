@@ -122,11 +122,12 @@ auth ::
     EncFlow m r,
     CoreMetrics m
   ) =>
+  Bool ->
   AuthReq ->
   Maybe Version ->
   Maybe Version ->
   m AuthRes
-auth req mbBundleVersion mbClientVersion = do
+auth isDashboard req mbBundleVersion mbClientVersion = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
@@ -138,7 +139,7 @@ auth req mbBundleVersion mbClientVersion = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <-
     QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
-      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id) return
+      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id isDashboard) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -196,8 +197,8 @@ createDriverDetails personId merchantId = do
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo
 
-makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
-makePerson req mbBundleVersion mbClientVersion merchantId = do
+makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
+makePerson req mbBundleVersion mbClientVersion merchantId isDashboard = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
@@ -219,6 +220,7 @@ makePerson req mbBundleVersion mbClientVersion merchantId = do
         rating = Nothing,
         merchantId = merchantId,
         isNew = True,
+        onboardedFromDashboard = isDashboard,
         deviceToken = Nothing,
         language = Nothing,
         description = Nothing,
@@ -270,9 +272,9 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
-  person <- makePerson req mbBundleVersion mbClientVersion merchantId
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
+  person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
   now <- getCurrentTime
   DB.runTransaction $ do
     QP.create person
