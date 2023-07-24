@@ -227,7 +227,6 @@ getDriverInfoFlow = do
       let dbClientVersion = getDriverInfoResp.clientVersion
       let dbBundleVersion = getDriverInfoResp.bundleVersion
       updateDriverVersion dbClientVersion dbBundleVersion
-      modifyScreenState $ GlobalPropsType (\globalPropsType -> globalPropsType {aadhaarVerificationRequired = organization.aadhaarVerificationRequired})
       if getDriverInfoResp.enabled then do
         if(getValueToLocalStore IS_DRIVER_ENABLED == "false") then do
           _ <- pure $ firebaseLogEvent "ny_driver_enabled"
@@ -1205,7 +1204,7 @@ currentRideFlow = do
     _ <- updateStage $ HomeScreenStage HomeScreen
     pure unit
   (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && allState.globalProps.aadhaarVerificationRequired}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && (getMerchant FunctionCall) == YATRISATHI}})
   homeScreenFlow
 
 getDriverStatus :: String -> DriverStatus
