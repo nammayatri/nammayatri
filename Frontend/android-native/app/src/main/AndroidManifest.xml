@@ -27,7 +27,6 @@
         android:label="@string/app_name"
         android:resizeableActivity="false"
         android:largeHeap="true"
-        android:hardwareAccelerated="true"
         android:roundIcon="${appIconRound}"
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
