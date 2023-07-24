@@ -54,7 +54,6 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
-import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
