@@ -62,6 +62,7 @@ library
       API.UI.FeedbackForm
       API.UI.Frontend
       API.UI.GoogleTranslate
+      API.UI.HotSpot
       API.UI.Maps
       API.UI.Payment
       API.UI.Profile
@@ -124,6 +125,7 @@ library
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.Frontend
+      Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
       Domain.Action.UI.Profile
@@ -160,6 +162,8 @@ library
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
       Domain.Types.Geometry
+      Domain.Types.HotSpot
+      Domain.Types.HotSpotConfig
       Domain.Types.Issue
       Domain.Types.LocationAddress
       Domain.Types.Maps.DirectionsCache
@@ -201,7 +205,9 @@ library
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.DirectionsCache
+      Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage
@@ -210,6 +216,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
+      Storage.CachedQueries.SavedLocation
       Storage.Queries.AppInstalls
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
@@ -225,6 +232,7 @@ library
       Storage.Queries.FeedbackForm
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
+      Storage.Queries.HotSpotConfig
       Storage.Queries.Issues
       Storage.Queries.Maps.DirectionsCache
       Storage.Queries.Maps.PlaceNameCache
@@ -261,6 +269,7 @@ library
       Storage.Tabular.FarePolicy.FareBreakup
       Storage.Tabular.FeedbackForm
       Storage.Tabular.Geometry
+      Storage.Tabular.HotSpotConfig
       Storage.Tabular.Issue
       Storage.Tabular.Maps.DirectionsCache
       Storage.Tabular.Maps.PlaceNameCache

@@ -21,11 +21,18 @@ module Domain.Action.UI.Search.OneWay
   )
 where
 
+import Control.Monad
+import Domain.Action.UI.HotSpot
 import qualified Domain.Action.UI.Search.Common as DSearch
+import Domain.Types.HotSpot
+import Domain.Types.HotSpotConfig
+import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
@@ -35,13 +42,16 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.DirectionsCache as SDC
 import qualified SharedLogic.MerchantConfig as SMC
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -53,7 +63,9 @@ import qualified Tools.Metrics as Metrics
 
 data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
-    destination :: DSearch.SearchReqLocation
+    destination :: DSearch.SearchReqLocation,
+    isSourceManuallyMoved :: Maybe Bool,
+    isSpecialLocation :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -69,6 +81,44 @@ data OneWaySearchRes = OneWaySearchRes
     device :: Maybe Text,
     shortestRouteInfo :: Maybe Maps.RouteInfo
   }
+
+hotSpotUpdate ::
+  ( HasCacheConfig r,
+    CoreMetrics m,
+    HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Maybe SavedReqLocation ->
+  OneWaySearchReq ->
+  m ()
+hotSpotUpdate merchantId mbFavourite req = case mbFavourite of
+  Just SavedReqLocation {..} ->
+    frequencyUpdator merchantId req.origin.gps (bool NonManualSaved ManualSaved (isMoved == Just True))
+  Nothing ->
+    frequencyUpdator merchantId req.origin.gps (bool NonManualPickup ManualPickup (req.isSourceManuallyMoved == Just True))
+
+updateForSpecialLocation ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    HasCacheConfig r,
+    EncFlow m r,
+    HedisFlow m r,
+    CoreMetrics m,
+    EventStreamFlow m r
+  ) =>
+  Id Merchant ->
+  OneWaySearchReq ->
+  m ()
+updateForSpecialLocation merchantId req = do
+  case req.isSpecialLocation of
+    Just isSpecialLocation -> do
+      when isSpecialLocation $ frequencyUpdator merchantId req.origin.gps SpecialLocation
+    Nothing -> do
+      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong req.origin.gps
+      case specialLocationBody of
+        Just _ -> frequencyUpdator merchantId req.origin.gps SpecialLocation
+        Nothing -> return ()
 
 oneWaySearch ::
   ( HasCacheConfig r,
@@ -91,7 +141,12 @@ oneWaySearch ::
 oneWaySearch personId req bundleVersion clientVersion device = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  mbFavourite <- CSavedLocation.findByLatLonAndRiderId personId req.origin.gps
+  HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
 
+  when shouldTakeHotSpot do
+    _ <- hotSpotUpdate person.merchantId mbFavourite req
+    updateForSpecialLocation person.merchantId req
   validateServiceability merchant.geofencingConfig
 
   let sourceLatlong = req.origin.gps

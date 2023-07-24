@@ -18,58 +18,51 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.SavedReqLocation where
+module Storage.Tabular.HotSpotConfig where
 
-import qualified Domain.Types.SavedReqLocation as Domain
+import qualified Domain.Types.HotSpotConfig as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Id
-import qualified Storage.Tabular.Person as Person
+import Kernel.Types.Id (Id (..))
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SavedReqLocationT sql=saved_location
+    HotSpotConfigT sql=hot_spot_config
       id Text
-      lat Double
-      lon Double
-      street Text Maybe
-      door Text Maybe
-      city Text Maybe
-      state Text Maybe
-      country Text Maybe
-      building Text Maybe
-      areaCode Text Maybe
-      area Text Maybe
-      placeId Text Maybe
-      createdAt UTCTime
-      updatedAt UTCTime
-      tag  Text
-      riderId Person.PersonTId
-      ward Text Maybe
-      isMoved Bool Maybe
+      hotSpotGeoHashPrecision Int
+      blockRadius Int
+      minFrequencyOfHotSpot Int
+      nearbyGeohashPrecision Int
+      weightOfManualPickup Int
+      weightOfManualSaved Int
+      weightOfAutoPickup Int
+      weightOfAutoSaved Int
+      weightOfTripStart Int
+      weightOfTripEnd Int
+      weightOfSpecialLocation Int
+      shouldTakeHotSpot Bool
+      maxNumHotSpotsToShow Int
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey SavedReqLocationT where
-  type DomainKey SavedReqLocationT = Id Domain.SavedReqLocation
-  fromKey (SavedReqLocationTKey _id) = Id _id
-  toKey (Id id) = SavedReqLocationTKey id
+instance TEntityKey HotSpotConfigT where
+  type DomainKey HotSpotConfigT = Id Domain.HotSpotConfig
+  fromKey (HotSpotConfigTKey _id) = Id _id
+  toKey (Id id) = HotSpotConfigTKey id
 
-instance FromTType SavedReqLocationT Domain.SavedReqLocation where
-  fromTType SavedReqLocationT {..} = do
+instance FromTType HotSpotConfigT Domain.HotSpotConfig where
+  fromTType HotSpotConfigT {..} = do
     return $
-      Domain.SavedReqLocation
+      Domain.HotSpotConfig
         { id = Id id,
-          riderId = fromKey riderId,
           ..
         }
 
-instance ToTType SavedReqLocationT Domain.SavedReqLocation where
-  toTType Domain.SavedReqLocation {..} =
-    SavedReqLocationT
+instance ToTType HotSpotConfigT Domain.HotSpotConfig where
+  toTType Domain.HotSpotConfig {..} =
+    HotSpotConfigT
       { id = getId id,
-        riderId = toKey riderId,
         ..
       }
