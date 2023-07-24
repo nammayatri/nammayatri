@@ -485,7 +485,7 @@ public class LocationUpdateService extends Service {
         try {
             String localStage = getValueFromStorage("LOCAL_STAGE");
 
-            if (localStage.equals("RideStarted")) {
+            if (localStage.equals("RideStarted") && accuracy<=50.0) {
                 if (rideWaypoints == null) {
                     updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(0));
                     ExecutorService executor1 = Executors.newSingleThreadExecutor();
