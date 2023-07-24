@@ -744,7 +744,7 @@ eval BackPressed state = do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
                       _ <- pure $ updateLocalStage SearchLocationModel
-                      continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+                      continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
     FindingEstimate -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel

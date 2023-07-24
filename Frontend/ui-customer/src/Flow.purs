@@ -749,7 +749,7 @@ homeScreenFlow = do
                                               }) srcSpecialLocation.gates
         (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing && bothLocationChangedState.data.config.specialLocationView , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing && bothLocationChangedState.data.config.specialLocationView}})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           else pure unit
@@ -1297,14 +1297,16 @@ fetchLatAndLong state tag  =
 rideSearchFlow :: String -> FlowBT String Unit
 rideSearchFlow flowType = do
   logField_ <- lift $ lift $ getLogFields
+  config <- getAppConfig
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{config = config}})
   (GlobalState homeScreenModifiedState) <- getState
   let finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
   if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "")
     then do
       case ((not finalState.props.isSpecialZone) && finalState.props.sourceSelectedOnMap) of
         false -> do
-          liftFlowBT $ runEffectFn5 locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if finalState.data.config.specialLocationView then finalState.data.polygonCoordinates else "")  (if finalState.data.config.specialLocationView then finalState.data.nearByPickUpPoints else [])
           pure $ removeAllPolylines ""
+          liftFlowBT $ runEffectFn5 locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if finalState.data.config.specialLocationView then finalState.data.polygonCoordinates else "")  (if finalState.data.config.specialLocationView then finalState.data.nearByPickUpPoints else [])
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false
