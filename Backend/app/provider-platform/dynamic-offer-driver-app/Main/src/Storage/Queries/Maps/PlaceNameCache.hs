@@ -11,7 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Maps.PlaceNameCache
   {-# WARNING
@@ -21,27 +21,16 @@ module Storage.Queries.Maps.PlaceNameCache
 where
 
 import Domain.Types.Maps.PlaceNameCache
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 
--- create :: PlaceNameCache -> SqlDB ()
--- create = Esq.create
-
-create :: L.MonadFlow m => PlaceNameCache -> m (MeshResult ())
-create config = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamPNC.PlaceNameCacheT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPlaceNameCacheToBeam config)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => PlaceNameCache -> m ()
+create = createWithKV
 
 -- findPlaceByPlaceId :: Transactionable m => Text -> m [PlaceNameCache]
 -- findPlaceByPlaceId placeId =
@@ -50,72 +39,45 @@ create config = do
 --     where_ $ placeNameCache ^. PlaceNameCachePlaceId ==. val (Just placeId)
 --     return placeNameCache
 
-findPlaceByPlaceId :: L.MonadFlow m => Text -> m [PlaceNameCache]
-findPlaceByPlaceId placeId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamPNC.PlaceNameCacheT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamPNC.placeId $ Se.Eq $ Just placeId]
-      case result of
-        Left _ -> pure []
-        Right result' -> pure $ transformBeamPlaceNameCacheToDomain <$> result'
-    Nothing -> pure []
+findPlaceByPlaceId :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
+findPlaceByPlaceId placeId = findAllWithKV [Se.Is BeamPNC.placeId $ Se.Eq (Just placeId)]
 
 -- findPlaceByGeoHash :: Transactionable m => Text -> m [PlaceNameCache]
 -- findPlaceByGeoHash geoHash =
 --   Esq.findAll $ do
 --     placeNameCache <- from $ table @PlaceNameCacheT
 --     where_ $ placeNameCache ^. PlaceNameCacheGeoHash ==. val (Just geoHash)
-
 --     return placeNameCache
 
-findPlaceByGeoHash :: L.MonadFlow m => Text -> m [PlaceNameCache]
-findPlaceByGeoHash geoHash = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamPNC.PlaceNameCacheT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamPNC.geoHash $ Se.Eq $ Just geoHash]
-      case result of
-        Left _ -> pure []
-        Right result' -> pure $ transformBeamPlaceNameCacheToDomain <$> result'
-    Nothing -> pure []
+findPlaceByGeoHash :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
+findPlaceByGeoHash geoHash = findAllWithKV [Se.Is BeamPNC.geoHash $ Se.Eq (Just geoHash)]
 
-transformBeamPlaceNameCacheToDomain :: BeamPNC.PlaceNameCache -> PlaceNameCache
-transformBeamPlaceNameCacheToDomain BeamPNC.PlaceNameCacheT {..} = do
-  PlaceNameCache
-    { id = Id id,
-      formattedAddress = formattedAddress,
-      plusCode = plusCode,
-      lat = lat,
-      lon = lon,
-      placeId = placeId,
-      addressComponents = addressComponents,
-      geoHash = geoHash,
-      createdAt = createdAt
-    }
+instance FromTType' BeamPNC.PlaceNameCache PlaceNameCache where
+  fromTType' BeamPNC.PlaceNameCacheT {..} = do
+    pure $
+      Just
+        PlaceNameCache
+          { id = Id id,
+            formattedAddress = formattedAddress,
+            plusCode = plusCode,
+            lat = lat,
+            lon = lon,
+            placeId = placeId,
+            addressComponents = addressComponents,
+            geoHash = geoHash,
+            createdAt = createdAt
+          }
 
-transformDomainPlaceNameCacheToBeam :: PlaceNameCache -> BeamPNC.PlaceNameCache
-transformDomainPlaceNameCacheToBeam PlaceNameCache {..} =
-  BeamPNC.PlaceNameCacheT
-    { BeamPNC.id = getId id,
-      BeamPNC.formattedAddress = formattedAddress,
-      BeamPNC.plusCode = plusCode,
-      BeamPNC.lat = lat,
-      BeamPNC.lon = lon,
-      BeamPNC.placeId = placeId,
-      BeamPNC.addressComponents = addressComponents,
-      BeamPNC.geoHash = geoHash,
-      BeamPNC.createdAt = createdAt
-    }
+instance ToTType' BeamPNC.PlaceNameCache PlaceNameCache where
+  toTType' PlaceNameCache {..} = do
+    BeamPNC.PlaceNameCacheT
+      { BeamPNC.id = getId id,
+        BeamPNC.formattedAddress = formattedAddress,
+        BeamPNC.plusCode = plusCode,
+        BeamPNC.lat = lat,
+        BeamPNC.lon = lon,
+        BeamPNC.placeId = placeId,
+        BeamPNC.addressComponents = addressComponents,
+        BeamPNC.geoHash = geoHash,
+        BeamPNC.createdAt = createdAt
+      }
