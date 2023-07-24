@@ -35,6 +35,7 @@ in  { hedisCfg
         //  { logFilePath = "/tmp/producer.log", prettyPrinting = True }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , waitTimeMilliSec = +500
     , batchSize = +1000
     , streamName = "xx"
     , setName = "yy"

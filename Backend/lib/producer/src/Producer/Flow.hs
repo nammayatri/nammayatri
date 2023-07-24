@@ -13,6 +13,7 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
+import Kernel.Utils.Time
 
 getCurrentTimestamp :: IO Double
 getCurrentTimestamp = realToFrac <$> getPOSIXTime
@@ -41,7 +42,11 @@ runProducer :: Flow ()
 runProducer = do
   currentTime <- liftIO getCurrentTimestamp
   let oneSecondAgo = currentTime - 1
+
   print $ pack "Producer is running ..."
+  logDebug $ "currentTime :" <> show currentTime
+  logDebug $ "oneSecondAgo :" <> show oneSecondAgo
+
   setName <- asks (.setName)
   currentJobs <- Hedis.zrangebyscore setName oneSecondAgo currentTime
   logDebug $ "Jobs taken out of sortedset" <> show currentJobs
@@ -59,5 +64,9 @@ runProducer = do
     let fieldValue = [(eqIdByteString, chunk_)]
     result <- Hedis.xadd streamName entryId fieldValue
     logDebug $ "Jobs inserted out of stream" <> show result
+
+  waitTimeMilliSec <- asks (.waitTimeMilliSec)
+  threadDelayMilliSec waitTimeMilliSec
+  runProducer
 
 -- pure ()
