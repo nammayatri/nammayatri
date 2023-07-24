@@ -39,7 +39,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
+import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion, setText)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getDatebyCount, startPP, consumeBP)
@@ -589,13 +589,16 @@ applicationSubmittedFlow screenType = do
     GO_TO_HOME_FROM_APPLICATION_STATUS -> permissionsScreenFlow
     GO_TO_UPLOAD_DL_SCREEN -> do
       let (GlobalState defaultEpassState') = defaultGlobalState
-      modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> defaultEpassState'.uploadDrivingLicenseScreen)
-      modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> defaultEpassState'.addVehicleDetailsScreen)
+      modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ -> defaultEpassState'.uploadDrivingLicenseScreen)
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState'.addVehicleDetailsScreen)
+      pure $ setText (getNewIDWithTag "EnterDrivingLicenseEditText") ""
+      pure $ setText (getNewIDWithTag "ReEnterDrivingLicenseEditText") ""
       uploadDrivingLicenseFlow
     GO_TO_VEHICLE_DETAIL_SCREEN -> do
       let (GlobalState defaultEpassState') = defaultGlobalState
-      modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> defaultEpassState'.uploadDrivingLicenseScreen)
-      modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> defaultEpassState'.addVehicleDetailsScreen)
+      modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ -> defaultEpassState'.uploadDrivingLicenseScreen)
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState'.addVehicleDetailsScreen)
+      pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
       addVehicleDetailsflow
     VALIDATE_NUMBER state -> do
       getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (state.data.mobileNumber))
