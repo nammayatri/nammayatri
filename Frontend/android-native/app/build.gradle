@@ -36,8 +36,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 33
-        versionCode 100
-        versionName "1.2.9"
+        versionCode 56
+        versionName "1.3.4"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -207,7 +207,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.24'
+    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.32'
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
