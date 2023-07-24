@@ -126,12 +126,12 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
         { amount = realToFrac breakup.price.value,
           description = breakup.title
         }
-parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
-  return $
-    DOnUpdate.BookingCancelledReq
-      { bppBookingId = Id $ tcEvent.id,
-        cancellationSource = castCancellationSource tcEvent.cancellation_reason
-      }
+-- parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
+--   return $
+--     DOnUpdate.BookingCancelledReq
+--       { bppBookingId = Id $ tcEvent.id,
+--         cancellationSource = castCancellationSource tcEvent.cancellation_reason
+--       }
 parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
   return $
     DOnUpdate.BookingReallocationReq

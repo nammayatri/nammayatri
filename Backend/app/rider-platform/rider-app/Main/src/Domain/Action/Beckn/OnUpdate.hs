@@ -97,11 +97,11 @@ data OnUpdateReq
         traveledDistance :: HighPrecMeters,
         paymentUrl :: Maybe Text
       }
-  | BookingCancelledReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        cancellationSource :: SBCR.CancellationSource
-      }
-  | BookingReallocationReq
+  | -- | BookingCancelledReq
+    --     { bppBookingId :: Id SRB.BPPBooking,
+    --       cancellationSource :: SBCR.CancellationSource
+    --     }
+    BookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         reallocationSource :: SBCR.CancellationSource
@@ -157,13 +157,13 @@ data ValidatedOnUpdateReq
         person :: DP.Person,
         paymentUrl :: Maybe Text
       }
-  | ValidatedBookingCancelledReq
-      { bppBookingId :: Id SRB.BPPBooking,
-        cancellationSource :: SBCR.CancellationSource,
-        booking :: SRB.Booking,
-        mbRide :: Maybe SRide.Ride
-      }
-  | ValidatedBookingReallocationReq
+  | -- | ValidatedBookingCancelledReq
+    --     { bppBookingId :: Id SRB.BPPBooking,
+    --       cancellationSource :: SBCR.CancellationSource,
+    --       booking :: SRB.Booking,
+    --       mbRide :: Maybe SRide.Ride
+    --     }
+    ValidatedBookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         reallocationSource :: SBCR.CancellationSource,
@@ -358,33 +358,33 @@ onUpdate ValidatedRideCompletedReq {..} = do
           { id = guid,
             ..
           }
-onUpdate ValidatedBookingCancelledReq {..} = do
-  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
-  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
-  merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
-  case cancellationSource of
-    SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-    SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
-    _ -> pure ()
-  fork "incrementing fraud counters" $ do
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
-  case mbRide of
-    Just ride -> do
-      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
-    Nothing -> do
-      logDebug "No ride found for the booking."
-  triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
-  DB.runTransaction $ do
-    unless (booking.status == SRB.CANCELLED) $ QRB.updateStatus booking.id SRB.CANCELLED
-    whenJust mbRide $ \ride -> do
-      unless (ride.status == SRide.CANCELLED) $ QRide.updateStatus ride.id SRide.CANCELLED
-    unless (cancellationSource == SBCR.ByUser) $
-      QBCR.upsert bookingCancellationReason
-    QPFS.updateStatus booking.riderId DPFS.IDLE
-  QPFS.clearCache booking.riderId
-  -- notify customer
-  Notify.notifyOnBookingCancelled booking cancellationSource
+-- onUpdate ValidatedBookingCancelledReq {..} = do
+--   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
+--   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
+--   merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
+--   case cancellationSource of
+--     SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+--     SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+--     _ -> pure ()
+--   fork "incrementing fraud counters" $ do
+--     mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
+--     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
+--   case mbRide of
+--     Just ride -> do
+--       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
+--     Nothing -> do
+--       logDebug "No ride found for the booking."
+--   triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
+--   DB.runTransaction $ do
+--     unless (booking.status == SRB.CANCELLED) $ QRB.updateStatus booking.id SRB.CANCELLED
+--     whenJust mbRide $ \ride -> do
+--       unless (ride.status == SRide.CANCELLED) $ QRide.updateStatus ride.id SRide.CANCELLED
+--     unless (cancellationSource == SBCR.ByUser) $
+--       QBCR.upsert bookingCancellationReason
+--     QPFS.updateStatus booking.riderId DPFS.IDLE
+--   QPFS.clearCache booking.riderId
+--   -- notify customer
+--   Notify.notifyOnBookingCancelled booking cancellationSource
 onUpdate ValidatedBookingReallocationReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
@@ -455,17 +455,17 @@ validateRequest RideCompletedReq {..} = do
     throwError (RideInvalidStatus $ show ride.status)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   return $ ValidatedRideCompletedReq {..}
-validateRequest BookingCancelledReq {..} = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  mbRide <- QRide.findActiveByRBId booking.id
-  let isRideCancellable = maybe False (\ride -> ride.status `notElem` [SRide.INPROGRESS, SRide.CANCELLED]) mbRide
-      bookingAlreadyCancelled = booking.status == SRB.CANCELLED
-  unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
-    throwError (BookingInvalidStatus (show booking.status))
-  return $ ValidatedBookingCancelledReq {..}
-  where
-    isBookingCancellable booking =
-      booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
+-- validateRequest BookingCancelledReq {..} = do
+--   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+--   mbRide <- QRide.findActiveByRBId booking.id
+--   let isRideCancellable = maybe False (\ride -> ride.status `notElem` [SRide.INPROGRESS, SRide.CANCELLED]) mbRide
+--       bookingAlreadyCancelled = booking.status == SRB.CANCELLED
+--   unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
+--     throwError (BookingInvalidStatus (show booking.status))
+--   return $ ValidatedBookingCancelledReq {..}
+-- where
+--   isBookingCancellable booking =
+--     booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 validateRequest BookingReallocationReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)

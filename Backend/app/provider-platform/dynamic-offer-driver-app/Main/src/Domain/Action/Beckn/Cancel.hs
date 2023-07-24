@@ -111,7 +111,10 @@ cancel req merchant booking = do
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP booking merchant bookingCR.source
+    let mbRideId = case mbRide of
+          Just ride -> Just ride.id
+          Nothing -> Nothing
+    BP.sendBookingCancelledToBAP booking merchant mbRideId bookingCR.source
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -137,6 +140,14 @@ cancelSearch ::
     HedisFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
+    HedisFlow m r,
+    CacheFlow m r,
+    HasHttpClientOptions r c,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   Id DM.Merchant ->
@@ -144,6 +155,7 @@ cancelSearch ::
   Id DSR.SearchRequest ->
   m ()
 cancelSearch merchantId req searchRequestId = do
+  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   searchTry <- QST.findActiveTryByRequestId searchRequestId >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchRequestId.getId)
   CS.whenSearchTryCancellable searchTry.id $ do
     driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
@@ -152,6 +164,8 @@ cancelSearch merchantId req searchRequestId = do
       QST.cancelActiveTriesByRequestId searchRequestId
       QSRD.setInactiveBySRId searchRequestId
       QDQ.setInactiveBySRId searchRequestId
+    fork "cancelSearchReq - Notify BAP" $ do
+      BP.sendSearchReqCancelToBAP merchant searchRequestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
       Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId

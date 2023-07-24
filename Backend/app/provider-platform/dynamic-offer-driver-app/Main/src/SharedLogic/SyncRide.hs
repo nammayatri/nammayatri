@@ -62,8 +62,11 @@ syncInProgressRide ride booking = do
 syncCancelledRide :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
 syncCancelledRide mbCancellationSource mbRide booking merchant = do
   cancellationSource <- maybe (findCancellationSource mbRide) pure mbCancellationSource
+  let mbRideId = case mbRide of
+        Just ride -> Just ride.id
+        Nothing -> Nothing
   handle (errHandler (mbRide <&> (.status)) booking.status "booking cancellation") $
-    CallBAP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource
+    CallBAP.sendBookingCancelledToBAP booking merchant mbRideId cancellationSource
   pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
 findCancellationSource :: Maybe DRide.Ride -> Flow DBCR.CancellationSource

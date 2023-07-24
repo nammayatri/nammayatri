@@ -68,11 +68,11 @@ data OnUpdateBuildReq
         paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
         paymentUrl :: Maybe Text
       }
-  | BookingCancelledBuildReq
-      { booking :: DRB.Booking,
-        cancellationSource :: SBCR.CancellationSource
-      }
-  | DriverArrivedBuildReq
+  | -- | BookingCancelledBuildReq
+    --     { booking :: DRB.Booking,
+    --       cancellationSource :: SBCR.CancellationSource
+    --     }
+    DriverArrivedBuildReq
       { ride :: DRide.Ride,
         driver :: SP.Person,
         vehicle :: SVeh.Vehicle,
@@ -263,16 +263,17 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
-buildOnUpdateMessage BookingCancelledBuildReq {..} = do
-  return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.BookingCancelled
-        BookingCancelledOU.BookingCancelledEvent
-          { id = booking.id.getId,
-            state = "CANCELLED",
-            update_target = "state,fufillment.state.code",
-            cancellation_reason = castCancellationSource cancellationSource
-          }
+
+-- buildOnUpdateMessage BookingCancelledBuildReq {..} = do
+--   return $
+--     OnUpdate.OnUpdateMessage $
+--       OnUpdate.BookingCancelled
+--         BookingCancelledOU.BookingCancelledEvent
+--           { id = booking.id.getId,
+--             state = "CANCELLED",
+--             update_target = "state,fufillment.state.code",
+--             cancellation_reason = castCancellationSource cancellationSource
+--           }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
   let tagGroups =
         [ Tags.TagGroup

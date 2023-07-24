@@ -15,10 +15,11 @@
 module Storage.Queries.Estimate where
 
 import Domain.Types.Estimate as Domain
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Estimate ()
+import Storage.Tabular.Estimate
 
 create :: Estimate -> SqlDB ()
 create = Esq.create
@@ -28,3 +29,10 @@ createMany = Esq.createMany
 
 findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 findById = Esq.findById
+
+findBySearchReqId :: Transactionable m => Id DSR.SearchRequest -> m (Maybe Estimate)
+findBySearchReqId searchReqId = do
+  Esq.findOne $ do
+    estimate <- from $ table @EstimateT
+    where_ $ estimate ^. EstimateRequestId ==. val (toKey searchReqId)
+    return estimate

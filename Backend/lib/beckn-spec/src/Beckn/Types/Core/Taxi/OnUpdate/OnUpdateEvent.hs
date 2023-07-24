@@ -17,7 +17,7 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent
   )
 where
 
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
+-- import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
@@ -34,8 +34,8 @@ data OnUpdateEvent
   = RideAssigned RideAssignedEvent
   | RideStarted RideStartedEvent
   | RideCompleted RideCompletedEvent
-  | BookingCancelled BookingCancelledEvent
-  | BookingReallocation BookingReallocationEvent
+  | -- | BookingCancelled BookingCancelledEvent
+    BookingReallocation BookingReallocationEvent
   | DriverArrived DriverArrivedEvent
   | EstimateRepetition EstimateRepetitionEvent
   | NewMessage NewMessageEvent

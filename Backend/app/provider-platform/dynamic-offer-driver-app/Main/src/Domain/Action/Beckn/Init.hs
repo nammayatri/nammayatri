@@ -48,6 +48,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
 import qualified Storage.Queries.SearchTry as QST
@@ -110,7 +111,11 @@ cancelBooking booking transporterId = do
     QBCR.upsert bookingCancellationReason
     QRB.updateStatus booking.id DRB.CANCELLED
   fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
+    mbRide <- QRide.findOneByBookingId booking.id
+    let mbRideId = case mbRide of
+          Just ride -> Just ride.id
+          Nothing -> Nothing
+    BP.sendBookingCancelledToBAP booking transporter mbRideId bookingCancellationReason.source
   pure Ack
   where
     buildBookingCancellationReason = do

@@ -344,7 +344,10 @@ cancelBooking booking mbDriver transporter = do
     SRide.clearCache ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False booking.providerId
   fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
+    let mbRideId = case mbRide of
+          Just ride -> Just ride.id
+          Nothing -> Nothing
+    BP.sendBookingCancelledToBAP booking transporter mbRideId bookingCancellationReason.source
   whenJust mbRide $ \ride ->
     case mbDriver of
       Nothing -> throwError (PersonNotFound ride.driverId.getId)

@@ -17,7 +17,9 @@ module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
-    sendBookingCancelledUpdateToBAP,
+    -- sendBookingCancelledUpdateToBAP,
+    sendBookingCancelledToBAP,
+    sendSearchReqCancelToBAP,
     sendDriverArrivalUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
     sendNewMessageToBAP,
@@ -27,11 +29,14 @@ module SharedLogic.CallBAP
   )
 where
 
+import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
+import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import qualified Beckn.Types.Core.Taxi.OnCancel as OnCancel
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -44,6 +49,7 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Ride as R
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
@@ -52,6 +58,7 @@ import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
@@ -59,8 +66,8 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
 callOnSelect ::
@@ -219,7 +226,49 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
 
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideCompletedMsg retryConfig
 
-sendBookingCancelledUpdateToBAP ::
+-- sendBookingCancelledUpdateToBAP ::
+--   ( EsqDBFlow m r,
+--     EncFlow m r,
+--     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+--     HasHttpClientOptions r c,
+--     HasLongDurationRetryCfg r c,
+--     CoreMetrics m
+--   ) =>
+--   DRB.Booking ->
+--   DM.Merchant ->
+--   SRBCR.CancellationSource ->
+--   m ()
+-- sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
+--   let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
+--   bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
+
+--   retryConfig <- asks (.longDurationRetryCfg)
+
+--   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId bookingCancelledMsg retryConfig
+
+callOnCancel ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m,
+    HasHttpClientOptions r c
+  ) =>
+  DM.Merchant ->
+  Text ->
+  BaseUrl ->
+  Maybe Context.City ->
+  Maybe Context.Country ->
+  Text ->
+  OnCancel.OnCancelMessage ->
+  RetryCfg ->
+  m ()
+callOnCancel transporter bapId bapUri bapCity bapCountry transactionId content retryConfig = do
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bppUri <- buildBppUrl (transporter.id)
+  msgId <- generateGUID
+  context <- buildTaxiContext Context.ON_CANCEL msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_CANCEL) API.onCancelAPI bapUri . BecknCallbackReq context $ Right content
+
+sendBookingCancelledToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -229,15 +278,32 @@ sendBookingCancelledUpdateToBAP ::
   ) =>
   DRB.Booking ->
   DM.Merchant ->
+  Maybe (Id R.Ride) ->
   SRBCR.CancellationSource ->
   m ()
-sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
-  let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
-  bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
-
+sendBookingCancelledToBAP booking transporter mbRideId cancellationSource = do
+  let bookingCancelledBuildReq = ACL.OnCancelBuildReq {..}
+  bookingCancelledMsg <- ACL.buildOnCancelMessage bookingCancelledBuildReq
   retryConfig <- asks (.longDurationRetryCfg)
+  void $ callOnCancel transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId bookingCancelledMsg retryConfig
 
-  void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId bookingCancelledMsg retryConfig
+sendSearchReqCancelToBAP ::
+  ( EsqDBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    CoreMetrics m
+  ) =>
+  DM.Merchant ->
+  Id DSR.SearchRequest ->
+  m ()
+sendSearchReqCancelToBAP transporter searchReqId = do
+  let searchCancelledBuildReq = ACL.OnSearchCancelBuildReq {..}
+  searchCancelledMsg <- ACL.buildOnSearchCancelMessage searchCancelledBuildReq
+  retryConfig <- asks (.longDurationRetryCfg)
+  searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
+  void $ callOnCancel transporter searchReq.bapId searchReq.bapUri searchReq.bapCity searchReq.bapCountry searchReq.transactionId searchCancelledMsg retryConfig
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
