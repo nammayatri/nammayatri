@@ -47,7 +47,7 @@ dependencies {
     implementation 'androidx.work:work-runtime:2.7.1'
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.firebase:firebase-analytics'
-    implementation platform('com.google.firebase:firebase-bom:31.1.1')
+    implementation platform('com.google.firebase:firebase-bom:32.2.0')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-messaging'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
@@ -60,7 +60,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'androidx.browser:browser:1.2.0'
-    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.24'
+    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.32'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'

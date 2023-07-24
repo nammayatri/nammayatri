@@ -207,7 +207,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.24'
+    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.32'
     implementation project(path: ':mobility-app')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
     nyDriverImplementation project(path: ':mobility-driver')
