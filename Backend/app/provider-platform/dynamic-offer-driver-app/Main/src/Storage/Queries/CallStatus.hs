@@ -35,14 +35,14 @@ findByCallSid callSid =
     where_ $ callStatus ^. CallStatusCallId ==. val callSid
     return callStatus
 
-updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> SqlDB ()
+updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> SqlDB ()
 updateCallStatus callId status conversationDuration mbrecordingUrl = do
   Esq.update $ \tbl -> do
     set
       tbl
       [ CallStatusStatus =. val status,
         CallStatusConversationDuration =. val conversationDuration,
-        CallStatusRecordingUrl =. val (showBaseUrl <$> mbrecordingUrl)
+        CallStatusRecordingUrl =. val mbrecordingUrl
       ]
     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
