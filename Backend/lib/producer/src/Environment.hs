@@ -16,53 +16,59 @@ module Environment where
 
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
-import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
-import Kernel.Storage.Hedis.Config
-import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Storage.Hedis
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Flow (FlowR)
-import Kernel.Utils.Dhall
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
-import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
-import Kernel.Utils.Servant.Client
 import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
-  { esqDBCfg :: EsqDBConfig,
-    esqDBReplicaCfg :: EsqDBConfig,
-    hedisCfg :: HedisCfg,
+  { hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     loggerConfig :: LoggerConfig,
-    httpClientOptions :: HttpClientOptions
+    enableRedisLatencyLogging :: Bool,
+    batchSize :: Int,
+    enablePrometheusMetricLogging :: Bool,
+    streamName :: Text,
+    setName :: Text,
+    entryId :: Text
   }
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { hedisCfg :: HedisCfg,
-    hostname :: Maybe Text,
-    hedisEnv :: HedisEnv,
+  { hedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
-    esqDBEnv :: EsqDBEnv,
+    hostname :: Maybe Text,
+    coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool,
     loggerConfig :: LoggerConfig,
-    esqDBReplicaEnv :: EsqDBEnv
+    batchSize :: Int,
+    version :: DeploymentVersion,
+    streamName :: Text,
+    setName :: Text,
+    entryId :: Text
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg id
+  version <- lookupDeploymentVersion
+  hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  coreMetrics <- registerCoreMetricsContainer
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   hedisClusterEnv <-
     if cutOffHedisCluster
@@ -72,9 +78,7 @@ buildAppEnv AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg id
-  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
   pure $ AppEnv {..}
 
 type FlowHandler = FlowHandlerR AppEnv

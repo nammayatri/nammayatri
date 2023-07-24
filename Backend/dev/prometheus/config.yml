@@ -6,28 +6,29 @@ scrape_configs:
   - job_name: "beckn-app-backend"
     static_configs:
       - targets:
-          - "192.168.0.17:9999"
+          - "10.10.50.232:9999"
         labels:
           service: "beckn-app-backend"
           namespace: "atlas"
   - job_name: "beckn-gateway"
     static_configs:
       - targets:
-          - "192.168.0.17:9998"
+          - "10.10.50.232:9998"
         labels:
           service: "beckn-gateway"
           namespace: "atlas"
   - job_name: "beckn-transport-backend"
     static_configs:
       - targets:
-          - "192.168.0.17:9997"
+          - "10.10.50.232:9997"
         labels:
           service: "beckn-transport-backend"
           namespace: "atlas"
   - job_name: "beckn-transport-allocation-service"
     static_configs:
       - targets:
-          - "192.168.0.17:9996"
+          - "10.10.50.232:9996"
         labels:
           service: "beckn-transport-allocation-service"
           namespace: "atlas"
+

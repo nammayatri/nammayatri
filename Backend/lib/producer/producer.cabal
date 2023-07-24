@@ -86,12 +86,9 @@ library
 executable producer-exe
   main-is: Main.hs
   other-modules:
-      App
-      Environment
-      Producer.Flow
       Paths_producer
   hs-source-dirs:
-      src
+      app
   default-extensions:
       ConstraintKinds
       DataKinds

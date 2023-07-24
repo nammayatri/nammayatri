@@ -2092,8 +2092,8 @@
         "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1689748792,
-        "narHash": "sha256-ToosXFRs4PUoFEh6/SXbxvcysirrMmn2tnhjpItOp1A=",
+        "lastModified": 1689918482,
+        "narHash": "sha256-1uWm1pYbFYeHm4iaMeJ0jTcEAip5mbNcxCshTqVn8XI=",
         "path": "/Users/aman.dwivedi/Desktop/shared-kernel",
         "type": "path"
       },
