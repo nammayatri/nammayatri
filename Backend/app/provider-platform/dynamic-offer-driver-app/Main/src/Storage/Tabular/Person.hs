@@ -58,6 +58,7 @@ mkPersist
       identifier Text Maybe
       rating Centesimal Maybe
       isNew Bool
+      onboardedFromDashboard Bool
       merchantId MerchantTId
       deviceToken FCMRecipientToken Maybe
       language Language Maybe

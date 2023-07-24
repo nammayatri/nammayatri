@@ -63,7 +63,7 @@ handler =
     :<|> logout
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersionText = withFlowHandlerAPI . DRegistration.auth req mbBundleVersionText
+auth req mbBundleVersionText = withFlowHandlerAPI . DRegistration.auth False req mbBundleVersionText
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId

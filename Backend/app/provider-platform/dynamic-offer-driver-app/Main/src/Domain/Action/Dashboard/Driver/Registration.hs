@@ -20,6 +20,8 @@ module Domain.Action.Dashboard.Driver.Registration
     registerRC,
     generateAadhaarOtp,
     verifyAadhaarOtp,
+    auth,
+    verify,
   )
 where
 
@@ -28,14 +30,16 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Queries.DriverOnboarding.Image as QImage
@@ -126,6 +130,34 @@ verifyAadhaarOtp merchantShortId driverId_ req = do
           shareCode = req.shareCode
         }
   pure (convertSubmitOtp res)
+
+auth :: ShortId DM.Merchant -> Common.AuthReq -> Flow Common.AuthRes
+auth merchantShortId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  res <-
+    DReg.auth
+      True
+      DReg.AuthReq
+        { mobileNumber = req.mobileNumber,
+          mobileCountryCode = req.mobileCountryCode,
+          merchantId = merchant.id.getId
+        }
+      Nothing
+      Nothing
+  pure $ Common.AuthRes {authId = res.authId.getId, attempts = res.attempts}
+
+verify :: Text -> Common.AuthVerifyReq -> Flow APISuccess
+verify authId req = do
+  let regId = Id authId :: Id SR.RegistrationToken
+  _ <-
+    DReg.verify
+      regId
+      DReg.AuthVerifyReq
+        { otp = req.otp,
+          deviceToken = req.deviceToken,
+          whatsappNotificationEnroll = Nothing
+        }
+  pure Success
 
 convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes
 convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..}
