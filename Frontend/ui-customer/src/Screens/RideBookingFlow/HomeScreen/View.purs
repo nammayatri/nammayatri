@@ -284,7 +284,6 @@ view push state =
             , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
-            , rideCompletedCardView state push
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , rideTrackingView push state
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
@@ -298,7 +297,6 @@ view push state =
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
             , if state.props.currentStage == DistanceOutsideLimits then (distanceOutsideLimitsView push state) else emptyTextView state
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
-            , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
@@ -308,6 +306,8 @@ view push state =
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
+            , rideCompletedCardView state push
+            , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             ]
         ]
     ]
@@ -1227,7 +1227,7 @@ topLeftIconView state push =
           , background Color.white900
           , gravity CENTER
           , cornerRadius 24.0
-          , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then GONE else VISIBLE
+          , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain , RideCompleted, RideRating]) then GONE else VISIBLE
           , clickable true
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
           ]
