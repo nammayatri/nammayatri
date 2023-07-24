@@ -291,7 +291,8 @@ function loadConfig() {
   const newScript = document.createElement("script");
   newScript.type = "text/javascript";
   newScript.id = "ny-driver-configuration";
-  newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
+  var config = window.JBridge.loadFileInDUI("v1-configuration.jsa");
+  newScript.innerHTML = config == "" ? window.JBridge.loadFileInDUI("v1-configuration.js") : config;
   headID.appendChild(newScript);
   try {
       const merchantConfig = (
