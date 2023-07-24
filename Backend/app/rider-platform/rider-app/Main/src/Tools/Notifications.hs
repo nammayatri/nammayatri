@@ -582,24 +582,19 @@ notifyOnNewMessage booking message = do
   notifyPerson person.merchantId notificationData
 
 decodeLanguage :: Text -> Maybe Maps.Language -> Text
-decodeLanguage msg language =
+decodeLanguage msg mbLanguage =
   case Map.lookup msg dataMap of
     Just messages -> do
-      let message = getField (Just Maps.ENGLISH) messages ""
-      if isNothing language
-        then message
-        else getField language messages message
+      let language = fromMaybe Maps.ENGLISH mbLanguage
+      getField messages language
     Nothing -> msg
 
-getField :: Maybe Maps.Language -> DChatSuggestions.Messages -> Text -> Text
-getField language DChatSuggestions.Messages {..} message = case language of
-  Just lan ->
-    case lan of
-      Maps.ENGLISH -> en_us
-      Maps.HINDI -> hi_in
-      Maps.KANNADA -> kn_in
-      Maps.TAMIL -> ta_in
-      Maps.MALAYALAM -> ml_in
-      Maps.BENGALI -> bn_in
-      Maps.FRENCH -> message
-  Nothing -> message
+getField :: DChatSuggestions.Messages -> Maps.Language -> Text
+getField DChatSuggestions.Messages {..} = \case
+  Maps.ENGLISH -> en_us
+  Maps.HINDI -> hi_in
+  Maps.KANNADA -> kn_in
+  Maps.TAMIL -> ta_in
+  Maps.MALAYALAM -> ml_in
+  Maps.BENGALI -> bn_in
+  Maps.FRENCH -> en_us -- default english
