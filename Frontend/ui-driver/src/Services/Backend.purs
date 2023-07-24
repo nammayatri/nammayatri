@@ -753,6 +753,21 @@ removeAlternateNumber payload = do
    where
         unwrapResponse (x) = x
 
+----------------------------------customerFeedBack-------------------------------------------
+rideFeedbackBT :: FeedbackReq -> FlowBT String FeedbackRes
+rideFeedbackBT payload = do
+    headers <- getHeaders' ""
+    withAPIResultBT (EP.customerFeedback "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+      errorHandler errorPayload = do
+            BackT $ pure GoBack
+
+makeFeedBackReq :: Int -> String -> String -> FeedbackReq
+makeFeedBackReq rating rideId feedback = FeedbackReq
+    {   "rating" : rating
+    ,   "rideId" : rideId
+    ,   "feedbackDetails" : feedback
+    }
 
 --------------------------------------------- Driver Report Issue ---------------------------------------------
 getCategoriesBT :: String -> FlowBT String GetCategoriesRes

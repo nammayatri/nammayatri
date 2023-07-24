@@ -500,5 +500,15 @@ const bengaliStrings = {
 	OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP প্রবেশের সময়সীমা পৌঁছে গেছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
 	TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "আপনি অনেকগুলি অবৈধ প্রচেষ্টা করেছেন, অনুগ্রহ করে পরে আবার চেষ্টা করুন৷",
 	INVALID_REFERRAL_NUMBER : "অবৈধ রেফারেল নম্বর",
-	SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন"
-	}
+	SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
+	SAVED_DUE_TO_NO_COMMISSION : "জিরো কমিশনের কারণে সংরক্ষিত",
+	RIDE_DETAILS : "রাইডের বিবরণ",
+	RIDE_COMPLETED : "রাইড সম্পূর্ণ হয়েছে",
+	FARE_COLLECTED : "ভাড়া সংগৃহীত",
+	HELP_US_WITH_YOUR_FEEDBACK : "আপনার প্রতিক্রিয়া আমাদের সাহায্য করুন",
+	RATE_YOUR_RIDE_WITH : "এর সাথে আপনার রাইডকে রেট দিন ",
+	TOTAL_AMOUNT : "সর্বমোট পরিমাণ",
+	HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "আমরা আশা করি আপনার রাইড ঝামেলা মুক্ত ছিল",
+	SUBMIT_FEEDBACK : "প্রতিক্রিয়া জমা দিন",
+	METRO_RIDE: "মেট্রো রাইড"
+ }

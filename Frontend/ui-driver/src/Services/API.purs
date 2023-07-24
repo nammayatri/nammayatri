@@ -482,7 +482,8 @@ newtype RidesInfo = RidesInfo
       toLocation :: LocationInfo,
       estimatedDistance :: Int,
       exoPhone :: String,
-      specialLocationTag :: Maybe String
+      specialLocationTag :: Maybe String,
+      customerExtraFee :: Maybe Int
   }
 
 newtype LocationInfo = LocationInfo
@@ -1376,6 +1377,35 @@ derive instance genericRemoveAlternateNumberRequest :: Generic RemoveAlternateNu
 instance decodeRemoveAlternateNumberRequest :: Decode RemoveAlternateNumberRequest where decode = defaultDecode
 instance standardEncodeRemoveAlternateNumberRequest :: StandardEncode RemoveAlternateNumberRequest where standardEncode (RemoveAlternateNumberRequest token) = standardEncode token
 instance encodeRemoveAlternateNumberRequest :: Encode RemoveAlternateNumberRequest where encode = defaultEncode
+
+newtype FeedbackReq = FeedbackReq
+  { rating :: Int
+  , rideId :: String
+  , feedbackDetails :: String
+  }
+
+newtype FeedbackRes = FeedbackRes
+  {
+    result :: String
+  }
+
+instance makeFeedBackReq :: RestEndpoint FeedbackReq FeedbackRes where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.customerFeedback "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericFeedbackReq :: Generic FeedbackReq _
+instance standardEncodeFeedbackReq :: StandardEncode FeedbackReq where standardEncode (FeedbackReq body) = standardEncode body
+instance showFeedbackReq :: Show FeedbackReq where show = genericShow
+instance decodeFeedbackReq :: Decode FeedbackReq where decode = defaultDecode
+instance encodeFeedbackReq  :: Encode FeedbackReq where encode = defaultEncode
+
+derive instance genericFeedbackRes :: Generic FeedbackRes _
+derive instance newtypeFeedbackRes :: Newtype FeedbackRes _
+instance standardEncodeFeedbackRes :: StandardEncode FeedbackRes where standardEncode (FeedbackRes body) = standardEncode body
+instance showFeedbackRes :: Show FeedbackRes where show = genericShow
+instance decodeFeedbackRes :: Decode FeedbackRes where decode = defaultDecode
+instance encodeFeedbackRes  :: Encode FeedbackRes where encode = defaultEncode
 
 --------------------------------------------------- getCategories ----------------------------------------------------
 data GetCategoriesReq = GetCategoriesReq String

@@ -501,5 +501,16 @@ const hindiStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP डालने की सीमा समाप्त हो गई है, कृपया बाद में पुनः प्रयास करें",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "आपने बहुत से अमान्य प्रयास किए हैं, कृपया बाद में पुनः प्रयास करें",
   INVALID_REFERRAL_NUMBER : "अमान्य रेफ़रल नंबर",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "कुछ तकनीकी समस्या हुई है, कृपया बाद में दोबारा प्रयास करें"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "कुछ तकनीकी समस्या हुई है, कृपया बाद में दोबारा प्रयास करें",
+  SAVED_DUE_TO_NO_COMMISSION : "जीरो कमीशन के कारण बचत",
+  RIDE_DETAILS : "सवारी विवरण",
+  RIDE_COMPLETED :"सवारी पूरी हुई",
+  FARE_COLLECTED : "एकत्र किया गया किराया",
+  HELP_US_WITH_YOUR_FEEDBACK : "अपने फीडबैक से हमारी सहायता करें",
+  RATE_YOUR_RIDE_WITH :" के साथ अपनी राइड को रेट करें",
+  HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "आशा है कि आपकी सवारी परेशानी मुक्त थी",
+  SUBMIT_FEEDBACK : "प्रतिपुष्टि दें",
+  TOTAL_AMOUNT : "कुल राशि",
+  METRO_RIDE : "मेट्रो की सवारी"
+
 }

@@ -504,4 +504,13 @@ const mlStrings = {
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "നിങ്ങൾ വളരെയധികം അസാധുവായ ശ്രമങ്ങൾ നടത്തി, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
   INVALID_REFERRAL_NUMBER : "അസാധുവായ റഫറൽ നമ്പർ",
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ചില സാങ്കേതിക പ്രശ്നം സംഭവിച്ചു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
+  SAVED_DUE_TO_NO_COMMISSION : "സീറോ കമ്മീഷൻ കാരണം സംരക്ഷിച്ചു",
+  RIDE_DETAILS : "റൈഡ് വിശദാംശങ്ങൾ", 
+  RIDE_COMPLETED : "റൈഡ് പൂർത്തിയായി",
+  FARE_COLLECTED : "യാത്രക്കൂലി ശേഖരിച്ചു",
+  HELP_US_WITH_YOUR_FEEDBACK : "നിങ്ങളുടെ ഫീഡ്‌ബാക്കിൽ ഞങ്ങളെ സഹായിക്കൂ",
+  RATE_YOUR_RIDE_WITH : "നിങ്ങളുടെ യാത്ര റേറ്റ് ചെയ്യുക ",
+  TOTAL_AMOUNT : "മൊത്തം തുക",
+  HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "നിങ്ങളുടെ യാത്ര തടസ്സരഹിതമായിരുന്നുവെന്ന് ഞങ്ങൾ പ്രതീക്ഷിക്കുന്നു",
+  SUBMIT_FEEDBACK : "ഫീഡ്ബാക്ക് സമർപ്പിക്കുക"
 }

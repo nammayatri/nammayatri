@@ -499,5 +499,14 @@ const englishStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP entering limit exhausted, please try again later",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "Too many invalid attempts, please try again later",
   INVALID_REFERRAL_NUMBER : "Invalid Referral Number",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "Something went wrong, please try again later"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "Something went wrong, please try again later",
+  SAVED_DUE_TO_NO_COMMISSION : "Saved due to \n Zero Commission",
+  RIDE_DETAILS : "Ride Details",
+  RIDE_COMPLETED : "Ride Completed",
+  FARE_COLLECTED : "Fare Collected",
+  HELP_US_WITH_YOUR_FEEDBACK : "Help us with your feedback",
+  RATE_YOUR_RIDE_WITH : "Rate your ride with ",
+  TOTAL_AMOUNT : "Total Amount",
+  HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "We hope your ride was hassle free",
+  SUBMIT_FEEDBACK : "Submit Feedback"
 }

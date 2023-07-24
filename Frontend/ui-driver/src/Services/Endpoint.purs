@@ -159,3 +159,6 @@ leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/week
 
 currentDateAndTime :: String -> String
 currentDateAndTime _ = "https://tools.aimylogic.com/api/now"
+
+customerFeedback :: String -> String
+customerFeedback dummy = (getBaseUrl "") <> "/rating"

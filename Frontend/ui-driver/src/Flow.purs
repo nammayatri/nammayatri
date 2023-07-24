@@ -1363,8 +1363,19 @@ homeScreenFlow = do
             },
             rideStartTime = convertUTCtoISC (fromMaybe " " response.tripStartTime) "h:mm a",
             rideEndTime = convertUTCtoISC (fromMaybe " " response.tripEndTime) "h:mm a",
-            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/YYYY  hh:mm a",
-            totalAmount = fromMaybe response.estimatedBaseFare response.computedFare}})
+            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/yyyy  hh:mm a",
+            totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
+            extraFare = response.customerExtraFee,
+            rideId = response.id}})
+          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
+            tripId = response.shortRideId,
+            date = (convertUTCtoISC (response.createdAt) "D MMM"),
+            time = (convertUTCtoISC (response.createdAt )"h:mm A"),
+            source = (decodeAddress response.fromLocation false),
+            destination = (decodeAddress response.toLocation false),
+            totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
+            distance = show ((toNumber (response.estimatedDistance))/1000.0)
+            }})
       void $ lift $ lift $ toggleLoader false
       _ <- updateStage $ HomeScreenStage RideCompleted
       rideDetailFlow
@@ -1481,10 +1492,13 @@ rideDetailFlow = do
     GO_TO_HOME_FROM_RIDE_DETAIL -> do
       _ <- updateStage $ HomeScreenStage HomeScreen
       currentRideFlow
-    SHOW_ROUTE_IN_RIDE_DETAIL -> do
-      void $ lift $ lift $ toggleLoader false
-      modifyScreenState $ RideDetailScreenStateType (\rideDetail -> rideDetail { props { cashCollectedButton = true } } )
-      rideDetailFlow
+    SHOW_CURRENT_RIDE_DETAILS updatedState -> do 
+      tripDetailsScreenFlow
+    SUBMIT_RATING state -> do 
+      response <- Remote.rideFeedbackBT $ Remote.makeFeedBackReq state.props.rating state.data.rideId state.props.feedback 
+      _ <- updateStage $ HomeScreenStage HomeScreen
+      homeScreenFlow
+
 
 editBankDetailsFlow :: FlowBT String Unit
 editBankDetailsFlow = do

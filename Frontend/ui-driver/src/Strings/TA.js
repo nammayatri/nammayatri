@@ -496,5 +496,14 @@ const tamilStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP உள்ளீட்டு வரம்பை அடைந்து விட்டது, பிறகு முயற்சிக்கவும்",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "நீங்கள் பல தவறான முயற்சிகளைச் செய்துள்ளீர்கள், பிறகு முயற்சிக்கவும்",
   INVALID_REFERRAL_NUMBER : "தவறான பரிந்துரை எண்",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "சில தொழில்நுட்பச் சிக்கல் ஏற்பட்டுள்ளது, பிறகு முயற்சிக்கவும்"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "சில தொழில்நுட்பச் சிக்கல் ஏற்பட்டுள்ளது, பிறகு முயற்சிக்கவும்",
+  SAVED_DUE_TO_NO_COMMISSION : "ஜீரோ கமிஷன் காரணமாக சேமிக்கப்பட்டது",
+  RIDE_DETAILS : "சவாரி விவரங்கள்",
+  RIDE_COMPLETED : "சவாரி முடிந்தது",
+  FARE_COLLECTED : "கட்டணம் வசூலிக்கப்பட்டது",
+  HELP_US_WITH_YOUR_FEEDBACK : "உங்கள் கருத்தை தெரிவிக்க எங்களுக்கு உதவுங்கள்",
+  RATE_YOUR_RIDE_WITH : "உங்கள் பயணத்தை மதிப்பிடவும்",
+  TOTAL_AMOUNT : "மொத்த தொகை",
+  HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "உங்கள் சவாரி தொந்தரவு இல்லாமல் இருந்தது என்று நம்புகிறோம்",
+  SUBMIT_FEEDBACK : "கருத்தைச் சமர்ப்பிக்கவும்"
 }

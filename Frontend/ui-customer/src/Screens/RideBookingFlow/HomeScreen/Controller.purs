@@ -888,7 +888,6 @@ eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick))
   _ <- pure $ firebaseLogEvent "ny_user_ride_give_feedback"
   updateAndExit state $ SubmitRating state
 
-eval (RatingCardAC (RatingCard.FareBreakUpAC FareBreakUp.ShowInvoice)) state = exit $ GoToInvoice state
 
 eval (RatingCardAC (RatingCard.SkipButtonAC PrimaryButtonController.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"

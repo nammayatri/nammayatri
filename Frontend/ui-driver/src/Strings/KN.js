@@ -497,5 +497,14 @@ const kannadaStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP ಇನ್‌ಪುಟ್ ಮಿತಿಯನ್ನು ತಲುಪಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "ನೀವು ಹಲವಾರು ಅಮಾನ್ಯ ಪ್ರಯತ್ನಗಳನ್ನು ಮಾಡಿದ್ದೀರಿ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   INVALID_REFERRAL_NUMBER : "ಅಮಾನ್ಯ ರೆಫರಲ್ ಸಂಖ್ಯೆ",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  SAVED_DUE_TO_NO_COMMISSION : "ಶೂನ್ಯ ಆಯೋಗದ ಕಾರಣ ಉಳಿಸಲಾಗಿದೆ",
+  RIDE_DETAILS : "ಸವಾರಿಯ ವಿವರಗಳು",
+  RIDE_COMPLETED : "ಸವಾರಿ ಪೂರ್ಣಗೊಂಡಿದೆ",
+  FARE_COLLECTED : "ಶುಲ್ಕ ಸಂಗ್ರಹಿಸಲಾಗಿದೆ",
+  HELP_US_WITH_YOUR_FEEDBACK : "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯೊಂದಿಗೆ ನಮಗೆ ಸಹಾಯ ಮಾಡಿ",
+  RATE_YOUR_RIDE_WITH : " ಜೊತೆಗೆ ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ರೇಟ್ ಮಾಡಿ",
+  SUBMIT_FEEDBACK : "ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಸಲ್ಲಿಸಿ",
+  TOTAL_AMOUNT : "ಒಟ್ಟು ಮೊತ್ತ",
+  HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "ನಿಮ್ಮ ಸವಾರಿ ಜಗಳ ಮುಕ್ತವಾಗಿದೆ ಎಂದು ಭಾವಿಸುತ್ತೇವೆ"
 }

@@ -15,9 +15,7 @@
 
 module Components.RatingCard.Controller where
 
-import Screens.Types(Stage, ZoneType(..))
 import Components.PrimaryButton as PrimaryButton
-import Components.FareBreakUp as FareBreakUp
 import Components.SourceToDestination as SourceToDestination
 import Data.Maybe
 
@@ -25,10 +23,13 @@ data Action = NoAction
             | BackPressed
             | PrimaryButtonAC PrimaryButton.Action
             | Rating Int
-            | FareBreakUpAC FareBreakUp.Action
             | SourceToDestinationAC SourceToDestination.Action
             | SkipButtonAC PrimaryButton.Action
             | FeedbackChanged String
+            | OnClose
+            | OnBackgroundClick
+
+
 
 type RatingCardState = 
   { data :: RatingCardData
@@ -55,3 +56,27 @@ type RatingCardData =
   , distanceDifference :: Int
   , feedback :: String
   }
+
+config :: RatingCardState
+config = {
+  ratingCardData :{
+      rideId : ""
+    , rating : 0
+    , driverName : ""
+    , finalAmount : 0
+    , rideStartTime : ""
+    , rideEndTime : ""
+    , source : ""
+    , destination : ""
+    , rideStartDate : ""
+    , vehicleNumber : ""
+    , status : ""
+    , shortRideId : ""
+    , bookingId : ""
+    , rideEndTimeUTC : ""
+    , dateDDMMYY : ""
+    , offeredFare : 0
+    , distanceDifference : 0
+    , feedback : ""
+  }
+}

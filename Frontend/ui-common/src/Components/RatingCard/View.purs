@@ -16,7 +16,6 @@
 module Components.RatingCard.View where
 
 import Animation (fadeIn)
-import Components.FareBreakUp as FareBreakUp
 import Components.PrimaryButton as PrimaryButton
 import Components.RatingCard.Controller (Action(..), RatingCardState)
 import Components.SourceToDestination as SourceToDestination
@@ -28,7 +27,7 @@ import Engineering.Helpers.Commons (screenWidth, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
-import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard)
@@ -37,9 +36,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Screens.Types(Stage(..), ZoneType(..))
 import Common.Types.App
-
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -89,6 +86,7 @@ horizontalLine state =
   , width MATCH_PARENT
   , background Color.grey900
   , margin $ MarginBottom 24
+  , visibility GONE
   ][]
 
 --------------------------------------------------- emptyLayout ---------------------------------------------------
@@ -129,8 +127,8 @@ editTextView state push =
       , hint (getString HELP_US_WITH_YOUR_FEEDBACK)
       , weight 1.0
       , pattern "[^\n]*,255"
-      , singleLine false
-      , onChange push FeedbackChanged
+      , singleLine false 
+      , onChange push FeedbackChanged  
       ]
 
   ]
@@ -147,8 +145,8 @@ rideRatingButtonConfig state = let
         , textSize = FontSize.a_16
         , width = MATCH_PARENT
         }
-      , isClickable = if state.data.rating < 1 then false else true
-      , alpha = if state.data.rating < 1 then 0.4 else 1.0
+      , isClickable = if state.ratingCardData.rating < 1 then false else true 
+      , alpha = if state.ratingCardData.rating < 1 then 0.4 else 1.0
       , margin = (Margin 0 0 0 0)
       , height = (V 48)
       , gravity = CENTER_VERTICAL
@@ -180,9 +178,29 @@ starRatingView state push =
         , maxLines 2
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
-        , lineHeight "20"
+        , orientation HORIZONTAL
         , margin (MarginBottom 16)
-        ]
+        ][
+          textView
+            [ height WRAP_CONTENT
+            , width $ V (screenWidth unit - 64)
+            , textSize FontSize.a_16
+            , text (getText state)
+            , color Color.black800
+            , maxLines 2
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , gravity CENTER_HORIZONTAL
+            , lineHeight "20"
+            
+            ]
+          
+          , imageView
+              [ height $ V 16
+              , width $ V 16
+              , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+              , onClick push  (const OnClose)
+              ]
+           ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -191,12 +209,12 @@ starRatingView state push =
                           linearLayout
                           [ height WRAP_CONTENT
                           , width WRAP_CONTENT
-                          , margin (MarginHorizontal 5 5)
+                          , margin (MarginHorizontal 6 6)
                           , onClick push $ const (Rating item)
                           ][imageView
-                              [ height $ V 30
-                              , width $ V 30
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              [ height $ V 40
+                              , width $ V 40
+                              , imageWithFallback if item <= state.ratingCardData.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]

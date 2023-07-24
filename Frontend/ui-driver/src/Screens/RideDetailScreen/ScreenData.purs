@@ -17,6 +17,7 @@ module Screens.RideDetailScreen.ScreenData where
 
 
 import Screens.Types (RideDetailScreenState)
+import Data.Maybe
 
 initData :: RideDetailScreenState
 initData = {
@@ -35,7 +36,14 @@ initData = {
     rideEndTime : "",
     bookingDateAndTime : "",
     totalAmount : 0,
-    customerName : ""
+    customerName : "",
+    extraFare : Nothing,
+    rideId : ""
   },
-  props: { cashCollectedButton : false }
+  props: { cashCollectedButton : false,
+           rateCardView : false,
+           rating : 0,
+           feedback : "",
+           supportPopUpView : false
+         }
 }
