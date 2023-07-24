@@ -404,8 +404,7 @@ newtype  OrganizationInfo = OrganizationInfo
         contactNumber :: String,
         status        :: String,
         enabled       :: Boolean,
-        id            :: String,
-        aadhaarVerificationRequired :: Boolean
+        id            :: String
     }
 
 newtype Vehicle = Vehicle
