@@ -425,7 +425,7 @@ allContactsView state push =
              ]
           , linearLayout
             [ height  WRAP_CONTENT
-            , width  WRAP_CONTENT
+            , width $ V 40
             , onClick push $ const $ CallContactPopUp item
             ][  textView
                 [ text $ (getString CALL)
@@ -435,7 +435,7 @@ allContactsView state push =
                 , lineHeight "18"
                 , fontStyle $ FontStyle.regular LanguageStyle
                 , margin $ MarginLeft 5
-                , padding $ Padding 20 10 20 10
+                , padding $ Padding 10 10 20 10
                 ]
               ]
           ]
