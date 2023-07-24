@@ -39,7 +39,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime,stringToVersion, convertUTCtoISC, getCurrentUTC)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange)
+import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange, decodeError)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Language.Strings (getString)
@@ -494,13 +494,13 @@ enterMobileNumberScreenFlow = do
               Left err -> do
                 _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EnterOTPNumberEditText") "" )
                 let errResp = err.response
-                    codeMessage = decodeErrorCode errResp.errorMessage
+                    codeMessage = decodeError errResp.errorMessage "errorCode"
                 if ( err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     _ <- pure $ toast (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{data{otp=""}, props{enterOTP = false, wrongOTP = false}})
                 else if ( err.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false}, data{otp=""}})
-                    pure $ toast (getString WRONG_OTP)
+                    let attemptsLeft = decodeError errResp.errorMessage "errorPayload"
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false, attemptLeft = attemptsLeft}, data{otp=""}})
                 else if ( err.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
                     pure $ toast (getString TOO_MANY_LOGIN_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false, wrongOTP = false}, data{otp=""}})
@@ -811,7 +811,7 @@ homeScreenFlow = do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
                 homeScreenFlow
               Left err  -> do
-                if not (err.code == 400 && (decodeErrorCode err.response.errorMessage) == "QUOTE_EXPIRED") then pure $ toast (getString ERROR_OCCURED_TRY_AGAIN) else pure unit
+                if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then pure $ toast (getString ERROR_OCCURED_TRY_AGAIN) else pure unit
                 _ <- setValueToLocalStore AUTO_SELECTING "false"
                 _ <- pure $ updateLocalStage QuoteList
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = QuoteList,selectedQuote = Nothing, expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)}, data {quoteListModelState = []}})
@@ -1539,7 +1539,7 @@ myProfileScreenFlow = do
           myProfileScreenFlow
         Left err -> do
           let errResponse = err.response
-          let codeMessage = decodeErrorCode errResponse.errorMessage
+          let codeMessage = decodeError errResponse.errorMessage "errorCode"
           case codeMessage of
             "PERSON_EMAIL_ALREADY_EXISTS" -> do
               _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EmailEditText") "" )
@@ -1795,7 +1795,7 @@ referralScreenFlow = do
           setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{isReferred = true} })
         Left err -> do
-          if ((err.code == 500 && (decodeErrorCode err.response.errorMessage) == "BPP_INTERNAL_API_ERROR")) then
+          if ((err.code == 500 && (decodeError err.response.errorMessage "errorCode") == "BPP_INTERNAL_API_ERROR")) then
             modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { isInvalidCode = true })
           else do
             _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
@@ -1955,7 +1955,7 @@ updateFlowStatus eventType = do
         Right _  -> homeScreenFlow
         Left err -> do
           let errResp = err.response
-              codeMessage = decodeErrorCode errResp.errorMessage
+              codeMessage = decodeError errResp.errorMessage "errorCode"
           when ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") $ do
             void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
             currentRideFlow false
@@ -1986,7 +1986,7 @@ cancelEstimate bookingId = do
           homeScreenFlow
     Left err -> do
       let errResp = err.response
-          codeMessage = decodeErrorCode errResp.errorMessage
+          codeMessage = decodeError errResp.errorMessage "errorCode"
       if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
         void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
         _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_left"

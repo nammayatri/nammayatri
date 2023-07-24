@@ -185,7 +185,8 @@ type EnterMobileNumberScreenStateProps = {
   letterSpacing :: LetterSpacing,
   mNumberEdtFocused :: Boolean,
   otpEdtFocused :: Boolean,
-  editTextVal :: String
+  editTextVal :: String,
+  attemptLeft :: String
 }
 
 type EnterMobileNumberScreenStateData = {

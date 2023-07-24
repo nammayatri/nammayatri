@@ -530,5 +530,7 @@ const kannadaStrings = {
   "WE_WILL_GIVE_YOU_CALLBACK" : "ನಾವು ನಿಮಗೆ 24 ಗಂಟೆಗಳ ಒಳಗೆ ಕಾಲ್‌ಬ್ಯಾಕ್ ನೀಡುತ್ತೇವೆ",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರದಿ ಮಾಡಲಾಗಿದೆ",
   "OTP_RESENT_SUCCESSFULLY" : "OTP ಯಶಸ್ವಿಯಾಗಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "ವಿವರಣೆಯು 10 ಕ್ಕಿಂತ ಹೆಚ್ಚು ವರ್ಣಮಾಲೆಯ ಅಕ್ಷರಗಳನ್ನು ಹೊಂದಿರಬೇಕು"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "ವಿವರಣೆಯು 10 ಕ್ಕಿಂತ ಹೆಚ್ಚು ವರ್ಣಮಾಲೆಯ ಅಕ್ಷರಗಳನ್ನು ಹೊಂದಿರಬೇಕು",
+  "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "ತಪ್ಪಾದ OTP, ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ.",
+  "N_MORE_ATTEMPTS_LEFT" : " ಪ್ರಯತ್ನಗಳು ಉಳಿದಿವೆ"
 }

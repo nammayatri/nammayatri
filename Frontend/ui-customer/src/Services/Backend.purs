@@ -23,7 +23,7 @@ import Common.Types.App (Version(..), LazyCheck(..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Foreign.Generic (encode)
-import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, getPreviousVersion)
+import Helpers.Utils (decodeError, toString, getTime, getPreviousVersion)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
 import Juspay.OTP.Reader as Readers
 import Log (printLog)
@@ -103,9 +103,9 @@ withAPIResult url f flow = do
             _ <- pure $ printLog "Err Code" (err.code)
             _ <- pure $ printLog "Err" err
             let errResp = err.response
-            let codeMessage = decodeErrorCode errResp.errorMessage
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeErrorMessage errResp.errorMessage
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
 
             _ <- (trackApiCallFlow Tracker.Network Tracker.Exception DETAILS start end (err.code) (codeMessage) url "" "") $> errResp
             _ <- trackExceptionFlow Tracker.API_CALL Tracker.Sdk DETAILS url (codeMessage)
@@ -133,9 +133,9 @@ withAPIResultBT url f errorHandler flow = do
             _ <- pure $ printLog "Err" err
 
             let errResp = err.response
-            let codeMessage = decodeErrorCode errResp.errorMessage
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeErrorMessage errResp.errorMessage
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
             _ <- pure $ printLog "message" userMessage
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
@@ -163,9 +163,9 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
             _ <- pure $ printLog "Err Code" (err.code)
             _ <- pure $ printLog "Err" err
             let errResp = err.response
-            let codeMessage = decodeErrorCode errResp.errorMessage
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeErrorMessage errResp.errorMessage
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
 
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
@@ -185,7 +185,7 @@ triggerOTPBT payload = do
     where
     errorHandler errorPayload = do
         let errResp = errorPayload.response
-        let codeMessage = decodeErrorCode errResp.errorMessage
+        let codeMessage = decodeError errResp.errorMessage "errorCode"
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
             pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
             else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
@@ -210,7 +210,7 @@ resendOTPBT token = do
     where
     errorHandler  errorPayload  = do
         let errResp = errorPayload.response
-        let codeMessage = decodeErrorCode errResp.errorMessage
+        let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "AUTH_BLOCKED") then
             pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
             else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
@@ -226,7 +226,7 @@ verifyTokenBT payload token = do
     where
     errorHandler errorPayload = do
         let errResp = errorPayload.response
-        let codeMessage = decodeErrorCode errResp.errorMessage
+        let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
             pure $ toast (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do

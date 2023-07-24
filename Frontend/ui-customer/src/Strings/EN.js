@@ -536,5 +536,7 @@ const englishStrings = {
   "WE_WILL_GIVE_YOU_CALLBACK" : "We will give you a callback within 24 hrs",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "Your issue has been reported successfully",
   "OTP_RESENT_SUCCESSFULLY" : "OTP resent successfully",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "Description should be more than 10 alphabetic characters"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "Description should be more than 10 alphabetic characters",
+  "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "Incorrect OTP, please try again.",
+  "N_MORE_ATTEMPTS_LEFT" : " more attempts left"
 }

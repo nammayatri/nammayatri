@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (not, (<>))
+import Prelude (not, (<>), (==))
 import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -127,7 +127,7 @@ otpEditTextConfig state = let
       , type = "number"
       , height = V 54
       , errorLabel {
-            text = (getString WRONG_OTP),
+            text = if state.props.attemptLeft == "" then getString WRONG_OTP else getString INCORRECT_OTP_PLEASE_TRY_AGAIN <> state.props.attemptLeft <> getString N_MORE_ATTEMPTS_LEFT,
             visibility = VISIBLE,
             textSize = FontSize.a_12,
             fontStyle = FontStyle.bold LanguageStyle,

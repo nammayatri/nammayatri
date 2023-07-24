@@ -532,5 +532,7 @@ const bengaliStrings = {
   "WE_WILL_GIVE_YOU_CALLBACK" : "আমরা আপনাকে 24 ঘন্টার মধ্যে একটি কলব্যাক দেব",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "আপনার সমস্যা সফলভাবে রিপোর্ট করা হয়েছে",
   "OTP_RESENT_SUCCESSFULLY" : "OTP সফলভাবে পুনরায় পাঠানো হয়েছে",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "বর্ণনা 10টির বেশি বর্ণমালার অক্ষর হওয়া উচিত"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "বর্ণনা 10টির বেশি বর্ণমালার অক্ষর হওয়া উচিত",
+  "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "ভুল OTP, আবার চেষ্টা করুন.",
+  "N_MORE_ATTEMPTS_LEFT" : " আরো প্রচেষ্টা বাকি"
 }
