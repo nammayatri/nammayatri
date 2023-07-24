@@ -11,6 +11,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_app"
+      , connectionPoolCount = +25
       }
 
 let esqDBReplicaCfg =
@@ -20,6 +21,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
+      , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
 let rcfg =
