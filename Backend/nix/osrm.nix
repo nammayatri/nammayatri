@@ -3,10 +3,11 @@ _:
 let
   # We cannot use southern-zone-latest here, because the sha256 will change over
   # time.
-  openStreetDataFileName = "southern-zone-230401";
+  # NOTE: This file is not permanent, find the available one at https://download.geofabrik.de/asia/india/
+  openStreetDataFileName = "southern-zone-230720";
   openStreetDataFile = builtins.fetchurl {
     url = "http://download.geofabrik.de/asia/india/${openStreetDataFileName}.osm.pbf";
-    sha256 = "sha256:1c1vmcp5b7wfayhxh91b9641d3x7smfms51v9kl7vkk412zhpg5m";
+    sha256 = "sha256:0ig54rlfllgg81a5smmvxyr41h3dvzqx6c3d0ky3v3q11z362gj9";
   };
 in
 {
