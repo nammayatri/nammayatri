@@ -2255,13 +2255,18 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback) {
         try {
             activity.runOnUiThread(() -> {
-                SupportMapFragment mapFragment = SupportMapFragment.newInstance();
-                FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
-                FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
-                fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
-                fragmentTransaction.commitAllowingStateLoss();
-                if (mapFragment != null) {
-                    getMapAsync(mapFragment, isEnableCurrentLocation, mapType, callback, pureScriptId, zoom);
+                try {
+                    SupportMapFragment mapFragment = SupportMapFragment.newInstance();
+                    FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
+                    FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
+                    fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
+                    fragmentTransaction.commitAllowingStateLoss();
+                    if (mapFragment != null) {
+                        getMapAsync(mapFragment, isEnableCurrentLocation, mapType, callback, pureScriptId, zoom);
+                    }
+                } catch (Exception e) {
+                    mFirebaseAnalytics.logEvent("Exception_in_showMap",null);
+                    Log.e(LOG_TAG, "Error in showMap " + e);
                 }
             });
         } catch (Exception e) {
@@ -2273,55 +2278,60 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void mapSnapShot(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback) {
         try {
             activity.runOnUiThread(() -> {
-                SupportMapFragment mapFragment = SupportMapFragment.newInstance();
-                FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
-                FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
-                fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
-                fragmentTransaction.commitAllowingStateLoss();
-                mapFragment.getMapAsync(googleMap -> {
-                    CommonJsInterface.this.googleMap = googleMap;
-                    CommonJsInterface.this.googleMap.getUiSettings().setAllGesturesEnabled(false);
-                    CommonJsInterface.this.googleMap.getUiSettings().setRotateGesturesEnabled(false);
-                    googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                    markers = new JSONObject();
-                    markersElement.put(pureScriptId, markers);
-                    CommonJsInterface.this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
-                        @Override
-                        public synchronized void onMapLoaded() {
-                            System.out.println("onMapLoaded");
-                            System.out.println(json);
-                            showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8);
-                            final Handler handler = new Handler();
-                            handler.postDelayed(() -> {
-                                GoogleMap.SnapshotReadyCallback callback2 = new GoogleMap.SnapshotReadyCallback() {
-                                    Bitmap bitmap;
+                try {
+                    SupportMapFragment mapFragment = SupportMapFragment.newInstance();
+                    FragmentManager supportFragmentManager = ((FragmentActivity) activity).getSupportFragmentManager();
+                    FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
+                    fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
+                    fragmentTransaction.commitAllowingStateLoss();
+                    mapFragment.getMapAsync(googleMap -> {
+                        CommonJsInterface.this.googleMap = googleMap;
+                        CommonJsInterface.this.googleMap.getUiSettings().setAllGesturesEnabled(false);
+                        CommonJsInterface.this.googleMap.getUiSettings().setRotateGesturesEnabled(false);
+                        googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+                        markers = new JSONObject();
+                        markersElement.put(pureScriptId, markers);
+                        CommonJsInterface.this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                            @Override
+                            public synchronized void onMapLoaded() {
+                                System.out.println("onMapLoaded");
+                                System.out.println(json);
+                                showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8);
+                                final Handler handler = new Handler();
+                                handler.postDelayed(() -> {
+                                    GoogleMap.SnapshotReadyCallback callback2 = new GoogleMap.SnapshotReadyCallback() {
+                                        Bitmap bitmap;
 
-                                    @Override
-                                    public void onSnapshotReady(Bitmap snapshot) {
-                                        bitmap = snapshot;
-                                        String encImage = "";
-                                        try {
-                                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                                            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
-                                            byte[] b = baos.toByteArray();
-                                            encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
-                                        }
+                                        @Override
+                                        public void onSnapshotReady(Bitmap snapshot) {
+                                            bitmap = snapshot;
+                                            String encImage = "";
+                                            try {
+                                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                                                byte[] b = baos.toByteArray();
+                                                encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+                                            } catch (Exception e) {
+                                                e.printStackTrace();
+                                            }
 
-                                        if (dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null) {
-                                            Log.i("callback encoded image 2", encImage);
-                                            String javascript = String.format("window.callUICallback('%s','%s');", callback, encImage);
-                                            Log.e(LOG_TAG, javascript);
-                                            dynamicUI.addJsToWebView(javascript);
+                                            if (dynamicUI != null && callback != null && juspayServices.getDynamicUI() != null) {
+                                                Log.i("callback encoded image 2", encImage);
+                                                String javascript = String.format("window.callUICallback('%s','%s');", callback, encImage);
+                                                Log.e(LOG_TAG, javascript);
+                                                dynamicUI.addJsToWebView(javascript);
+                                            }
                                         }
-                                    }
-                                };
-                                CommonJsInterface.this.googleMap.snapshot(callback2);
-                            }, 2000);
-                        }
+                                    };
+                                    CommonJsInterface.this.googleMap.snapshot(callback2);
+                                }, 2000);
+                            }
+                        });
                     });
-                });
+                } catch (Exception e) {
+                    mFirebaseAnalytics.logEvent("Exception_in_mapSnapShot",null);
+                    Log.e(LOG_TAG, "Error in mapSnapShot " + e);
+                }
             });
         } catch (Exception e) {
             Log.e("ADD_MARKER", e.toString());

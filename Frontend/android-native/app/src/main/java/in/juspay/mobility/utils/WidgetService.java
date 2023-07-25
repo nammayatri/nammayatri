@@ -104,6 +104,7 @@ public class WidgetService extends Service {
     private float mAngleToRotate;
 
     private void showSilentNotification(Intent intent){
+        if(widgetView == null) return;
         try{
             // Fetch TextView for fare and distanceToPickup
             fareTextView = widgetView.findViewById(R.id.ride_fare);
@@ -196,33 +197,37 @@ public class WidgetService extends Service {
                 mAngleToRotate = 360f;
                 rotationAnimation(floatingWidget, 0.0f, mAngleToRotate);
                 widgetView.post(() -> {
-                    int calculatedWidth = (widgetView.getWidth()/100)*85;
-                    int[] ar = new int[100];
-                    for(int i = ar.length-1, j = 1; i >=0 && j <= ar.length; i--, j++){
-                        ar[i] = (calculatedWidth/100)*j;
-                    }
-
-                    ValueAnimator anim = ValueAnimator.ofInt(ar);
-                    anim.addUpdateListener(valueAnimator -> {
-                        if(progressBar!=null) {
-                            int val = (Integer) valueAnimator.getAnimatedValue();
-                            ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
-                            if (val < calculatedWidth / 3 && val > calculatedWidth / 5) {
-                                progressBar.setIndicatorColor(getColor(R.color.yellow900));
-                            } else if (val < calculatedWidth / 5) {
-                                progressBar.setIndicatorColor(getColor(R.color.red900));
-                            } else {
-                                progressBar.setIndicatorColor(getColor(R.color.green900));
-                            }
-                            layoutParams.width = val;
-                            progressBar.setLayoutParams(layoutParams);
-                        }else{
-                            anim.removeAllUpdateListeners();
-                            anim.end();
+                    try {
+                        int calculatedWidth = (widgetView.getWidth()/100)*85;
+                        int[] ar = new int[100];
+                        for(int i = ar.length-1, j = 1; i >=0 && j <= ar.length; i--, j++){
+                            ar[i] = (calculatedWidth/100)*j;
                         }
-                    });
-                    anim.setDuration((calculatedTime+1)*1000);
-                    anim.start();
+                        ValueAnimator anim = ValueAnimator.ofInt(ar);
+                        anim.addUpdateListener(valueAnimator -> {
+                            if(progressBar!=null) {
+                                int val = (Integer) valueAnimator.getAnimatedValue();
+                                ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
+                                if (val < calculatedWidth / 3 && val > calculatedWidth / 5) {
+                                    progressBar.setIndicatorColor(getColor(R.color.yellow900));
+                                } else if (val < calculatedWidth / 5) {
+                                    progressBar.setIndicatorColor(getColor(R.color.red900));
+                                } else {
+                                    progressBar.setIndicatorColor(getColor(R.color.green900));
+                                }
+                                layoutParams.width = val;
+                                progressBar.setLayoutParams(layoutParams);
+                            }else{
+                                anim.removeAllUpdateListeners();
+                                anim.end();
+                            }
+                        });
+                        anim.setDuration((calculatedTime+1)*1000);
+                        anim.start();
+                    } catch (Exception e) {
+                        Log.e("WidgetService", "Error in showSilentNotification " + e);
+                        mFirebaseAnalytics.logEvent("Exception_in_showSilentNotification",null);
+                    }
                 });
 
 
@@ -233,9 +238,9 @@ public class WidgetService extends Service {
 
                 // Adding dismiss button on widget
                 dismissRequest.setOnClickListener(view -> {
-                    silentRideRequest.setVisibility(View.GONE);
-                    progressBar.setVisibility(View.GONE);
-                    dismissRequest.setVisibility(View.GONE);
+                    if(silentRideRequest != null) silentRideRequest.setVisibility(View.GONE);
+                    if(progressBar != null) progressBar.setVisibility(View.GONE);
+                    if(dismissRequest != null) dismissRequest.setVisibility(View.GONE);
                     silentRideRequest = null;
                     progressBar = null;
                     handler.removeCallbacksAndMessages(null);

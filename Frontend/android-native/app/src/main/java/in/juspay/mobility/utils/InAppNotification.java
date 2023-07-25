@@ -168,10 +168,14 @@ public class InAppNotification extends AppCompatActivity {
                 @Override
                 public void onClick(View view) {
                     dismissNotification();
-                    DuiCallback dynamicUII = MainActivity.getInstance().getJuspayServices().getDuiCallback();
-                    if (dynamicUII != null && onTapAction != null) {
-                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", onTapAction);
-                        dynamicUII.addJsToWebView(javascript);
+                    try {
+                        DuiCallback dynamicUII = MainActivity.getInstance().getJuspayServices().getDuiCallback();
+                        if (dynamicUII != null && onTapAction != null) {
+                            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", onTapAction);
+                            dynamicUII.addJsToWebView(javascript);
+                        }
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Error in onClick " + e);
                     }
                 }
             });

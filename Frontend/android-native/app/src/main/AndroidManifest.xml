@@ -126,6 +126,11 @@
             android:exported="false">
         </receiver>
         <receiver
+            android:name=".utils.GPSBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false">
+        </receiver>
+        <receiver
             android:name=".utils.LocationUpdateAlarm"
             android:enabled="true"
             android:exported="false" />

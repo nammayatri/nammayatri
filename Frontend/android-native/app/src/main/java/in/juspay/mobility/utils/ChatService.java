@@ -70,6 +70,7 @@ public class ChatService extends Service {
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
+        this.startForeground(serviceNotificationID, createNotification());
         firestoreInstance = FirebaseFirestore.getInstance();
         firebaseAuth = FirebaseAuth.getInstance();
         merchant = getApplicationContext().getResources().getString(R.string.service);
@@ -81,7 +82,6 @@ public class ChatService extends Service {
         }
         isSessionCreated();
         if (!isChatServiceRunning){
-            this.startForeground(serviceNotificationID, createNotification());
             FirebaseUser user = firebaseAuth.getCurrentUser();
             if(user != null) {
                 startChatService();
