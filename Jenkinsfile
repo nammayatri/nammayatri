@@ -9,15 +9,18 @@ pipeline {
                 when {
                     anyOf {
                         expression { 'x86_64-linux' == env.SYSTEM }
-                        // Enable running macOS builds when on main branch, so
-                        // as to provide Nix cache for people on macOS.
+                        // Enable running macOS / Linux ARM builds when on main
+                        // branch, so as to provide Nix cache for people on
+                        // macOS.
                         branch 'main'
+                        // TODO: remove this
+                        branch 'linux-arm'
                     }
                 }
                 axes {
                     axis {
                         name 'SYSTEM'
-                        values 'x86_64-linux', 'aarch64-darwin', 'x86_64-darwin'
+                        values 'x86_64-linux', 'aarch64-linux', 'aarch64-darwin', 'x86_64-darwin'
                     }
                 }
                 stages {
