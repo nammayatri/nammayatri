@@ -23,7 +23,6 @@ import qualified Domain.Types.Quote as DQuote
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (count)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -74,13 +73,15 @@ getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
       -- customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
       customer <- QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
-      issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      -- issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      issues <- QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
       return $ IssueListRes {list = issueList, summary = summary}
     Nothing -> do
-      issues <- runInReplica $ QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
+      -- issues <- runInReplica $ QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
+      issues <- QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
