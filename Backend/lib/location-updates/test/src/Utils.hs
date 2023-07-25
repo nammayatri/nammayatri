@@ -81,11 +81,19 @@ wrapTests func = do
       -- fetch google configs for using mock-google or real google
       appCfg <- Environment.readConfig "../"
       version <- lookupDeploymentVersion
+
       let appEnv =
             AppEnv
               { httpClientOptions = defaultHttpClientOptions,
                 encTools = appCfg.encTools,
                 snapToRoadSnippetThreshold = appCfg.snapToRoadSnippetThreshold,
+                hedisClusterEnv = hedisEnv,
+                hedisMigrationStage = True,
+                cutOffHedisCluster = True,
+                hedisNonCriticalEnv = hedisEnv,
+                hedisNonCriticalClusterEnv = hedisEnv,
+                enableRedisLatencyLogging = False,
+                enablePrometheusMetricLogging = False,
                 ..
               }
       func appCfg appEnv

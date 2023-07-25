@@ -144,7 +144,7 @@ qcTest' batchSize numPoints groupingList = do
   driverId <- run $ Id <$> generateGUIDText
 
   forM_ groupedPoints $ processPointsGroup ih driverId
-  run $ recalcDistanceBatches ih True driverId
+  run $ recalcDistanceBatches ih InterpolateAlways driverId
 
   totalDistance <- run $ checkTraveledDistance driverId
   assert $ equalsEps 100 (fromIntegral (numPoints - 1) * segmentLength) totalDistance
@@ -156,8 +156,8 @@ processPointsGroup ih driverId pointsGroup = do
   distanceBefore <- run $ checkTraveledDistance driverId
   pointsBefore <- run $ ih.getWaypointsNumber driverId
   let currentLength = fromIntegral $ length pointsGroup :: Integer
-
-  run $ processWaypoints ih driverId False $ NE.fromList pointsGroup
+  -- FIXME InterpolateWhenFullBatch deprecated
+  run $ processWaypoints ih driverId InterpolateWhenFullBatch $ NE.fromList pointsGroup
 
   distanceAfter <- run $ checkTraveledDistance driverId
   pointsAfter <- run $ ih.getWaypointsNumber driverId

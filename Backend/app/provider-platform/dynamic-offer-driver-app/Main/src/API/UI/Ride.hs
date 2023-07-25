@@ -66,8 +66,9 @@ type API =
                     :> QueryParam "status" Ride.RideStatus
                     :> QueryParam "day" Day
                     :> Get '[JSON] DRide.DriverRideListRes
-                    :<|> "current"
-                    :> TokenAuth
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "status"
                     :> Get '[JSON] DRide.DriverRideRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -126,7 +127,7 @@ handler :: FlowServer API
 handler =
   otpRideCreateAndStart
     :<|> ( listDriverRides
-             :<|> getCurrentRideInfo
+             :<|> rideStatus
              :<|> arrivedAtPickup
              :<|> startRide
              :<|> endRide
@@ -175,10 +176,11 @@ cancelRide (personId, _) rideId CancelRideReq {reasonCode, additionalInfo} = wit
   let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq
 
-getCurrentRideInfo ::
+rideStatus ::
   (Id SP.Person, Id Merchant.Merchant) ->
+  Id Ride.Ride ->
   FlowHandler DRide.DriverRideRes
-getCurrentRideInfo (driverId, _) = withFlowHandlerAPI $ DRide.getCurrentRideInfo driverId
+rideStatus (driverId, _) rideId = withFlowHandlerAPI $ DRide.rideStatus driverId rideId
 
 listDriverRides ::
   (Id SP.Person, Id Merchant.Merchant) ->

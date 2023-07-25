@@ -221,7 +221,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                fareParametersId = Just newFareParams.id,
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = Just pickupDropOutsideOfThreshold,
-               numberOfDeviation = getDeviations req
+               numberOfDeviation = getDeviations req,
+               routeDeviated = Just routeDeviated
               }
     -- we need to store fareParams only when they changed
     withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide booking.riderId newFareParams thresholdConfig booking.providerId

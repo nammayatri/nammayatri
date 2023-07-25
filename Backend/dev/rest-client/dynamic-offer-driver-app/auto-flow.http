@@ -317,6 +317,30 @@ content-type: application/json
 
 ###
 
+# @name rideEnd2
+
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end2
+token: {{token1}}
+content-type: application/json
+
+{
+  "point": {
+    "lat": 14.441555,
+    "lon": 75.922259
+  },
+  "routeDeviated" : true
+}
+
+###
+
+# @name rideStatus
+
+GET {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/status/
+token: {{token1}}
+content-type: application/json
+
+###
+
 # @name rideCancelByDriver
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
 token: {{token1}}
