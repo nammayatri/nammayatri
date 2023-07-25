@@ -35,7 +35,7 @@ import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks,getGenderIndex)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -78,6 +78,7 @@ baseAppFlow baseFlow = do
     (GlobalState state) <- getState
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
+    checkDateAndTime 
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     setValueToLocalNativeStore NEGOTIATION_UNIT if (getMerchant unit == YATRIPARTNER) then "20" else "10"
@@ -125,8 +126,8 @@ checkVersion versioncode = do
     _ <- UI.handleAppUpdatePopUp
     checkVersion versioncode
 
-checkDateAndTime :: Unit -> FlowBT String Unit
-checkDateAndTime _ = do
+checkDateAndTime :: FlowBT String Unit
+checkDateAndTime = do
   _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "false"
   (CurrentDateAndTimeRes current)  <- Remote.currentDateAndTimeBT ""
   if(current == {timestamp : Nothing}) then pure unit
@@ -136,12 +137,16 @@ checkDateAndTime _ = do
     let timeDiff = (((fromMaybe ( toNumber 0) currentTimeStamp )) - deviceDateTimeStamp)
     let timeDiffInMins = (timeDiff) / toNumber (1000)
     let absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
-    when (absTimeDiff >= toNumber 10 ) do
-      _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
-      modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
-      lift $ lift $ doAff do liftEffect hideSplash
-      void $ UI.handleAppUpdatePopUp
-    
+    if (absTimeDiff < toNumber 10 ) then do
+      liftFlowBT $ unregisterDateAndTime
+    else
+      when (absTimeDiff >= toNumber 10 ) do
+        _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
+        modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
+        lift $ lift $ doAff do liftEffect hideSplash
+        _ <- UI.handleAppUpdatePopUp
+        checkDateAndTime
+
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
   case merchant of
@@ -1235,6 +1240,7 @@ homeScreenFlow = do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0 , currentTab = "COMPLETED"})
       myRidesScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> referralScreenFlow
+    GO_TO_APP_UPDATE_POPUP_SCREEN -> checkDateAndTime 
     DRIVER_AVAILABILITY_STATUS status -> do
       _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
       _ <- setValueToLocalStore DRIVER_STATUS_N $ show status
