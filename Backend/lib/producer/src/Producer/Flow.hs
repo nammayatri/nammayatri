@@ -12,6 +12,8 @@ import qualified Data.Text.Encoding as TE
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics (addGenericLatency))
+import Kernel.Types.Flow ()
 import Kernel.Utils.Common
 import Kernel.Utils.Time ()
 
@@ -24,11 +26,9 @@ splitIntoBatches batchSize xs =
   let (batch, rest) = splitAt batchSize xs
    in batch : splitIntoBatches batchSize rest
 
--- Concatenate the list of strict ByteStrings into a single strict ByteString
 concatenateChunks :: [BS.ByteString] -> BS.ByteString
 concatenateChunks = BS.concat
 
--- Encode the ByteString to JSON using Aeson
 encodeToJSON :: BS.ByteString -> BSL.ByteString
 encodeToJSON = Ae.encode . TE.decodeUtf8
 
@@ -51,8 +51,6 @@ runProducer = do
   Hedis.set producerTimestampKey endTime
 
   print $ pack "Producer is running ..."
-  logDebug $ "currentTime :" <> show startTime
-  logDebug $ "oneSecondAgo :" <> show endTime
 
   setName <- asks (.setName)
   currentJobs <- Hedis.zrangebyscore setName (millisToSecondsDouble startTime) (millisToSecondsDouble endTime)
@@ -77,8 +75,6 @@ runProducer = do
   waitTimeMilliSec <- asks (.waitTimeMilliSec)
   threadDelayMilliSec $ max 0 (waitTimeMilliSec - diff)
 
-  fork "" $ addGenericLatency "producer" diff
+  fork "" $ addGenericLatency "producer" (millisToNominalDiffTime diff)
 
   runProducer
-
--- operation generic latenct krdo
