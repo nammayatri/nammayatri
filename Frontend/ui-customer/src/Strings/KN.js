@@ -281,7 +281,7 @@ const kannadaStrings = {
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
   "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "ನೀವು ಹತ್ತಿರದ ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
   "DIAL_112": "ಡಯಲ್ 112",
-  "HELP_US_WITH_YOUR_FEEDBACK": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯೊಂದಿಗೆ ನಮಗೆ ಸಹಾಯ ಮಾಡಿ",
+  "HELP_US_WITH_YOUR_FEEDBACK_OPTIONAL": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯೊಂದಿಗೆ ನಮಗೆ ಸಹಾಯ ಮಾಡಿ (ಐಚ್ಛಿಕ)",
   "WAIT_TIME": "ಸಮಯ ಕಾಯಿರಿ",
   "FAVOURITES": "ಮೆಚ್ಚಿನವುಗಳು",
   "ADD_FAVOURITE": "ಮೆಚ್ಚಿನವುಗಳನ್ನು ಸೇರಿಸಿ",

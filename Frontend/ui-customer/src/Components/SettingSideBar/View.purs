@@ -153,6 +153,7 @@ profileView state push =
       [ width ( V 48 )
       , height ( V 48 )
       , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
+      , onClick push $ (const GoToMyProfile)
       ]
     , linearLayout
       [ width WRAP_CONTENT
