@@ -123,6 +123,7 @@ eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = contin
 
 eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
     _ <- pure $ hideKeyboardOnNavigation true
+    _ <- pure $ clearCountDownTimer state.data.timerID
     updateAndExit state $ GoToAccountSetUp state
 
 eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do
@@ -153,6 +154,7 @@ eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state 
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
     if length value == 4 then do
         pure $ hideKeyboardOnNavigation true
+        _ <- pure $ clearCountDownTimer state.data.timerID
         updateAndExit newState $ GoToAccountSetUp newState
     else
         continue newState
@@ -162,17 +164,18 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick ))
 eval Resend state = do
     let newState = state {data{attempts = if (state.data.attempts > 0) then state.data.attempts - 1 else state.data.attempts},props{resendEnable = false}}
     if state.data.attempts == 0 then do
-        _ <- pure $ toast (getString LIMIT_REACHED)
+        _ <- pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
         _ <- pure $ toggleBtnLoader "" false
         continue newState{props{enterOTP = false}}
-      else exit $ ResendOTP newState
+      else do 
+        _ <- pure $ toast (getString OTP_RESENT_SUCCESSFULLY)
+        exit $ ResendOTP newState
 
-eval (AutoFill otp) state = updateAndExit
-    (state {props = state.props {
-    isReadingOTP = if length otp == 4 then false else true ,
-    capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}})
-   (GoToAccountSetUp (state {props = state.props {isReadingOTP = if length otp == 4 then false else true ,capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}}))
-
+eval (AutoFill otp) state = do
+    _ <- pure $ firebaseLogEvent "ny_user_otp_autoread"
+    let newState = state {props = state.props {isReadingOTP = if length otp == 4 then false else true ,capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}}
+    updateAndExit newState $ GoToAccountSetUp (newState)
+   
 eval (BackPressed flag) state = do
       _ <- pure $ printLog "state" state
       _ <- pure $ toggleBtnLoader "" false
@@ -200,7 +203,7 @@ eval (SetToken id )state = do
 
 eval (SetPhoneNumber number )state = continue state {props { editTextVal = number, mNumberEdtFocused = true}}
 
-eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""},props = state.props{resendEnable = false}}
+eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""},props = state.props{btnActiveOTP = false, resendEnable = false}}
 eval AfterRender state = continue state
 
 eval _ state = continue state

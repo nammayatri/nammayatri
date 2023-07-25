@@ -16,11 +16,13 @@
 module Storage.Queries.DriverOnboarding.AadhaarOtp where
 
 import Domain.Types.DriverOnboarding.AadhaarOtp
+import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV
 
@@ -29,6 +31,30 @@ createForGenerate = createWithKV
 
 createForVerify :: (L.MonadFlow m, Log m) => AadhaarOtpVerify -> m ()
 createForVerify = createWithKV
+
+-- deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
+-- deleteByPersonIdForGenerate personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @AadhaarOtpReqT
+--     where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
+
+deleteByPersonIdForGenerate :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonIdForGenerate personId = deleteWithKV [Se.Is BeamAOR.driverId (Se.Eq (getId personId))]
+
+-- deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
+-- deleteByPersonIdForGenerate personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @AadhaarOtpReqT
+--     where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
+
+deleteByPersonIdForVerify :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonIdForVerify personId = deleteWithKV [Se.Is BeamAOV.driverId (Se.Eq (getId personId))]
+
+-- deleteByPersonIdForVerify :: Id Person -> SqlDB ()
+-- deleteByPersonIdForVerify personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @AadhaarOtpVerifyT
+--     where_ $ verifications ^. AadhaarOtpVerifyDriverId ==. val (toKey personId)
 
 instance FromTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where
   fromTType' BeamAOR.AadhaarOtpReqT {..} = do

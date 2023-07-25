@@ -18,6 +18,7 @@ module Storage.Queries.SavedReqLocation where
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
 import qualified EulerHS.Language as L
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
@@ -66,6 +67,18 @@ deleteByRiderIdAndTag perId addressTag = deleteWithKV [Se.And [Se.Is BeamSRL.rid
 findAllByRiderIdAndTag :: (L.MonadFlow m, Log m) => Id Person -> Text -> m [SavedReqLocation]
 findAllByRiderIdAndTag perId addressTag = findAllWithKV [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
 
+-- findByLatLonAndRiderId :: Transactionable m => Id Person -> LatLong -> m (Maybe SavedReqLocation)
+-- findByLatLonAndRiderId personId LatLong {..} = Esq.findOne $ do
+--   saveReqLocation <- from $ table @SavedReqLocationT
+--   where_ $
+--     saveReqLocation ^. SavedReqLocationLat ==. val lat
+--       &&. saveReqLocation ^. SavedReqLocationLon ==. val lon
+--       &&. saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId)
+--   return saveReqLocation
+
+findByLatLonAndRiderId :: (L.MonadFlow m, Log m) => Id Person -> LatLong -> m (Maybe SavedReqLocation)
+findByLatLonAndRiderId personId LatLong {..} = findOneWithKV [Se.And [Se.Is BeamSRL.lat (Se.Eq lat), Se.Is BeamSRL.lon (Se.Eq lon), Se.Is BeamSRL.riderId (Se.Eq (getId personId))]]
+
 -- deleteAllByRiderId :: Id Person -> SqlDB ()
 -- deleteAllByRiderId personId = do
 --   Esq.delete $ do
@@ -96,7 +109,8 @@ instance FromTType' BeamSRL.SavedReqLocation SavedReqLocation where
             tag = tag,
             riderId = Id riderId,
             placeId = placeId,
-            ward = ward
+            ward = ward,
+            isMoved = isMoved
           }
 
 instance ToTType' BeamSRL.SavedReqLocation SavedReqLocation where
@@ -118,5 +132,6 @@ instance ToTType' BeamSRL.SavedReqLocation SavedReqLocation where
         BeamSRL.tag = tag,
         BeamSRL.riderId = getId riderId,
         BeamSRL.placeId = placeId,
-        BeamSRL.ward = ward
+        BeamSRL.ward = ward,
+        BeamSRL.isMoved = isMoved
       }

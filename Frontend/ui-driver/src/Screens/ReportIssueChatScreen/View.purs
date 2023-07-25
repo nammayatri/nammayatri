@@ -224,7 +224,10 @@ submitView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
+      , stroke ("1,"<>Color.grey900)
+      , cornerRadius 18.0
       , onClick push (const AddImage)
+      , margin (MarginRight 12)
       ][ imageView
        [ width $ V 36
        , height $ V 36
@@ -241,10 +244,10 @@ submitView push state =
        , imageView
        [ width $ V 24
        , height $ V 24
-       , margin (MarginLeft 8)
+       , margin (MarginRight 6)
        , imageWithFallback "ny_ic_close_bold,https://assets.juspay.in/nammayatri/images/driver/ny_ic_close_bold"
        , visibility if (length state.data.addedImages > 0) then VISIBLE else GONE
-       , onClick push (const DeleteSelectedImages)
+       , onClick push (const DeleteSelectedImages)   
        ]
       ]
       , linearLayout
@@ -253,6 +256,8 @@ submitView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
+      , stroke ("1,"<>Color.grey900)
+      , cornerRadius 18.0
       , onClick push (const $ AddAudio false)
       ][ imageView
        [ width $ V 36
@@ -270,7 +275,7 @@ submitView push state =
        , imageView
        [ width $ V 24
        , height $ V 24
-       , margin (MarginLeft 8)
+       , margin (MarginRight 6)
        , imageWithFallback "ny_ic_close_bold,https://assets.juspay.in/nammayatri/images/driver/ny_ic_close_bold"
        , visibility if (isJust state.data.recordedAudioUrl) then VISIBLE else GONE
        , onClick push (const DeleteRecordedAudio)

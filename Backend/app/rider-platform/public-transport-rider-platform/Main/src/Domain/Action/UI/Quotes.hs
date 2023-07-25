@@ -30,7 +30,8 @@ newtype GetQuotesRes = GetQuotesRes
 
 getQuotesHandler :: EsqDBReplicaFlow m r => Id DSearch.Search -> m GetQuotesRes
 getQuotesHandler searchId = do
-  quoteAggregates <- runInReplica $ QQuote.findAllAggregatesBySearchId searchId
+  -- quoteAggregates <- runInReplica $ QQuote.findAllAggregatesBySearchId searchId
+  quoteAggregates <- QQuote.findAllAggregatesBySearchId searchId
   let quoteAPIEntities = map makeQuoteAPIEntity quoteAggregates
   return $ GetQuotesRes quoteAPIEntities
   where

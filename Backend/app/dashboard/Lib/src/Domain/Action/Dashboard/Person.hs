@@ -27,7 +27,7 @@ import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
@@ -138,12 +138,13 @@ listPerson ::
   m ListPersonRes
 listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
+  -- personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
+  personAndRoleList <- QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
     decPerson <- decrypt encPerson
     pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
   let count = length res
-  let summary = Summary {totalCount = count, count}
+  let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
 
 assignRole ::
@@ -246,9 +247,12 @@ profile ::
   TokenInfo ->
   m DP.PersonAPIEntity
 profile tokenInfo = do
-  encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  merchantAccessList <- runInReplica $ QAccess.findAllByPersonId tokenInfo.personId
+  -- encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  -- role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  -- merchantAccessList <- runInReplica $ QAccess.findAllByPersonId tokenInfo.personId
+  merchantAccessList <- QAccess.findAllByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
   pure $ DP.makePersonAPIEntity decPerson role (merchantAccessList <&> (.shortId))
 
@@ -257,10 +261,11 @@ getCurrentMerchant ::
   TokenInfo ->
   m MerchantAccessRes
 getCurrentMerchant tokenInfo = do
-  merchant <-
-    runInReplica $
-      QMerchant.findById tokenInfo.merchantId
-        >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+  -- merchant <-
+  --   runInReplica $
+  --     QMerchant.findById tokenInfo.merchantId
+  --       >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   pure $ MerchantAccessReq merchant.shortId
 
 getAccessMatrix ::
@@ -268,9 +273,12 @@ getAccessMatrix ::
   TokenInfo ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrix tokenInfo = do
-  encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
+  -- encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  -- role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  -- accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
+  accessMatrixItems <- QMatrix.findAllByRoleId encPerson.roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
 changePasswordByAdmin ::
@@ -316,6 +324,7 @@ buildPerson req = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
+  --TODO write query to make existing email in person table to lower case
   email <- encrypt (T.toLower req.email)
   passwordHash <- getDbHash req.password
   return

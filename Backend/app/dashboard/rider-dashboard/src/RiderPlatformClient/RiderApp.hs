@@ -75,8 +75,9 @@ data CustomerAPIs = CustomerAPIs
     customerInfo :: Id Customer.Customer -> Euler.EulerClient Customer.CustomerInfoRes
   }
 
-newtype BookingsAPIs = BookingsAPIs
-  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes
+data BookingsAPIs = BookingsAPIs
+  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes,
+    multipleBookingSync :: Booking.MultipleBookingSyncReq -> Euler.EulerClient Booking.MultipleBookingSyncResp
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -94,7 +95,7 @@ data RidesAPIs = RidesAPIs
     tripRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
-    rideForceSync :: Id Ride.Ride -> Euler.EulerClient APISuccess
+    multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncResp
   }
 
 data RideBookingAPIs = RideBookingAPIs
@@ -198,14 +199,15 @@ mkAppBackendAPIs merchantId token = do
       :<|> customerUnblock
       :<|> customerInfo = customersClient
 
-    stuckBookingsCancel = bookingsClient
+    stuckBookingsCancel
+      :<|> multipleBookingSync = bookingsClient
 
     shareRideInfo
       :<|> rideList
       :<|> tripRoute
       :<|> rideInfo
       :<|> multipleRideCancel
-      :<|> rideForceSync = ridesClient
+      :<|> multipleRideSync = ridesClient
 
     registrationClient
       :<|> profileClient

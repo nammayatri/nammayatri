@@ -106,7 +106,8 @@ issueInfo merchantShortId apiTokenInfo issueReportId_ = withFlowHandlerAPI $ do
   where
     mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
     mkAuthorDetail Common.IssueReportCommentItem {..} = do
-      author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
+      -- author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
+      author <- QP.findById $ cast authorDetail.authorId >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
       let authorDetail_ =
             Common.AuthorDetail
               { authorId = cast author.id,

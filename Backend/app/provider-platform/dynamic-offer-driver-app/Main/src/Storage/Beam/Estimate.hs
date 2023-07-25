@@ -44,7 +44,6 @@ import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Vehicle ()
 
 -- import Data.Aeson (FromJSON, ToJSON)
 

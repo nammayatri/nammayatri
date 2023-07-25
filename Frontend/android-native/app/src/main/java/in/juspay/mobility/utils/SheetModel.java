@@ -9,7 +9,7 @@
 package in.juspay.mobility.utils;
 
 public class SheetModel {
-    private String pickUpDistance, distanceToBeCovered, sourceArea, sourceAddress, destinationArea, destinationAddress, requestId, searchRequestId, specialLocationTag;
+    private String pickUpDistance, distanceToBeCovered, sourceArea, sourceAddress, destinationArea, destinationAddress, requestId, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode;
     private int baseFare, reqExpiryTime, startTime, updatedAmount, offeredPrice, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit, customerExtraFee;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
@@ -29,7 +29,9 @@ public class SheetModel {
                       int rideRequestPopupDelayDuration,
                       int negotiationUnit,
                       int customerExtraFee,
-                      String specialLocationTag){
+                      String specialLocationTag,
+                      String sourcePinCode,
+                      String destinationPinCode){
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
         this.sourceArea = sourceArea;
@@ -52,6 +54,8 @@ public class SheetModel {
         this.buttonDecreasePriceClickable = false;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
+        this.sourcePinCode = sourcePinCode;
+        this.destinationPinCode = destinationPinCode;
     }
 
     public int getOfferedPrice() {
@@ -174,5 +178,13 @@ public class SheetModel {
 
     public String getspecialLocationTag() {
         return specialLocationTag;
+    }
+
+    public String getSourcePinCode() {
+        return sourcePinCode;
+    }
+
+    public String getDestinationPinCode() {
+        return destinationPinCode;
     }
 }

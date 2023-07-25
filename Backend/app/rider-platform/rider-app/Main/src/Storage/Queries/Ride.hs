@@ -39,7 +39,7 @@ import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -53,8 +53,9 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import Storage.Queries.Booking ()
 import Storage.Queries.Person ()
-import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Ride as Ride
+
+-- import Storage.Tabular.Booking as Booking
+-- import Storage.Tabular.Ride as Ride
 
 create :: (L.MonadFlow m, Log m) => Ride -> m ()
 create = createWithKV
@@ -233,8 +234,8 @@ updateDriverArrival rideId = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
-upcoming6HrsCond ride now = ride ^. RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
+-- upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
+-- upcoming6HrsCond ride now = ride ^. RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
 
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,
@@ -566,18 +567,21 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
-findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
-findRiderIdByRideId rideId = findOne $ do
-  ride :& booking <-
-    from $
-      table @RideT
-        `innerJoin` table @BookingT
-          `Esq.on` ( \(ride :& booking) ->
-                       ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                   )
-  where_ $
-    ride ^. RideTId ==. val (toKey rideId)
-  pure $ booking ^. BookingRiderId
+findRiderIdByRideId :: L.MonadFlow m => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId (Id rideId) = err ""
+
+-- findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
+-- findRiderIdByRideId rideId = findOne $ do
+--   ride :& booking <-
+--     from $
+--       table @RideT
+--         `innerJoin` table @BookingT
+--           `Esq.on` ( \(ride :& booking) ->
+--                        ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                    )
+--   where_ $
+--     ride ^. RideTId ==. val (toKey rideId)
+--   pure $ booking ^. BookingRiderId
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do

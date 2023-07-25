@@ -59,6 +59,7 @@ data DriverOfferAPIs = DriverOfferAPIs
 data DriversAPIs = DriversAPIs
   { driverDocumentsInfo :: Euler.EulerClient Driver.DriverDocumentsInfoRes,
     driverAadhaarInfo :: Id Driver.Driver -> Euler.EulerClient Driver.DriverAadhaarInfoRes,
+    driverAadhaarInfoByPhone :: Text -> Euler.EulerClient Driver.DriverAadhaarInfoByPhoneReq,
     listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
     getDriverDue :: Maybe Text -> Text -> Euler.EulerClient [Driver.DriverOutstandingBalanceResp],
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
@@ -77,11 +78,14 @@ data DriversAPIs = DriversAPIs
     registerRC :: Id Driver.Driver -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
     generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
     verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
+    auth :: Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
+    verify :: Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess,
     unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkDL :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkAadhaar :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
+    updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
@@ -91,17 +95,18 @@ data RidesAPIs = RidesAPIs
   { rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Money -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Ride.RideListRes,
     rideStart :: Id Ride.Ride -> Ride.StartRideReq -> Euler.EulerClient APISuccess,
     rideEnd :: Id Ride.Ride -> Ride.EndRideReq -> Euler.EulerClient APISuccess,
-    multipleRideEnd :: Ride.MultipleRideEndReq -> Euler.EulerClient APISuccess,
+    multipleRideEnd :: Ride.MultipleRideEndReq -> Euler.EulerClient Ride.MultipleRideEndResp,
     rideCancel :: Id Ride.Ride -> Ride.CancelRideReq -> Euler.EulerClient APISuccess,
-    multipleRideCancel :: Ride.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
+    multipleRideCancel :: Ride.MultipleRideCancelReq -> Euler.EulerClient Ride.MultipleRideCancelResp,
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     rideSync :: Id Ride.Ride -> Euler.EulerClient Ride.RideSyncRes,
     multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncRes,
     rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes
   }
 
-newtype BookingsAPIs = BookingsAPIs
-  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes
+data BookingsAPIs = BookingsAPIs
+  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes,
+    multipleBookingSync :: Booking.MultipleBookingSyncReq -> Euler.EulerClient Booking.MultipleBookingSyncResp
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -179,6 +184,7 @@ mkDriverOfferAPIs merchantId token = do
 
     driverDocumentsInfo
       :<|> driverAadhaarInfo
+      :<|> driverAadhaarInfoByPhone
       :<|> listDrivers
       :<|> getDriverDue
       :<|> driverActivity
@@ -195,6 +201,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> unlinkAadhaar
       :<|> endRCAssociation
       :<|> updatePhoneNumber
+      :<|> updateByPhoneNumber
       :<|> addVehicle
       :<|> updateDriverName
       :<|> ( documentsList
@@ -204,9 +211,10 @@ mkDriverOfferAPIs merchantId token = do
                :<|> registerRC
                :<|> generateAadhaarOtp
                :<|> verifyAadhaarOtp
+               :<|> auth
+               :<|> verify
              )
-      :<|> clearOnRideStuckDrivers =
-        driversClient
+      :<|> clearOnRideStuckDrivers = driversClient
 
     rideList
       :<|> rideStart
@@ -219,7 +227,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> multipleRideSync
       :<|> rideRoute = ridesClient
 
-    stuckBookingsCancel = bookingsClient
+    stuckBookingsCancel
+      :<|> multipleBookingSync = bookingsClient
 
     merchantUpdate
       :<|> merchantCommonConfig

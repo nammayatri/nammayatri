@@ -25,12 +25,16 @@ data Category
   | SureSchool
   | SureHospital
   | SureStation
+  | SureBlockedAreaForAutos
+  | SureBlockedArea
   | UnSureShoppingMall
   | UnSureMetro
   | UnSureAirport
   | UnSureSchool
   | UnSureHospital
   | UnSureStation
+  | UnSureBlockedAreaForAutos
+  | UnSureBlockedArea
   deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
 
 data SpecialLocation = SpecialLocation
@@ -44,6 +48,7 @@ data SpecialLocation = SpecialLocation
 
 data GatesInfo = GatesInfo
   { point :: LatLong,
-    name :: Text
+    name :: Text,
+    address :: Maybe String
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

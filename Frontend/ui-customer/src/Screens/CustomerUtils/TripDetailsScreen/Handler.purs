@@ -24,6 +24,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.TripDetailsScreen.View as TripDetailsScreen
 import Types.App (FlowBT, GlobalState(..), TRIP_DETAILS_SCREEN_OUTPUT(..),ScreenType(..))
 import ModifyScreenState (modifyScreenState)
+import Screens.Types (TripDetailsGoBackType(..))
 
 tripDetailsScreen :: FlowBT String TRIP_DETAILS_SCREEN_OUTPUT
 tripDetailsScreen = do
@@ -31,11 +32,13 @@ tripDetailsScreen = do
     act <- lift $ lift $ runScreen $ TripDetailsScreen.screen state.tripDetailsScreen
     case act of
         GoBack fromMyRides -> do 
-          if fromMyRides then App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDES)
-            else App.BackT $ App.NoBack <$> (pure $ GO_TO_HELPSCREEN)
+          case fromMyRides of 
+            Home -> App.BackT $ pure App.GoBack
+            MyRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDES)
+            HelpAndSupport -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HELPSCREEN)
         OnSubmit state -> App.BackT $ App.NoBack <$> (pure $ ON_SUBMIT state)
         GoToInvoice updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_INVOICE updatedState )
-        GoHome  -> do
+        GoHome updatedState-> do
             modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false}})
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME)
+            App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME updatedState)
         ConnectWithDriver updatedState -> App.BackT $ App.NoBack <$> (pure $ CONNECT_WITH_DRIVER updatedState)

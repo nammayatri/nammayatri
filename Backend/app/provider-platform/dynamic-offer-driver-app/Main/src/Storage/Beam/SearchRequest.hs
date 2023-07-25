@@ -35,7 +35,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Vehicle ()
 import qualified Tools.Maps as Maps
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where

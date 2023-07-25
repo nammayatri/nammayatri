@@ -33,7 +33,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Services.APITypes(Route(..))
+import Services.API(Route(..))
 import Services.Backend as Remote
 import Services.Backend (walkCoordinate)
 import Common.Types.App

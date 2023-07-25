@@ -223,6 +223,7 @@ import in.juspay.mobility.utils.CheckPermissionAutoStart;
 import in.juspay.mobility.utils.CheckPermissionOverlay;
 import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
+import in.juspay.mobility.utils.MessageOverlayService;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.OtpUtils;
 import in.juspay.mobility.utils.carousel.VPAdapter;
@@ -3356,7 +3357,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
-            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage", null);
+            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage" + System.currentTimeMillis(), null);
             return Uri.parse(path);
         } catch (Exception e) {
             return null;
@@ -3915,7 +3916,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     System.out.println("In mmove camera in catch exception" + e);
                 }
             }
-        });
+        }); 
     }
 
     @JavascriptInterface
@@ -4000,7 +4001,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void stopChatListenerService() {
         try {
             Intent chatListenerService = new Intent(activity, ChatService.class);
+            Intent overlayService = new Intent(activity, MessageOverlayService.class);
             activity.stopService(chatListenerService);
+            activity.stopService(overlayService);
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error in stopChatListenerService : " + e);
         }
@@ -4040,29 +4043,42 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 //        });
 //    }
 
-
     @JavascriptInterface
     public void uploadFile() {
         if (!isUploadPopupOpen)
             activity.runOnUiThread(() -> {
-                if ((ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
-                    Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                    SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                    Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getApplicationInfo().packageName + ".fileProvider", new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
-                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                    Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                    chooseFromFile.setType("image/*");
-                    Intent chooser = Intent.createChooser(takePicture, "Upload Image");
-                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                    isUploadPopupOpen = true;
-                    startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                    if ((ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
+                        uploadTheFile();
+                    } else {
+                        ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
+                    }
                 } else {
-                    ActivityCompat.requestPermissions(activity, new String[]{CAMERA, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
+                    if (ActivityCompat.checkSelfPermission(activity, CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        uploadTheFile();
+                    } else {
+                        ActivityCompat.requestPermissions(activity, new String[]{CAMERA}, IMAGE_PERMISSION_REQ_CODE);
+                    }
                 }
             });
     }
+
+    public void uploadTheFile(){
+        System.out.println("in upload file");
+        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
+        Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getApplicationInfo().packageName + ".fileProvider", new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+        chooseFromFile.setType("image/*");
+        Intent chooser = Intent.createChooser(takePicture, "Upload Image");
+        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
+        isUploadPopupOpen = true;
+        startActivityForResult(activity, chooser, IMAGE_CAPTURE_REQ_CODE, null);
+    }
+
 
     @JavascriptInterface
     public void copyToClipboard(String inputText) {
@@ -4079,6 +4095,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         context.startActivity(appSettingsIntent);
     }
 
+    @JavascriptInterface
+    public void launchDateSettings() {
+        try {
+            context.startActivity(new Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }catch (ActivityNotFoundException e){
+            context.startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+    }
+    
     @JavascriptInterface
     public void adjustViewWithKeyboard(String flag) {
         activity.runOnUiThread(() -> {

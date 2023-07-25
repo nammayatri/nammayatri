@@ -45,7 +45,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
 import Animation as Anim
-import Services.APITypes (GetRidesHistoryResp(..), Status(..))
+import Services.API (GetRidesHistoryResp(..), Status(..))
 import Common.Types.App
 import Types.App (defaultGlobalState)
 import Components.BottomNavBar.Controller (navData)

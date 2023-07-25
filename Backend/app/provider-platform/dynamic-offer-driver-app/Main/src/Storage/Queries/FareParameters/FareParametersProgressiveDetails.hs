@@ -23,8 +23,6 @@ import Kernel.Types.Logging (Log)
 import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
-import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as BeamFPPD
-import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as DomainFPPD
 
 create :: (L.MonadFlow m, Log m) => DomainFPPD.FullFareParametersProgressiveDetails -> m ()
 create = createWithKV

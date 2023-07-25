@@ -24,7 +24,8 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.BapMetadata as BeamBM
 import qualified Storage.Beam.BapMetadata as BeamBMD
-import Storage.Tabular.BapMetadata ()
+
+-- import Storage.Tabular.BapMetadata ()
 
 -- findById :: Transactionable m => Id BapMetadata -> m (Maybe BapMetadata)
 -- findById = Esq.findById

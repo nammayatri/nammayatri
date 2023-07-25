@@ -33,7 +33,8 @@ import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Vehicle ()
+
+-- import Storage.Tabular.Vehicle ()
 
 data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,

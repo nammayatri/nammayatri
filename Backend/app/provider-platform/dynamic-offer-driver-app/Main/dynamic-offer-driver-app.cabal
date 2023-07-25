@@ -45,6 +45,7 @@ library
       API.Dashboard.Volunteer
       API.Internal
       API.Internal.DriverReferee
+      API.Internal.FeedbackForm
       API.UI
       API.UI.Call
       API.UI.CancellationReason
@@ -108,6 +109,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.DriverReferee
+      Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Driver
@@ -179,6 +181,8 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.FareProduct
+      Domain.Types.Feedback.Feedback
+      Domain.Types.Feedback.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -252,6 +256,7 @@ library
       SharedLogic.Person
       SharedLogic.Ride
       SharedLogic.SearchTryLocker
+      SharedLogic.SyncRide
       Storage.Beam.BapMetadata
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
@@ -381,6 +386,9 @@ library
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
+      Storage.Queries.Feedback.Feedback
+      Storage.Queries.Feedback.FeedbackBadge
+      Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.Geometry
       Storage.Queries.Instances.DriverInformation
       Storage.Queries.Issue.Comment
@@ -418,36 +426,9 @@ library
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
-      Storage.Tabular.BapMetadata
-      Storage.Tabular.Booking
-      Storage.Tabular.Booking.BookingLocation
-      Storage.Tabular.DriverInformation
-      Storage.Tabular.DriverOnboarding.DriverLicense
-      Storage.Tabular.DriverOnboarding.DriverRCAssociation
-      Storage.Tabular.DriverOnboarding.IdfyVerification
-      Storage.Tabular.DriverOnboarding.Image
-      Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
-      Storage.Tabular.DriverReferral
-      Storage.Tabular.FareParameters
-      Storage.Tabular.FareParameters.FareParametersProgressiveDetails
-      Storage.Tabular.FareParameters.FareParametersSlabDetails
-      Storage.Tabular.FareParameters.Instances
-      Storage.Tabular.FareParameters.Table
-      Storage.Tabular.FarePolicy.DriverExtraFeeBounds
-      Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
-      Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
-      Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Storage.Tabular.FarePolicy.Table
-      Storage.Tabular.Merchant
-      Storage.Tabular.Merchant.MerchantPaymentMethod
-      Storage.Tabular.MetaData
-      Storage.Tabular.Person
-      Storage.Tabular.Ride
-      Storage.Tabular.Ride.Instances
-      Storage.Tabular.Ride.Table
-      Storage.Tabular.RideDetails
-      Storage.Tabular.RiderDetails
-      Storage.Tabular.Vehicle
+      Storage.Tabular.Feedback.Feedback
+      Storage.Tabular.Feedback.FeedbackBadge
+      Storage.Tabular.Feedback.FeedbackForm
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Call

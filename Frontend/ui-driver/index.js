@@ -165,6 +165,9 @@ window.onPause = function () {
 }
 
 window.onResume = function () {
+  if(window.scrollAction) {
+    window.scrollAction();
+  }
   if (window.eventListeners && window.eventListeners["onResume"]) {
     if (Array.isArray(window.eventListeners["onResume"])) {
       var onResumeEvents = window.eventListeners["onResume"];
@@ -217,6 +220,11 @@ window["onEvent'"] = function (event, args) {
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
+    let launchDateSetting = window.JBridge.getKeysInSharedPrefs("LAUNCH_DATE_SETTING");
+    if (launchDateSetting == "true"){
+      window.JBridge.setKeysInSharedPrefs("LAUNCH_DATE_SETTING", "false");
+      purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
+    }
     refreshFlow();
   }
 }

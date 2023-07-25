@@ -20,6 +20,7 @@ module Dashboard.ProviderPlatform.Driver.Registration
 where
 
 import Dashboard.Common as Reexport
+import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
@@ -33,6 +34,7 @@ data DriverRegistrationEndpoint
   | RegisterRCEndpoint
   | GenerateAadhaarOtpEndpoint
   | VerifyAadhaarOtpEndpoint
+  | AuthEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverRegistrationEndpoint"
@@ -207,3 +209,39 @@ data VerifyAadhaarOtpRes = VerifyAadhaarOtpRes
 
 instance HideSecrets VerifyAadhaarOtpRes where
   hideSecrets = identity
+
+-- auth  API ------------------------
+-- ----------------------------------------
+
+type AuthAPI =
+  "auth"
+    :> ReqBody '[JSON] AuthReq
+    :> Post '[JSON] AuthRes
+
+data AuthReq = AuthReq
+  { mobileNumber :: Text,
+    mobileCountryCode :: Text
+  }
+  deriving (Generic, FromJSON, ToSchema, ToJSON)
+
+data AuthRes = AuthRes
+  { authId :: Text,
+    attempts :: Int
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+-- verify  API ------------------------
+-- ----------------------------------------
+
+type VerifyAPI =
+  Capture "authId" Text
+    :> "verify"
+    :> ReqBody '[JSON] AuthVerifyReq
+    :> Post '[JSON] APISuccess
+
+---------- Verify Login --------
+data AuthVerifyReq = AuthVerifyReq
+  { otp :: Text,
+    deviceToken :: FCMRecipientToken
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

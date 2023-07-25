@@ -27,7 +27,7 @@ import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
@@ -38,9 +38,10 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
-import Storage.Tabular.Booking
-import Storage.Tabular.Person
-import Storage.Tabular.Ride
+
+-- import Storage.Tabular.Booking
+-- import Storage.Tabular.Person
+-- import Storage.Tabular.Ride
 
 create :: (L.MonadFlow m, Log m) => Person -> m ()
 create = createWithKV
@@ -601,18 +602,34 @@ countCustomers merchantId = findAllWithKV [Se.And [Se.Is BeamP.merchantId (Se.Eq
 countCustomersInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
 countCustomersInReplica merchantId = findAllWithKvInReplica [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
 
-ridesCountAggTable :: SqlQuery (From (SqlExpr (Esq.Value PersonTId), SqlExpr (Esq.Value Int)))
-ridesCountAggTable = with $ do
-  ride :& booking <-
-    from $
-      table @RideT
-        `innerJoin` table @BookingT
-        `Esq.on` ( \(ride :& booking) ->
-                     ride ^. RideBookingId ==. booking ^. BookingTId
-                 )
-  where_ (not_ $ ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
-  groupBy $ booking ^. BookingRiderId
-  pure (booking ^. BookingRiderId, count @Int $ ride ^. RideId)
+-- fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
+-- fetchRidesCount personId = do
+--   dbConf <- getMasterBeamConfig
+--   res <- L.runDB dbConf $
+--     L.findRows $
+--       B.select $
+--           B.aggregate_ (\(booking, _) -> (B.group_ (BeamB.riderId booking), B.as_ @Int B.countAll_)) $
+--           B.filter_' (\(_, ride) -> B.sqlBool_ (B.not_ (ride.status `B.in_` (B.val_ <$> [Ride.NEW, Ride.CANCELLED]))))
+--             do
+--               booking' <- B.all_ (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamB.BookingT BeamR.RideT))
+--               ride' <- B.join_' (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamB.BookingT BeamR.RideT)) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+--               pure (booking', ride')
+--   person <- findOneWithKV [Se.Is BeamP.id $ Se.Eq (getId personId)]
+--   let res' = either (const []) EP.id res
+--   maybe (pure Nothing) (\p -> pure (snd <$> find (\r -> (getId p.id) == fst r) res')) person
+
+-- ridesCountAggTable :: SqlQuery (From (SqlExpr (Esq.Value PersonTId), SqlExpr (Esq.Value Int)))
+-- ridesCountAggTable = with $ do
+--   ride :& booking <-
+--     from $
+--       table @RideT
+--         `innerJoin` table @BookingT
+--         `Esq.on` ( \(ride :& booking) ->
+--                      ride ^. RideBookingId ==. booking ^. BookingTId
+--                  )
+--   where_ (not_ $ ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
+--   groupBy $ booking ^. BookingRiderId
+--   pure (booking ^. BookingRiderId, count @Int $ ride ^. RideId)
 
 fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do

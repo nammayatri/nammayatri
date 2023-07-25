@@ -17,7 +17,7 @@ module Domain.Action.UI.BookingList where
 import Domain.Types.Booking.API
 import Domain.Types.Booking.Type
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runInReplica)
+-- import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -32,14 +32,18 @@ bookingListHandler personId mbLimit mbOffset mbBookingStatus = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   logDebug $ getId personId
-  bList <- runInReplica $ QBooking.findAllByRequestorId personId limit offset mbBookingStatus
+  -- bList <- runInReplica $ QBooking.findAllByRequestorId personId limit offset mbBookingStatus
+  bList <- QBooking.findAllByRequestorId personId limit offset mbBookingStatus
   logDebug $ show bList
   BookingListRes
     <$> traverse buildBookingListRes bList
 
 buildBookingListRes :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity
 buildBookingListRes booking = do
-  departureStation <- runInReplica $ QTransportStation.findById booking.departureStationId >>= fromMaybeM TransportStationNotFound
-  arrivalStation <- runInReplica $ QTransportStation.findById booking.arrivalStationId >>= fromMaybeM TransportStationNotFound
-  paymentTrans <- runInReplica $ QPT.findByBookingId booking.id
+  -- departureStation <- runInReplica $ QTransportStation.findById booking.departureStationId >>= fromMaybeM TransportStationNotFound
+  departureStation <- QTransportStation.findById booking.departureStationId >>= fromMaybeM TransportStationNotFound
+  -- arrivalStation <- runInReplica $ QTransportStation.findById booking.arrivalStationId >>= fromMaybeM TransportStationNotFound
+  arrivalStation <- QTransportStation.findById booking.arrivalStationId >>= fromMaybeM TransportStationNotFound
+  -- paymentTrans <- runInReplica $ QPT.findByBookingId booking.id
+  paymentTrans <- QPT.findByBookingId booking.id
   return $ makeBookingAPIEntity booking departureStation arrivalStation paymentTrans

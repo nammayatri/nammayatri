@@ -101,8 +101,8 @@ data ScreenOutput = GoToHomeScreen
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
 eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = continueWithCmd state
       [do
-        _ <- pure $ setRefreshing "2000040" false
-        pure $ setEnabled "2000040" false
+        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag")false
+        pure $ setEnabled (getNewIDWithTag "EmergencyContactTag") false
         _ <- launchAff $ flowRunner defaultGlobalState $ do
                 _ <- loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                 _ <- toggleLoader true
@@ -130,7 +130,7 @@ eval (ContactsCallback allContacts) state = do
               Just contact ->  if (contact.name == "beckn_contacts_flag") then take ((length allContacts) - 1) allContacts else allContacts -- TODO :: Need to refactor @Chakradhar
               Nothing -> allContacts
   if(flag == "false") then do
-    _ <- pure $ toast (getString PERMISSION_DENIED)
+    _ <- pure $ toast (getString PLEASE_ENABLE_CONTACTS_PERMISSION_TO_PROCEED)
     continueWithCmd state
       [do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
@@ -139,7 +139,7 @@ eval (ContactsCallback allContacts) state = do
         pure NoAction
       ]
   else if (null updatedContactList) then do
-    _ <- pure $ toast (getString NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD)
+    _ <- pure $ toast (getString NO_CONTACTS_FOUND_ON_THE_DEVICE_TO_BE_ADDED)
     continueWithCmd state
       [do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
@@ -194,7 +194,7 @@ eval BackPressed state =
           pure LoadMoreContacts
         ]
   else if (state.props.showInfoPopUp == true) then
-    continue state{props{showInfoPopUp = false}}
+    continue state{props{showInfoPopUp = false, showContactList = false}}
   else
     exit $ GoToHomeScreen
 
@@ -211,6 +211,8 @@ eval (ContactListGenericHeaderActionController GenericHeader.PrefixImgOnClick) s
               pure unit
           pure LoadMoreContacts
         ]
+  else if state.props.showInfoPopUp then
+    continue state{props{showInfoPopUp = false, showContactList = false}}
   else
     exit $ GoToHomeScreen
 
@@ -253,10 +255,10 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
     contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
   else contact
   if (((length state.data.contactsList) >= 3) && (item.isSelected == false)) then do
-    _ <- pure $ toast (getString MAXIMUM_CONTACTS_LIMIT_REACHED)
+    _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED
     continue state
   else if((DS.length item.number) /= 10 || (fromMaybe 0 (fromString (DS.take 1 item.number)) < 6)) then do
-    _ <- pure $ toast (getString SELECTED_CONTACT_IS_INVALID)
+    _ <- pure $ toast (getString INVALID_CONTACT_FORMAT)
     continue state
   else do
     let contactListState = if(contact.isSelected == false) then state{ data {contactsList = (snoc state.data.contactsList item{isSelected = true}) } } else state { data {contactsList = filter (\x -> ((if DS.length contact.number == 10 then "" else "91") <> x.number <> x.name  /= contact.number <> contact.name)) state.data.contactsList}}
@@ -333,8 +335,10 @@ contactListTransformerProp contactList =(map (\(contact) -> {
   name: toPropValue (contact.name),
   number: toPropValue (contact.number),
   isSelected: toPropValue (contact.isSelected),
-  contactBackgroundColor: toPropValue(if contact.isSelected then Color.grey900 else Color.white900),
-  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png") 
+  contactBackgroundColor: toPropValue (if contact.isSelected then Color.grey900 else Color.white900),
+  visibilitySelectedImage: toPropValue (if contact.isSelected then "visible" else "gone"),
+  visibilityUnSelectedImage: toPropValue (if contact.isSelected then "gone" else "visible"),
+  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon" else "ny_ic_outer_circle") 
 })(contactList))
 
 contactTransformerProp :: NewContacts -> NewContactsProp 
@@ -342,8 +346,10 @@ contactTransformerProp contact = {
   name: toPropValue (contact.name),
   number: toPropValue (contact.number),
   isSelected: toPropValue (contact.isSelected),
-  contactBackgroundColor : toPropValue(if contact.isSelected then Color.grey900 else Color.white900),
-  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png") 
+  contactBackgroundColor : toPropValue (if contact.isSelected then Color.grey900 else Color.white900),
+  visibilitySelectedImage: toPropValue (if contact.isSelected then "visible" else "gone"),
+  visibilityUnSelectedImage: toPropValue (if contact.isSelected then "gone" else "visible"),
+  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon" else "ny_ic_outer_circle") 
 }
 
 contactListTransformer :: Array NewContacts -> Array NewContacts 

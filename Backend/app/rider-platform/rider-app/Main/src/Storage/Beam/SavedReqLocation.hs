@@ -49,7 +49,8 @@ data SavedReqLocationT f = SavedReqLocationT
     updatedAt :: B.C f Time.UTCTime,
     tag :: B.C f Text,
     riderId :: B.C f Text,
-    ward :: B.C f (Maybe Text)
+    ward :: B.C f (Maybe Text),
+    isMoved :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

@@ -20,7 +20,7 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Padding(..), clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import Common.Types.App
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -50,6 +50,7 @@ titleView config =
   textView
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
+    , padding $ PaddingBottom 4
     , text config.titleConfig.text
     , color if config.isSelected then Color.black900 else config.titleConfig.color
     , fontStyle if config.isSelected then config.titleConfig.selectedFontStyle else config.titleConfig.unselectedFontStyle

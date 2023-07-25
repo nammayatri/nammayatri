@@ -169,7 +169,7 @@ nameEditTextView state push =
           , fontStyle $ FontStyle.semiBold LanguageStyle
           , hint $ getString ENTER_YOUR_NAME
           , hintColor Color.black600
-          , pattern "[a-zA-Z ]*,30"
+          , pattern "[a-zA-Z. ]*,30"
           , id $ EHC.getNewIDWithTag "NameEditText"
           ] <> if EHC.os == "IOS" then [] else [onClick push $ const NameSectionClick]
         ]

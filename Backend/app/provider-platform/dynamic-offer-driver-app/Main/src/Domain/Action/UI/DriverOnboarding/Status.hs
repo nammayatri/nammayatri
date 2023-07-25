@@ -52,7 +52,7 @@ import qualified Storage.Queries.Vehicle as VQuery
 -- FAILED is used when verification is failed
 -- INVALID is the state
 --   which the doc switches to when, for example, it's expired.
-data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED
+data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
@@ -68,8 +68,10 @@ statusHandler (personId, merchantId) = do
   (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
   (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit
   (aadhaarStatus, _) <- getAadhaarStatus personId transporterConfig.aadhaarVerificationRequired
+  when (rcStatus == VALID) $ do
+    createVehicle personId merchantId mRC
   when (dlStatus == VALID && rcStatus == VALID && aadhaarStatus == VALID) $ do
-    enableDriver personId merchantId mRC mDL
+    enableDriver personId merchantId mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus, aadhaarVerificationStatus = aadhaarStatus}
 
 getAadhaarStatus :: Id SP.Person -> Bool -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
@@ -77,8 +79,11 @@ getAadhaarStatus _ False = return (VALID, Nothing)
 getAadhaarStatus personId True = do
   mAadhaarCard <- SAV.findByDriverId personId
   case mAadhaarCard of
-    Just aadhaarCard -> return (VALID, Just aadhaarCard)
-    Nothing -> return (INVALID, Nothing)
+    Just aadhaarCard -> do
+      if aadhaarCard.isVerified
+        then return (VALID, Just aadhaarCard)
+        else return (MANUAL_VERIFICATION_REQUIRED, Just aadhaarCard)
+    Nothing -> return (NO_DOC_AVAILABLE, Nothing)
 
 getDLAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)
 getDLAndStatus driverId onboardingTryLimit = do
@@ -125,10 +130,17 @@ verificationStatus onboardingTryLimit imagesNum verificationReq =
         then LIMIT_EXCEED
         else NO_DOC_AVAILABLE
 
-enableDriver :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
-enableDriver _ _ Nothing Nothing = return ()
-enableDriver personId merchantId (Just rc) (Just dl) = do
-  _ <- DIQuery.verifyAndEnableDriver personId
+enableDriver :: Id SP.Person -> Id DM.Merchant -> Maybe DL.DriverLicense -> Flow ()
+enableDriver _ _ Nothing = return ()
+enableDriver personId _ (Just dl) = do
+  DIQuery.verifyAndEnableDriver personId
+  case dl.driverName of
+    Just name -> DB.runTransaction $ Person.updateName personId name
+    Nothing -> return ()
+
+createVehicle :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Flow ()
+createVehicle _ _ Nothing = return ()
+createVehicle personId merchantId (Just rc) = do
   rcNumber <- decrypt rc.certificateNumber
   now <- getCurrentTime
   let vehicle = buildVehicle now personId merchantId rcNumber
@@ -155,4 +167,3 @@ enableDriver personId merchantId (Just rc) (Just dl) = do
           Vehicle.createdAt = now,
           Vehicle.updatedAt = now
         }
-enableDriver _ _ _ _ = return ()

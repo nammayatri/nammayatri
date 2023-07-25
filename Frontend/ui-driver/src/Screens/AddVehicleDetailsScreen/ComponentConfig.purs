@@ -48,7 +48,9 @@ referalNumberConfig :: ST.AddVehicleDetailsScreenState -> ReferralMobileNumber.C
 referalNumberConfig state = let 
   config' = ReferralMobileNumber.config
   referalNumberConfig' = config'{
-   isApplyButtonActive = state.props.btnActive, 
-   referralNumber = if state.props.isEdit then state.data.referral_mobile_number else ""
+    isApplyButtonActive = state.props.btnActive, 
+    referralNumber = if state.props.isEdit then state.data.referral_mobile_number else "",
+    isValid = state.props.isValid,
+    errorText = getString if state.props.isValid then INVALID_REFERRAL_NUMBER else INVALID_REFERRAL_CODE
   }
   in referalNumberConfig'

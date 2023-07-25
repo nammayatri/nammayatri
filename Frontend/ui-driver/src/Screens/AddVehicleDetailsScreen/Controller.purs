@@ -221,16 +221,21 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
 eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
 eval ReferralMobileNumber state = do
   continue state{props{openReferralMobileNumber = true, btnActive = false, isEdit = true}}
-eval (ReferralMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = continue state{props{openReferralMobileNumber = false}}
-eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit $ ReferApiCall $ state { props { openReferralMobileNumber = false, referralViewstatus = true }}
+eval (ReferralMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
+  pure $ hideKeyboardOnNavigation true
+  continue state{props{openReferralMobileNumber = false, isValid = false}}
+eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do exit $ ReferApiCall state
 eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditTextActionController (PrimaryEditTextController.TextChanged valId newVal))) state = do
-  let var =  if( (charAt 0 newVal) == Just '0' || (charAt 0 newVal) == Just '1') then true else false
+  let var = case (charAt 0 newVal) of 
+                                      Just a -> if a=='0' || a=='1' || a=='2' || a=='3'|| a=='4' || a=='5' then false 
+                                                else true 
+                                      Nothing -> true 
   _ <- pure $ spy "new val" state
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true
             else pure unit
-  continue state { props = state.props { btnActive = if (length newVal == 10 &&  not var) then true else false
-                                        , isValid = var
+  continue state {props = state.props { btnActive = if (length newVal == 10 && var) then true else false
+                                        , isValid = not var
                                         , isEdit = if (length newVal == 10 && state.props.isEdit) then true else false }
                                         , data = state.data { referral_mobile_number = if length newVal <= 10 then newVal else state.data.referral_mobile_number}}
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do

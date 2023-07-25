@@ -220,6 +220,10 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
+        <service android:name=".utils.MessageOverlayService"
+            android:exported="true"
+            android:enabled="true"
+            android:largeHeap="true" />
         <service android:name=".utils.OverlayMessagingService"
             android:enabled="true"
             android:exported="true"

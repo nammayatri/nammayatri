@@ -27,7 +27,9 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -36,9 +38,12 @@ data AadhaarVerificationT f = AadhaarVerificationT
     driverId :: B.C f Text,
     driverName :: B.C f Text,
     driverGender :: B.C f Text,
+    aadhaarNumberHash :: B.C f (Maybe DbHash),
     driverDob :: B.C f Text,
-    driverImage :: B.C f Text,
-    createdAt :: B.C f Time.UTCTime
+    driverImage :: B.C f (Maybe Text),
+    isVerified :: B.C f Bool,
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -41,7 +41,7 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runInReplica)
+-- import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -157,7 +157,8 @@ selectResult estimateId = do
     -- estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     estimate <- MaybeT $ QEstimate.findById estimateId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
-    bookingId <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id
+    -- bookingId <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id
+    bookingId <- MaybeT $ QBooking.findBookingIdAssignedByEstimateId estimate.id
     return $ QuotesResultResponse {bookingId = Just bookingId, selectedQuotes = Nothing}
   case res of
     Just r -> pure r

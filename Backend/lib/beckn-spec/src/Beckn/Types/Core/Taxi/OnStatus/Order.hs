@@ -23,7 +23,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Order = Order
   { id :: Text, -- BPP booking id
     status :: BookingStatus,
-    fulfillment :: FulfillmentInfo
+    fulfillment :: Maybe FulfillmentInfo
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

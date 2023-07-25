@@ -22,7 +22,7 @@ import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
 import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.ErrorModal as ErrorModalController
-import Services.APITypes (RidesInfo(..), Status(..))
+import Services.API (RidesInfo(..), Status(..))
 import PrestoDOM.Types.Core (toPropValue)
 import Resource.Constants (decodeAddress)
 import Data.Array (union, (!!), filter, length)

@@ -32,15 +32,15 @@ import Font.Style as FontStyle
 import JBridge (openUrlInApp, startTimerWithTime, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.Types as ST
-import Services.APITypes (LeaderBoardReq(..))
+import Services.API (LeaderBoardReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -54,7 +54,7 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks)
+import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
@@ -74,6 +74,7 @@ screen initialState =
                                               Just day -> day
                                               Nothing -> initialState.props.selectedDay
                                           else initialState.props.selectedDay
+
                       leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
                       case leaderBoardRes of
                         Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
@@ -140,6 +141,7 @@ view push state =
                    , padding (Padding 11 6 11 6)
                    , orientation HORIZONTAL
                    , cornerRadius 8.0
+                   , visibility GONE
                    ][ imageView
                       [ width (V 16)
                       , height (V 16)
@@ -229,21 +231,15 @@ leaderBoard push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , weight 1.0
-      ]([ if state.props.noData then
-            noDataView state
-          else
-            leaderBoardRanks state
+      ]([ leaderBoardRanksCover push state
         , dateSelector push state
-          ]<> if state.props.currentDriverData.rank > 10 then [currentDriverRank state] else []
+          ]<> if (state.props.currentDriverData.rank > 10 || state.props.currentDriverData.rank < 1) then [currentDriverRank state] else []
       )
    ]
 
 noDataView :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 noDataView state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  ][ scrollView
+   scrollView
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
@@ -287,7 +283,7 @@ noDataView state =
          ]
       ]
      ]
-  ]
+  
 
 currentDriverRank :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 currentDriverRank state =
@@ -297,6 +293,7 @@ currentDriverRank state =
   , gravity BOTTOM
   , alignParentBottom "true,-1"
   , cornerRadii $ Corners 18.0 true true false false
+  , visibility if( checkDate state || state.props.currentDriverData.rank > 0 ) && not state.props.showShimmer then VISIBLE else GONE
   ][ rankCard state.props.currentDriverData true state
    ]
 
@@ -347,8 +344,22 @@ dateAndTime push state =
         , gravity RIGHT
         , weight 1.0
         ]
-    ]
+  ]
 
+leaderBoardRanksCover :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+leaderBoardRanksCover push state = 
+  swipeRefreshLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , onRefresh push $ const RefreshScreen
+  , id (getNewIDWithTag "ReferralRefreshView")
+  ][ if state.props.noData then
+      noDataView state
+     else
+      leaderBoardRanks state
+  ]
+  
 leaderBoardRanks :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 leaderBoardRanks state =
   scrollView
@@ -359,7 +370,7 @@ leaderBoardRanks state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , padding (PaddingBottom if state.props.currentDriverData.rank > 10 then 68 else 8)
+    , padding (PaddingBottom if (state.props.currentDriverData.rank > 10 ||( checkDate state && state.props.currentDriverData.rank < 1)) then 68 else 8)
     ][ shimmerView state
      , congratsBar state
      , topRankers state
@@ -467,6 +478,7 @@ rankCard item aboveThreshold state =
           , height WRAP_CONTENT
           , gravity CENTER_HORIZONTAL
           , margin (MarginHorizontal 8 6)
+          , visibility $ if checkDriverWithZeroRides item aboveThreshold state then GONE else VISIBLE
           ][ textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -486,21 +498,23 @@ rankCard item aboveThreshold state =
         , textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ (DS.take 12 item.goodName) <> (if DS.length item.goodName > 12 then "..." else "")
+          , text ((DS.take 12 item.goodName) <> (if DS.length item.goodName > 12 then "..." else "")) 
           , textSize FontSize.a_14
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
+          , visibility $ if checkDriverWithZeroRides item aboveThreshold state then GONE else VISIBLE 
           ]
         ]
       , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , gravity RIGHT
+        , gravity $ if checkDriverWithZeroRides item aboveThreshold state then LEFT else RIGHT
+        , padding $ PaddingLeft (if checkDriverWithZeroRides item aboveThreshold state then 10 else 0 )
         , weight 1.0
         ][ textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
-          , text $ (show item.rides) <> " " <> (getString RIDES)
+          , text $ if checkDriverWithZeroRides item aboveThreshold state then  getString ACCEPT_RIDES_TO_ENTER_RANKINGS else (show item.rides) <> " " <> (getString RIDES)
           , textSize FontSize.a_16
           , fontStyle  $ FontStyle.semiBold LanguageStyle
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
@@ -1157,3 +1171,12 @@ emptyView =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   ][]
+
+checkDriverWithZeroRides :: ST.RankCardData -> Boolean -> ST.ReferralScreenState -> Boolean
+checkDriverWithZeroRides item aboveThreshold state = 
+  let currentDriverData = state.props.currentDriverData
+  in aboveThreshold && (item == currentDriverData && currentDriverData.rank == 0) 
+
+checkDate :: ST.ReferralScreenState -> Boolean
+checkDate state = if state.props.leaderBoardType == ST.Daily then (getcurrentdate "") == (convertUTCtoISC state.props.selectedDay.utcDate "YYYY-MM-DD") 
+                  else (getcurrentdate "") <= (convertUTCtoISC state.props.selectedWeek.utcEndDate "YYYY-MM-DD") 

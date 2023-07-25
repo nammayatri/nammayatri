@@ -25,13 +25,13 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==))
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width)
 import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare)
+import Helpers.Utils (isHaveFare, getMerchant, Merchant (..))
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -102,7 +102,7 @@ view push state =
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
-  (if (state.data.selectedItem.nightCharges) then [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ] else [])
+  (if (state.data.selectedItem.nightCharges && (getMerchant FunctionCall) /= YATRI) then [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ] else [])
     <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
     <> (if (isHaveFare "WAITING_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])

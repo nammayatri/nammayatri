@@ -29,6 +29,7 @@ type API =
   "driver"
     :> ( Common.DriverDocumentsInfoAPI
            :<|> Common.DriverAadhaarInfoAPI
+           :<|> Common.DriverAadhaarInfoByPhoneAPI
            :<|> Common.DriverListAPI
            :<|> Common.DriverOutstandingBalanceAPI
            :<|> Common.DriverActivityAPI
@@ -45,6 +46,7 @@ type API =
            :<|> Common.UnlinkAadhaarAPI
            :<|> Common.EndRCAssociationAPI
            :<|> Common.UpdatePhoneNumberAPI
+           :<|> Common.UpdateDriverAadhaarAPI
            :<|> Common.AddVehicleAPI
            :<|> Common.UpdateDriverNameAPI
            :<|> Reg.API
@@ -55,6 +57,7 @@ handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocumentsInfo merchantId
     :<|> driverAadhaarInfo merchantId
+    :<|> driverAadhaarInfoByPhone merchantId
     :<|> listDrivers merchantId
     :<|> getDriverDue merchantId
     :<|> driverActivity merchantId
@@ -71,6 +74,7 @@ handler merchantId =
     :<|> unlinkAadhaar merchantId
     :<|> endRCAssociation merchantId
     :<|> updatePhoneNumber merchantId
+    :<|> updateByPhoneNumber merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
@@ -81,6 +85,9 @@ driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
 
 driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DriverAadhaarInfoRes
 driverAadhaarInfo merchantShortId = withFlowHandlerAPI . DDriver.driverAadhaarInfo merchantShortId
+
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> FlowHandler Common.DriverAadhaarInfoByPhoneReq
+driverAadhaarInfoByPhone merchantShortId = withFlowHandlerAPI . DDriver.driverAadhaarInfoByPhone merchantShortId
 
 listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
 listDrivers merchantShortId mbLimit mbOffset verified enabled blocked mbSubscribed vechicleNumberSearchString =
@@ -131,6 +138,9 @@ endRCAssociation merchantShortId = withFlowHandlerAPI . DDriver.endRCAssociation
 
 updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
 updatePhoneNumber merchantShortId driverId = withFlowHandlerAPI . DDriver.updatePhoneNumber merchantShortId driverId
+
+updateByPhoneNumber :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
+updateByPhoneNumber merchantShortId mobileNo = withFlowHandlerAPI . DDriver.updateByPhoneNumber merchantShortId mobileNo
 
 addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId driverId = withFlowHandlerAPI . DDriver.addVehicle merchantShortId driverId

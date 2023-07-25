@@ -31,7 +31,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Sos as QSos
-import Storage.Tabular.Person ()
+-- import Storage.Tabular.Person ()
 import Tools.Error
 
 data SosReq = SosReq

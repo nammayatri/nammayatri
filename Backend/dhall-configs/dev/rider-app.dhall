@@ -118,6 +118,8 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
+let cacheFeedbackFormConfig = { configsExpTime = +5184000 }
+
 let registryMap =
       [ { mapKey = "YATRI", mapValue = "http://localhost:8020/" }
       , { mapKey = "YATRI_2", mapValue = "http://localhost:8020/" }
@@ -183,6 +185,7 @@ in  { esqDBCfg
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , cacheTranslationConfig
+    , cacheFeedbackFormConfig
     , maxEmergencyNumberCount = +3
     , minTripDistanceForReferralCfg = Some +1000
     , registryMap

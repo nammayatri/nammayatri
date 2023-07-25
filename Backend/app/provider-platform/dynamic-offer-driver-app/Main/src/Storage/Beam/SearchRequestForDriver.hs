@@ -39,7 +39,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Vehicle ()
 
 instance FromField D.DriverMode where
   fromField = fromFieldEnum

@@ -25,7 +25,7 @@ import Components.PrimaryButton.Controller as PrimaryButton
 import Storage (KeyStore(..), setValueToLocalStore)
 import JBridge(minimizeApp)
 import Screens (ScreenName(..), getScreen)
-import Debug (spy)
+import JBridge (setCleverTapUserProp)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -56,5 +56,6 @@ eval AfterRender state = continue state
 eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage
+  _ <- pure $ setCleverTapUserProp "Preferred Language" state.props.selectedLanguage
   exit (GoToEnterMobileScreen state)
 eval _ state = continue state

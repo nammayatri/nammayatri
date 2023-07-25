@@ -139,6 +139,15 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
       let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
        in acc <> ((\x -> (ride', x)) <$> bookings')
 
+findOneByBookingId :: Transactionable m => Id Booking -> m (Maybe Ride)
+findOneByBookingId bookingId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. Ride.RideBookingId ==. val (toKey bookingId)
+  orderBy [desc $ ride ^. RideCreatedAt]
+  limit 1
+  pure ride
+
 findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
   let limitVal = maybe 10 fromInteger mbLimit

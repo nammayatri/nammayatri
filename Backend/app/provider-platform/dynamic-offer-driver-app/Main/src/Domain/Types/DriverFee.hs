@@ -51,6 +51,9 @@ data PlatformFee = PlatformFee
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
+paymentProcessingLockKey :: Text -> Text
+paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
+
 instance FromHttpApiData DriverFeeStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece

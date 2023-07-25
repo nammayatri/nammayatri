@@ -488,26 +488,26 @@ public class LocationUpdateService extends Service {
             String toleranceEarth = getValueFromStorage("TOLERANCE_EARTH");
             Double toleranceEarthVal = toleranceEarth == null ? 30.0 : Double.valueOf(toleranceEarth);
 
-            int resultIndex = PolyUtil.locationIndexOnEdgeOrPath(new LatLng(latitude, longitude), latLngPoints, PolyUtil.isClosedPolygon(latLngPoints), true, toleranceEarthVal);
 
-            if (resultIndex == -1) {
-                Integer devCount = Integer.parseInt(getValueFromStorage("WAYPOINT_DEVIATION_COUNT"));
-                if(devCount == null){
-                    return;
-                }
-                devCount = devCount + 1;
-                updateStorage("WAYPOINT_DEVIATION_COUNT", String.valueOf(devCount));
-
-                Log.d("ride deviation count" , String.valueOf(devCount));
-                if(devCount != 0 && devCount % 3 == 0) {
-                    Integer rideDevCount = Integer.parseInt(getValueFromStorage("RIDE_WAYPOINT_DEVIATION_COUNT"));
-                    rideDevCount = rideDevCount + 1;
-                    updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(rideDevCount));
-                    Log.d("total deviation count" , String.valueOf(rideDevCount));
-                }
-            } else {
-               Log.d(  "in path", String.valueOf(resultIndex));
+            Integer devCount = Integer.parseInt(getValueFromStorage("RIDE_WAYPOINT_DEVIATION_COUNT"));
+            if(devCount == null){
+                return;
             }
+
+            if(devCount < 3){
+                int resultIndex = PolyUtil.locationIndexOnEdgeOrPath(new LatLng(latitude, longitude), latLngPoints, PolyUtil.isClosedPolygon(latLngPoints), true, toleranceEarthVal);
+                if (resultIndex == -1) {
+                    devCount = devCount + 1;
+                    updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(devCount));
+                    Integer storage_dev_count = Integer.parseInt(getValueFromStorage("RIDE_WAYPOINT_DEVIATION_COUNT"));
+                    Log.d("ride deviation count" , String.valueOf(storage_dev_count));
+                }
+                else {
+                    updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(0));
+                    Log.d(  "in path", String.valueOf(resultIndex));
+                }
+            }
+
         }
         catch (Exception e) {
             Log.e("deviation update exception", e.toString());
@@ -521,6 +521,7 @@ public class LocationUpdateService extends Service {
 
             if (localStage.equals("RideStarted")) {
                 if (rideWaypoints == null) {
+                    updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(0));
                     ExecutorService executor1 = Executors.newSingleThreadExecutor();
                     executor1.execute(() -> {
                         try {

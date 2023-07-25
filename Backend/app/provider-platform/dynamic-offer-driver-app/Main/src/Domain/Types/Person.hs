@@ -90,6 +90,7 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Centesimal,
     isNew :: Bool,
+    onboardedFromDashboard :: Bool,
     merchantId :: Id DM.Merchant,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,

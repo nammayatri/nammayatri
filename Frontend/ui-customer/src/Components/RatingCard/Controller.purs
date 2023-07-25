@@ -30,18 +30,8 @@ data Action = NoAction
             | SkipButtonAC PrimaryButton.Action
             | FeedbackChanged String
 
-type RatingCardState =
-  { props :: RatingCardProps
-  , data :: RatingCardData
-  }
-
-type RatingCardProps =
-  {
-    currentStage :: Stage
-  , estimatedDistance :: Maybe Int
-  , enableFeedback :: Boolean
-  , showFareBreakUp :: Boolean
-  , zoneType :: ZoneType
+type RatingCardState = 
+  { data :: RatingCardData
   }
 
 type RatingCardData =

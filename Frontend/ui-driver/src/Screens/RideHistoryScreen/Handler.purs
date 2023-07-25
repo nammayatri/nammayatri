@@ -28,10 +28,9 @@ import Screens.Types (IndividualRideCardState, AnimationState(..))
 import Components.IndividualRideCard as IndividualRideCard
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Core (getPushFn)
-import Services.APITypes (RidesInfo(..), Status(..))
+import Services.API (RidesInfo(..), Status(..))
 import Data.Maybe (Maybe(..))
 import Types.ModifyScreenState (modifyScreenState)
-
 
 
 rideHistory :: FlowBT String MY_RIDES_SCREEN_OUTPUT
@@ -49,13 +48,13 @@ rideHistory = do
     GoToTripDetails updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab})
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState.selectedItem)
-    LoaderOutput updatedState -> App.BackT $ App.BackPoint <$> (pure $ LOADER_OUTPUT updatedState)
-    RefreshScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState)
+    LoaderOutput updatedState -> App.BackT $ App.NoBack <$> (pure $ LOADER_OUTPUT updatedState)
+    RefreshScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ REFRESH updatedState)
     GoToFilter currentTab -> App.BackT $ App.BackPoint <$> (pure $ FILTER currentTab)
     GoToNotification -> App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_FLOW)
     SelectedTab updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab, offsetValue = 0})
-      App.BackT $ App.BackPoint <$> (pure $ SELECTED_TAB updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SELECTED_TAB updatedState)
 rideHistoryItem :: IndividualRideCardState
 rideHistoryItem = {
     date : "31/05/2022",

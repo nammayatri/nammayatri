@@ -34,6 +34,7 @@ import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -101,7 +102,8 @@ getOrder ::
   Id DOrder.PaymentOrder ->
   m DOrder.PaymentOrderAPIEntity
 getOrder (personId, _) orderId = do
-  order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 
@@ -159,8 +161,9 @@ processPayment merchantId orderStatus driverFeeId = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   unless (orderStatus /= Juspay.CHARGED) $ do
-    CDI.updatePendingPayment False driverFee.driverId
-    CDI.updateSubscription True driverFee.driverId
-    -- Esq.runTransaction $ do
-    _ <- QDF.updateStatus DF.CLEARED driverFeeId now
-    QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
+    Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
+      CDI.updatePendingPayment False driverFee.driverId
+      CDI.updateSubscription True driverFee.driverId
+      Esq.runTransaction $ do
+        QDF.updateStatus DF.CLEARED driverFeeId now
+        QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active

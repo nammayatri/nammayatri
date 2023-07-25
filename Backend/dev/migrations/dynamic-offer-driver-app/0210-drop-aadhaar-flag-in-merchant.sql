@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.merchant DROP COLUMN aadhaar_verification_required;

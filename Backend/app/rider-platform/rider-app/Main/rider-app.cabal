@@ -59,8 +59,10 @@ library
       API.UI.Confirm
       API.UI.CustomerSupport
       API.UI.Feedback
+      API.UI.FeedbackForm
       API.UI.Frontend
       API.UI.GoogleTranslate
+      API.UI.HotSpot
       API.UI.Maps
       API.UI.Payment
       API.UI.Profile
@@ -121,7 +123,9 @@ library
       Domain.Action.UI.Confirm
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Feedback
+      Domain.Action.UI.FeedbackForm
       Domain.Action.UI.Frontend
+      Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
       Domain.Action.UI.Profile
@@ -156,7 +160,10 @@ library
       Domain.Types.Exophone
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
+      Domain.Types.FeedbackForm
       Domain.Types.Geometry
+      Domain.Types.HotSpot
+      Domain.Types.HotSpotConfig
       Domain.Types.Issue
       Domain.Types.LocationAddress
       Domain.Types.Maps.DirectionsCache
@@ -241,7 +248,10 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
+      Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.DirectionsCache
+      Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage
@@ -250,6 +260,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person.PersonFlowStatus
+      Storage.CachedQueries.SavedLocation
       Storage.Queries.AppInstalls
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
@@ -263,8 +274,10 @@ library
       Storage.Queries.EstimateBreakup
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
+      Storage.Queries.FeedbackForm
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
+      Storage.Queries.HotSpotConfig
       Storage.Queries.Issues
       Storage.Queries.Maps.DirectionsCache
       Storage.Queries.Maps.PlaceNameCache
@@ -289,24 +302,8 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
-      Storage.Tabular.Booking
-      Storage.Tabular.Booking.BookingLocation
-      Storage.Tabular.CallStatus
-      Storage.Tabular.DriverOffer
-      Storage.Tabular.Estimate
-      Storage.Tabular.Issue
-      Storage.Tabular.Maps.DirectionsCache
-      Storage.Tabular.Merchant
-      Storage.Tabular.Merchant.MerchantPaymentMethod
-      Storage.Tabular.MerchantConfig
-      Storage.Tabular.Person
-      Storage.Tabular.Quote
-      Storage.Tabular.RentalSlab
-      Storage.Tabular.Ride
-      Storage.Tabular.SearchRequest
-      Storage.Tabular.SearchRequest.SearchReqLocation
-      Storage.Tabular.SpecialZoneQuote
-      Storage.Tabular.TripTerms
+      Storage.Tabular.FeedbackForm
+      Storage.Tabular.HotSpotConfig
       Tools.Auth
       Tools.Call
       Tools.Error

@@ -18,6 +18,8 @@ module Domain.Action.UI.Serviceability
   )
 where
 
+import API.UI.HotSpot
+import qualified Domain.Types.HotSpot as DHotSpot
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Kernel.External.Maps.Types
@@ -37,7 +39,9 @@ import Tools.Error
 data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
     specialLocation :: Maybe DSpecialLocation.SpecialLocation,
-    geoJson :: Maybe Text
+    geoJson :: Maybe Text,
+    hotSpotInfo :: [DHotSpot.HotSpotInfo],
+    blockRadius :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -55,19 +59,33 @@ checkServiceability settingAccessor (_, merchantId) location = do
   let merchId = merchantId
   geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig
+  DHotSpot.HotSpotResponse {..} <- getHotspot location merchantId
   case geoRestriction of
     Unrestricted -> do
       let serviceable = True
       specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
-      pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
+      pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
     Regions regions -> do
       -- serviceable <- runInReplica $ someGeometriesContain location regions
       serviceable <- someGeometriesContain location regions
       if serviceable
         then do
           specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
-          pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
-        else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing, geoJson = Nothing}
+          pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
+        else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing, geoJson = Nothing, ..}
+
+-- convert :: (a -> b) -> SqlExpr a -> QGenExpr context be s b
+-- convert f (ERaw m nf) = QExpr (\tbl -> PgCommandSyntax PgCommandTypeQuery (emitBuilder (getB $ nf Parens (mkSqlBackend undefined, initialIdentState))))
+
+-- getB :: (Builder, PersistValue) -> Builder
+-- getB (b, listOdValues) = do
+--   let by = getByteString b
+--   makeItBuilder $ replace "?" listOdValue
+
+-- convert :: (a -> b) -> SqlExpr a -> QGenExpr context be s b
+-- convert f s = QExpr (\tbl -> PgCommandSyntax PgCommandTypeQuery (emitBytestring $ getByte s))
+
+-- convert unValue (containsPoint ...)
 
 -- convert :: (a -> b) -> SqlExpr a -> QGenExpr context be s b
 -- convert f (ERaw m nf) = QExpr (\tbl -> PgCommandSyntax PgCommandTypeQuery (emitBuilder (getB $ nf Parens (mkSqlBackend undefined, initialIdentState))))

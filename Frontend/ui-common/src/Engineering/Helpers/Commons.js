@@ -342,6 +342,10 @@ export const getExpiryTime = function (str1) {
   };
 };
 
+export const getCurrentTimeStamp = function () {
+  return new Date()
+};
+
 export const getCurrentUTC = function (str) {
   var result = new Date().toISOString();
   console.log(result);

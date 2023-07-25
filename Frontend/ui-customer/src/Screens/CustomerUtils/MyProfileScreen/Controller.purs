@@ -21,10 +21,9 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), ErrorType(..), Gender(..))
 import Services.API (GetProfileRes(..))
 import Helpers.Utils (validateEmail)
-import Data.String(length)
+import Data.String(length, trim)
 import Storage(KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag)
-import Debug (spy)
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
@@ -110,13 +109,12 @@ eval (UserProfile (GetProfileRes profile)) state = do
         _ -> Nothing
   continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email} }
 eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do
-  _ <- pure $ spy "Value changed"  value
-  if (value == "" || length value < 3) then continue state {data {editedName = value, nameErrorMessage = checkError "name" (Just state.data.name) value}, props{isNameValid = false, isBtnEnabled = ((length value >=3) && state.props.isEmailValid && state.props.isNameValid) }}
-    else continue state { data { editedName = value, nameErrorMessage = Nothing }, props{isNameValid = true, isBtnEnabled = ((length value >=3) && state.props.isEmailValid)} }
+  if (trim value == "" || length (trim value) < 3) then continue state {data {editedName = value, nameErrorMessage = checkError "name" (Just state.data.name) value}, props{isNameValid = false, isBtnEnabled = ((length value >=3) && state.props.isEmailValid && state.props.isNameValid && value /= state.data.name) }}
+    else continue state { data { editedName = value, nameErrorMessage = Nothing }, props{isNameValid = true, isBtnEnabled = ((length value >=3) && state.props.isEmailValid &&  value /= state.data.name)} }
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
-  if (state.data.emailId == Nothing) then continue state {data {editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}, props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = checkValid state.data.emailId value}}
+  if (state.data.emailId == Nothing) then continue state {data {editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}, props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = checkValid state.data.emailId value && state.data.emailId /= Just value && state.data.nameErrorMessage == Nothing}}
     else if (value == "" && state.data.emailErrorMessage == Just EMAIL_EXISTS) then continue state {props{isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
-    else continue state {data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value },props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = ((length state.data.editedName >=3)  && checkValid state.data.emailId value), genderOptionExpanded = false}}
+    else continue state {data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value },props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = ((length state.data.editedName >=3)  && checkValid state.data.emailId value && state.data.emailId /= Just value && state.data.nameErrorMessage == Nothing), genderOptionExpanded = false}}
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.data.gender /= state.data.editedGender then do
@@ -132,8 +130,8 @@ checkError inputType originalValue value = case inputType of
                                       "email" ->  if (length value == 0 && originalValue /= Nothing) then Just EMAIL_CANNOT_BE_BLANK
                                                     else if ((length value == 0 && originalValue == Nothing) || (validateEmail value)) then Nothing
                                                     else Just INVALID_EMAIL
-                                      "name"  ->  if (length value == 0) then Just NAME_CANNOT_BE_BLANK
-                                                    else if (length value < 3) then Just INVALID_NAME
+                                      "name"  ->  if (length ( trim value ) == 0) then Just NAME_CANNOT_BE_BLANK
+                                                    else if (length ( trim value)  < 3) then Just INVALID_NAME
                                                     else Nothing
                                       _ -> Nothing
 

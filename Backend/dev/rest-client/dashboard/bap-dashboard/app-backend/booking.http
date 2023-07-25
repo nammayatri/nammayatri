@@ -22,3 +22,19 @@ content-type: application/json
         "0b7c2b71-9e98-41f0-976e-5e11a9f4d537"
         ]
 }
+
+###
+
+# @name multipleBookingSync
+
+POST {{bap-dashboard-host}}/bap/YATRI/booking/sync
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "bookings" :
+    [
+        {"bookingId" : "06a79dca-b1ab-450d-8b9b-485ba345905b"},
+        {"bookingId" : "fakeBookingId"}
+    ]
+}

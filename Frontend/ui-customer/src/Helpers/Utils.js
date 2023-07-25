@@ -96,9 +96,14 @@ export const storeCallBackLocateOnMap = function (cb) {
       return function () {
         var callback = callbackMapper.map(function (key, lat, lon) {
           console.log("in show storeCallBackLocateOnMap",action);
+          if(timerIdDebounce){
+            clearTimeout(timerIdDebounce);
+          }
           window.x = cb;
           window.y = action;
-          cb(action (key) (lat) (lon))();
+          timerIdDebounce = setTimeout(() => {
+            cb(action (key) (lat) (lon))();
+          }, 300); 
         });
           console.log("In storeCallBackLocateOnMap ---------- + " + action);
           window.JBridge.storeCallBackLocateOnMap(callback);

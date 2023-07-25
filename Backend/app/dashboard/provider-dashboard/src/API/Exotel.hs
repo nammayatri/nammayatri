@@ -62,7 +62,8 @@ exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI $ do
     throwError $ InvalidToken incomingExotelToken
   let serverNames = [DSN.APP_BACKEND, DSN.BECKN_TRANSPORT, DSN.DRIVER_OFFER_BPP]
   needToCallApps <- forM serverNames $ \serverName -> do
-    mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
+    -- mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
+    mbLastTransaction <- QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
     let mbLastReq =
           mbLastTransaction
             >>= (.request)

@@ -78,3 +78,4 @@ mkOnInitMessage res = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "TOTAL_FARE"
+            || breakup.title == "NIGHT_SHIFT_CHARGE"

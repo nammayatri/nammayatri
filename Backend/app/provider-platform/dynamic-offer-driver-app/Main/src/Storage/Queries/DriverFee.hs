@@ -179,17 +179,6 @@ findOngoingAfterEndTime (Id driverId) now = findOneWithKV [Se.And [Se.Is BeamDF.
 findOngoingAfterEndTimeInReplica :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findOngoingAfterEndTimeInReplica (Id driverId) now = findOneWithKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
 
--- findUnpaidAfterPayBy :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
--- findUnpaidAfterPayBy driverId now = do
---   findOne $ do
---     -- assuming only one such entry only
---     driverFee <- from $ table @DriverFeeT
---     where_ $
---       driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
---         &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
---         &&. driverFee ^. DriverFeePayBy <=. val now
---     return driverFee
-
 findUnpaidAfterPayBy :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findUnpaidAfterPayBy (Id driverId) now =
   findOneWithKV

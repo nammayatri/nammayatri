@@ -625,6 +625,24 @@ export const openChatScreen = function() {
   }
 }
 
+export const scrollOnResume = function (cb) {
+  return function (action) {
+    try {
+      var callback = function () {
+        cb(action)();
+      }
+      var scroll = function () {
+        if(JBridge.getKeysInSharedPrefs("LOCAL_STAGE") === "ChatWithCustomer" || JBridge.getKeysInSharedPrefs("LOCAL_STAGE") === "ChatWithDriver") {
+           setTimeout(callback, 500);
+        }
+      }
+      window.scrollAction = scroll;
+    } catch (e) {
+      console.error("Error in scrollOnResume : " + e);
+    }
+  }
+}
+
 export const startChatListenerService = function() {
   if (JBridge.startChatListenerService) {
     JBridge.startChatListenerService();
@@ -945,7 +963,10 @@ export const minimizeApp = function (str) {
   window.JBridge.minimizeApp();
 };
 export const toast = function (str) {
-  window.JBridge.toast(str);
+  if(window.JBridge.toaster)
+    window.JBridge.toaster(str);
+  else
+    window.JBridge.toast(str);
 };
 
 export const firebaseLogEventWithParams = function (event) {
@@ -1593,3 +1614,9 @@ export const cleverTapSetLocation = function () {
       return window.JBridge.cleverTapSetLocation();
     }
 }
+
+export const launchDateSettings = function (res) {
+  if(JBridge.launchDateSettings){
+    return JBridge.launchDateSettings();
+  }
+};

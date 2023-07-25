@@ -185,10 +185,21 @@ data DriverAadhaarInfoRes = DriverAadhaarInfoRes
   { driverName :: Text,
     driverGender :: Text,
     driverDob :: Text,
-    driverImage :: Text
+    driverImage :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- driver aadhaar Info api by mobile Number ----------------------------------------
+
+type DriverAadhaarInfoByPhoneAPI =
+  Capture "mobileNo" Text
+    :> "aadhaarInfobyMobileNumber"
+    :> Get '[JSON] DriverAadhaarInfoByPhoneReq
+
+type DriverAadhaarInfoByPhoneReq = DriverAadhaarInfoRes
+
+---------------------------------------------------------
 
 ---------------------------------------------------------
 -- driver outstanding balance api ----------------------------------------
@@ -361,7 +372,6 @@ data DriverInfoRes = DriverInfoRes
     enabled :: Bool,
     blocked :: Bool,
     verified :: Bool,
-    aadhaarVerified :: Bool,
     subscribed :: Bool,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
@@ -498,6 +508,23 @@ validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
 
 instance HideSecrets UpdatePhoneNumberReq where
   hideSecrets = identity
+
+-- update driver aadhaar  api ----------------------------------------
+type UpdateDriverAadhaarAPI =
+  Capture "mobileNo" Text
+    :> "updateByPhoneNumber"
+    :> ReqBody '[JSON] UpdateDriverDataReq
+    :> Post '[JSON] APISuccess
+
+data UpdateDriverDataReq = UpdateDriverDataReq
+  { driverName :: Text,
+    driverGender :: Text,
+    driverDob :: Text,
+    driverAadhaarNumber :: Text,
+    isVerified :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- add vehicle ------------------------------------------
