@@ -112,8 +112,9 @@ view push state =
       , if state.props.updateDetails then updateDetailsView state push else dummyTextView
       , if state.props.showGenderView || state.props.alternateNumberView then driverNumberGenderView state push else dummyTextView
       , if state.props.removeAlternateNumber then PopUpModal.view (push <<<  RemoveAlternateNumberAC) (removeAlternateNumberConfig state ) else dummyTextView
-      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView]
-      , if state.props.updateLanguages then updateLanguageView state push else dummyTextView]
+      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.updateLanguages then updateLanguageView state push else dummyTextView
+    ]
 
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
 profileView push state = 
@@ -1062,6 +1063,16 @@ infoTileView state config =
         , color Color.black700
         ]
     ]
+
+updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
+updateDetailsView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    , PrimaryEditText.view (push <<< PrimaryEditTextAC) (primaryEditTextConfig state)
+  ]
 
 updateLanguageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
 updateLanguageView state push = 

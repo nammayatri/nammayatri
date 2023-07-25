@@ -501,5 +501,10 @@ const kannadaStrings = {
   OTHERS : "ಇತರರು",
   ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
   ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  OTP_RESEND_LIMIT_EXCEEDED : "OTP ಮಿತಿಯನ್ನು ಮರುಕಳುಹಿಸಲಾಗಿದೆ",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "ಅನೇಕ ತಪ್ಪು ಪ್ರಯತ್ನಗಳು. ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ",
+  ADD_ALTERNATE_NUMBER_IN_MEANTIME : "ಈ ಪ್ರಕ್ರಿಯೆಯು ಪೂರ್ಣಗೊಳ್ಳಲು 2 ಕೆಲಸದ ದಿನಗಳವರೆಗೆ ತೆಗೆದುಕೊಳ್ಳಬಹುದು. ಈ ಮಧ್ಯೆ, ನೀವು \nಪರ್ಯಾಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಬಹುದು.",
+  OTP_RESENT: "OTP ಮರು ಕಳುಹಿಸಲಾಗಿದೆ"
 }

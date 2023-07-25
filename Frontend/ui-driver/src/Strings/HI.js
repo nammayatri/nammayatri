@@ -505,5 +505,9 @@ const hindiStrings = {
   OTHERS : "अन्य",
   ENTER_SECOND_SIM_NUMBER : "दूसरा सिम नंबर दर्ज करें",
   ALTERNATE_NUMBER : "वैकल्पिक नंबर",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं",
+  OTP_RESEND_LIMIT_EXCEEDED : "ओटीपी पुनः भेजने की सीमा पार हो गई है",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "कृपया कुछ समय बाद प्रयास करे" ,
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "दूसरा मोबाइल नंबर ऐड नहीं हो सकता",
+  OTP_RESENT: "ओटीपी फिर से भेजा है"
 }

@@ -503,5 +503,9 @@ const bengaliStrings = {
 	SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
 	OTHERS : "অন্যান্য",
 	ENTER_SECOND_SIM_NUMBER : "দ্বিতীয় সিম নম্বর লিখুন",
-	ALTERNATE_NUMBER : "বিকল্প নম্বর"
+	ALTERNATE_NUMBER : "বিকল্প নম্বর",
+	OTP_RESEND_LIMIT_EXCEEDED : "ওটিপি সীমা ছাড়িয়ে গেছে",
+	LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "কিছুক্ষণ পরে আবার চেষ্টা করুন",
+	ALTERNATE_NUMBER_CANNOT_BE_ADDED : "বিকল্প নম্বর যুক্ত করা যাবে না",
+	OTP_RESENT: "ওটিপি বিরক্তি"
 	}

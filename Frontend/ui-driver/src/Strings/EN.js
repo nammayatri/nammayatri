@@ -503,5 +503,9 @@ const englishStrings = {
   OTHERS : "Others",
   ENTER_SECOND_SIM_NUMBER : "Enter Second SIM Number",
   ALTERNATE_NUMBER : "Alternate Number",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "Select the languages you can speak"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "Select the languages you can speak",
+  OTP_RESEND_LIMIT_EXCEEDED : "Resend OTP Limit Exceeded",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "Please try again after sometime",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "Alternate Number Cannot Be Added",
+  OTP_RESENT: "OTP Resent"
 }

@@ -508,5 +508,10 @@ const mlStrings = {
   OTHERS : "മറ്റുള്ളവ",
   ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
   ALTERNATE_NUMBER : "ഇതര നമ്പർ",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക",
+  OTP_RESEND_LIMIT_EXCEEDED : "ഓടിപി പരിധി കവിഞ്ഞു",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "അൽപസമയത്തിനു ശേഷം വീണ്ടും ശ്രമിക്കുക",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "ഇതര നമ്പർ ചേർക്കാൻ കഴിയില്ല",
+  ADD_ALTERNATE_NUMBER_IN_MEANTIME : "ഈ പ്രക്രിയ പൂർത്തിയാകാൻ 2 പ്രവൃത്തി ദിവസങ്ങൾ വരെ എടുത്തേക്കാം. അതിനിടയിൽ, നിങ്ങൾക്ക് ഒരു ഇതര മൊബൈൽ നമ്പർ ചേർക്കാം.",
+  OTP_RESENT: "ഒടിപി വീണ്ടും അയച്ചിരിക്കുന്നു"
 }

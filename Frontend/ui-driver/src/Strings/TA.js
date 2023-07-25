@@ -500,5 +500,9 @@ const tamilStrings = {
   OTHERS : "மற்றவைகள்",
   ENTER_SECOND_SIM_NUMBER : "இரண்டாவது சிம் எண்ணை உள்ளிடவும்",
   ALTERNATE_NUMBER : "மாற்று எண்",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்"
+  OTP_RESEND_LIMIT_EXCEEDED : "மீண்டும் OTP அனுப்புவதற்கான வரம்பு மீறப்பட்டது",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "பல தவறான முயற்சிகள். பின்னர் மீண்டும் முயற்சிக்கவும்",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "மற்றொரு எண்ணைச் சேர்க்க முடியாது",
+  ADD_ALTERNATE_NUMBER_IN_MEANTIME : "இந்தச் செயல்முறை முடிய 2 வேலை நாட்கள் வரை ஆகலாம். இதற்கிடையில், நீங்கள் \nமாற்று மொபைல் எண்ணைச் சேர்க்கலாம்.",
+  OTP_RESENT : "OTP மீண்டும் அனுப்பப்பட்டது"
 }

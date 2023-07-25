@@ -253,7 +253,6 @@ type DriverProfileScreenData = {
   capacity :: Int,
   downgradeOptions :: Array String,
   vehicleSelected :: Array VehicleP,
-  driverGender :: Maybe String,
   genderTypeSelect :: Maybe String,
   alterNumberEditableText :: Boolean,
   driverEditAlternateMobile :: Maybe String,
