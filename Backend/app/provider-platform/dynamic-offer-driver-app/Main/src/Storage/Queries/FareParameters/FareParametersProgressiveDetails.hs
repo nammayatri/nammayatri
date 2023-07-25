@@ -24,13 +24,13 @@ import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, fi
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 
-create :: (L.MonadFlow m, Log m) => DomainFPPD.FullFareParametersProgressiveDetails -> m ()
+create :: (L.MonadFlow m, Log m) => Domain.FullFareParametersProgressiveDetails -> m ()
 create = createWithKV
 
-findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
+findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersProgressiveDetails)
 findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
-instance FromTType' BeamFPPD.FareParametersProgressiveDetails DomainFPPD.FullFareParametersProgressiveDetails where
+instance FromTType' BeamFPPD.FareParametersProgressiveDetails Domain.FullFareParametersProgressiveDetails where
   fromTType' FareParametersProgressiveDetailsT {..} = do
     pure $
       Just
@@ -41,7 +41,7 @@ instance FromTType' BeamFPPD.FareParametersProgressiveDetails DomainFPPD.FullFar
             }
         )
 
-instance ToTType' FareParametersProgressiveDetails BeamFPPD.FullFareParametersProgressiveDetails where
+instance ToTType' FareParametersProgressiveDetails Domain.FullFareParametersProgressiveDetails where
   toTType' (KTI.Id fareParametersId, fParamsProgressiveDetails) =
     FareParametersProgressiveDetailsT
       { fareParametersId = fareParametersId,

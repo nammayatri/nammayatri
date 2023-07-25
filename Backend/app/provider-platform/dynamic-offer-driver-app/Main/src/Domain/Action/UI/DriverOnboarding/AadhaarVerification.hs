@@ -138,7 +138,8 @@ unVerifiedAadhaarData personId req = do
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False
-  Esq.runNoTransaction $ Q.create aadhaarEntity
+  -- Esq.runNoTransaction $ Q.create aadhaarEntity
+  Q.create aadhaarEntity
   return Success
 
 makeTransactionIdAndAadhaarHashKey :: Id Person.Person -> Text

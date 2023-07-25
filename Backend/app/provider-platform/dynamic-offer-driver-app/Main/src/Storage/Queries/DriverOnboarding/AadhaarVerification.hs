@@ -80,14 +80,14 @@ deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq driv
 findByAadhaarNumberHash :: (L.MonadFlow m, Log m) => DbHash -> m (Maybe AadhaarVerification)
 findByAadhaarNumberHash aadhaarHash = findOneWithKV [Se.Is BeamAV.aadhaarNumberHash $ Se.Eq (Just aadhaarHash)]
 
-findByPhoneNumberAndUpdate :: (L.MonadFlow m, Log m, MonadTime m) => Text -> Text -> Text -> DbHash -> Bool -> Id Person -> m ()
+findByPhoneNumberAndUpdate :: (L.MonadFlow m, Log m, MonadTime m) => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
 findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamAV.driverName name,
       Se.Set BeamAV.driverGender gender,
       Se.Set BeamAV.driverDob dob,
-      Se.Set BeamAV.aadhaarNumberHash $ Just aadhaarNumberHash,
+      Se.Set BeamAV.aadhaarNumberHash aadhaarNumberHash,
       Se.Set BeamAV.isVerified isVerified,
       Se.Set BeamAV.updatedAt now
     ]

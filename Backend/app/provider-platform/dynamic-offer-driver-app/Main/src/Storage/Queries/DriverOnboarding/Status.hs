@@ -17,7 +17,6 @@
 
 module Storage.Queries.DriverOnboarding.Status where
 
-import Data.Coerce
 import Data.List (zip7)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
@@ -31,8 +30,8 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
+import qualified EulerHS.Prelude as Prelude
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (Log)
 import Kernel.Types.Id
 import Lib.Utils
@@ -50,14 +49,6 @@ import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification ()
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 import qualified Storage.Queries.Person ()
-import Storage.Tabular.DriverInformation
-import Storage.Tabular.DriverOnboarding.DriverLicense
-import Storage.Tabular.DriverOnboarding.DriverRCAssociation
-import Storage.Tabular.DriverOnboarding.IdfyVerification
-import Storage.Tabular.DriverOnboarding.Image
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
-import Storage.Tabular.Person
-import qualified Prelude
 
 data DriverDocsInfo = DriverDocsInfo
   { person :: Person,
@@ -70,17 +61,17 @@ data DriverDocsInfo = DriverDocsInfo
     numVehRegImages :: Int
   }
 
-imagesAggTableCTEbyDoctype :: Image.ImageType -> SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
-imagesAggTableCTEbyDoctype imageType = with $ do
-  image <- from $ table @ImageT
-  where_ $ image ^. ImageImageType ==. val imageType
-  groupBy $ image ^. ImagePersonId
-  pure (image ^. ImagePersonId, count @Int $ image ^. ImageId)
+-- imagesAggTableCTEbyDoctype :: Image.ImageType -> SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
+-- imagesAggTableCTEbyDoctype imageType = with $ do
+--   image <- from $ table @ImageT
+--   where_ $ image ^. ImageImageType ==. val imageType
+--   groupBy $ image ^. ImagePersonId
+--   pure (image ^. ImagePersonId, count @Int $ image ^. ImageId)
 
 -- imagesAggTableCTEbyDoctype' = do
 
-imagesAggTableCTEbyDoctype' :: L.MonadFlow m => Image.ImageType -> m ([(Text, Int)])
-imagesAggTableCTEbyDoctype' imageType' = do
+imagesAggTableCTEbyDoctype :: L.MonadFlow m => Image.ImageType -> m [(Text, Int)]
+imagesAggTableCTEbyDoctype imageType' = do
   dbConf <- getMasterBeamConfig
   resp <-
     L.runDB dbConf $
@@ -89,86 +80,86 @@ imagesAggTableCTEbyDoctype' imageType' = do
           B.aggregate_ (\image' -> (B.group_ (BeamI.personId image'), B.as_ @Int B.countAll_)) $
             B.filter_' (\(BeamI.ImageT {..}) -> imageType B.==?. B.val_ imageType') $
               B.all_ (meshModelTableEntity @BeamI.ImageT @Postgres @(Se.DatabaseWith BeamI.ImageT))
-  pure (either (const []) Prelude.id resp)
+  pure (Prelude.fromRight [] resp)
 
-baseDriverDocumentsInfoQuery ::
-  From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
-  From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
-  From
-    ( Table PersonT
-        :& MbTable DriverLicenseT
-        :& MbTable IdfyVerificationT
-        :& MbTable DriverRCAssociationT
-        :& MbTable VehicleRegistrationCertificateT
-        :& MbTable IdfyVerificationT
-        :& Table DriverInformationT
-        :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
-        :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
-    )
-baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggTable =
-  table @PersonT
-    `Esq.leftJoin` table @DriverLicenseT `Esq.on` (\(p :& l) -> just (p ^. PersonTId) ==. l ?. DriverLicenseDriverId)
-    `Esq.leftJoin` table @IdfyVerificationT
-      `Esq.on` ( \(p :& _ :& licReq) ->
-                   just (p ^. PersonTId) ==. licReq ?. IdfyVerificationDriverId
-                     &&. licReq ?. IdfyVerificationDocType ==. just (val Image.DriverLicense)
-               )
-    `Esq.leftJoin` table @DriverRCAssociationT
-      `Esq.on` (\(p :& _ :& _ :& rcAssoc) -> just (p ^. PersonTId) ==. rcAssoc ?. DriverRCAssociationDriverId)
-    `Esq.leftJoin` table @VehicleRegistrationCertificateT
-      `Esq.on` (\(_ :& _ :& _ :& rcAssoc :& regCert) -> rcAssoc ?. DriverRCAssociationRcId ==. regCert ?. VehicleRegistrationCertificateTId)
-    `Esq.leftJoin` table @IdfyVerificationT
-      `Esq.on` ( \(p :& _ :& _ :& _ :& _ :& regReq) ->
-                   just (p ^. PersonTId) ==. regReq ?. IdfyVerificationDriverId
-                     &&. regReq ?. IdfyVerificationDocType ==. just (val Image.VehicleRegistrationCertificate)
-               )
-    `Esq.innerJoin` table @DriverInformationT
-      `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& driverInfo) -> p ^. PersonTId ==. driverInfo ^. DriverInformationDriverId)
-    `Esq.leftJoin` licenseImagesAggTable
-      `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& (licImgPersonId, _)) -> just (p ^. PersonTId) ==. licImgPersonId)
-    `Esq.leftJoin` vehicleRegistrationImagesAggTable
-      `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& _ :& (vehRegImgPersonId, _)) -> just (p ^. PersonTId) ==. vehRegImgPersonId)
+-- baseDriverDocumentsInfoQuery ::
+--   From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
+--   From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
+--   From
+--     ( Table PersonT
+--         :& MbTable DriverLicenseT
+--         :& MbTable IdfyVerificationT
+--         :& MbTable DriverRCAssociationT
+--         :& MbTable VehicleRegistrationCertificateT
+--         :& MbTable IdfyVerificationT
+--         :& Table DriverInformationT
+--         :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
+--         :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
+--     )
+-- baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggTable =
+--   table @PersonT
+--     `Esq.leftJoin` table @DriverLicenseT `Esq.on` (\(p :& l) -> just (p ^. PersonTId) ==. l ?. DriverLicenseDriverId)
+--     `Esq.leftJoin` table @IdfyVerificationT
+--       `Esq.on` ( \(p :& _ :& licReq) ->
+--                    just (p ^. PersonTId) ==. licReq ?. IdfyVerificationDriverId
+--                      &&. licReq ?. IdfyVerificationDocType ==. just (val Image.DriverLicense)
+--                )
+--     `Esq.leftJoin` table @DriverRCAssociationT
+--       `Esq.on` (\(p :& _ :& _ :& rcAssoc) -> just (p ^. PersonTId) ==. rcAssoc ?. DriverRCAssociationDriverId)
+--     `Esq.leftJoin` table @VehicleRegistrationCertificateT
+--       `Esq.on` (\(_ :& _ :& _ :& rcAssoc :& regCert) -> rcAssoc ?. DriverRCAssociationRcId ==. regCert ?. VehicleRegistrationCertificateTId)
+--     `Esq.leftJoin` table @IdfyVerificationT
+--       `Esq.on` ( \(p :& _ :& _ :& _ :& _ :& regReq) ->
+--                    just (p ^. PersonTId) ==. regReq ?. IdfyVerificationDriverId
+--                      &&. regReq ?. IdfyVerificationDocType ==. just (val Image.VehicleRegistrationCertificate)
+--                )
+--     `Esq.innerJoin` table @DriverInformationT
+--       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& driverInfo) -> p ^. PersonTId ==. driverInfo ^. DriverInformationDriverId)
+--     `Esq.leftJoin` licenseImagesAggTable
+--       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& (licImgPersonId, _)) -> just (p ^. PersonTId) ==. licImgPersonId)
+--     `Esq.leftJoin` vehicleRegistrationImagesAggTable
+--       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& _ :& (vehRegImgPersonId, _)) -> just (p ^. PersonTId) ==. vehRegImgPersonId)
 
-fetchDriverDocsInfo' :: (L.MonadFlow m, Log m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
-fetchDriverDocsInfo' merchantId' mbDriverIds = do
+fetchDriverDocsInfo :: (L.MonadFlow m, Log m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
+fetchDriverDocsInfo merchantId' mbDriverIds = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
         do
           person' <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
-          dl' <- B.leftJoin_' (B.all_ $ BeamCommon.driverLicense BeamCommon.atlasDB) (\dl'' -> BeamDL.driverId dl'' B.==?. (BeamP.id person'))
-          idfy' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy'' -> BeamIV.driverId idfy'' B.==?. (BeamP.id person'))
-          drc' <- B.leftJoin_' (B.all_ $ BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\drc'' -> BeamRC.driverId drc'' B.==?. (BeamP.id person'))
-          vc' <- B.leftJoin_' (B.all_ $ BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB) (\vc'' -> (BeamRC.rcId drc' B.==?. B.just_ (BeamVRC.id vc'')))
-          idfy'' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy''' -> BeamIV.driverId idfy''' B.==?. (BeamP.id person') B.&&?. BeamIV.docType idfy''' B.==?. (B.val_ Image.VehicleRegistrationCertificate))
-          di' <- B.join_' (BeamCommon.dInformation BeamCommon.atlasDB) (\di'' -> BeamDI.driverId di'' B.==?. (BeamP.id person'))
+          dl' <- B.leftJoin_' (B.all_ $ BeamCommon.driverLicense BeamCommon.atlasDB) (\dl'' -> BeamDL.driverId dl'' B.==?. BeamP.id person')
+          idfy' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy'' -> BeamIV.driverId idfy'' B.==?. BeamP.id person')
+          drc' <- B.leftJoin_' (B.all_ $ BeamCommon.driverRCAssociation BeamCommon.atlasDB) (\drc'' -> BeamRC.driverId drc'' B.==?. BeamP.id person')
+          vc' <- B.leftJoin_' (B.all_ $ BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB) (\vc'' -> BeamRC.rcId drc' B.==?. B.just_ (BeamVRC.id vc''))
+          idfy'' <- B.leftJoin_' (B.all_ $ BeamCommon.idfyVerification BeamCommon.atlasDB) (\idfy''' -> BeamIV.driverId idfy''' B.==?. BeamP.id person' B.&&?. BeamIV.docType idfy''' B.==?. B.val_ Image.VehicleRegistrationCertificate)
+          di' <- B.join_' (BeamCommon.dInformation BeamCommon.atlasDB) (\di'' -> BeamDI.driverId di'' B.==?. BeamP.id person')
           pure (person', dl', idfy', drc', vc', idfy'', di')
   resDom <- case res of
     Right res' -> do
       p <- catMaybes <$> mapM fromTType' (fst' <$> res')
       -- dl <- mapM (maybe (pure Nothing) (fromTType')) dl''
-      dl <- mapM (maybe (pure Nothing) (fromTType')) (snd' <$> res')
-      idfy <- mapM (maybe (pure Nothing) (fromTType')) (thd' <$> res')
-      drc <- mapM (maybe (pure Nothing) (fromTType')) (fth' <$> res')
-      vc <- mapM (maybe (pure Nothing) (fromTType')) (fft' <$> res')
-      idfy_ <- mapM (maybe (pure Nothing) (fromTType')) (six' <$> res')
-      di <- catMaybes <$> (mapM fromTType' (sev' <$> res'))
+      dl <- mapM (maybe (pure Nothing) fromTType') (snd' <$> res')
+      idfy <- mapM (maybe (pure Nothing) fromTType') (thd' <$> res')
+      drc <- mapM (maybe (pure Nothing) fromTType') (fth' <$> res')
+      vc <- mapM (maybe (pure Nothing) fromTType') (fft' <$> res')
+      idfy_ <- mapM (maybe (pure Nothing) fromTType') (six' <$> res')
+      di <- catMaybes <$> mapM fromTType' (sev' <$> res')
       pure $ zip7 p dl idfy drc vc idfy_ di
     Left _ -> pure []
-  imagesCountLic <- imagesAggTableCTEbyDoctype' Image.DriverLicense
-  imagesCountVehReg <- imagesAggTableCTEbyDoctype' Image.VehicleRegistrationCertificate
+  imagesCountLic <- imagesAggTableCTEbyDoctype Image.DriverLicense
+  imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
   let resAndImageCount = foldl' (joinResAndLic imagesCountLic) [] resDom
       resImageAndVehCount = foldl' (joinResAndVeh imagesCountVehReg) [] resAndImageCount
-      driverDocs' = filter (\(p, _, _, _, _, _, _, _, _) -> p.merchantId == merchantId' && (maybe (True) (\dIds -> (getId p.id) `elem` (getId <$> toList dIds)) mbDriverIds)) resImageAndVehCount
+      driverDocs' = filter (\(p, _, _, _, _, _, _, _, _) -> p.merchantId == merchantId' && maybe True (\dIds -> (getId p.id) `elem` (getId <$> toList dIds)) mbDriverIds) resImageAndVehCount
       driverDocs = map (\(p, dl, idfy, drc, vc, idfy_, di, lic, veh) -> (p, dl, idfy, drc, vc, idfy_, di, snd <$> lic, snd <$> veh)) driverDocs'
   pure $ map mkDriverDocsInfo driverDocs
   where
     joinResAndLic imagesCountLic' resAndImageCount (p, dl, idfy, drc, vc, idfy_, di) =
-      let resAndImageCount' = filter (\(id_, _) -> (getId p.id) == id_) imagesCountLic'
+      let resAndImageCount' = filter (\(id_, _) -> getId p.id == id_) imagesCountLic'
        in resAndImageCount <> if not (null resAndImageCount') then (\(id_, count'') -> (p, dl, idfy, drc, vc, idfy_, di, Just (id_, count''))) <$> resAndImageCount' else [(p, dl, idfy, drc, vc, idfy_, di, Nothing)]
     joinResAndVeh imagesCountVehReg' resImageAndVehCount (p, dl, idfy, drc, vc, idfy_, di, lic) =
-      let resImageAndVehCount' = filter (\(id_, _) -> (getId p.id) == id_) imagesCountVehReg'
+      let resImageAndVehCount' = filter (\(id_, _) -> getId p.id == id_) imagesCountVehReg'
        in resImageAndVehCount <> if not (null resImageAndVehCount') then (\(id_, count'') -> (p, dl, idfy, drc, vc, idfy_, di, lic, Just (id_, count''))) <$> resImageAndVehCount' else [(p, dl, idfy, drc, vc, idfy_, di, lic, Nothing)]
     fst' (x, _, _, _, _, _, _) = x
     snd' (_, x, _, _, _, _, _) = x
@@ -178,18 +169,18 @@ fetchDriverDocsInfo' merchantId' mbDriverIds = do
     six' (_, _, _, _, _, x, _) = x
     sev' (_, _, _, _, _, _, x) = x
 
-fetchDriverDocsInfo :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
-fetchDriverDocsInfo merchantId mbDriverIds = fmap (map mkDriverDocsInfo) $
-  Esq.findAll $ do
-    imagesCountLic <- imagesAggTableCTEbyDoctype Image.DriverLicense
-    imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
-    person :& license :& licReq :& assoc :& registration :& regReq :& driverInfo :& licImages :& vehRegImages <-
-      from $ baseDriverDocumentsInfoQuery imagesCountLic imagesCountVehReg
+-- fetchDriverDocsInfo :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
+-- fetchDriverDocsInfo merchantId mbDriverIds = fmap (map mkDriverDocsInfo) $
+--   Esq.findAll $ do
+--     imagesCountLic <- imagesAggTableCTEbyDoctype Image.DriverLicense
+--     imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
+--     person :& license :& licReq :& assoc :& registration :& regReq :& driverInfo :& licImages :& vehRegImages <-
+--       from $ baseDriverDocumentsInfoQuery imagesCountLic imagesCountVehReg
 
-    where_ $
-      maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
-        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-    pure (person, license, licReq, assoc, registration, regReq, driverInfo, snd licImages, snd vehRegImages)
+--     where_ $
+--       maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
+--         &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+--     pure (person, license, licReq, assoc, registration, regReq, driverInfo, snd licImages, snd vehRegImages)
 
 mkDriverDocsInfo ::
   ( Person,

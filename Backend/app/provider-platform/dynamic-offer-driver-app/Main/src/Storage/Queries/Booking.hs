@@ -15,11 +15,9 @@
 
 module Storage.Queries.Booking where
 
-import qualified Data.HashMap.Strict as HashMap
 import Domain.Types.Booking
 import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Merchant
-import qualified Domain.Types.Ride as DRide
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.Language as L
@@ -33,7 +31,6 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
-import Storage.Queries.FullEntityBuilders
 
 createBooking :: (L.MonadFlow m, Log m) => Booking -> m ()
 createBooking = createWithKV
@@ -144,48 +141,6 @@ cancelBookings bookingIds now =
     ]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
-transformBeamBookingToDomain :: (L.MonadFlow m, Log m) => BeamB.Booking -> m (Maybe Booking)
-transformBeamBookingToDomain BeamB.BookingT {..} = do
-  fl <- QBBL.findById (Id fromLocationId)
-  tl <- QBBL.findById (Id toLocationId)
-  fp <- QueriesFP.findById (Id fareParametersId)
-  pUrl <- parseBaseUrl bapUri
-  if isJust fl && isJust tl && isJust fp
-    then
-      pure $
-        Just
-          Booking
-            { id = Id id,
-              transactionId = transactionId,
-              quoteId = quoteId,
-              status = status,
-              bookingType = bookingType,
-              specialLocationTag = specialLocationTag,
-              specialZoneOtpCode = specialZoneOtpCode,
-              area = area,
-              providerId = Id providerId,
-              primaryExophone = primaryExophone,
-              bapId = bapId,
-              bapUri = pUrl,
-              bapCity = bapCity,
-              bapCountry = bapCountry,
-              startTime = startTime,
-              riderId = Id <$> riderId,
-              fromLocation = fromJust fl,
-              toLocation = fromJust tl,
-              vehicleVariant = vehicleVariant,
-              estimatedDistance = estimatedDistance,
-              maxEstimatedDistance = maxEstimatedDistance,
-              estimatedFare = estimatedFare,
-              estimatedDuration = estimatedDuration,
-              fareParams = fromJust fp,
-              paymentMethodId = Id <$> paymentMethodId,
-              riderName = riderName,
-              createdAt = createdAt,
-              updatedAt = updatedAt
-            }
-    else pure Nothing
-
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
     fl <- QBBL.findById (Id fromLocationId)
@@ -228,39 +183,6 @@ instance FromTType' BeamB.Booking Booking where
               }
       else pure Nothing
 
-transformDomainBookingToBeam :: Booking -> BeamB.Booking
-transformDomainBookingToBeam Booking {..} =
-  BeamB.BookingT
-    { BeamB.id = getId id,
-      BeamB.transactionId = transactionId,
-      BeamB.quoteId = quoteId,
-      BeamB.status = status,
-      BeamB.bookingType = bookingType,
-      BeamB.specialLocationTag = specialLocationTag,
-      BeamB.specialZoneOtpCode = specialZoneOtpCode,
-      BeamB.area = area,
-      BeamB.providerId = getId providerId,
-      BeamB.primaryExophone = primaryExophone,
-      BeamB.bapId = bapId,
-      BeamB.bapUri = showBaseUrl bapUri,
-      BeamB.bapCity = bapCity,
-      BeamB.bapCountry = bapCountry,
-      BeamB.startTime = startTime,
-      BeamB.riderId = getId <$> riderId,
-      BeamB.fromLocationId = getId fromLocation.id,
-      BeamB.toLocationId = getId toLocation.id,
-      BeamB.vehicleVariant = vehicleVariant,
-      BeamB.estimatedDistance = estimatedDistance,
-      BeamB.maxEstimatedDistance = maxEstimatedDistance,
-      BeamB.estimatedFare = estimatedFare,
-      BeamB.estimatedDuration = estimatedDuration,
-      BeamB.fareParametersId = getId fareParams.id,
-      BeamB.paymentMethodId = getId <$> paymentMethodId,
-      BeamB.riderName = riderName,
-      BeamB.createdAt = createdAt,
-      BeamB.updatedAt = updatedAt
-    }
-
 instance ToTType' BeamB.Booking Booking where
   toTType' Booking {..} =
     BeamB.BookingT
@@ -293,37 +215,3 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt
       }
-
-cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
-cancelBookings bookingIds now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingStatus =. val CANCELLED,
-        BookingUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
-
-findRideBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m (HashMap.HashMap (Id Booking) (Booking, Maybe DRide.Ride))
-findRideBookingsById merchantId bookingIds = do
-  bookings <- findBookingsById merchantId bookingIds
-  rides <- findRidesByBookingId (bookings <&> (.id))
-  let tuple = map (\booking -> (booking.id, (booking, find (\ride -> ride.bookingId == booking.id) rides))) bookings
-  pure $ HashMap.fromList tuple
-
-findBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m [Booking]
-findBookingsById merchantId bookingIds = Esq.buildDType $ do
-  bookingTs <- Esq.findAll' $ do
-    booking <- from $ table @BookingT
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-    return booking
-  catMaybes <$> forM bookingTs buildFullBooking
-
-findRidesByBookingId :: Transactionable m => [Id Booking] -> m [DRide.Ride]
-findRidesByBookingId bookingIds = Esq.findAll $ do
-  ride <- from $ table @Ride.RideT
-  where_ $
-    ride ^. RideBookingId `in_` valList (toKey <$> bookingIds)
-  return ride

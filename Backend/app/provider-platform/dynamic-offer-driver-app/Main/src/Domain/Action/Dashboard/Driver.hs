@@ -61,7 +61,6 @@ import Environment
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -746,10 +745,12 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
   driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   res <- AV.findByDriverId driver.id
   case res of
-    Just _ -> Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+    -- Just _ -> Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+    Just _ -> AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
     Nothing -> do
       aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True
-      Esq.runTransaction $ AV.create aadhaarEntity
+      -- Esq.runTransaction $ AV.create aadhaarEntity
+      AV.create aadhaarEntity
   CQDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success
 

@@ -44,7 +44,7 @@ data FeedbackFormAPIEntity = FeedbackFormAPIEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data Category = RIDE | DRIVER | VEHICLE
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read, Ord)
 
 data FeedbackFormItem = FeedbackFormItem
   { id :: Id FeedbackFormItem,
@@ -56,7 +56,7 @@ data FeedbackFormItem = FeedbackFormItem
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data AnswerType = Text | Checkbox | Radio
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read, Ord)
 
 data FeedbackFormRes = FeedbackFormRes
   { categoryName :: Category,

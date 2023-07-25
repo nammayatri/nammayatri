@@ -24,7 +24,6 @@ import Kernel.Utils.Common
 import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), deleteWithKV, findAllWithOptionsKV, findOneWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
-import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
 
 -- findAll' ::
 --   ( Transactionable m,
@@ -41,20 +40,20 @@ import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 --     orderBy [asc $ farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionStartDistance]
 --     return farePolicyProgressiveDetailsPerExtraKmFareSection
 
-findById' :: (L.MonadFlow m, Log m) => KTI.Id DFP.FarePolicy -> m (Maybe FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
+findById' :: (L.MonadFlow m, Log m) => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findById' farePolicyId' = findOneWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
 
-findAll ::
+findAll' ::
   ( L.MonadFlow m,
     Log m
   ) =>
   -- Id DFP.FarePolicy ->
   Id DFP.FarePolicy ->
-  m [FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
-findAll farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
+  m [BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
+findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
 
--- deleteAll'' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
--- deleteAll'' farePolicyId =
+-- deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
+-- deleteAll' farePolicyId =
 --   Esq.delete' $ do
 --     farePolicyProgressiveDetailsPerExtraKmFareSection <- from $ table @FarePolicyProgressiveDetailsPerExtraKmRateSectionT
 --     where_ $
@@ -74,7 +73,7 @@ instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection 
             }
         )
 
-instance ToTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
+instance ToTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
   toTType' (KTI.Id farePolicyId, DFP.FPProgressiveDetailsPerExtraKmRateSection {..}) =
     BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
       { -- id = id,

@@ -28,23 +28,22 @@ import Kernel.Types.Id as KTI
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
-import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as Domain
 
--- create :: Domain.FullDriverExtraFeeBounds -> SqlDB ()
+-- create :: DFP.FullDriverExtraFeeBounds -> SqlDB ()
 -- create = Esq.create
 
-create :: (L.MonadFlow m, Log m) => Domain.FullDriverExtraFeeBounds -> m ()
+create :: (L.MonadFlow m, Log m) => DFP.FullDriverExtraFeeBounds -> m ()
 create = createWithKV
 
--- findByFarePolicyIdAndStartDistance :: Transactionable m => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
+-- findByFarePolicyIdAndStartDistance :: Transactionable m => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
 -- findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
 --   farePolicy <- from $ table @DFP.DriverExtraFeeBoundsT
 --   where_ $
---     farePolicy ^. Domain.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
---       &&. farePolicy ^. Domain.DriverExtraFeeBoundsStartDistance ==. val startDistance
+--     farePolicy ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+--       &&. farePolicy ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistance
 --   pure farePolicy
 
-findByFarePolicyIdAndStartDistance :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
+findByFarePolicyIdAndStartDistance :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
 findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findOneWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
 
 -- update :: Id DFP.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
@@ -52,11 +51,11 @@ findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findOneWith
 --   Esq.update $ \tbl -> do
 --     set
 --       tbl
---       [ Domain.DriverExtraFeeBoundsMinFee =. val minFee,
---         Domain.DriverExtraFeeBoundsMaxFee =. val maxFee
+--       [ DFP.DriverExtraFeeBoundsMinFee =. val minFee,
+--         DFP.DriverExtraFeeBoundsMaxFee =. val maxFee
 --       ]
---       tbl ^. Domain.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
---         &&. tbl ^. Domain.DriverExtraFeeBoundsStartDistance ==. val startDistace
+--       tbl ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+--         &&. tbl ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistace
 
 update :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
 update (Id farePolicyId) startDistance minFee maxFee =
@@ -70,10 +69,10 @@ findAll' ::
     Log m
   ) =>
   Id DFP.FarePolicy ->
-  m [Domain.FullDriverExtraFeeBounds]
+  m [DFP.FullDriverExtraFeeBounds]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
 
-instance FromTType' BeamDEFB.DriverExtraFeeBounds Domain.FullDriverExtraFeeBounds where
+instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where
   fromTType' BeamDEFB.DriverExtraFeeBoundsT {..} = do
     pure $
       Just
@@ -85,7 +84,7 @@ instance FromTType' BeamDEFB.DriverExtraFeeBounds Domain.FullDriverExtraFeeBound
             }
         )
 
-instance ToTType' BeamDEFB.DriverExtraFeeBounds Domain.FullDriverExtraFeeBounds where
+instance ToTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where
   toTType' (KTI.Id farePolicyId, DFP.DriverExtraFeeBounds {..}) =
     BeamDEFB.DriverExtraFeeBoundsT
       { id = Nothing,

@@ -12,10 +12,10 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 {-# HLINT ignore "Use tuple-section" #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Storage.Queries.Person where
 
@@ -32,7 +32,6 @@ import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
-import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
@@ -75,13 +74,6 @@ import qualified Storage.Queries.DriverLocation as QueriesDL
 import Storage.Queries.DriverQuote ()
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Vehicle ()
-import Storage.Tabular.DriverInformation
-import Storage.Tabular.DriverOnboarding.DriverLicense
-import Storage.Tabular.DriverOnboarding.DriverRCAssociation
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
-import Storage.Tabular.Person as TPerson
-import Storage.Tabular.Ride
-import Storage.Tabular.Vehicle as Vehicle
 
 create :: (L.MonadFlow m, Log m) => Person.Person -> m ()
 create = createWithKV
@@ -102,8 +94,46 @@ data FullDriver = FullDriver
 mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriver
 mkFullDriver (p, l, i, v) = FullDriver p l i v
 
+-- findAllDriversWithInfoAndVehicle ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   Int ->
+--   Int ->
+--   Maybe Bool ->
+--   Maybe Bool ->
+--   Maybe Bool ->
+--   Maybe Bool ->
+--   Maybe DbHash ->
+--   Maybe Text ->
+--   m [(Person, DriverInformation, Maybe Vehicle)]
+-- findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+--   Esq.findAll $ do
+--     person :& info :& mbVeh <-
+--       from $
+--         table @PersonT
+--           `innerJoin` table @DriverInformationT
+--             `Esq.on` ( \(person :& driverInfo) ->
+--                          person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+--                      )
+--           `leftJoin` table @VehicleT
+--             `Esq.on` ( \(person :& _ :& mbVehicle) ->
+--                          just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
+--                      )
+--     where_ $
+--       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+--         &&. person ^. PersonRole ==. val Person.DRIVER
+--         &&. maybe (val True) (\vehicleNumber -> mbVeh ?. VehicleRegistrationNo `Esq.like` just (val vehicleNumber)) mbVehicleNumberSearchString
+--         &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
+--         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
+--         &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
+--         &&. maybe (val True) (\subscribed -> info ^. DriverInformationSubscribed ==. val subscribed) mbSubscribed
+--         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
+--     limit $ fromIntegral limitVal
+--     offset $ fromIntegral offsetVal
+--     pure (person, info, mbVeh)
+
 findAllDriversWithInfoAndVehicle ::
-  Transactionable m =>
+  (L.MonadFlow m, Log m) =>
   Id Merchant ->
   Int ->
   Int ->
@@ -114,31 +144,7 @@ findAllDriversWithInfoAndVehicle ::
   Maybe DbHash ->
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
-  Esq.findAll $ do
-    person :& info :& mbVeh <-
-      from $
-        table @PersonT
-          `innerJoin` table @DriverInformationT
-            `Esq.on` ( \(person :& driverInfo) ->
-                         person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-                     )
-          `leftJoin` table @VehicleT
-            `Esq.on` ( \(person :& _ :& mbVehicle) ->
-                         just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
-                     )
-    where_ $
-      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-        &&. person ^. PersonRole ==. val Person.DRIVER
-        &&. maybe (val True) (\vehicleNumber -> mbVeh ?. VehicleRegistrationNo `Esq.like` just (val vehicleNumber)) mbVehicleNumberSearchString
-        &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
-        &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
-        &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
-        &&. maybe (val True) (\subscribed -> info ^. DriverInformationSubscribed ==. val subscribed) mbSubscribed
-        &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
-    limit $ fromIntegral limitVal
-    offset $ fromIntegral offsetVal
-    pure (person, info, mbVeh)
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = error ""
 
 getDriversList ::
   (L.MonadFlow m, Log m) =>
@@ -234,19 +240,22 @@ getDriverInfos driverLocs = do
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
 
-getOnRideStuckDriverIds :: Transactionable m => m [DriverInformation]
-getOnRideStuckDriverIds = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationOnRide ==. val True
-        &&. not_ (driverInfos ^. DriverInformationDriverId `in_` rideSubQuery)
-    return driverInfos
-  where
-    rideSubQuery = subList_select $ do
-      r <- from $ table @RideT
-      where_ (r ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW])
-      pure (r ^. RideDriverId)
+-- getOnRideStuckDriverIds :: Transactionable m => m [DriverInformation]
+-- getOnRideStuckDriverIds = do
+--   Esq.findAll $ do
+--     driverInfos <- from $ table @DriverInformationT
+--     where_ $
+--       driverInfos ^. DriverInformationOnRide ==. val True
+--         &&. not_ (driverInfos ^. DriverInformationDriverId `in_` rideSubQuery)
+--     return driverInfos
+--   where
+--     rideSubQuery = subList_select $ do
+--       r <- from $ table @RideT
+--       where_ (r ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW])
+--       pure (r ^. RideDriverId)
+
+getOnRideStuckDriverIds :: (L.MonadFlow m, Log m) => m [DriverInformation]
+getOnRideStuckDriverIds = error ""
 
 getVehicles ::
   (L.MonadFlow m, Log m) =>
@@ -447,71 +456,74 @@ data DriverWithRidesCount = DriverWithRidesCount
 mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
 mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
 
-fetchDriverInfoWithRidesCount :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
-fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
-  mbDriverInfo <- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash
-  addRidesCount `mapM` mbDriverInfo
-  where
-    addRidesCount :: Transactionable m => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
-    addRidesCount (person, info, vehicle) = do
-      ridesCount <-
-        Esq.findOne $ do
-          ride <- from $ table @RideT
-          where_ $
-            ride ^. RideDriverId ==. val (toKey person.id)
-              &&. not_ (ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
-          groupBy $ ride ^. RideDriverId
-          return (count @Int $ ride ^. RideId)
-      return $ mkDriverWithRidesCount (person, info, vehicle, ridesCount)
+-- fetchDriverInfoWithRidesCount :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
+-- fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
+--   mbDriverInfo <- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash
+--   addRidesCount `mapM` mbDriverInfo
+--   where
+--     addRidesCount :: Transactionable m => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
+--     addRidesCount (person, info, vehicle) = do
+--       ridesCount <-
+--         Esq.findOne $ do
+--           ride <- from $ table @RideT
+--           where_ $
+--             ride ^. RideDriverId ==. val (toKey person.id)
+--               &&. not_ (ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
+--           groupBy $ ride ^. RideDriverId
+--           return (count @Int $ ride ^. RideId)
+--       return $ mkDriverWithRidesCount (person, info, vehicle, ridesCount)
 
-fetchDriverInfo :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
-fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
-  now <- getCurrentTime
-  Esq.findOne $ do
-    person :& driverInfo :& mbVehicle :& mbDriverLicense :& _mbRcAssoc :& mbRegCert <-
-      from $
-        table @PersonT
-          `innerJoin` table @DriverInformationT
-          `Esq.on` ( \(person :& driverInfo) ->
-                       person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-                   )
-          `leftJoin` table @VehicleT
-          `Esq.on` ( \(person :& _ :& mbVehicle) ->
-                       just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
-                   )
-          `leftJoin` table @DriverLicenseT
-          `Esq.on` ( \(person :& _ :& _ :& mbDriverLicense) ->
-                       joinOnlyWhenJust mbDlNumberHash $ just (person ^. PersonTId) ==. mbDriverLicense ?. DriverLicenseDriverId
-                   )
-          `leftJoin` table @DriverRCAssociationT
-          `Esq.on` ( \(person :& _ :& _ :& _ :& mbRcAssoc) ->
-                       joinOnlyWhenJust mbRcNumberHash $
-                         do
-                           just (person ^. PersonTId) ==. mbRcAssoc ?. DriverRCAssociationDriverId
-                           &&. just (just (val now)) <. mbRcAssoc ?. DriverRCAssociationAssociatedTill
-                   )
-          `leftJoin` table @VehicleRegistrationCertificateT
-          `Esq.on` ( \(_ :& _ :& _ :& _ :& mbRcAssoc :& mbRegCert) ->
-                       joinOnlyWhenJust mbRcNumberHash $
-                         mbRcAssoc ?. DriverRCAssociationRcId ==. mbRegCert ?. VehicleRegistrationCertificateTId
-                   )
-    where_ $
-      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-        &&. person ^. PersonRole ==. val Person.DRIVER
-        &&. whenJust_
-          mbMobileNumberDbHashWithCode
-          ( \(mobileNumberDbHash, mobileCountryCode) ->
-              person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
-                &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
-                        ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberDbHash)
-                    )
-          )
-        &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
-        &&. whenJust_ mbDlNumberHash (\dlNumberHash -> mbDriverLicense ?. DriverLicenseLicenseNumberHash ==. just (val dlNumberHash))
-        &&. whenJust_ mbRcNumberHash (\rcNumberHash -> mbRegCert ?. VehicleRegistrationCertificateCertificateNumberHash ==. just (val rcNumberHash))
-    pure (person, driverInfo, mbVehicle)
-  where
-    joinOnlyWhenJust mbFilter cond = maybe (val False) (const cond) mbFilter
+fetchDriverInfoWithRidesCount :: (L.MonadFlow m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = error ""
+
+-- fetchDriverInfo :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
+-- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
+--   now <- getCurrentTime
+--   Esq.findOne $ do
+--     person :& driverInfo :& mbVehicle :& mbDriverLicense :& _mbRcAssoc :& mbRegCert <-
+--       from $
+--         table @PersonT
+--           `innerJoin` table @DriverInformationT
+--           `Esq.on` ( \(person :& driverInfo) ->
+--                        person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+--                    )
+--           `leftJoin` table @VehicleT
+--           `Esq.on` ( \(person :& _ :& mbVehicle) ->
+--                        just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
+--                    )
+--           `leftJoin` table @DriverLicenseT
+--           `Esq.on` ( \(person :& _ :& _ :& mbDriverLicense) ->
+--                        joinOnlyWhenJust mbDlNumberHash $ just (person ^. PersonTId) ==. mbDriverLicense ?. DriverLicenseDriverId
+--                    )
+--           `leftJoin` table @DriverRCAssociationT
+--           `Esq.on` ( \(person :& _ :& _ :& _ :& mbRcAssoc) ->
+--                        joinOnlyWhenJust mbRcNumberHash $
+--                          do
+--                            just (person ^. PersonTId) ==. mbRcAssoc ?. DriverRCAssociationDriverId
+--                            &&. just (just (val now)) <. mbRcAssoc ?. DriverRCAssociationAssociatedTill
+--                    )
+--           `leftJoin` table @VehicleRegistrationCertificateT
+--           `Esq.on` ( \(_ :& _ :& _ :& _ :& mbRcAssoc :& mbRegCert) ->
+--                        joinOnlyWhenJust mbRcNumberHash $
+--                          mbRcAssoc ?. DriverRCAssociationRcId ==. mbRegCert ?. VehicleRegistrationCertificateTId
+--                    )
+--     where_ $
+--       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+--         &&. person ^. PersonRole ==. val Person.DRIVER
+--         &&. whenJust_
+--           mbMobileNumberDbHashWithCode
+--           ( \(mobileNumberDbHash, mobileCountryCode) ->
+--               person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
+--                 &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+--                         ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberDbHash)
+--                     )
+--           )
+--         &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
+--         &&. whenJust_ mbDlNumberHash (\dlNumberHash -> mbDriverLicense ?. DriverLicenseLicenseNumberHash ==. just (val dlNumberHash))
+--         &&. whenJust_ mbRcNumberHash (\rcNumberHash -> mbRegCert ?. VehicleRegistrationCertificateCertificateNumberHash ==. just (val rcNumberHash))
+--     pure (person, driverInfo, mbVehicle)
+--   where
+--     joinOnlyWhenJust mbFilter cond = maybe (val False) (const cond) mbFilter
 
 findByIdAndRoleAndMerchantId :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
 findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
@@ -1040,6 +1052,7 @@ instance FromTType' BeamP.Person Person where
             email = email,
             unencryptedMobileNumber = unencryptedMobileNumber,
             mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+            onboardedFromDashboard = onboardedFromDashboard,
             mobileCountryCode = mobileCountryCode,
             passwordHash = passwordHash,
             identifier = identifier,
@@ -1071,6 +1084,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.email = email,
         BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
         BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+        BeamP.onboardedFromDashboard = onboardedFromDashboard,
         BeamP.mobileNumberHash = mobileNumber <&> (.hash),
         BeamP.mobileCountryCode = mobileCountryCode,
         BeamP.passwordHash = passwordHash,

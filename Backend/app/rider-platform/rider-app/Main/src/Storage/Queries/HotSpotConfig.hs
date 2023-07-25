@@ -24,7 +24,6 @@ import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.HotSpotConfig as BeamHSC
-import Storage.Tabular.HotSpotConfig ()
 
 -- findConfigByMerchantId ::
 --   (MonadIO m, Transactionable m) =>

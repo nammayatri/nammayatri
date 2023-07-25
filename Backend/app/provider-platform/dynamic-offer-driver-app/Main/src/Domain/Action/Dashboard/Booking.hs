@@ -46,6 +46,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Ride as QRide
 
 ---------------------------------------------------------------------
@@ -132,11 +133,11 @@ multipleBookingSync merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
   let reqBookingIds = cast @Common.Booking @DBooking.Booking . (.bookingId) <$> req.bookings
   -- rideBookingsMap <- Esq.runInReplica $ QBooking.findRideBookingsById merchant.id reqBookingIds
-  rideBookingsMap <- QBooking.findRideBookingsById merchant.id reqBookingIds
+  rideBookingsMap <- QR.findRideBookingsById merchant.id reqBookingIds
   respItems <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId
-      let mbRideBooking = HashMap.lookup bookingId rideBookingsMap
+      let mbRideBooking = HashMap.lookup (getId bookingId) rideBookingsMap
       case mbRideBooking of
         Nothing -> throwError (BookingDoesNotExist bookingId.getId)
         Just (booking, mbRide) -> do
@@ -152,9 +153,9 @@ multipleBookingSync merchantShortId req = do
                       then Just $ mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
                       else Nothing
               unless (bookingNewStatus == booking.status) $ do
-                Esq.runTransaction $ do
-                  QBooking.updateStatus bookingId bookingNewStatus
-                  whenJust mbCancellationReason QBCR.upsert
+                -- Esq.runTransaction $ do
+                QBooking.updateStatus bookingId bookingNewStatus
+                whenJust mbCancellationReason QBCR.upsert
               let updBooking = booking{status = bookingNewStatus}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) (Just ride) updBooking merchant
             Nothing -> do
@@ -163,9 +164,9 @@ multipleBookingSync merchantShortId req = do
                       then Just $ mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
                       else Nothing
               when (booking.status /= DBooking.CANCELLED) $ do
-                Esq.runTransaction $ do
-                  QBooking.updateStatus bookingId DBooking.CANCELLED
-                  whenJust mbCancellationReason QBCR.upsert
+                -- Esq.runTransaction $ do
+                QBooking.updateStatus bookingId DBooking.CANCELLED
+                whenJust mbCancellationReason QBCR.upsert
               let updBooking = booking{status = DBooking.CANCELLED}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) Nothing updBooking merchant
           pure Common.SuccessItem

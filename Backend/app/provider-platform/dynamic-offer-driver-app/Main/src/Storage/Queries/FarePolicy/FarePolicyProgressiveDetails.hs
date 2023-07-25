@@ -26,14 +26,13 @@ import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV)
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
-import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as DomainFPPD
 
-findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FarePolicy -> m (Maybe DomainFPPD.FullFarePolicyProgressiveDetails)
+findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
 
-instance FromTType' BeamFPPD.FarePolicyProgressiveDetails DomainFPPD.FullFarePolicyProgressiveDetails where
+instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' BeamFPPD.FarePolicyProgressiveDetailsT {..} = do
-    fullFPPDP <- QueriesFPPDP.findAll (KTI.Id farePolicyId)
+    fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyId)
     let fPPDP = snd <$> fullFPPDP
     pure $
       Just
@@ -53,7 +52,7 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails DomainFPPD.FullFarePol
             }
         )
 
-instance ToTType' BeamFPPD.FarePolicyProgressiveDetails DomainFPPD.FullFarePolicyProgressiveDetails where
+instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   toTType' (KTI.Id farePolicyId, Domain.FPProgressiveDetails {..}) =
     BeamFPPD.FarePolicyProgressiveDetailsT
       { farePolicyId = farePolicyId,

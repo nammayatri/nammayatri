@@ -15,6 +15,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Redundant bracket" #-}
+{-# HLINT ignore "Use >" #-}
 
 module Storage.Queries.Ride where
 
@@ -464,7 +465,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
       | ride.status == Ride.COMPLETED = Common.RCOMPLETED
       | ride.status == Ride.NEW && not (ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.UPCOMING
       | ride.status == Ride.NEW && (ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.UPCOMING_6HRS
-      | ride.status == Ride.INPROGRESS && not (ride.rideStartTime <= (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
+      | ride.status == Ride.INPROGRESS && not (ride.rideStartTime <= Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.RCANCELLED
       | otherwise = Common.RCOMPLETED
     -- fst' (x, _, _) = x
@@ -568,7 +569,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
 --     mkCount _ = 0
 
 findRiderIdByRideId :: L.MonadFlow m => Id Ride -> m (Maybe (Id Person))
-findRiderIdByRideId (Id rideId) = err ""
+findRiderIdByRideId _ = error ""
 
 -- findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
 -- findRiderIdByRideId rideId = findOne $ do

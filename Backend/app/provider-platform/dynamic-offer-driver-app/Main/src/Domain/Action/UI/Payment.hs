@@ -164,6 +164,6 @@ processPayment merchantId orderStatus driverFeeId = do
     Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
       CDI.updatePendingPayment False driverFee.driverId
       CDI.updateSubscription True driverFee.driverId
-      Esq.runTransaction $ do
-        QDF.updateStatus DF.CLEARED driverFeeId now
-        QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
+      -- Esq.runTransaction $ do
+      QDF.updateStatus DF.CLEARED driverFeeId now
+      QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active

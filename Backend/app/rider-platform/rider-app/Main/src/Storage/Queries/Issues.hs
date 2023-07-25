@@ -13,6 +13,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use tuple-section" #-}
 
 module Storage.Queries.Issues where
 
@@ -27,6 +30,8 @@ import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue as BeamI
+import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Queries.Person ()
 
 -- import Storage.Tabular.Issue
 -- import Storage.Tabular.Person

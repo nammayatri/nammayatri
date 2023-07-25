@@ -11,24 +11,25 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Feedback.Feedback where
 
-import Domain.Types.Feedback.Feedback (Feedback)
-import qualified EulerHS.Extra.EulerDB as Extra
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
+import Control.Applicative
+import Data.Foldable
+import Data.Function hiding (id)
+import Data.Maybe
+import Domain.Types.Feedback.Feedback
 import qualified EulerHS.Language as L
-import qualified Lib.Mesh as Mesh
+import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
-import qualified Sequelize as Se
 import qualified Storage.Beam.Feedback.Feedback as BeamF
-import Storage.Tabular.Feedback.Feedback ()
 
-create :: L.MonadFlow m Feedback -> m ()
+create :: (L.MonadFlow m, Log m) => Feedback -> m ()
 create = createWithKV
 
-createMany :: L.MonadFlow m => [Feedback] -> m ()
+createMany :: (L.MonadFlow m, Log m) => [Feedback] -> m ()
 createMany = traverse_ create
 
 instance FromTType' BeamF.Feedback Feedback where
@@ -45,7 +46,7 @@ instance FromTType' BeamF.Feedback Feedback where
 
 instance ToTType' BeamF.Feedback Feedback where
   toTType' Feedback {..} =
-    BeamF.defaultFeedback
+    BeamF.FeedbackT
       { BeamF.id = getId id,
         BeamF.rideId = getId rideId,
         BeamF.driverId = getId driverId,

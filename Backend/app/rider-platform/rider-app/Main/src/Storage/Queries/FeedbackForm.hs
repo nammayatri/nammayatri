@@ -13,16 +13,16 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.Feedback.FeedbackForm where
+module Storage.Queries.FeedbackForm where
 
-import Domain.Types.Feedback.FeedbackForm
+import Domain.Types.FeedbackForm
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
-import qualified Storage.Beam.Feedback.FeedbackForm as BFF
+import qualified Storage.Beam.FeedbackForm as BFF
 
 -- findAllFeedback :: Transactionable m => m [FeedbackFormRes]
 -- findAllFeedback = Esq.findAll $ do

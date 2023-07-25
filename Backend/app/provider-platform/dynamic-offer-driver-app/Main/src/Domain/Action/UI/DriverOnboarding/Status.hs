@@ -11,6 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use forM_" #-}
 
 module Domain.Action.UI.DriverOnboarding.Status
   ( ResponseStatus (..),
@@ -135,7 +138,8 @@ enableDriver _ _ Nothing = return ()
 enableDriver personId _ (Just dl) = do
   DIQuery.verifyAndEnableDriver personId
   case dl.driverName of
-    Just name -> DB.runTransaction $ Person.updateName personId name
+    -- Just name -> DB.runTransaction $ Person.updateName personId name
+    Just name -> Person.updateName personId name
     Nothing -> return ()
 
 createVehicle :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Flow ()
@@ -144,10 +148,7 @@ createVehicle personId merchantId (Just rc) = do
   rcNumber <- decrypt rc.certificateNumber
   now <- getCurrentTime
   let vehicle = buildVehicle now personId merchantId rcNumber
-  _ <- VQuery.upsert vehicle
-  case dl.driverName of
-    Just name -> void (Person.updateName personId name)
-    Nothing -> return ()
+  VQuery.upsert vehicle
   where
     buildVehicle now personId_ merchantId_ certificateNumber =
       Vehicle.Vehicle
