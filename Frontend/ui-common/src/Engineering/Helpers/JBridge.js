@@ -606,6 +606,17 @@ export const storeCallBackMessageUpdated = function (cb) {
         };
       };
 
+export const dateCallback = function (cb, action) {
+    var callback = function (){
+      cb(action)();
+    }
+    window.dateCallback = callback;
+  };
+
+export const unregisterDateAndTime = function () {
+    window.dateCallback = undefined;
+};
+
 export const storeCallBackOpenChatScreen = function (cb) {
     return function(action) {
         return function (){

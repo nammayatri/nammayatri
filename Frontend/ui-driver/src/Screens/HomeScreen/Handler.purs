@@ -43,6 +43,7 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
     GoToHelpAndSupportScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_HELP_AND_SUPPORT_SCREEN
+    GoToAppUpdatePopupScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_APP_UPDATE_POPUP_SCREEN
     GotoEditGenderScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_EDIT_GENDER_SCREEN
     GoToRidesScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)

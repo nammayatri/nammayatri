@@ -171,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sharedPref;
     private IntentFilter intentFilter;
     private Intent widgetService;
+    private BroadcastReceiver timeChangeCallback;
     String GAID;
     public String imageBase64 = "sin";
     private AppUpdateManager appUpdateManager;
@@ -386,6 +387,16 @@ public class MainActivity extends AppCompatActivity {
         networkBroadcastReceiver = new NetworkBroadcastReceiver();
         registerReceiver(networkBroadcastReceiver,new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         registerReceiver(gpsReceiver,intentFilter);
+        timeChangeCallback = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String javascript = String.format("window[\"onEvent'\"]('%s')", "onTimeChanged");
+                if ( juspayServicesGlobal.getDynamicUI() != null ) {
+                    juspayServicesGlobal.getDuiCallback().addJsToWebView(javascript);
+                }
+            }
+        };
+        registerReceiver(timeChangeCallback, new IntentFilter(Intent.ACTION_TIME_CHANGED));
         String key = getResources().getString(R.string.service);
         String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
         System.out.println("androidId => " + androidId );
@@ -1022,6 +1033,8 @@ public class MainActivity extends AppCompatActivity {
         LocationUpdateService.deRegisterCallback(this.timeUpdateCallback);
         unregisterReceiver(gpsReceiver);
         unregisterReceiver(networkBroadcastReceiver);
+        if(timeChangeCallback != null)
+            unregisterReceiver(timeChangeCallback);
         DefaultMediaPlayerControl.mediaPlayer.reset();
         super.onDestroy();
     }

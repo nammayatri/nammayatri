@@ -62,6 +62,7 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
+    CallBackForTime -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "screen_click"
     BackPressed -> do
       trackAppBackPress appId (getScreen HOME_SCREEN)
       trackAppEndScreen appId (getScreen HOME_SCREEN)
@@ -175,6 +176,7 @@ instance loggableAction :: Loggable Action where
 
 data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToHelpAndSupportScreen
+                    | GoToAppUpdatePopupScreen
                     | GoToProfileScreen ST.HomeScreenState
                     | GoToRidesScreen ST.HomeScreenState
                     | GoToReferralScreen
@@ -196,6 +198,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
 data Action = NoAction
             | BackPressed
             | ScreenClick
+            | CallBackForTime
             | Notification String
             | ChangeStatus Boolean
             | GoOffline Boolean
@@ -287,6 +290,9 @@ eval (Notification notificationType) state = do
 
 eval CancelGoOffline state = do
   continue state { props = state.props { goOfflineModal = false } }
+
+eval CallBackForTime state = do
+  exit $ GoToAppUpdatePopupScreen
 
 eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
 
