@@ -621,7 +621,7 @@ sourceUnserviceableConfig state =
     config = ErrorModal.config
     errorModalConfig' =
       config
-        { height = MATCH_PARENT
+        { height = if (HU.getMerchant FunctionCall == HU.NAMMAYATRI) then MATCH_PARENT else WRAP_CONTENT
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
         , corners = (Corners 20.0 true true false false)

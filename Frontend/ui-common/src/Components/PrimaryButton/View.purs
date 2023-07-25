@@ -35,7 +35,7 @@ view push config =
   , margin config.margin
   , onClick (\action -> do
               _ <- pure $ toggleBtnLoader config.id true
-              _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag config.id) true 0.6 "CENTER_CROP"
+              _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag config.id) true 0.6 if os == "IOS" then "DEFAULT" else "CENTER_CROP"
               push action
               ) (const OnClick)
   , orientation HORIZONTAL
