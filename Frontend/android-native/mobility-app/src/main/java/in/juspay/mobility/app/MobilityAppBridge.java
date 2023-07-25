@@ -12,6 +12,7 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -450,6 +451,15 @@ public class MobilityAppBridge extends HyperBridge {
     public void cleverTapSetLocation() {
         Location location = clevertapDefaultInstance.getLocation();
         clevertapDefaultInstance.setLocation(location);
+    }
+
+    @JavascriptInterface
+    public void openWhatsAppSupport(String contactNumber) {
+        String url = "https://api.whatsapp.com/send?phone=" + contactNumber;
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(url));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        bridgeComponents.getContext().startActivity(intent);
     }
 
 

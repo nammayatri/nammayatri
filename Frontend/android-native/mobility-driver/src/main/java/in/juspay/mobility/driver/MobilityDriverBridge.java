@@ -1080,7 +1080,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 break;
             case REQUEST_CALL:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showDialer(phoneNumber);
+                    showDialer(phoneNumber, false);
                 } else {
                     toast("Permission Denied");
                 }
