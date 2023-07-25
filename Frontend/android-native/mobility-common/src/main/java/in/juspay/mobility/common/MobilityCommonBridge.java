@@ -71,6 +71,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.location.LocationManagerCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -1307,14 +1308,13 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void showDialer(String phoneNum) {
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_DIAL);
-        phoneNumber = phoneNum;
-        if (phoneNum != null) {
-            phoneNumber = "tel:" + phoneNum;
-            intent.setData(Uri.parse(phoneNumber));
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    public void showDialer(String phoneNum, boolean call) {
+        Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setData(Uri.parse("tel:" + phoneNum));
+        if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+        } else {
             bridgeComponents.getContext().startActivity(intent);
         }
     }
