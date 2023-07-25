@@ -62,6 +62,7 @@ data SchedulerEnv = SchedulerEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
+    schedulerType :: Text,
     metrics :: SchedulerMetrics,
     loopIntervalSec :: Seconds,
     expirationTime :: Integer,

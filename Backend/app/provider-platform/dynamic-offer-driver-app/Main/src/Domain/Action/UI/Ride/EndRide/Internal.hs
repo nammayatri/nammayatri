@@ -49,7 +49,7 @@ import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import Lib.Scheduler.JobStorageType.Redis.Queries (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
@@ -291,13 +291,12 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
     let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
     case isPendingPaymentJobScheduled of
       Nothing -> do
-        Esq.runNoTransaction $
-          createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
-            SendPaymentReminderToDriverJobData
-              { startTime = driverFee.startTime,
-                endTime = driverFee.endTime,
-                timeDiff = transporterConfig.timeDiffFromUtc
-              }
+        createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
+          SendPaymentReminderToDriverJobData
+            { startTime = driverFee.startTime,
+              endTime = driverFee.endTime,
+              timeDiff = transporterConfig.timeDiffFromUtc
+            }
         setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
       _ -> pure ()
 
@@ -305,12 +304,11 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
     isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
     case isOverduePaymentJobScheduled of
       Nothing -> do
-        Esq.runNoTransaction $
-          createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
-            UnsubscribeDriverForPaymentOverdueJobData
-              { startTime = driverFee.startTime,
-                timeDiff = transporterConfig.timeDiffFromUtc
-              }
+        createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
+          UnsubscribeDriverForPaymentOverdueJobData
+            { startTime = driverFee.startTime,
+              timeDiff = transporterConfig.timeDiffFromUtc
+            }
         setOverduePaymentCache driverFee.endTime overduePaymentJobTs
       _ -> pure ()
 

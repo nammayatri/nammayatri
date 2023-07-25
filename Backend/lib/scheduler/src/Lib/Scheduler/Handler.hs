@@ -21,6 +21,7 @@ where
 import qualified Control.Monad.Catch as C
 import Control.Monad.Trans.Cont
 import Data.Singletons (fromSing)
+import qualified Data.Text as T
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common hiding (id)
@@ -46,11 +47,15 @@ data SchedulerHandle t = SchedulerHandle
 
 handler :: SchedulerHandle t -> SchedulerM ()
 handler hnd = do
+  schedulerType <- asks (.schedulerType)
   iterSessionId <- generateGUIDText
   before <- getCurrentTime
   withLogTag iterSessionId $ do
     logInfo "Starting runner iteration"
-    runnerIteration hnd
+    case T.unpack schedulerType of
+      "RedisBased" -> runnerIterationRedis hnd
+      "DBBased" -> runnerIteration hnd
+      _ -> logInfo $ "Unknown scheduler type: " <> schedulerType
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
   loopIntervalSec <- asks (.loopIntervalSec)
@@ -59,6 +64,53 @@ handler hnd = do
 
 errorLogger :: (Log m, Show a) => a -> m ()
 errorLogger e = logError $ "error occured: " <> show e
+
+runnerIterationRedis :: forall t. SchedulerHandle t -> SchedulerM ()
+runnerIterationRedis hnd@SchedulerHandle {..} = do
+  readyTasks <- getReadyTasks
+  logTagDebug "All Tasks - Count" . show $ length readyTasks
+  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> id) readyTasks
+  tasksPerIteration <- asks (.tasksPerIteration)
+  takenTasksUpdatedInfo <- pickTasksRedis tasksPerIteration readyTasks
+  logTagDebug "Available tasks - Count" . show $ length takenTasksUpdatedInfo
+  terminationMVar <- newEmptyMVar
+  let inspectTermination = modifyMVarMasked_ terminationMVar pure
+      waitAll :: MonadUnliftIO m => [Async a] -> m ()
+      waitAll = mapConcurrently_ waitCatch
+  flip withAsync (waitEitherTerminationOrExecEnd terminationMVar) $
+    withAsyncList (map runTask takenTasksUpdatedInfo) $ \asyncList -> do
+      res <- race (waitAll asyncList) inspectTermination
+      case res of
+        Left _ -> pure ()
+        Right _ -> do
+          mapM_ cancel asyncList
+          waitAll asyncList
+  where
+    waitEitherTerminationOrExecEnd :: MVar () -> Async () -> SchedulerM ()
+    waitEitherTerminationOrExecEnd termMVar exec =
+      void (waitCatch exec) `C.catchAll` \e -> mask $ \restore -> do
+        logInfo "terminating gracefully"
+        errorLogger e
+        termPeriod <- asks (.graceTerminationPeriod)
+        restore (threadDelaySec termPeriod) `C.catchAll` \e' ->
+          logInfo "terminating immediately" >> errorLogger e'
+        putMVar termMVar ()
+        throwIO e
+
+    runTask :: AnyJob t -> SchedulerM ()
+    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId=" <> id.getId) $ do
+      res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+      registerExecutionResult hnd anyJob res
+      releaseLock id
+
+    pickTasksRedis :: Int -> [AnyJob t] -> SchedulerM [AnyJob t]
+    pickTasksRedis _ [] = pure []
+    pickTasksRedis 0 _ = pure []
+    pickTasksRedis tasksRemain (AnyJob Job {..} : xs) = do
+      gainedLock <- attemptTaskLockAtomic id
+      if gainedLock
+        then (AnyJob Job {..} :) <$> pickTasksRedis (tasksRemain - 1) xs
+        else pickTasksRedis tasksRemain xs
 
 runnerIteration :: forall t. SchedulerHandle t -> SchedulerM ()
 runnerIteration hnd@SchedulerHandle {..} = do

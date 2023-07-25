@@ -58,7 +58,7 @@ runSchedulerService SchedulerConfig {..} handle_ = do
       else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
-
+  let schedulerType = "RedisBased"
   let schedulerEnv = SchedulerEnv {..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
