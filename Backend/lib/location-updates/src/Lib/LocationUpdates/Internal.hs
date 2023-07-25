@@ -29,6 +29,7 @@ module Lib.LocationUpdates.Internal
     wrapDistanceCalculationImplementation,
     processWaypoints,
     mkRideInterpolationHandler,
+    InterpolateMode (..),
   )
 where
 
@@ -78,37 +79,45 @@ isDistanceCalculationFailedImplementation driverId = isJust <$> Hedis.get @() (g
 resetFailedDistanceCalculationFlag :: (HedisFlow m r) => Id person -> m ()
 resetFailedDistanceCalculationFlag driverId = Hedis.del $ getFailedDistanceCalculationKey driverId
 
+data InterpolateMode
+  = InterpolateAlways -- rideEnd api
+  | InterpolateWhenFullBatch -- old updateLocation api, deprecated
+  | ShiftInterpolation -- new updateLocation api
+
 processWaypoints ::
   (Log m, MonadThrow m) =>
   RideInterpolationHandler person m ->
   Id person ->
-  Bool ->
+  InterpolateMode ->
   NonEmpty LatLong ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId mode waypoints = do
   calculationFailed <- ih.isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
     else ih.wrapDistanceCalculation driverId $ do
       addPoints driverId waypoints
-      recalcDistanceBatches ih ending driverId
+      recalcDistanceBatches ih mode driverId
 
 recalcDistanceBatches ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
-  Bool ->
+  InterpolateMode ->
   Id person ->
   m ()
-recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId = do
+recalcDistanceBatches h@RideInterpolationHandler {..} mode driverId = do
   distanceToUpdate <- recalcDistanceBatches' 0
-  updateDistance driverId distanceToUpdate
+  if distanceToUpdate == 0
+    then logDebug "No need to increase distance by 0"
+    else updateDistance driverId distanceToUpdate
   where
     atLeastBatchPlusOne = getWaypointsNumber driverId <&> (> batchSize)
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
     continueCondition =
-      if ending
-        then pointsRemaining
-        else atLeastBatchPlusOne
+      case mode of
+        InterpolateAlways -> pointsRemaining
+        InterpolateWhenFullBatch -> atLeastBatchPlusOne
+        ShiftInterpolation -> pure False
 
     recalcDistanceBatches' acc = do
       batchLeft <- continueCondition
