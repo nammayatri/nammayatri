@@ -15,8 +15,8 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
 import Kernel.Utils.Time ()
 
-getCurrentTimestamp :: IO Milliseconds
-getCurrentTimestamp = getClockTimeInMs
+getCurrentTimestamp :: (CacheFlow m r) => m Milliseconds
+getCurrentTimestamp = liftIO getClockTimeInMs
 
 splitIntoBatches :: Int -> [a] -> [[a]]
 splitIntoBatches _ [] = []
@@ -39,14 +39,14 @@ getTime :: (CacheFlow m r) => Text -> m Milliseconds
 getTime producerTimestampKey = do
   Hedis.safeGet producerTimestampKey >>= \case
     Just currentTime -> return currentTime
-    Nothing -> liftIO getCurrentTimestamp
+    Nothing -> getCurrentTimestamp
 
 runProducer :: Flow ()
 runProducer = do
-  begTime <- liftIO getCurrentTimestamp
+  begTime <- getCurrentTimestamp
   producerTimestampKey <- asks (.producerTimestampKey)
   startTime <- getTime producerTimestampKey
-  endTime <- liftIO getCurrentTimestamp
+  endTime <- getCurrentTimestamp
 
   Hedis.set producerTimestampKey endTime
 
@@ -72,9 +72,13 @@ runProducer = do
     result <- Hedis.xadd streamName entryId fieldValue
     logDebug $ "Jobs inserted out of stream" <> show result
 
-  endTime <- liftIO getCurrentTimestamp
+  endTime <- getCurrentTimestamp
   let diff = endTime - begTime
   waitTimeMilliSec <- asks (.waitTimeMilliSec)
   threadDelayMilliSec $ max 0 (waitTimeMilliSec - diff)
 
+  fork "" $ addGenericLatency "producer" diff
+
   runProducer
+
+-- operation generic latenct krdo
