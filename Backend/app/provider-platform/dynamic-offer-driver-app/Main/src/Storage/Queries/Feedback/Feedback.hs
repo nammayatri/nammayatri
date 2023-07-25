@@ -15,8 +15,40 @@
 module Storage.Queries.Feedback.Feedback where
 
 import Domain.Types.Feedback.Feedback (Feedback)
-import Kernel.Storage.Esqueleto as Esq
+import qualified EulerHS.Extra.EulerDB as Extra
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Lib.Mesh as Mesh
+import Lib.Utils
+import qualified Sequelize as Se
+import qualified Storage.Beam.Feedback.Feedback as BeamF
 import Storage.Tabular.Feedback.Feedback ()
 
-createMany :: [Feedback] -> SqlDB ()
-createMany = Esq.createMany
+create :: L.MonadFlow m Feedback -> m ()
+create = createWithKV
+
+createMany :: L.MonadFlow m => [Feedback] -> m ()
+createMany = traverse_ create
+
+instance FromTType' BeamF.Feedback Feedback where
+  fromTType' BeamF.FeedbackT {..} = do
+    pure $
+      Just
+        Feedback
+          { id = Id id,
+            rideId = Id rideId,
+            driverId = Id driverId,
+            badge = badge,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamF.Feedback Feedback where
+  toTType' Feedback {..} =
+    BeamF.defaultFeedback
+      { BeamF.id = getId id,
+        BeamF.rideId = getId rideId,
+        BeamF.driverId = getId driverId,
+        BeamF.badge = badge,
+        BeamF.createdAt = createdAt
+      }

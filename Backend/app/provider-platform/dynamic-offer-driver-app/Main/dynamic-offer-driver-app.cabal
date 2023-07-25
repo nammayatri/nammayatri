@@ -293,6 +293,9 @@ library
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.FareProduct
+      Storage.Beam.Feedback.Feedback
+      Storage.Beam.Feedback.FeedbackBadge
+      Storage.Beam.Feedback.FeedbackForm
       Storage.Beam.Geometry
       Storage.Beam.Issue.Comment
       Storage.Beam.Issue.IssueCategory
@@ -426,9 +429,6 @@ library
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
-      Storage.Tabular.Feedback.Feedback
-      Storage.Tabular.Feedback.FeedbackBadge
-      Storage.Tabular.Feedback.FeedbackForm
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Call

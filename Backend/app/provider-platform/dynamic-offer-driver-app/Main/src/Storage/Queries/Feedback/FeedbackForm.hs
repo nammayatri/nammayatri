@@ -11,23 +11,58 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Feedback.FeedbackForm where
 
 import Domain.Types.Feedback.FeedbackForm
+import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Feedback.FeedbackForm
+import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
+import Lib.Utils
+import qualified Sequelize as Se
+import qualified Storage.Beam.Feedback.FeedbackForm as BFF
 
-findAllFeedback :: Transactionable m => m [FeedbackFormRes]
-findAllFeedback = Esq.findAll $ do
-  from $ table @FeedbackFormT
+-- findAllFeedback :: Transactionable m => m [FeedbackFormRes]
+-- findAllFeedback = Esq.findAll $ do
+--   from $ table @FeedbackFormT
 
-findAllFeedbackByRating :: Transactionable m => Int -> m [FeedbackFormRes]
-findAllFeedbackByRating rating =
-  Esq.findAll $ do
-    feedbackForm <- from $ table @FeedbackFormT
-    where_ $
-      feedbackForm ^. FeedbackFormRating ==. val (Just rating)
-        ||. Esq.isNothing (feedbackForm ^. FeedbackFormRating)
-    pure feedbackForm
+findAllFeedback :: (L.MonadFlow m, Log m) => m [FeedbackFormRes]
+findAllFeedback = findAllWithKV [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
+
+-- findAllFeedbackByRating :: Transactionable m => Int -> m [FeedbackFormRes]
+-- findAllFeedbackByRating rating =
+--   Esq.findAll $ do
+--     feedbackForm <- from $ table @FeedbackFormT
+--     where_ $
+--       feedbackForm ^. FeedbackFormRating ==. val (Just rating)
+--         ||. Esq.isNothing (feedbackForm ^. FeedbackFormRating)
+--     pure feedbackForm
+
+findAllFeedbackByRating :: (L.MonadFlow m, Log m) => Int -> m [FeedbackFormRes]
+findAllFeedbackByRating rating = findAllWithKV [Se.Or [Se.Is BFF.rating $ Se.Eq $ Just rating, Se.Is BFF.rating $ Se.Eq Nothing]]
+
+instance FromTType' BFF.FeedbackForm FeedbackFormRes where
+  fromTType' BFF.FeedbackFormT {..} = do
+    pure $
+      Just
+        FeedbackFormRes
+          { categoryName = categoryName,
+            id = Id id,
+            rating = rating,
+            question = question,
+            answer = answer,
+            answerType = answerType
+          }
+
+instance ToTType' BFF.FeedbackForm FeedbackFormRes where
+  toTType' FeedbackFormRes {..} =
+    BFF.FeedbackFormT
+      { BFF.categoryName = categoryName,
+        BFF.id = getId id,
+        BFF.rating = rating,
+        BFF.question = question,
+        BFF.answer = answer,
+        BFF.answerType = answerType
+      }

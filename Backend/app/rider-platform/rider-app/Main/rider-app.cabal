@@ -218,7 +218,9 @@ library
       Storage.Beam.EstimateBreakup
       Storage.Beam.Exophone
       Storage.Beam.FarePolicy.FareBreakup
+      Storage.Beam.FeedbackForm
       Storage.Beam.Geometry
+      Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
       Storage.Beam.Maps.DirectionsCache
       Storage.Beam.Maps.PlaceNameCache
@@ -302,8 +304,6 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
-      Storage.Tabular.FeedbackForm
-      Storage.Tabular.HotSpotConfig
       Tools.Auth
       Tools.Call
       Tools.Error
