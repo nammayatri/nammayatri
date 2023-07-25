@@ -12,7 +12,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueReport as BeamIR
 
@@ -125,7 +125,7 @@ deleteByPersonId (Id driverId) = deleteWithKV [Se.Is BeamIR.driverId (Se.Eq driv
 updateAsDeleted :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> m ()
 updateAsDeleted issueReportId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamIR.deleted True,
       Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now
     ]
@@ -148,7 +148,7 @@ updateAsDeleted issueReportId = do
 updateStatusAssignee :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     ([Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> ([Se.Set BeamIR.assignee assignee | isJust assignee]))
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
 
@@ -168,7 +168,7 @@ updateStatusAssignee issueReportId status assignee = do
 updateOption :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> Id IssueOption -> m ()
 updateOption issueReportId (Id optionId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [Se.Set BeamIR.optionId (Just optionId), Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
 

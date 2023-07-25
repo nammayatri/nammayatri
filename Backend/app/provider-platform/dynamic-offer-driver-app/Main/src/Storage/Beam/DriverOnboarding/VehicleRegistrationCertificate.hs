@@ -23,36 +23,31 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
 import qualified Database.Beam.Schema.Tables as BST
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Domain.Types.Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+-- import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
-instance FromField Domain.VerificationStatus where
-  fromField = fromFieldEnum
+-- instance FromField Domain.VerificationStatus where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VerificationStatus where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VerificationStatus where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
 
-instance FromBackendRow Postgres Domain.VerificationStatus
+-- instance FromBackendRow Postgres Domain.VerificationStatus
 
-instance IsString Domain.VerificationStatus where
-  fromString = show
+-- instance IsString Domain.VerificationStatus where
+--   fromString = show
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,

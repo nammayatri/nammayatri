@@ -48,9 +48,7 @@ updateStatus' checkForPayment personId flowStatus = do
     Just ds | not checkForPayment || not (isPaymentOverdue ds) -> do
       now <- getCurrentTime
       updateOneWithKV
-        [ Se.Set BeamDFS.flowStatus flowStatus,
-          Se.Set BeamDFS.updatedAt now
-        ]
+        [Se.Set BeamDFS.flowStatus flowStatus, Se.Set BeamDFS.updatedAt now]
         [Se.Is BeamDFS.personId $ Se.Eq (getId personId)]
     _ -> pure ()
 

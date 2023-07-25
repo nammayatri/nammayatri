@@ -30,8 +30,7 @@ import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as
 -- create = Esq.create
 
 create :: (L.MonadFlow m, Log m) => VehicleRegistrationCertificate -> m ()
-create vehicleRegistrationCertificate = do
-  createWithKV vehicleRegistrationCertificate
+create = createWithKV
 
 -- upsert :: VehicleRegistrationCertificate -> SqlDB ()
 -- upsert a@VehicleRegistrationCertificate {..} =

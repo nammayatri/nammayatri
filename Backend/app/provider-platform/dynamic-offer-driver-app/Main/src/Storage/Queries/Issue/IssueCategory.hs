@@ -46,10 +46,8 @@ findAllIssueCategoryWithSeCondition = findAllWithKV
 findAllByLanguage :: (L.MonadFlow m, Log m) => Language -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllByLanguage language = do
   iTranslations <- findAllIssueTranslationWithSeCondition [Se.Is BeamIT.language $ Se.Eq language]
-  let iCategorySeCondition = [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
-  iCategorys <- findAllIssueCategoryWithSeCondition iCategorySeCondition
-  let dCategoriesWithTranslations = foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
-  pure dCategoriesWithTranslations
+  iCategorys <- findAllIssueCategoryWithSeCondition [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
+  pure $ foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
   where
     getIssueCategoryWithTranslations iTranslations dInfosWithTranslations iCategory =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
