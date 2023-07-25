@@ -26,6 +26,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -201,7 +202,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 //                                    cleanUp();
 //                                    executor.shutdown();
                                     removeCard(position);
-                                    if(apiLoader!= null) {
+                                    if(apiLoader != null && apiLoader.isAttachedToWindow()) {
                                         windowManager.removeView(apiLoader);
                                         apiLoader = null;
                                     }
@@ -438,7 +439,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }
 
-            if (progressDialog !=null){
+            if (progressDialog != null && progressDialog.isAttachedToWindow()){
                 if (progressDialog.getParent()!=null){
                     windowManager.removeView(progressDialog);
                 }
@@ -589,6 +590,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     private void showOverLayPopup() {
+        if (!Settings.canDrawOverlays(this)) return;
         firebaseLogEvent("Overlay_is_popped_up");
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
@@ -863,7 +865,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     mediaPlayer.pause();
                 }
             }
-            if (apiLoader !=null){
+            if (apiLoader != null){
                 windowManager.addView(apiLoader, params);
             }
         } catch (Exception e) {
@@ -966,30 +968,41 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     private void updateProgressBars(boolean animated){
-        if (floatyView == null || sheetArrayList == null ) return;
-        progressIndicatorsList = new ArrayList<>(Arrays.asList(
-                floatyView.findViewById(R.id.progress_indicator_1),
-                floatyView.findViewById(R.id.progress_indicator_2),
-                floatyView.findViewById(R.id.progress_indicator_3)));
+       try {
+            if (floatyView == null || sheetArrayList == null ) return;
+            progressIndicatorsList = new ArrayList<>(Arrays.asList(
+                    floatyView.findViewById(R.id.progress_indicator_1),
+                    floatyView.findViewById(R.id.progress_indicator_2),
+                    floatyView.findViewById(R.id.progress_indicator_3)));
 
-        for (int i=0; i<sheetArrayList.size(); i++){
-            progressCompat = sheetArrayList.get(i).getReqExpiryTime()  + sheetArrayList.get(i).getStartTime() - time;
-            progressIndicatorsList.get(i).setProgressCompat(progressCompat*4, animated); // (100/maxExpiryTime)
-            if (progressCompat <= 8){
-                progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
-            }else {
-                progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
+            for (int i=0; i<sheetArrayList.size(); i++){
+                progressCompat = sheetArrayList.get(i).getReqExpiryTime()  + sheetArrayList.get(i).getStartTime() - time;
+                progressIndicatorsList.get(i).setProgressCompat(progressCompat*4, animated); // (100/maxExpiryTime)
+                if (progressCompat <= 8){
+                    progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
+                }else {
+                    progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
+                }
             }
-        }
+       } catch (Exception e) {
+            mFirebaseAnalytics.logEvent("Exception_in_updateProgressBars",null);
+            Log.e("OverlaySheetService", "Error in updateProgressBars " + e);
+       }
     }
 
     private boolean findCardById(String id){
-        if (sheetArrayList != null){
-            for (int i = 0; i<sheetArrayList.size(); i++){
-                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
-                    return true;
+        try {
+            if (sheetArrayList != null){
+                for (int i = 0; i<sheetArrayList.size(); i++){
+                    if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
+                        return true;
+                    }
                 }
             }
+        } catch (Exception e) {
+            mFirebaseAnalytics.logEvent("Exception_in_findCardById",null);
+            Log.e("OverlaySheetService", "Error in findCardById " + e);
+            return false;
         }
         return false;
     }

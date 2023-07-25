@@ -809,12 +809,22 @@ public class LocationUpdateService extends Service {
     }
 
     private void startGPSListeningService() {
-        Intent gpsListeningService = new Intent(this, GpsListeningService.class);
-        gpsListeningService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            this.getApplicationContext().startForegroundService(gpsListeningService);
-        }else {
-            this.startService(gpsListeningService);
+        try {
+            Intent gpsListeningService = new Intent(this, GpsListeningService.class);
+            gpsListeningService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && sharedPrefs.getString("ACTIVITY_STATUS","null").equals("onPause")) {
+                AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                Intent alarmIntent = new Intent(context, GPSBroadcastReceiver.class);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE);
+                manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                this.getApplicationContext().startForegroundService(gpsListeningService);
+            }else {
+                this.startService(gpsListeningService);
+            }
+        } catch (Exception e) {
+            mFirebaseAnalytics.logEvent("Exception_in_startGPSListeningService",null);
+            Log.e(LOG_TAG, "Error in startGPSListeningService : " + e);
         }
     }
 
@@ -981,16 +991,21 @@ public class LocationUpdateService extends Service {
     // to cancel timer
     private void cancelTimer()
     {
-        System.out.println("LOCATION_UPDATE: CANCEL TIMER CALLED INSIDE");
-        if (timer != null){
-            timer.cancel();
-            timer.purge();
+        try {
+            System.out.println("LOCATION_UPDATE: CANCEL TIMER CALLED INSIDE");
+            if (timer != null){
+                timer.cancel();
+                timer.purge();
+            }
+            if (timerTask != null)
+                timerTask.cancel();
+            timer = null;
+            timerTask = null;
+            isLocationUpdating = false;
+        } catch (Exception e) {
+            mFirebaseAnalytics.logEvent("Exception_in_cancelTimer",null);
+            Log.e(LOG_TAG, "Error in cancelTimer " + e);
         }
-        if (timerTask != null)
-            timerTask.cancel();
-        timer = null;
-        timerTask = null;
-        isLocationUpdating = false;
     }
 
     private boolean isScreenLocked()

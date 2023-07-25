@@ -1350,13 +1350,16 @@ public class MainActivity extends AppCompatActivity {
     public static void showInAppNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds, Context context) {
         try {
             Handler handler = new Handler(context.getMainLooper());
-            handler.postDelayed(() -> {
+            handler.post(() -> {
                 try {
-                    inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
-                } catch (JSONException e) {
+                    if(inAppNotification != null) {
+                        inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
+                    }
+                } catch (Exception e) {
+                    mFirebaseAnalytics.logEvent("Exception_in_showInAppNotification",null);
                     Log.e(TAG, "Error in In App Notification Handler " + e);
                 }
-            }, 0);
+            });
         } catch (Exception e) {
             Log.e(TAG, "Error in In App Notification " + e);
         }

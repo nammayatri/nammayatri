@@ -21,6 +21,7 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
@@ -29,6 +30,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.airbnb.lottie.LottieAnimationView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -60,6 +62,7 @@ public class RideRequestActivity extends AppCompatActivity {
     private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
     private ArrayList<LinearLayout> indicatorList ;
     private  RideRequestUtils rideRequestUtils = new RideRequestUtils();
+    private FirebaseAnalytics mFirebaseAnalytics;
 
     private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager2, new SheetAdapter.OnItemClickListener() {
         @Override
@@ -237,15 +240,16 @@ public class RideRequestActivity extends AppCompatActivity {
             addToList(getIntent().getExtras());
         }
         setIndicatorClickListener();
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
     }
 
 
     public void addToList(Bundle rideRequestBundle){
-        if (sheetArrayList == null || sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
+        if (rideRequestBundle == null || sheetArrayList == null || sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
         mainLooper.post(new Runnable() {
             @Override
             public void run() {
-                if (rideRequestBundle == null || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
+                if (findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
                 String searchRequestValidTill  = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
                 float distanceToPickup  = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
                 float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
@@ -313,7 +317,7 @@ public class RideRequestActivity extends AppCompatActivity {
     }
 
     private void startLoader(String id){
-        countDownTimer.cancel();
+       if(countDownTimer != null) countDownTimer.cancel();
         cancelSound();
         View progressDialog = findViewById(R.id.progress_loader);
         View viewPagerParentView = findViewById(R.id.view_pager_parent);
@@ -363,7 +367,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 lottieAnimationView.setProgress(0);
                 lottieAnimationView.setSpeed(1.2f);
                 lottieAnimationView.playAnimation();
-                rideStatusListener.cancel();
+                if(rideStatusListener != null) rideStatusListener.cancel();
             }
         });
         mainLooper.postDelayed(new Runnable() {
@@ -464,29 +468,40 @@ public class RideRequestActivity extends AppCompatActivity {
 
     private void updateProgressBars(boolean animated){
         if (sheetArrayList == null ) return;
-        progressIndicatorsList = new ArrayList<>(Arrays.asList(
-                findViewById(R.id.progress_indicator_1),
-                findViewById(R.id.progress_indicator_2),
-                findViewById(R.id.progress_indicator_3)));
+        try {
+            progressIndicatorsList = new ArrayList<>(Arrays.asList(
+                    findViewById(R.id.progress_indicator_1),
+                    findViewById(R.id.progress_indicator_2),
+                    findViewById(R.id.progress_indicator_3)));
 
-        for (int i=0; i<sheetArrayList.size(); i++){
-            progressCompat = sheetArrayList.get(i).getReqExpiryTime()  + sheetArrayList.get(i).getStartTime() - time;
-            progressIndicatorsList.get(i).setProgressCompat(progressCompat*4, animated); // (100/maxExpiryTime)
-            if (progressCompat <= 8){
-                progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
-            }else {
-                progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
+            for (int i=0; i<sheetArrayList.size(); i++){
+                progressCompat = sheetArrayList.get(i).getReqExpiryTime()  + sheetArrayList.get(i).getStartTime() - time;
+                progressIndicatorsList.get(i).setProgressCompat(progressCompat*4, animated); // (100/maxExpiryTime)
+                if (progressCompat <= 8){
+                    progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
+                }else {
+                    progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
+                }
             }
+        } catch (Exception e) {
+            mFirebaseAnalytics.logEvent("Exception_in_updateProgressBars", null);
+            Log.e("RideRequestActivity", "Error in updateProgressBars : " + e);
         }
     }
 
     private boolean findCardById(String id){
-        if (sheetArrayList != null){
-            for (int i = 0; i<sheetArrayList.size(); i++){
-                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
-                    return true;
+        try {
+            if (sheetArrayList != null && sheetArrayList.size() > 0){
+                for (int i = 0; i<sheetArrayList.size(); i++){
+                    if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
+                        return true;
+                    }
                 }
             }
+        } catch (Exception e) {
+            mFirebaseAnalytics.logEvent("Exception_in_findCardById", null);
+            Log.e("RideRequestActivity", "Error in findCardById : " + e);
+            return false;
         }
         return false;
     }
@@ -496,7 +511,7 @@ public class RideRequestActivity extends AppCompatActivity {
         instance = null;
         time = 0;
         sheetArrayList.clear();
-        countDownTimer.cancel();
+        if(countDownTimer != null) countDownTimer.cancel();
         cancelSound();
         NotificationUtils.lastRideReq.clear();
         rideRequestUtils.cancelRideReqNotification(this);
