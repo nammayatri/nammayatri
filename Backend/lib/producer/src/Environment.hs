@@ -38,6 +38,8 @@ data AppCfg = AppCfg
     waitTimeMilliSec :: Milliseconds,
     enablePrometheusMetricLogging :: Bool,
     streamName :: Text,
+    producerTimestampKey :: Text,
+    cacheConfig :: CacheConfig,
     setName :: Text,
     entryId :: Text
   }
@@ -60,6 +62,8 @@ data AppEnv = AppEnv
     batchSize :: Int,
     version :: DeploymentVersion,
     streamName :: Text,
+    producerTimestampKey :: Text,
+    cacheConfig :: CacheConfig,
     setName :: Text,
     entryId :: Text
   }
@@ -86,3 +90,12 @@ buildAppEnv AppCfg {..} = do
 type FlowHandler = FlowHandlerR AppEnv
 
 type Flow = FlowR AppEnv
+
+newtype CacheConfig = CacheConfig
+  { configsExpTime :: Seconds
+  }
+  deriving (Generic, FromDhall)
+
+type HasCacheConfig r = HasField "cacheConfig" r CacheConfig
+
+type CacheFlow m r = (HasCacheConfig r, HedisFlow m r)

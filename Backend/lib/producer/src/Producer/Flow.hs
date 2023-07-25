@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Producer.Flow where
@@ -8,24 +9,20 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Text (pack)
 import qualified Data.Text.Encoding as TE
-import Data.Time.Clock.POSIX (getPOSIXTime)
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
-import Kernel.Utils.Time
+import Kernel.Utils.Time ()
 
-getCurrentTimestamp :: IO Double
-getCurrentTimestamp = realToFrac <$> getPOSIXTime
+getCurrentTimestamp :: IO Milliseconds
+getCurrentTimestamp = getClockTimeInMs
 
 splitIntoBatches :: Int -> [a] -> [[a]]
 splitIntoBatches _ [] = []
 splitIntoBatches batchSize xs =
   let (batch, rest) = splitAt batchSize xs
    in batch : splitIntoBatches batchSize rest
-
--- arrayToByteString :: [BS.ByteString] -> BS.ByteString
--- arrayToByteString chunk = BSL.toStrict $ Ae.encode $ BSL.fromChunks chunk
 
 -- Concatenate the list of strict ByteStrings into a single strict ByteString
 concatenateChunks :: [BS.ByteString] -> BS.ByteString
@@ -38,17 +35,27 @@ encodeToJSON = Ae.encode . TE.decodeUtf8
 arrayToByteString :: [BS.ByteString] -> BS.ByteString
 arrayToByteString chunks = BSL.toStrict (encodeToJSON (concatenateChunks chunks))
 
+getTime :: (CacheFlow m r) => Text -> m Milliseconds
+getTime producerTimestampKey = do
+  Hedis.safeGet producerTimestampKey >>= \case
+    Just currentTime -> return currentTime
+    Nothing -> liftIO getCurrentTimestamp
+
 runProducer :: Flow ()
 runProducer = do
-  currentTime <- liftIO getCurrentTimestamp
-  let oneSecondAgo = currentTime - 1
+  begTime <- liftIO getCurrentTimestamp
+  producerTimestampKey <- asks (.producerTimestampKey)
+  startTime <- getTime producerTimestampKey
+  endTime <- liftIO getCurrentTimestamp
+
+  Hedis.set producerTimestampKey endTime
 
   print $ pack "Producer is running ..."
-  logDebug $ "currentTime :" <> show currentTime
-  logDebug $ "oneSecondAgo :" <> show oneSecondAgo
+  logDebug $ "currentTime :" <> show startTime
+  logDebug $ "oneSecondAgo :" <> show endTime
 
   setName <- asks (.setName)
-  currentJobs <- Hedis.zrangebyscore setName oneSecondAgo currentTime
+  currentJobs <- Hedis.zrangebyscore setName (millisToSecondsDouble startTime) (millisToSecondsDouble endTime)
   logDebug $ "Jobs taken out of sortedset" <> show currentJobs
 
   batchSize <- asks (.batchSize)
@@ -65,8 +72,9 @@ runProducer = do
     result <- Hedis.xadd streamName entryId fieldValue
     logDebug $ "Jobs inserted out of stream" <> show result
 
+  endTime <- liftIO getCurrentTimestamp
+  let diff = endTime - begTime
   waitTimeMilliSec <- asks (.waitTimeMilliSec)
-  threadDelayMilliSec waitTimeMilliSec
-  runProducer
+  threadDelayMilliSec $ max 0 (waitTimeMilliSec - diff)
 
--- pure ()
+  runProducer

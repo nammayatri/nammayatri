@@ -29,15 +29,17 @@ in  { hedisCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/producer.log", prettyPrinting = True }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , waitTimeMilliSec = +500
+    , producerTimestampKey = "producerTimestampKey"
     , batchSize = +1000
     , streamName = "xx"
+    , cacheConfig
     , setName = "yy"
     , entryId = "*"
     }
