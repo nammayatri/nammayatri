@@ -94,7 +94,8 @@ savedReqLocationTMod =
       updatedAt = B.fieldNamed "updated_at",
       tag = B.fieldNamed "tag",
       riderId = B.fieldNamed "rider_id",
-      ward = B.fieldNamed "ward"
+      ward = B.fieldNamed "ward",
+      isMoved = B.fieldNamed "is_moved"
     }
 
 instance Serialize SavedReqLocation where
