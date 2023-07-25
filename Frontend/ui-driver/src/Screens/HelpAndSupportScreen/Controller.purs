@@ -80,7 +80,7 @@ eval (OptionClick optionIndex) state = do
     GettingStartedFaq -> continue state
     OtherIssues -> exit $ GoToWriteToUsScreen
     CallSupportCenter -> do
-      _ <- pure $ showDialer (getSupportNumber "")
+      _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
       continue state
 eval _ state = continue state
 

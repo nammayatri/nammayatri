@@ -915,7 +915,13 @@ export const loaderTextImpl = function (mainTxt) {
 
 
 export const showDialer = function (str) {
-  window.JBridge.showDialer(str);
+  return function (call) {
+    try {
+      window.JBridge.showDialer(str, call);
+    } catch (error) {
+      window.JBridge.showDialer(str);
+    }
+  }
 };
 
 export const startLocationPollingAPI = function () {

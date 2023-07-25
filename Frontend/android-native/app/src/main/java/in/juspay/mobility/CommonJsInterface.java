@@ -1461,19 +1461,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void showDialer(String phoneNum) {
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_CALL);
-        phoneNumber = phoneNum;
-        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+    public void showDialer(String phoneNum, boolean call) {
+        Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
+        intent.setData(Uri.parse("tel:" + phoneNum));
+        if (call && ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
         } else {
-            if (intent != null) {
-                phoneNumber = "tel:" + phoneNum;
-                intent.setData(Uri.parse(phoneNumber));
-                activity.startActivity(intent);
-            }
-
+            activity.startActivity(intent);
         }
     }
 

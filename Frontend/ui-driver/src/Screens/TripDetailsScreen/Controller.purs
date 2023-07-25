@@ -99,7 +99,7 @@ eval Copy state = continueWithCmd state [ do
     pure NoAction
   ]
 eval CallSupport state = do
-  _ <- pure $ showDialer (getSupportNumber "")
+  _ <- pure $ showDialer (getSupportNumber "") false --TODO: FIX_DIALER
   continue state
 
 eval _ state = continue state

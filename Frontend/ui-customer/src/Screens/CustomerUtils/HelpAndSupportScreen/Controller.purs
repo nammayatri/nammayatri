@@ -143,7 +143,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
-  void $ pure $ showDialer $ getSupportNumber ""
+  void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack

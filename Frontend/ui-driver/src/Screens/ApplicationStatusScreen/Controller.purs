@@ -126,7 +126,7 @@ eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state 
       else continue state { data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus}, props{onBoardingFailure = onBoardingStatus, isVerificationFailed = popup_visibility}}
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{popupview=false}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ showDialer (getSupportNumber "")
+  _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
   if state.props.enterOtp then do 
