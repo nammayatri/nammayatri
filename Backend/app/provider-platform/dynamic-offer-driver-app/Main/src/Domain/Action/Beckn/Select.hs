@@ -34,7 +34,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug, throwError)
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import Lib.Scheduler.JobStorageType.Redis.Queries as JC
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -77,12 +77,12 @@ handler merchant sReq estimate = do
       maxShards <- asks (.maxShards)
       Esq.runTransaction $ do
         QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
-        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-          SendSearchRequestToDriverJobData
-            { searchTryId = searchTry.id,
-              estimatedRideDistance = searchReq.estimatedDistance,
-              driverExtraFeeBounds = driverExtraFeeBounds
-            }
+      JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+        SendSearchRequestToDriverJobData
+          { searchTryId = searchTry.id,
+            estimatedRideDistance = searchReq.estimatedDistance,
+            driverExtraFeeBounds = driverExtraFeeBounds
+          }
     _ -> return ()
   where
     createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry

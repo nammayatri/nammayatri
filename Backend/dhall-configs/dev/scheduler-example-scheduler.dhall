@@ -46,6 +46,7 @@ in  { loggerConfig =
     , hedisMigrationStage = True
     , cutOffHedisCluster = False
     , hedisPrefix = "example-scheduler"
+    , schedulerType = "RedisBased"
     , port = +8051
     , loopIntervalSec = +5
     , expirationTime = +600
