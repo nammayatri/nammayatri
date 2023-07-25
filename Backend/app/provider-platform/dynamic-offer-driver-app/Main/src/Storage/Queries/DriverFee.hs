@@ -24,7 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 
@@ -229,7 +229,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
       let totalEarnings = df.totalEarnings
       let numRides = df.numRides
       let fare = fromMaybe 0 mbFare
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
           Se.Set BeamDF.platformFee $ platformFee' + platformFee,
           Se.Set BeamDF.cgst $ cgst' + cgst,
@@ -254,7 +254,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
 
 updateStatus :: (L.MonadFlow m, Log m) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now =
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDF.status status,
       Se.Set BeamDF.updatedAt now
     ]

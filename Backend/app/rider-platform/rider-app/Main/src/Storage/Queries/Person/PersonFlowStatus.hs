@@ -62,7 +62,7 @@ getStatus (Id personId) = findOneWithKV [Se.Is BeamPFS.personId $ Se.Eq personId
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> DPFS.FlowStatus -> m ()
 updateStatus (Id personId) flowStatus = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [Se.Set BeamPFS.flowStatus flowStatus, Se.Set BeamPFS.updatedAt now]
     [Se.Is BeamPFS.personId $ Se.Eq personId]
 

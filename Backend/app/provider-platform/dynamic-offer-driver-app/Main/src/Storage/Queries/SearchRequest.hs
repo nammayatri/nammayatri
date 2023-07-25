@@ -21,7 +21,7 @@ import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -50,7 +50,7 @@ updateAutoAssign ::
   Bool ->
   m ()
 updateAutoAssign searchRequestId autoAssignedEnabled =
-  updateWithKV
+  updateOneWithKV
     [Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled]
     [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
 

@@ -22,7 +22,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 
@@ -32,7 +32,7 @@ create = createWithKV
 updateRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
 updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.ratingValue newRatingValue,
       Se.Set BeamR.feedbackDetails newFeedbackDetails,
       Se.Set BeamR.updatedAt now

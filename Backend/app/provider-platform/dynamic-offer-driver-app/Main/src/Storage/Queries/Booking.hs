@@ -25,7 +25,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
@@ -52,7 +52,7 @@ findBySTId searchTryId = do
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.status rbStatus,
       Se.Set BeamB.updatedAt now
     ]
@@ -61,7 +61,7 @@ updateStatus rbId rbStatus = do
 updateRiderId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id RiderDetails -> m ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.riderId $ Just $ getId riderId,
       Se.Set BeamB.updatedAt now
     ]
@@ -70,12 +70,12 @@ updateRiderId rbId riderId = do
 updateRiderName :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateRiderName bookingId riderName = do
   now <- getCurrentTime
-  updateWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+  updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 updateSpecialZoneOtpCode :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode,
       Se.Set BeamB.updatedAt now
     ]

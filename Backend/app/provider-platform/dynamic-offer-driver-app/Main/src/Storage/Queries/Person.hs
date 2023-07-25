@@ -59,7 +59,7 @@ import Lib.Utils
     findAllWithOptionsKV,
     findOneWithKV,
     findOneWithKvInReplica,
-    updateWithKV,
+    updateOneWithKV,
   )
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
@@ -615,7 +615,7 @@ findAllDriverIdExceptProvidedInReplica (Id merchantId) driverIdsToBeExcluded = d
 updateMerchantIdAndMakeAdmin :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Id Merchant -> m ()
 updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.merchantId merchantId,
       Se.Set BeamP.role Person.ADMIN,
       Se.Set BeamP.updatedAt now
@@ -625,7 +625,7 @@ updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
 updateName :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Text -> m ()
 updateName (Id personId) name = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.firstName name,
       Se.Set BeamP.updatedAt now
     ]
@@ -634,7 +634,7 @@ updateName (Id personId) name = do
 updatePersonRec :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.firstName $ person.firstName,
       Se.Set BeamP.middleName $ person.middleName,
       Se.Set BeamP.lastName $ person.lastName,
@@ -660,7 +660,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
       now <- getCurrentTime
       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamP.clientVersion mbClientVersionText,
           Se.Set BeamP.bundleVersion mbBundleVersionText,
           Se.Set BeamP.updatedAt now
@@ -670,7 +670,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
 updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe FCMRecipientToken -> m ()
 updateDeviceToken (Id personId) mbDeviceToken = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.deviceToken mbDeviceToken,
       Se.Set BeamP.updatedAt now
     ]
@@ -679,7 +679,7 @@ updateDeviceToken (Id personId) mbDeviceToken = do
 updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
       Se.Set BeamP.updatedAt now
     ]
@@ -688,7 +688,7 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
 updateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
@@ -700,7 +700,7 @@ updateMobileNumberAndCode person = do
 setIsNewFalse :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 setIsNewFalse (Id personId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.isNew False,
       Se.Set BeamP.updatedAt now
     ]
@@ -712,7 +712,7 @@ deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
 updateAverageRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Centesimal -> m ()
 updateAverageRating (Id personId) newAverageRating = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.rating (Just newAverageRating),
       Se.Set BeamP.updatedAt now
     ]
@@ -1012,7 +1012,7 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
 updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
       Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
       Se.Set BeamP.updatedAt now

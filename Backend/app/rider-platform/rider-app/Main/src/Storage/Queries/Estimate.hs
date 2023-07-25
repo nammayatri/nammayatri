@@ -132,7 +132,7 @@ findByBPPEstimateId (Id bppEstimateId_) = findOneWithKV [Se.Is BeamE.bppEstimate
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Estimate -> EstimateStatus -> m ()
 updateStatus (Id estimateId) status_ = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamE.updatedAt now,
       Se.Set BeamE.status status_
     ]

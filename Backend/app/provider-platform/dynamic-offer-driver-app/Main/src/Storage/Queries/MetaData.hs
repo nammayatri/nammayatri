@@ -21,7 +21,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MetaData as BeamMD
 
@@ -48,7 +48,7 @@ create = createWithKV
 updateMetaData :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> m ()
 updateMetaData personId device deviceOS deviceDateTime appPermissions = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamMD.device device,
       Se.Set BeamMD.deviceOS deviceOS,
       Se.Set BeamMD.deviceDateTime deviceDateTime,

@@ -83,7 +83,7 @@ data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.status status,
       Se.Set BeamR.updatedAt now
     ]
@@ -106,7 +106,7 @@ updateStatus rideId status = do
 updateTrackingUrl :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.trackingUrl (Just $ showBaseUrl url),
       Se.Set BeamR.updatedAt now
     ]
@@ -129,7 +129,7 @@ updateTrackingUrl rideId url = do
 updateRideRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Int -> m ()
 updateRideRating rideId rideRating = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.rideRating (Just rideRating),
       Se.Set BeamR.updatedAt now
     ]
@@ -173,7 +173,7 @@ findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getI
 updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.status ride.status,
       Se.Set BeamR.fare (realToFrac <$> ride.fare),
       Se.Set BeamR.totalFare (realToFrac <$> ride.totalFare),
@@ -227,7 +227,7 @@ findAllByRBIdInReplica (Id bookingId) = findAllWithOptionsKvInReplica [Se.Is Bea
 updateDriverArrival :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> m ()
 updateDriverArrival rideId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.driverArrivalTime (Just now),
       Se.Set BeamR.updatedAt now
     ]

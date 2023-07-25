@@ -94,7 +94,7 @@ fetchAllAvailableByIds driversIds = findAllWithKV [Se.Is BeamDI.driverId $ Se.In
 updateActivity :: (L.MonadFlow m, MonadTime m, Log m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
 updateActivity (Id driverId) isActive mode = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDI.active isActive,
       Se.Set BeamDI.mode mode,
       Se.Set BeamDI.updatedAt now
@@ -104,7 +104,7 @@ updateActivity (Id driverId) isActive mode = do
 updateEnabledState :: (L.MonadFlow m, MonadTime m, Log m) => Id Driver -> Bool -> m ()
 updateEnabledState (Id driverId) isEnabled = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     ( [ Se.Set BeamDI.enabled isEnabled,
         Se.Set BeamDI.updatedAt now
       ]
@@ -115,7 +115,7 @@ updateEnabledState (Id driverId) isEnabled = do
 updateEnabledVerifiedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Driver -> Bool -> Bool -> m ()
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     ( [ Se.Set BeamDI.enabled isEnabled,
         Se.Set BeamDI.verified isVerified,
         Se.Set BeamDI.updatedAt now
@@ -145,7 +145,7 @@ updateBlockedState driverId isBlocked = do
   let numOfLocks' = case driverInfo of
         Just driverInfoResult -> driverInfoResult.numOfLocks
         Nothing -> 0
-  updateWithKV
+  updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.updatedAt now
       ]
@@ -156,7 +156,7 @@ updateBlockedState driverId isBlocked = do
 verifyAndEnableDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 verifyAndEnableDriver (Id driverId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDI.enabled True,
       Se.Set BeamDI.verified True,
       Se.Set BeamDI.lastEnabledOn $ Just now,
@@ -185,7 +185,7 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled = do
 updateOnRide :: (L.MonadFlow m, MonadTime m, Log m) => Id Person.Driver -> Bool -> m ()
 updateOnRide (Id driverId) onRide = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDI.onRide onRide,
       Se.Set BeamDI.updatedAt now
     ]
@@ -361,7 +361,7 @@ countDriversInReplica merchantID =
 updateDowngradingOptions :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> Bool -> Bool -> m ()
 updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
       Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,
@@ -383,7 +383,7 @@ updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchba
 updateSubscription :: (L.MonadFlow m, MonadTime m, Log m) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed (Id driverId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDI.subscribed isSubscribed,
       Se.Set BeamDI.updatedAt now
     ]
@@ -403,7 +403,7 @@ updateSubscription isSubscribed (Id driverId) = do
 updateAadhaarVerifiedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person.Driver -> Bool -> m ()
 updateAadhaarVerifiedState (Id personId) isVerified = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDI.aadhaarVerified isVerified,
       Se.Set BeamDI.updatedAt now
     ]
@@ -426,7 +426,7 @@ updateAadhaarVerifiedState (Id personId) isVerified = do
 updatePendingPayment :: (L.MonadFlow m, MonadTime m, Log m) => Bool -> Id Person.Driver -> m ()
 updatePendingPayment isPending (Id driverId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDI.paymentPending isPending,
       Se.Set BeamDI.updatedAt now
     ]

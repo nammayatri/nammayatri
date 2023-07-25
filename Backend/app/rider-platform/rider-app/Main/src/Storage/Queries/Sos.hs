@@ -29,7 +29,7 @@ create = createWithKV
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Sos.Sos -> Sos.SosStatus -> m ()
 updateStatus sosId status = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamS.status status,
       Se.Set BeamS.updatedAt now
     ]

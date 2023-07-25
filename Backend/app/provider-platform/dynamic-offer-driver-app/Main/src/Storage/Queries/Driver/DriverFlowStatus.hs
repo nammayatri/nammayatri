@@ -23,7 +23,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 
@@ -47,7 +47,7 @@ updateStatus' checkForPayment personId flowStatus = do
   getStatus personId >>= \case
     Just ds | not checkForPayment || not (isPaymentOverdue ds) -> do
       now <- getCurrentTime
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamDFS.flowStatus flowStatus,
           Se.Set BeamDFS.updatedAt now
         ]

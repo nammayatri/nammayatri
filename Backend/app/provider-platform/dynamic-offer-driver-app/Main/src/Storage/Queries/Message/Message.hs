@@ -23,7 +23,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
@@ -122,7 +122,7 @@ updateMessageLikeCount messageId value = do
     Nothing -> pure ()
     Just msg -> do
       let likeCount = msg.likeCount
-      updateWithKV
+      updateOneWithKV
         [Se.Set BeamM.likeCount $ likeCount + value]
         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
 
@@ -131,7 +131,7 @@ updateMessageViewCount messageId value = do
   findById messageId >>= \case
     Just msg -> do
       let viewCount = msg.viewCount
-      updateWithKV
+      updateOneWithKV
         [Se.Set BeamM.viewCount $ viewCount + value]
         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
     Nothing -> pure ()

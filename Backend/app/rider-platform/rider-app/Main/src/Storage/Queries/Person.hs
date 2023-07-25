@@ -179,7 +179,7 @@ findByRoleAndMobileNumberAndMerchantIdWithoutCCInReplica role_ mobileNumberHash 
 updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
 updateMultiple (Id personId) person = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.updatedAt now,
       Se.Set BeamP.firstName $ person.firstName,
       Se.Set BeamP.middleName $ person.middleName,

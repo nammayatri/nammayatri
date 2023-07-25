@@ -30,6 +30,7 @@ import Lib.Utils
     findAllWithOptionsKV,
     findOneWithKV,
     findOneWithKvInReplica,
+    updateOneWithKV,
     updateWithKV,
     updateWithKvInReplica,
   )
@@ -140,7 +141,7 @@ findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&
 incrementTotalRidesAndTotalDist :: (L.MonadFlow m, Log m) => Id Driver -> Meters -> m ()
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   findTotalRides (Id driverId') >>= \(rides, distance) ->
-    updateWithKV
+    updateOneWithKV
       [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
         Se.Set BeamDS.totalDistance (rideDist + distance)
       ]
@@ -161,9 +162,9 @@ findTotalRidesAssigned (Id driverId) = (Domain.totalRidesAssigned =<<) <$> findO
 incrementTotalRidesAssigned :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
 incrementTotalRidesAssigned (Id driverId') number = do
   findTotalRidesAssigned (Id driverId') >>= \case
-    Nothing -> updateWithKV [Se.Set BeamDS.totalRidesAssigned (Just number)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    Nothing -> updateOneWithKV [Se.Set BeamDS.totalRidesAssigned (Just number)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Just newRides -> do
-      updateWithKV [Se.Set BeamDS.totalRidesAssigned (Just (newRides + number))] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+      updateOneWithKV [Se.Set BeamDS.totalRidesAssigned (Just (newRides + number))] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 -- setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
 -- setCancelledRidesCount driverId cancelledCount = do
@@ -175,7 +176,7 @@ incrementTotalRidesAssigned (Id driverId') number = do
 --     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 setCancelledRidesCount :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
-setCancelledRidesCount (Id driverId') cancelledCount = updateWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+setCancelledRidesCount (Id driverId') cancelledCount = updateOneWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 setCancelledRidesCountInReplica :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
 setCancelledRidesCountInReplica (Id driverId') cancelledCount = updateWithKvInReplica [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]

@@ -49,7 +49,7 @@ import Lib.Utils
     findOneWithKvInReplica,
     getMasterBeamConfig,
     getReplicaBeamConfig,
-    updateWithKV,
+    updateOneWithKV,
   )
 import Sequelize
 import qualified Sequelize as Se
@@ -419,7 +419,7 @@ getMessageCountByReadStatusInReplica (Id messageID) = do
 updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m ()
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamMR.readStatus readStatus,
       Se.Set BeamMR.reply reply,
       Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
@@ -432,7 +432,7 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
     Just report -> do
       let likeStatus = not report.likeStatus
       now <- getCurrentTime
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamMR.likeStatus likeStatus,
           Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
         ]
@@ -442,7 +442,7 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
 updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m ()
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamMR.deliveryStatus deliveryStatus,
       Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
     ]

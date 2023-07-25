@@ -63,7 +63,7 @@ upsert cancellationReason = do
   res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
   if isJust res
     then
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
           Se.Set BeamBCR.source cancellationReason.source,
           Se.Set BeamBCR.reasonCode cancellationReason.reasonCode,

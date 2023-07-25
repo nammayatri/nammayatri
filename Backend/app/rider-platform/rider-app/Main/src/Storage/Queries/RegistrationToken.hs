@@ -59,7 +59,7 @@ findByToken token = do
 setVerified :: (L.MonadFlow m, MonadTime m, Log m) => Id RegistrationToken -> m ()
 setVerified (Id rtId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamRT.verified True,
       Se.Set BeamRT.updatedAt now
     ]
@@ -81,7 +81,7 @@ setVerified (Id rtId) = do
 setDirectAuth :: (L.MonadFlow m, MonadTime m, Log m) => Id RegistrationToken -> m ()
 setDirectAuth (Id rtId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamRT.verified True,
       Se.Set BeamRT.authMedium SIGNATURE,
       Se.Set BeamRT.authType DIRECT,
@@ -103,7 +103,7 @@ setDirectAuth (Id rtId) = do
 updateAttempts :: (L.MonadFlow m, MonadTime m, Log m) => Int -> Id RegistrationToken -> m ()
 updateAttempts attempts (Id rtId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamRT.attempts attempts,
       Se.Set BeamRT.updatedAt now
     ]

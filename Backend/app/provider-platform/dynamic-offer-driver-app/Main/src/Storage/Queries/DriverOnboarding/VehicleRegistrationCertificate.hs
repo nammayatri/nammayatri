@@ -22,7 +22,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 
@@ -56,7 +56,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
   res <- findOneWithKV [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
   if isJust res
     then
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamVRC.permitExpiry permitExpiry,
           Se.Set BeamVRC.pucExpiry pucExpiry,
           Se.Set BeamVRC.insuranceValidity insuranceValidity,

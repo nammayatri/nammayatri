@@ -34,7 +34,7 @@ import Lib.Utils
     findAllWithKvInReplica,
     findOneWithKV,
     findOneWithKvInReplica,
-    updateWithKV,
+    updateOneWithKV,
   )
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
@@ -80,7 +80,7 @@ upsert cancellationReason = do
   res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
   if isJust res
     then
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
           Se.Set BeamBCR.reasonCode ((\(CancellationReasonCode x) -> x) <$> cancellationReason.reasonCode),
           Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo

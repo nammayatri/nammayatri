@@ -59,6 +59,7 @@ import Lib.Utils
     findAllWithOptionsKV,
     findOneWithKV,
     getMasterBeamConfig,
+    updateOneWithKV,
     updateWithKV,
   )
 import qualified Sequelize as Se
@@ -230,7 +231,7 @@ getActiveByDriverId (Id personId) =
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.status status,
       Se.Set BeamR.updatedAt now
     ]
@@ -239,7 +240,7 @@ updateStatus rideId status = do
 updateStartTimeAndLoc :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.tripStartTime $ Just now,
       Se.Set BeamR.tripStartLat $ Just point.lat,
       Se.Set BeamR.tripStartLon $ Just point.lon,
@@ -259,7 +260,7 @@ updateStatusByIds rideIds status = do
 updateDistance :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> HighPrecMeters -> m ()
 updateDistance driverId distance = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.traveledDistance distance,
       Se.Set BeamR.updatedAt now
     ]
@@ -268,7 +269,7 @@ updateDistance driverId distance = do
 updateAll :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.fare ride.fare,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
@@ -313,7 +314,7 @@ getRidesForDate driverId date diffTime = do
 updateArrival :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> m ()
 updateArrival rideId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamR.driverArrivalTime $ Just now,
       Se.Set BeamR.updatedAt now
     ]

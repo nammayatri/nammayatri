@@ -33,7 +33,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.DriverOffer as BeamDO
@@ -93,7 +93,7 @@ create dBooking = do
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.status rbStatus,
       Se.Set BeamB.updatedAt now
     ]
@@ -113,7 +113,7 @@ updateStatus rbId rbStatus = do
 updateBPPBookingId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.bppBookingId (Just $ getId bppRbId),
       Se.Set BeamB.updatedAt now
     ]
@@ -133,7 +133,7 @@ updateBPPBookingId rbId bppRbId = do
 updateOtpCodeBookingId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateOtpCodeBookingId rbId otp = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.otpCode (Just otp),
       Se.Set BeamB.updatedAt now
     ]
@@ -397,7 +397,7 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
 updatePaymentInfo :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.estimatedFare (realToFrac estimatedFare),
       Se.Set BeamB.discount (realToFrac <$> discount),
       Se.Set BeamB.estimatedTotalFare (realToFrac estimatedTotalFare),
@@ -420,7 +420,7 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = 
 updatePaymentUrl :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updatePaymentUrl bookingId paymentUrl = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.paymentUrl (Just paymentUrl),
       Se.Set BeamB.updatedAt now
     ]

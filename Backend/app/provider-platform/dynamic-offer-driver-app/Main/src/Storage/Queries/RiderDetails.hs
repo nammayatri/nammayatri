@@ -24,7 +24,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as BeamRD
 
@@ -45,7 +45,7 @@ findByMobileNumberAndMerchant mobileNumber_ (Id merchantId) = do
 updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m, Log m) => Id RiderDetails -> m ()
 updateHasTakenValidRide (Id riderId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamRD.hasTakenValidRide True,
       Se.Set BeamRD.hasTakenValidRideAt (Just now),
       Se.Set BeamRD.updatedAt now

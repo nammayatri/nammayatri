@@ -22,7 +22,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 
@@ -70,7 +70,7 @@ updateStatus ::
   m ()
 updateStatus (Id searchId) status_ = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamST.status status_,
       Se.Set BeamST.updatedAt now
     ]

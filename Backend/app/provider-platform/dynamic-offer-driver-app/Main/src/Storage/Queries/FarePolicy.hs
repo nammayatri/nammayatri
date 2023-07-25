@@ -31,7 +31,7 @@ import Lib.Utils
     ToTType' (toTType'),
     createWithKV,
     findOneWithKV,
-    updateWithKV,
+    updateOneWithKV,
   )
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
@@ -46,7 +46,7 @@ findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId
 update :: (L.MonadFlow m, MonadTime m, Log m) => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
       Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
       Se.Set BeamFP.updatedAt now
@@ -54,7 +54,7 @@ update farePolicy = do
     [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
           Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
           Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,

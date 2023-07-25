@@ -22,7 +22,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 
@@ -34,7 +34,7 @@ upsert a@DriverLicense {..} = do
   res <- findOneWithKV [Se.Is BeamDL.id $ Se.Eq (getId a.id)]
   if isJust res
     then
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamDL.driverDob driverDob,
           Se.Set BeamDL.driverName driverName,
           Se.Set BeamDL.licenseExpiry licenseExpiry,
