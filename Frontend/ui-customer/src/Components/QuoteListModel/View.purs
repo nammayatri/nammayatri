@@ -208,6 +208,7 @@ findingRidesView state push =
   , orientation VERTICAL
   , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
   , clickable true
+  , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 82 else  MarginBottom 85
   ][
     linearLayout
     [ width MATCH_PARENT
@@ -233,7 +234,6 @@ addTipView state push =
   linearLayout
     [ width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 62 else  MarginBottom 72
     , visibility if state.tipViewProps.isVisible then VISIBLE else GONE
     ]
     [ 

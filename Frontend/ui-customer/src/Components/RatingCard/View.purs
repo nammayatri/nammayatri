@@ -126,7 +126,7 @@ editTextView state push =
       , background Color.grey800
       , color Color.black
       , fontStyle $ FontStyle.regular LanguageStyle
-      , hint (getString HELP_US_WITH_YOUR_FEEDBACK)
+      , hint $ getString HELP_US_WITH_YOUR_FEEDBACK_OPTIONAL
       , weight 1.0
       , pattern "[^\n]*,255"
       , singleLine false
