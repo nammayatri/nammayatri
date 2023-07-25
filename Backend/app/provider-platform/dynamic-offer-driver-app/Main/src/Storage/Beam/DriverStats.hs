@@ -27,7 +27,6 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -36,7 +35,7 @@ data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
     idleSince :: B.C f Time.UTCTime,
     totalRides :: B.C f Int,
-    totalDistance :: B.C f Meters,
+    totalDistance :: B.C f Double,
     ridesCancelled :: B.C f (Maybe Int),
     totalRidesAssigned :: B.C f (Maybe Int)
   }

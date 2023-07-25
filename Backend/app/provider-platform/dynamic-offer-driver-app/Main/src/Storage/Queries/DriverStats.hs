@@ -18,6 +18,7 @@ module Storage.Queries.DriverStats where
 import Domain.Types.DriverStats as Domain
 import Domain.Types.Person (Driver)
 import qualified EulerHS.Language as L
+import GHC.Float (double2Int, int2Double)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -143,7 +144,7 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   findTotalRides (Id driverId') >>= \(rides, distance) ->
     updateOneWithKV
       [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
-        Se.Set BeamDS.totalDistance (rideDist + distance)
+        Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance)
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
@@ -200,7 +201,7 @@ instance FromTType' BeamDS.DriverStats DriverStats where
           { driverId = Id driverId,
             idleSince = idleSince,
             totalRides = totalRides,
-            totalDistance = totalDistance,
+            totalDistance = Meters $ double2Int totalDistance,
             ridesCancelled = ridesCancelled,
             totalRidesAssigned = totalRidesAssigned
           }
@@ -211,7 +212,7 @@ instance ToTType' BeamDS.DriverStats DriverStats where
       { BeamDS.driverId = getId driverId,
         BeamDS.idleSince = idleSince,
         BeamDS.totalRides = totalRides,
-        BeamDS.totalDistance = totalDistance,
+        BeamDS.totalDistance = (\(Meters m) -> int2Double m) totalDistance,
         BeamDS.ridesCancelled = ridesCancelled,
         BeamDS.totalRidesAssigned = totalRidesAssigned
       }
