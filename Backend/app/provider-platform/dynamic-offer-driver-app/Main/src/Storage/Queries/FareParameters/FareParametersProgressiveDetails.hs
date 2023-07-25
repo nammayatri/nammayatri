@@ -30,8 +30,7 @@ create :: (L.MonadFlow m, Log m) => DomainFPPD.FullFareParametersProgressiveDeta
 create = createWithKV
 
 findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
-findById' (KTI.Id fareParametersId') = do
-  findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
+findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
 instance FromTType' BeamFPPD.FareParametersProgressiveDetails DomainFPPD.FullFareParametersProgressiveDetails where
   fromTType' FareParametersProgressiveDetailsT {..} = do

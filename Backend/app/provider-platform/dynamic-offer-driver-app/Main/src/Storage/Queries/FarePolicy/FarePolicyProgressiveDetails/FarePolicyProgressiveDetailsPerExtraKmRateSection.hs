@@ -19,7 +19,6 @@ module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), deleteWithKV, findAllWithOptionsKV, findOneWithKV)
@@ -27,20 +26,20 @@ import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
 
-findAll' ::
-  ( Transactionable m,
-    MonadThrow m,
-    Log m
-  ) =>
-  Id DFP.FarePolicy ->
-  DTypeBuilder m [FarePolicyProgressiveDetailsPerExtraKmRateSectionT]
-findAll' farePolicyId = do
-  Esq.findAll' $ do
-    farePolicyProgressiveDetailsPerExtraKmFareSection <- from $ table @FarePolicyProgressiveDetailsPerExtraKmRateSectionT
-    where_ $
-      farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
-    orderBy [asc $ farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionStartDistance]
-    return farePolicyProgressiveDetailsPerExtraKmFareSection
+-- findAll' ::
+--   ( Transactionable m,
+--     MonadThrow m,
+--     Log m
+--   ) =>
+--   Id DFP.FarePolicy ->
+--   DTypeBuilder m [FarePolicyProgressiveDetailsPerExtraKmRateSectionT]
+-- findAll' farePolicyId = do
+--   Esq.findAll' $ do
+--     farePolicyProgressiveDetailsPerExtraKmFareSection <- from $ table @FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+--     where_ $
+--       farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
+--     orderBy [asc $ farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionStartDistance]
+--     return farePolicyProgressiveDetailsPerExtraKmFareSection
 
 findById' :: (L.MonadFlow m, Log m) => KTI.Id DFP.FarePolicy -> m (Maybe FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findById' farePolicyId' = findOneWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
@@ -54,15 +53,15 @@ findAll ::
   m [FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findAll farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
 
-deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
-deleteAll' farePolicyId =
-  Esq.delete' $ do
-    farePolicyProgressiveDetailsPerExtraKmFareSection <- from $ table @FarePolicyProgressiveDetailsPerExtraKmRateSectionT
-    where_ $
-      farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
+-- deleteAll'' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
+-- deleteAll'' farePolicyId =
+--   Esq.delete' $ do
+--     farePolicyProgressiveDetailsPerExtraKmFareSection <- from $ table @FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+--     where_ $
+--       farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
 
-deleteAll'' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
-deleteAll'' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]
+deleteAll' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
+deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]
 
 instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
   fromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT {..} = do

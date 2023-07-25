@@ -39,8 +39,7 @@ import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 --     return config
 
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId (Id merchantId) = do
-  findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
+findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
 
 -- updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
 -- updateFCMConfig merchantId fcmUrl fcmServiceAccount = do

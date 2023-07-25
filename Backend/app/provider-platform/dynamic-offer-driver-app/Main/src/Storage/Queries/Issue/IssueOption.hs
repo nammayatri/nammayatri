@@ -57,12 +57,9 @@ findAllIssueTranslationWithSeCondition = findAllWithKV
 
 findAllByCategoryAndLanguage :: (L.MonadFlow m, Log m) => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
 findAllByCategoryAndLanguage (Id issueCategoryId) language = do
-  let iOptionsSeCondition = [Se.Is BeamIO.issueCategoryId $ Se.Eq issueCategoryId]
-  iOptions <- findAllIssueOptionWithSeCondition iOptionsSeCondition
-  let iTranslationsSeCondition = [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
-  iTranslations <- findAllIssueTranslationWithSeCondition iTranslationsSeCondition
-  let dInfosWithTranslations = foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
-  pure dInfosWithTranslations
+  iOptions <- findAllIssueOptionWithSeCondition [Se.Is BeamIO.issueCategoryId $ Se.Eq issueCategoryId]
+  iTranslations <- findAllIssueTranslationWithSeCondition [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
+  pure $ foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
@@ -81,13 +78,10 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
 
 findByIdAndLanguage :: (L.MonadFlow m, Log m) => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
 findByIdAndLanguage issueOptionId language = do
-  let iOptionsSeCondition = [Se.Is BeamIO.id $ Se.Eq (getId issueOptionId)]
-  iOptions <- findAllIssueOptionWithSeCondition iOptionsSeCondition
-  let iTranslationsSeCondition = [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
-  iTranslations <- findAllIssueTranslationWithSeCondition iTranslationsSeCondition
-  let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
-      dInfosWithTranslations = headMaybe dInfosWithTranslations'
-  pure dInfosWithTranslations
+  iOptions <- findAllIssueOptionWithSeCondition [Se.Is BeamIO.id $ Se.Eq (getId issueOptionId)]
+  iTranslations <- findAllIssueTranslationWithSeCondition [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
+  let dInfosWithTranslations' = headMaybe $ foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
+  pure dInfosWithTranslations'
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iOption =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations

@@ -91,11 +91,11 @@ findPendingFeesByDriverId (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDF.dr
 --     return driverFee
 
 findLatestFeeByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
-findLatestFeeByDriverId (Id driverId) = do
-  res <- findAllWithOptionsKV [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing
-  pure $ case res of
-    (x : _) -> Just x
-    _ -> Nothing
+findLatestFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
+
+-- pure $ case res of
+--   (x : _) -> Just x
+--   _ -> Nothing
 
 -- findOldestFeeByStatus :: Transactionable m => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
 -- findOldestFeeByStatus driverId status = do
@@ -109,16 +109,10 @@ findLatestFeeByDriverId (Id driverId) = do
 --     return driverFee
 
 findOldestFeeByStatus :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
-findOldestFeeByStatus (Id driverId) status = do
-  findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing >>= \case
-    (x : _) -> pure $ Just x
-    _ -> pure Nothing
+findOldestFeeByStatus (Id driverId) status = findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
 
 findOldestFeeByStatusInReplica :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
-findOldestFeeByStatusInReplica (Id driverId) status = do
-  findAllWithOptionsKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing >>= \case
-    (x : _) -> pure $ Just x
-    _ -> pure Nothing
+findOldestFeeByStatusInReplica (Id driverId) status = findAllWithOptionsKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
 
 -- findFeesInRangeWithStatus :: Transactionable m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
 -- findFeesInRangeWithStatus startTime endTime status = do
@@ -255,9 +249,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
 updateStatus :: (L.MonadFlow m, Log m) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now =
   updateOneWithKV
-    [ Se.Set BeamDF.status status,
-      Se.Set BeamDF.updatedAt now
-    ]
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 instance FromTType' BeamDF.DriverFee DriverFee where

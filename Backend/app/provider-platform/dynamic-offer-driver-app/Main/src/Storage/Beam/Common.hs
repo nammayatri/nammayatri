@@ -17,6 +17,7 @@ import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLocation
 import Storage.Beam.DriverOnboarding.DriverLicense
 import Storage.Beam.DriverOnboarding.DriverRCAssociation
+import Storage.Beam.DriverOnboarding.IdfyVerification
 import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.Exophone
@@ -39,7 +40,7 @@ atlasDB =
         -- image = imageTable,
         person = personTable,
         driverLicense = driverLicenseTable,
-        -- idfyVerification = idfyVerificationTable,
+        idfyVerification = idfyVerificationTable,
         driverRCAssociation = driverRCAssociationTable,
         vehicleRegistrationCertificate = vehicleRegistrationCertificateTable,
         dInformation = dInformationTable,
@@ -58,7 +59,7 @@ data AtlasDB f = AtlasDB
     -- image :: f (B.TableEntity ImageT),
     person :: f (B.TableEntity PersonT),
     driverLicense :: f (B.TableEntity DriverLicenseT),
-    -- idfyVerification :: f (B.TableEntity IdfyVerificationT),
+    idfyVerification :: f (B.TableEntity IdfyVerificationT),
     driverRCAssociation :: f (B.TableEntity DriverRCAssociationT),
     vehicleRegistrationCertificate :: f (B.TableEntity VehicleRegistrationCertificateT),
     dInformation :: f (B.TableEntity DriverInformationT),

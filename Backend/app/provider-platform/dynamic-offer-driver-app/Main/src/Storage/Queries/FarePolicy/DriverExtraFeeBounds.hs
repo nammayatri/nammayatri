@@ -34,8 +34,7 @@ import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as Domain
 -- create = Esq.create
 
 create :: (L.MonadFlow m, Log m) => Domain.FullDriverExtraFeeBounds -> m ()
-create fullDriverExtraFeeBounds = do
-  createWithKV fullDriverExtraFeeBounds
+create = createWithKV
 
 -- findByFarePolicyIdAndStartDistance :: Transactionable m => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
 -- findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
@@ -62,9 +61,7 @@ findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findOneWith
 update :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
 update (Id farePolicyId) startDistance minFee maxFee =
   updateWithKV
-    [ Se.Set BeamDEFB.minFee minFee,
-      Se.Set BeamDEFB.maxFee maxFee
-    ]
+    [Se.Set BeamDEFB.minFee minFee, Se.Set BeamDEFB.maxFee maxFee]
     [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
 
 findAll' ::
