@@ -127,8 +127,7 @@ listRoles ::
   Maybe Integer ->
   m ListRoleRes
 listRoles _ mbSearchString mbLimit mbOffset = do
-  -- personAndRoleList <- Esq.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
-  personAndRoleList <- QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
+  personAndRoleList <- Esq.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
   res <- forM personAndRoleList $ \role -> do
     pure $ mkRoleAPIEntity role
   let count = length res

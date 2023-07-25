@@ -18,7 +18,7 @@ import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import qualified Storage.Queries.AccessMatrix as QMatrix
@@ -33,10 +33,8 @@ getAccessMatrix ::
   Maybe Integer ->
   m DMatrix.AccessMatrixAPIEntity
 getAccessMatrix _ mbLimit mbOffset = do
-  -- roles <- runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset
-  roles <- QRole.findAllByLimitOffset mbLimit mbOffset
-  -- accessMatrixItems <- runInReplica $ QMatrix.findAllByRoles roles
-  accessMatrixItems <- QMatrix.findAllByRoles roles
+  roles <- runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset
+  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoles roles
   pure $ DMatrix.mkAccessMatrixAPIEntity roles accessMatrixItems
 
 getAccessMatrixByRole ::
@@ -45,8 +43,6 @@ getAccessMatrixByRole ::
   Id DRole.Role ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrixByRole _ roleId = do
-  -- role <- runInReplica $ QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  -- accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId roleId
-  accessMatrixItems <- QMatrix.findAllByRoleId roleId
+  role <- runInReplica $ QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
