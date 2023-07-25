@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-identities #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,18 +16,18 @@
 
 module Storage.Queries.Issues where
 
-import Domain.Types.Issue
+import Domain.Types.Issue as Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.Issue as BeamI
-import Storage.Tabular.Issue
-import Storage.Tabular.Person
+import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Queries.Person ()
 
 -- insertIssue :: Issue -> SqlDB ()
 -- insertIssue = do
@@ -35,46 +36,44 @@ import Storage.Tabular.Person
 insertIssue :: (L.MonadFlow m, Log m) => Issue -> m ()
 insertIssue = createWithKV
 
-findByCustomerId :: Transactionable m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
-findByCustomerId customerId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
-  (issues :& person) <-
-    from $
-      table @IssueT
-        `innerJoin` table @PersonT
-        `Esq.on` ( \(issues :& person) ->
-                     issues ^. IssueCustomerId ==. person ^. PersonTId
-                 )
-  where_ $
-    issues ^. IssueCustomerId ==. val (toKey customerId)
-      &&. issues ^. IssueCreatedAt >=. val fromDate
-      &&. issues ^. IssueCreatedAt <=. val toDate
-  orderBy [desc $ issues ^. IssueCreatedAt]
-  limit limitVal
-  offset offsetVal
-  pure (issues, person)
-  where
-    limitVal = min (maybe 10 fromIntegral mbLimit) 10
-    offsetVal = maybe 0 fromIntegral mbOffset
+findByCustomerId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
+  let limitVal = min (maybe 10 fromIntegral mbLimit) 10
+      offsetVal = maybe 0 fromIntegral mbOffset
+  issues <-
+    findAllWithOptionsKV
+      [ Se.And
+          [Se.Is BeamI.customerId $ Se.Eq customerId, Se.Is BeamI.createdAt $ Se.GreaterThanOrEq fromDate, Se.Is BeamI.createdAt $ Se.LessThanOrEq toDate]
+      ]
+      (Se.Desc BeamI.createdAt)
+      Nothing
+      Nothing
+  persons <- findAllWithOptionsKV [Se.And [Se.Is BeamP.id $ Se.In $ getId . Issue.customerId <$> issues]] (Se.Desc BeamP.createdAt) Nothing Nothing
 
-findAllIssue :: Transactionable m => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
-findAllIssue merchantId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
-  (issues :& person) <-
-    from $
-      table @IssueT
-        `innerJoin` table @PersonT
-        `Esq.on` ( \(issues :& person) ->
-                     issues ^. IssueCustomerId ==. person ^. PersonTId
-                 )
-  where_ $
-    person ^. PersonMerchantId ==. val (toKey merchantId)
-      &&. issues ^. IssueCreatedAt >=. val fromDate
-      &&. issues ^. IssueCreatedAt <=. val toDate
-  limit limitVal
-  offset offsetVal
-  pure (issues, person)
+  let issueWithPerson = foldl' (getIssueWithPerson persons) [] issues
+  pure $ take limitVal (drop offsetVal issueWithPerson)
   where
-    limitVal = min (maybe 10 fromIntegral mbLimit) 10
-    offsetVal = maybe 0 fromIntegral mbOffset
+    getIssueWithPerson persons acc issue =
+      let persons' = filter (\p -> p.id == issue.customerId) persons
+       in acc <> ((\p -> (issue, p)) <$> persons')
+
+findAllIssue :: (L.MonadFlow m, Log m) => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
+  let limitVal = min (maybe 10 fromIntegral mbLimit) 10
+      offsetVal = maybe 0 fromIntegral mbOffset
+  issues <-
+    findAllWithKV
+      [ Se.And
+          [Se.Is BeamI.createdAt $ Se.GreaterThanOrEq fromDate, Se.Is BeamI.createdAt $ Se.LessThanOrEq toDate]
+      ]
+  persons <- findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.id $ Se.In $ getId . Issue.customerId <$> issues]]
+
+  let issueWithPerson = foldl' (getIssueWithPerson persons) [] issues
+  pure $ take limitVal (drop offsetVal issueWithPerson)
+  where
+    getIssueWithPerson persons acc issue =
+      let persons' = filter (\p -> p.id == issue.customerId) persons
+       in acc <> ((\p -> (issue, p)) <$> persons')
 
 instance FromTType' BeamI.Issue Issue where
   fromTType' BeamI.IssueT {..} = do
