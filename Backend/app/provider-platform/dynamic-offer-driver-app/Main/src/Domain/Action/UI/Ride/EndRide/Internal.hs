@@ -90,13 +90,12 @@ endRideTransaction ::
   Id DP.Driver ->
   SRB.Booking ->
   Ride.Ride ->
-  Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
   Id Merchant ->
   m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+endRideTransaction driverId booking ride mbRiderDetailsId newFareParams thresholdConfig merchantId = do
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -123,7 +122,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
       when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
-    whenJust mbFareParams QFare.create
+    QFare.create newFareParams
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus booking.id SRB.COMPLETED

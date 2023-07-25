@@ -68,8 +68,9 @@ data Ride = Ride
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
+    numberOfDeviation :: Maybe Bool, -- TODO To be deprecated
+    routeDeviated :: Maybe Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    numberOfDeviation :: Maybe Bool
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

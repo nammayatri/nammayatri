@@ -225,9 +225,10 @@ handler transporter req quote = do
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            numberOfDeviation = Nothing,
+            routeDeviated = Nothing,
             createdAt = now,
-            updatedAt = now,
-            numberOfDeviation = Nothing
+            updatedAt = now
           }
 
     buildTrackingUrl rideId = do

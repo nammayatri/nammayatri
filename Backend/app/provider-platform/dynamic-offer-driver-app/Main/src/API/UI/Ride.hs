@@ -164,7 +164,7 @@ endRide (requestorId, merchantId) rideId EndRideReq {point, numberOfDeviation} =
 endRide2 :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRide2Req -> FlowHandler APISuccess
 endRide2 (requestorId, merchantId) rideId EndRide2Req {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  let driverReq = RideEnd.DriverEndRideReq {numberOfDeviation = Just routeDeviated, ..}
+  let driverReq = RideEnd.DriverEndRideReq {numberOfDeviation = Nothing, ..}
   shandle <- RideEnd.buildEndRideHandle merchantId
   fork "End ride processing" $
     RideEnd.driverEndRide shandle rideId driverReq
