@@ -87,10 +87,10 @@ data DriverRideRes = DriverRideRes
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
-    computedFare :: Maybe Money,
-    estimatedBaseFare :: Money,
+    computedFare :: Maybe HighPrecMoney,
+    estimatedBaseFare :: HighPrecMoney,
     estimatedDistance :: Meters,
-    driverSelectedFare :: Money,
+    driverSelectedFare :: HighPrecMoney,
     actualRideDistance :: HighPrecMeters,
     rideRating :: Maybe Int,
     riderName :: Maybe Text,
@@ -103,7 +103,7 @@ data DriverRideRes = DriverRideRes
     bapLogo :: Maybe BaseUrl,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

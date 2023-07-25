@@ -31,7 +31,7 @@ buildOnConfirmMessage now res = do
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
   let itemCode = OnConfirm.ItemCode OnConfirm.ONE_WAY_TRIP vehicleVariant Nothing Nothing
       fareParams = booking.fareParams
-      totalFareDecimal = fromIntegral booking.estimatedFare
+      totalFareDecimal = booking.estimatedFare
       currency = "INR"
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
@@ -56,7 +56,7 @@ buildOnConfirmMessage now res = do
                         },
                     breakup =
                       mkBreakupList
-                        (OnConfirm.BreakupItemPrice currency . fromIntegral)
+                        (OnConfirm.BreakupItemPrice currency)
                         OnConfirm.BreakupItem
                         fareParams
                   },

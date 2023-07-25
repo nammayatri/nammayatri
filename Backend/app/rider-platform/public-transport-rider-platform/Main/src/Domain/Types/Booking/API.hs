@@ -26,7 +26,7 @@ data BookingAPIEntity = BookingAPIEntity
     quantity :: Int,
     publicTransportSupportNumber :: Text,
     description :: Text,
-    fare :: Money,
+    fare :: HighPrecMoney,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStation :: TransportStationAPIEntity,

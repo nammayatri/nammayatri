@@ -59,7 +59,7 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
 data DSelectReq = DSelectReq
-  { customerExtraFee :: Maybe Money,
+  { customerExtraFee :: Maybe HighPrecMoney,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
@@ -70,7 +70,7 @@ data DSelectReq = DSelectReq
 validateDSelectReq :: Validate DSelectReq
 validateDSelectReq DSelectReq {..} =
   sequenceA_
-    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100
+    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @HighPrecMoney 1 100
     ]
 
 data DSelectRes = DSelectRes
@@ -79,7 +79,7 @@ data DSelectRes = DSelectRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
-    customerExtraFee :: Maybe Money,
+    customerExtraFee :: Maybe HighPrecMoney,
     merchant :: DM.Merchant,
     autoAssignEnabled :: Bool
   }

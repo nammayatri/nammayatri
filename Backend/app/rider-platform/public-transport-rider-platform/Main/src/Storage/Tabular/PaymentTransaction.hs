@@ -60,7 +60,7 @@ instance FromTType PaymentTransactionT Domain.PaymentTransaction where
         { id = Id id,
           bookingId = fromKey bookingId,
           paymentUrl = paymentUrl_,
-          fare = roundToIntegral fare,
+          fare = fare,
           ..
         }
 
@@ -70,6 +70,6 @@ instance ToTType PaymentTransactionT Domain.PaymentTransaction where
       { id = id.getId,
         bookingId = toKey bookingId,
         paymentUrl = showBaseUrl paymentUrl,
-        fare = realToFrac fare,
+        fare = fare,
         ..
       }

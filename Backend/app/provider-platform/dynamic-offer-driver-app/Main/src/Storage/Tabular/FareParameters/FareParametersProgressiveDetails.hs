@@ -33,8 +33,8 @@ mkPersist
   [defaultQQ|
     FareParametersProgressiveDetailsT sql=fare_parameters_progressive_details
       fareParametersId FareParametersTId
-      deadKmFare Money
-      extraKmFare Money Maybe
+      deadKmFare HighPrecMoney
+      extraKmFare HighPrecMoney Maybe
 
       Primary fareParametersId
       deriving Generic

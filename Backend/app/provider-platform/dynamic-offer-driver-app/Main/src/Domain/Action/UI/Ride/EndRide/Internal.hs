@@ -212,10 +212,10 @@ getCurrentDate time =
   let currentDate = localDay $ utcToLocalTime timeZoneIST time
    in currentDate
 
-putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
-putDiffMetric merchantId money mtrs = do
+putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> HighPrecMoney -> Meters -> m ()
+putDiffMetric merchantId highPrecMoney mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  Metrics.putFareAndDistanceDeviations org.name money mtrs
+  Metrics.putFareAndDistanceDeviations org.name highPrecMoney mtrs
 
 getDistanceBetweenPoints ::
   ( EncFlow m r,
@@ -268,14 +268,14 @@ safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
 
-createDriverFee :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m ()
+createDriverFee :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> Maybe HighPrecMoney -> DFare.FareParameters -> Int -> m ()
 createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
         DFare.ProgressiveDetails _ -> (0, 0, 0)
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
-  let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
+  let totalDriverFee = govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
   driverFee <- mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig
@@ -319,9 +319,9 @@ mkDriverFee ::
   ) =>
   UTCTime ->
   Id DP.Driver ->
-  Maybe Money ->
-  Money ->
-  Money ->
+  Maybe HighPrecMoney ->
+  HighPrecMoney ->
+  HighPrecMoney ->
   HighPrecMoney ->
   HighPrecMoney ->
   TransporterConfig ->

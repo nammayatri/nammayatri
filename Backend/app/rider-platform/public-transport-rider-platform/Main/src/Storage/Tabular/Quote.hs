@@ -23,7 +23,7 @@ module Storage.Tabular.Quote where
 import qualified Domain.Types.Quote as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (HighPrecMeters)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Storage.Tabular.Search (SearchTId)
 import Storage.Tabular.TransportStation (TransportStationTId)
@@ -37,7 +37,7 @@ mkPersist
       bppId Text
       bppUrl Text
       description Text
-      fare HighPrecMeters
+      fare HighPrecMoney
       departureTime UTCTime
       arrivalTime UTCTime
       departureStationId TransportStationTId
@@ -63,7 +63,7 @@ instance FromTType QuoteT Domain.Quote where
           bppUrl = bppUrl_,
           departureStationId = fromKey departureStationId,
           arrivalStationId = fromKey arrivalStationId,
-          fare = roundToIntegral fare,
+          fare = fare,
           ..
         }
 
@@ -75,6 +75,6 @@ instance ToTType QuoteT Domain.Quote where
         bppUrl = showBaseUrl bppUrl,
         departureStationId = toKey departureStationId,
         arrivalStationId = toKey arrivalStationId,
-        fare = realToFrac fare,
+        fare = fare,
         ..
       }

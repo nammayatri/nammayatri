@@ -21,7 +21,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney, Money)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Servant.API
 
@@ -29,11 +29,11 @@ data DriverFee = DriverFee
   { id :: Id DriverFee,
     shortId :: ShortId DriverFee,
     driverId :: Id Driver,
-    govtCharges :: Money,
+    govtCharges :: HighPrecMoney,
     platformFee :: PlatformFee,
     numRides :: Int,
     payBy :: UTCTime,
-    totalEarnings :: Money,
+    totalEarnings :: HighPrecMoney,
     startTime :: UTCTime,
     endTime :: UTCTime,
     status :: DriverFeeStatus,
@@ -43,7 +43,7 @@ data DriverFee = DriverFee
   deriving (Generic, Show)
 
 data PlatformFee = PlatformFee
-  { fee :: Money,
+  { fee :: HighPrecMoney,
     cgst :: HighPrecMoney,
     sgst :: HighPrecMoney
   }

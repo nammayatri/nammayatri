@@ -78,8 +78,8 @@ instance ToSchema ItemDescriptor where
 
 data ItemPrice = ItemPrice
   { currency :: Text,
-    value :: DecimalValue,
-    offered_value :: DecimalValue
+    value :: HighPrecMoney,
+    offered_value :: HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

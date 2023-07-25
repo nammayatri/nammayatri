@@ -18,7 +18,7 @@ import Domain.Types.DriverFee
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Common (HighPrecMoney, Money)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Storage.Tabular.DriverFee
 
@@ -120,7 +120,7 @@ findUnpaidAfterPayBy driverId now = do
         &&. driverFee ^. DriverFeePayBy <=. val now
     return driverFee
 
-updateFee :: Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
+updateFee :: Id DriverFee -> Maybe HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
 updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
   let fare = fromMaybe 0 mbFare
   Esq.update $ \tbl -> do

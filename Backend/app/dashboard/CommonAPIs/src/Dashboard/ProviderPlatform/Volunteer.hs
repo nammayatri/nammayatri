@@ -50,7 +50,7 @@ data BookingInfoResponse = BookingInfoResponse
     fromLocation :: BookingLocation,
     toLocation :: BookingLocation,
     estimatedDistance :: Meters,
-    estimatedFare :: Money,
+    estimatedFare :: HighPrecMoney,
     estimatedDuration :: Seconds,
     riderName :: Maybe Text
   }

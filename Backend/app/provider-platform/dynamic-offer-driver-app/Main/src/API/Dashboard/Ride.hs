@@ -28,7 +28,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (Money, logTagInfo, withFlowHandlerAPI)
+import Kernel.Utils.Common (HighPrecMoney, logTagInfo, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -68,7 +68,7 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   FlowHandler Common.RideListRes

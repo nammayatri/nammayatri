@@ -124,8 +124,8 @@ mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DSearch.EstimateInfo -> QuoteE
 mkQuoteEntities start end estInfo = do
   let estimate = estInfo.estimate
       variant = Common.castVariant estimate.vehicleVariant
-      minPriceDecimalValue = OS.DecimalValue $ toRational estimate.minFare
-      maxPriceDecimalValue = OS.DecimalValue $ toRational estimate.maxFare
+      minPriceDecimalValue = estimate.minFare
+      maxPriceDecimalValue = estimate.maxFare
       estimateBreakupList = buildEstimateBreakUpList <$> estimate.estimateBreakupList
       fulfillment =
         OS.FulfillmentInfo
@@ -160,7 +160,7 @@ mkQuoteEntities start end estInfo = do
                 OS.ItemTags
                   { distance_to_nearest_driver = Just $ realToFrac estInfo.distanceToNearestDriver,
                     night_shift_charge = estimate.nightShiftInfo <&> (.nightShiftCharge),
-                    old_night_shift_charge = OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)),
+                    old_night_shift_charge = estimate.nightShiftInfo <&> (.oldNightShiftCharge),
                     night_shift_start = estimate.nightShiftInfo <&> (.nightShiftStart),
                     night_shift_end = estimate.nightShiftInfo <&> (.nightShiftEnd),
                     waiting_charge_per_min = estimate.waitingCharges.waitingChargePerMin,
@@ -178,7 +178,7 @@ mkQuoteEntities start end estInfo = do
 mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
 mkQuoteEntitiesSpecialZone start end it = do
   let variant = Common.castVariant it.vehicleVariant
-      estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
+      estimatedFare = it.estimatedFare
       fulfillment =
         OS.FulfillmentInfo
           { start,
@@ -236,7 +236,7 @@ buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
       price =
         BreakupPrice
           { currency = price.currency,
-            value = realToFrac price.value
+            value = price.value
           }
     }
 

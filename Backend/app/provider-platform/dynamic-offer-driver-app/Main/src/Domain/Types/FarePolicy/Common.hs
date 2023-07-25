@@ -23,8 +23,8 @@ data WaitingChargeInfo = WaitingChargeInfo
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
+data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge HighPrecMoney
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
+data NightShiftCharge = ProgressiveNightShiftCharge HighPrecMoney | ConstantNightShiftCharge HighPrecMoney
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)

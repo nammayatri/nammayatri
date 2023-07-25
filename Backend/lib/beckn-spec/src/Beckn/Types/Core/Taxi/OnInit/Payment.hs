@@ -25,6 +25,7 @@ import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Utils.JSON as JSON
 import Kernel.Utils.Schema
 
@@ -49,7 +50,7 @@ instance ToSchema Payment where
 
 data PaymentParams = PaymentParams
   { currency :: Text,
-    amount :: DecimalValue
+    amount :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

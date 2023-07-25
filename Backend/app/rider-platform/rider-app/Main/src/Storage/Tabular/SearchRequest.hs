@@ -48,7 +48,7 @@ mkPersist
       device Text Maybe
       merchantId SMerchant.MerchantTId
       language Language Maybe
-      customerExtraFee Money Maybe
+      customerExtraFee HighPrecMoney Maybe
       availablePaymentMethods (PostgresList SMPM.MerchantPaymentMethodTId)
       selectedPaymentMethodId SMPM.MerchantPaymentMethodTId Maybe
       autoAssignEnabled Bool Maybe

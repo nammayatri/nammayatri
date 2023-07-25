@@ -81,8 +81,8 @@ buildQuoteInfo item = do
     OnSelect.ONE_WAY_SPECIAL_ZONE -> throwError $ InvalidRequest "select not supported for one way special zone trip"
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
-      estimatedFare = roundToIntegral item.price.value
-      estimatedTotalFare = roundToIntegral item.price.offered_value
+      estimatedFare = item.price.value
+      estimatedTotalFare = item.price.offered_value
       descriptions = item.quote_terms
       specialLocationTag = item.tags >>= (.special_location_tag)
   validatePrices estimatedFare estimatedTotalFare

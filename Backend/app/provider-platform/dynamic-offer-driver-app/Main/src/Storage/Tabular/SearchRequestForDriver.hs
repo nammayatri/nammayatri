@@ -26,7 +26,7 @@ import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Meters, Money)
+import Kernel.Types.Common (HighPrecMoney, Meters)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Merchant (MerchantTId)
@@ -58,8 +58,8 @@ mkPersist
       driverId PersonTId
       status Domain.DriverSearchRequestStatus
       response Domain.SearchRequestForDriverResponse Maybe
-      driverMinExtraFee Money Maybe
-      driverMaxExtraFee Money Maybe
+      driverMinExtraFee HighPrecMoney Maybe
+      driverMaxExtraFee HighPrecMoney Maybe
       rideRequestPopupDelayDuration Seconds
       isPartOfIntelligentPool Bool
       cancellationRatio Double Maybe

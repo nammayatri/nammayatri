@@ -24,7 +24,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Meters, Money)
+import Kernel.Types.Common (HighPrecMoney, Meters)
 import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.Table (FarePolicyTId)
 import Storage.Tabular.Vehicle ()
@@ -36,8 +36,8 @@ mkPersist
       Id Int
       farePolicyId FarePolicyTId
       startDistance Meters
-      minFee Money
-      maxFee Money
+      minFee HighPrecMoney
+      maxFee HighPrecMoney
       deriving Generic
     |]
 

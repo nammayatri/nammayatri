@@ -53,7 +53,7 @@ mkOrder res = do
                     price =
                       Select.BreakupItemPrice
                         { currency = "INR",
-                          value = realToFrac customerExtraFee
+                          value = customerExtraFee
                         }
                   }
             )

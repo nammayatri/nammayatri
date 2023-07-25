@@ -35,8 +35,8 @@ mkPersist
     FarePolicyProgressiveDetailsT sql=fare_policy_progressive_details
       farePolicyId FarePolicyTId
       baseDistance Meters
-      baseFare Money
-      deadKmFare Money
+      baseFare HighPrecMoney
+      deadKmFare HighPrecMoney
       waitingCharge Domain.WaitingCharge Maybe
       freeWatingTime Minutes Maybe
       nightShiftCharge Domain.NightShiftCharge Maybe

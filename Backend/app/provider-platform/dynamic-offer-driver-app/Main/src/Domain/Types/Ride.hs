@@ -57,7 +57,7 @@ data Ride = Ride
     driverId :: Id DPers.Person,
     otp :: Text,
     trackingUrl :: BaseUrl,
-    fare :: Maybe Money,
+    fare :: Maybe HighPrecMoney,
     traveledDistance :: HighPrecMeters,
     chargeableDistance :: Maybe Meters,
     driverArrivalTime :: Maybe UTCTime,

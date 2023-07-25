@@ -57,7 +57,7 @@ data Booking = Booking
     bppUrl :: BaseUrl,
     publicTransportSupportNumber :: Text,
     description :: Text,
-    fare :: Money,
+    fare :: HighPrecMoney,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStationId :: Id TransportStation,

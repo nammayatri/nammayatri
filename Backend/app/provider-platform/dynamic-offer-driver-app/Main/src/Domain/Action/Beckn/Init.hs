@@ -177,7 +177,7 @@ handler merchantId req eitherReq = do
         HasField "area" sr (Maybe FareProductD.Area),
         HasField "vehicleVariant" q Veh.Variant,
         HasField "distance" q Meters,
-        HasField "estimatedFare" q Money,
+        HasField "estimatedFare" q HighPrecMoney,
         HasField "fareParams" q DFP.FareParameters,
         HasField "specialLocationTag" q (Maybe Text)
       ) =>

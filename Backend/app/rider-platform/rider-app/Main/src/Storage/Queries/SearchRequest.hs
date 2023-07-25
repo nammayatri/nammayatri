@@ -77,7 +77,7 @@ findAllByPerson perId = Esq.buildDType $ do
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
 
-updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
+updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe HighPrecMoney -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
 updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =
   Esq.update $ \tbl -> do
     set

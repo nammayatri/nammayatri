@@ -59,12 +59,12 @@ mkPersist
       vehicleVariant VehVar.VehicleVariant
       driversLocation (PostgresList LatLong)
       tripTermsId STripTerms.TripTermsTId Maybe
-      nightShiftCharge Money Maybe
+      nightShiftCharge HighPrecMoney Maybe
       oldNightShiftCharge Centesimal Maybe sql=night_shift_multiplier
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
       status Domain.EstimateStatus
-      waitingChargePerMin Money Maybe
+      waitingChargePerMin HighPrecMoney Maybe
       specialLocationTag Text Maybe
       createdAt UTCTime
       updatedAt UTCTime

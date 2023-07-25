@@ -33,7 +33,7 @@ data QuoteSpecialZone = QuoteSpecialZone
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     validTill :: UTCTime,
-    estimatedFare :: Money,
+    estimatedFare :: HighPrecMoney,
     specialLocationTag :: Maybe Text,
     fareParams :: Params.FareParameters
   }

@@ -24,10 +24,10 @@ import SharedLogic.FareCalculator
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
   let rb = res.booking
-      fareDecimalValue = fromIntegral rb.estimatedFare
+      fareDecimalValue = rb.estimatedFare
       currency = "INR"
       breakup_ =
-        mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
+        mkBreakupList (OnInit.BreakupItemPrice currency) OnInit.BreakupItem rb.fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
   OnInit.OnInitMessage
     { order =

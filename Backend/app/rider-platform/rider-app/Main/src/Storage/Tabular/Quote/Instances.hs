@@ -58,9 +58,9 @@ instance FromTType FullQuoteT Domain.Quote where
         { id = Id id,
           requestId = fromKey requestId,
           providerUrl = pUrl,
-          estimatedFare = roundToIntegral estimatedFare,
-          discount = roundToIntegral <$> discount,
-          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          estimatedFare = estimatedFare,
+          discount = discount,
+          estimatedTotalFare = estimatedTotalFare,
           merchantId = fromKey merchantId,
           ..
         }
@@ -86,9 +86,9 @@ instance ToTType FullQuoteT Domain.Quote where
               requestId = toKey requestId,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
-              estimatedFare = realToFrac estimatedFare,
-              discount = realToFrac <$> discount,
-              estimatedTotalFare = realToFrac estimatedTotalFare,
+              estimatedFare = estimatedFare,
+              discount = discount,
+              estimatedTotalFare = estimatedTotalFare,
               merchantId = toKey merchantId,
               ..
             }

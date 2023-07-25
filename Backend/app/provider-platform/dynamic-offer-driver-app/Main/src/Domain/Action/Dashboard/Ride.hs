@@ -64,7 +64,7 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes

@@ -19,7 +19,6 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEv
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
-import Kernel.Prelude (roundToIntegral)
 import Kernel.Product.Validation.Context (validateContext)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -79,8 +78,8 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) =
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
         bppRideId = Id rcEvent.fulfillment.id,
-        fare = roundToIntegral rcEvent.quote.price.value,
-        totalFare = roundToIntegral rcEvent.quote.price.computed_value,
+        fare = HighPrecMoney $ toRational rcEvent.quote.price.value,
+        totalFare = HighPrecMoney $ toRational rcEvent.quote.price.computed_value,
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,

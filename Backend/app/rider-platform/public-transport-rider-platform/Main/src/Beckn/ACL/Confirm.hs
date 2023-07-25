@@ -38,9 +38,9 @@ mkConfirmMessage msg = do
         Billing
           { name = msg.requestorName
           }
-      onePrice = rupeePrice $ fromIntegral dQuote.fare
+      onePrice = dQuote.fare
       totalAmount = dQuote.fare * fromIntegral quantity
-      totalPrice = rupeePrice $ fromIntegral totalAmount
+      totalPrice = totalAmount
       breakupTitle = dQuote.description
       breakupItem = BreakupItem breakupTitle onePrice
       quote =
@@ -53,7 +53,7 @@ mkConfirmMessage msg = do
         Payment
           { uri = BaseUrl Http "fake.org" 80 "fake",
             tl_method = HttpGet,
-            params = rupeeParams $ realToFrac totalAmount,
+            params = rupeeParams totalAmount,
             _type = PRE_FULFILLMENT,
             status = NOT_PAID
           }

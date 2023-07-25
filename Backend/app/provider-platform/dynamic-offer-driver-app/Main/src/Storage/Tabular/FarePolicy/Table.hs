@@ -59,7 +59,7 @@ mkPersist
 
       farePolicyType Domain.FarePolicyType
 
-      serviceCharge Money Maybe
+      serviceCharge HighPrecMoney Maybe
 
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
@@ -67,7 +67,7 @@ mkPersist
       maxAllowedTripDistance Meters Maybe
       minAllowedTripDistance Meters Maybe
 
-      govtCharges Double Maybe
+      govtCharges HighPrecMoney Maybe
 
       description Text Maybe
 

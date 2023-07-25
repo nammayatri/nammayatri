@@ -104,9 +104,9 @@ instance FromTType FullBookingT Domain.Booking where
           quoteId = fromKey <$> quoteId,
           providerUrl = pUrl,
           merchantId = fromKey merchantId,
-          estimatedFare = roundToIntegral estimatedFare,
-          discount = roundToIntegral <$> discount,
-          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          estimatedFare = estimatedFare,
+          discount = discount,
+          estimatedTotalFare = estimatedTotalFare,
           ..
         }
     where
@@ -155,9 +155,9 @@ instance ToTType FullBookingT Domain.Booking where
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
               distance = distance,
               merchantId = toKey merchantId,
-              estimatedFare = realToFrac estimatedFare,
-              discount = realToFrac <$> discount,
-              estimatedTotalFare = realToFrac estimatedTotalFare,
+              estimatedFare = estimatedFare,
+              discount = discount,
+              estimatedTotalFare = estimatedTotalFare,
               ..
             }
     let fromLocT = toTType fromLocation

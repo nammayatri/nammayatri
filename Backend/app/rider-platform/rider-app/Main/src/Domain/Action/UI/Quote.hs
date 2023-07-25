@@ -129,7 +129,7 @@ getEstimates searchRequestId = do
   let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
-sortByEstimatedFare :: (HasField "estimatedFare" r Money) => [r] -> [r]
+sortByEstimatedFare :: (HasField "estimatedFare" r HighPrecMoney) => [r] -> [r]
 sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare)
   sortBy sortFunc resultList

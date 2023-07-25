@@ -33,7 +33,7 @@ mkPersist
   [defaultQQ|
     FareParametersSlabDetailsT sql=fare_parameters_slab_details
       fareParametersId FareParametersTId
-      platformFee Money Maybe
+      platformFee HighPrecMoney Maybe
       sgst HighPrecMoney Maybe
       cgst HighPrecMoney Maybe
 

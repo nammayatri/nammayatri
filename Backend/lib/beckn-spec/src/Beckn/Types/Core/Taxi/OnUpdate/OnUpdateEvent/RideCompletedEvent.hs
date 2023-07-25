@@ -26,6 +26,7 @@ import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
 
@@ -127,7 +128,7 @@ instance ToSchema BreakupItem where
 
 data BreakupPrice = BreakupPrice
   { currency :: Text,
-    value :: DecimalValue
+    value :: HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
 

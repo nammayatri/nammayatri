@@ -26,11 +26,11 @@ import Kernel.Utils.Time (getClockTimeInMs)
 import Prometheus as P
 import Tools.Metrics.ARDUBPPMetrics.Types as Reexport
 
-putFareAndDistanceDeviations :: (MonadIO m, HasBPPMetrics m r) => Text -> Money -> Meters -> m ()
-putFareAndDistanceDeviations agencyName fareDiff distanceDiff = do
+putFareAndDistanceDeviations :: (MonadIO m, HasBPPMetrics m r) => Text -> HighPrecMoney -> Meters -> m ()
+putFareAndDistanceDeviations agencyName (HighPrecMoney fareDiff) distanceDiff = do
   countingDeviationMetric <- asks (.bppMetrics.countingDeviation)
   version <- asks (.version)
-  liftIO $ P.withLabel countingDeviationMetric.realFareDeviation (agencyName, version.getDeploymentVersion) (`P.observe` fromIntegral fareDiff)
+  liftIO $ P.withLabel countingDeviationMetric.realFareDeviation (agencyName, version.getDeploymentVersion) (`P.observe` fromRational fareDiff)
   liftIO $ P.withLabel countingDeviationMetric.realDistanceDeviation (agencyName, version.getDeploymentVersion) (`P.observe` fromIntegral distanceDiff)
 
 type SearchMetricsMVar = MVar Milliseconds

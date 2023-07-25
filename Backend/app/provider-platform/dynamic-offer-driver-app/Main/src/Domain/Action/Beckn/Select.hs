@@ -57,7 +57,7 @@ data DSelectReq = DSelectReq
     pickupTime :: UTCTime,
     estimateId :: Id DEst.Estimate,
     autoAssignEnabled :: Bool,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe HighPrecMoney
   }
 
 handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
@@ -140,7 +140,7 @@ buildSearchTry ::
   Id DSR.SearchRequest ->
   DEst.Estimate ->
   DSelectReq ->
-  Money ->
+  HighPrecMoney ->
   Meters ->
   Seconds ->
   Int ->

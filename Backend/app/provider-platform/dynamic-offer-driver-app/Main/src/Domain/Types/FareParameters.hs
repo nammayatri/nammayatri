@@ -22,14 +22,14 @@ import Kernel.Utils.GenericPretty (PrettyShow (..))
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
-    driverSelectedFare :: Maybe Money,
-    customerExtraFee :: Maybe Money,
-    serviceCharge :: Maybe Money,
-    govtCharges :: Maybe Money,
-    baseFare :: Money,
-    waitingCharge :: Maybe Money,
-    nightShiftCharge :: Maybe Money,
-    nightShiftRateIfApplies :: Maybe Double,
+    driverSelectedFare :: Maybe HighPrecMoney,
+    customerExtraFee :: Maybe HighPrecMoney,
+    serviceCharge :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    baseFare :: HighPrecMoney,
+    waitingCharge :: Maybe HighPrecMoney,
+    nightShiftCharge :: Maybe HighPrecMoney,
+    nightShiftRateIfApplies :: Maybe HighPrecMoney,
     fareParametersDetails :: FareParametersDetails
   }
   deriving (Generic, Show, Eq, PrettyShow)
@@ -38,13 +38,13 @@ data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | Slab
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
-  { deadKmFare :: Money,
-    extraKmFare :: Maybe Money
+  { deadKmFare :: HighPrecMoney,
+    extraKmFare :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsSlabDetails = FParamsSlabDetails
-  { platformFee :: Maybe Money,
+  { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney
   }

@@ -26,8 +26,8 @@ data Estimate = Estimate
   { id :: Id Estimate,
     requestId :: Id DSR.SearchRequest,
     vehicleVariant :: Variant.Variant,
-    minFare :: Money,
-    maxFare :: Money,
+    minFare :: HighPrecMoney,
+    maxFare :: HighPrecMoney,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: WaitingCharges,
@@ -37,14 +37,14 @@ data Estimate = Estimate
   deriving (Generic)
 
 data WaitingCharges = WaitingCharges
-  { waitingChargePerMin :: Maybe Money,
-    waitingOrPickupCharges :: Maybe Money
+  { waitingChargePerMin :: Maybe HighPrecMoney,
+    waitingOrPickupCharges :: Maybe HighPrecMoney
   }
   deriving (Generic)
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftCharge :: Money,
-    oldNightShiftCharge :: Centesimal, -- TODO: Doesn't make sense, to be removed
+  { nightShiftCharge :: HighPrecMoney,
+    oldNightShiftCharge :: HighPrecMoney,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
@@ -64,7 +64,7 @@ deriving instance ToJSON (EstimateBreakupD 'Unsafe)
 
 data EstimateBreakupPriceD (s :: UsageSafety) = EstimateBreakupPrice
   { currency :: Text,
-    value :: Money
+    value :: HighPrecMoney
   }
   deriving (Generic)
 

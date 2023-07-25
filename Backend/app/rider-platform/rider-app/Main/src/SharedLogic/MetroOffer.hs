@@ -41,7 +41,7 @@ data MetroRide = MetroRide
   { schedule :: [ScheduleElement],
     departureStation :: MetroStation,
     arrivalStation :: MetroStation,
-    price :: Money
+    price :: HighPrecMoney
   }
   deriving (Show, Generic, ToSchema, FromJSON, ToJSON)
 

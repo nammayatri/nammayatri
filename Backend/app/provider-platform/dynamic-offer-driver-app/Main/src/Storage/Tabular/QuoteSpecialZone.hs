@@ -43,7 +43,7 @@ mkPersist
       vehicleVariant Variant.Variant
       distance Meters
       validTill UTCTime
-      estimatedFare Common.Money
+      estimatedFare Common.HighPrecMoney
       fareParametersId Fare.FareParametersTId
       estimatedFinishTime UTCTime
       specialLocationTag Text Maybe

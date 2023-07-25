@@ -57,7 +57,7 @@ findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
       &&. farePolicy ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistance
   pure farePolicy
 
-update :: Id FarePolicy.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
+update :: Id FarePolicy.FarePolicy -> Meters -> HighPrecMoney -> HighPrecMoney -> SqlDB ()
 update farePolicyId startDistace minFee maxFee = do
   Esq.update $ \tbl -> do
     set

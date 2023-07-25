@@ -14,15 +14,16 @@
 
 module Beckn.Spec.Common.Price where
 
-import Beckn.Spec.Common.DecimalValue
+import Beckn.Spec.Common.DecimalValue ()
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Utils.GenericPretty
 
 data Price = Price
   { currency :: Text,
-    value :: DecimalValue
+    value :: HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, PrettyShow)
 
-rupeePrice :: DecimalValue -> Price
+rupeePrice :: HighPrecMoney -> Price
 rupeePrice = Price "INR"
