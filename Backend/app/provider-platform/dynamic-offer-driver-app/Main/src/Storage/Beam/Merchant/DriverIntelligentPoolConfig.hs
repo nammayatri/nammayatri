@@ -19,7 +19,7 @@ module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import Data.ByteString.Lazy (toStrict)
+-- import Data.ByteString.Lazy (toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -58,8 +58,8 @@ instance IsString Minutes where
 instance FromField SWC.SlidingWindowOptions where
   fromField = fromFieldSWC
 
-instance HasSqlValueSyntax be ByteString => HasSqlValueSyntax be SWC.SlidingWindowOptions where
-  sqlValueSyntax = sqlValueSyntax . toStrict . A.encode
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be SWC.SlidingWindowOptions where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be SWC.SlidingWindowOptions
 

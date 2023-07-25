@@ -55,8 +55,10 @@ instance FromField BatchSplitByPickupDistance where
 instance FromField [BatchSplitByPickupDistance] where
   fromField f mbValue = V.toList <$> fromField f mbValue
 
-instance (HasSqlValueSyntax be Value) => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
-  sqlValueSyntax = sqlValueSyntax . A.toJSON
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
+  sqlValueSyntax batchList =
+    let x = (show <$> batchList :: [Text])
+     in sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistance]
 
