@@ -32,11 +32,22 @@ import qualified Database.Beam as B
 
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
-import Domain.Types.Booking.Type
+import Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant
-import Domain.Types.Person
+import Domain.Types.Person as DP
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
+-- import Kernel.External.Encryption
+
+-- import qualified Storage.Beam.Ride as BeamR
+
+-- import Storage.Tabular.Booking as Booking
+-- import Storage.Tabular.Ride as Ride
+-- import Storage.Tabular.Booking as Booking
+-- import Storage.Tabular.Person as Person
+-- import Storage.Tabular.Ride as Ride
+-- import qualified Storage.Beam.Person as BeamP
+
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -46,15 +57,14 @@ import Kernel.Utils.Common
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
--- import qualified Storage.Beam.Ride as BeamR
-
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import Storage.Queries.Booking ()
 import Storage.Queries.Person ()
-import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Ride as Ride
+import Storage.Tabular.Ride
+
+-- import qualified Domain.Action.Beckn.Status as BeamR
 
 create :: (L.MonadFlow m, Log m) => Ride -> m ()
 create = createWithKV
@@ -566,18 +576,24 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
-findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
-findRiderIdByRideId rideId = findOne $ do
-  ride :& booking <-
-    from $
-      table @RideT
-        `innerJoin` table @BookingT
-          `Esq.on` ( \(ride :& booking) ->
-                       ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                   )
-  where_ $
-    ride ^. RideTId ==. val (toKey rideId)
-  pure $ booking ^. BookingRiderId
+-- findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
+-- findRiderIdByRideId rideId = findOne $ do
+--   ride :& booking <-
+--     from $
+--       table @RideT
+--         `innerJoin` table @BookingT
+--           `Esq.on` ( \(ride :& booking) ->
+--                        ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                    )
+--   where_ $
+--     ride ^. RideTId ==. val (toKey rideId)
+--   pure $ booking ^. BookingRiderId
+
+findRiderIdByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId (Id rideId) = do
+  ride <- findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
+  booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
+  maybe (pure Nothing) (\booking' -> pure $ Just booking'.riderId) booking
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do

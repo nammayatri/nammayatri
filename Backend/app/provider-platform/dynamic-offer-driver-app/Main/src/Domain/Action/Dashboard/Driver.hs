@@ -395,23 +395,31 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
     (Just mobileNumber, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
-          >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+      --     >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+      QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+        >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber, Nothing, Nothing) -> do
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
-          >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
+      --     >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
+        >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     (Nothing, Nothing, Just driverLicenseNumber, Nothing) -> do
       dlNumberHash <- getDbHash driverLicenseNumber
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
-          >>= fromMaybeM (InvalidRequest "License does not exist.")
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
+      --     >>= fromMaybeM (InvalidRequest "License does not exist.")
+      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
+        >>= fromMaybeM (InvalidRequest "License does not exist.")
     (Nothing, Nothing, Nothing, Just rcNumber) -> do
       rcNumberHash <- getDbHash rcNumber
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
-          >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
+      --     >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
+      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
+        >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
   let driverId = driverWithRidesCount.person.id
   -- mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
