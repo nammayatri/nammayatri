@@ -537,6 +537,7 @@ const englishStrings = {
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "Your issue has been reported successfully",
   "OTP_RESENT_SUCCESSFULLY" : "OTP resent successfully",
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "Description should be more than 10 alphabetic characters",
+  "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "It seems that you have an on-going booking, please restart the app to view it",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "Incorrect OTP, please try again.",
   "N_MORE_ATTEMPTS_LEFT" : " more attempts left"
 }
