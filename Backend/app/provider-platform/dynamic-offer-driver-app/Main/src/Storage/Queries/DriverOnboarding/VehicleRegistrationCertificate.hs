@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -78,4 +79,11 @@ findByRCAndExpiry certNumber expiry = do
     where_ $
       rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
+    return rc
+
+findAllById :: Transactionable m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+findAllById rcIds =
+  findAll $ do
+    rc <- from $ table @VehicleRegistrationCertificateT
+    where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
     return rc

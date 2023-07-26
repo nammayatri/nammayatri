@@ -46,10 +46,10 @@ updateCallStatus callId status conversationDuration mbrecordingUrl = do
       ]
     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
-countCallsByRideId :: Transactionable m => Id Ride -> m Int
-countCallsByRideId rideId = (fromMaybe 0 <$>) $
+countCallsByEntityId :: Transactionable m => Id Ride -> m Int
+countCallsByEntityId entityId = (fromMaybe 0 <$>) $
   Esq.findOne $ do
     callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusRideId ==. val (toKey rideId)
-    groupBy $ callStatus ^. CallStatusRideId
+    where_ $ callStatus ^. CallStatusEntityId ==. val (entityId.getId)
+    groupBy $ callStatus ^. CallStatusEntityId
     pure $ count @Int $ callStatus ^. CallStatusTId

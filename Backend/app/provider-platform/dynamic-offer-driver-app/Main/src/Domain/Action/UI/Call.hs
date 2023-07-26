@@ -18,24 +18,28 @@ module Domain.Action.UI.Call
     CallAttachments (..),
     CallCallbackRes,
     GetCustomerMobileNumberResp,
+    GetDriverMobileNumberResp,
     GetCallStatusRes,
     initiateCallToCustomer,
     callStatusCallback,
     getCallStatus,
     directCallStatusCallback,
     getCustomerMobileNumber,
+    getDriverMobileNumber,
   )
 where
 
 import qualified Data.Text as T
 import qualified Domain.Types.CallStatus as SCS
+import qualified Domain.Types.Merchant as DM
+import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude (Alternative ((<|>)))
 import Kernel.External.Call.Exotel.Types
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Interface.Types as CallTypes
-import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Encryption as KE
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
 import Kernel.Types.Beckn.Ack
@@ -45,6 +49,9 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import Storage.Queries.Person as PSQuery
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
@@ -61,13 +68,15 @@ type CallCallbackReq = ExotelCallCallbackReq CallAttachments
 
 data CallAttachments = CallAttachments
   { callStatusId :: Id SCS.CallStatus,
-    rideId :: Id SRide.Ride
+    entityId :: Text
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 type CallCallbackRes = AckResponse
 
 type GetCustomerMobileNumberResp = Text
+
+type GetDriverMobileNumberResp = Text
 
 type GetCallStatusRes = SCS.CallStatusAPIEntity
 
@@ -91,7 +100,7 @@ initiateCallToCustomer rideId = do
         InitiateCallReq
           { fromPhoneNum = providerPhone,
             toPhoneNum = customerPhone,
-            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId}
+            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = rideId.getId}
           }
   exotelResponse <- initiateCall booking.providerId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from driver to customer."
@@ -105,13 +114,53 @@ initiateCallToCustomer rideId = do
         SCS.CallStatus
           { id = callStatusId,
             callId = exotelResponse.callId,
-            rideId = rideId,
+            entityId = rideId.getId,
             dtmfNumberUsed = Nothing,
             status = exotelResponse.callStatus,
             conversationDuration = 0,
             recordingUrl = Nothing,
             createdAt = now
           }
+
+getDriverMobileNumber :: (EncFlow m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => (Id Person.Person, Id DM.Merchant) -> Text -> m CallRes
+getDriverMobileNumber (driverId, merchantId) rcNo = do
+  vehicleRC <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (InvalidRequest "Rc not found")
+  rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM (InvalidRequest "No active Rc found")
+  callStatusId <- generateGUID
+  linkedDriverNumber <- getDecryptedMobileNumberByDriverId rcActiveAssociation.driverId
+  driverRequestedNumber <- getDecryptedMobileNumberByDriverId driverId
+  let callReq =
+        InitiateCallReq
+          { fromPhoneNum = linkedDriverNumber,
+            toPhoneNum = driverRequestedNumber,
+            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = vehicleRC.id.getId}
+          }
+  exotelResponse <- initiateCall merchantId callReq
+  callStatus <- buildCallStatus callStatusId exotelResponse vehicleRC.id.getId
+  runTransaction $ QCallStatus.create callStatus
+  return $ CallRes callStatusId
+  where
+    buildCallStatus callStatusId exotelResponse rcId' = do
+      now <- getCurrentTime
+      return $
+        SCS.CallStatus
+          { id = callStatusId,
+            callId = exotelResponse.callId,
+            entityId = rcId',
+            dtmfNumberUsed = Nothing,
+            status = exotelResponse.callStatus,
+            conversationDuration = 0,
+            recordingUrl = Nothing,
+            createdAt = now
+          }
+
+getDecryptedMobileNumberByDriverId :: (EncFlow m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m Text
+getDecryptedMobileNumberByDriverId driverId = do
+  driver <- PSQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let encMobNum = driver.mobileNumber
+  case encMobNum of
+    Just mobNum -> decrypt mobNum
+    Nothing -> throwError $ InvalidRequest "Mobile Number not found."
 
 callStatusCallback :: EsqDBFlow m r => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
@@ -169,7 +218,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
         >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   callId <- generateGUID
-  callStatusObj <- buildCallStatus activeRide.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
+  callStatusObj <- buildCallStatus activeRide.id.getId callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
   runTransaction $ QCallStatus.create callStatusObj
   return requestorPhone
   where
@@ -181,7 +230,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
         SCS.CallStatus
           { id = callId,
             callId = exotelCallId,
-            rideId = rideId,
+            entityId = rideId,
             dtmfNumberUsed = dtmfNumberUsed,
             status = exoStatus,
             conversationDuration = 0,

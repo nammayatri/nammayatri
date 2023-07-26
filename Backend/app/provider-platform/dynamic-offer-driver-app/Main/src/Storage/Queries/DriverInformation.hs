@@ -176,6 +176,13 @@ updateOnRide driverId onRide = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+findByDriverIdActiveRide :: (Transactionable m) => Id Person.Driver -> m (Maybe DriverInformation)
+findByDriverIdActiveRide driverId = do
+  Esq.findOne $ do
+    isOnRide <- from $ table @DriverInformationT
+    where_ $ isOnRide ^. DriverInformationOnRide ==. val True &&. isOnRide ^. DriverInformationDriverId ==. val (toKey (Id driverId.getId))
+    return isOnRide
+
 updateNotOnRideMultiple :: [Id Person.Driver] -> SqlDB ()
 updateNotOnRideMultiple driverIds = do
   now <- getCurrentTime

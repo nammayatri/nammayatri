@@ -33,6 +33,7 @@ data DriverOnboardingError
   | DLAlreadyUpdated
   | RCAlreadyLinked
   | RCAlreadyUpdated
+  | RCLimitReached
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
   deriving (Generic, Eq, Show, Read, IsBecknAPIError, ToSchema, ToJSON, FromJSON)
@@ -57,6 +58,7 @@ instance IsBaseError DriverOnboardingError where
     RCAlreadyUpdated -> Just "No action required. Vehicle RC is already linked to driver."
     InvalidOperatingCity city -> Just $ "Operating city \"" <> city <> "\" is invalid."
     GenerateAadhaarOtpExceedLimit id_ -> Just $ "Generate Aadhaar otp  try limit exceeded for person \"" <> id_ <> "\"."
+    RCLimitReached -> Just "Maximum Rc Limit Reached."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -76,6 +78,7 @@ instance IsHTTPError DriverOnboardingError where
     RCAlreadyUpdated -> "RC_ALREADY_UPDATED"
     InvalidOperatingCity _ -> "OPERATING_CITY_INVALID"
     GenerateAadhaarOtpExceedLimit _ -> "GENERATE_AADHAAR_OTP_EXCEED_LIMIT"
+    RCLimitReached -> "MAXIMUM_RC_LIMIT_REACHED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -93,5 +96,6 @@ instance IsHTTPError DriverOnboardingError where
     RCAlreadyUpdated -> E400
     InvalidOperatingCity _ -> E400
     GenerateAadhaarOtpExceedLimit _ -> E429
+    RCLimitReached -> E400
 
 instance IsAPIError DriverOnboardingError

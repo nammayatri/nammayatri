@@ -50,6 +50,12 @@ type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE '
 
 deriving instance Show DecryptedVehicleRegistrationCertificate
 
+deriving instance ToSchema DecryptedVehicleRegistrationCertificate
+
+deriving instance ToJSON DecryptedVehicleRegistrationCertificate
+
+deriving instance FromJSON DecryptedVehicleRegistrationCertificate
+
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
   encryptItem (VehicleRegistrationCertificate {..}, salt) = do

@@ -17,6 +17,7 @@ module API.UI.Call
     handler,
     DCall.CallCallbackRes,
     DCall.GetCustomerMobileNumberResp,
+    backendBasedDriverCallHandler,
   )
 where
 
@@ -34,10 +35,10 @@ import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 
-type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI
+type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> BackendBasedDriverCallApi
 
 handler :: FlowServer API
-handler = backendBasedCallHandler :<|> frontendBasedCallHandler
+handler = backendBasedCallHandler :<|> frontendBasedCallHandler :<|> backendBasedDriverCallHandler
 
 -------- Initiate a call (Exotel) APIs --------
 type BackendBasedCallAPI =
@@ -87,10 +88,23 @@ type FrontendBasedCallAPI =
            :> Get '[JSON] DCall.CallCallbackRes
        )
 
+type BackendBasedDriverCallApi =
+  "driver"
+    :> "register"
+    :> "call"
+    :> "driver"
+    :> TokenAuth
+    :> MandatoryQueryParam "RC" Text
+    :> Get '[JSON] DCall.CallRes
+
 frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
 frontendBasedCallHandler =
   getCustomerMobileNumber
     :<|> directCallStatusCallback
+
+backendBasedDriverCallHandler :: FlowServer BackendBasedDriverCallApi
+backendBasedDriverCallHandler =
+  getDriverMobileNumber
 
 -- | Try to initiate a call driver -> customer
 initiateCallToCustomer :: Id SRide.Ride -> (Id Person.Person, Id DM.Merchant) -> FlowHandler DCall.CallRes
@@ -107,3 +121,6 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration = withFl
 
 getCustomerMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> FlowHandler DCall.GetCustomerMobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber
+
+getDriverMobileNumber :: (Id Person.Person, Id DM.Merchant) -> Text -> FlowHandler DCall.CallRes
+getDriverMobileNumber (driverId, merchantId) = withFlowHandlerAPI . DCall.getDriverMobileNumber (driverId, merchantId)

@@ -26,6 +26,8 @@ data DriverRCAssociation = DriverRCAssociation
     associatedOn :: UTCTime,
     associatedTill :: Maybe UTCTime,
     consent :: Bool,
-    consentTimestamp :: UTCTime
+    consentTimestamp :: UTCTime,
+    isRcActive :: Bool,
+    isDeleted :: Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)

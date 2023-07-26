@@ -135,3 +135,60 @@ deleteByDriverId driverId =
   Esq.delete $ do
     associations <- from $ table @DriverRCAssociationT
     where_ $ associations ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+
+findActiveAssociationByRC :: (Transactionable m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
+findActiveAssociationByRC rcId =
+  Esq.findOne $ do
+    isRcActiveRes <- from $ table @DriverRCAssociationT
+    where_ $ isRcActiveRes ^. DriverRCAssociationIsRcActive ==. val True &&. isRcActiveRes ^. DriverRCAssociationRcId ==. val (toKey rcId)
+    return isRcActiveRes
+
+updateByDriverIdAndRCIdisDeleted :: Id Person -> Id VehicleRegistrationCertificate -> SqlDB ()
+updateByDriverIdAndRCIdisDeleted driverId rcId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverRCAssociationIsRcActive =. val False
+      ]
+    where_ $ tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId) &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
+
+updateIsRcActiveByRcAndDriver :: Id Person -> Id VehicleRegistrationCertificate -> SqlDB ()
+updateIsRcActiveByRcAndDriver driverId rcId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverRCAssociationIsRcActive =. val False
+      ]
+    where_ $ tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId) &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
+
+findByDriverIdAndUpdateIsRcActive :: Id Person -> SqlDB ()
+findByDriverIdAndUpdateIsRcActive driverId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverRCAssociationIsRcActive =. val False
+      ]
+    where_ $ tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+
+findByRCIdAndDriverId :: Transactionable m => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
+findByRCIdAndDriverId rcId driverId =
+  Esq.findOne $ do
+    res <- from $ table @DriverRCAssociationT
+    where_ $ res ^. DriverRCAssociationRcId ==. val (toKey rcId) &&. res ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+    return res
+
+findNumberOfRcs :: Transactionable m => Id Person -> m [DriverRCAssociation]
+findNumberOfRcs driverId =
+  Esq.findAll $ do
+    res <- from $ table @DriverRCAssociationT
+    where_ $ res ^. DriverRCAssociationDriverId ==. val (toKey driverId) &&. res ^. DriverRCAssociationIsDeleted ==. val True
+    return res
+
+updateIsRcAndDriverIdActiveByRc :: Id VehicleRegistrationCertificate -> Id Person -> SqlDB ()
+updateIsRcAndDriverIdActiveByRc rcId driverId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverRCAssociationIsRcActive =. val True
+      ]
+    where_ $ tbl ^. DriverRCAssociationRcId ==. val (toKey rcId) &&. tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
