@@ -59,6 +59,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies
@@ -124,6 +125,7 @@ executable mock-idfy-exe
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies

@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Maps.DirectionsCache where
 
