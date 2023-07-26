@@ -20,14 +20,25 @@ import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Geofencing (GeoRestriction (Regions))
 import Kernel.Types.Id
-import "rider-app" Storage.Tabular.Merchant
+import qualified Kernel.Types.Id
+import "rider-app" Lib.Utils
+import Sequelize as Se
+import "rider-app" Storage.Beam.Merchant as BeamM
 
-updateOrigAndDestRestriction :: Id DM.Merchant -> [Text] -> [Text] -> SqlDB ()
-updateOrigAndDestRestriction merchantId originList destinationList =
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ MerchantOriginRestriction =. val (Regions originList),
-        MerchantDestinationRestriction =. val (Regions destinationList)
-      ]
-    where_ $ tbl ^. MerchantTId ==. val (toKey merchantId)
+-- updateOrigAndDestRestriction :: Id DM.Merchant -> [Text] -> [Text] -> SqlDB ()
+-- updateOrigAndDestRestriction merchantId originList destinationList =
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ MerchantOriginRestriction =. val (Regions originList),
+--         MerchantDestinationRestriction =. val (Regions destinationList)
+--       ]
+--     where_ $ tbl ^. MerchantTId ==. val (toKey merchantId)
+
+updateOrigAndDestRestriction :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m ()
+updateOrigAndDestRestriction (Id merchantId) =
+  updateWithKV
+    [ Se.Set BeamM.originRestriction $ Regions originList,
+      Se.Set destinationRestriction $ Regions destinationList
+    ]
+    [Se.Is BeamM.id $ Se.Eq merchantId]

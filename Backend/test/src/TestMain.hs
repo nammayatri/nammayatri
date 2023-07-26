@@ -123,8 +123,8 @@ specs' googleCfg trees = do
 
     onServersStarted = do
       runAppFlow "" $ do
-        Esq.runTransaction $
-          updateOrigAndDestRestriction Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
+        -- Esq.runTransaction $
+        updateOrigAndDestRestriction Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
 
     cleanupServers _ = do
       AppBackendUtils.clearCachedMapsConfig

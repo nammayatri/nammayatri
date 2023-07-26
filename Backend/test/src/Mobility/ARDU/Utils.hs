@@ -374,10 +374,10 @@ withFakeBapUrl :: TRB.Booking -> ClientsM () -> ClientsM ()
 withFakeBapUrl booking action = do
   liftIO $
     runARDUFlow "fake bap url" $ do
-      Esq.runTransaction $
-        Queries.updateBapUrlWithFake booking.id
+      -- Esq.runTransaction $
+      Queries.updateBapUrlWithFake booking.id
   action
   liftIO $
     runARDUFlow "update bap url" $ do
-      Esq.runTransaction $
-        Queries.updateBapUrl booking.bapUri booking.id
+      -- Esq.runTransaction $
+      Queries.updateBapUrl booking.bapUri booking.id
