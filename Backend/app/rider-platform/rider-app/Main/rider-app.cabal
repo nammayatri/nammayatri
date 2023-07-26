@@ -339,6 +339,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies
@@ -426,6 +427,7 @@ executable rider-app-exe
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies
