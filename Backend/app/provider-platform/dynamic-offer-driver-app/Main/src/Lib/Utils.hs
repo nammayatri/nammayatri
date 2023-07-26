@@ -20,6 +20,12 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+-- import Kernel.External.Encryption
+-- import Kernel.External.Types
+
+-- import Kernel.Storage.Esqueleto.Types
+
+import Debug.Trace as T
 import Domain.Types.DriverFee
 import qualified Domain.Types.FarePolicy as DomainFP
 import qualified Domain.Types.FareProduct as FareProductD
@@ -27,11 +33,6 @@ import Domain.Types.Vehicle.Variant (Variant (..))
 import EulerHS.CachedSqlDBQuery (SqlReturning)
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
--- import Kernel.External.Encryption
--- import Kernel.External.Types
-
--- import Kernel.Storage.Esqueleto.Types
-
 import qualified EulerHS.Language as L
 import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn)
 import Kernel.Beam.Types (PsqlDbCfg (..), PsqlDbCfgR1 (..))
@@ -44,6 +45,7 @@ import Kernel.Utils.Common (encodeToText)
 import Kernel.Utils.Error (throwError)
 import Lib.Mesh as Mesh
 import Sequelize (Model, ModelMeta (modelTableName), OrderBy, Set, Where)
+import System.Random
 
 fromFieldCenti ::
   DPSF.Field ->
@@ -361,23 +363,33 @@ setFlagsInMeshConfig meshCfg modelName = do
 
 setMeshConfig :: (L.MonadFlow m, HasCallStack) => Text -> m MeshConfig
 setMeshConfig modelName = do
-  tables <- L.getOption KBT.Tables
+  tables <- T.trace "getting the tables" $ L.getOption KBT.Tables
+  randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
-      let kvTables = tables'.kVTables
-      let kvHardKilledTables = tables'.kVHardKilledTables
-      pure $ meshConfig {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+      let enableKVForWriteAlso = tables'.enableKVForWriteAlso
+      let enableKVForRead = tables'.enableKVForRead
+      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
+      let tableAllocation = fromIntegral tables'.tableAllocation
+      if randomIntV <= tableAllocation
+        then pure $ meshConfig {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
+        else pure $ meshConfig {meshEnabled = False, kvHardKilled = modelName `notElem` enableKVForRead}
 
 setMeshConfig' :: (L.MonadFlow m, HasCallStack) => Text -> MeshConfig -> m MeshConfig
 setMeshConfig' modelName meshConfig' = do
   tables <- L.getOption KBT.Tables
+  randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
-      let kvTables = tables'.kVTables
-      let kvHardKilledTables = tables'.kVHardKilledTables
-      pure $ meshConfig' {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+      let enableKVForWriteAlso = tables'.enableKVForWriteAlso
+      let enableKVForRead = tables'.enableKVForRead
+      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
+      let tableAllocation = fromIntegral tables'.tableAllocation
+      if randomIntV <= tableAllocation
+        then pure $ meshConfig' {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
+        else pure $ meshConfig' {meshEnabled = False, kvHardKilled = modelName `notElem` enableKVForRead}
 
 class
   FromTType' t a

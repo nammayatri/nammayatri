@@ -391,6 +391,7 @@ library
     , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , random
     , record-dot-preprocessor
     , record-hasfield
     , sequelize
@@ -487,6 +488,7 @@ executable rider-app-exe
     , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , random
     , record-dot-preprocessor
     , record-hasfield
     , rider-app

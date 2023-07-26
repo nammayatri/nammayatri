@@ -137,7 +137,10 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
 let tables =
-      { kVTables = [ "ride" ] : List Text, kVHardKilledTables = [] : List Text }
+      { enableKVForWriteAlso = [] : List Text
+      , enableKVForRead = [] : List Text
+      , tableAllocation = 50 : Natural
+      }
 
 in  { esqDBCfg
     , esqDBReplicaCfg

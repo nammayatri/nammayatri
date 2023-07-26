@@ -137,7 +137,11 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
-let tables = { kVTables = [] : List Text, kVHardKilledTables = [] : List Text }
+let tables =
+      { enableKVForWriteAlso = [] : List Text
+      , enableKVForRead = [] : List Text
+      , tableAllocation = 50 : Natural
+      }
 
 in  { esqDBCfg
     , esqDBReplicaCfg

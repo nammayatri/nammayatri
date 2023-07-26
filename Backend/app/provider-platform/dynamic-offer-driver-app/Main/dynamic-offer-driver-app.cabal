@@ -519,6 +519,7 @@ library
     , persistent
     , postgresql-simple
     , prometheus-client
+    , random
     , record-dot-preprocessor
     , record-hasfield
     , resource-pool
@@ -620,6 +621,7 @@ executable dynamic-offer-driver-app-exe
     , persistent
     , postgresql-simple
     , prometheus-client
+    , random
     , record-dot-preprocessor
     , record-hasfield
     , resource-pool
