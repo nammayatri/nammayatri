@@ -563,5 +563,6 @@ const tamilStrings = {
   HOMETOWN  : "சொந்த ஊர்",
   MISSED_OPPORTUNITY : "தவறவிட்ட வாய்ப்புகள்",
   HOW_OLD_IS_YOUR_VEHICLE : "உங்கள் வாகனம் (ஆண்டுகளில்) எவ்வளவு பழையது?",
-  ENTER_NAME_OF_VEHICLE : "உங்கள் வாகனத்தின் பெயரை உள்ளிடவும்"
+  ENTER_NAME_OF_VEHICLE : "உங்கள் வாகனத்தின் பெயரை உள்ளிடவும்",
+  NEW_ : "புதியது"
 }

@@ -562,5 +562,6 @@ const kannadaStrings = {
   YEARS_OLD  : "ವರ್ಷ ಹರೆಯ",
   HOMETOWN  : "ಹೋಮ್ ಟೌನ್",
   MISSED_OPPORTUNITY : "ತಪ್ಪಿದ ಅವಕಾಶಗಳು",
-  HOW_OLD_IS_YOUR_VEHICLE : "ನಿಮ್ಮ ವಾಹನ ಎಷ್ಟು ಹಳೆಯದು (ವರ್ಷಗಳಲ್ಲಿ)?"
+  HOW_OLD_IS_YOUR_VEHICLE : "ನಿಮ್ಮ ವಾಹನ ಎಷ್ಟು ಹಳೆಯದು (ವರ್ಷಗಳಲ್ಲಿ)?",
+  NEW_ : "ಹೊಸದು",
 }

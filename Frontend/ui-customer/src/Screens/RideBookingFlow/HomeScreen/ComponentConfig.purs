@@ -23,17 +23,18 @@ import PrestoDOM
 import Animation.Config as AnimConfig
 import Components.Banner as Banner
 import Components.SelectListModal as CancelRidePopUpConfig
+import Animation.Config as AnimConfig
+import Components.ChatView as ChatView
+import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
 import Components.FareBreakUp as FareBreakUp
+import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
 import Components.RequestInfoCard as RequestInfoCard
 import Components.PrimaryButton as PrimaryButton
-import Components.SearchLocationModel as SearchLocationModel
-import Components.ChooseYourRide as ChooseYourRide
-import Components.MenuButton as MenuButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
@@ -41,9 +42,13 @@ import Components.ChatView as ChatView
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.String as DS
 import Animation.Config as AnimConfig
+import Components.SearchLocationModel as SearchLocationModel
+import Components.SearchLocationModel as SearchLocationModel
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
+import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String as DS
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -59,10 +64,13 @@ import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn ,setValueToLocalStore)
 import Control.Monad.Except (runExcept)
 import Foreign.Generic (decodeJSON, encodeJSON)
+import Resources.Constants (getKmMeter)
 import Effect (Effect)
 import Data.Either (Either(..))
 import Foreign.Class (class Encode)
 import Data.Array ((!!))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import MerchantConfig.Utils as MU
 import Resources.Constants (getKmMeter)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
@@ -78,32 +86,27 @@ shareAppConfig state = let
         text = getString YOUR_RIDE_HAS_STARTED
       , margin = MarginHorizontal 16 16},
       secondaryText {
-        text = getString ENJOY_RIDING_WITH_US
-      , margin = MarginVertical 12 24
-      , fontSize = FontSize.a_14
+        text = getString(ENJOY_RIDING_WITH_US)
+      , margin = MarginVertical 12 24  
       , color = Color.black700},
       option1 {
-        text = getString(MAYBE_LATER)
-      , fontSize = FontSize.a_16
-      , width = V $ (EHC.screenWidth unit-92)/2
+        text = getString(MAYBE_LATER) 
+      , width = V $ (((EHC.screenWidth unit)-92)/2) 
       , background = Color.white900
       , strokeColor = Color.black500
       , color = Color.black700
-      , fontStyle = FontStyle.semiBold LanguageStyle
       },
       option2 {
-        text = getString(SHARE_APP)
-      , fontSize = FontSize.a_16
-      , width = V $ (EHC.screenWidth unit-92)/2
-      , color = Color.yellow900
-      , strokeColor = Color.black900
-      , background = Color.black900
+        text = getString(SHARE_APP) 
+      , width = V $ (((EHC.screenWidth unit)-92)/2)
+      , color = state.data.config.primaryTextColor
+      , strokeColor = state.data.config.primaryBackground
+      , background = state.data.config.primaryBackground
       , margin = MarginLeft 12
-      ,fontStyle = FontStyle.semiBold LanguageStyle
       },
       cornerRadius = Corners 15.0 true true true true,
       coverImageConfig {
-        imageUrl = "ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
+        imageUrl = "ic_share_app," <> (getAssetStoreLink FunctionCall) <> "ic_share_app.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -122,25 +125,22 @@ cancelAppConfig state = let
       buttonLayoutMargin = Margin 16 0 16 20,
       primaryText {
         text = distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
-      , margin = Margin 16 20 16 20
-      , fontSize = FontSize.a_18},
+      , margin = Margin 16 20 16 20},
       secondaryText { visibility = GONE },
       option1 {
         text = getString CALL_DRIVER
-      , fontSize = FontSize.a_16
       , color = Color.yellow900
       , background = Color.black900
       , strokeColor = Color.transparent
-      , fontStyle = FontStyle.semiBold LanguageStyle
+      , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
       },
       option2 {
         text = getString CANCEL_RIDE
-      , fontSize = FontSize.a_16
+      , textStyle = FontStyle.SubHeading1
       , color = Color.black700
       , background = Color.white900
       , strokeColor = Color.transparent
-      , fontStyle = FontStyle.semiBold LanguageStyle
       , width = MATCH_PARENT
       , margin = Margin 0 0 0 0
       },
@@ -180,74 +180,19 @@ skipButtonConfig state =
       config
         { textConfig
           { text = getString DONE
-          , color = Color.yellow900
-          , textSize = FontSize.a_16
-          , fontStyle = FontStyle.regular LanguageStyle
+          , color = state.data.config.ratingConfig.secondaryButtonTextColor
           }
-        , background = Color.black900
+        , width = V (EHC.screenWidth unit / 4)
+        , background = Color.white900
+        , isGradient = false
+        , cornerRadius = state.data.config.ratingConfig.buttonCornerRadius
+        , stroke = state.data.config.ratingConfig.secondaryButtonStroke
         , margin = MarginTop 22
         , id = "SkipButton"
+        , enableLoader = (JB.getBtnLoader "SkipButton")
         }
   in
     primaryButtonConfig'
-
-sourceToDestinationConfig :: ST.HomeScreenState -> SourceToDestination.Config
-sourceToDestinationConfig state =
-  let
-    config = SourceToDestination.config
-    sourceToDestinationConfig' =
-      config
-        { margin = (Margin 0 0 0 0)
-        , width = V (EHC.screenWidth unit - 70)
-        , sourceMargin = (Margin 0 0 0 14)
-        , lineMargin = (Margin 20 10 0 0)
-        , sourceImageConfig
-          { imageUrl = "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
-          , height = V 13
-          , width = V 13
-          , margin = (Margin 14 2 0 0)
-          }
-        , rideStartedAtConfig
-          { text = state.data.startedAt
-          , visibility = VISIBLE
-          , padding = (Padding 1 1 1 1)
-          , margin = (Margin 12 2 0 0)
-          }
-        , sourceTextConfig
-          { text = state.data.driverInfoCardState.source
-          , textSize = FontSize.a_14
-          , padding = (Padding 0 0 0 0)
-          , margin = (Margin 11 0 15 0)
-          , fontStyle = FontStyle.medium LanguageStyle
-          , color = Color.black800
-          , ellipsize = true
-          , maxLines = 1
-          }
-        , destinationImageConfig
-          { imageUrl = "ny_ic_loc_red,https://assets.juspay.in/nammayatri/images/common/ny_ic_loc_red.png"
-          , height = V 17
-          , width = V 14
-          , margin = (Margin 13 3 0 0)
-          }
-        , destinationTextConfig
-          { text = state.data.driverInfoCardState.destination
-          , textSize = FontSize.a_14
-          , padding = (Padding 2 0 2 2)
-          , margin = (Margin 10 0 15 0)
-          , maxLines = 1
-          , color = Color.black800
-          , fontStyle = FontStyle.medium LanguageStyle
-          , ellipsize = true
-          }
-        , rideEndedAtConfig
-          { text = state.data.endedAt
-          , visibility = VISIBLE
-          , padding = (Padding 1 1 1 1)
-          , margin = (Margin 13 2 0 0)
-          }
-        }
-  in
-    sourceToDestinationConfig'
 
 fareBreakUpConfig :: ST.HomeScreenState -> FareBreakUp.Config
 fareBreakUpConfig state =
@@ -257,29 +202,24 @@ fareBreakUpConfig state =
       config
         { fareDetails = []
         , headingText = (getString VIEW_BREAKDOWN)
-        , totalAmount =
-          { text: ""
-          , textSize: FontSize.a_16
-          , fontStyle: FontStyle.semiBold LanguageStyle
-          , color: Color.black800
-          , margin: (Margin 0 0 0 20)
-          , visibility: GONE
-          , priceDetails:
-              { text: 0
-              , textSize: FontSize.a_16
-              , fontStyle: FontStyle.semiBold LanguageStyle
-              , offeredFare: state.data.driverInfoCardState.price
-              , distanceDifference: state.data.rideRatingState.distanceDifference
-              }
+        , totalAmount { text = ""
+          , color= Color.black800
+          , margin= (Margin 0 0 0 20)
+          , visibility= GONE
+          , priceDetails
+              { text = 0
+              , offeredFare = state.data.driverInfoCardState.price
+              , distanceDifference = state.data.rideRatingState.distanceDifference
+              }  
           }
-        , rideDetails =
-          { destination: state.data.driverInfoCardState.destination
-          , destinationTitle: (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.destination)) DA.!! 0))
-          , source: state.data.driverInfoCardState.source
-          , sourceTitle: (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
-          , rideStartTime: state.data.startedAt
-          , rideStartDate: ((fromMaybe "" ((DS.split (DS.Pattern ",") (EHC.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (EHC.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
-          , estimatedDistance: state.props.estimatedDistance
+        , rideDetails 
+          { destination= state.data.driverInfoCardState.destination
+          , destinationTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.destination)) DA.!! 0))
+          , source = state.data.driverInfoCardState.source
+          , sourceTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
+          , rideStartTime = state.data.startedAt
+          , rideStartDate = ((fromMaybe "" ((DS.split (DS.Pattern ",") (EHC.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (EHC.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
+          , estimatedDistance = state.props.estimatedDistance
           }
         }
   in
@@ -292,20 +232,19 @@ whereToButtonConfig state =
     primaryButtonConfig' = config
       { textConfig
         { text = (getString WHERE_TO)
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
         , width = MATCH_PARENT
         , gravity = LEFT
+        , color = state.data.config.primaryTextColor 
         }
       , height = V 60
       , gravity = CENTER
       , cornerRadius = 8.0
-      , background = Color.black900
-      , margin = (MarginHorizontal 16 16)
-      , isClickable = true
+      , margin = (MarginHorizontal 16 16)  
+      , isClickable = true 
       , isPrefixImage = true
+      , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = "ny_ic_bent_right_arrow,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png"
+        { imageUrl = "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)
@@ -322,13 +261,13 @@ primaryButtonRequestRideConfig state =
       config
         { textConfig
           { text = (getString REQUEST_RIDE)
-          , color = Color.yellow900
-          , textSize = FontSize.a_16
+          ,  color = state.data.config.primaryTextColor
           }
-        , background = Color.black900
+        , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
         , enableLoader = (JB.getBtnLoader "RequestRideButton")
+        , background = state.data.config.primaryBackground
         }
   in
     primaryButtonConfig'
@@ -341,13 +280,12 @@ primaryButtonConfirmPickupConfig state =
       config
         { textConfig
           { text = (getString CONFIRM_LOCATION)
-          , color = Color.yellow900
-          , textSize = FontSize.a_16
-          , fontStyle = FontStyle.regular LanguageStyle
+          , color = state.data.config.primaryTextColor
           }
-        , background = Color.black900
+        , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (Margin 0 22 0 0)
         , id = "ConfirmLocationButton"
+        , background = state.data.config.primaryBackground
         }
   in
     primaryButtonConfig'
@@ -360,11 +298,10 @@ rateRideButtonConfig state =
       config
         { textConfig
           { text = (getString RATE_YOUR_DRIVER)
-          , color = Color.yellow900
-          , textSize = FontSize.a_16
-          , fontStyle = FontStyle.bold LanguageStyle
+          ,  color = state.data.config.primaryTextColor 
           }
-        , background = Color.black900
+        , cornerRadius = state.data.config.ratingConfig.buttonCornerRadius
+        , background = state.data.config.rateCardColor
         , margin = (MarginLeft 12)
         , id = "RateYourDriverButton"
         , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
@@ -388,6 +325,7 @@ cancelRidePopUpConfig state =
         , activeIndex = state.props.cancelRideActiveIndex
         , activeReasonCode = Just state.props.cancelReasonCode
         , isLimitExceeded = DS.length state.props.cancelDescription >= 100
+        , cornerRadius = (MU.getValueFromConfig "primaryButtonCornerRadius")
         , isSelectButtonActive =
           ( case state.props.cancelRideActiveIndex of
               Just cancelRideIndex -> true
@@ -404,6 +342,7 @@ cancelRidePopUpConfig state =
           { mandatory = getString MANDATORY
           , limitReached = getString MAX_CHAR_LIMIT_REACHED <> " 100 " <> getString OF <> " 100"
           }
+        , config = state.data.config
         }
   in
     cancelRideconfig'
@@ -469,8 +408,18 @@ logOutPopUpModelConfig state =
           config'
             { primaryText { text = (getString LOGOUT_) }
             , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-            , option1 { text = (getString GO_BACK_) }
-            , option2 { text = (getString LOGOUT_) }
+            , option1 { 
+                background = state.data.config.popupBackground
+              , strokeColor = state.data.config.primaryBackground
+              , color = state.data.config.primaryBackground
+              , text = (getString GO_BACK_)
+              }
+            , option2 { 
+                color = state.data.config.primaryTextColor
+              , strokeColor = state.data.config.primaryBackground
+              , background = state.data.config.primaryBackground
+              , text = (getString LOGOUT_)
+              }
             }
       in
         popUpConfig'
@@ -489,11 +438,10 @@ logOutPopUpModelConfig state =
           , customerTipArrayWithValues = [0,10, 20, 30]
           , primaryText {
               text = if isLocalStageOn ST.QuoteList then (getString TRY_AGAIN <> "?") else getString SEARCH_AGAIN_WITH_A_TIP
-            , fontSize = FontSize.a_22
+            , textStyle = FontStyle.Heading1
             },
           secondaryText {
             text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
-          , fontSize = FontSize.a_14
           , color = Color.black650}
           , tipLayoutMargin = (Margin 22 2 22 22)
           , buttonLayoutMargin = (MarginHorizontal 16 16)
@@ -506,24 +454,20 @@ logOutPopUpModelConfig state =
             },
           option1 {
             text = if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getString SEARCH_AGAIN_WITH  <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex)) <>" "<> getString TIP
-          , fontSize = FontSize.a_16
           , width = MATCH_PARENT
-          , color = Color.yellow900
-          , strokeColor = Color.black900
-          , background = Color.black900
+          , color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
           , padding = (Padding 0 10 0 10)
-          , fontStyle = FontStyle.semiBold LanguageStyle
           },
           option2 {
             text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
-          , fontSize = FontSize.a_16
-          , width = MATCH_PARENT
+          , width = MATCH_PARENT 
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
           , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
-          , fontStyle = FontStyle.semiBold LanguageStyle
           , height = WRAP_CONTENT
           },
           cornerRadius = (Corners 15.0 true true false false)
@@ -541,24 +485,20 @@ logOutPopUpModelConfig state =
             , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
             , option1 {
               text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
-            , fontSize = FontSize.a_16
             , width = MATCH_PARENT
-            , color = Color.yellow900
-            , strokeColor = Color.black900
-            , background = Color.black900
+            , color = state.data.config.primaryTextColor
+            , strokeColor = state.data.config.primaryBackground
+            , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
-            , fontStyle = FontStyle.semiBold LanguageStyle
             }
-            , option2 {
-               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
-              , fontSize = FontSize.a_16
-              , width = MATCH_PARENT
+            , option2 { 
+               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT) 
+              , width = MATCH_PARENT 
               , background = Color.white900
               , strokeColor = Color.white900
               , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
               , color = Color.black650
               , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
-              , fontStyle = FontStyle.semiBold LanguageStyle
              }
             }
       in
@@ -578,15 +518,17 @@ distanceOusideLimitsConfig state =
         , primaryText
           { text = (getString DESTINATION_OUTSIDE_LIMITS)
           , margin = (Margin 16 20 16 0)
-          , fontSize = FontSize.a_20
           }
         , secondaryText
           { text = (getString DROP_LOCATION_FAR_AWAY)
           , margin = (Margin 0 16 0 20)
           }
         , option1 { visibility = false }
-        , option2
-          { text = (getString CHANGE_DROP_LOCATION)
+        , option2 { 
+            background = state.data.config.primaryBackground
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryTextColor
+          , text = (getString CHANGE_DROP_LOCATION)
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
           }
         }
@@ -603,14 +545,23 @@ shortDistanceConfig state =
         , primaryText
           { text = (getString YOUR_TRIP_IS_TOO_SHORT_YOU_ARE_JUST) <> HU.toString (state.props.distance) <> (getString METERS_AWAY_FROM_YOUR_DESTINATION)
           , margin = (Margin 16 20 16 0)
-          , fontSize = FontSize.a_20
           }
         , secondaryText
           { text = (getString YOU_CAN_TAKE_A_WALK_OR_CONTINUE_WITH_RIDE_BOOKING)
           , margin = (Margin 0 16 0 20)
           }
-        , option1 { text = (getString GO_BACK_) }
-        , option2 { text = (getString BOOK_RIDE_) }
+        , option1 { 
+            background = state.data.config.popupBackground
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = (getString GO_BACK_)
+          }
+        , option2 {
+            color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , text = (getString BOOK_RIDE_)
+          }
         }
   in
     popUpConfig'
@@ -624,34 +575,27 @@ sourceUnserviceableConfig state =
         { height = MATCH_PARENT
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
-        , corners = (Corners 20.0 true true false false)
         , imageConfig
-          { imageUrl = "ny_ic_location_unserviceable,https://assets.juspay.in/nammayatri/images/user/ny_ic_location_unserviceable.png"
+          { imageUrl = "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
           , height = V 99
           , width = V 133
           , margin = (Margin 0 50 0 20)
           }
         , errorConfig
           { text = if state.props.isMockLocation then "Unable to get your location!" else (getString LOCATION_UNSERVICEABLE)
-          , textSize = FontSize.a_22
           , color = Color.black800
           , margin = (MarginBottom 5)
-          , fontStyle = FontStyle.bold LanguageStyle
           }
         , errorDescriptionConfig
           { text = if state.props.isMockLocation then "Turn off any Mock Location app you might be using and restart the app." else (getString CURRENTLY_WE_ARE_LIVE_IN_)
           , color = Color.black700
-          , textSize = FontSize.a_16
           , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
-          , fontStyle = FontStyle.regular LanguageStyle
           }
         , buttonConfig
           { text = (getString CHANGE_LOCATION)
-          , textSize = FontSize.a_16
           , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
-          , fontStyle = FontStyle.medium LanguageStyle
-          , background = Color.black900
-          , color = Color.yellow900
+          , background = state.data.config.primaryBackground
+          , color = state.data.config.primaryTextColor
           , visibility = GONE
           }
         }
@@ -668,7 +612,7 @@ rateCardConfig state =
         , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
-        , nightChargesApplicable = not ((HU.getMerchant FunctionCall) == HU.YATRI)
+        , nightChargesApplicable = not ((MU.getMerchant FunctionCall) == MU.YATRI)
         , rateCardArray = state.data.rateCard.rateCardArray
         , title = state.data.rateCard.title
         , driverAdditionsImage = state.data.rateCard.driverAdditionsImage
@@ -685,8 +629,18 @@ estimateChangedPopupConfig state =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
         , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> if state.data.rateCard.additionalFare > 0 then "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) else "" }
-        , option1 { text = (getString GO_HOME_) }
-        , option2 { text = (getString CONTINUE) }
+        , option1 { 
+            background = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = (getString GO_HOME_)
+          }
+        , option2 { 
+            color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , text = (getString CONTINUE)
+          }
         }
   in
     popUpConfig'
@@ -794,6 +748,7 @@ driverInfoTransformer state =
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
     , lastMessage : state.data.lastMessage
+    , config : state.data.config
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -803,6 +758,7 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 , emergencyContactData: state.props.emergencyHelpModelState.emergencyContactData
                                 , currentlySelectedContact: state.props.emergencyHelpModelState.currentlySelectedContact
                                 , showCallSuccessfulPopUp : state.props.emergencyHelpModelState.showCallSuccessfulPopUp
+                                , config : state.data.config
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
@@ -818,6 +774,8 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isDestServiceable: state.props.isDestServiceable
                                     , isRideServiceable: state.props.isRideServiceable
                                     , savedlocationList: state.data.savedLocations
+                                    , homeScreenConfig : state.data.config
+                                    , logField : state.data.logField
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
@@ -831,6 +789,7 @@ quoteListModelViewState state = { source: state.data.source
                             , tipViewProps : getTipViewProps state.props.tipViewProps
                             , findingRidesAgain : state.props.findingRidesAgain
                             , progress : state.props.findingQuotesProgress
+                            , appConfig : state.data.config
                             }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -882,7 +841,6 @@ callSupportConfig state = let
   , margin = (MarginHorizontal 16 16)
   , primaryText {
       text = getString CONTACT_SUPPORT <>"?"
-    , fontStyle = FontStyle.semiBold LanguageStyle
     }
   , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
@@ -891,13 +849,15 @@ callSupportConfig state = let
     }
   , option1 {
       text =  getString CANCEL_
-    , fontSize = FontSize.a_16
-    , color = Color.black700
-    , strokeColor = Color.black700
+    , background = state.data.config.popupBackground
+    , strokeColor = state.data.config.primaryBackground
+    , color = state.data.config.primaryBackground
     }
   , option2 {
       text =  getString CALL_SUPPORT
-    , fontSize = FontSize.a_16
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , background = state.data.config.primaryBackground
     , margin = (MarginLeft 12)
     }
   }
@@ -908,20 +868,19 @@ menuButtonConfig state item = let
     menuButtonConfig' = config {
       titleConfig{
           text = item.place
-          ,selectedFontStyle = FontStyle.bold LanguageStyle
-          ,unselectedFontStyle = FontStyle.regular LanguageStyle
+        , gravity = CENTER_VERTICAL
       }
-      , radioButtonConfig {
+    , radioButtonConfig {
         height = V 16
         , width = V 16
-        , imageHeight = V 10
-        , imageWidth = V 10
-        , imageUrl = "ny_ic_pickup"
-        , cornerRadius = 10.0
-        , buttonMargin = (MarginRight 15)
+        , cornerRadius = 8.0
+        , buttonWidth = V 8
+        , buttonHeight = V 8
+        , buttonColor = Color.positive
+        , margin = (MarginRight 15)
         , activeStroke = ("2," <> Color.positive)
       }
-      , height = V 40
+      , height = WRAP_CONTENT
       , id = item.place
       , lat = item.lat
       , lng = item.lng
@@ -1009,7 +968,7 @@ requestInfoCardConfig _ = let
       text = getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE
     }
   , imageConfig {
-      imageUrl = "ny_ic_select_offer,https://assets.juspay.in/nammayatri/images/user/ny_ic_select_offer.png",
+      imageUrl = "ny_ic_select_offer," <> getAssetStoreLink FunctionCall <> "ny_ic_select_offer.png",
       height = V 122,
       width = V 116
     }

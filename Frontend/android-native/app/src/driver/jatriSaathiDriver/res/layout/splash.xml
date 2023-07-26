@@ -6,16 +6,18 @@
     android:orientation="vertical"
     android:background="@color/white"
     android:id="@+id/splash">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="vertical">
+
         <ImageView
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_launcher"/>
+            android:src="@drawable/ic_launcher" />
 
 
         <TextView
@@ -27,7 +29,7 @@
             android:fontFamily="@font/plus_jakarta_sans_bold"
             android:textSize="20dp"
             android:textColor="#BC3A1D"
-            android:text="jatri sathi driver"/>
+            android:text="jatri sathi driver" />
     </LinearLayout>
 
     <LinearLayout

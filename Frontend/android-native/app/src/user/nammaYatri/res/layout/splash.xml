@@ -6,18 +6,21 @@
     android:orientation="vertical"
     android:background="@drawable/ny_ic_splash_bg"
     android:id="@+id/splash">
+
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/splash_lottie"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:lottie_autoPlay="true"
         app:lottie_repeatMode="restart"
-        app:lottie_rawRes="@raw/splash_lottie"/>
+        app:lottie_rawRes="@raw/splash_lottie" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="bottom">
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -30,7 +30,7 @@ import Types.App(ScreenType(..))
 savedLocationScreen :: FlowBT String SAVED_LOCATION_SCREEN_OUTPUT
 savedLocationScreen = do 
   (GlobalState state) <- getState 
-  act <- lift $ lift $ runScreen $ SavedLocationScreen.screen state.savedLocationScreen 
+  act <- lift $ lift $ runScreen $ SavedLocationScreen.screen state.savedLocationScreen (GlobalState state)
   case act of 
     AddLocation updatedState -> do 
       modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)

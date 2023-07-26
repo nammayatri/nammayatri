@@ -23,18 +23,21 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((==), (/=))
+import Prelude ((==), (/=), (<>))
 import PrestoDOM (Length(..), Margin(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
+import Screens.Types (PermissionScreenState)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
-errorModalConfig :: ErrorModal.Config 
-errorModalConfig = let 
+errorModalConfig :: PermissionScreenState -> ErrorModal.Config 
+errorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ic_offline,https://assets.juspay.in/beckn/merchantcommon/images/ic_offline.png"
+        imageUrl = "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_offline.png"
       , height = V 124
       , width = V 124
       , margin = (MarginBottom 32)
@@ -43,36 +46,32 @@ errorModalConfig = let
         text = (getString YOU_ARE_OFFLINE)
       , margin = (MarginBottom 7)  
       , color = Color.black900
-      , fontStyle = FontStyle.medium LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
       , color = Color.black700
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString TRY_AGAIN)
       , margin = (Margin 16 0 16 24)
-      , background = Color.black900
-      , color = Color.yellow900
-      , fontStyle = FontStyle.medium LanguageStyle
+      , background = state.appConfig.primaryBackground
+      , color = state.appConfig.primaryTextColor
       }
     }
   in errorModalConfig' 
 
-primaryButtonConfig :: PrimaryButton.Config 
-primaryButtonConfig  = let
+primaryButtonConfig :: PermissionScreenState -> PrimaryButton.Config 
+primaryButtonConfig  state = let
     config' = PrimaryButton.config 
     primaryButtonConfig' = config' 
       { textConfig 
         { text = getString if EHC.os == "IOS" then CONTINUE
                   else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS
-        , fontStyle = FontStyle.bold LanguageStyle
-        , textSize = FontSize.a_16
-        , color = Color.yellow900
+        , textStyle = FontStyle.Body7
+        , color = state.appConfig.primaryTextColor
         }
       , width = MATCH_PARENT 
-      , background = Color.black900
+      , background = state.appConfig.primaryBackground
       , margin = (Margin 0 0 0 0)
       , id = "PermissionScreenButton"
       , enableLoader = (JB.getBtnLoader "PermissionScreenButton")

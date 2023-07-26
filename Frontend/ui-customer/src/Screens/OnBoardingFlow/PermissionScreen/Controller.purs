@@ -17,13 +17,17 @@ module Screens.PermissionScreen.Controller where
 
 import Components.ErrorModal.Controller as ErrorModalController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import JBridge (isInternetAvailable, requestLocation, firebaseLogEvent)
+import Effect.Uncurried (EffectFn3, mkEffectFn3, runEffectFn3)
+import Effect.Unsafe (unsafePerformEffect)
+import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, bind, pure, unit, (==), discard, ($))
+import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (PermissionScreenState)
+import Effect.Unsafe 
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where 
     show _ = ""
@@ -46,6 +50,7 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen PERMISSION_SCREEN)
       InternetCallBackCustomer str -> trackAppScreenEvent appId (getScreen PERMISSION_SCREEN) "in_screen" "internet_call_back_customer"
       LocationPermissionCallBackCustomer str -> trackAppScreenEvent appId (getScreen PERMISSION_SCREEN) "in_screen" "location_permission_call_back_customer"
+      RequestLocation -> trackAppScreenEvent appId (getScreen PERMISSION_SCREEN) "in_screen" "request_location"
       NoAction -> trackAppScreenEvent appId (getScreen PERMISSION_SCREEN) "in_screen" "no_action"
 
 data Action = ErrorModalActionController ErrorModalController.Action 
@@ -53,9 +58,10 @@ data Action = ErrorModalActionController ErrorModalController.Action
             | NoAction
             | Reload
             | BackPressed
-            | LocationPermissionCallBackCustomer String
+            | LocationPermissionCallBackCustomer Boolean
             | InternetCallBackCustomer String
             | AfterRender
+            | RequestLocation
 
 data ScreenOutput = GoBack | Refresh | InternetCallBack PermissionScreenState | LocationCallBack PermissionScreenState 
 
@@ -73,19 +79,20 @@ eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionContro
   ]
 
 eval (LocationPermissionCallBackCustomer isLocationPermissionEnabled) state = do 
-  if isLocationPermissionEnabled == "true" then do 
-    updateAndExit state (LocationCallBack state)
+  if isLocationPermissionEnabled then updateAndExit state (LocationCallBack state)
     else continue state
 eval (InternetCallBackCustomer isInternetAvailable) state = do 
   if( isInternetAvailable == "true") then do
     updateAndExit state (InternetCallBack state)
     else continue state
 
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = continueWithCmd state [ do 
-  _ <- pure $ firebaseLogEvent "ny_user_grant_location_permission"
-  _ <- requestLocation unit
-  pure NoAction
-  ]
+eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
+  let _ = unsafePerformEffect $ requestLocation unit
+      _ = unsafePerformEffect $ logEvent state.logField "ny_user_grant_location_permission"
+  continue state
+
+eval RequestLocation state = do 
+  continue state
 
 eval Reload state = updateAndExit state $ Refresh
   

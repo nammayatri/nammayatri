@@ -15,7 +15,9 @@
 
 module Components.QuoteListItem.Controller where
 
+import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
+import MerchantConfig.DefaultConfig as DC
 
 data Action = Click QuoteListItemState
               | NoAction 
@@ -35,6 +37,7 @@ type QuoteListItemState =
   , vehicleType :: String
   , driverName :: String
   , selectedQuote :: Maybe String
+  , appConfig :: AppConfig
   }
 
 config :: QuoteListItemState
@@ -49,4 +52,5 @@ config = {
   , vehicleType : "auto"
   , driverName : "Drive_Name"
   , selectedQuote : Nothing
+  , appConfig : DC.config
   }

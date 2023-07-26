@@ -20,6 +20,7 @@ import Components.SourceToDestination as SourceToDestinationController
 import Screens.Types(Stage, ZoneType(..), SearchResultType)
 import Data.Maybe(Maybe)
 import Components.ChatView as ChatView
+import MerchantConfig.Types
 
 data Action = NoAction
             | Support
@@ -33,6 +34,7 @@ data Action = NoAction
             | ZoneOTPExpiryAction String String Int
             | OnNavigate
             | RemoveNotification
+            | CallDriver
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -84,4 +86,5 @@ type DriverInfoCardData =
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
   , lastMessage :: ChatView.ChatComponent
+  , config :: AppConfig
   }

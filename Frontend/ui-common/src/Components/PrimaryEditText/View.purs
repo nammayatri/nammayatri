@@ -21,6 +21,8 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
 import Components.PrimaryEditText.Controller (Action(..), Config)
 import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable)
+import Font.Style as FontStyle
+import Common.Types.App
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -36,20 +38,18 @@ view push config =
 
 topLabelView :: forall w . Config -> PrestoDOM (Effect Unit) w
 topLabelView config = 
-  textView
+  textView $ 
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , textSize config.topLabel.textSize
     , text config.topLabel.text
     , color config.topLabel.color
-    , fontStyle config.topLabel.fontStyle
     , gravity config.topLabel.gravity
     , lineHeight "28"
     , singleLine true
     , margin config.topLabel.margin
     , alpha config.topLabel.alpha
     , visibility config.topLabel.visibility
-    ]  
+    ] <> (FontStyle.getFontStyle config.topLabel.textStyle LanguageStyle)
 
 
 editTextLayout :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -68,18 +68,16 @@ editTextLayout push config =
 
 constantField :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 constantField push config = 
-  textView
+  textView $ 
   [ width config.constantField.width
   , height config.constantField.height
   , gravity config.constantField.gravity
   , text config.constantField.text
-  , fontStyle config.constantField.fontStyle
-  , textSize config.constantField.textSize
   , color config.constantField.color
   , padding config.constantField.padding
   , margin config.constantField.margin
   , visibility if config.showConstantField then VISIBLE else GONE
-  ]
+  ] <> (FontStyle.getFontStyle config.constantField.textStyle LanguageStyle)
 
 
 
@@ -90,9 +88,7 @@ editTextView push config =
   , width config.width
   , id config.id
   , weight 1.0
-  , textSize config.editText.textSize
   , color config.editText.color
-  , fontStyle config.editText.fontStyle
   , text config.editText.text
   , hint config.editText.placeholder
   , singleLine config.editText.singleLine
@@ -105,8 +101,8 @@ editTextView push config =
   , letterSpacing config.editText.letterSpacing
   , alpha config.editText.alpha
   , onFocus push $ FocusChanged
-  ] 
-  <> (case config.editText.pattern of 
+  ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
+    <> (case config.editText.pattern of 
         Just _pattern -> case config.type of 
                           "text" -> [pattern _pattern
                                     , inputType TypeText]
@@ -138,18 +134,16 @@ errorLabelLayout config =
         , padding config.errorImageConfig.padding
         , visibility if config.showErrorImage then VISIBLE else GONE
         ]
-      , textView
+      , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , textSize config.errorLabel.textSize
         , text config.errorLabel.text
         , color config.errorLabel.color
-        , fontStyle config.errorLabel.fontStyle
         , gravity config.errorLabel.gravity
         , margin config.errorLabel.margin
         , lineHeight "28"
         , singleLine true
         , visibility if config.showErrorLabel then VISIBLE else GONE
         , alpha config.errorLabel.alpha
-        ]
+        ] <> (FontStyle.getFontStyle config.errorLabel.textStyle LanguageStyle)
     ]

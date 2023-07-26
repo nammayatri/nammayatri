@@ -8,56 +8,63 @@
 
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+  or FITNESS FOR A PARTIEHULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.SavedLocationScreen.View where
 
+import Common.Types.App
+import Common.Types.App
+import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
+import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
+
 import Animation as Anim
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.SavedLocationCard as SavedLocationCard
-import Components.PopUpModal as PopUpModal
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
+import Data.Either (Either(..))
+import Data.Either (Either(..))
+import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
-import Presto.Core.Types.Language.Flow (doAff, Flow)
+import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (SavedLocationReq(..), SavedLocationsListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
-import Common.Types.App
-import Data.Maybe(fromMaybe, Maybe(..))
-import Types.App (GlobalState, defaultGlobalState)
-import Data.Either (Either(..))
-import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
+import Types.App (GlobalState(..), defaultGlobalState)
 
-screen :: ST.SavedLocationScreenState -> Screen Action ST.SavedLocationScreenState ScreenOutput
-screen initialState =
+screen :: ST.SavedLocationScreenState -> GlobalState -> Screen Action ST.SavedLocationScreenState ScreenOutput
+screen initialState st =
   { initialState
   , view
   , name : "SavedLocationScreen"
   , globalEvents : [
       (\push -> do
-        _ <- launchAff $ EHC.flowRunner defaultGlobalState $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
+        _ <- launchAff $ EHC.flowRunner st $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
         pure $ pure unit
           )
   ]
@@ -82,11 +89,14 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , linearLayout
-      [ height $ V 1
-      , width MATCH_PARENT
-      , background Color.greySmoke
-      ][]
+    , if (not state.data.config.nyBrandingVisibility) then 
+        linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.greySmoke
+        ][]
+      else
+        linearLayout[][]
     , frameLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -180,13 +190,13 @@ savedLocationsView push state =
 
 getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> Flow GlobalState Unit
 getSavedLocationsList action push state = do
-  _ <-  JB.toggleLoader true
+  _ <-  EHU.toggleLoader true
   (savedLocationResp ) <- Remote.getSavedLocationList ""
   case savedLocationResp of
       Right (SavedLocationsListRes listResp) -> do
+        _ <-  EHU.toggleLoader false
         doAff do liftEffect $ push $ action ( SavedLocationsListRes (listResp))
-        _ <-  JB.toggleLoader false
         pure unit
       Left (err) -> do
-        _ <-  JB.toggleLoader false
+        _ <-  EHU.toggleLoader false
         pure unit

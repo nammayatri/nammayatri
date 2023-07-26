@@ -574,5 +574,6 @@ const bengaliStrings = {
   HOMETOWN  : "হোম টাউন",
 	MISSED_OPPORTUNITY : "সুযোগ মিস করেছে",
 	HOW_OLD_IS_YOUR_VEHICLE : "আপনার গাড়ির বয়স কত (বছরে)?",
-	ENTER_NAME_OF_VEHICLE : "আপনার গাড়ির নাম লিখুন"
+	ENTER_NAME_OF_VEHICLE : "আপনার গাড়ির নাম লিখুন",
+	NEW_ : "নতুন"
 }

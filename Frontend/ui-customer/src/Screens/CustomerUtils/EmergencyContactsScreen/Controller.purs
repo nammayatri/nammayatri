@@ -10,7 +10,7 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.NewContact.Controller as NewContactController
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
-import JBridge (toast, loaderText, toggleLoader)
+import JBridge (toast)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts, NewContactsProp)
 import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText', toString, setEnabled, setRefreshing)
 import Data.Array (length, sortBy, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last, slice, union)
@@ -35,6 +35,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.String (split, Pattern(..), Replacement(..), replaceAll)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Data.Ord (min)
+import Engineering.Helpers.Utils (loaderText, toggleLoader)
 
 instance showAction :: Show Action where
   show _ = ""

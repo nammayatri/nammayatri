@@ -31,7 +31,8 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare, getMerchant, Merchant (..))
+import Helpers.Utils (isHaveFare)
+import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant (..))
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -125,7 +126,7 @@ amountBreakupView state =
               , padding (Padding 0 5 0 5)
               , margin (MarginBottom 16)
               ]
-              [ textView
+              [ textView $
                   [ text case item.fareType of
                       "BASE_FARE" -> (getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
@@ -139,29 +140,25 @@ amountBreakupView state =
                       "SERVICE_CHARGE" -> getString SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
                       "WAITING_OR_PICKUP_CHARGES"  -> getString PICKUP_CHARGE
+                      "PLATFORM_FEE" -> getString PLATFORM_FEE
                       _ -> "BASE_FARE"
-                  , textSize FontSize.a_14
                   , color Color.black800
                   , layoutGravity "bottom"
-                  , fontStyle $ FontStyle.regular LanguageStyle
-                  , lineHeight "18"
-                  ]
+                  ] <> FontStyle.paragraphText LanguageStyle
               , linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , gravity RIGHT
                   , orientation HORIZONTAL
                   ]
-                  [ textView
-                      [ text $ "₹ " <> (show item.price)
-                      , fontStyle $ FontStyle.medium LanguageStyle
+                  [ textView $
+                      [ text $ item.price
                       , alignParentRight "true,-1"
                       , color Color.black800
                       , height WRAP_CONTENT
                       , width WRAP_CONTENT
-                      , textSize FontSize.a_14
                       , lineHeight "18"
-                      ]
+                      ] <> FontStyle.body1 LanguageStyle
                   ]
               ]
         )
@@ -177,26 +174,21 @@ totalAmountView state =
     , orientation HORIZONTAL
     , margin (MarginTop 8)
     ]
-    [ textView
+    [ textView $
         [ text $ getString TOTAL_PAID
-        , textSize FontSize.a_22
         , color Color.black800
-        , fontStyle $ FontStyle.bold LanguageStyle
         , lineHeight "28"
-        ]
+        ] <> FontStyle.h1 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , orientation HORIZONTAL
         , weight 1.0
         ]
         []
-    , textView
+    , textView $
         [ text state.data.totalAmount
-        , textSize FontSize.a_22
-        , fontStyle $ FontStyle.bold LanguageStyle
         , color Color.black800
-        , lineHeight "28"
-        ]
+        ] <> FontStyle.h1 LanguageStyle
     ]
 
 --------------------------- RideDateAndTimeView --------------------
@@ -223,12 +215,9 @@ rideDateAndTimeView state =
 
 localTextView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
 localTextView textValue colorValue =
-  textView
+  textView $
     [ text textValue
-    , textSize FontSize.a_12
     , color colorValue
-    , fontStyle $ FontStyle.medium LanguageStyle
     , width MATCH_PARENT
-    , lineHeight "16"
-    ]
+    ] <> FontStyle.tags LanguageStyle
 

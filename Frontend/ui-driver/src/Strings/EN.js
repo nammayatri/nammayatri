@@ -564,5 +564,8 @@ const englishStrings = {
   HOMETOWN  : "Home Town",
   MISSED_OPPORTUNITY : "Missed Opportunities",
   HOW_OLD_IS_YOUR_VEHICLE : "How old is your vehicle (in years)?",
-  ENTER_NAME_OF_VEHICLE : "Enter the name of your vehicle"
+  ENTER_NAME_OF_VEHICLE : "Enter the name of your vehicle",
+  NEW_ : "New",
+  WITH : "with",
+  CHOOSE_LANGUAGE : "Choose Language"
 }

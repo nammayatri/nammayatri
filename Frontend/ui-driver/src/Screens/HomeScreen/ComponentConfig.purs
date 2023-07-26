@@ -20,6 +20,10 @@ import Prelude(unit, show, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..),Padding(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
+import Language.Strings
+import Common.Types.App (LazyCheck(..))
+import Components.ChatView as ChatView
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
@@ -30,19 +34,20 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
-import Components.InAppKeyboardModal as InAppKeyboardModal
-import Language.Strings
 import Language.Types (STR(..))
+import Prelude ((<>))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
-import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
+import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Style as FontStyle
-import Merchant.Utils (getMerchantVehicleSize)
+import Helpers.Utils (getMerchantVehicleSize)
 
 
 
@@ -168,8 +173,7 @@ cancelConfirmationConfig state = let
     secondaryText {visibility = GONE},
     option1 {
       text = (getString CONTINUE)
-    , fontSize = FontSize.a_16
-    , width = V $ (((EHC.screenWidth unit)-92)/2)
+    , width = V $ (((EHC.screenWidth unit)-92)/2) 
     , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
     , timerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
     , enableTimer = true
@@ -180,7 +184,6 @@ cancelConfirmationConfig state = let
     option2 {
       text = (getString GO_BACK)
     , margin = MarginLeft 12
-    , fontSize = FontSize.a_16
     , width = V $ (((EHC.screenWidth unit)-92)/2)
     , color = Color.yellow900
     , strokeColor = Color.black900
@@ -189,7 +192,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
                   else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -282,8 +285,8 @@ enterOtpStateConfig state = let
       inputTextConfig {
         text = state.props.rideOtp,
         -- pattern = "[0-9]*,4",
-        fontSize = FontSize.a_22,
         focusIndex = state.props.enterOtpFocusIndex
+        , textStyle = FontStyle.Heading1
       },
       headingConfig {
         text = getString (ENTER_OTP)
@@ -294,8 +297,8 @@ enterOtpStateConfig state = let
       },
       subHeadingConfig {
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
-        fontSize = FontSize.a_14,
         visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
+      , textStyle = FontStyle.Body1
       },
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
@@ -368,18 +371,15 @@ waitTimeInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
-      text = getString WAIT_TIMER,
-      fontSize = FontSize.a_18
+      text = getString WAIT_TIMER
     }
   , primaryText {
       text = getString HOW_LONG_WAITED_FOR_PICKUP,
-      fontSize = FontSize.a_16,
       padding = Padding 16 16 0 0
     }
   , secondaryText {
       text = getString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE,
       visibility = VISIBLE,
-      fontStyle = FontStyle.regular LanguageStyle,
       padding = PaddingLeft 16
     }
   , imageConfig {

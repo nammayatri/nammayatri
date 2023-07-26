@@ -33,6 +33,10 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Common.Types.App
 import Screens.TripDetailsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
+import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -108,7 +112,7 @@ view push state =
                        , orientation HORIZONTAL
                        , onClick push (const HelpAndSupport)
                         ][ imageView
-                          [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
+                          [ imageWithFallback $ "ny_ic_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_support.png"
                           , height $ V 17
                           , width $ V 20
                           , margin $ MarginRight 7
@@ -122,7 +126,7 @@ view push state =
                           , imageView
                           [ width $ V 18
                           , height $ V 18
-                          , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                          , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
                           ]
                         ]
                       ]
@@ -159,7 +163,7 @@ tripDetailsView state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-          [ imageWithFallback "ic_vehicle_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
+          [ imageWithFallback $ "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"
           , width (V 36)
           , height (V 36)
           ]
@@ -175,12 +179,10 @@ tripDetailsView state =
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-          ][  textView
+          ][  textView $
               [ text state.data.date
-              , textSize FontSize.a_15
               , color Color.black800
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.body1 TypoGraphy
             , textView
               [ background Color.greyishBlue
               , cornerRadius 2.5
@@ -188,12 +190,10 @@ tripDetailsView state =
               , height (V 5)
               , width (V 5)
               ] 
-            , textView
+            , textView $
               [ text state.data.time
-              , textSize FontSize.a_15
               , color Color.black800
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.body1 TypoGraphy
             ]
         ]
     , linearLayout
@@ -201,18 +201,14 @@ tripDetailsView state =
       , width MATCH_PARENT
       , gravity RIGHT
       , orientation VERTICAL
-      ][  textView
-          [ text $ "₹" <> ( show state.data.totalAmount)
-          , textSize FontSize.a_18
-          , fontStyle $ FontStyle.regular LanguageStyle
+      ][  textView $
+          [ text $ (getValueFromConfig "currency") <> ( show state.data.totalAmount)
           , color Color.black
-          ]
-        , textView
+          ] <> FontStyle.body14 TypoGraphy
+        , textView $
           [ text $ getString(PAID)<> "  " <> if state.data.paymentMode == ST.CASH then (getString BY_CASH) else (getString ONLINE_)
-          , textSize FontSize.a_11
           , color Color.greyDarker
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
+          ] <> FontStyle.body16 TypoGraphy
         ]
     ]
 
@@ -243,25 +239,23 @@ tripDataView push state =
             , width WRAP_CONTENT
             , orientation VERTICAL
             , weight 0.75
-            ][ textView
+            ][ textView $
                 [ text (getString TRIP_ID)
                 , color Color.black700
-                , textSize FontSize.a_16
                 , margin (MarginBottom 4) 
-                ]
+                ] <> FontStyle.body5 TypoGraphy
               , linearLayout
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , orientation HORIZONTAL
                 , onClick push (const Copy)
-                ][ textView
+                ][ textView $
                     [ text state.data.tripId
                     , width WRAP_CONTENT
                     , color Color.black900
-                    , textSize FontSize.a_18
-                    ]
+                    ] <> FontStyle.body14 TypoGraphy
                   , imageView
-                    [ imageWithFallback "ny_ic_copy,https://assets.juspay.in/nammayatri/images/common/ny_ic_copy.png"
+                    [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_copy.png"
                     , height (V 15)
                     , width (V 13)
                     , margin (Margin 10 5 0 0)
@@ -277,17 +271,15 @@ tripDataView push state =
             , orientation VERTICAL
             , weight 0.25
             , visibility GONE
-            ][ textView
+            ][ textView $
                 [ text (getString RIDER)
                 , color Color.black700
-                , textSize FontSize.a_16
                 , margin (MarginBottom 4) 
-                ]
-              , textView
+                ] <> FontStyle.body5 TypoGraphy
+              , textView $
                 [ text state.data.rider
                 , color Color.black900
-                , textSize FontSize.a_18
-                ]
+                ] <> FontStyle.body14 TypoGraphy
             ]
         ] 
     , linearLayout
@@ -302,17 +294,15 @@ tripDataView push state =
             , width WRAP_CONTENT
             , orientation VERTICAL
             , weight 0.865
-            ][ textView
+            ][ textView $
                 [ text (getString DISTANCE)
                 , color Color.black700
-                , textSize FontSize.a_16
                 , margin (MarginBottom 4) 
-                ]
-              , textView
+                ] <> FontStyle.body5 TypoGraphy
+              , textView $
                 [ text (state.data.distance <> " km")
                 , color Color.black900
-                , textSize FontSize.a_18
-                ]
+                ] <> FontStyle.body14 TypoGraphy
             ]
           , linearLayout
             [ height WRAP_CONTENT
@@ -320,17 +310,15 @@ tripDataView push state =
             , orientation VERTICAL
             , weight 0.135
             , visibility GONE
-            ][ textView
+            ][ textView $
                 [ text (getString TIME_TAKEN)
                 , color Color.black700
-                , textSize FontSize.a_16
                 , margin (MarginBottom 4)
-                ]
-              , textView
+                ] <> FontStyle.body5 TypoGraphy
+              , textView $
                 [ text state.data.timeTaken
                 , color Color.black900
-                , textSize FontSize.a_18
-                ]
+                ] <> FontStyle.body14 TypoGraphy
             ]
         ] 
   ]
@@ -360,7 +348,7 @@ reportIssueView state push =
             , width MATCH_PARENT
             , gravity RIGHT
             ][  imageView
-                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_chevron_down.png"
                 , height $ V 5
                 , width $ V 10 
                 ]
@@ -421,23 +409,20 @@ issueReportedView state push =
     , gravity CENTER
     , orientation VERTICAL
   ][ imageView
-      [ imageWithFallback "ny_ic_greetings,https://assets.juspay.in/nammayatri/images/driver/ny_ic_greetings.png"
+      [ imageWithFallback $ "ny_ic_greetings," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_greetings.png"
       , height $ V 81
       , width $ V 135
       , margin (MarginBottom 32)
       ]
-    , textView
+    , textView $
       [ text (getString THANK_YOU_FOR_WRITING_TO_US)
-      , textSize FontSize.a_22
-      , fontStyle $ FontStyle.bold LanguageStyle
       , color Color.black900
       , margin (MarginBottom 12)
-      ]
-    , textView
+      ] <> FontStyle.h1 TypoGraphy
+    , textView $ 
       [ text (getString WE_HAVE_RECIEVED_YOUR_ISSUE)
-      , textSize FontSize.a_13
       , margin (Margin 42 0 42 0)
       , gravity CENTER
       , color Color.blackLightGrey
-      ]]
+      ] <> FontStyle.body3 TypoGraphy]
   ]

@@ -24,6 +24,7 @@ import Services.API(FeedbackAnswer)
 import Common.Types.App (LazyCheck(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Types
 
 data Action = NoAction
             | BackPressed
@@ -60,6 +61,7 @@ type RatingCardData =
   , distanceDifference :: Int
   , feedback :: String
   , feedbackList :: Array FeedbackAnswer
+  , appConfig :: AppConfig
   }
 
 type FeedbackItem = { 

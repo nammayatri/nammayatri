@@ -34,7 +34,7 @@ import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenTyp
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..), MenuOptions(..))
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PrimaryButton as PrimaryButton
@@ -54,6 +54,11 @@ import Data.Lens.Getter ((^.))
 import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Components.PrimaryButton as PrimaryButtonController
 import Services.Config (getSupportNumber)
+import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe (unsafePerformEffect)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -253,7 +258,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rides" -> exit $ GoToDriverHistoryScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
@@ -547,3 +552,17 @@ makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
   vehicleModel : (rc.rcDetails) ^. _vehicleModel}
   }
   ) listRes
+
+optionList :: String -> Array Listtype
+optionList dummy =
+    (if (getMerchant FunctionCall /= NAMMAYATRI)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options,https://assets.juspay.in/nammayatri/images/driver/ic_booking_options.png"}] else []) <>
+    [
+      {menuOptions: APP_INFO_SETTINGS , icon:"ny_ic_app_info,https://assets.juspay.in/nammayatri/images/driver/ny_ic_app_info.png"},
+      {menuOptions: MULTI_LANGUAGE , icon:"ny_ic_language,https://assets.juspay.in/nammayatri/images/driver/ny_ic_language.png"},
+      {menuOptions: HELP_AND_FAQS , icon:"ny_ic_head_phones,https://assets.juspay.in/nammayatri/images/driver/ny_ic_head_phones.png"}
+    ] 
+    <> (if (getMerchant FunctionCall == NAMMAYATRI) then [{menuOptions: LIVE_STATS_DASHBOARD , icon:"ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png"}] else []) <>
+    [ 
+      {menuOptions: ABOUT_APP , icon:"ny_ic_about,https://assets.juspay.in/nammayatri/images/driver/ny_ic_about.png"},
+      {menuOptions: DRIVER_LOGOUT , icon:"ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"}
+    ]

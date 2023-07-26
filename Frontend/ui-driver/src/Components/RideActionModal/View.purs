@@ -17,15 +17,19 @@ module Components.RideActionModal.View where
 
 import Common.Types.App
 
+import Common.Types.App (LazyCheck(..))
 import Components.RideActionModal.Controller (Action(..), Config)
 import Data.Maybe as Maybe
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown, getSpecialZoneConfig,getRequiredTag,clearTimer,getCurrentUTC)
+import Helpers.Utils (countDown, getSpecialZoneConfig,getRequiredTag,clearTimer,getCurrentUTC, getCommonAssetStoreLink, getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude ((<>))
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, fontSize, weight)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
@@ -35,7 +39,8 @@ import Styles.Colors as Color
 import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..),TimerStatus(..))
 import JBridge (getVersionCode,waitingCountdownTimer,toast)
-import Merchant.Utils(getMerchant, Merchant(..))
+import MerchantConfig.Utils(getMerchant, getValueFromConfig, Merchant(..))
+import Components.SeparatorView.View as SeparatorView
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -64,7 +69,7 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) && checkVersionForChat (getCurrentAndroidVersion (getMerchant unit)) then VISIBLE else GONE
+  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
@@ -72,7 +77,7 @@ messageButton push config =
   , cornerRadius 30.0
   , onClick push (const $ MessageCustomer)
   ][  imageView
-      [ imageWithFallback if config.unReadMessages then "ic_chat_badge,https://assets.juspay.in/nammayatri/images/driver/ic_chat_badge.png" else "ic_chat,https://assets.juspay.in/nammayatri/images/driver/ic_chat.png"
+      [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat.png"
       , height $ V 20
       , width $ V 20
       ]
@@ -81,9 +86,12 @@ messageButton push config =
 getCurrentAndroidVersion :: Merchant -> Int 
 getCurrentAndroidVersion merchant = 
   case merchant of 
-    NAMMAYATRIPARTNER -> 54
-    YATRIPARTNER -> 47 
-    JATRISAATHIDRIVER -> 1
+    NAMMAYATRI -> 54
+    YATRI -> 47 
+    JATRISAATHI -> 1
+    MOBILITY_PM -> 1
+    MOBILITY_RS -> 1
+    PASSCULTURE -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =
@@ -105,7 +113,7 @@ callButton push config =
   , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
   ][  imageView
-      [ imageWithFallback "ic_phone,https://assets.juspay.in/nammayatri/images/common/ic_phone.png"
+      [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "/ic_phone.png"
       , height $ V 20
       , width $ V 20
       ]
@@ -206,7 +214,7 @@ openGoogleMap push config =
       ][  imageView
           [ width $ V 20
           , height $ V 20
-          , imageWithFallback "ny_ic_navigation,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigation.png"
+          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_navigation.png"
           ]
         , textView (
           [ width WRAP_CONTENT
@@ -262,7 +270,6 @@ totalDistanceView push config =
         , width WRAP_CONTENT
         , text (getString RIDE_DISTANCE)
         , color Color.black650
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
@@ -271,11 +278,9 @@ totalDistanceView push config =
         , width WRAP_CONTENT
         , text config.totalDistance
         , color Color.black650
-        , textSize FontSize.a_20
         , ellipsize true
         , singleLine true
-        , fontStyle (FontStyle.medium TypoGraphy)
-        ]
+        ] <> FontStyle.body11 TypoGraphy
     ]
 
 sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -385,20 +390,17 @@ estimatedFareView push config =
         , width WRAP_CONTENT
         , text (getString RIDE_FARE)
         , color Color.black650
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
       , textView $ 
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text ("₹" <> (show config.estimatedRideFare))
+        , text ((getValueFromConfig "currency") <> (show config.estimatedRideFare))
         , color Color.black900
         , ellipsize true
-        , textSize FontSize.a_20
         , singleLine true
-        , fontStyle (FontStyle.semiBold TypoGraphy)
-        ]
+        ] <> FontStyle.body10 TypoGraphy
     ]
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -485,17 +487,17 @@ sourceDestinationImageView  config =
     , width WRAP_CONTENT
     , orientation VERTICAL
     ][ imageView
-        [ height $ V 21
-        , width $ V 17
+        [ height $ V 14
+        , width $ V 14
         , margin $ MarginTop 2
-        , imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+        , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
         ]
-      , lineImageView 53
+      , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 14
         , width $ V 14
         , margin $ MarginTop 4
-        , imageWithFallback "ny_ic_destination,https://assets.juspay.in/nammayatri/images/driver/ny_ic_destination.png"         
+        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"        
         ]
       ]
 
@@ -514,17 +516,15 @@ sourceDestinationTextView push config =
         , color Color.black800
         , ellipsize true
         , singleLine true
-        , textSize FontSize.a_16 
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $ 
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.sourceAddress.detailText
         , color Color.black650
-        , margin (MarginBottom 30)
+        , margin (MarginBottom 25)
         , ellipsize true
         , singleLine true
-        , textSize FontSize.a_14 
         ] <> FontStyle.body1 TypoGraphy
       , destAddressTextView config push
       ]   
@@ -553,7 +553,7 @@ arrivedButtonView push config =
   ][  imageView
       [ width $ V 20
       , height $ V 20
-      , imageWithFallback if config.notifiedCustomer then "ny_ic_tick_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_tick_grey.png" else "ic_chat_blue,https://assets.juspay.in/nammayatri/images/driver/ic_chat_blue.png"
+      , imageWithFallback if config.notifiedCustomer then "ny_ic_tick_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_tick_grey.png" else "ny_ic_hand_wave," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_hand_wave.png"
       , margin $ MarginRight 4
       ]
     , textView $
@@ -575,7 +575,7 @@ destinationView config push =
   ][  imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback "ny_ic_loc_red,https://assets.juspay.in/nammayatri/images/common/ny_ic_loc_red.png"
+      , imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
       , margin $ Margin 0 3 8 0         
       ]
     , destAddressTextView config push
@@ -603,7 +603,6 @@ destAddressTextView config push=
         , color Color.black800
         , ellipsize true
         , singleLine true
-        , textSize FontSize.a_16 
         ] <> FontStyle.subHeading1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
@@ -611,7 +610,6 @@ destAddressTextView config push=
         , text config.destinationAddress.detailText
         , color Color.black650
         , ellipsize true
-        , textSize FontSize.a_14
         , maxLines if config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer then 1 else 2
         ]<> FontStyle.body1 TypoGraphy
       ]
@@ -626,3 +624,15 @@ getTitle config = case config.startRideActive of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
+
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  {
+    orientation : VERTICAL
+  , count : 4
+  , height : V 4
+  , width : V 2
+  , layoutWidth : V 14
+  , layoutHeight : V 16
+  }
