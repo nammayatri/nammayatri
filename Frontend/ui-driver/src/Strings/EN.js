@@ -511,5 +511,18 @@ const englishStrings = {
   OTP_RESEND_LIMIT_EXCEEDED : "Resend OTP Limit Exceeded",
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "Please try again after sometime",
   ALTERNATE_NUMBER_CANNOT_BE_ADDED : "Alternate Number Cannot Be Added",
-  OTP_RESENT: "OTP Resent"
+  OTP_RESENT: "OTP Resent",
+  SEDAN : "Sedan",
+  SUV : "SUV",
+  HATCHBACK : "Hatchback",
+  AUTO_RICKSHAW : "Auto Rickshaw",
+  TAXI : "Non-AC Taxi",
+  TAXI_PLUS : "AC Taxi",
+  MY_PROFILE : "My Profile",
+  SETTINGS : "Settings",
+  AUTO_DETAILS : "Auto Details",
+  REG_NUMBER : "Reg. Number",
+  TYPE : "Type",
+  MODEL_NAME : "Model Name",
+  COLOUR : "Colour"
 }

@@ -510,8 +510,21 @@ const hindiStrings = {
   ENTER_SECOND_SIM_NUMBER : "दूसरा सिम नंबर दर्ज करें",
   ALTERNATE_NUMBER : "वैकल्पिक नंबर",
   SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं",
-  OTP_RESEND_LIMIT_EXCEEDED : "ओटीपी पुनः भेजने की सीमा पार हो गई है",
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "कृपया कुछ समय बाद प्रयास करे" ,
   ALTERNATE_NUMBER_CANNOT_BE_ADDED : "दूसरा मोबाइल नंबर ऐड नहीं हो सकता",
-  OTP_RESENT: "ओटीपी फिर से भेजा है"
+  OTP_RESENT: "ओटीपी फिर से भेजा है",
+  OTP_RESEND_LIMIT_EXCEEDED : "OTP पुनः भेजने की सीमा पार हो गई",
+  SEDAN : "सेडान",
+  SUV : "एसयूवी",
+  HATCHBACK : "हैचबैक",
+  AUTO_RICKSHAW : "ऑटो रिक्शा",
+  TAXI : "नॉन-एसी टैक्सी",
+  TAXI_PLUS : "एसी टैक्सी",
+  MY_PROFILE : "मेरी प्रोफ़ाइल",
+  SETTINGS : "सेटिंग्स",
+  AUTO_DETAILS : "ऑटो विवरण",
+  REG_NUMBER : "पंजीकरण संख्या",
+  TYPE : "प्रकार",
+  MODEL_NAME : "मॉडल का नाम",
+  COLOUR : "रंग"
 }

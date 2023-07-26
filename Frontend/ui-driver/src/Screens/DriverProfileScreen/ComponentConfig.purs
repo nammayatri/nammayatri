@@ -127,7 +127,7 @@ primaryButtonConfig state = let
       , margin = MarginHorizontal 10 10
       , cornerRadius = 10.0
       , background = Color.black900
-      , height = (V 60)
+      , height = (V 48)
       , isClickable = (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && (length (fromMaybe "" state.data.driverEditAlternateMobile))==10 && state.props.checkAlternateNumber)
       , alpha = if (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber) then 1.0 else 0.7
       }
@@ -259,7 +259,7 @@ primaryButtonConfig1 state = let
       , margin = (Margin 10 0 10 0)
       , cornerRadius = 10.0
       , background = Color.black900
-      , height = (V 60)
+      , height = (V 48)
       -- , isClickable = state.props.deleteButtonVisibility
       , alpha = 1.0
       }

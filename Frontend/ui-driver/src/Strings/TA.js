@@ -508,5 +508,20 @@ const tamilStrings = {
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "பல தவறான முயற்சிகள். பின்னர் மீண்டும் முயற்சிக்கவும்",
   ALTERNATE_NUMBER_CANNOT_BE_ADDED : "மற்றொரு எண்ணைச் சேர்க்க முடியாது",
   ADD_ALTERNATE_NUMBER_IN_MEANTIME : "இந்தச் செயல்முறை முடிய 2 வேலை நாட்கள் வரை ஆகலாம். இதற்கிடையில், நீங்கள் \nமாற்று மொபைல் எண்ணைச் சேர்க்கலாம்.",
-  OTP_RESENT : "OTP மீண்டும் அனுப்பப்பட்டது"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "மாற்று எண்ணைச் சேர்க்க முடியாது",
+  OTP_RESENT : "OTP மீண்டும் அனுப்பவும்",
+  SEDAN : "செடான்",
+  SUV : "SUV",
+  HATCHBACK : "ஹேட்ச்பேக்",
+  AUTO_RICKSHAW : "ஆட்டோ ரிக்ஷா",
+  TAXI : "ஏசி அல்லாத டாக்ஸி",
+  TAXI_PLUS : "ஏசி டாக்ஸி",
+  MY_PROFILE : "எனது சுயவிவரம்",
+  SETTINGS : "அமைப்புகள்",
+  AUTO_DETAILS : "ஆட்டோ விவரங்கள்",
+  REG_NUMBER : "பதிவு எண்",
+  TYPE : "வகை",
+  MODEL_NAME : "மாடல் பெயர்",
+  COLOUR : "நிறம்"
 }

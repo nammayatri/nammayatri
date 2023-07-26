@@ -510,5 +510,19 @@ const kannadaStrings = {
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "ಅನೇಕ ತಪ್ಪು ಪ್ರಯತ್ನಗಳು. ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   ALTERNATE_NUMBER_CANNOT_BE_ADDED : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ",
   ADD_ALTERNATE_NUMBER_IN_MEANTIME : "ಈ ಪ್ರಕ್ರಿಯೆಯು ಪೂರ್ಣಗೊಳ್ಳಲು 2 ಕೆಲಸದ ದಿನಗಳವರೆಗೆ ತೆಗೆದುಕೊಳ್ಳಬಹುದು. ಈ ಮಧ್ಯೆ, ನೀವು \nಪರ್ಯಾಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಬಹುದು.",
-  OTP_RESENT: "OTP ಮರು ಕಳುಹಿಸಲಾಗಿದೆ"
+  OTP_RESENT: "OTP ಮರು ಕಳುಹಿಸಲಾಗಿದೆ",
+  SEDAN : "ಸೆಡಾನ್",
+  SUV : "SUV",
+  HATCHBACK : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್",
+  AUTO_RICKSHAW : "ಆಟೋ ರಿಕ್ಷಾ",
+  TAXI : "ನಾನ್-ಎಸಿ ಟ್ಯಾಕ್ಸಿ",
+  TAXI_PLUS : "ಎಸಿ ಟ್ಯಾಕ್ಸಿ",
+  MY_PROFILE : "ನನ್ನ ಪ್ರೊಫೈಲ್",
+  SETTINGS : "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+  AUTO_DETAILS : "ಆಟೋರಿಕ್ಷಾ ವಿವರಗಳು",
+  REG_NUMBER : "ನೋಂದಣಿ ಸಂಖ್ಯೆ",
+  TYPE : "ಟೈಪ್",
+  MODEL_NAME : "ಮಾದರಿ ಹೆಸರು",
+  COLOUR : "ಬಣ್ಣ"
+
 }
