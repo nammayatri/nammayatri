@@ -94,6 +94,7 @@ public class ChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        this.startForeground(serviceNotificationID, createNotification());
         handler.postDelayed(this::handleMessages, delay);
         return  START_STICKY;
     }
@@ -199,7 +200,7 @@ public class ChatService extends Service {
                 Log.d(LOG_TAG,"Document path cannot be empty, chatChannelId is empty");
             }
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Error in listening to messages");
+            Log.e(LOG_TAG, "Error in listening to messages " + e);
         }
 
     }
