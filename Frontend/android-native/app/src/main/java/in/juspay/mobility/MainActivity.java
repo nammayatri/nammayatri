@@ -1153,15 +1153,15 @@ public class MainActivity extends AppCompatActivity {
                   if (juspayServicesGlobal.getDynamicUI() != null) {
                       CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
                   }
-              } catch (JSONException e) {
-                  e.printStackTrace();
+              } catch (Exception e) {
+                  Log.e(TAG, "Error in REQUEST_CONTACTS " + e);
               }
               break;
           default: return;
       }
   }
 
-    public String getPhoneContacts() throws JSONException {
+    public String getPhoneContacts() throws Exception {
         ContentResolver contentResolver = getContentResolver();
         Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
         Cursor cursor = contentResolver.query(uri,null,null,null,null);
