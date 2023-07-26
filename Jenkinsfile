@@ -39,8 +39,7 @@ pipeline {
                             allOf {
                                 expression { 'x86_64-linux' == env.SYSTEM }
                                 anyOf {
-                                    branch 'main'; branch 'prodHotPush';
-                                    changeRequest target: 'main'
+                                    branch 'main'; branch 'prodHotPush'
                                 }
                             }
                         }
