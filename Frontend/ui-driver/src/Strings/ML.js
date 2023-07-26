@@ -119,7 +119,7 @@ const mlStrings = {
   ENTER_DRIVING_LICENSE_NUMBER: "ഡ്രൈവിംഗ് ലൈസൻസ് നമ്പർ നൽകുക",
   WHERE_IS_MY_LICENSE_NUMBER: "എന്റെ ലൈസൻസ് നമ്പർ എവിടെയാണ്?",
   TRIP_DETAILS: "യാത്ര വിശദാംശങ്ങൾ",
-  BY_CASH: "പണമായി",
+  PAID_BY_CASH: "പണമായി അടച്ചു",
   ONLINE_: "ഓൺലൈൻ",
   REPORT_AN_ISSUE: "ഒരു പ്രശ്നം റിപ്പോർട്ടുചെയ്യുക",
   DISTANCE: "അകലം",

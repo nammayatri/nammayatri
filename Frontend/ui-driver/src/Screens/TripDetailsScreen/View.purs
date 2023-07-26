@@ -208,7 +208,7 @@ tripDetailsView state =
           , color Color.black
           ]
         , textView
-          [ text $ getString(PAID)<> "  " <> if state.data.paymentMode == ST.CASH then (getString BY_CASH) else (getString ONLINE_)
+          [ text if state.data.paymentMode == ST.CASH then (getString PAID_BY_CASH) else ((getString PAID) <> (getString ONLINE_))
           , textSize FontSize.a_11
           , color Color.greyDarker
           , fontStyle $ FontStyle.medium LanguageStyle

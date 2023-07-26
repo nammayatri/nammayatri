@@ -118,7 +118,7 @@ const tamilStrings = {
   ENTER_DRIVING_LICENSE_NUMBER: "ஓட்டுநர் உரிம எண்ணை உள்ளிடவும்",
   WHERE_IS_MY_LICENSE_NUMBER: "எனது உரிம எண் எங்கே?",
   TRIP_DETAILS: "பயண விவரங்கள்",
-  BY_CASH: "பணத்தால்",
+  PAID_BY_CASH: "பணமாக செலுத்தப்பட்டது",
   ONLINE_: "ஆன்லைன்",
   REPORT_AN_ISSUE: "சிக்கலைப் புகாரளிக்கவும்",
   DISTANCE: "தூரம்",

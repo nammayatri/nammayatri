@@ -118,7 +118,7 @@ const kannadaStrings = {
   ENTER_DRIVING_LICENSE_NUMBER: "ಚಾಲನಾ ಪರವಾನಗಿ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
   WHERE_IS_MY_LICENSE_NUMBER: "ನನ್ನ ಪರವಾನಗಿ ಸಂಖ್ಯೆ ಎಲ್ಲಿದೆ?",
   TRIP_DETAILS: "ಪ್ರವಾಸದ ವಿವರಗಳು",
-  BY_CASH: "ನಗದು ಮೂಲಕ",
+  PAID_BY_CASH: "ನಗದು ರೂಪದಲ್ಲಿ ಪಾವತಿಸಲಾಗಿದೆಕ",
   ONLINE_: "ಆನ್ಲೈನ್",
   REPORT_AN_ISSUE: "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
   DISTANCE: "ದೂರ",

@@ -119,7 +119,7 @@ const englishStrings = {
   ENTER_DRIVING_LICENSE_NUMBER: "Enter Driving License Number",
   WHERE_IS_MY_LICENSE_NUMBER: "Where is my License Number?",
   TRIP_DETAILS: "Trip Details",
-  BY_CASH: "by Cash",
+  PAID_BY_CASH: "Paid by Cash",
   ONLINE_: "Online",
   REPORT_AN_ISSUE: "Report an Issue",
   DISTANCE: "Distance",

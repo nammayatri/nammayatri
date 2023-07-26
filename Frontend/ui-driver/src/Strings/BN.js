@@ -119,7 +119,7 @@ const bengaliStrings = {
 	ENTER_DRIVING_LICENSE_NUMBER: "ড্রাইভিং লাইসেন্স নম্বর প্রবেশ করান",
 	WHERE_IS_MY_LICENSE_NUMBER: "আমার লাইসেন্স নম্বরটি কোথায়?",
 	TRIP_DETAILS: "ভ্রমণের বিশদ",
-	BY_CASH: "নগদে",
+	PAID_BY_CASH: "নগদে পরিশোধ করা হয়েছে",
 	ONLINE_: "অনলাইন",
 	REPORT_AN_ISSUE: "একটি সমস্যা রিপোর্ট",
 	DISTANCE: "দূরত্ব",

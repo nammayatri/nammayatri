@@ -119,7 +119,7 @@ const hindiStrings = {
   ENTER_DRIVING_LICENSE_NUMBER: "ड्राइविंग लाइसेंस नंबर दर्ज करें",
   WHERE_IS_MY_LICENSE_NUMBER: "मेरा लाइसेंस नंबर कहां है?",
   TRIP_DETAILS: "यात्रा विवरण",
-  BY_CASH: "नकद द्वारा",
+  PAID_BY_CASH: "नकद भुगतान किया",
   ONLINE_: "ऑनलाइन",
   REPORT_AN_ISSUE: "मामले की रिपोर्ट करें",
   DISTANCE: "दूरी",
