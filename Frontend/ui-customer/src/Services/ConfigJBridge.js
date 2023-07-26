@@ -1,16 +1,29 @@
-import { callbackMapper } from 'presto-ui';
-
 export const getKeyInSharedPrefKeysConfig = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  };
+  if (JBridge.getKeysInSharedPref) {
+    return JBridge.getKeysInSharedPref(key);
+  }
+  if (window.__OS == "IOS") {
+    return JBridge.getKeysInSharedPrefs(key);
+  }
+  return JBridge.getKeyInNativeSharedPrefKeys(key);
+};
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  };
+  if (JBridge.getKeysInSharedPref) {
+    return JBridge.getKeysInSharedPref(key);
+  }
+  if (window.__OS == "IOS") {
+    return JBridge.getKeysInSharedPrefs(key);
+  }
+  return JBridge.getKeyInNativeSharedPrefKeys(key);
+};
 
 export const getValueToLocalNativeStoreConfig = function (key) {
-  if (window.__OS == "IOS") {
-    return window.JBridge.getKeysInSharedPrefs(key);
+  if (JBridge.getKeysInSharedPref) {
+    return JBridge.getKeysInSharedPref(key);
   }
-  return window.JBridge.getKeyInNativeSharedPrefKeys(key);
+  if (window.__OS == "IOS") {
+    return JBridge.getKeysInSharedPrefs(key);
+  }
+  return JBridge.getKeyInNativeSharedPrefKeys(key);
 }

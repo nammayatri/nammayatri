@@ -50,7 +50,7 @@ data Action = PrimaryButtonActionController String PrimaryButtonController.Actio
             | NoAction
             | Reload
             | BackPressed
-            | LocationPermissionCallBack String
+            | LocationPermissionCallBack Boolean
             | InternetActionCallBack String
             | AfterRender
 
@@ -62,8 +62,7 @@ eval BackPressed state = exit GoBack
 
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do 
-  if isLocationPermissionEnabled == "true" then do 
-    exit (LocationCallBack state)
+  if isLocationPermissionEnabled then exit (LocationCallBack state)
     else continue state
 
 eval (InternetActionCallBack isInternetAvailable) state = do 

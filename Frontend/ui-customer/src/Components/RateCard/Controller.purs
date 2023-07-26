@@ -29,7 +29,9 @@ type Config = {
   vehicleType :: String,
   driverAdditionsImage :: String,
   driverAdditionsLogic :: String,
-  title :: String 
+  title :: String ,
+  showDetails :: Boolean,
+  alertDialogPrimaryColor :: String
 }
 
 type RateCardDetails = {
@@ -48,5 +50,7 @@ config = {
   rateCardArray : [],
   driverAdditionsImage : "",
   driverAdditionsLogic : "",
-  title : ""
+  title : "",
+  showDetails : true,
+  alertDialogPrimaryColor: "#2194FF"
 }

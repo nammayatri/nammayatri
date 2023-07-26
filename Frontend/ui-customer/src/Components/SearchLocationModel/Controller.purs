@@ -22,6 +22,12 @@ import Data.Maybe (Maybe(..))
 import Prelude (show)
 import PrestoDOM (Visibility(..))
 import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import MerchantConfig.Types (AppConfig)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 data Action = GoBack
             | NoAction
@@ -50,12 +56,14 @@ type SearchLocationModelState = {
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
+  , homeScreenConfig :: AppConfig
+  , logField :: Object Foreign
 }
 
 dummy_data :: Array LocationListItemState
 dummy_data = [
-    { prefixImageUrl : "ny_ic_briefcase,https://assets.juspay.in/nammayatri/images/user/ny_ic_briefcase.png"
-    , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
+    { prefixImageUrl : "ny_ic_briefcase," <> (getAssetStoreLink FunctionCall) <> "ny_ic_briefcase.png"
+    , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
     , postfixImageVisibility : true
     , title : "Work"
     , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
@@ -78,8 +86,8 @@ dummy_data = [
     , distance : Nothing
     , showDistance : Just false
     }
-  , { prefixImageUrl : "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png"
-    , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
+  , { prefixImageUrl : "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png"
+    , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
     , postfixImageVisibility : true
     , title : "Work"
     , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
@@ -102,8 +110,8 @@ dummy_data = [
     , distance : Nothing
     , showDistance : Just false
     }
-  , { prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
-    , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
+  , { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+    , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
     , postfixImageVisibility : true
     , title : "Work"
     , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"

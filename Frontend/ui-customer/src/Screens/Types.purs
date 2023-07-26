@@ -30,6 +30,9 @@ import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
+import MerchantConfig.Types
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 type Contacts = {
   name :: String,
@@ -138,6 +141,7 @@ type StepsHeaderModelState = {
   activeIndex :: Int,
   textArray :: Array String,
   backArrowVisibility :: Boolean
+, config :: AppConfig
 }
 
 -- ############################################################# ChooseLanguageScreen ################################################################################
@@ -148,21 +152,14 @@ type ChooseLanguageScreenState = {
 }
 
 type ChooseLanguageScreenData =  {
-  languages :: Array Language,
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type ChooseLanguageScreenProps =  {
   selectedLanguage :: String,
   btnActive :: Boolean,
   exitAnimation :: Boolean
- }
-
-
-type Language =  {
-  name :: String,
-  value :: String,
-  subTitle :: String
  }
 
 
@@ -196,6 +193,8 @@ type EnterMobileNumberScreenStateData = {
   , otp :: String
   , timer :: Int
   , timerID :: String
+  , config :: AppConfig,
+  logField :: Object Foreign
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -231,6 +230,7 @@ type AccountSetUpScreenStateData =
     , email :: String
     , gender :: Maybe Gender
     , nameErrorMessage :: Maybe ErrorType
+    , config :: AppConfig
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
@@ -260,7 +260,8 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     rating :: Int,
     selectedItem :: IndividualRideCardState,
-    tripId :: String
+    tripId :: String,
+    config :: AppConfig
     -- bookingId :: String
   }
 
@@ -294,7 +295,8 @@ type InvoiceScreenData =
     gst :: Number,
     totalAmount :: String,
     date :: String ,
-    selectedItem :: IndividualRideCardState
+    selectedItem :: IndividualRideCardState,
+    config :: AppConfig
   }
 
 type InvoiceScreenProps =
@@ -317,7 +319,8 @@ type ContactUsScreenData =
     subject :: String,
     description :: String,
     bookingId :: String,
-    errorMessage :: Maybe ErrorType
+    errorMessage :: Maybe ErrorType,
+    config :: AppConfig
   }
 
 type ContactUsScreenProps =
@@ -354,7 +357,8 @@ type HelpAndSupportScreenData =
     bookingId :: String,
     email :: String,
     description :: String,
-    accountStatus :: DeleteStatus
+    accountStatus :: DeleteStatus ,
+    config :: AppConfig
   }
 
 type HelpAndSuportScreenProps =
@@ -389,7 +393,9 @@ type MyRidesScreenState =
 type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
-    loadMoreText :: String
+    loadMoreText :: String,
+    config :: AppConfig,
+    logField :: Object Foreign
   }
 
 type MyRideScreenProps = {
@@ -466,8 +472,10 @@ type ItemState =
 
 -- ################################################ PermissionScreenState ##################################################
 
-type PermissionScreenState =
-  {}
+type PermissionScreenState = {
+    appConfig :: AppConfig,
+    logField :: Object Foreign
+}
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen
@@ -558,6 +566,8 @@ type HomeScreenStateData =
   , cancelRideConfirmationData :: CancelRideConfirmationData
   , pickUpCharges :: Int
   , ratingViewState :: RatingViewState
+  , config :: AppConfig
+  , logField :: Object Foreign
   }
 
 type HomeScreenStateProps =
@@ -693,15 +703,6 @@ type TipViewProps = {
   , primaryButtonText :: String
 }
 
-type BannerViewState = {
-  backgroundColor :: String,
-  title :: String,
-  titleColor :: String,
-  actionText :: String,
-  actionTextColor :: String,
-  imageUrl :: String
-}
-
 type Contact = {
      name :: String,
      phoneNo :: String
@@ -753,6 +754,8 @@ type ReferralScreenState =
     , showThanks :: Boolean
     , isInvalidCode :: Boolean
     , isExpandReference :: Boolean
+    , config :: AppConfig
+    , logField :: Object Foreign
   }
 
 -- ################################## SelectLanguageScreenState ###############################
@@ -763,7 +766,8 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type SelectLanguageScreenProps =  {
@@ -805,7 +809,9 @@ type ContactDetail = {
 
 -- ############################################## AboutUsScreenState #############################
 
-type AboutUsScreenState = {}
+type AboutUsScreenState = {
+    appConfig :: AppConfig
+}
 
 -- ############################################## MyProfileScreenState #############################
 
@@ -847,7 +853,9 @@ type MyProfileScreenData = {
   editedEmailId :: Maybe String,
   editedGender :: Maybe Gender,
   emailErrorMessage :: Maybe ErrorType,
-  nameErrorMessage :: Maybe ErrorType
+  nameErrorMessage :: Maybe ErrorType,
+  config :: AppConfig,
+  logField :: Object Foreign
 }
 
 data ErrorType = INVALID_EMAIL | EMAIL_EXISTS | EMAIL_CANNOT_BE_BLANK | INVALID_NAME | NAME_CANNOT_BE_BLANK
@@ -893,6 +901,7 @@ type DriverInfoCard =
   , merchantExoPhone :: String
   , createdAt :: String
   , initDistance :: Maybe Int
+  , config :: AppConfig
   }
 
 type RatingCard =
@@ -916,6 +925,7 @@ type RatingCard =
   , distanceDifference :: Int
   , feedback :: String
   , feedbackList :: Array FeedbackAnswer 
+  , appConfig :: AppConfig
   }
 
 type Address =
@@ -948,6 +958,7 @@ type SavedLocationScreenData =
   {
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
+  , config :: AppConfig
   }
 
 type DistInfo =
@@ -1012,6 +1023,7 @@ type AddNewAddressScreenData =
   , addressComponents :: Array AddressComponents
   , polygonCoordinates :: String
   , nearByPickUpPoints :: Array Location
+  , config :: AppConfig
   }
 
 type AddNewAddressScreenProps =
@@ -1033,7 +1045,9 @@ type AddNewAddressScreenProps =
   }
 
 type AppUpdatePopUpState =
- { version :: Int }
+ { version :: Int ,
+   logField :: Object Foreign
+ }
 
 
 data NotifyFlowEventType = RATE_DRIVER_SKIPPED | SEARCH_CANCELLED
@@ -1110,7 +1124,7 @@ type Fares = {
 
 type FareComponent = {
   fareType :: String
-, price :: Int
+, price :: String
 , title :: String
 }
 
@@ -1157,6 +1171,8 @@ instance showZoneType :: Show ZoneType where show = genericShow
 instance eqZoneType :: Eq ZoneType where eq = genericEq
 instance encodeZoneType :: Encode ZoneType where encode = defaultEncode
 instance decodeZoneType :: Decode ZoneType where decode = defaultDecode
+
+
 newtype TipViewData = TipViewData {
     stage :: TipViewStage
   , activeIndex :: Int

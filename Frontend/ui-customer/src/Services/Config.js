@@ -1,7 +1,5 @@
-import { callbackMapper } from 'presto-ui';
-
 export const environment = function () {
-    return window.configEnv
+    return (window.__payload.payload.environment === "staging") ? "master" : window.__payload.payload.environment;
 };
 
 export const getMerchant = function () {

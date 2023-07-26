@@ -1,6 +1,6 @@
 <html>
 <head>
-    <title>ATLAS - RELEASE</title>
+    <title>MOBILITY-RELEASE</title>
 </head>
 <body>
 </body>
@@ -9,33 +9,63 @@
     window.JBridge = top.JBridge;
     window.Android = top.Android;
     window.DUIGatekeeper = JBridge;
-    window.onFileUpdated = function (){
-      console.log("arguments -=>", arguments)
-      if ((arguments[0].includes("v1-index_bundle.zip")) && ((arguments[0].includes("in.juspay.nammayatri")) || (arguments[0].includes("in.juspay.nammayatripartner"))) ){
-        // JBridge.toast("BUNDLE UPDATE AVAILABLE");
-        JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
-            event: "reboot",
-            service: "in.juspay.nammayatri",
-            payload: {},
-            error: false,
-            errorMessage: "",
-            errorCode: ""
-          }), "");
-        console.log("arguments after -=>", arguments)
-      }
-      
+    top.__BOOT_LOADER = top.__BOOT_LOADER || {};
+    window.loadInDuiBundle = false;
+    var count = 5;
+
+    var checkAndLoadFile = function() {
+        console.log('callback triggered count : ', count);
+        var jsFile = JBridge.loadFileInDUI('index_bundle.js');
+        if(jsFile == "" || jsFile == "undefined") {
+            if (count >= 0) {
+                console.log('bundle not present, download');
+                count--;
+                downloadFile("fnLoadBundle" + JSON.stringify(count));
+            } else {
+                console.log('bundle not present, failed');
+                onEvent('bundle_load_failed');
+            }
+        } else {
+            console.log('bundle present, load');
+            loadBundle(jsFile);
+        }
     }
-    window.JOS.addEventListener("onFileUpdated")();
 
+    function downloadFile(fnName) {
+        const filePath = packageUrl('in.yatri.consumer');
+        top.__BOOT_LOADER[fnName] = checkAndLoadFile;
+        JBridge.renewFile(filePath, "v1-index_bundle.zip", fnName);
+    }
 
-    </script>
-<script type="text/javascript">
-        console.log("Here is the Release file")
+    function loadBundle(innerHTML) {
+        console.log("Here is the Release file");
         var headID = document.getElementsByTagName("head")[0];
         var newScript = document.createElement('script');
         newScript.type = 'text/javascript';
         newScript.id = 'mystique';
-        newScript.innerHTML = JBridge.loadFileInDUI('index_bundle.js');
+        newScript.innerHTML = innerHTML;
         headID.appendChild(newScript);
-    </script>
+    }
+
+    function packageUrl(service) {
+      const fileContent = JSON.parse(JBridge.loadFileInDUI('config.json'));
+      const url = fileContent.new.package[service];
+      return url;
+    }
+
+    function onEvent(_event) {
+      JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
+                event: _event,
+                service: "in.yatri.consumer",
+                payload: {},
+                error: false,
+                errorMessage: "",
+                errorCode: ""
+            }), "");
+    }
+
+    checkAndLoadFile();
+
+
+</script>
 </html>

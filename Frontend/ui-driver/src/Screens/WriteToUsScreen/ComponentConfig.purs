@@ -37,14 +37,11 @@ primaryEditTextConfig optionItem = let
       { editText
         { singleLine = true
           , pattern = Just "[0-9]*,10"
-          , fontStyle = FontStyle.medium LanguageStyle
-          , textSize = FontSize.a_16
           , text = if(optionItem.title == DescribeYourIssue) then "" else (optionItem.value)
           , placeholder = if(optionItem.title == DescribeYourIssue) then (getString YOU_CAN_DESCRIBE_ISSUE_THAT_YOU_FACED_HERE) else ""
         }
       , topLabel
-        { textSize = FontSize.a_14
-        , text = (getTitle optionItem.title)
+        { text = (getTitle optionItem.title)
         , color = Color.greyTextColor
         }
       }
@@ -57,7 +54,7 @@ primaryButtonConfig state = let
       { textConfig
       { text = if(state.props.isThankYouScreen) then (getString GO_TO_HOME) else (getString SUBMIT)
       , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      }
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , background = Color.black900

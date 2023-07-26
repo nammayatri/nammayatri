@@ -566,5 +566,6 @@ const hindiStrings = {
   HOMETOWN  : "गृहनगर",
   MISSED_OPPORTUNITY : "छूटे हुए अवसर",
   HOW_OLD_IS_YOUR_VEHICLE : "आपका वाहन कितना पुराना है (वर्षों में)?",
-  ENTER_NAME_OF_VEHICLE : "अपने वाहन का नाम दर्ज करें"
+  ENTER_NAME_OF_VEHICLE : "अपने वाहन का नाम दर्ज करें",
+  NEW_ : "नया"
 }

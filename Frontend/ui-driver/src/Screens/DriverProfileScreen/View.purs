@@ -41,8 +41,8 @@ import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=),(<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, scrollBarY)
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
+import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
@@ -64,7 +64,8 @@ import Components.PrimaryEditText as PrimaryEditText
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import Components.CheckListView.View as CheckListView
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 import Components.PopUpModal as PopUpModal
 import Storage (isLocalStageOn)
 import Debug (spy)
@@ -955,24 +956,23 @@ profileOptionsLayout state push =
                   , height WRAP_CONTENT
                   , orientation HORIZONTAL
                   , gravity CENTER_VERTICAL
-                  ][ textView
+                  ][ textView $
                       [ width WRAP_CONTENT
                       , height WRAP_CONTENT
                       , text $ "V " <> (getValueToLocalStore VERSION_NAME)
-                      , textSize FontSize.a_14
                       , visibility if(optionItem.menuOptions == ABOUT_APP) then VISIBLE else GONE
                       , margin (MarginRight 5)
-                      ]
+                      ] <> FontStyle.paragraphText TypoGraphy
                     , imageView
                       [ width $ V 18
                       , height $ V 18
-                      , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                      , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
                       ]
                   ]
               ]
               , if (index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
             ]
-          ) (optionList "lazyEvaluation")
+          ) (optionList "")
     )
  ]
 

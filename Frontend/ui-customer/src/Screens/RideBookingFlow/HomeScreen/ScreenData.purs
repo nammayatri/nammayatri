@@ -16,15 +16,15 @@
 module Screens.HomeScreen.ScreenData where
 
 import Components.LocationListItem.Controller (dummyLocationListState)
-import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Styles.Colors as Color
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
+import Foreign.Object (empty)
+import MerchantConfig.DefaultConfig as DC
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 initData :: HomeScreenState
@@ -106,6 +106,8 @@ initData = {
         issueDescription : "",
         rideBookingRes : dummyRideBooking
     }
+    , config : DC.config
+    , logField : empty
     },
     props: {
       rideRequestFlow : false
@@ -225,46 +227,6 @@ emergencyHelpModalData = {
   isSelectEmergencyContact : false
 }
 
-dummyQuoteList :: Array QuoteListItemState
-dummyQuoteList = [
-  {
-   seconds : 10
-  , id : "1"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "200"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  , selectedQuote : Nothing
-
-  },
-  {
-   seconds : 10
-  , id : "2"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "300"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  },
-  {
-   seconds : 3
-  , id : "3"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "3150"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  }
-]
 
 dummyPreviousRiderating :: RatingCard
 dummyPreviousRiderating = {
@@ -287,6 +249,7 @@ dummyPreviousRiderating = {
 , distanceDifference : 0
 , feedback : ""
 , feedbackList : []
+, appConfig : DC.config 
 }
 
 
@@ -321,6 +284,7 @@ dummyDriverInfo =
   , merchantExoPhone : ""
   , createdAt : ""
   , initDistance : Nothing
+  , config : DC.config
   }
 
 dummySettingBar :: SettingSideBarState
@@ -330,7 +294,9 @@ dummySettingBar = {
   , opened : CLOSED
   , email : Nothing
   , gender : Nothing
-  }
+  , appConfig : DC.config
+  , sideBarList : ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
+}
 
 dummyAddress :: Address
 dummyAddress = {

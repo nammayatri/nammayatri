@@ -12,7 +12,7 @@ export const getNewTrackingId = function (unit) {
 };
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
+    return (JBridge.getKeysInSharedPref ? JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key));
   };
 
 export const validateInputPattern = function (input, pattern){
@@ -39,7 +39,6 @@ export const getLocationName = function(cb){
         }
     }
 }
-export const hideSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
 
 export const getCurrentDate = function (string) {
   var today = new Date();
@@ -121,8 +120,12 @@ export const storeCallBackCustomer = function (cb) {
             var callback = callbackMapper.map(function (notificationType) {
                 cb(action (notificationType))();
             });
+            var notificationCallBack = function (notificationType) {
+              cb(action (notificationType))();
+          };
+            window.callNotificationCallBack = notificationCallBack;
             console.log("In storeCallBackCustomer ---------- + " + action);
-            window.JBridge.storeCallBackCustomer(callback);
+            JBridge.storeCallBackCustomer(callback);
         }
     }}
     catch (error){
@@ -166,18 +169,18 @@ export const makePascalCase = function (str){
     return changeToUpperCase;
 }
 
-  export const decodeError = function (er) {
-    return function (key){
-      try {
-        var errorPayload = JSON.parse(er)[key];
-        if(errorPayload === null)
-          return "";
-        return  errorPayload.toString();
-      } catch (e) {
-        console.log(e);
+export const decodeError = function (er) {
+  return function (key){
+    try {
+      var errorPayload = JSON.parse(er)[key];
+      if(errorPayload === null)
         return "";
-      }
+      return  errorPayload.toString();
+    } catch (e) {
+      console.log(e);
+      return "";
     }
+  }
   };
 
 export const toString = function (attr) {
@@ -307,7 +310,7 @@ export const fetchFromLocalStoreImpl = function(key) {
     return function (just) {
         return function (nothing) {
           return function () {
-            var state = window.JBridge.getKeysInSharedPrefs(key);
+            var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
             if (state != "__failed" && state != "(null)") {
               return just(state);
             }
@@ -321,7 +324,7 @@ export const fetchFromLocalStoreTempImpl = function(key) {
   return function (just) {
       return function (nothing) {
         return function () {
-          var state = window.JBridge.getKeysInSharedPrefs(key);
+          var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
           var newState = JSON.parse(state);
           var predictionArray = newState.predictionArray;
           try {
@@ -431,37 +434,7 @@ export const contactPermission = function () {
 
 export const performHapticFeedback = function () {
   if(window.JBridge.performHapticFeedback ){
-    if ((window.__OS == "IOS") || (JBridge.getAndroidVersion() >= 26)){
       return window.JBridge.performHapticFeedback();
-    }
-  }
-}
-
-export const initialWebViewSetUp = function (cb) {
-  return function (id) {
-      return function (action) {
-        return function () {
-          try {
-            var callback = callbackMapper.map(function (val) {
-              cb(action(val))();
-            });
-
-            return window.JBridge.initialWebViewSetUp(callback,id);
-          } catch (err) {
-            console.log("initialWebViewSetUp error " + err);
-          }
-        };
-      };
-  };
-};
-
-export const goBackPrevWebPage = function (id) {
-  try {
-    if (window.JBridge.goBackPrevWebPage){
-      return window.JBridge.goBackPrevWebPage(id);
-    }
-  } catch (err) {
-    console.log("goBackPrevWebPage error " + err);
   }
 }
 
@@ -483,9 +456,6 @@ export const storeOnResumeCallback = function (cb) {
   }
 }
 
-export const getMerchantId = function(id) {
-  return window.merchantID;
-}
 
 export const drawPolygon = function(geoJson) {
   return function (locationName) {
@@ -518,5 +488,19 @@ export const strLenWithSpecificCharacters = function(input) {
   const regex = new RegExp(pattern, 'g');
   const matches = input.match(regex);
   return matches ? matches.length : 0;
+  }
+}
+
+export const getMobileNumber = function (signatureAuthData, maskedNumber) {
+  try {
+    const re = /^[6-9][)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
+    var mobileNumber = JSON.parse(signatureAuthData).mobileNumber;
+    if (re.test(mobileNumber)) {
+      return mobileNumber;
+    } else {
+      return maskedNumber.replace("...", "****");
+    }
+  } catch (err) {
+    console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
 }

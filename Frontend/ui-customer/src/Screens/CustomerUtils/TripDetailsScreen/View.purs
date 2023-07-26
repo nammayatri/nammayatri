@@ -35,6 +35,8 @@ import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -142,18 +144,16 @@ lostAndFoundView push state =
   , disableClickFeedback false
   , visibility if (state.data.selectedItem.status /= "CANCELLED" && state.props.canConnectWithDriver) then VISIBLE else GONE
   , onClick push $ (const ShowPopUp)
-  ][  textView
+  ][  textView $
       [ text (getString LOST_SOMETHING)
-      , textSize FontSize.a_14
       , color Color.darkDescriptionText
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body1 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity RIGHT
       ][  imageView
-          [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+          [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
           , height (V 15)
           , width (V 15)
           ]
@@ -170,26 +170,23 @@ tripIdView push state =
   , visibility if state.data.tripId == "" then GONE else VISIBLE
   , margin (MarginBottom 16)
   , gravity LEFT
-  ][  textView
+  ][  textView $
       [ text (getString RIDE_ID)
-      , textSize FontSize.a_14
       , color Color.black700
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body1 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const Copy)
       , gravity CENTER_VERTICAL
-      ][ textView
+      ][ textView $
           [ text state.data.tripId
           , width WRAP_CONTENT
           , color Color.black900
-          , textSize FontSize.a_14
-          ]
+          ] <> FontStyle.paragraphText LanguageStyle
         , imageView
-          [ imageWithFallback "ny_ic_copy,https://assets.juspay.in/nammayatri/images/common/ny_ic_copy.png"
+          [ imageWithFallback $ "ny_ic_copy," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_copy.png"
           , height (V 13)
           , width (V 11)
           , margin (Margin 10 0 0 0)
@@ -224,10 +221,10 @@ tripDetailsView state =
               -- , background Color.grey800
               , width (V 36)
               , height (V 36)
-              , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
+              , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
               ]
             , imageView
-              [ imageWithFallback "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+              [ imageWithFallback $ "ny_ic_auto," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_auto.png"
               , width (V 40)
               , height (V 40)
               ]
@@ -238,24 +235,19 @@ tripDetailsView state =
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin (MarginLeft 10)
-      ][  textView
+      ][  textView $
           [ text state.data.driverName
-          , textSize FontSize.a_14
-          , visibility if state.data.driverName /= "" then VISIBLE else GONE
-          , fontStyle $ FontStyle.medium LanguageStyle
           , color Color.darkDescriptionText
-          ]
+          ] <> FontStyle.body1 LanguageStyle
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-          ][  textView
+          ][  textView $
               [ text state.data.date
-              , textSize FontSize.a_11
               , color Color.greyShade
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.body16 LanguageStyle
             , linearLayout
               [ height MATCH_PARENT
               , width WRAP_CONTENT
@@ -269,12 +261,10 @@ tripDetailsView state =
                   , width (V 5)
                   ][]
                ]
-            , textView
+            , textView $
               [ text state.data.time
-              , textSize FontSize.a_11
               , color Color.greyShade
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
+              ] <> FontStyle.body16 LanguageStyle
             ]
         ]
     , linearLayout
@@ -282,18 +272,14 @@ tripDetailsView state =
       , width MATCH_PARENT
       , gravity RIGHT
       , orientation VERTICAL
-      ][  textView
+      ][  textView $
           [ text (state.data.totalAmount)
-          , textSize FontSize.a_18
-          , fontStyle $ FontStyle.bold LanguageStyle
           , color Color.black
-          ]
-        , textView
+          ] <> FontStyle.h2 LanguageStyle
+        , textView $
           [ text $ if state.data.selectedItem.status == "CANCELLED" then (getString CANCELLED) else (getString PAID) <> " " <> if state.data.paymentMode == CASH then (getString BY_CASH) else (getString ONLINE_)
-          , textSize FontSize.a_11
           , color if state.data.selectedItem.status == "CANCELLED" then Color.red else Color.greyShade
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          ] <> FontStyle.captions LanguageStyle
         ]
     ]
 
@@ -316,12 +302,10 @@ ratingAndInvoiceView state push =
   , gravity CENTER_VERTICAL
   , orientation HORIZONTAL
   , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
-  ][  textView
+  ][  textView $ 
       [ text $ (getString YOU_RATED)
-      , textSize FontSize.a_12
-      , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.greyDavy
-      ]
+      ] <> FontStyle.tags LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -335,7 +319,7 @@ ratingAndInvoiceView state push =
                           ][imageView
                               [ height $ V 14
                               , width $ V 14
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png" 
                               ]
                             ]) [1 ,2 ,3 ,4 ,5])
     -- , linearLayout
@@ -364,18 +348,16 @@ invoiceView state push =
     , disableClickFeedback false
     , onClick push $ (const ViewInvoice)
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
-    ][  textView
+    ][  textView $
         [ text (getString VIEW_INVOICE)
-        , textSize FontSize.a_14
         , color Color.darkDescriptionText
-        , fontStyle $ FontStyle.medium LanguageStyle
-        ]
+        ] <> FontStyle.body1 LanguageStyle
      ,  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+            [ imageWithFallback $     "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , height (V 15)
             , width (V 15)
             ]
@@ -398,18 +380,16 @@ reportIssueView state push =
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
         , margin (MarginBottom 16)
-        ][  textView
+        ][  textView $
             [ text (getString REPORT_AN_ISSUE)
-            , textSize FontSize.a_14
             , color Color.darkDescriptionText
-            , fontStyle $ FontStyle.medium LanguageStyle
-            ]
+            ] <> FontStyle.body1 LanguageStyle
           , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity RIGHT
             ][  imageView
-                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                [ imageWithFallback if state.props.reportIssue then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                 , height $ if state.props.reportIssue then V 6 else V 15
                 , width $ if state.props.reportIssue then V 12 else V 15
                 ]
@@ -437,18 +417,16 @@ reportIssueView state push =
                       $ [ height MATCH_PARENT
                       , width WRAP_CONTENT
                       , weight 1.0
-                      , textSize FontSize.a_14
                       , padding (Padding 14 14 14 14)
                       , color Color.black800
                       , gravity LEFT
                       , background Color.white900
-                      , fontStyle $ FontStyle.semiBold LanguageStyle
                       , text ""
                       , hint $ getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
                       , hintColor $ Color.blueGrey
                       , pattern "[^\n]*,255"
                       , onChange push $ MessageTextChanged
-                      ]
+                      ] <> FontStyle.body6 LanguageStyle
 
                  ]
               ]
@@ -470,28 +448,25 @@ issueReportedView state push =
       , gravity CENTER
       , orientation VERTICAL
       ][ imageView
-          [ imageWithFallback "ny_ic_letter,https://assets.juspay.in/nammayatri/images/user/ny_ic_letter.png"
+          [ imageWithFallback $ "ny_ic_letter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_letter.png"
           , height $ V 149
           , width $ V 149
           , margin (MarginBottom 32)
           ]
-        , textView
+        , textView $
           [ text $ getString THANK_YOU_FOR_WRITING
-          , textSize FontSize.a_22
-          , fontStyle $ FontStyle.bold LanguageStyle
           , gravity CENTER
           , width MATCH_PARENT
           , color Color.black900
           , margin (MarginBottom 12)
-          ]
-        , textView
+          ] <> FontStyle.h1 LanguageStyle
+        , textView $
           [ text $ getString WE_HAVE_RECEIVED_YOUR_ISSUE
-          , textSize FontSize.a_13
           , margin (Margin 42 0 42 0)
           , gravity CENTER
           , width MATCH_PARENT
           , color Color.blackLightGrey
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         ]
         , linearLayout
           [ width MATCH_PARENT

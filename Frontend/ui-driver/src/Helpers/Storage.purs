@@ -70,6 +70,7 @@ data KeyStore = USER_NAME
                 | TRIGGER_MAPS
                 | DEVICE_DETAILS
                 | HAS_TAKEN_FIRST_RIDE
+                | CURRENCY
                 | IS_BANNER_ACTIVE
                 | IS_DRIVER_AT_PICKUP
                 | RIDE_START_LAT

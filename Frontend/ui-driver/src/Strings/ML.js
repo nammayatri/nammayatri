@@ -570,5 +570,6 @@ const mlStrings = {
   HOMETOWN  : "ഹോം ടൗൺn",
   MISSED_OPPORTUNITY : "അവസരങ്ങൾ നഷ്ടപ്പെടുത്തി",
   HOW_OLD_IS_YOUR_VEHICLE : "നിങ്ങളുടെ വാഹനത്തിന് എത്ര പഴക്കമുണ്ട് (വർഷങ്ങളിൽ)?",
-  ENTER_NAME_OF_VEHICLE : "നിങ്ങളുടെ വാഹനത്തിന്റെ പേര് നൽകുക"
+  ENTER_NAME_OF_VEHICLE : "നിങ്ങളുടെ വാഹനത്തിന്റെ പേര് നൽകുക",
+  NEW_ : "പുതിയത്"
 }
