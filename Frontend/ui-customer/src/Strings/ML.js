@@ -533,6 +533,7 @@ const malayalamStrings = {
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "നിങ്ങളുടെ പ്രശ്നം വിജയകരമായി റിപ്പോർട്ട് ചെയ്തു",
   "OTP_RESENT_SUCCESSFULLY" : "OTP വീണ്ടും അയച്ചു",
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "വിവരണം 10 അക്ഷരമാലയിൽ കൂടുതലായിരിക്കണം",
+  "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "നിങ്ങൾക്ക് ഒരു ബുക്കിംഗ് നടക്കുന്നുണ്ടെന്ന് തോന്നുന്നു, അത് കാണുന്നതിന് ദയവായി ആപ്പ് പുനരാരംഭിക്കുക",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "തെറ്റായ OTP, വീണ്ടും ശ്രമിക്കുക.",
   "N_MORE_ATTEMPTS_LEFT" : " കൂടുതൽ ശ്രമങ്ങൾ അവശേഷിക്കുന്നു"
 }

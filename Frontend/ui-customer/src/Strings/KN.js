@@ -531,6 +531,7 @@ const kannadaStrings = {
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರದಿ ಮಾಡಲಾಗಿದೆ",
   "OTP_RESENT_SUCCESSFULLY" : "OTP ಯಶಸ್ವಿಯಾಗಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ",
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "ವಿವರಣೆಯು 10 ಕ್ಕಿಂತ ಹೆಚ್ಚು ವರ್ಣಮಾಲೆಯ ಅಕ್ಷರಗಳನ್ನು ಹೊಂದಿರಬೇಕು",
+  "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "ನೀವು ನಡೆಯುತ್ತಿರುವ ಬುಕಿಂಗ್ ಅನ್ನು ಹೊಂದಿರುವಂತೆ ತೋರುತ್ತಿದೆ, ದಯವಿಟ್ಟು ಅದನ್ನು ವೀಕ್ಷಿಸಲು ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "ತಪ್ಪಾದ OTP, ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ.",
   "N_MORE_ATTEMPTS_LEFT" : " ಪ್ರಯತ್ನಗಳು ಉಳಿದಿವೆ"
 }

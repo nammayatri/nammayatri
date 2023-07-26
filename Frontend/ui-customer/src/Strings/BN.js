@@ -534,5 +534,6 @@ const bengaliStrings = {
   "OTP_RESENT_SUCCESSFULLY" : "OTP সফলভাবে পুনরায় পাঠানো হয়েছে",
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "বর্ণনা 10টির বেশি বর্ণমালার অক্ষর হওয়া উচিত",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "ভুল OTP, আবার চেষ্টা করুন.",
-  "N_MORE_ATTEMPTS_LEFT" : " আরো প্রচেষ্টা বাকি"
+  "N_MORE_ATTEMPTS_LEFT" : " আরো প্রচেষ্টা বাকি",
+  "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "মনে হচ্ছে আপনার একটি চলমান বুকিং আছে, এটি দেখতে অ্যাপটি পুনরায় চালু করুন"
 }

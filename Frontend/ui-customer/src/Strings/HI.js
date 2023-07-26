@@ -537,6 +537,7 @@ const hindiStrings = {
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "आपकी समस्या की सफलतापूर्वक रिपोर्ट कर दी गई है",
   "OTP_RESENT_SUCCESSFULLY" : "OTP सफलतापूर्वक पुनः भेजा गया",
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "विवरण 10 से अधिक वर्णमाला वर्ण का होना चाहिए",
+  "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "ऐसा लगता है कि आपकी कोई बुकिंग चल रही है, कृपया इसे देखने के लिए ऐप को पुनरारंभ करें",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "गलत OTP, कृपया पुन: प्रयास करें।",
   "N_MORE_ATTEMPTS_LEFT" : " और प्रयास शेष हैं"
 }
