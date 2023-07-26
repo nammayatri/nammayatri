@@ -358,9 +358,6 @@ findBookingIdAssignedByEstimateId (Id estimateId) = do
   booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote]
   return $ listToMaybe $ Domain.id <$> booking
 
-findAllByRiderIdAndRide :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
-findAllByRiderIdAndRide = error ""
-
 -- findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 -- findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
 --   let isOnlyActive = Just True == mbOnlyActive

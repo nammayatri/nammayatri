@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
 newtype BookingListRes = BookingListRes
@@ -42,10 +43,12 @@ bookingStatus bookingId (personId, _) = do
   -- booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
+  logInfo $ "booking: test " <> show booking
   SRB.buildBookingAPIEntity booking
 
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   -- rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
-  rbList <- QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rbList <- QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  logInfo $ "rbList: test " <> show rbList
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

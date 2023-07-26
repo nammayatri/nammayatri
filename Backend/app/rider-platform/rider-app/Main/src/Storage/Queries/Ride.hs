@@ -33,22 +33,24 @@ import qualified Database.Beam as B
 
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
-import Domain.Types.Booking.Type
+import Domain.Types.Booking.Type as Booking
+-- import Kernel.Storage.Esqueleto as Esq
+
+-- import qualified Storage.Beam.Ride as BeamR
+
+import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
--- import qualified Storage.Beam.Ride as BeamR
-
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
@@ -196,7 +198,7 @@ updateMultiple rideId ride = do
 --     return ride
 
 findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
-findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
+findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
 findActiveByRBIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
 findActiveByRBIdInReplica (Id rbId) = findOneWithKvInReplica [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
@@ -568,8 +570,59 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
-findRiderIdByRideId :: L.MonadFlow m => Id Ride -> m (Maybe (Id Person))
-findRiderIdByRideId _ = error ""
+findRiderIdByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId rideId = do
+  ride <- findOneWithKV [Se.Is BeamR.id $ Se.Eq $ getId rideId]
+  booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
+  pure $ Booking.riderId <$> booking
+
+findAllByRiderIdAndRide :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
+findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
+  let isOnlyActive = Just True == mbOnlyActive
+  let limit' = maybe 0 fromIntegral mbLimit
+  let offset' = maybe 0 fromIntegral mbOffset
+  bookings <-
+    findAllWithOptionsKV
+      [ Se.And
+          ( [Se.Is BeamB.riderId $ Se.Eq personId]
+              <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | isOnlyActive])
+              <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
+          )
+      ]
+      (Se.Desc BeamB.createdAt)
+      Nothing
+      Nothing
+
+  rides <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) (fromIntegral <$> mbLimit) (fromIntegral <$> mbOffset)
+  let filteredBookings = matchBookingsWithRides bookings rides
+  let filteredB = (filterBookingsWithConditions filteredBookings)
+  pure $ take limit' (drop offset' filteredB)
+  where
+    matchBookingsWithRides :: [Booking] -> [Ride.Ride] -> [(Booking, Maybe Ride.Ride)]
+    matchBookingsWithRides bookings rides =
+      [(booking, lookupRide booking rides) | booking <- bookings]
+      where
+        lookupRide :: Booking -> [Ride.Ride] -> Maybe Ride.Ride
+        lookupRide booking = foldr (\ride acc -> if booking.id == ride.bookingId then Just ride else acc) Nothing
+    -- filterBookingsWithConditions :: [(Booking, Maybe Ride.Ride)] -> [Booking]
+    -- filterBookingsWithConditions =
+    --     filter isBookingValid
+    --   where
+    --     isBookingValid :: (Booking, Maybe Ride.Ride) -> Bool
+    --     isBookingValid (booking, maybeRide) =
+    --         isJust (booking.otpCode) && isJust ((Ride.id :: Ride.Ride -> Id Ride.Ride) <$> maybeRide)
+    filterBookingsWithConditions :: [(Booking, Maybe Ride.Ride)] -> [Booking]
+    filterBookingsWithConditions filteredBookings =
+      map fst $ filter (uncurry isBookingValid) filteredBookings
+      where
+        isBookingValid :: Booking -> Maybe Ride.Ride -> Bool
+        isBookingValid booking maybeRide =
+          let bookingDetails = DRB.bookingDetails booking
+              otpCode =
+                case bookingDetails of
+                  DRB.OneWaySpecialZoneDetails details -> details.otpCode
+                  _ -> Nothing
+           in isJust maybeRide || (isJust (otpCode) && isNothing maybeRide)
 
 -- findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
 -- findRiderIdByRideId rideId = findOne $ do
