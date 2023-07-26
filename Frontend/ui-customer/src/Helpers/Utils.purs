@@ -19,6 +19,7 @@ module Helpers.Utils
     )
     where
 
+import Prelude
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
@@ -49,7 +50,7 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Data.Number (fromString, pi, sin, cos, sqrt, asin)
-import Prelude (class Show, class Ord, class Eq, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
+import Prelude (class Show, class Ord, class Eq, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($), (>=))
 import Presto.Core.Flow (Flow, doAff)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Services.API (Prediction)
@@ -60,6 +61,7 @@ import Data.Lens ((^.))
 import Accessor (_distance_meters)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Data.Int (round, toNumber)
 
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
@@ -362,6 +364,14 @@ isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
 sortPredctionByDistance :: Array Prediction -> Array Prediction
 sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
+
+getDistanceString :: Int -> String
+getDistanceString distanceInMeters
+  | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
+  | otherwise = show distanceInMeters <> " m"
+
+recentDistance :: Array LocationListItemState -> Number -> Number -> Array LocationListItemState
+recentDistance arr currLat currLon = map (\item -> item{actualDistance = round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0))}) arr
 
 foreign import getMerchantId :: String -> Foreign
 

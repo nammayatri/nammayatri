@@ -49,6 +49,7 @@ initData = {
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
   }
   , address : ""
   , activeIndex : (Just 2)

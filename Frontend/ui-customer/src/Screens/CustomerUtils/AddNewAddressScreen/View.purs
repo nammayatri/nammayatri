@@ -265,7 +265,7 @@ addNewScreenView state push =
               , textSize FontSize.a_16
               , lineHeight "24"
               , onChange push AddressChanged
-              , hintColor "#A7A7A7"
+              , hintColor Color.black600
               ]
         ,linearLayout
           [  height MATCH_PARENT
@@ -381,7 +381,7 @@ searchResultsView state push =
                 width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              ][  (LocationListItem.view (push <<< LocationListItemAC ) item )
+              ][  (LocationListItem.view (push <<< LocationListItemAC ) item 0)
                 , linearLayout
                     [ height $ V 1
                     , width MATCH_PARENT
@@ -416,6 +416,7 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
     }
   , { prefixImageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -440,6 +441,7 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
     }
 
   ]

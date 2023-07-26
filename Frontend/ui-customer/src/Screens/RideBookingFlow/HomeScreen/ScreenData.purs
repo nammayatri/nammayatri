@@ -33,6 +33,9 @@ initData = {
       suggestedAmount : 0
     , finalAmount : 0
     , startedAt : ""
+    , sourceLength : 0
+    , prevLocation : ""
+    , destinationLength : 0
     , endedAt : ""
     , source : ""
     , destination : ""
@@ -107,6 +110,8 @@ initData = {
     },
     props: {
       rideRequestFlow : false
+    , isAutoComplete : false
+    , showLoader : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false

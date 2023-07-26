@@ -817,6 +817,11 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isDestServiceable: state.props.isDestServiceable
                                     , isRideServiceable: state.props.isRideServiceable
                                     , savedlocationList: state.data.savedLocations
+                                    , sourceLength: state.data.sourceLength
+                                    , destinationLength: state.data.destinationLength
+                                    , isAutoComplete: state.props.isAutoComplete
+                                    , showLoader: state.props.showLoader
+                                    , prevLocation: state.data.prevLocation
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
