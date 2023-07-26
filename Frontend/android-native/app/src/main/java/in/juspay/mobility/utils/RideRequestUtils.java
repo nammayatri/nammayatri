@@ -23,19 +23,20 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.View;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -153,6 +154,9 @@ public class RideRequestUtils {
         }
         if ((expireTime-currTime) > 0) return expireTime-currTime;
         return 0;
+    }
+    public int timeDifferenceInMinutes(Long expireTimeTemp, Long currTimeTemp){
+        return (int) (((expireTimeTemp-currTimeTemp)/1000)/60);
     }
 
     public void createRideRequestNotification(Context context){
