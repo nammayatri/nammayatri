@@ -33,6 +33,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
+import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Merchant
 import Domain.Types.Person as DP
 import Domain.Types.Ride as Ride
@@ -588,12 +589,64 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
 --   where_ $
 --     ride ^. RideTId ==. val (toKey rideId)
 --   pure $ booking ^. BookingRiderId
+-- findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
+-- findRiderIdByRideId rideId = findOne $ do
+--   ride :& booking <-
+--     from $
+--       table @RideT
+--         `innerJoin` table @BookingT
+--           `Esq.on` ( \(ride :& booking) ->
+--                        ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                    )
+--   where_ $
+--     ride ^. RideTId ==. val (toKey rideId)
+--   pure $ booking ^. BookingRiderId
 
 findRiderIdByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId (Id rideId) = do
   ride <- findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   maybe (pure Nothing) (\booking' -> pure $ Just booking'.riderId) booking
+
+findAllByRiderIdAndRide :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
+findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
+  let isOnlyActive = Just True == mbOnlyActive
+  bookings :: [Booking] <-
+    findAllWithOptionsKV
+      [ Se.And
+          ( [Se.Is BeamB.riderId $ Se.Eq personId]
+              <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | isOnlyActive])
+              <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
+          )
+      ]
+      (Se.Desc BeamB.createdAt)
+      (fromIntegral <$> mbLimit)
+      (fromIntegral <$> mbOffset)
+  rides :: [Ride.Ride] <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) (fromIntegral <$> mbLimit) (fromIntegral <$> mbOffset)
+
+  let filteredBookings = matchBookingsWithRides bookings rides
+
+  pure (filterBookingsWithConditions filteredBookings)
+  where
+    matchBookingsWithRides :: [Booking] -> [Ride.Ride] -> [(Booking, Maybe Ride.Ride)]
+    matchBookingsWithRides bookings rides =
+      [(booking, lookupRide booking rides) | booking <- bookings]
+      where
+        lookupRide :: Booking -> [Ride.Ride] -> Maybe Ride.Ride
+        lookupRide booking = foldr (\ride acc -> if booking.id == ride.bookingId then Just ride else acc) Nothing
+
+    filterBookingsWithConditions :: [(Booking, Maybe Ride.Ride)] -> [Booking]
+    filterBookingsWithConditions filteredBookings =
+      map fst $ filter (\(booking, maybeRide) -> isBookingValid booking maybeRide) filteredBookings
+      where
+        isBookingValid :: Booking -> Maybe Ride.Ride -> Bool
+        isBookingValid booking maybeRide =
+          let bookingDetails = DRB.bookingDetails booking
+              otpCode =
+                case bookingDetails of
+                  DRB.OneWaySpecialZoneDetails details -> details.otpCode
+                  _ -> Nothing
+           in isJust ((Ride.id :: Ride.Ride -> Id Ride.Ride) <$> maybeRide) && isJust (otpCode)
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do

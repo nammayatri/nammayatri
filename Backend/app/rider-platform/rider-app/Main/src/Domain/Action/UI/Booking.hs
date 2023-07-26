@@ -24,12 +24,12 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id)
-import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
 newtype BookingListRes = BookingListRes
@@ -46,5 +46,6 @@ bookingStatus bookingId (personId, _) = do
 
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
-  rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  -- rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rbList <- QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

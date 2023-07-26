@@ -70,6 +70,18 @@ data DriverDocsInfo = DriverDocsInfo
     numVehRegImages :: Int
   }
 
+-- imagesAggTableCTEbyDoctype :: L.MonadFlow m => Image.ImageType -> m (Maybe (Text, Int))
+-- imagesAggTableCTEbyDoctype imageType' = do
+--   dbConf <- getMasterBeamConfig
+--   resp <-
+--     L.runDB dbConf $
+--       L.findRow $
+--         B.select $
+--           B.aggregate_ (\image' -> (B.group_ (BeamI.personId image'), B.as_ @Int B.countAll_)) $
+--             B.filter_' (\(BeamI.ImageT {..}) -> imageType B.==?. B.val_ imageType') $
+--               B.all_ (meshModelTableEntity @BeamI.ImageT @Postgres @(Se.DatabaseWith BeamI.ImageT))
+--   pure (either (const Nothing) Prelude.id resp)
+
 imagesAggTableCTEbyDoctype :: Image.ImageType -> SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
 imagesAggTableCTEbyDoctype imageType = with $ do
   image <- from $ table @ImageT

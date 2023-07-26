@@ -21,6 +21,7 @@ import Control.Applicative
 import Data.Time (addUTCTime)
 import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
+-- import qualified Domain.Types.Booking.Type as DB (BookingDetails(..), otpCode)
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
@@ -36,22 +37,22 @@ import Kernel.Utils.Error
 import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
+-- import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverOffer ()
-import Storage.Queries.FullEntityBuilders (buildFullBooking)
+-- import qualified Storage.Queries.Ride ()
+-- import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import qualified Storage.Queries.Quote ()
 import Storage.Queries.RentalSlab as QueryRS
 import qualified Storage.Queries.TripTerms as QTT
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB
-import qualified Storage.Tabular.Booking.BookingLocation as Loc
 import qualified Storage.Tabular.DriverOffer as DrOff
 import qualified Storage.Tabular.Quote as Quote
-import qualified Storage.Tabular.RentalSlab as RentalSlab
-import qualified Storage.Tabular.Ride as R
-import qualified Storage.Tabular.TripTerms as TripTerms
+
+-- import qualified Storage.Tabular.Ride as R
 
 -- we already created TripTerms and RentalSlab when created Quote
 -- create :: L.MonadFlow m => Booking -> m (MeshResult ())
@@ -138,33 +139,6 @@ updateOtpCodeBookingId rbId otp = do
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
-
-fullBookingTable ::
-  From
-    ( Table RB.BookingT
-        :& Table Loc.BookingLocationT
-        :& MbTable Loc.BookingLocationT
-        :& MbTable TripTerms.TripTermsT
-        :& MbTable RentalSlab.RentalSlabT
-    )
-fullBookingTable =
-  table @BookingT
-    `innerJoin` table @Loc.BookingLocationT
-      `Esq.on` ( \(s :& loc1) ->
-                   s ^. RB.BookingFromLocationId ==. loc1 ^. Loc.BookingLocationTId
-               )
-    `leftJoin` table @Loc.BookingLocationT
-      `Esq.on` ( \(s :& _ :& mbLoc2) ->
-                   s ^. RB.BookingToLocationId ==. mbLoc2 ?. Loc.BookingLocationTId
-               )
-    `leftJoin` table @TripTerms.TripTermsT
-      `Esq.on` ( \(s :& _ :& _ :& mbTripTerms) ->
-                   s ^. RB.BookingTripTermsId ==. mbTripTerms ?. TripTerms.TripTermsTId
-               )
-    `leftJoin` table @RentalSlab.RentalSlabT
-      `Esq.on` ( \(s :& _ :& _ :& _ :& mbRentalSlab) ->
-                   s ^. RB.BookingRentalSlabId ==. mbRentalSlab ?. RentalSlab.RentalSlabTId
-               )
 
 -- findLatestByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
 -- findLatestByRiderIdAndStatus riderId statusList =
@@ -358,27 +332,32 @@ findBookingIdAssignedByEstimateId' (Id estimateId) = do
   booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote]
   return $ listToMaybe $ Domain.id <$> booking
 
-findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
-findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
-  let isOnlyActive = Just True == mbOnlyActive
-  fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& mbRide) <-
-      from $
-        fullBookingTable `leftJoin` table @R.RideT
-          `Esq.on` (\(booking :& _ :& _ :& _ :& _ :& mbRide) -> just (booking ^. RB.BookingTId) ==. mbRide ?. R.RideBookingId)
-    where_ $
-      booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. ( whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
-                &&. whenJust_ mbBookingStatus (\status -> booking ^. RB.BookingStatus ==. val status)
-                &&. ( not_ (Esq.isNothing (mbRide ?. R.RideTId))
-                        ||. (Esq.isNothing (mbRide ?. R.RideTId) &&. not_ (Esq.isNothing (booking ^. RB.BookingOtpCode)))
-                    )
-            )
-    limit $ fromIntegral $ fromMaybe 10 mbLimit
-    offset $ fromIntegral $ fromMaybe 0 mbOffset
-    orderBy [desc $ booking ^. RB.BookingCreatedAt]
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+-- fullBookingTable ::
+--   From
+--     ( Table RB.BookingT
+--         :& Table Loc.BookingLocationT
+--         :& MbTable Loc.BookingLocationT
+--         :& MbTable TripTerms.TripTermsT
+--         :& MbTable RentalSlab.RentalSlabT
+--     )
+-- fullBookingTable =
+--   table @BookingT
+--     `innerJoin` table @Loc.BookingLocationT
+--       `Esq.on` ( \(s :& loc1) ->
+--                    s ^. RB.BookingFromLocationId ==. loc1 ^. Loc.BookingLocationTId
+--                )
+--     `leftJoin` table @Loc.BookingLocationT
+--       `Esq.on` ( \(s :& _ :& mbLoc2) ->
+--                    s ^. RB.BookingToLocationId ==. mbLoc2 ?. Loc.BookingLocationTId
+--                )
+--     `leftJoin` table @TripTerms.TripTermsT
+--       `Esq.on` ( \(s :& _ :& _ :& mbTripTerms) ->
+--                    s ^. RB.BookingTripTermsId ==. mbTripTerms ?. TripTerms.TripTermsTId
+--                )
+--     `leftJoin` table @RentalSlab.RentalSlabT
+--       `Esq.on` ( \(s :& _ :& _ :& _ :& mbRentalSlab) ->
+--                    s ^. RB.BookingRentalSlabId ==. mbRentalSlab ?. RentalSlab.RentalSlabTId
+--                )
 
 -- updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> SqlDB ()
 -- updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
