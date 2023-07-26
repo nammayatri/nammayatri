@@ -172,6 +172,7 @@ library
       Domain.Types.DriverOnboarding.Image
       Domain.Types.DriverOnboarding.OperatingCity
       Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+      Domain.Types.DriverPlan
       Domain.Types.DriverQuote
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
@@ -211,6 +212,7 @@ library
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.Person
+      Domain.Types.PlanDetails
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -302,6 +304,7 @@ library
       Storage.Queries.DriverOnboarding.OperatingCity
       Storage.Queries.DriverOnboarding.Status
       Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
+      Storage.Queries.DriverPlan
       Storage.Queries.DriverQuote
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
@@ -339,6 +342,7 @@ library
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.MetaData
       Storage.Queries.Person
+      Storage.Queries.PlanDetails
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
@@ -371,6 +375,7 @@ library
       Storage.Tabular.DriverOnboarding.Image
       Storage.Tabular.DriverOnboarding.OperatingCity
       Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
+      Storage.Tabular.DriverPlan
       Storage.Tabular.DriverQuote
       Storage.Tabular.DriverReferral
       Storage.Tabular.DriverStats
@@ -416,6 +421,7 @@ library
       Storage.Tabular.Message.MessageTranslation
       Storage.Tabular.MetaData
       Storage.Tabular.Person
+      Storage.Tabular.PlanDetails
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
       Storage.Tabular.RegistrationToken
