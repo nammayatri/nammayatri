@@ -86,6 +86,8 @@ data KeyStore = USER_NAME
                 | NEGOTIATION_UNIT
                 | SET_WAITING_TIME
                 | IS_WAIT_TIMER_STOP
+                | VEHICLE_VARIANT
+                | MAX_LIMIT_TO_STORE_LOCATION_PT_NOT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
