@@ -17,6 +17,7 @@ module Storage.Queries.Issues where
 import Domain.Types.Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import Domain.Types.Ride as R
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -67,3 +68,11 @@ findAllIssue merchantId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset
+
+findByRideId :: Transactionable m => Id R.Ride -> m (Maybe Text)
+findByRideId rideId_ =
+  findOne $ do
+    issues <- from $ table @IssueT
+    where_ $ issues ^. IssueRideId ==. val (Just $ toKey rideId_)
+    limit 1
+    return $ issues ^. IssueId

@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.issue ADD column ride_id text;

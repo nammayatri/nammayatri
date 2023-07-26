@@ -38,6 +38,8 @@ mkPersist
       feedbackDetails Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
+      isSafe Bool Maybe
+      issueId Text Maybe
       Primary id
       deriving Generic
     |]

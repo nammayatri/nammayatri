@@ -25,6 +25,7 @@ import EulerHS.Prelude hiding (id)
 data RatingMessage = RatingMessage
   { id :: Text,
     value :: Int,
+    issueId :: Maybe Text,
     feedback_form :: FeedbackForm
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

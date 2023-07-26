@@ -31,13 +31,15 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Issues as QIssue
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
     rating :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: Maybe Text,
+    issueId :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -48,7 +50,8 @@ data FeedbackRes = FeedbackRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    issueId :: Maybe Text
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -62,6 +65,7 @@ feedback request = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  issueId' <- getIssueForRide
   DB.runTransaction $ do
     QRide.updateRideRating rideId ratingValue
     QPFS.updateStatus booking.riderId DPFS.IDLE
@@ -71,5 +75,8 @@ feedback request = do
       { providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
+        issueId = issueId',
         ..
       }
+  where
+    getIssueForRide = if isNothing request.issueId then QIssue.findByRideId request.rideId else return request.issueId

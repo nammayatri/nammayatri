@@ -26,6 +26,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Storage.Tabular.Person as SPerson
 import qualified Storage.Tabular.Quote as SQuote
+import qualified Storage.Tabular.Ride as SR
 
 --FIXME: bookingId SQuote.QuoteTId Maybe
 mkPersist
@@ -34,10 +35,11 @@ mkPersist
     IssueT sql=issue
       id Text
       customerId SPerson.PersonTId
-      bookingId SQuote.QuoteTId Maybe
+      rideBookingId SQuote.QuoteTId Maybe
       contactEmail Text Maybe
       reason Text
       description Text
+      rideId SR.RideTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -55,7 +57,8 @@ instance FromTType IssueT Domain.Issue where
       Domain.Issue
         { id = Id id,
           customerId = fromKey customerId,
-          bookingId = fromKey <$> bookingId,
+          rideId = fromKey <$> rideId,
+          bookingId = fromKey <$> rideBookingId,
           ..
         }
 
@@ -64,6 +67,7 @@ instance ToTType IssueT Domain.Issue where
     IssueT
       { id = getId id,
         customerId = toKey customerId,
-        bookingId = toKey <$> bookingId,
+        rideBookingId = toKey <$> bookingId,
+        rideId = toKey <$> rideId,
         ..
       }

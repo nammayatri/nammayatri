@@ -27,6 +27,8 @@ data Rating = Rating
     ratingValue :: Int,
     feedbackDetails :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    isSafe :: Maybe Bool,
+    issueId :: Maybe Text
   }
   deriving (Generic, Show, Eq)

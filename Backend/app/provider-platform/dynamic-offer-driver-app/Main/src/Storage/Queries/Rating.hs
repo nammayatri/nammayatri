@@ -26,15 +26,17 @@ import Storage.Tabular.Rating
 create :: Rating -> SqlDB ()
 create = Esq.create
 
-updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
-updateRating ratingId driverId newRatingValue newFeedbackDetails = do
+updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> SqlDB ()
+updateRating ratingId driverId newRatingValue newFeedbackDetails newIssueId newStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       [ RatingRatingValue =. val newRatingValue,
         RatingFeedbackDetails =. val newFeedbackDetails,
-        RatingUpdatedAt =. val now
+        RatingUpdatedAt =. val now,
+        RatingIsSafe =. val newStatus,
+        RatingIssueId =. val newIssueId
       ]
     where_ $
       tbl ^. RatingTId ==. val (toKey ratingId)

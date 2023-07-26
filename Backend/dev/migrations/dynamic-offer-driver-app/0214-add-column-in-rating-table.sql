@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN issue_id text, Add COLUMN is_safe text;

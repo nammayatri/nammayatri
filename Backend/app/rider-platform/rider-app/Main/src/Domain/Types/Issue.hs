@@ -16,6 +16,7 @@ module Domain.Types.Issue where
 
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -26,6 +27,7 @@ data Issue = Issue
     contactEmail :: Maybe Text,
     reason :: Text,
     description :: Text,
+    rideId :: Maybe (Id DRide.Ride),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

@@ -25,6 +25,7 @@ import qualified Domain.Types.CallbackRequest as DCallback
 import qualified Domain.Types.Issue as DIssue
 import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
+import Domain.Types.Ride (Ride)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
@@ -58,7 +59,8 @@ validateIssue Issue {..} =
 data SendIssueReq = SendIssueReq
   { contactEmail :: Maybe Text,
     issue :: Issue,
-    rideBookingId :: Maybe (Id Quote)
+    rideBookingId :: Maybe (Id Quote),
+    rideId :: Maybe (Id Ride)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -66,7 +68,10 @@ validateSendIssueReq :: Validate SendIssueReq
 validateSendIssueReq SendIssueReq {..} =
   validateObject "issue" issue validateIssue
 
-type SendIssueRes = APISuccess
+newtype SendIssueRes = SendIssueRes
+  { issueId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 sendIssue :: EsqDBFlow m r => Id Person.Person -> SendIssueReq -> m SendIssueRes
 sendIssue personId request = do
@@ -74,7 +79,7 @@ sendIssue personId request = do
   newIssue <- buildDBIssue personId request
   runTransaction $
     Queries.insertIssue newIssue
-  return Success
+  return $ SendIssueRes {issueId = newIssue.id.getId}
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
 buildDBIssue (Id customerId) SendIssueReq {..} = do
@@ -89,7 +94,8 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         reason = issue.reason,
         description = issue.description,
         createdAt = time,
-        updatedAt = time
+        updatedAt = time,
+        rideId = rideId
       }
 
 callbackRequest :: EsqDBFlow m r => Id Person.Person -> m APISuccess
