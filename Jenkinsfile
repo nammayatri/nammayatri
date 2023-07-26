@@ -15,6 +15,7 @@ pipeline {
                         branch 'main'
                         // TODO: remove this
                         branch 'linux-arm'
+                        changeRequest target: 'main'
                     }
                 }
                 axes {
