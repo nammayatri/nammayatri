@@ -90,7 +90,7 @@ public class LocationUpdateService extends Service {
     private String LOCATION_DESCRIPTION = "LOCATION_IS_UPDATING";
     private String LOCATION_UPDATES = "LOCATION_UPDATES";
     private String MAX_LIMIT_TO_STORE_LOCATION_PT = "MAX_LIMIT_TO_STORE_LOCATION_PT";
-    private String NO_OF_LOCATION_PT_TO_REMOVE = "NO_OF_LOCATION_PT_TO_REMOVE";
+    private String MAX_LIMIT_TO_STORE_LOCATION_PT_NOT = "MAX_LIMIT_TO_STORE_LOCATION_PT_NOT";
     private static final String LOCATION_PAYLOAD = "LOCATION_PAYLOAD";
     private static String LAST_LOCATION_TIME;
     public static AlarmManager alarmManager;
@@ -115,8 +115,9 @@ public class LocationUpdateService extends Service {
     private Context context;
     private int delayForG = 500000, delayForT = 20000;
     private int delayForGNew = 500000, delayForTNew = 20000;
-    private int maximumLimit = 100;
-    private int noOfPointsToRemove = 10;
+    private int maximumLimit = 30;
+    private int pointsToRemove = 1;
+    private int maximumLimitNotOnRide = 5;
     private float minDispDistanceNew = 25.0f, minDispDistance = 25.0f;
     private TimerTask timerTask;
 
@@ -232,8 +233,8 @@ public class LocationUpdateService extends Service {
             sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
 
-            maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "100"));
-            noOfPointsToRemove = Integer.parseInt(sharedPrefs.getString(NO_OF_LOCATION_PT_TO_REMOVE, "1"));
+            maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "30"));
+            maximumLimitNotOnRide = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT_NOT, "5"));
             // UPDATE FOR GOOGLE CALLBACK FREQUENCY
             locationGFrequency = sharedPrefs.getString("RIDE_G_FREQUENCY", null);
             delayForGNew = locationGFrequency != null ? Integer.parseInt(locationGFrequency) : 50000;
@@ -376,8 +377,7 @@ public class LocationUpdateService extends Service {
 
     private String getValueFromStorage(String k) {
         SharedPreferences sharedPreff = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        String val = sharedPreff.getString(k, null);
-        return val;
+        return sharedPreff.getString(k, null);
     }
 
     private JSONObject getLatLng(Double lat , Double lng) throws JSONException {
@@ -586,12 +586,14 @@ public class LocationUpdateService extends Service {
             if(bufferedLocationObjects!= null)
             {
                 try { locationPayload = new JSONArray(bufferedLocationObjects);
-                    if (locationPayload.length() >= maximumLimit && noOfPointsToRemove < maximumLimit)
-                    {
-                        for(int i =0; i<noOfPointsToRemove; i++)
-                        {
-                            locationPayload.remove(i);
-                        }
+                    String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
+
+                    if(rideStatus!=null && rideStatus.equals("false")) maximumLimit = maximumLimitNotOnRide;
+
+                    if (locationPayload.length() >= maximumLimit ) {
+                        int index = (pointsToRemove++) % (locationPayload.length()-1);
+                        if (index!=0) locationPayload.remove(index);
+                        if (pointsToRemove > 1000000) pointsToRemove = 1;
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -634,6 +636,10 @@ public class LocationUpdateService extends Service {
                     connection.setRequestProperty("token", token);
                     connection.setRequestProperty("x-bundle-version", bundle_version);
                     connection.setRequestProperty("x-device", deviceDetails);
+                    String merchantId  = getValueFromStorage("MERCHANT_ID");
+                    String vehicleVariant = getValueFromStorage ("VEHICLE_VARIANT");
+                    if (merchantId != null) connection.setRequestProperty("mId",merchantId);
+                    if (vehicleVariant != null)connection.setRequestProperty("vt", vehicleVariant);
                     connection.setDoOutput(true);
 
                     // Request Body for API call

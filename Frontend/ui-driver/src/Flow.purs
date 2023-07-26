@@ -228,8 +228,8 @@ getDriverInfoFlow = do
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
   case getDriverInfoApiResp of
-    Right getDriverInfoResp -> do
-      let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+    Right getDriverInfoResponse -> do
+      let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResponse
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
       case getDriverInfoResp.mobileNumber of
           Just value -> void $ pure $ setCleverTapUserData "Phone" ("+91" <> value)
@@ -267,7 +267,7 @@ getDriverInfoFlow = do
       
       let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
       void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
-
+      setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
       case getDriverInfoResp.blocked of
         Just value -> void $ pure $ setCleverTapUserProp "Blocked" (show $ value)
         Nothing -> pure unit
