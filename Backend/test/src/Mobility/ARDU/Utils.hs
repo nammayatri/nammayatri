@@ -39,7 +39,6 @@ import HSpec
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
