@@ -495,7 +495,6 @@ const kannadaStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "CALL_112": "112 ಗೆ ಕರೆ ಮಾಡಿ",
   "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಗಳು ₹10 ಹೆಚ್ಚಳದಲ್ಲಿವೆ",
   "SEATS" : "ಆಸನಗಳು",
   "HATCHBACK" : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್", 
@@ -530,5 +529,6 @@ const kannadaStrings = {
   "AUTO_BROKEN" : "ಆಟೋ ಕೆಟ್ಟು ನಿಂತಿತು",
   "WE_WILL_GIVE_YOU_CALLBACK" : "ನಾವು ನಿಮಗೆ 24 ಗಂಟೆಗಳ ಒಳಗೆ ಕಾಲ್‌ಬ್ಯಾಕ್ ನೀಡುತ್ತೇವೆ",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರದಿ ಮಾಡಲಾಗಿದೆ",
-  "OTP_RESENT_SUCCESSFULLY" : "OTP ಯಶಸ್ವಿಯಾಗಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ"
+  "OTP_RESENT_SUCCESSFULLY" : "OTP ಯಶಸ್ವಿಯಾಗಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "ವಿವರಣೆಯು 10 ಕ್ಕಿಂತ ಹೆಚ್ಚು ವರ್ಣಮಾಲೆಯ ಅಕ್ಷರಗಳನ್ನು ಹೊಂದಿರಬೇಕು"
 }

@@ -101,10 +101,10 @@ foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> Effect Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
-foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> SpecialLocationTag -> Effect Unit
+foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
 foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
-foreign import updateRoute :: Locations -> String -> String -> SpecialLocationTag -> Effect Unit
+foreign import updateRoute :: Locations -> String -> String -> MapRouteConfig -> Effect Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
 -- -- foreign import showAndDrawRoute :: String -> String -> String -> Locations -> Effect Int
 -- foreign import addMarkers :: Markers -> Effect Unit
@@ -324,9 +324,10 @@ type Locations = {
     points :: Coordinates
 }
 
-type SpecialLocationTag = {
+type MapRouteConfig = {
     sourceSpecialTagIcon :: String
   , destSpecialTagIcon :: String
+  , vehicleSizeTagIcon :: Int
 }
 
 type Coordinates = Array Paths
@@ -355,7 +356,7 @@ type UpdateRouteMarker = {
   , destName :: String
   , sourceIcon :: String
   , destIcon :: String
-  , specialLocation :: SpecialLocationTag
+  , mapRouteConfig :: MapRouteConfig
 }
 
 type Suggestions = Array

@@ -501,7 +501,6 @@ const hindiStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "नम्मा यात्री सहायता को कॉल करें",
   "CALL_112": "112 पर कॉल करें",
   "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए",
   "SEATS" : "सीटें",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ड्राइवर जोड़ने की सीमा ₹10 की वृद्धि में है",
   "HATCHBACK" : "हैचबैक", 
@@ -536,5 +535,6 @@ const hindiStrings = {
   "AUTO_BROKEN" : "ऑटो टूट गया",
   "WE_WILL_GIVE_YOU_CALLBACK" : "हम आपको 24 घंटे के भीतर कॉलबैक देंगे",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "आपकी समस्या की सफलतापूर्वक रिपोर्ट कर दी गई है",
-  "OTP_RESENT_SUCCESSFULLY" : "OTP सफलतापूर्वक पुनः भेजा गया"
+  "OTP_RESENT_SUCCESSFULLY" : "OTP सफलतापूर्वक पुनः भेजा गया",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "विवरण 10 से अधिक वर्णमाला वर्ण का होना चाहिए"
 }

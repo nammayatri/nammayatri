@@ -126,6 +126,8 @@ foreign import decodeErrorCode :: String -> String
 
 foreign import decodeErrorMessage :: String -> String
 
+foreign import strLenWithSpecificCharacters :: String -> String -> Int
+
 foreign import toString :: forall a. a -> String
 
 foreign import zoneOtpExpiryTimer :: forall action. Int -> Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
@@ -386,3 +388,9 @@ makeNumber number = (DS.take 2 number) <> " " <> (DS.drop 2 (DS.take 4 number)) 
 
 reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
+
+getMerchantVechicleSize :: Unit -> Int
+getMerchantVechicleSize unit = 
+ case getMerchant FunctionCall of
+   YATRI -> 160
+   _ -> 90

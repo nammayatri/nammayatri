@@ -42,6 +42,7 @@ import JBridge as JB
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Style as FontStyle
+import Merchant.Utils (getMerchantVehicleSize)
 
 
 
@@ -330,10 +331,11 @@ getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_DROP" -> ZONE_CANCEL_TEXT_DROP
   _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
 
-specialLocationConfig :: String -> String -> JB.SpecialLocationTag
-specialLocationConfig srcIcon destIcon = {
+mapRouteConfig :: String -> String -> JB.MapRouteConfig
+mapRouteConfig srcIcon destIcon = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
+  , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
 }
 
 requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config

@@ -24,6 +24,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.SavedLocationScreen.View as SavedLocationScreen
 import Types.App (FlowBT, GlobalState(..), SAVED_LOCATION_SCREEN_OUTPUT(..))
 import ModifyScreenState (modifyScreenState)
+import Storage (setValueToLocalStore,KeyStore(..))
 import Types.App(ScreenType(..))
 
 savedLocationScreen :: FlowBT String SAVED_LOCATION_SCREEN_OUTPUT
@@ -36,4 +37,6 @@ savedLocationScreen = do
       App.BackT $  App.BackPoint <$> ( pure $ ADD_NEW_LOCATION updatedState)
     DeleteLocation tagName -> App.BackT $ App.NoBack <$> (pure $ DELETE_LOCATION tagName)
     EditLocation cardState -> App.BackT $ App.BackPoint <$> (pure $ EDIT_LOCATION cardState)
-    GoBack -> App.BackT $ App.NoBack <$> (pure $ GO_BACK_FROM_SAVED_LOCATION)
+    GoBack -> do
+     _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
+     App.BackT $ App.NoBack <$> (pure $ GO_BACK_FROM_SAVED_LOCATION)

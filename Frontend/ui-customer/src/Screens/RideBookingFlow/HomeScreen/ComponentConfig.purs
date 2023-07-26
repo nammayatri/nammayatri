@@ -701,6 +701,7 @@ driverInfoCardViewState state = { props:
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
+                                  , currentSearchResultType : state.data.currentSearchResultType
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -943,20 +944,21 @@ specialLocationIcons tag =
     METRO -> "ny_ic_metro_black"
     _     -> ""
 
-specialLocationConfig :: String -> String -> JB.SpecialLocationTag
+specialLocationConfig :: String -> String -> JB.MapRouteConfig
 specialLocationConfig srcIcon destIcon = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
+  , vehicleSizeTagIcon : (HU.getMerchantVechicleSize unit)
 }
 
-updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.SpecialLocationTag -> JB.UpdateRouteMarker
-updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon specialLocation = {
+updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker
+updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon mapRouteConfig = {
     locations : locations
   , sourceName : sourceName
   , destName : destName
   , sourceIcon : sourceIcon
   , destIcon : destIcon
-  , specialLocation : specialLocation
+  , mapRouteConfig : mapRouteConfig
 }
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit

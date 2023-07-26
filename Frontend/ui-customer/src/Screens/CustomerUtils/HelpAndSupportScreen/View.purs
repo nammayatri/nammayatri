@@ -30,6 +30,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -392,7 +393,7 @@ editTextView state push =
               , gravity CENTER_VERTICAL
               , padding $ PaddingLeft 10
               , margin $ MarginTop 5
-              , visibility if DS.length state.data.description < 10 then VISIBLE else GONE
+              , visibility if ((HU.strLenWithSpecificCharacters state.data.description  "[a-zA-Z]") < 10) then VISIBLE else GONE
               ][  imageView $
                   [ width $ V 16
                   , height $ V 16
@@ -403,7 +404,7 @@ editTextView state push =
                 , textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ getString DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS
+                  , text $ getString DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS
                   , color Color.black600
                   , gravity LEFT
                   , margin $ Margin 0 0 0 0

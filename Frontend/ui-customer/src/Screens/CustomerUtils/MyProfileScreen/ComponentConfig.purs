@@ -20,7 +20,8 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..), fromMaybe)
-import Prelude (not, negate)
+import Prelude (not, negate, (&&),(>=))
+import Data.String(length,trim)
 import Engineering.Helpers.Commons as EHC 
 import Font.Size as FontSize
 import Font.Style as FontStyle
