@@ -258,6 +258,8 @@
       "ny_ic_work" : true,
       "ny_ic_work_blue" : true,
       "ny_ic_zone_pickup_marker" : true,
+      "ny_ic_zone_pickup_marker_yellow" : true,
+      "ny_ic_zone_walk" : true,
       "ny_logo_dark" : true,
       "popup_background" : true,
       "progress_circle" : true,

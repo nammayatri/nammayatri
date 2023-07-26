@@ -56,7 +56,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
+import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeError, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString)
@@ -86,6 +86,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Control.Monad.Trans.Class (lift)
 import Types.App (GlobalState, defaultGlobalState)
 import Halogen.VDom.DOM.Prop (Prop)
+import Data.String as DS
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -224,7 +225,8 @@ isCurrentLocationEnabled = if (isLocalStageOn HomeScreen) then enableCurrentLoca
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  -- screenAnimation $
+  let showLabel = if state.props.defaultPickUpPoint == "" then false else true
+  in
   frameLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -267,10 +269,25 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if os == "IOS" then 20 else 35)
+                    , padding (PaddingBottom if os == "IOS" then 20 else if showLabel then 70 else 34)
                     , gravity CENTER
+                    , orientation VERTICAL
                     ]
-                    [ imageView
+                    [ textView
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , background Color.black800
+                        , color Color.white900
+                        , text if DS.length state.props.defaultPickUpPoint > 30 then
+                                  (DS.take 28 state.props.defaultPickUpPoint) <> "..."
+                               else
+                                  state.props.defaultPickUpPoint
+                        , padding (Padding 5 5 5 5)
+                        , margin (MarginBottom 5)
+                        , cornerRadius 5.0
+                        , visibility if (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)) then VISIBLE else GONE
+                        ]
+                    , imageView
                         [ width $ V 35
                         , height $ V 35
                         , imageWithFallback $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
@@ -1615,6 +1632,8 @@ locationTrackingData lazyCheck =
 ----------- confirmPickUpLocationView -------------
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
+  let zonePadding = (ceil (toNumber (screenWidth unit))/8)
+  in
   linearLayout
     [ orientation VERTICAL
     , height WRAP_CONTENT
@@ -1631,22 +1650,55 @@ confirmPickUpLocationView push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , background Color.white900
         , stroke $ "1," <> Color.grey900
         , cornerRadii $ Corners 24.0 true true false false
-        , padding $ Padding 16 16 16 24
+        , background Color.blue800
         ]
-        [ textView
-            [ text (getString CONFIRM_PICKUP_LOCATION)
-            , textSize FontSize.a_22
-            , color Color.black800
-            , gravity CENTER_HORIZONTAL
+        [ linearLayout
+            [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , width MATCH_PARENT
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ]
-        , if  (((getMerchant FunctionCall) /= NAMMAYATRI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
-        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
+            , orientation HORIZONTAL
+            , gravity CENTER
+            , padding (Padding zonePadding 4 zonePadding 4)
+            , cornerRadii $ Corners 24.0 true true false false
+            , visibility if state.props.confirmLocationCategory /= "" && os /= "IOS" then VISIBLE else GONE
+            ] [ imageView
+                [ width (V 20)
+                , height (V 20)
+                , margin (MarginRight 6)
+                , imageWithFallback "ny_ic_zone_walk,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_zone_walk.png"
+                ]
+              , textView
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , textSize FontSize.a_14
+                , text if state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then
+                        (getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED)
+                       else
+                        (getString GO_TO_SELECTED_PICKUP_SPOT)
+                , color Color.white900
+                ]
+              ]
+        , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , padding $ Padding 16 16 16 24
+            , cornerRadii $ Corners 24.0 true true false false
+            , background Color.white900
+            ] [ textView
+                [ text (getString CONFIRM_PICKUP_LOCATION)
+                , textSize FontSize.a_22
+                , color Color.black800
+                , gravity CENTER_HORIZONTAL
+                , height WRAP_CONTENT
+                , width MATCH_PARENT
+                , fontStyle $ FontStyle.bold LanguageStyle
+                ]
+              , currentLocationView push state
+              , nearByPickUpPointsView state push
+              , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
+             ]
         ]
     ]
 
@@ -1985,7 +2037,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     if (state.props.isSpecialZone) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
-      _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17
+      _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17 "ZOOM"
       _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 160 (0.0) (0.0)
       void $ delay $ Milliseconds duration
       driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
@@ -2213,6 +2265,7 @@ currentLocationView push state =
             , stroke $ "1," <> Color.grey900
             , gravity CENTER_VERTICAL
             , cornerRadius 5.0
+            , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
             ]
             [ imageView
                 [ imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
@@ -2239,6 +2292,7 @@ nearByPickUpPointsView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding $ Padding 5 20 0 5
+    , visibility if state.props.defaultPickUpPoint /= "" then VISIBLE else GONE
     ](map (\item -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)) state.data.nearByPickUpPoints)
 
 confirmingLottieView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

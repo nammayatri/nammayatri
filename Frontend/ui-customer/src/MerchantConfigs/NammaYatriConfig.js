@@ -52,7 +52,7 @@ export function getAppLink(os) {
 const config = {
   "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM",
   "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
-  
+
   "isReferralEnabled" : "true",
   "showBookingPreference" : "true",
   "showRateCard" : "true",
@@ -79,6 +79,6 @@ const hindiStrings = {
 
 const englishStrings = {
   "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
-  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Namma Yatri! \nTo start booking rides, please allow us to find you!" 
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Namma Yatri! \nTo start booking rides, please allow us to find you!"
 }
 

@@ -72,7 +72,7 @@ initData = {
     , messagesSize : "-1"
     , suggestionsList : []
     , messageToBeSent : ""
-    , nearByPickUpPoints : dummyPickUpPoints
+    , nearByPickUpPoints : []
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
@@ -195,6 +195,7 @@ initData = {
     , findingRidesAgain : false
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
+    , confirmLocationCategory : ""
     }
 }
 
@@ -380,11 +381,6 @@ dummyLocationName = PlaceName {
   "plusCode" : Nothing,
   "addressComponents" : []
 }
-dummyPickUpPoints :: Array Location
-dummyPickUpPoints = [
-  {place : "Kolkata airport arrival gate 1 ", lat : 12.941156, lng : 77.623510 },
-  {place : "Kolkata airport arrival gate 2 ", lat : 12.940696, lng : 77.622877 }
-]
 
 specialLocation :: SpecialLocation
 specialLocation = SpecialLocation{
@@ -397,7 +393,8 @@ dummyLocation :: Location
 dummyLocation = {
    place : "",
    lat : 0.0,
-   lng : 0.0
+   lng : 0.0,
+   address : Nothing
  }
 
 

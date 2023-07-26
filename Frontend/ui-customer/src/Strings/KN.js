@@ -497,7 +497,7 @@ const kannadaStrings = {
   "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಗಳು ₹10 ಹೆಚ್ಚಳದಲ್ಲಿವೆ",
   "SEATS" : "ಆಸನಗಳು",
-  "HATCHBACK" : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್", 
+  "HATCHBACK" : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್",
   "SUV" : "ಎಸ್ ಯು ವಿ",
   "SEDAN" : "ಸೆಡಾನ್",
   "OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN" : "OTP ಪುಟದ ಅವಧಿ ಮುಗಿದಿದೆ, ದಯವಿಟ್ಟು OTP ಗೆ ಮತ್ತೊಮ್ಮೆ ವಿನಂತಿಸಿ",
@@ -514,7 +514,7 @@ const kannadaStrings = {
   "LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED" : "ಮಿತಿ ಮೀರಿದೆ! 3 ರಲ್ಲಿ 3 ತುರ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಈಗಾಗಲೇ ಸೇರಿಸಲಾಗಿದೆ",
   "INVALID_CONTACT_FORMAT" : "ಅಮಾನ್ಯ ಸಂಪರ್ಕ ಸ್ವರೂಪ",
   "OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP ಮರುಕಳುಹಿಸುವ ಮಿತಿಯನ್ನು ತಲುಪಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
+  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ",
   "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
   "RATE_YOUR_EXPERIENCE" : "ನಿಮ್ಮ ಅನುಭವವನ್ನು ರೇಟ್ ಮಾಡಿ",
   "REPORT_ISSUE_" : "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
@@ -533,5 +533,7 @@ const kannadaStrings = {
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "ವಿವರಣೆಯು 10 ಕ್ಕಿಂತ ಹೆಚ್ಚು ವರ್ಣಮಾಲೆಯ ಅಕ್ಷರಗಳನ್ನು ಹೊಂದಿರಬೇಕು",
   "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "ನೀವು ನಡೆಯುತ್ತಿರುವ ಬುಕಿಂಗ್ ಅನ್ನು ಹೊಂದಿರುವಂತೆ ತೋರುತ್ತಿದೆ, ದಯವಿಟ್ಟು ಅದನ್ನು ವೀಕ್ಷಿಸಲು ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "ತಪ್ಪಾದ OTP, ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ.",
-  "N_MORE_ATTEMPTS_LEFT" : " ಪ್ರಯತ್ನಗಳು ಉಳಿದಿವೆ"
+  "N_MORE_ATTEMPTS_LEFT" : " ಪ್ರಯತ್ನಗಳು ಉಳಿದಿವೆ",
+  "GO_TO_SELECTED_PICKUP_SPOT" : "ಆಯ್ದ ಪಿಕಪ್ ಸ್ಪಾಟ್‌ಗೆ ಹೋಗಿ",
+  "GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED" : "ಈ ಪ್ರದೇಶದಲ್ಲಿ ಆಟೋಗಳನ್ನು ನಿರ್ಬಂಧಿಸಿರುವುದರಿಂದ ಸೂಚಿಸಲಾದ ಪಿಕಪ್ ಸ್ಥಳಕ್ಕೆ ಚಾಲನೆ ಮಾಡಿ"
 }

@@ -61,11 +61,11 @@ eval GoToHome state = do
 eval NoAction state = continue state
 eval _ state = continue state
 
-checkPermissionAndUpdateDriverMarker :: Effect Unit 
-checkPermissionAndUpdateDriverMarker = do 
-  conditionA <- isLocationPermissionEnabled unit 
-  conditionB <- isLocationEnabled unit 
-  if conditionA && conditionB then do 
+checkPermissionAndUpdateDriverMarker :: Effect Unit
+checkPermissionAndUpdateDriverMarker = do
+  conditionA <- isLocationPermissionEnabled unit
+  conditionB <- isLocationEnabled unit
+  if conditionA && conditionB then do
     _ <- getCurrentPosition (showDriverMarker "ic_vehicle_side") constructLatLong
     pure unit
     else do
@@ -76,7 +76,7 @@ showDriverMarker :: String -> Location -> Effect Unit
 showDriverMarker marker location = do
   _ <- showMarker marker location.lat location.lon 100 0.5 0.5
   --_ <- showMarker "ic_active_marker" location.lat location.lng 350 0.5 0.5
-  animateCamera location.lat location.lon 15
+  animateCamera location.lat location.lon 15 "ZOOM"
 
 constructLatLong :: String -> String -> Location
 constructLatLong lat lng =

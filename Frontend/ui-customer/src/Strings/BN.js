@@ -480,7 +480,7 @@ const bengaliStrings = {
   "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "ড্রাইভার যোগ করার সীমা ₹10 বৃদ্ধিতে রয়েছে ",
   "SEATS" : "আসন",
-  "HATCHBACK" : "হ্যাচব্যাক", 
+  "HATCHBACK" : "হ্যাচব্যাক",
   "SUV" : "এসইউভি",
   "SEDAN" : "সেডান",
   "CHANGE_OF_PLANS" : "পরিকল্পনার পরিবর্তন",
@@ -517,7 +517,7 @@ const bengaliStrings = {
   "LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED" : "সীমা ছাড়িয়ে গেছে! 3টির মধ্যে 3টি জরুরি পরিচিতি ইতিমধ্যেই যোগ করা হয়েছে৷",
   "INVALID_CONTACT_FORMAT" : "অবৈধ যোগাযোগ বিন্যাস",
   "OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP পুনরায় পাঠানোর সীমা পৌঁছে গেছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
-  "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে",
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল টি আগে থেকেই আছে",
   "RATE_YOUR_EXPERIENCE" : "আপনার অভিজ্ঞতা রেট",
   "REPORT_ISSUE_" : "রিপোর্ট সমস্যা",
   "DONE" : "সম্পন্ন",
@@ -535,5 +535,7 @@ const bengaliStrings = {
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "বর্ণনা 10টির বেশি বর্ণমালার অক্ষর হওয়া উচিত",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "ভুল OTP, আবার চেষ্টা করুন.",
   "N_MORE_ATTEMPTS_LEFT" : " আরো প্রচেষ্টা বাকি",
-  "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "মনে হচ্ছে আপনার একটি চলমান বুকিং আছে, এটি দেখতে অ্যাপটি পুনরায় চালু করুন"
+  "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "মনে হচ্ছে আপনার একটি চলমান বুকিং আছে, এটি দেখতে অ্যাপটি পুনরায় চালু করুন",
+  "GO_TO_SELECTED_PICKUP_SPOT" : "নির্বাচিত পিকআপ স্পটে যান",
+  "GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED" : "প্রস্তাবিত পিকআপ অবস্থানে ড্রাইভ করুন কারণ এই এলাকার ভিতরে অটোগুলি সীমাবদ্ধ"
 }

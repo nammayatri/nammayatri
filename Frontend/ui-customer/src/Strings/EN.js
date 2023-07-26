@@ -505,7 +505,7 @@ const englishStrings = {
   "CALL_EMERGENCY_CENTRE": "Call Emergency Centre",
   "SEATS" : "Seats",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "Driver addition limits are in increments of ₹10",
-  "HATCHBACK" : "Hatchback", 
+  "HATCHBACK" : "Hatchback",
   "SUV" : "SUV",
   "SEDAN" : "Sedan",
   "OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN" : "OTP page has been expired, please request OTP again",
@@ -539,5 +539,7 @@ const englishStrings = {
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "Description should be more than 10 alphabetic characters",
   "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "It seems that you have an on-going booking, please restart the app to view it",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "Incorrect OTP, please try again.",
-  "N_MORE_ATTEMPTS_LEFT" : " more attempts left"
+  "N_MORE_ATTEMPTS_LEFT" : " more attempts left",
+  "GO_TO_SELECTED_PICKUP_SPOT" : "Go to selected pickup spot",
+  "GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED" : "Go to the suggested pickup spot as Autos are restricted inside this area"
 }

@@ -771,8 +771,9 @@ eval BackPressed state = do
     ConfirmingLocation -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
+                      _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
-                      continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+                      continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
     FindingEstimate -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
@@ -870,16 +871,18 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 
 eval (UpdateLocation key lat lon) state = case key of
   "LatLon" -> do
-    exit $ UpdateLocationName state (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-  _ -> continue state
+    exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+  _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
+          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+        else continue state
 
 eval (UpdatePickupLocation  key lat lon) state =
   case key of
     "LatLon" -> do
       exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-    _ -> if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-            else continue state
+    _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
+            exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          else continue state
 
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1339,9 +1342,14 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetCurr
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   _ <- pure $ performHapticFeedback unit
-  _ <- pure $ locateOnMap true 0.0 0.0 "" []
-  _ <- pure $ removeAllPolylines ""
+  let isSource = case state.props.isSource of
+                    Just true -> true
+                    _         -> false
+      lat = if (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0) then state.props.destinationLat else state.props.sourceLat
+      lon = if (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0) then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
+  _ <- pure $ removeAllPolylines ""
+  _ <- pure $ locateOnMap false lat lon state.data.polygonCoordinates state.data.nearByPickUpPoints
   if (state.props.isSource == Just true) then pure $ firebaseLogEvent "ny_user_src_set_location_on_map" else pure $ firebaseLogEvent "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then "Current Location" else state.data.source
   let newState = state{data{source = srcValue}, props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
@@ -1639,7 +1647,11 @@ eval RecenterCurrentLocation state = recenterCurrentLocation state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = updateCurrentLocation state lat lng
+eval (SearchLocationModelActionController (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = do
+  if state.props.isSource == Just true then
+    updateCurrentLocation state lat lng
+  else
+    continue state
 
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
@@ -1733,7 +1745,7 @@ eval GoToEditProfile state = do
   exit $ GoToMyProfile state true
 eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
   continueWithCmd state{props{defaultPickUpPoint = config.id}} [do
-      _ <- animateCamera config.lat config.lng 25
+      _ <- animateCamera config.lat config.lng 25 "NO_ZOOM"
       pure NoAction
     ]
 
@@ -1791,6 +1803,7 @@ constructLatLong lat lng _ =
   { lat: lat
   , lng: lng
   , place: ""
+  , address: Nothing
   }
 
 checkPermissionAndUpdatePersonMarker :: HomeScreenState -> Effect Unit
@@ -1812,7 +1825,7 @@ showPersonMarker :: HomeScreenState -> String -> Location -> Effect Unit
 showPersonMarker state marker location = do
   _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) location.lat location.lng 160 0.5 0.9
   _ <- pure $ printLog "Location :: " location
-  animateCamera location.lat location.lng 17
+  animateCamera location.lat location.lng 17 "ZOOM"
 
 getCurrentCustomerLocation :: forall t44 t51. Applicative t51 => (Action -> Effect Unit) -> t44 -> Effect (t51 Unit)
 getCurrentCustomerLocation push state = do
@@ -1960,10 +1973,11 @@ flowWithoutOffers dummy = not $ (getValueToLocalStore FLOW_WITHOUT_OFFERS) == "f
 
 recenterCurrentLocation :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 recenterCurrentLocation state = continueWithCmd state [ do
-    _ <- pure $ currentPosition ""
     if state.props.locateOnMap || (not state.props.locateOnMap && state.props.currentStage == ConfirmingLocation) then do
+      _ <- pure $ currentPosition "NO_ZOOM"
       pure unit
     else do
+      _ <- pure $ currentPosition ""
       _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
       pure unit
     pure NoAction
@@ -2083,7 +2097,7 @@ estimatesFlow estimatedQuotes state = do
         Nothing -> 0
       showRateCardIcon = if (null estimateFareBreakup) then false else true
       zoneType = getSpecialTag $ if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _specialLocationTag else Nothing
-  if ((not (null estimatedVarient)) && (isLocalStageOn FindingEstimate)) then do
+  if not (null estimatedVarient) then do
     _ <- pure $ firebaseLogEvent "ny_user_estimate"
     let lang = getValueToLocalStore LANGUAGE_KEY
     exit
@@ -2232,6 +2246,7 @@ getZoneType :: Maybe String -> ZoneType
 getZoneType tag =
   case tag of
     Just "SureMetro" -> METRO
+    Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
 
 getVehicleTitle :: String -> String

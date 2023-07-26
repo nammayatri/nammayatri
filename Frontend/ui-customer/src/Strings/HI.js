@@ -503,7 +503,7 @@ const hindiStrings = {
   "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें",
   "SEATS" : "सीटें",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ड्राइवर जोड़ने की सीमा ₹10 की वृद्धि में है",
-  "HATCHBACK" : "हैचबैक", 
+  "HATCHBACK" : "हैचबैक",
   "SUV" : "एसयूवी",
   "SEDAN" : "सेडान",
   "OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN" : "ओटीपी पेज की समय सीमा समाप्त हो गई है, कृपया ओटीपी के लिए फिर से अनुरोध करें",
@@ -520,7 +520,7 @@ const hindiStrings = {
   "LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED" : "सीमा पार हो गई! 3 में से 3 आपातकालीन संपर्क पहले ही जोड़े जा चुके हैं",
   "INVALID_CONTACT_FORMAT" : "अमान्य संपर्क फ़ॉर्मेट",
   "OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP पुनः भेजने की सीमा समाप्त हो गई है, कृपया बाद में पुनः प्रयास करें",
-  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है", 
+  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है",
   "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
   "RATE_YOUR_EXPERIENCE" : "अपने अनुभव को रेट करें",
   "REPORT_ISSUE_" : "मुद्दा प्रतिवेदन",
@@ -539,5 +539,7 @@ const hindiStrings = {
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "विवरण 10 से अधिक वर्णमाला वर्ण का होना चाहिए",
   "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "ऐसा लगता है कि आपकी कोई बुकिंग चल रही है, कृपया इसे देखने के लिए ऐप को पुनरारंभ करें",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "गलत OTP, कृपया पुन: प्रयास करें।",
-  "N_MORE_ATTEMPTS_LEFT" : " और प्रयास शेष हैं"
+  "N_MORE_ATTEMPTS_LEFT" : " और प्रयास शेष हैं",
+  "GO_TO_SELECTED_PICKUP_SPOT" : "चयनित पिकअप स्थान पर जाएं",
+  "GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED" : "सुझाए गए पिकअप स्थान पर जाएं क्योंकि इस क्षेत्र के अंदर ऑटो प्रतिबंधित हैं"
 }

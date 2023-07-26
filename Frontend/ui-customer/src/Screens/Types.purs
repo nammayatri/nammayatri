@@ -633,6 +633,7 @@ type HomeScreenStateProps =
   , findingRidesAgain :: Boolean
   , routeEndPoints :: Maybe RouteEndPoints
   , findingQuotesProgress :: Number
+  , confirmLocationCategory :: String
   }
 
 type RouteEndPoints = {
@@ -858,7 +859,8 @@ instance eqErrorType :: Eq ErrorType where eq = genericEq
 type Location = {
   place :: String,
   lat :: Number,
-  lng :: Number
+  lng :: Number,
+  address :: Maybe String
 }
 
 type DriverInfoCard =
@@ -1007,6 +1009,8 @@ type AddNewAddressScreenData =
   , latSelectedFromMap :: Number
   , lonSelectedFromMap :: Number
   , addressComponents :: Array AddressComponents
+  , polygonCoordinates :: String
+  , nearByPickUpPoints :: Array Location
   }
 
 type AddNewAddressScreenProps =
@@ -1022,6 +1026,9 @@ type AddNewAddressScreenProps =
   , selectFromCurrentOrMap :: Boolean
   , isSearchedLocationServiceable :: Boolean
   , editSavedLocation :: Boolean
+  , isSpecialZone :: Boolean
+  , defaultPickUpPoint :: String
+  , isServiceable :: Boolean
   }
 
 type AppUpdatePopUpState =
@@ -1040,7 +1047,7 @@ instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
-data SearchResultType = QUOTES | ESTIMATES 
+data SearchResultType = QUOTES | ESTIMATES
 
 derive instance genericSearchResultType :: Generic SearchResultType _
 instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
@@ -1142,6 +1149,7 @@ data ZoneType = METRO
               | SCHOOL
               | RAILWAY
               | NOZONE
+              | AUTO_BLOCKED
 
 derive instance genericZoneType :: Generic ZoneType _
 instance showZoneType :: Show ZoneType where show = genericShow

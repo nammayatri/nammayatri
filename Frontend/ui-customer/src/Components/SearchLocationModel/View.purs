@@ -415,7 +415,7 @@ primaryButtonConfig state =
       , cornerRadius = 8.0
       , background = Color.black900
       , margin = (MarginHorizontal 16 16)
-      , isClickable = true
+      , isClickable = if (state.isSource == Just true && state.source /= "" && state.isSrcServiceable) || (state.isSource == Just false && state.destination /= "" && state.isDestServiceable) then true else false
       , id = "SelectLocationFromMap"
       }
   in primaryButtonConfig'
