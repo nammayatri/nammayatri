@@ -84,6 +84,8 @@ data KeyStore = USER_NAME
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY
                 | NEGOTIATION_UNIT
+                | SET_WAITING_TIME
+                | IS_WAIT_TIMER_STOP
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

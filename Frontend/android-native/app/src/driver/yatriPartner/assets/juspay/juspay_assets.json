@@ -279,6 +279,7 @@
       "ny_ic_vehicle_onboard" : true,
       "ny_ic_vehicle_registration_card" : true,
       "ny_ic_vertical_line" : true,
+      "ny_ic_waiting_auto" : true,
       "ny_ic_welcome" : true,
       "ny_ic_zone_pickup_marker" : true,
       "ny_logo_dark" : true,

@@ -504,4 +504,8 @@ const mlStrings = {
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "നിങ്ങൾ വളരെയധികം അസാധുവായ ശ്രമങ്ങൾ നടത്തി, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
   INVALID_REFERRAL_NUMBER : "അസാധുവായ റഫറൽ നമ്പർ",
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ചില സാങ്കേതിക പ്രശ്നം സംഭവിച്ചു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
+  WAIT_TIME : "കാത്തിരിപ്പ് സമയം",
+  WAIT_TIMER : "ടൈമർ കാത്തിരിക്കുക",
+  HOW_LONG_WAITED_FOR_PICKUP : "പിക്കപ്പിൽ നിങ്ങൾ\nഎത്ര നേരം കാത്തിരുന്നുവെന്ന് കാണിക്കുന്നു.",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ഉപഭോക്താവ് \nആദ്യ 3 മിനിറ്റിന് ശേഷം ഓരോ മിനിറ്റിലും കാത്തിരിപ്പ് സമയത്തിന് ₹1.5\nനൽകും."
 }

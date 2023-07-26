@@ -23,18 +23,18 @@ import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown, getSpecialZoneConfig, getRequiredTag)
+import Helpers.Utils (countDown, getSpecialZoneConfig,getRequiredTag,clearTimer,getCurrentUTC)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, fontSize)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, fontSize, weight)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore,setValueToLocalStore)
 import Styles.Colors as Color 
 import Engineering.Helpers.Commons (screenWidth)
-import Screens.Types (HomeScreenStage(..))
-import JBridge (getVersionCode)
+import Screens.Types (HomeScreenStage(..),TimerStatus(..))
+import JBridge (getVersionCode,waitingCountdownTimer,toast)
 import Merchant.Utils(getMerchant, Merchant(..))
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -256,6 +256,7 @@ totalDistanceView push config =
     , width WRAP_CONTENT
     , gravity LEFT
     , orientation VERTICAL
+    , weight 1.0
     ][ textView $ 
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -378,6 +379,7 @@ estimatedFareView push config =
     , width WRAP_CONTENT
     , gravity LEFT
     , orientation VERTICAL
+    , weight 1.0
     ][ textView $ 
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -399,23 +401,81 @@ estimatedFareView push config =
         ]
     ]
 
+waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+waitTimeView push config = 
+   linearLayout
+     [ height WRAP_CONTENT
+     , gravity START
+     , orientation VERTICAL
+     , weight 1.0
+     , visibility if (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" ) then VISIBLE else GONE
+     ]
+     [ linearLayout
+         [
+          orientation HORIZONTAL
+         ]
+         [textView $ 
+        [ height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , text (getString WAIT_TIME)
+         , color Color.black650
+         , textSize FontSize.a_14
+         , ellipsize true
+         , singleLine true
+         ] <> FontStyle.body1 TypoGraphy
+        ,
+        imageView
+          [ height MATCH_PARENT
+            , width  $ V 40
+            , visibility if config.notifiedCustomer then VISIBLE else GONE
+            , onClick push (const WaitingInfo)
+            , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+          ]
+         ]
+        , textView $ 
+         [ height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , text (config.waitTime)
+         , color Color.black900
+         , ellipsize true
+         , textSize FontSize.a_20
+         , singleLine true
+         , fontStyle (FontStyle.semiBold TypoGraphy)
+         ]
+     ]
+
+
 rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideInfoView push config = 
   linearLayout
     [ height WRAP_CONTENT
-    , width $ V ((screenWidth unit) - 34)
+    , width MATCH_PARENT
     , stroke ("1," <> Color.grey900)
     , cornerRadius 8.0
-    , gravity CENTER_VERTICAL
-    , padding (Padding 16 16 16 16)
+    , padding (Padding 16 16 5 16) 
     ][ estimatedFareView push config
-     , linearLayout
-       [ width (V 1)
-       , height $ V 40
-       , margin (Margin 24 0 24 0)
-       , background Color.lightGrey
-       ][]
+     , separator true
      , totalDistanceView push config
+     , separator $ (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" )
+     , waitTimeView push config
+     , linearLayout
+       [ weight 1.0
+       , height MATCH_PARENT
+       ][]
+    ]
+
+separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
+separator visibility' = 
+  linearLayout
+    [ weight 1.0
+    , height MATCH_PARENT
+    , margin $ MarginHorizontal 5 5
+    , visibility if visibility' then VISIBLE else GONE
+    ][ linearLayout
+      [ width $ V 1
+      , background Color.lightGrey
+      , height MATCH_PARENT
+      ][]
     ]
 
 sourceDestinationImageView :: forall w . Config -> PrestoDOM (Effect Unit) w
@@ -484,6 +544,9 @@ arrivedButtonView push config =
   , onClick (\action -> do 
       if config.notifiedCustomer then pure unit
         else do
+          _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show Triggered)
+          _ <- pure $ setValueToLocalStore SET_WAITING_TIME (getCurrentUTC "")
+          _ <- waitingCountdownTimer 0 push TimerCallback
           _ <- countDown config.buttonTimeOut config.id push ButtonTimer
           push action) (const NotifyCustomer)
   , visibility if config.isDriverArrived then VISIBLE else GONE

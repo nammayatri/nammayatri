@@ -113,7 +113,7 @@ foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import requestLocation  :: Unit -> Effect Unit
 
 foreign import initiateLocationServiceClient :: Effect Unit
-
+foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
 foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit

@@ -15,6 +15,7 @@
 
 module Screens.HomeScreen.Controller where
 
+import Prelude
 import Common.Types.App (OptionButtonList)
 import Components.BottomNavBar as BottomNavBar
 import Components.SelectListModal as SelectListModal
@@ -36,8 +37,8 @@ import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, repl
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
-import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, differenceBetweenTwoUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, scrollToEnd)
+import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, differenceBetweenTwoUTC,getCurrentUTC)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, scrollToEnd,waitingCountdownTimer)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -171,6 +172,7 @@ instance loggableAction :: Loggable Action where
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
     RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
+    WaitTimerCallback id min sec -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "wait_timer_callBack" 
 
 
 
@@ -239,6 +241,7 @@ data Action = NoAction
             | RemoveGenderBanner
             | RequestInfoCardAction RequestInfoCard.Action
             | ScrollToBottom
+            | WaitTimerCallback String String Int
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -380,6 +383,21 @@ eval (RideActionModalAction (RideActionModal.ButtonTimer seconds id status timer
       continue state{data{activeRide{isDriverArrived = false}}}
     else
       continue state
+
+eval (RideActionModalAction (RideActionModal.WaitingInfo)) state = do
+  continue state {data{activeRide {waitTimeInfo = true }}}
+
+eval (RideActionModalAction (RideActionModal.TimerCallback timerID timeInMinutes seconds)) state = continueWithCmd state [do pure $ (WaitTimerCallback timerID timeInMinutes seconds)]
+
+eval (WaitTimerCallback timerID timeInMinutes seconds) state = do
+      if (getValueToLocalStore IS_WAIT_TIMER_STOP) == "Stop" || (getValueToLocalStore IS_WAIT_TIMER_STOP) == "NoView" then do
+        _ <- pure $ clearTimer timerID
+        _ <- pure $ setValueToLocalStore SET_WAITING_TIME timeInMinutes
+        pure unit
+      else do
+        _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show ST.Triggered)
+        pure unit
+      continue state { data {activeRide { waitingTime = timeInMinutes} } ,props {timerRefresh = false} }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -568,11 +586,11 @@ eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
   exit $ GotoEditGenderScreen
 
-eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { props { showBonusInfo = not state.props.showBonusInfo } }
+eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
 
-eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showBonusInfo = false } }
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
-eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showBonusInfo = false } }
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
@@ -643,7 +661,10 @@ activeRideDetail state (RidesInfo ride) = {
   isDriverArrived : state.data.activeRide.isDriverArrived,
   notifiedCustomer : if (differenceBetweenTwoUTC ride.updatedAt ride.createdAt) == 0 then false else true,
   exoPhone : ride.exoPhone,
-  specialLocationTag : ride.specialLocationTag -- Just "SureMetro - Pickup"
+  specialLocationTag : ride.specialLocationTag, -- Just "SureMetro - Pickup"
+  waitingTime : if (getValueToLocalStore IS_WAIT_TIMER_STOP) == "Stop" && state.props.timerRefresh then (getValueToLocalStore SET_WAITING_TIME) else state.data.activeRide.waitingTime,
+  rideCreatedAt : ride.createdAt,
+  waitTimeInfo : state.data.activeRide.waitTimeInfo
 }
 
 cancellationReasons :: String -> Array OptionButtonList

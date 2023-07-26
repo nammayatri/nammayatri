@@ -17,7 +17,7 @@ module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
 import Prelude(unit, show, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..),Padding(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
 import Components.PopUpModal as PopUpModal
@@ -41,6 +41,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Font.Style as FontStyle
 
 
 
@@ -68,7 +69,8 @@ rideActionModalConfig state = let
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
-    specialLocationTag = state.data.activeRide.specialLocationTag
+    specialLocationTag = state.data.activeRide.specialLocationTag,
+    waitTime = state.data.activeRide.waitingTime
   }
   in rideActionModalConfig'
 
@@ -355,6 +357,38 @@ requestInfoCardConfig _ = let
     }
   , buttonConfig {
       text = getString GOT_IT
+    }
+  }
+  in requestInfoCardConfig'
+
+waitTimeInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+waitTimeInfoCardConfig _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString WAIT_TIMER,
+      fontSize = FontSize.a_18
+    }
+  , primaryText {
+      text = getString HOW_LONG_WAITED_FOR_PICKUP,
+      fontSize = FontSize.a_16,
+      padding = Padding 16 16 0 0
+    }
+  , secondaryText {
+      text = getString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE,
+      visibility = VISIBLE,
+      fontStyle = FontStyle.regular LanguageStyle,
+      padding = PaddingLeft 16
+    }
+  , imageConfig {
+      imageUrl = "ny_ic_waiting_auto,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_ride_completed",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 4 1 0
+    }
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20
     }
   }
   in requestInfoCardConfig'

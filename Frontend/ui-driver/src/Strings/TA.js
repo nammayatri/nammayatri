@@ -496,5 +496,9 @@ const tamilStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP உள்ளீட்டு வரம்பை அடைந்து விட்டது, பிறகு முயற்சிக்கவும்",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "நீங்கள் பல தவறான முயற்சிகளைச் செய்துள்ளீர்கள், பிறகு முயற்சிக்கவும்",
   INVALID_REFERRAL_NUMBER : "தவறான பரிந்துரை எண்",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "சில தொழில்நுட்பச் சிக்கல் ஏற்பட்டுள்ளது, பிறகு முயற்சிக்கவும்"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "சில தொழில்நுட்பச் சிக்கல் ஏற்பட்டுள்ளது, பிறகு முயற்சிக்கவும்",
+  WAIT_TIME : "காத்திருக்கும் நேரம்",
+  WAIT_TIMER : "காத்திரு டைமர்",
+  HOW_LONG_WAITED_FOR_PICKUP : "பிக்அப்பில்\nஎவ்வளவு நேரம் காத்திருந்தீர்கள் என்பதைக் காட்டுகிறது.",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "முதல் 3 நிமிடங்களுக்குப் பிறகு ஒவ்வொரு நிமிட காத்திருப்பு நேரத்திற்கும் வாடிக்கையாளர் ₹1.5 செலுத்துவார்."
 }
