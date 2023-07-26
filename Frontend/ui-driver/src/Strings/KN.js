@@ -501,5 +501,14 @@ const kannadaStrings = {
   WAIT_TIME : "ಕಾಯುವ ಸಮಯ",
   WAIT_TIMER : "ಟೈಮರ್ ನಿರೀಕ್ಷಿಸಿ",
   HOW_LONG_WAITED_FOR_PICKUP : "ಪಿಕಪ್‌ನಲ್ಲಿ ನೀವು ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದೀರಿ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತದೆ.",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ."
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ.",
+  OTHERS : "ಇತರರು",
+  ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
+  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  OTP_RESEND_LIMIT_EXCEEDED : "OTP ಮಿತಿಯನ್ನು ಮರುಕಳುಹಿಸಲಾಗಿದೆ",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "ಅನೇಕ ತಪ್ಪು ಪ್ರಯತ್ನಗಳು. ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ",
+  ADD_ALTERNATE_NUMBER_IN_MEANTIME : "ಈ ಪ್ರಕ್ರಿಯೆಯು ಪೂರ್ಣಗೊಳ್ಳಲು 2 ಕೆಲಸದ ದಿನಗಳವರೆಗೆ ತೆಗೆದುಕೊಳ್ಳಬಹುದು. ಈ ಮಧ್ಯೆ, ನೀವು \nಪರ್ಯಾಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಬಹುದು.",
+  OTP_RESENT: "OTP ಮರು ಕಳುಹಿಸಲಾಗಿದೆ"
 }

@@ -471,6 +471,7 @@ const mlStrings = {
   COMPLAINTS_DESCRIPTION_ADDITIONAL : "പരാതികൾ പരിഹരിക്കുന്നതിന്, ഞങ്ങളുടെ <u>സ്വകാര്യതാ നയം</u> പരിശോധിക്കുക",
   REGISTERED_ADDRESS : "രേഖപ്പെടുത്തിയ വിലാസം",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "സ്റ്റാലിയൻ ബിസിനസ് സെന്റർ, നമ്പർ 444, 3rd & 4th നിലകൾ, 18th മെയിൻ, 6th ബ്ലോക്ക്, കോറമംഗല, ബെംഗളൂരു, കർണാടക- 560095, ഇന്ത്യ",
+  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
   SELECT_YOUR_GENDER : "നിങ്ങളുടെ ലിംഗഭേദം തിരഞ്ഞെടുക്കുക",
   FEMALE : "സ്ത്രീ",
   MALE : "പുരുഷൻ",
@@ -507,5 +508,14 @@ const mlStrings = {
   WAIT_TIME : "കാത്തിരിപ്പ് സമയം",
   WAIT_TIMER : "ടൈമർ കാത്തിരിക്കുക",
   HOW_LONG_WAITED_FOR_PICKUP : "പിക്കപ്പിൽ നിങ്ങൾ\nഎത്ര നേരം കാത്തിരുന്നുവെന്ന് കാണിക്കുന്നു.",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ഉപഭോക്താവ് \nആദ്യ 3 മിനിറ്റിന് ശേഷം ഓരോ മിനിറ്റിലും കാത്തിരിപ്പ് സമയത്തിന് ₹1.5\nനൽകും."
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ഉപഭോക്താവ് \nആദ്യ 3 മിനിറ്റിന് ശേഷം ഓരോ മിനിറ്റിലും കാത്തിരിപ്പ് സമയത്തിന് ₹1.5\nനൽകും.",
+  OTHERS : "മറ്റുള്ളവ",
+  ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
+  ALTERNATE_NUMBER : "ഇതര നമ്പർ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക",
+  OTP_RESEND_LIMIT_EXCEEDED : "ഓടിപി പരിധി കവിഞ്ഞു",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "അൽപസമയത്തിനു ശേഷം വീണ്ടും ശ്രമിക്കുക",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "ഇതര നമ്പർ ചേർക്കാൻ കഴിയില്ല",
+  ADD_ALTERNATE_NUMBER_IN_MEANTIME : "ഈ പ്രക്രിയ പൂർത്തിയാകാൻ 2 പ്രവൃത്തി ദിവസങ്ങൾ വരെ എടുത്തേക്കാം. അതിനിടയിൽ, നിങ്ങൾക്ക് ഒരു ഇതര മൊബൈൽ നമ്പർ ചേർക്കാം.",
+  OTP_RESENT: "ഒടിപി വീണ്ടും അയച്ചിരിക്കുന്നു"
 }
