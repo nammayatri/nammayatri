@@ -673,6 +673,9 @@ type ActiveRide = {
   estimatedFare :: Int,
   isDriverArrived :: Boolean,
   notifiedCustomer :: Boolean,
+  waitingTime :: String,
+  waitTimeInfo :: Boolean,
+  rideCreatedAt :: String,
   specialLocationTag :: Maybe String
 }
 
@@ -705,10 +708,16 @@ type HomeScreenProps =  {
   zoneRideBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
-  showBonusInfo :: Boolean
+  showBonusInfo :: Boolean,
+  timerRefresh :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
+
+data TimerStatus = Triggered | PostTriggered | Stop | NoView
+
+derive instance genericTimerStatus :: Generic TimerStatus _
+instance showTimerStatus :: Show TimerStatus where show = genericShow
 
 type PillButtonState = {
   status :: DriverStatus,

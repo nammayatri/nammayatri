@@ -497,5 +497,9 @@ const kannadaStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP ಇನ್‌ಪುಟ್ ಮಿತಿಯನ್ನು ತಲುಪಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "ನೀವು ಹಲವಾರು ಅಮಾನ್ಯ ಪ್ರಯತ್ನಗಳನ್ನು ಮಾಡಿದ್ದೀರಿ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   INVALID_REFERRAL_NUMBER : "ಅಮಾನ್ಯ ರೆಫರಲ್ ಸಂಖ್ಯೆ",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  WAIT_TIME : "ಕಾಯುವ ಸಮಯ",
+  WAIT_TIMER : "ಟೈಮರ್ ನಿರೀಕ್ಷಿಸಿ",
+  HOW_LONG_WAITED_FOR_PICKUP : "ಪಿಕಪ್‌ನಲ್ಲಿ ನೀವು ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದೀರಿ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತದೆ.",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ."
 }

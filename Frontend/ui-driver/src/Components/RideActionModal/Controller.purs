@@ -27,6 +27,8 @@ data Action = StartRide
             | ButtonTimer Int String String String
             | NotifyCustomer
             | MessageCustomer
+            | TimerCallback String String Int
+            | WaitingInfo
 
 type Config = { 
   startRideActive :: Boolean,
@@ -41,7 +43,8 @@ type Config = {
   buttonTimeOut :: Int,
   currentStage :: HomeScreenStage,
   unReadMessages :: Boolean,
-  specialLocationTag :: Mb.Maybe String
+  specialLocationTag :: Mb.Maybe String,
+  waitTime :: String
   }
 
 type AddressConfig = {
@@ -66,6 +69,7 @@ config = {
   estimatedRideFare : 0,
   notifiedCustomer : true,
   buttonTimeOut : 10,
+  waitTime : "__",
   id : "buttonTimer",
   currentStage : RideAccepted,
   unReadMessages : false,

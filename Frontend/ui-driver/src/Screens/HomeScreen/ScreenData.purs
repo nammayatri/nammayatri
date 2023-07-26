@@ -43,7 +43,10 @@ initData = {
           isDriverArrived : false,
           notifiedCustomer : false,
           exoPhone : "",
-          specialLocationTag : Nothing
+          specialLocationTag : Nothing,
+          waitingTime : "__",
+          waitTimeInfo : false,
+          rideCreatedAt : ""
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -100,6 +103,7 @@ initData = {
         zoneRideBooking : true,
         showGenderBanner : false,
         notRemoveBanner : true,
-        showBonusInfo : false
+        showBonusInfo : false,
+        timerRefresh : true
     }
 }

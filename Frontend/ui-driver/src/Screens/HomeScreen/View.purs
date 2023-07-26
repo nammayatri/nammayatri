@@ -55,7 +55,7 @@ import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..))
+import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..))
 import Services.Backend as Remote
@@ -92,7 +92,12 @@ screen initialState =
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
                 Nothing -> setValueToLocalStore IS_RIDE_ACTIVE "false"
-
+          let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
+          if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
+            _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))
+            _ <- JB.waitingCountdownTimer startingTime push WaitTimerCallback 
+            pure unit
+          else pure unit
           case (getValueToLocalNativeStore LOCAL_STAGE) of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -200,6 +205,7 @@ view push state =
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
+      , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -955,6 +961,15 @@ updateButtonIconAndText push state =
     , fontStyle $ FontStyle.bold LanguageStyle
     ]
   ]
+
+waitTimeInfoPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+waitTimeInfoPopUp push state =
+   PrestoAnim.animationSet [ Anim.fadeIn true ]
+     $ linearLayout
+         [ height MATCH_PARENT
+         , width MATCH_PARENT
+         ]
+         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig FunctionCall) ]
 
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBar push state =

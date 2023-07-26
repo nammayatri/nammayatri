@@ -1631,3 +1631,46 @@ export const launchDateSettings = function (res) {
     return JBridge.launchDateSettings();
   }
 };
+
+function getTwoDigitsNumber(number) 
+{
+  return number >= 10 ? number : "0"+number.toString();
+}
+
+var driverWaitingTimerId = null;
+export const waitingCountdownTimer = function (startingTime) {
+  return function (cb) {
+    return function (action) {
+      return function () {
+        if (__OS == "IOS") {
+          if (window.JBridge.startCountUpTimer) {
+            var callbackIOS = callbackMapper.map(function (timerId, sec) {
+              var minutes = getTwoDigitsNumber(Math.floor(sec / 60));
+              var seconds = getTwoDigitsNumber(sec - minutes * 60);
+              var timeInMinutesFormat = minutes + " : " + seconds;
+              cb(action(timerId)(timeInMinutesFormat)(sec))();
+            });
+            window.JBridge.startCountUpTimer(startingTime.toString(), callbackIOS);
+          }
+        } else {
+          var callback = callbackMapper.map(function () {
+            var sec = startingTime;
+            if (driverWaitingTimerId) clearInterval(driverWaitingTimerId);
+            driverWaitingTimerId = setInterval(
+              convertInMinutesFromat,
+              1000
+            );
+            function convertInMinutesFromat() {
+              sec++;
+              var minutes = getTwoDigitsNumber(Math.floor(sec / 60));
+              var seconds = getTwoDigitsNumber(sec - minutes * 60);
+              var timeInMinutesFormat = minutes + " : " + seconds;
+              cb(action(driverWaitingTimerId)(timeInMinutesFormat)(sec))();
+            }
+          });
+          window.callUICallback(callback);
+        }
+      };
+    };
+  };
+};

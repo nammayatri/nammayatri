@@ -1290,8 +1290,12 @@ homeScreenFlow = do
       startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
+          if((getValueToLocalStore IS_WAIT_TIMER_STOP ) /= "NoView") then
+            setValueToLocalStore IS_WAIT_TIMER_STOP (show ST.Stop)
+          else
+            pure unit
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true,timerRefresh=false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
@@ -1335,6 +1339,7 @@ homeScreenFlow = do
       let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) >=3 
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation)-- driver's  lat long during ending ride
       _ <- pure $ removeAllPolylines ""
+      _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
@@ -1377,6 +1382,7 @@ homeScreenFlow = do
     GO_TO_CANCEL_RIDE {id, info , reason} -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_CANCEL_RIDE" "."
       cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
+      _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"

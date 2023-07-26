@@ -501,5 +501,9 @@ const hindiStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP डालने की सीमा समाप्त हो गई है, कृपया बाद में पुनः प्रयास करें",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "आपने बहुत से अमान्य प्रयास किए हैं, कृपया बाद में पुनः प्रयास करें",
   INVALID_REFERRAL_NUMBER : "अमान्य रेफ़रल नंबर",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "कुछ तकनीकी समस्या हुई है, कृपया बाद में दोबारा प्रयास करें"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "कुछ तकनीकी समस्या हुई है, कृपया बाद में दोबारा प्रयास करें",
+  WAIT_TIME : "प्रतीक्षा समय",
+  WAIT_TIMER : "प्रतीक्षा टाइमर",
+  HOW_LONG_WAITED_FOR_PICKUP : "आपको दिखाता है कि आपने पिकअप पर कितनी देर तक इंतजार किया है।",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ग्राहक को पहले 3 मिनट के बाद प्रत्येक मिनट के इंतजार के लिए ₹1.5 का भुगतान करना होगा।"
 }

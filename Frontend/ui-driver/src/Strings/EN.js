@@ -499,5 +499,9 @@ const englishStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP entering limit exhausted, please try again later",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "Too many invalid attempts, please try again later",
   INVALID_REFERRAL_NUMBER : "Invalid Referral Number",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "Something went wrong, please try again later"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "Something went wrong, please try again later",
+  WAIT_TIME : "Wait Time",
+  WAIT_TIMER : "Wait Timer",
+  HOW_LONG_WAITED_FOR_PICKUP : "Shows you how long you\nhave waited at pickup.",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst 3 minutes"
 }
