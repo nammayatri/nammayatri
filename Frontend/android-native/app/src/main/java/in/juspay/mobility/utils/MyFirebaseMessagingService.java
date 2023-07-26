@@ -157,7 +157,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                             case NotificationTypes.NEW_RIDE_AVAILABLE:
                                 sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
+                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) || sharedPref.getString("IS_VALID_TIME","true").equals("false")) {
                                     startWidgetService(null, payload, entity_payload);
                                 } else {
                                     NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);

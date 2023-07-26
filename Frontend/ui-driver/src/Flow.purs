@@ -138,10 +138,14 @@ checkDateAndTime = do
     let timeDiffInMins = (timeDiff) / toNumber (1000)
     let absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
     if (absTimeDiff < toNumber 10 ) then do
+      setValueToLocalStore IS_VALID_TIME "true"
       liftFlowBT $ unregisterDateAndTime
+      liftFlowBT $ stopLocationPollingAPI
+      liftFlowBT $ startLocationPollingAPI
     else
       when (absTimeDiff >= toNumber 10 ) do
         _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
+        setValueToLocalStore IS_VALID_TIME "false"
         modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
         lift $ lift $ doAff do liftEffect hideSplash
         _ <- UI.handleAppUpdatePopUp
