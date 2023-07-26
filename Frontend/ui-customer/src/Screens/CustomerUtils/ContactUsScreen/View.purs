@@ -31,8 +31,11 @@ import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import Screens.CustomerUtils.ContactUsScreen.ComponentConfig 
 import Storage (getValueToLocalStore, KeyStore(..))
+import Screens.CustomerUtils.ContactUsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..)) 
+import Prelude ((<>))
 
 screen :: ST.ContactUsScreenState -> Screen Action ST.ContactUsScreenState ScreenOutput
 screen initialState =
@@ -87,20 +90,16 @@ instructionView state =
   , orientation HORIZONTAL
   , gravity CENTER
   , visibility VISIBLE 
-  ][  textView
+  ][  textView $
       [ text (getString NOTE)
-      , textSize FontSize.a_12
-      , fontStyle $ FontStyle.medium LanguageStyle
       , visibility $ if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then GONE else VISIBLE
       , color Color.black800
-      ]
-    , textView
+      ] <> FontStyle.tags LanguageStyle
+    , textView $
       [ text (getString VISIT_MY_RIDES_SECTION_FOR_RIDE_SPECIFIC_COMPLAINTS)
-      , textSize FontSize.a_12
-      , fontStyle $ FontStyle.regular LanguageStyle
       , gravity CENTER
       , color Color.black800
-      ]
+      ] <> FontStyle.body3 LanguageStyle
     ]
 
 --------------------------- editTextView --------------------------- 
@@ -137,26 +136,23 @@ afterSuccessfullSubmissionView state push =
     , gravity CENTER
     , orientation VERTICAL
   ][ imageView
-      [ imageWithFallback "ny_ic_letter,https://assets.juspay.in/nammayatri/images/user/ny_ic_letter.png"
+      [ imageWithFallback $ "ny_ic_letter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_letter.png"
       , height $ V 149
       , width $ V 149
       , margin (MarginBottom 32)
       ]
-    , textView
+    , textView $
       [ text (getString THANK_YOU_FOR_WRITING_TO_US)
-      , textSize FontSize.a_22
-      , fontStyle $ FontStyle.bold LanguageStyle
       , color Color.black900
       , margin (MarginBottom 12)
-      ]
-    , textView
+      ] <> FontStyle.h1 TypoGraphy
+    , textView $
       [ text (getString WE_HAVE_RECEIVED_YOUR_ISSUE_WELL_REACH_OUT_TO_YOU_IN_SOMETIME)
-      , textSize FontSize.a_13
       , margin (Margin 42 0 42 0)
       , width $ V ((EHC.screenWidth unit - 84))
       , gravity CENTER
       , color Color.blackLightGrey
-      ]]
+      ] <> FontStyle.body3 TypoGraphy]
     , linearLayout[
      width MATCH_PARENT
     , height MATCH_PARENT

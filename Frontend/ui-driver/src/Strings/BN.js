@@ -500,5 +500,6 @@ const bengaliStrings = {
 	OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP প্রবেশের সময়সীমা পৌঁছে গেছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
 	TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "আপনি অনেকগুলি অবৈধ প্রচেষ্টা করেছেন, অনুগ্রহ করে পরে আবার চেষ্টা করুন৷",
 	INVALID_REFERRAL_NUMBER : "অবৈধ রেফারেল নম্বর",
-	SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন"
+	SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
+	NEW_ : "নতুন"
 	}

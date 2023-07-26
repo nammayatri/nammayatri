@@ -24,6 +24,9 @@ import Helpers.Utils (validateEmail)
 import Data.String(length, trim)
 import Storage(KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag)
+import Effect.Unsafe 
+import Engineering.Helpers.LogEvent (logEvent)
+
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
@@ -118,7 +121,7 @@ eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.data.gender /= state.data.editedGender then do
-      _ <- pure $ firebaseLogEvent if state.props.fromHomeScreen then "banner_gender_selected" else "profile_gender_selected"
+      let _ = unsafePerformEffect $ logEvent state.data.logField $ if state.props.fromHomeScreen then "banner_gender_selected" else "profile_gender_selected"
       pure unit
     else pure unit
   updateAndExit state $ UpdateProfile state

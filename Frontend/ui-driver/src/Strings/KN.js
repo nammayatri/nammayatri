@@ -497,5 +497,6 @@ const kannadaStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP ಇನ್‌ಪುಟ್ ಮಿತಿಯನ್ನು ತಲುಪಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "ನೀವು ಹಲವಾರು ಅಮಾನ್ಯ ಪ್ರಯತ್ನಗಳನ್ನು ಮಾಡಿದ್ದೀರಿ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   INVALID_REFERRAL_NUMBER : "ಅಮಾನ್ಯ ರೆಫರಲ್ ಸಂಖ್ಯೆ",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  NEW_ : "ಹೊಸದು"
 }

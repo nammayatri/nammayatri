@@ -24,7 +24,7 @@ import Presto.Core.Types.API (Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Types.ModifyScreenState(modifyScreenState)
 import Types.App (GlobalState, FlowBT, ScreenType(..))
@@ -45,6 +45,7 @@ import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.Types (DriverStatus)
 import Debug (spy)
+import Engineering.Helpers.Utils (toggleLoader)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
@@ -109,7 +110,6 @@ withAPIResult url f flow = do
             _ <- trackExceptionFlow Tracker.API_CALL Tracker.Sdk DETAILS url (codeMessage)
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
-                _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
                 _ <- pure $ deleteValueFromLocalStore VERSION_NAME
                 _ <- pure $ deleteValueFromLocalStore BASE_URL
                 _ <- pure $ deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -142,7 +142,6 @@ withAPIResultBT url f errorHandler flow = do
             _ <- pure $ printLog "message" userMessage
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore VERSION_NAME
                 deleteValueFromLocalStore BASE_URL
                 deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -180,7 +179,6 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore VERSION_NAME
                 deleteValueFromLocalStore BASE_URL
                 deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION

@@ -18,6 +18,7 @@ module Accessor where
 import Prelude
 import Data.Lens (Lens', lens)
 import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Maybe (Maybe)
 
 _formattedAddress :: forall a b c. Newtype a { formattedAddress :: b | c} => Lens' a b
 _formattedAddress = lens (unwrap >>> _.formattedAddress) (\oldRec newVal -> wrap ((unwrap oldRec) {formattedAddress = newVal}))
@@ -140,8 +141,20 @@ _selectedQuotes = lens (unwrap >>> _.selectedQuotes) (\oldRec newVal -> wrap ((u
 _otpCode :: forall a b c. Newtype a { otpCode :: b | c } => Lens' a b
 _otpCode = lens (unwrap >>> _.otpCode) (\oldRec newVal -> wrap ((unwrap oldRec) { otpCode = newVal }))
 
+_signatureAuthData :: forall a b c. Newtype a { signatureAuthData :: b | c } => Lens' a b
+_signatureAuthData = lens (unwrap >>> _.signatureAuthData) (\oldRec newVal -> wrap ((unwrap oldRec) { signatureAuthData = newVal }))
+
 _fareProductType :: forall a b c. Newtype a { fareProductType :: b | c } => Lens' a b
 _fareProductType = lens (unwrap >>> _.fareProductType) (\oldRec newVal -> wrap ((unwrap oldRec) { fareProductType = newVal }))
 
 _specialLocationTag :: forall a b c. Newtype a { specialLocationTag :: b | c } => Lens' a b
 _specialLocationTag = lens (unwrap >>> _.specialLocationTag) (\oldRec newVal -> wrap ((unwrap oldRec) { specialLocationTag = newVal }))
+
+_search_type :: forall a b c. Newtype a { search_type :: b | c } => Lens' a b
+_search_type = lens (unwrap >>> _.search_type) (\oldRec newVal -> wrap ((unwrap oldRec) { search_type = newVal }))
+
+_source :: forall a b c. Newtype a { source :: b | c } => Lens' a b
+_source = lens (unwrap >>> _.source) (\oldRec newVal -> wrap ((unwrap oldRec) { source = newVal }))
+
+_destination :: forall a b c. Newtype a { destination :: b | c } => Lens' a b
+_destination = lens (unwrap >>> _.destination) (\oldRec newVal -> wrap ((unwrap oldRec) { destination = newVal }))

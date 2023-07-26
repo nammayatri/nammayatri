@@ -18,9 +18,10 @@ module Components.MenuButton.Controller where
 import Prelude((<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 data Action = OnClick Config
 
@@ -47,9 +48,8 @@ type Config =
 
 type TextConfig =
   { text :: String
-  , textSize :: Int
-  , selectedFontStyle :: String
-  , unselectedFontStyle :: String
+  , selectedTextStyle :: Style
+  , unselectedTextStyle :: Style
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
@@ -60,16 +60,17 @@ type TextConfig =
 type RadioButtonConfig =
   { height :: Length
   , width :: Length
-  , imageHeight :: Length
-  , imageWidth :: Length
-  , imageUrl :: String
-  , imageMargin :: Margin
-  , imagePadding :: Padding
+  , buttonHeight :: Length
+  , buttonWidth :: Length
+  , buttonMargin :: Margin
+  , buttonPadding :: Padding
   , activeStroke :: String
   , inActiveStroke :: String
   , cornerRadius :: Number
-  , buttonMargin :: Margin
-  , buttonPadding :: Padding
+  , margin :: Margin
+  , padding :: Padding
+  , buttonColor :: String
+  , buttonCornerRadius :: Number
   }
 
 config :: Config
@@ -77,9 +78,8 @@ config =
   {
       titleConfig :
           { text : ""
-          , selectedFontStyle : FontStyle.regular LanguageStyle
-          , unselectedFontStyle : FontStyle.regular LanguageStyle
-          , textSize :  FontSize.a_16
+          , selectedTextStyle : SubHeading2
+          , unselectedTextStyle : Body1
           , gravity : LEFT
           , visibility : VISIBLE
           , color : Color.black800
@@ -87,9 +87,8 @@ config =
           }
     , subTitleConfig :
           { text : ""
-          , selectedFontStyle : FontStyle.regular LanguageStyle
-          , unselectedFontStyle : FontStyle.regular LanguageStyle
-          , textSize :  FontSize.a_16
+          , selectedTextStyle : Body1
+          , unselectedTextStyle : Body1
           , gravity : LEFT
           , visibility : VISIBLE
           , color : Color.black700
@@ -107,16 +106,17 @@ config =
     , radioButtonConfig :
           { height : V 20
           , width : V 20
-          , imageHeight : V 10
-          , imageWidth : V 10
-          , imageUrl : "ny_ic_radio_button,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_button.png"
-          , imageMargin : (Margin 0 0 0 0)
-          , imagePadding : (Padding 0 0 0 0)
+          , buttonHeight : V 10
+          , buttonWidth : V 10
+          , buttonMargin : (Margin 0 0 0 0)
+          , buttonPadding : (Padding 0 0 0 0)
           , activeStroke :("2," <> Color.black800)
           , inActiveStroke :("2," <> Color.black600)
           , cornerRadius : 10.0
-          , buttonMargin : (Margin 0 10 0 10)
-          , buttonPadding : (Padding 0 0 0 0)
+          , margin : (Margin 0 10 0 10)
+          , padding : (Padding 0 0 0 0)
+          , buttonColor : Color.black800
+          , buttonCornerRadius : 5.0
           }
     , index : 0
     , id : ""

@@ -35,6 +35,8 @@ import Components.SelectVehicleTypeModal as SelectVehicleTypeModal
 import JBridge as JB
 import Common.Types.App
 import Screens.VehicleDetailsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.VehicleDetailsScreenState -> Screen Action ST.VehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -111,22 +113,20 @@ headerLayout state push heading =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
         , layoutGravity "center_vertical"
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         , onClick push (const BackPressed)
         ]
-      , textView
+      , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text heading
-        , textSize FontSize.a_19
         , margin (MarginLeft 20)
         , color Color.black
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , weight 1.0
-        ]
+        ] <> FontStyle.h3 LanguageStyle
       , textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -180,15 +180,13 @@ vehicleDetailsView state push =
                     , color Color.black800
                     , alpha 0.8
                     ]
-                    , textView
+                    , textView $
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , margin (MarginTop 10)
                     , text (getValue optionItem.title state)
-                    , textSize FontSize.a_16
                     , color Color.black800
-                    , fontStyle $ FontStyle.semiBold LanguageStyle
-                    ]
+                    ] <> FontStyle.subHeading1 TypoGraphy
                 ]
               , if(optionItem.title == VehicleColor ) then dummyTextView else horizontalLineView
             ]
@@ -217,24 +215,20 @@ rcImageField optionItem push state =
       , height WRAP_CONTENT
       , margin (MarginTop 10)
       , orientation HORIZONTAL
-      ][ textView
+      ][ textView $
          [ width WRAP_CONTENT
          , height WRAP_CONTENT
          , text state.data.imageName
          , color Color.black800
-         , fontStyle $ FontStyle.semiBold LanguageStyle
-         , textSize FontSize.a_16
-         ]
-       , textView
+         ] <> FontStyle.subHeading1 TypoGraphy
+       , textView $                   
          [ width WRAP_CONTENT
          , height WRAP_CONTENT
          , text (getString PREVIEW)
          , color Color.blueTextColor
-         , fontStyle $ FontStyle.semiBold LanguageStyle
          , margin (MarginLeft 10)
-         , textSize FontSize.a_16
          , onClick push (const PreviewImage)
-         ]
+         ] <> FontStyle.subHeading1 TypoGraphy
       ]
   ]
 
@@ -304,13 +298,12 @@ vehicleTypeView push state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , padding (Padding 10 0 10 0)
-    ][ textView
+    ][ textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_14
         , text (getString VEHICLE_TYPE)
         , color Color.greyTextColor
-        ]
+        ] <> FontStyle.paragraphText TypoGraphy
       , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -321,20 +314,18 @@ vehicleTypeView push state =
         , stroke ("1," <> Color.borderColorLight)
         , background Color.white900
         , onClick push (const SelectVehicleType)
-        ][ textView
+        ][ textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , weight 1.0
             , text state.data.vehicleType
             , color Color.greyTextColor
-            , textSize FontSize.a_16
-            , fontStyle $ FontStyle.bold LanguageStyle
             , alpha 0.8
-            ]
+            ] <> FontStyle.body7 TypoGraphy
           , imageView
             [ width ( V 15 )
             , height ( V 15 )
-            , imageWithFallback "ny_ic_drop_down,https://assets.juspay.in/nammayatri/images/driver/ny_ic_drop_down.png"
+            , imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_drop_down.png"
             ]
         ]
     ]
@@ -346,14 +337,12 @@ uploadRCView state push =
     , height WRAP_CONTENT
     , padding (Padding 10 0 10 0)
     , orientation VERTICAL
-    ][ textView
+    ][ textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , text (getString UPLOAD_REGISTRATION_CERTIFICATE)
-        , textSize FontSize.a_14
         , color Color.greyTextColor
-        , fontStyle $ FontStyle.regular LanguageStyle
-        ]
+        ] <> FontStyle.paragraphText TypoGraphy
         , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -363,32 +352,29 @@ uploadRCView state push =
         , padding (Padding 20 16 20 16)
         , margin (Margin 0 10 0 10)
         , background Color.white900
-        ][ textView
+        ][ textView $
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , weight 1.0
             , text if (state.props.deleteButtonVisibility) then state.data.imageName else (getString UPLOAD_RC)
             , alpha if (state.props.deleteButtonVisibility) then 0.8 else 0.5
-            , textSize FontSize.a_16
             , color Color.greyTextColor
-            , fontStyle $ FontStyle.bold LanguageStyle
-            ]
+            ] <> FontStyle.body7 TypoGraphy
           , linearLayout
             [ width WRAP_CONTENT
             , height MATCH_PARENT
-            ][ textView
+            ][ textView $
                [ width WRAP_CONTENT
                , height MATCH_PARENT
                , text (getString PREVIEW)
                , color Color.blueBtn
-               , textSize FontSize.a_16
                , onClick push (const PreviewImage)
                , visibility if state.props.deleteButtonVisibility then VISIBLE else GONE
-               ]
+               ] <> FontStyle.body5 TypoGraphy
              , imageView
                [ width ( V 20 )
                , height ( V 20 )
-               , imageWithFallback if (state.props.deleteButtonVisibility) then "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel.png" else "ny_ic_upload,https://assets.juspay.in/nammayatri/images/driver/ny_ic_upload.png"
+               , imageWithFallback if (state.props.deleteButtonVisibility) then "ny_ic_cancel," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel.png" else "ny_ic_upload," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_upload.png"
                , padding (Padding 2 2 2 0)
                , margin (MarginLeft 5)
                , onClick push $ if (state.props.deleteButtonVisibility) then ((const RemoveImageClick)) else ((const UploadImage))

@@ -24,7 +24,7 @@ import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), map, show, not)
@@ -36,6 +36,7 @@ import Screens.Types (RateCardType(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config as AnimConfig
 import Engineering.Helpers.Commons (os)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -79,16 +80,17 @@ view push config =
               , margin (MarginVertical 4 4)
               ]
             ] <>  if config.nightChargesApplicable then 
-                    [textView
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , textSize FontSize.a_14
-                    , lineHeight "15"
-                    , fontStyle $ FontStyle.medium LanguageStyle
-                    , color if config.nightCharges then Color.black500 else Color.black700
-                    , text if config.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
-                    
-                    ]] else [])
+                    [ textView $
+                      [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , textSize FontSize.a_14
+                      , lineHeight "15"
+                      , fontStyle $ FontStyle.medium LanguageStyle
+                      , color if config.nightCharges then Color.black500 else Color.black700
+                      , text if config.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
+                      
+                      ] <> FontStyle.paragraphText TypoGraphy
+                    ] else [])
          , imageView
            [ width MATCH_PARENT
            , height $ V 90
@@ -98,7 +100,7 @@ view push config =
          ]
       ,linearLayout
         [ width MATCH_PARENT
-        , height $ V 350
+        , height $ V if config.showDetails then 350 else 250
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if config.currentRateCardType == DefaultRateCard then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
           if config.currentRateCardType == DefaultRateCard then defaultRateCardView push config 
@@ -112,7 +114,7 @@ view push config =
       ][ textView
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , color Color.blue800
+        , color config.alertDialogPrimaryColor
         , gravity CENTER
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , text if config.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
@@ -172,7 +174,7 @@ defaultRateCardView push config =
       , margin (Margin 20 20 20 12)
       , visibility if config.nightChargesApplicable then VISIBLE else GONE
       ]
-    , textView
+    , textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , color Color.black700
@@ -180,12 +182,9 @@ defaultRateCardView push config =
                     (getString NIGHT_TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                   else
                     (getString DAY_TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
-      ,  textSize FontSize.a_14
-      , lineHeight "16"
       , visibility if config.nightChargesApplicable then VISIBLE else GONE
-      , fontStyle $ FontStyle.regular LanguageStyle
       , padding $ PaddingHorizontal 20 20
-      ]
+      ] <> FontStyle.paragraphText TypoGraphy
     , imageView
       [ width MATCH_PARENT
       , height $ V 2 

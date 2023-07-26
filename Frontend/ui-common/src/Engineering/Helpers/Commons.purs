@@ -17,30 +17,34 @@ module Engineering.Helpers.Commons where
 
 import Prelude
 
+import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
 import Common.Types.App (Version(..))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
+import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..),split)
 import Data.Int (fromString)
 import Data.Number.Format (toStringWith, fixed) as Number
+import Data.String as DS
 import Effect (Effect)
-import Effect.Aff (Aff, makeAff, nonCanceler, try)
+import Effect.Aff (Aff, makeAff, nonCanceler, try, launchAff)
+import Effect.Aff.AVar (new)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref (Ref, read, write)
-import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
-import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
+import Effect.Uncurried (EffectFn2)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic.Class (class DecodeWithOptions, class EncodeWithOptions)
 import Presto.Core.Language.Runtime.API (APIRunner)
-import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, PermissionRunner(..), PermissionTakeRunner, Runtime(..), run)
-import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL,Response)
-import Presto.Core.Types.Language.Flow (Flow, doAff,defaultState)
+import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, PermissionRunner(..), PermissionTakeRunner, Runtime(..), run,UIRunner(..))
+import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL, Response)
+import Presto.Core.Types.Language.Flow (Flow, doAff, defaultState, getState, modifyState)
+import Presto.Core.Types.Permission (PermissionStatus(..))
 import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
 import Common.Types.App (FlowBT)
 import Effect.Aff.AVar (new)
@@ -48,7 +52,8 @@ import Data.String as DS
 import Data.Int as INT
 import Data.Array ((!!))
 import Data.Number.Format as Number
-
+import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
+import Data.Function.Uncurried (runFn2)
 
 foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
 showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)

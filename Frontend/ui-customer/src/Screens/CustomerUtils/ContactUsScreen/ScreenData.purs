@@ -17,6 +17,7 @@ module Screens.ContactUsScreen.ScreenData where
 
 import Screens.Types(ContactUsScreenState)
 import Data.Maybe(Maybe(..))
+import MerchantConfig.DefaultConfig as DC
 
 initData :: ContactUsScreenState
 initData = {
@@ -25,7 +26,8 @@ initData = {
     subject : "",
     description : "",
     bookingId : "",
-    errorMessage : Nothing
+    errorMessage : Nothing,
+    config : DC.config
   },
   props: {
     btnActive : false,

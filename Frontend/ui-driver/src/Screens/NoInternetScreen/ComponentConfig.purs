@@ -31,8 +31,6 @@ primaryButtonConfig triggertype = let
     primaryButtonConfig' = config' 
       { textConfig 
         { text = if triggertype == "INTERNET_ACTION" then (getString TRY_AGAIN) else (getString GRANT_ACCESS)
-        , fontStyle = FontStyle.bold LanguageStyle
-        , textSize = FontSize.a_16
         , color = Color.yellow900
         }
       , width = MATCH_PARENT 

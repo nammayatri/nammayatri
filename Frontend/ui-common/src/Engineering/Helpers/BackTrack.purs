@@ -20,7 +20,6 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Effect (Effect)
 import Effect.Class (liftEffect)
--- import JBridge as JBridge
 import Presto.Core.Flow (doAff)
 import Presto.Core.Types.Language.Flow as Flow
 import Common.Types.App  (FlowBT)
