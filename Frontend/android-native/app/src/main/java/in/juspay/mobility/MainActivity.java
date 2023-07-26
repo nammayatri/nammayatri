@@ -728,11 +728,11 @@ public class MainActivity extends AppCompatActivity {
         try {
 
             json.put("requestId", "123");
-            json.put("service", getService());
+            json.put("service", "in.yatri.consumer");
             json.put("betaAssets", false);
-            payload.put("clientId",getResources().getString(R.string.client_id));
+            payload.put("clientId","yatriconsumer");
             payload.put("action", "initiate");
-            payload.put("service", getService());
+            payload.put("service", "in.yatri.consumer");
             payload.put(PaymentConstants.ENV, "prod");
 
             json.put(PaymentConstants.PAYLOAD, payload);
