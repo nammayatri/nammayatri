@@ -152,6 +152,10 @@ export const showUIImpl = function (sc, screen) {
   };
 };
 
+export const toInt = function (val) {
+  return parseInt(val);
+} 
+
 export const getNewIDWithTag = function(tag){
   window.__usedIDS = window.__usedIDS || []
   window.__usedIDS[tag] = window.__usedIDS[tag] || "" + window.createPrestoElement().__id;

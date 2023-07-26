@@ -17,7 +17,7 @@ module Components.DriverInfoCard.Controller where
 
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..))
+import Screens.Types(Stage, ZoneType(..), QuotesOrEstimates)
 import Data.Maybe(Maybe)
 import Components.ChatView as ChatView
 
@@ -42,6 +42,7 @@ type DriverInfoCardState =
 type DriverInfoCardProps =
   {
     currentStage :: Stage,
+    quotesOrEstimates :: QuotesOrEstimates,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
     showChatNotification :: Boolean,

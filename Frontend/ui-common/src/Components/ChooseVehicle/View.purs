@@ -5,10 +5,12 @@ import Common.Types.App
 import Components.ChooseVehicle.Controller (Action(..), Config)
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width)
 import Common.Styles.Colors as Color
+import Engineering.Helpers.Commons (toInt)
 import Merchant.Utils (getValueFromConfig)
+import Data.Lens((^.))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -96,7 +98,8 @@ vehicleDetailsView push config =
     ]
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-priceDetailsView push config =
+priceDetailsView push config = do 
+  let basePrice = config.base_price 
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
@@ -106,7 +109,7 @@ priceDetailsView push config =
     [ textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "₹" <> config.price <> " - " <> "₹" <> config.maxPrice
+          , text $ if config.price == config.maxPrice then "₹" <> show ((toInt config.price) + basePrice) else "₹" <> show ((toInt config.price) + basePrice) <> " - " <> "₹" <> show((toInt config.maxPrice) + basePrice)
           , color Color.black800
           , visibility if config.isCheckBox then GONE else VISIBLE
           ]

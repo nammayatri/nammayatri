@@ -701,6 +701,7 @@ driverInfoCardViewState state = { props:
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
+                                  , quotesOrEstimates : state.data.quotesOrEstimates
                                   }
                               , data: driverInfoTransformer state
                             }

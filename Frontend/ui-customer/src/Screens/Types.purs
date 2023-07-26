@@ -514,6 +514,7 @@ type HomeScreenState =
 type HomeScreenStateData =
   {
     suggestedAmount :: Int
+  , quotesOrEstimates :: QuotesOrEstimates
   , finalAmount :: Int
   , startedAt :: String
   , endedAt :: String
@@ -861,6 +862,7 @@ type Location = {
 type DriverInfoCard =
   { otp :: String
   , driverName :: String
+  , quotesOrEstimates :: QuotesOrEstimates
   , eta :: Int
   , vehicleDetails :: String
   , registrationNumber :: String
@@ -1035,6 +1037,12 @@ instance eqLocItemType :: Eq LocItemType where eq = genericEq
 instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
+
+data QuotesOrEstimates = QUOTES | ESTIMATES 
+
+derive instance genericQuotesOrEstimates :: Generic QuotesOrEstimates _
+instance eqQuotesOrEstimates :: Eq QuotesOrEstimates where eq = genericEq
+instance showQuotesOrEstimates :: Show QuotesOrEstimates where show = genericShow
 
 type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }

@@ -1,5 +1,4 @@
 module Components.ChooseVehicle.Controller where
-
 data Action
   = NoAction
   | OnSelect Config
@@ -19,6 +18,7 @@ type Config
     , activeIndex :: Int
     , id :: String
     , maxPrice :: String
+    , base_price :: Int
     }
 
 config :: Config
@@ -35,4 +35,5 @@ config =
   , index: 0
   , id: ""
   , maxPrice : "123"
+  , base_price : 0 
   }
