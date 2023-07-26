@@ -53,6 +53,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.SessionizerMetrics.Types.Event
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
@@ -72,6 +73,7 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RideDetails as QRideD
 import Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import Tools.Event
 import qualified Tools.Notifications as Notify
 
 data DriverRideRes = DriverRideRes
@@ -215,7 +217,8 @@ otpRideCreate ::
     EncFlow m r,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    EventStreamFlow m r
   ) =>
   DP.Person ->
   Text ->
@@ -232,6 +235,7 @@ otpRideCreate driver otpCode booking = do
   when driverInfo.onRide $ throwError DriverOnRide
   ride <- buildRide otpCode driver.id (Just transporter.id)
   rideDetails <- buildRideDetails ride
+  triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
   Esq.runTransaction $ do
     QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
     QRide.create ride
