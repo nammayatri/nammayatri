@@ -157,6 +157,7 @@ handler merchant sReq = do
           (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
+        triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
         Esq.runTransaction $ do
           QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
@@ -248,7 +249,7 @@ handler merchant sReq = do
           searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
           Redis.setExp (searchRequestKey $ getId searchReq.id) routeInfo 3600
           estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
-          triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
+          triggerSearchEvent SearchEventData {searchRequest = Left searchReq, merchantId = merchantId}
 
           forM_ estimates $ \est -> do
             triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
