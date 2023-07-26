@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Domain.Action.Beckn.Select
   ( DSelectReq (..),
@@ -103,7 +101,7 @@ handler merchant sReq estimate = do
           pureEstimatedFare = pureFareSum fareParams
       searchTry <- case mbLastSearchTry of
         Nothing -> do
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration 0 DST.INITIAL
+          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare 0 DST.INITIAL
           Esq.runTransaction $ do
             QST.create searchTry
           return searchTry
@@ -112,7 +110,7 @@ handler merchant sReq estimate = do
           -- hack check, i think we should store whole breakup instead of  single baseFare value
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
+          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
           Esq.runTransaction $ do
             when (oldSearchTry.status == DST.ACTIVE) $ do
               QST.updateStatus oldSearchTry.id DST.CANCELLED
@@ -142,12 +140,10 @@ buildSearchTry ::
   DEst.Estimate ->
   DSelectReq ->
   Money ->
-  Meters ->
-  Seconds ->
   Int ->
   DST.SearchRepeatType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReqId estimate sReq baseFare distance duration searchRepeatCounter searchRepeatType = do
+buildSearchTry merchantId searchReqId estimate sReq baseFare searchRepeatCounter searchRepeatType = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
