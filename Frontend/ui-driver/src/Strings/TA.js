@@ -504,5 +504,15 @@ const tamilStrings = {
   OTHERS : "மற்றவைகள்",
   ENTER_SECOND_SIM_NUMBER : "இரண்டாவது சிம் எண்ணை உள்ளிடவும்",
   ALTERNATE_NUMBER : "மாற்று எண்",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "மாற்று எண்ணுக்கான வரம்பு மீறப்பட்டது",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "மாற்று எண்ணைச் சேர்க்க முடியாது",
+  OTP_RESENT : "OTP மீண்டும் அனுப்பவும்",
+  OTP_RESEND_LIMIT_EXCEEDED : "OTP மீண்டும் அனுப்பும் வரம்பை மீறியது",
+  SEDAN : "செடான்",
+  SUV : "SUV",
+  HATCHBACK : "ஹேட்ச்பேக்",
+  AUTO_RICKSHAW : "ஆட்டோ ரிக்ஷா",
+  TAXI : "ஏசி அல்லாத டாக்ஸி",
+  TAXI_PLUS : "ஏசி டாக்ஸி"
 }

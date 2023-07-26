@@ -505,5 +505,16 @@ const kannadaStrings = {
   OTHERS : "ಇತರರು",
   ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
   ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆಗೆ ಮಿತಿ ಮೀರಿದೆ",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆಯನ್ನು ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ",
+  OTP_RESENT : "OTP ಮರುಕಳುಹಿಸಿ",
+  OTP_RESEND_LIMIT_EXCEEDED : "OTP ಮರುಕಳುಹಿಸುವ ಮಿತಿ ಮೀರಿದೆ",
+  SEDAN : "ಸೆಡಾನ್",
+  SUV : "SUV",
+  HATCHBACK : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್",
+  AUTO_RICKSHAW : "ಆಟೋ ರಿಕ್ಷಾ",
+  TAXI : "ನಾನ್-ಎಸಿ ಟ್ಯಾಕ್ಸಿ",
+  TAXI_PLUS : "ಎಸಿ ಟ್ಯಾಕ್ಸಿ"
+
 }

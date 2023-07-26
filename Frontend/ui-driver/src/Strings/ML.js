@@ -512,5 +512,15 @@ const mlStrings = {
   OTHERS : "മറ്റുള്ളവ",
   ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
   ALTERNATE_NUMBER : "ഇതര നമ്പർ",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "ഇതര നമ്പറിനുള്ള പരിധി കവിഞ്ഞു",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "ഇതര നമ്പർ ചേർക്കാൻ കഴിയില്ല",
+  OTP_RESENT : "OTP വീണ്ടും അയയ്ക്കുക",
+  OTP_RESEND_LIMIT_EXCEEDED : "OTP വീണ്ടും അയയ്ക്കുന്നതിനുള്ള പരിധി കവിഞ്ഞു",
+  SEDAN : "സെഡാൻ",
+  SUV : "SUV",
+  HATCHBACK : "ഹാച്ച്ബാക്ക്",
+  AUTO_RICKSHAW : "ഓട്ടോ റിക്ഷ",
+  TAXI : "നോൺ എസി ടാക്സി",
+  TAXI_PLUS : "എസി ടാക്സി"
 }

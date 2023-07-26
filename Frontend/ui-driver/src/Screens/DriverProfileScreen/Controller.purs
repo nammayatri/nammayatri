@@ -45,7 +45,7 @@ import Data.String (length, take, drop)
 import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC)
 import Data.String.CodeUnits (charAt)
 import Screens.Types as ST
-import Components.CheckList as CheckList
+import Components.CheckListView as CheckList
 import Common.Types.App (CheckBoxOptions)
 import Data.Array (filter)
 

@@ -260,7 +260,6 @@ type DriverProfileScreenData = {
   otpLimit :: Int,
   otpBackAlternateNumber :: Maybe String,
   gender :: Maybe String,
-  driverGender :: Maybe String,
   languageList :: Array CheckBoxOptions
 }
 

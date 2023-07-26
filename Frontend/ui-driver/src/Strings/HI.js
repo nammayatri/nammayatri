@@ -509,5 +509,15 @@ const hindiStrings = {
   OTHERS : "अन्य",
   ENTER_SECOND_SIM_NUMBER : "दूसरा सिम नंबर दर्ज करें",
   ALTERNATE_NUMBER : "वैकल्पिक नंबर",
-  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं"
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं",
+  LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "वैकल्पिक संख्या के लिए सीमा पार हो गई",
+  OTP_RESENT : "ओटीपी दोबारा भेजें",
+  OTP_RESEND_LIMIT_EXCEEDED : "OTP पुनः भेजने की सीमा पार हो गई",
+  SEDAN : "सेडान",
+  SUV : "एसयूवी",
+  HATCHBACK : "हैचबैक",
+  AUTO_RICKSHAW : "ऑटो रिक्शा",
+  TAXI : "नॉन-एसी टैक्सी",
+  TAXI_PLUS : "एसी टैक्सी"
 }

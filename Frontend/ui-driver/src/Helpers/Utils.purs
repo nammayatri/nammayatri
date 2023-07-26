@@ -215,12 +215,12 @@ getDowngradeOptions vehicleType = case vehicleType of
 getVehicleType :: String -> String
 getVehicleType vehicleType =
   case vehicleType of
-    "SEDAN" -> "Sedan"
-    "SUV"   -> "Suv"
-    "HATCHBACK" -> "Hatchback"
-    "AUTO_RICKSHAW" -> "Auto Rickshaw"
-    "TAXI" -> "Non AC Taxi"
-    "TAXI_PLUS" -> "AC Taxi"
+    "SEDAN" -> (getString SEDAN )
+    "SUV"   -> (getString SUV)
+    "HATCHBACK" -> (getString HATCHBACK)
+    "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
+    "TAXI" -> (getString TAXI)
+    "TAXI_PLUS" -> (getString TAXI_PLUS)
     _ -> ""
 
 foreign import getZoneTagConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)

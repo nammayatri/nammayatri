@@ -73,7 +73,7 @@ initData = {
     isEditAlternateMobile : false,
     numberExistError : false,
     mNumberEdtFocused : false,
-    updateLanguages : true
+    updateLanguages : false
    }
 }
 

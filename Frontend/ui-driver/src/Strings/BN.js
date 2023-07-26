@@ -507,5 +507,16 @@ const bengaliStrings = {
   CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "গ্রাহক ₹1.5\nপ্রথম 3 মিনিটের পর প্রতি মিনিট অপেক্ষার জন্য প্রদান করবেন",
 	OTHERS : "অন্যান্য",
 	ENTER_SECOND_SIM_NUMBER : "দ্বিতীয় সিম নম্বর লিখুন",
-	ALTERNATE_NUMBER : "বিকল্প নম্বর"
+	ALTERNATE_NUMBER : "বিকল্প নম্বর",
+	SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "আপনি কথা বলতে পারেন এমন ভাষা নির্বাচন করুন",
+	LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "বিকল্প সংখ্যার জন্য সীমা অতিক্রম করেছে৷",
+  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "বিকল্প নম্বর যোগ করা যাবে না",
+  OTP_RESENT : "OTP আবার পাঠান",
+  OTP_RESEND_LIMIT_EXCEEDED : "ওটিপি পুনরায় পাঠানোর সীমা অতিক্রম করেছে৷",
+	SEDAN : "সেডান",
+  SUV : "SUV",
+  HATCHBACK : "হ্যাচব্যাক",
+  AUTO_RICKSHAW : "অটো রিক্সা",
+  TAXI : "নন-এসি ট্যাক্সি",
+  TAXI_PLUS : "এসি ট্যাক্সি"
 	}
