@@ -575,6 +575,7 @@ public class LocationUpdateService extends Service {
             }
 
             String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+            String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
             String makeNullAPICall = sharedPref.getString("MAKE_NULL_API_CALL", "NO");
             String demoModePassword = sharedPref.getString("DEMO_MODE_PASSWORD", "null");
             String isDemoModeEnabled = sharedPref.getString("IS_DEMOMODE_ENABLED", "null");
@@ -614,7 +615,7 @@ public class LocationUpdateService extends Service {
             metaData.put(triggerFunction);
             try {
                 // endPoint for location update
-                if (!token.equals("__failed")) {
+                if (!token.equals("__failed") && isValidTime.equals("true")) {
                     String orderUrl = baseUrl + "/driver/location";
                     System.out.println("LOCATION_UPDATE: Log by " + log + "baseUrl - " + orderUrl);
 
@@ -850,8 +851,9 @@ public class LocationUpdateService extends Service {
                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                     Date locTime = new Date(locTimeMilliSeconds);
                     String thisLocationTimeStamp = sdf.format(locTime);
-                    boolean isLocationUpdateValid = compareCurrentAndLastTimestamp(thisLocationTimeStamp, sdf);
-                    if(isLocationUpdateValid)
+                    SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
+                    if(isValidTime.equals("true"))
                     {
                         updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                         updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
@@ -931,8 +933,9 @@ public class LocationUpdateService extends Service {
                                             long locTimeMilliSeconds = location.getTime();
                                             Date locTime = new Date(locTimeMilliSeconds);
                                             String thisLocationTimeStamp = sdf.format(locTime);
-                                            boolean isLocationUpdateValid = compareCurrentAndLastTimestamp(thisLocationTimeStamp, sdf);
-                                            if(isLocationUpdateValid)
+                                            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                                            String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
+                                            if(isValidTime.equals("true"))
                                             {
                                                 updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                                 updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
@@ -957,7 +960,9 @@ public class LocationUpdateService extends Service {
                                 .addOnSuccessListener(new OnSuccessListener<Location>() {
                                     @Override
                                     public void onSuccess(Location location) {
-                                        if (location != null) {
+                                        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                                        String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
+                                        if (location != null && isValidTime.equals("true")) {
                                             updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                             updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                                             long locTimeMilliSeconds = location.getTime();
@@ -965,11 +970,7 @@ public class LocationUpdateService extends Service {
                                             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                                             Date locTime = new Date(locTimeMilliSeconds);
                                             String thisLocationTimeStamp = sdf.format(locTime);
-                                            boolean isLocationUpdateValid = compareCurrentAndLastTimestamp(thisLocationTimeStamp, sdf);
-                                            if(isLocationUpdateValid)
-                                            {
-                                                callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
-                                            }
+                                            callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
                                         }
                                     }
                                 })

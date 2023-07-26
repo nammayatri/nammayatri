@@ -81,6 +81,7 @@ data KeyStore = USER_NAME
                 | TOLERANCE_EARTH
                 | RIDE_ID
                 | SUGGESTIONS_ENABLED
+                | IS_VALID_TIME
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY
                 | NEGOTIATION_UNIT

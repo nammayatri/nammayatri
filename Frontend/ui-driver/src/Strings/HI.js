@@ -8,7 +8,7 @@ export function getStringValue(key) {
 }
 
 const hindiStrings = {
-  INACCURATE_DATE_AND_TIME: "ग़लत दिनांक और समय!",
+  INACCURATE_DATE_AND_TIME: "गलत दिनांक और समय!",
   ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "अपनी डिवाइस की तारीख और समय समायोजित करें और पुनः प्रयास करें",
   THE_CURRENT_DATE_AND_TIME_IS: "वर्तमान दिनांक और समय है",
   GO_TO_SETTING: "सेटिंग्स में जाओ",

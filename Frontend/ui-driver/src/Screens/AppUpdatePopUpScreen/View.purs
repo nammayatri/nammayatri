@@ -95,6 +95,7 @@ inaccurateDateAndTimeView push state =
       , color Color.black700
       , fontStyle $ FontStyle.regular LanguageStyle
       , textSize FontSize.a_14
+      , gravity CENTER
       ]
     , linearLayout [
       width MATCH_PARENT
@@ -111,17 +112,17 @@ inaccurateDateAndTimeView push state =
         , fontStyle $ FontStyle.regular LanguageStyle
         , textSize FontSize.a_14
         ]
-        , PrimaryButton.view (push <<< PrimaryButtonActionController ) (primaryButtonConfig)
+        , PrimaryButton.view (push <<< PrimaryButtonActionController ) (primaryButtonConfig (getString GO_TO_SETTING))
       ]
 
   ]
 
-primaryButtonConfig ::  PrimaryButtonConfig.Config
-primaryButtonConfig  = let
+primaryButtonConfig :: String -> PrimaryButtonConfig.Config
+primaryButtonConfig val = let
     config = PrimaryButtonConfig.config
     primaryButtonConfig' = config
       { textConfig
-      { text = (getString GO_TO_SETTING)
+      { text = val
       , color = Color.primaryButtonColor
       , textSize = FontSize.a_18}
       , background = Color.black900
