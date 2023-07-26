@@ -68,16 +68,15 @@ statusHandler (personId, merchantId) = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
   (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit
-  (aadhaarStatus, _) <- getAadhaarStatus personId transporterConfig.aadhaarVerificationRequired
+  (aadhaarStatus, _) <- getAadhaarStatus personId
   when (rcStatus == VALID) $ do
     createVehicle personId merchantId mRC
-  when (dlStatus == VALID && rcStatus == VALID && aadhaarStatus == VALID) $ do
+  when (dlStatus == VALID && rcStatus == VALID && (aadhaarStatus == VALID || not transporterConfig.aadhaarVerificationRequired)) $ do
     enableDriver personId merchantId mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus, aadhaarVerificationStatus = aadhaarStatus}
 
-getAadhaarStatus :: Id SP.Person -> Bool -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
-getAadhaarStatus _ False = return (VALID, Nothing)
-getAadhaarStatus personId True = do
+getAadhaarStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
+getAadhaarStatus personId = do
   mAadhaarCard <- SAV.findByDriverId personId
   case mAadhaarCard of
     Just aadhaarCard -> do
