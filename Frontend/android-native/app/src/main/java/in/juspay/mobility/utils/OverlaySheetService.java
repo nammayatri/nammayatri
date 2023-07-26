@@ -573,20 +573,19 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     }
 
-    public void removeCardById(String id){
+    public boolean removeCardById(String id){
         if (sheetArrayList!=null){
             if (sheetArrayList.size()>0){
-                if ((sheetArrayList.size()==1  && rideStatusListener!=null)){
-                    return;
-                }
+
                 for (int i = 0; i<sheetArrayList.size(); i++){
                     if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
                         removeCard(i);
-                        break;
+                        return true;
                     }
                 }
             }
         }
+        return false;
     }
 
     private void showOverLayPopup() {

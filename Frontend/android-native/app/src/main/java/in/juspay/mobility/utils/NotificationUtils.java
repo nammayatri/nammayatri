@@ -9,6 +9,9 @@
 
 package in.juspay.mobility.utils;
 
+import static android.content.Context.ACTIVITY_SERVICE;
+import static android.content.Context.BIND_AUTO_CREATE;
+
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
@@ -34,22 +37,18 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.provider.Settings;
 import android.util.Log;
+import android.util.Pair;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
-
-import in.juspay.hypersdk.core.JuspayServices;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
@@ -63,8 +62,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import in.juspay.mobility.BuildConfig;
 import in.juspay.mobility.MainActivity;
@@ -75,7 +72,7 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import javax.net.ssl.HttpsURLConnection;
 
 
-public class NotificationUtils extends AppCompatActivity {
+public class NotificationUtils {
 
     private static final String LOG_TAG = "LocationServices";
     private static final String TAG = "NotificationUtils";
@@ -95,6 +92,7 @@ public class NotificationUtils extends AppCompatActivity {
     private static boolean hasStartedService = false;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList();
+
     private static RideRequestUtils rideRequestUtils = new RideRequestUtils();
 
     @SuppressLint("MissingPermission")
@@ -168,6 +166,7 @@ public class NotificationUtils extends AppCompatActivity {
                 .setContentIntent(pendingIntent)
                 .setChannelId(channelId)
                 .setPriority(NotificationManager.IMPORTANCE_MAX);
+
         if (data.has("notification_type")){
             String notificationType = new String(data.getString("notification_type"));
             int calculatedTime = 20;
@@ -189,10 +188,20 @@ public class NotificationUtils extends AppCompatActivity {
 
     public static void showAllocationNotification (Context context, String title, String msg, JSONObject data, String imageUrl, JSONObject entity_payload){
         try{
+
+            final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
+            f.setTimeZone(TimeZone.getTimeZone("IST"));
+            String currTime = f.format(new Date());
             String notificationType = new String(data.getString("notification_type"));
             String channelId;
-            if (ALLOCATION_TYPE.equals(notificationType)) {
-                System.out.println("showNotification:- "+ notificationType);
+
+            if(ALLOCATION_TYPE.equals(notificationType) &&  MyFirebaseMessagingService.clearedRideRequest.containsKey(data.getString("entity_ids")))
+            {
+                System.out.println("The remove notification cleare "+data.getString("entity_ids"));
+                MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
+                return;
+            }
+            if (ALLOCATION_TYPE.equals(notificationType) ) {
                 channelId = RINGING_CHANNEL_ID;
             }
             if (ALLOCATION_TYPE.equals(notificationType)) {
@@ -203,8 +212,11 @@ public class NotificationUtils extends AppCompatActivity {
                 //Recieved Notification && checking for permission if overlay permission is given, if not then it will redirect to give permission
 
                 Intent svcT = new Intent(context, OverlaySheetService.class);
+
+
                 SharedPreferences sharedPref = context.getSharedPreferences(
                         context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+
                 String token = sharedPref.getString("RegistrationToken", "null");
                 String env = sharedPref.getString("ENV", "null");
                 svcT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -227,7 +239,7 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putString("addressDrop", addressDrop.getString("full_address"));
                     sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee")?entity_payload.getInt("driverMinExtraFee"):10);
                     sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee")?entity_payload.getInt("driverMaxExtraFee"):20);
-                    sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag")?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
+                    sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
                     sheetData.putInt("rideRequestPopupDelayDuration",entity_payload.has("rideRequestPopupDelayDuration")?entity_payload.getInt("rideRequestPopupDelayDuration"):0);
                     sheetData.putInt("customerExtraFee",(entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
                     sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
@@ -246,9 +258,7 @@ public class NotificationUtils extends AppCompatActivity {
                     Log.e(TAG,"Exception" + e);
 
                 }
-                final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
-                f.setTimeZone(TimeZone.getTimeZone("IST"));
-                String currTime = f.format(new Date());
+
                 boolean rideReqExpired = (rideRequestUtils.calculateExpireTimer(expiryTime, currTime))<=1;
                 Log.e(TAG, "TimeDifference : " + (rideRequestUtils.calculateExpireTimer(expiryTime, currTime)));
                 if (rideRequestUtils.calculateExpireTimer(expiryTime, currTime) > 2){
@@ -257,7 +267,8 @@ public class NotificationUtils extends AppCompatActivity {
                         if(binder == null) {
                             context.startService(svcT);
                             listData.add(sheetData);
-                        } else {
+                        }
+                          else {
                             new Handler(Looper.getMainLooper()).post(new Runnable() {
                                 @Override
                                 public void run() {
@@ -341,11 +352,20 @@ public class NotificationUtils extends AppCompatActivity {
                     mFirebaseAnalytics.logEvent("overlay_popup_expired", overlayParams);
                 }
                 notificationId ++;
+                for(Iterator<Map.Entry<String, Long>> iterator = MyFirebaseMessagingService.clearedRideRequest.entrySet().iterator(); iterator.hasNext(); ) {
+                    Map.Entry<String, Long> entry = iterator.next();
+                      if(rideRequestUtils.timeDifferenceInMinutes(entry.getValue(), System.currentTimeMillis()) > 30) {
+                          iterator.remove();
+                      }
+                  }
             }
-
             if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))){
                 if (binder !=null){
-                    binder.getService().removeCardById(data.getString(context.getString(R.string.entity_ids)));
+                    if (!binder.getService().removeCardById(data.getString(context.getString(R.string.entity_ids))))
+                    {
+                        MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
+                    }
+
                 }
             }
         }catch (Exception e){

@@ -36,7 +36,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Map;
@@ -55,6 +57,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     String merchantType = BuildConfig.MERCHANT_TYPE;
 
     private RideRequestUtils rideRequestUtils = new RideRequestUtils();
+
+    public static HashMap<String, Long> clearedRideRequest = new HashMap<>();
 
     @Override
     public void onNewToken(@NonNull String newToken){
@@ -135,6 +139,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     if (notification_payload != null || notification != null) {
                         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                         String notificationType = (String) payload.get("notification_type");
+
                         stopChatService(notificationType, sharedPref);
                         switch (notificationType) {
                             case NotificationTypes.DRIVER_NOTIFY:
