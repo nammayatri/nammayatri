@@ -279,7 +279,7 @@ const bengaliStrings = {
   "YOU_ARE_ABOUT_TO_CALL_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "আপনি নিকটতম জরুরি কেন্দ্রে কল করতে চলেছেন৷ আপনি কি এগিয়ে যেতে চান?",
   "DIAL_112": "ডায়াল 112",
-  "HELP_US_WITH_YOUR_FEEDBACK": "আপনার মতামত দিয়ে আমাদের সহায়তা করুন",
+  "HELP_US_WITH_YOUR_FEEDBACK": "আপনার মতামত দিয়ে আমাদের সহায়তা করুন (ঐচ্ছিক)",
   "WAIT_TIME": "অপেক্ষার সময়",
   "FAVOURITES": "প্রিয়",
   "ADD_FAVOURITE": "প্রিয় যোগ করুন",

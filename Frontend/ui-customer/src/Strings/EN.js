@@ -283,7 +283,7 @@ const englishStrings = {
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "You are about to place a call to the nearest Emergency Centre. Do you want to proceed?",
   "DIAL_112": "Dial 112",
-  "HELP_US_WITH_YOUR_FEEDBACK": "Help us with your feedback",
+  "HELP_US_WITH_YOUR_FEEDBACK": "Help us with your feedback (Optional)",
   "WAIT_TIME": "Wait Time",
   "FAVOURITES": "Favourites",
   "ADD_FAVOURITE": "Add Favourite",

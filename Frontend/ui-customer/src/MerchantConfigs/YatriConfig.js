@@ -54,7 +54,8 @@ const config = {
     "LOCATION_PERMISSION_SUBTITLE_NEW_USER",
     "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
     "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
-    "CALL_NAMMA_YATRI_SUPPORT"],
+    "CALL_NAMMA_YATRI_SUPPORT",
+    "YOUR_FEEDBACK_HELPS_US"],
 
     "isReferralEnabled" : "false",
     "showBookingPreference" : "false",
@@ -85,7 +86,8 @@ const malayalamStrings = {
     "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "യാത്രിയിലേക്ക് സ്വാഗതം \nറൈഡുകൾ ബുക്കിംഗ് ആരംഭിക്കാൻ, നിങ്ങളെ കണ്ടെത്താൻ ഞങ്ങളെ അനുവദിക്കൂ!",
     "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
     "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-    "CALL_NAMMA_YATRI_SUPPORT" : "യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക"
+    "CALL_NAMMA_YATRI_SUPPORT" : "യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക",
+    "YOUR_FEEDBACK_HELPS_US" : "യാത്രാ അനുഭവം മെച്ചപ്പെടുത്താൻ നിങ്ങളുടെ ഫീഡ്‌ബാക്ക് ഞങ്ങളെ സഹായിക്കുന്നു"
 
 }
 
@@ -103,5 +105,6 @@ const englishStrings = {
     "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Yatri \nTo start booking rides, please allow us to find you!",
     "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
     "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-    "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Support"
+    "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Support",
+    "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience"
   }
