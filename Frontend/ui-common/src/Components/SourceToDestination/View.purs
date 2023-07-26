@@ -15,34 +15,44 @@
 
 module Components.SourceToDestination.View where
 
-import Prelude (Unit, ($), (<>))
+import Prelude (Unit, ($), (<>), (/), (<), (>), (==))
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action,Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id)
 import Common.Styles.Colors as Color
+import Font.Style as FontStyle
 import Font.Size as FontSize
+import Common.Types.App (LazyCheck(..))
+import Components.SeparatorView.View as SeparatorView
+import Engineering.Helpers.Commons (getNewIDWithTag, os)
+import Engineering.Helpers.Utils (defaultSeparatorCount, getSeparatorFactor)
+import Data.Maybe (Maybe(..), isNothing, fromMaybe)
+import Data.Function.Uncurried (runFn1)
+import JBridge (getLayoutBounds)
+import Debug
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   frameLayout
   [ height WRAP_CONTENT
   , width config.width
-  , gravity LEFT
+  , gravity CENTER_VERTICAL
   , margin config.margin
-  ][  imageView
-        [ imageUrl "ic_line"
-        , height MATCH_PARENT
-        , margin config.lineMargin
-        , width (V 1)
-        ]
-    , distanceLayout config
-    , linearLayout
-      [ height WRAP_CONTENT
-      , orientation VERTICAL
+  ][ relativeLayout
+      ([ height WRAP_CONTENT
       , width MATCH_PARENT
-      ][ sourceLayout config
-      , destinationLayout config
+      ] <> case config.id of
+        Just layoutId -> [id $ getNewIDWithTag $ "src_dest_layout_" <> layoutId]
+        Nothing -> [])[ linearLayout
+        [ height WRAP_CONTENT
+        , orientation VERTICAL
+        , width MATCH_PARENT
+        , margin $ MarginTop config.separatorMargin
+        ][SeparatorView.view $ separatorConfig config
+      , destinationLayout config]
+      , sourceLayout config
       ]
+    , distanceLayout config
     ]
 
 
@@ -60,34 +70,32 @@ sourceLayout config =
       , margin config.sourceImageConfig.margin
       ]
     , linearLayout
-      [ height WRAP_CONTENT
+      ([ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      ][  textView
+      ] <> case config.id of
+        Just layoutId -> [id $ getNewIDWithTag $ "source_layout_" <> layoutId]
+        Nothing -> [])
+        $ [  textView $
           [ text config.sourceTextConfig.text
-          , textSize config.sourceTextConfig.textSize
           , width MATCH_PARENT
           , padding config.sourceTextConfig.padding
           , margin config.sourceTextConfig.margin
-          , fontStyle config.sourceTextConfig.fontStyle
           , color config.sourceTextConfig.color
           , ellipsize config.sourceTextConfig.ellipsize
           , maxLines config.sourceTextConfig.maxLines
-          ]
-        , textView
+          ] <> (FontStyle.getFontStyle config.sourceTextConfig.textStyle LanguageStyle)
+        , textView $
           [ text config.rideStartedAtConfig.text
-          , textSize config.rideStartedAtConfig.textSize
-          , fontStyle config.rideStartedAtConfig.fontStyle
           , color config.rideStartedAtConfig.color
           , visibility config.rideStartedAtConfig.visibility
           , margin config.rideStartedAtConfig.margin
           , padding config.rideStartedAtConfig.padding
           , maxLines config.rideStartedAtConfig.maxLines
           , ellipsize config.rideStartedAtConfig.ellipsize
-          ]
+          ] <> (FontStyle.getFontStyle config.rideStartedAtConfig.textStyle LanguageStyle)
         ]
-
     ]
 
 destinationLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
@@ -113,29 +121,25 @@ destinationLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      ][  textView
+      ][  textView $
           [ text config.destinationTextConfig.text
-          , textSize config.destinationTextConfig.textSize
           , layoutGravity "center_vertical"
           , padding config.destinationTextConfig.padding
           , width MATCH_PARENT
           , margin config.destinationTextConfig.margin
-          , fontStyle config.destinationTextConfig.fontStyle
           , color config.destinationTextConfig.color
           , maxLines config.destinationTextConfig.maxLines
           , ellipsize config.destinationTextConfig.ellipsize
-          ]
-        , textView
+          ] <> (FontStyle.getFontStyle config.destinationTextConfig.textStyle LanguageStyle)
+        , textView $
           [ text config.rideEndedAtConfig.text
-          , textSize config.rideEndedAtConfig.textSize
-          , fontStyle config.rideEndedAtConfig.fontStyle
           , color config.rideEndedAtConfig.color
           , visibility config.rideEndedAtConfig.visibility
           , margin config.rideEndedAtConfig.margin
           , padding config.rideEndedAtConfig.padding
           , maxLines config.rideEndedAtConfig.maxLines
           , ellipsize config.rideEndedAtConfig.ellipsize
-          ]
+          ] <> (FontStyle.getFontStyle config.rideEndedAtConfig.textStyle LanguageStyle)
         ]
     ]
 
@@ -143,19 +147,43 @@ distanceLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
 distanceLayout config =
   linearLayout
   [ width WRAP_CONTENT
+  , height $ getDistanceLayoutHeight config
+  , gravity CENTER_VERTICAL
+  ]
+  [linearLayout
+  [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , stroke $ "1," <> Color.grey900
   , cornerRadius 4.0
   , margin config.distanceConfig.margin
   , background config.distanceConfig.background
   , visibility config.distanceConfig.distanceVisibility
-  ][ textView
+  ][ textView $
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , gravity CENTER
       , text config.distanceConfig.distanceValue
-      , textSize FontSize.a_12
       , color Color.black900
       , padding $ Padding 6 4 6 4
-      ]
-  ]
+      ] <> FontStyle.tags LanguageStyle
+  ]]
+
+separatorConfig :: Config -> SeparatorView.Config
+separatorConfig config = 
+  let count = case config.id of 
+                Nothing -> defaultSeparatorCount  
+                Just layoutId -> (runFn1 getLayoutBounds $ getNewIDWithTag $ "source_layout_" <> layoutId).height / getSeparatorFactor
+  in {
+    orientation : VERTICAL
+  , count : if config.overrideSeparatorCount > 0 then config.overrideSeparatorCount else if count < defaultSeparatorCount then defaultSeparatorCount else count
+  , height : V 4
+  , width : V 2
+  , layoutWidth : config.destinationImageConfig.width
+  , layoutHeight : config.destinationImageConfig.height
+  }
+
+getDistanceLayoutHeight :: Config -> Length
+getDistanceLayoutHeight config = if os == "ANDROID" then MATCH_PARENT else 
+  case config.id of
+    Nothing -> MATCH_PARENT
+    Just layoutId -> V $ (runFn1 getLayoutBounds $ getNewIDWithTag $ "src_dest_layout_" <> layoutId).height

@@ -55,6 +55,8 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
+import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -62,7 +64,6 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
-    CallBackForTime -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "screen_click"
     BackPressed -> do
       trackAppBackPress appId (getScreen HOME_SCREEN)
       trackAppEndScreen appId (getScreen HOME_SCREEN)
@@ -175,8 +176,7 @@ instance loggableAction :: Loggable Action where
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
-                    | GoToHelpAndSupportScreen
-                    | GoToAppUpdatePopupScreen
+                    | GoToHelpAndSupportScreen ST.HomeScreenState
                     | GoToProfileScreen ST.HomeScreenState
                     | GoToRidesScreen ST.HomeScreenState
                     | GoToReferralScreen
@@ -198,7 +198,6 @@ data ScreenOutput =   Refresh ST.HomeScreenState
 data Action = NoAction
             | BackPressed
             | ScreenClick
-            | CallBackForTime
             | Notification String
             | ChangeStatus Boolean
             | GoOffline Boolean
@@ -291,9 +290,6 @@ eval (Notification notificationType) state = do
 eval CancelGoOffline state = do
   continue state { props = state.props { goOfflineModal = false } }
 
-eval CallBackForTime state = do
-  exit $ GoToAppUpdatePopupScreen
-
 eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do
@@ -306,7 +302,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Profile" -> exit $ GoToProfileScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications state
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
@@ -349,7 +345,7 @@ eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
   _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
-  _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
+  _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
   pure NoAction
   ]
 
@@ -485,7 +481,7 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
 
 eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
   _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
-  _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
+  _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
   pure NoAction
   ]
 
@@ -503,7 +499,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
   let message = getMessageFromKey chatSuggestion "EN_US"
   _ <- pure $ sendMessage message
-  _ <- pure $ firebaseLogEvent $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
+  let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
   continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -562,7 +558,7 @@ eval ClickAddAlternateButton state = do
 eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
 
-eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
+eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 
 eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"

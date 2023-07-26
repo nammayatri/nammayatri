@@ -17,6 +17,7 @@ module Screens.AccountSetUpScreen.ScreenData where
 
 import Screens.Types (AccountSetUpScreenState)
 import Data.Maybe (Maybe(..))
+import MerchantConfig.DefaultConfig as DC
 
 initData :: AccountSetUpScreenState
 initData =
@@ -25,6 +26,7 @@ initData =
       , email: ""
       , gender: Nothing
       , nameErrorMessage: Nothing
+      , config : DC.config
       }
   , props:
       { btnActive: false

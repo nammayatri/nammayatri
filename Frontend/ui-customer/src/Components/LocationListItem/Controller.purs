@@ -24,8 +24,8 @@ data Action = OnClick LocationListItemState
 
 
 dummyLocationListState :: LocationListItemState
-dummyLocationListState = { prefixImageUrl : "ny_ic_briefcase,https://assets.juspay.in/nammayatri/images/user/ny_ic_briefcase.png"
-  , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
+dummyLocationListState = { prefixImageUrl : ""
+  , postfixImageUrl : ""
   , postfixImageVisibility : true
   , title : "Work"
   , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"

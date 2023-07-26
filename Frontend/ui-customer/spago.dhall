@@ -26,6 +26,7 @@ to generate this file without the comments in this block.
   , "foldable-traversable"
   , "foreign"
   , "foreign-generic"
+  , "foreign-object"
   , "free"
   , "functions"
   , "halogen-vdom"
@@ -46,6 +47,7 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
+  , "unsafe-coerce"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]

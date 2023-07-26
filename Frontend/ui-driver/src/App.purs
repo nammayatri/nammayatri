@@ -50,6 +50,7 @@ import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -88,6 +89,7 @@ newtype GlobalState = GlobalState {
   , notificationScreen :: NotificationsScreenState
   , referralScreen :: ReferralScreenState
   , bookingOptionsScreen :: BookingOptionsScreenState
+  , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
   }
 
 defaultGlobalState :: GlobalState
@@ -125,6 +127,7 @@ defaultGlobalState = GlobalState{
 , notificationScreen : NotificationsScreenData.initData
 , referralScreen : ReferralScreenData.initData
 , bookingOptionsScreen : BookingOptionsScreenData.initData
+, loaderOverlay : LoaderOverlayScreenData.initData
 }
 
 data ScreenType =
@@ -239,7 +242,6 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_RIDES_SCREEN
                           | GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
                           | GO_TO_HELP_AND_SUPPORT_SCREEN
-                          | GO_TO_APP_UPDATE_POPUP_SCREEN
                           | GO_TO_EDIT_GENDER_SCREEN
                           | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String} HomeScreenState
                           | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String}

@@ -30,7 +30,7 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
+import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), (||))
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -39,7 +39,8 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Screens.Types(Stage(..), ZoneType(..))
 import Common.Types.App
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -110,28 +111,26 @@ editTextView state push =
   , orientation HORIZONTAL
   , margin $ MarginBottom 24
   , padding $ Padding 16 16 16 16
-  ][  imageView
-      [ imageWithFallback "ny_ic_message_square,https://assets.juspay.in/nammayatri/images/common/ny_ic_message_square.png"
-      , height $ V 16
-      , width $ V 16
-      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0
-      ]
+  ][  imageView 
+      [ imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_message_square.png"
+      , height $ V 16 
+      , width $ V 16 
+      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0 
+      ]                   
     , (if os == "ANDROID" then editText else multiLineEditText)
       $
       [ height MATCH_PARENT
       , width $ WRAP_CONTENT
       , gravity LEFT
       , padding $ Padding 0 0 0 0
-      , textSize FontSize.a_12
       , background Color.grey800
-      , color Color.black
-      , fontStyle $ FontStyle.regular LanguageStyle
+      , color Color.black 
       , hint $ getString HELP_US_WITH_YOUR_FEEDBACK_OPTIONAL
       , weight 1.0
       , pattern "[^\n]*,255"
-      , singleLine false
-      , onChange push FeedbackChanged
-      ]
+      , singleLine false 
+      , onChange push FeedbackChanged 
+      ] <> FontStyle.body3 LanguageStyle
 
   ]
 
@@ -143,17 +142,17 @@ rideRatingButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
         { text = (getString SUBMIT_FEEDBACK)
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
+        , color = if state.data.rating < 1 && state.data.appConfig.isGradient == "true" then "#696A6F" else state.data.appConfig.primaryTextColor
         , width = MATCH_PARENT
         }
       , isClickable = if state.data.rating < 1 then false else true
-      , alpha = if state.data.rating < 1 then 0.4 else 1.0
+      , alpha = if not (state.data.rating < 1) || state.data.appConfig.isGradient == "true" then 1.0 else 0.4
       , margin = (Margin 0 0 0 0)
       , height = (V 48)
       , gravity = CENTER_VERTICAL
-      , cornerRadius = 8.0
-      , background = Color.black900
+      , isGradient = if state.data.rating < 1 then false else if state.data.appConfig.isGradient == "true" then true else false
+      , cornerRadius = state.data.appConfig.ratingConfig.buttonCornerRadius
+      , background = if state.data.rating < 1 && state.data.appConfig.isGradient == "true" then "#F1F1F4" else state.data.appConfig.primaryBackground
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
       }
@@ -171,18 +170,15 @@ starRatingView state push =
     , gravity CENTER
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
-    ][textView
+    ][ textView $
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
-        , textSize FontSize.a_16
         , text $ getString RATE_YOUR_EXPERIENCE
         , color Color.black800
         , maxLines 2
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
-        , lineHeight "20"
         , margin (MarginBottom 16)
-        ]
+        ] <> FontStyle.subHeading2 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -196,7 +192,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]

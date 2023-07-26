@@ -42,7 +42,7 @@ import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.Backend as Remote
@@ -51,6 +51,9 @@ import Styles.Colors as Color
 import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
 import Debug(spy)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -144,7 +147,7 @@ profilePictureLayout state push =
         , layoutGravity "center"
         , cornerRadius 45.0
         , id $ EHC.getNewIDWithTag "ProfileImage"
-        , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+        , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_profile_image.png"
         ]
       , linearLayout
         [ width WRAP_CONTENT
@@ -157,15 +160,13 @@ profilePictureLayout state push =
             , text $ getValueToLocalStore USER_NAME
             , color Color.white900
             ] <> FontStyle.h3 TypoGraphy
-            , textView
+            , textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , margin $ MarginTop 3
             , text $ getVehicleType state.data.driverVehicleType
-            , textSize FontSize.a_10
-            , fontStyle $ FontStyle.regular LanguageStyle
             , color Color.black500
-            ]
+            ] <> FontStyle.captions TypoGraphy
             , ratingView state
         ]
     ]
@@ -215,24 +216,23 @@ profileOptionsLayout state push =
                   , height WRAP_CONTENT
                   , orientation HORIZONTAL
                   , gravity CENTER_VERTICAL
-                  ][ textView
+                  ][ textView $
                       [ width WRAP_CONTENT
                       , height WRAP_CONTENT
                       , text $ "V " <> (getValueToLocalStore VERSION_NAME)
-                      , textSize FontSize.a_14
                       , visibility if(optionItem.menuOptions == ABOUT_APP) then VISIBLE else GONE
                       , margin (MarginRight 5)
-                      ]
+                      ] <> FontStyle.paragraphText TypoGraphy
                     , imageView
                       [ width $ V 18
                       , height $ V 18
-                      , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                      , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
                       ]
                   ]
               ]
-              , if (index == 2 || index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
+              , if (index == 2 || index == length (optionList FunctionCall) - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
             ]
-          ) (optionList "lazyEvaluation")
+          ) (optionList FunctionCall)
     )
  ]
 
@@ -246,21 +246,20 @@ ratingView state=
   ][imageView
     [ width $ V 12
     , height MATCH_PARENT
-    , imageWithFallback "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
+    , imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
     , gravity CENTER_VERTICAL
     ]
-    , textView
+    , textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text $ if (fromMaybe 0 state.data.driverRating ) == 0 then "New" else show (fromMaybe 0 state.data.driverRating )
+    , text $ if (fromMaybe 0 state.data.driverRating ) == 0 then (getString NEW_) else show (fromMaybe 0 state.data.driverRating )
     , margin (MarginLeft 7)
-    , textSize FontSize.a_14
     , color Color.white900
-    ]
+    ] <> FontStyle.paragraphText TypoGraphy
     , imageView
     [ width $ V 15
     , height MATCH_PARENT
-    , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+    , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
     , gravity CENTER_VERTICAL
     , margin (MarginLeft 5)
     , visibility GONE

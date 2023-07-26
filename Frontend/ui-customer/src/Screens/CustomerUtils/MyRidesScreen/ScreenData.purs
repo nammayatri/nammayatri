@@ -18,6 +18,9 @@ module Screens.MyRidesScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..))
 import Services.API (BookingLocationAPIEntity(..))
+import MerchantConfig.DefaultConfig as DC
+import Prelude ((<>))
+import Foreign.Object (empty)
 
 initData :: MyRidesScreenState
 initData =
@@ -34,6 +37,8 @@ initData =
       { selectedItem: dummyIndividualCard
       , offsetValue: 0
       , loadMoreText: "LoadMore"
+      , config: DC.config
+      , logField : empty
       }
   , prestoListArrayItems: []
   }
@@ -64,7 +69,7 @@ dummyIndividualCard = {
     totalAmount : "",
     cardVisibility : "",
     shimmerVisibility : "",
-    driverImage : "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png",
+    driverImage : "",
     isCancelled :  "",
     isSuccessfull :  "",
     rating : 0,

@@ -88,8 +88,9 @@ const kannadaStrings = {
   "LANGUAGE": "ಭಾಷೆಗಳು",
   "OTP": "ಒತ್ತು",
   "PAYMENT_METHOD": "ಪಾವತಿ ವಿಧಾನ",
-  "PAYMENT_METHOD_STRING": "ನಗದು / ಯಾವುದೇ UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
-  "CANCEL_RIDE": "ಸವಾರಿ ರದ್ದುಗೊಳಿಸಿ",
+  "PAYMENT_METHOD_STRING": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "PAYMENT_METHOD_STRING_": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "CANCEL_RIDE": "ನನ್ನ ಸವಾರಿಯನ್ನು ರದ್ದುಮಾಡಿ",
   "SUPPORT": "ಬೆಂಬಲ",
   "PICKUP_AND_DROP": "ಪಿಕಪ್ ಮತ್ತು ಡ್ರಾಪ್",
   "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
@@ -243,6 +244,7 @@ const kannadaStrings = {
   "RATE_YOUR_RIDE_WITH": " ಜೊತೆಗೆ ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ರೇಟ್ ಮಾಡಿ",
   "VIEW_BREAKDOWN": "ವಿಭಜನೆಯನ್ನು ವೀಕ್ಷಿಸಿ",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
   "RATE_YOUR_DRIVER": "ನಿಮ್ಮ ಡ್ರೈವರ್ ಅನ್ನು ರೇಟ್ ಮಾಡಿ",
   "MY_RIDES": "ನನ್ನ ಸವಾರಿಗಳು",
   "RIDE_ID": "ರೈಡ್ ಐಡಿ",
@@ -530,5 +532,8 @@ const kannadaStrings = {
   "AUTO_BROKEN" : "ಆಟೋ ಕೆಟ್ಟು ನಿಂತಿತು",
   "WE_WILL_GIVE_YOU_CALLBACK" : "ನಾವು ನಿಮಗೆ 24 ಗಂಟೆಗಳ ಒಳಗೆ ಕಾಲ್‌ಬ್ಯಾಕ್ ನೀಡುತ್ತೇವೆ",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರದಿ ಮಾಡಲಾಗಿದೆ",
-  "OTP_RESENT_SUCCESSFULLY" : "OTP ಯಶಸ್ವಿಯಾಗಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ"
+  "OTP_RESENT_SUCCESSFULLY" : "OTP ಯಶಸ್ವಿಯಾಗಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ",
+  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
+  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ"
 }

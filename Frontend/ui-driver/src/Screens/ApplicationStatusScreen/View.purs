@@ -44,6 +44,9 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Maybe
 import Data.String (length)
 import Screens.ApplicationStatusScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -114,20 +117,18 @@ applicationStatusView state push =
       [ width (V 136)
       , height (V 123)
       , layoutGravity "center_horizontal"
-      , imageWithFallback "ny_ic_coming_soon,https://assets.juspay.in/nammayatri/images/driver/ny_ic_coming_soon.png"
+      , imageWithFallback $ "ny_ic_coming_soon," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_coming_soon.png"
       , margin (MarginBottom 32)
       ]
-    , textView
+    , textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER
       , padding (PaddingHorizontal 16 16)
       , text if state.data.dlVerificationStatus == "PENDING" || state.data.rcVerificationStatus == "PENDING" then (getString YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION) else if (state.data.dlVerificationStatus == "FAILED" || state.data.rcVerificationStatus == "FAILED") then (getString OOPS_YOUR_APPLICATION_HAS_BEEN_REJECTED) else ""
-      , fontStyle $ FontStyle.medium LanguageStyle
-      , textSize FontSize.a_16
       , lineHeight "20"
       , color Color.black800
-      ]
+      ] <> FontStyle.subHeading2 TypoGraphy
     , applicationStatus state push
   ]
 
@@ -139,13 +140,11 @@ applicationStatus state push =
   , padding (Padding 16 0 16 24)
   , margin (MarginTop 50)
   , height WRAP_CONTENT
-  ][  textView
+  ][  textView $
       [ text (getString APPLICATION_STATUS)
-      , textSize FontSize.a_14
       , visibility if state.data.dlVerificationStatus == "PENDING" && state.data.rcVerificationStatus == "PENDING" then GONE else VISIBLE
       , color Color.black800
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.paragraphText TypoGraphy 
     , detailsView state (drivingLicenseCardDetails state) push
     , detailsView state (vehicleCardDetails state) push
     ]
@@ -166,19 +165,16 @@ detailsView state config push =
       , width MATCH_PARENT
       , gravity CENTER_VERTICAL
       , height WRAP_CONTENT
-      ][ textView
+      ][ textView $
           [ text config.title
-          , textSize FontSize.a_14
           , color Color.black800
           , lineHeight "18"
-          ]
-        , textView
+          ] <> FontStyle.paragraphText TypoGraphy
+        , textView $
           [ text $ " (" <> config.verificationStatus <> ")"
-          , textSize FontSize.a_12
           , visibility $ if config.verificationStatus /= "" then VISIBLE else GONE
           , color if config.verificationStatus == "FAILED" then Color.red else Color.black800
-          , lineHeight "18"
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -191,27 +187,23 @@ detailsView state config push =
               ]
             ]
           ]
-    , textView
+    , textView $
       [ text config.reason
-      , textSize FontSize.a_12
       , color Color.black700
       , margin (MarginTop 8)
-      , fontStyle $ FontStyle.regular LanguageStyle
       , visibility $ if config.reason /= "" then VISIBLE else GONE
       , lineHeight "16"
-      ]
-    , textView
+      ] <> FontStyle.body3 TypoGraphy
+    , textView $
       [ text (getString TRY_AGAIN)
       , height WRAP_CONTENT
       , width WRAP_CONTENT
-      , textSize FontSize.a_14
       , color Color.blue900
       , margin (MarginTop 8)
-      , fontStyle $ FontStyle.medium LanguageStyle
       , onClick push (const $ ReTry config.docType)
       , visibility if (config.status == "PENDING" || config.status == "VALID" || config.status == "INVALID") then GONE else VISIBLE -- $ if (config.verificationStatus == "PENDING") then GONE  else VISIBLE
       , lineHeight "18"
-      ]
+      ] <> FontStyle.body1 TypoGraphy
     ]
 -- ----------------------------------------- supportTextView -----------------------
 supportTextView state push =
@@ -225,23 +217,19 @@ supportTextView state push =
     , gravity CENTER
     , orientation HORIZONTAL
     , padding (PaddingBottom 20)
-    ][ textView
+    ][ textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text (getString FOR_SUPPORT)
-      , textSize FontSize.a_12
       , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
-    , textView
+      ] <> FontStyle.body3 TypoGraphy
+    , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text (getString CONTACT_US)
       , color Color.blueTextColor
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , textSize FontSize.a_12
       , onClick push (const SupportCall)
-      ]
+      ] <> FontStyle.body3 TypoGraphy
     ]
   ]
 
@@ -249,15 +237,15 @@ drivingLicenseCardDetails state =
   {
     "title" : (getString DRIVING_LICENSE),
     "image" : case state.data.dlVerificationStatus of
-                "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
-                "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
-                "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE"  -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
-    "verificationStatus" :  case state.data.dlVerificationStatus of
-                "VALID" -> ""
+                "VALID" -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_mark.png"
+                "PENDING" -> "ny_ic_pending," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_pending.png"
+                "FAILED" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
+                "NO_DOC_AVAILABLE"  -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
+                "INVALID" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
+                "LIMIT_EXCEED" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
+                _ -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png",
+    "verificationStatus" :  case state.data.dlVerificationStatus of 
+                "VALID" -> "" 
                 "PENDING" -> (getString VERIFICATION_PENDING)
                 "FAILED" -> (getString VERIFICATION_FAILED)
                 "NO_DOC_AVAILABLE" -> (getString NO_DOC_AVAILABLE)
@@ -274,15 +262,15 @@ vehicleCardDetails state=
   {
     "title" : (getString VEHICLE_DETAILS),
     "image" : case state.data.rcVerificationStatus of
-                "VALID" -> "ny_ic_check_mark,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_mark.png"
-                "PENDING" -> "ny_ic_pending,https://assets.juspay.in/nammayatri/images/driver/ny_ic_pending.png"
-                "FAILED" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "NO_DOC_AVAILABLE" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                "INVALID" -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png"
-                "LIMIT_EXCEED" -> "ny_ic_help_circle,https://assets.juspay.in/nammayatri/images/driver/ny_ic_help_circle.png"
-                _ -> "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png",
-    "verificationStatus" :  case state.data.rcVerificationStatus of
-                "VALID" -> ""
+                "VALID" -> "ny_ic_check_mark," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_mark.png"
+                "PENDING" -> "ny_ic_pending," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_pending.png"
+                "FAILED" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
+                "NO_DOC_AVAILABLE" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
+                "INVALID" -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png"
+                "LIMIT_EXCEED" -> "ny_ic_help_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_help_circle.png"
+                _ -> "ny_ic_api_failure_popup," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_api_failure_popup.png",
+    "verificationStatus" :  case state.data.rcVerificationStatus of 
+                "VALID" -> "" 
                 "PENDING" -> (getString VERIFICATION_PENDING)
                 "FAILED" -> (getString VERIFICATION_FAILED)
                 "NO_DOC_AVAILABLE" -> (getString NO_DOC_AVAILABLE)
@@ -314,7 +302,7 @@ applicationApprovedView state push =
           [ width (V 340)
           , height (V 150)
           , layoutGravity "center_horizontal"
-          , imageWithFallback "ny_ic_coming_soon,https://assets.juspay.in/nammayatri/images/driver/ny_ic_coming_soon.png"
+          , imageWithFallback $ "ny_ic_coming_soon," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_coming_soon.png"
           ]
           , textView (
           [ height WRAP_CONTENT
@@ -347,15 +335,14 @@ completeOnboardingView state push =
       , cornerRadius  4.0
       , margin (MarginHorizontal 16 16)
       , padding (Padding 16 16 16 16)
-      ][ textView
+      ][ textView $
          [ width WRAP_CONTENT
          , height WRAP_CONTENT
          , text   if state.props.onBoardingFailure then (getString VERIFICATION_IS_TAKING_A_BIT_LONGER) else (getString ADD_ALTERNATE_NUMBER_IN_MEANTIME)
          , color Color.black700
-         , textSize FontSize.a_16
          , margin (Margin 8 0 8 16)
          , gravity CENTER
-        ]
+        ] <> FontStyle.body5 TypoGraphy
         , PrimaryButton.view (push <<< CompleteOnBoardingAction)  (primaryButtonConfig state)
       ]
 

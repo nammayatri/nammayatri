@@ -496,5 +496,6 @@ const tamilStrings = {
   OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER : "OTP உள்ளீட்டு வரம்பை அடைந்து விட்டது, பிறகு முயற்சிக்கவும்",
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "நீங்கள் பல தவறான முயற்சிகளைச் செய்துள்ளீர்கள், பிறகு முயற்சிக்கவும்",
   INVALID_REFERRAL_NUMBER : "தவறான பரிந்துரை எண்",
-  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "சில தொழில்நுட்பச் சிக்கல் ஏற்பட்டுள்ளது, பிறகு முயற்சிக்கவும்"
+  SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "சில தொழில்நுட்பச் சிக்கல் ஏற்பட்டுள்ளது, பிறகு முயற்சிக்கவும்",
+  NEW_ : "புதியது"
 }

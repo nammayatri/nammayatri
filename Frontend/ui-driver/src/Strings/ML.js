@@ -504,4 +504,5 @@ const mlStrings = {
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "നിങ്ങൾ വളരെയധികം അസാധുവായ ശ്രമങ്ങൾ നടത്തി, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
   INVALID_REFERRAL_NUMBER : "അസാധുവായ റഫറൽ നമ്പർ",
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ചില സാങ്കേതിക പ്രശ്നം സംഭവിച്ചു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
+  NEW_ : "പുതിയത്"
 }

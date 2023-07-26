@@ -18,10 +18,11 @@ module Screens.PermissionsScreen.ScreenData where
 import Prelude (class Eq)
 import Screens.Types(PermissionsScreenState)
 import Data.Eq.Generic (genericEq)
+import Foreign.Object (empty)
 import Data.Generic.Rep (class Generic)
 initData :: PermissionsScreenState
 initData = {
-    data:{ },
+    data:{ logField : empty },
     props:{
       isLocationPermissionChecked : false
     , isOverlayPermissionChecked : false

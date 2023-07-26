@@ -87,8 +87,9 @@ const malayalamStrings = {
   "LANGUAGE": "ഭാഷ",
   "OTP": "OTP",
   "PAYMENT_METHOD": "പണമടയ്ക്കൽ രീതി",
-  "PAYMENT_METHOD_STRING": "ക്യാഷ് / യുപിഐ ",
-  "CANCEL_RIDE": "സവാരി റദ്ദാക്കുക",
+  "PAYMENT_METHOD_STRING": "പണം / UPI ആപ്പ് ഉപയോഗിക്കുക",
+  "PAYMENT_METHOD_STRING_": "പണം / UPI ആപ്പ് ഉപയോഗിക്കുക",
+  "CANCEL_RIDE": "എന്റെ റൈഡ് റദ്ദാക്കുക",
   "SUPPORT": "സപ്പോർട്ട്",
   "PICKUP_AND_DROP": "പിക്കപ്പ്, ഡ്രോപ്പ്",
   "CANCELLED": "റദ്ദാക്കി",
@@ -237,6 +238,7 @@ const malayalamStrings = {
   "RATE_YOUR_RIDE_WITH": "- ഉം ആയുള്ള താങ്കളുടെ സവാരി റേറ്റ് ചെയ്യൂ",
   "VIEW_BREAKDOWN": "വിഘടിച്ചു കാണുക",
   "PAY_DRIVER_USING_CASH_OR_UPI": "ക്യാഷ്/യുപിഐ ഉപയോഗിച്ച് ഡ്രൈവർക്ക് പണം നൽകുക",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "ക്യാഷ്/യുപിഐ ഉപയോഗിച്ച് ഡ്രൈവർക്ക് പണം നൽകുക",
   "RATE_YOUR_DRIVER": "റേറ്റ് ചെയ്യുക",
   "MY_RIDES": "എന്റെ റൈഡുകൾ",
   "RIDE_DETAILS": "റൈഡിന്റെ വിശദാംശങ്ങൾ",
@@ -532,5 +534,8 @@ const malayalamStrings = {
   "AUTO_BROKEN" : "ഓട്ടോ തകർന്നു",
   "WE_WILL_GIVE_YOU_CALLBACK" : "24 മണിക്കൂറിനുള്ളിൽ ഞങ്ങൾ നിങ്ങൾക്ക് ഒരു കോൾബാക്ക് നൽകും",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "നിങ്ങളുടെ പ്രശ്നം വിജയകരമായി റിപ്പോർട്ട് ചെയ്തു",
-  "OTP_RESENT_SUCCESSFULLY" : "OTP വീണ്ടും അയച്ചു"
+  "OTP_RESENT_SUCCESSFULLY" : "OTP വീണ്ടും അയച്ചു",
+  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്", 
+  "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്",
+  "PLATFORM_FEE" : "പ്ലാറ്റ്ഫോം ഫീസ്"
 }

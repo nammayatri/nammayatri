@@ -41,14 +41,14 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
-import Merchant.Utils as MU
+import MerchantConfig.Utils as MU
 import JBridge as JB
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -72,7 +72,9 @@ import Services.API (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
-import Merchant.Utils (getValueFromConfig)
+import MerchantConfig.Utils (getValueFromConfig)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 
@@ -285,6 +287,7 @@ genderBannerView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
+    , visibility if (getValueFromConfig "showGenderBanner") then VISIBLE else GONE
     , gravity BOTTOM
     ][
     linearLayout
@@ -319,20 +322,19 @@ otpButtonView state push =
     , margin $ MarginLeft 8
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
-    ][ imageView
-        [ imageWithFallback "ic_mode_standby,https://assets.juspay.in/nammayatri/images/user/ic_mode_standby.png"
+    ][ imageView 
+        [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
         ]
       , textView $
         [ width WRAP_CONTENT
-        , height MATCH_PARENT
-        , gravity CENTER
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
         , color Color.blue900
         , padding $ PaddingLeft 8
         , margin $ MarginBottom 2
         , text $ getString OTP_
-        , textSize FontSize.a_14
         ] <> FontStyle.subHeading2 TypoGraphy
     ]
 
@@ -387,14 +389,14 @@ recenterBtnView state push =
   , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
   , cornerRadius 24.0
   ][ imageView
-      [ width $ V 40
-      , height $ V 40
-      , imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
-      , onClick (\action -> do
-              _ <- JB.getCurrentPosition push CurrentLocation
-              pure unit
-            ) (const RecenterButtonAction)
-      ]
+    [ width ( V 40 )
+    , height ( V 40 )
+    , imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_recenter_btn.png"
+    , onClick (\action -> do
+            _ <- JB.getCurrentPosition push CurrentLocation
+            pure unit
+          ) (const RecenterButtonAction)
+    ]
   ]
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -414,7 +416,7 @@ offlineView push state =
           ][ lottieAnimationView
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
               , afterRender (\action-> do
-                              _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
+                              _ <- pure $ JB.startLottieProcess "rippling_online_effect.json" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
                               pure unit)(const NoAction)
               , height WRAP_CONTENT
               , width MATCH_PARENT
@@ -431,14 +433,14 @@ offlineView push state =
             , background Color.white900
             , PP.cornerRadii $ PTD.Corners 40.0 true true false false
             ][
-              textView
-              [ height WRAP_CONTENT
+              textView $
+              [
+                height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
               , margin $ MarginBottom 10
               , text $ getString GO_ONLINE_PROMPT
-              , textSize FontSize.a_14
-              ]
+              ] <> FontStyle.paragraphText TypoGraphy
             ]
         ]
     , linearLayout
@@ -507,13 +509,14 @@ driverDetail push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation HORIZONTAL
+      , gravity CENTER_HORIZONTAL
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red)
                else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true")&& ((state.props.driverStatusSet == Online) || state.props.driverStatusSet == Silent )) then ("2," <> Color.yellow900)
                else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
                else ("2," <> Color.blue800)
       , cornerRadius 50.0
       , alpha if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])then 0.5 else 1.0
-      , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
+      , margin (Margin 0 10 10 10)
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
@@ -544,7 +547,7 @@ driverStatusPill pillConfig push state index =
       ][ imageView
         [ width $ V 15
         , height $ V 15
-        , margin (MarginRight 5)
+        , margin (Margin 3 0 5 0)
         , visibility $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> VISIBLE
                     DEMO_ -> VISIBLE
@@ -557,6 +560,7 @@ driverStatusPill pillConfig push state index =
       , textView(
         [ width WRAP_CONTENT
           , height WRAP_CONTENT
+          , padding (Padding 0 0 4 0)
           , text $ case pillConfig.status of
               Online -> if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
               Offline -> (getString OFFLINE)
@@ -565,9 +569,7 @@ driverStatusPill pillConfig push state index =
                     ACTIVE -> pillConfig.textColor
                     DEMO_ -> Color.black900
                     DEFAULT -> Color.greyTextColor
-          , fontStyle $ FontStyle.medium LanguageStyle
-          , textSize FontSize.a_14
-        ]
+        ] <> FontStyle.body1 TypoGraphy
       )
       ]
 
@@ -639,15 +641,13 @@ clickHereDemoLayout state push =
   , stroke $ "1,"<> Color.yellow900
   , margin $ MarginLeft 10
   , cornerRadius 12.0
-  ][ textView
+  ][ textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ getString CLICK_TO_ACCESS_YOUR_ACCOUNT
       , color Color.white900
-      , textSize FontSize.a_18
-      , fontStyle $ FontStyle.medium TypoGraphy
       , padding $ Padding 20 12 20 15
-      ]
+      ] <> FontStyle.body13 TypoGraphy
   ]
 
 viewRecenterAndSupport :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -662,7 +662,7 @@ viewRecenterAndSupport state push =
     -- [ width ( V 40 )
     -- , height ( V 40 )
     -- , margin $ MarginBottom 10
-    -- , imageWithFallback "ny_ic_homepage_support,https://assets.juspay.in/nammayatri/images/common/ny_ic_homepage_support.png"
+    -- , imageWithFallback "ny_ic_homepage_support," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_homepage_support.png"
     -- -- , onClick (\action -> do
     -- --         _ <- JB.getCurrentPosition push CurrentLocation
     -- --         pure unit
@@ -688,7 +688,7 @@ driverStatus push state =
      ][ imageView
         [ width $ V 50
         , height $ V 30
-        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch,https://assets.juspay.in/nammayatri/images/driver/ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_on.png" else "ny_ic_toggle_off,https://assets.juspay.in/nammayatri/images/driver/ny_ic_toggle_off.png"
+        , imageWithFallback if (getValueToLocalStore IS_DEMOMODE_ENABLED == "true") then "ny_ic_demo_mode_switch," <> (getAssetStoreLink FunctionCall) <> "ny_ic_demo_mode_switch.png" else if state.props.statusOnline then "ny_ic_toggle_on," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_on.png" else "ny_ic_toggle_off," <> (getAssetStoreLink FunctionCall) <> "ny_ic_toggle_off.png"
         , margin (MarginTop 10)
         , onClick push (const (ChangeStatus if state.props.statusOnline then false else true))
         , clickable if state.props.rideActionModal then false else true
@@ -737,7 +737,7 @@ showOfflineStatus push state =
           ][ imageView
              [ width (V 65)
              , height (V 65)
-             , imageWithFallback "ny_ic_offline_status,https://assets.juspay.in/nammayatri/images/driver/ny_ic_offline_status.png"
+             , imageWithFallback $ "ny_ic_offline_status," <> (getAssetStoreLink FunctionCall) <> "ny_ic_offline_status.png"
              ]
           ]
         , linearLayout
@@ -800,32 +800,31 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ic_vehicle_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
+             , imageWithFallback $ "ic_vehicle_side_active," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
              , height (V 35)
              , margin (Margin 35 0 35 0)
-             , imageWithFallback "ny_ic_chevrons_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevrons_right.png"
+             , imageWithFallback $ "ny_ic_chevrons_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevrons_right.png"
              ]
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ic_vehicle_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
+             , imageWithFallback $ "ic_vehicle_side_inactive," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , margin (Margin ((EHC.screenWidth unit)/5) 0 ((EHC.screenWidth unit)/5) 0)
-          ][ textView
+          ][ textView $
              [ width MATCH_PARENT
              , height WRAP_CONTENT
              , text (getString GOING_OFFLINE_WILL_NOT_GET_YOU_ANY_RIDE)
-             , textSize FontSize.a_19
              , color Color.black
              , gravity CENTER
-             ]
+             ] <> FontStyle.body14 TypoGraphy
           ]
         , linearLayout
           [ width MATCH_PARENT
@@ -888,17 +887,16 @@ addAlternateNumber push state =
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback "ic_call_plus,https://assets.juspay.in/nammayatri/images/driver/ic_call_plus.png"
+      , imageWithFallback $ "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
       , margin (MarginRight 5)
-      ]
-    , textView
+      ] 
+    , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER
       , text (getString ADD_ALTERNATE_NUMBER)
       , color Color.black900
-      , textSize FontSize.a_14
-      ]
+      ] <> FontStyle.paragraphText TypoGraphy
    ]
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -906,22 +904,24 @@ locationLastUpdatedTextAndTimeView push state =
   linearLayout
   [ height MATCH_PARENT
     , width WRAP_CONTENT
+    , gravity CENTER_VERTICAL
   ][
-    textView
+    textView $
     [ text $ (getString UPDATED_AT) <> ": "
-    , textSize FontSize.a_14
     , lineHeight "15"
     , color Color.brownishGrey
+    , width $ V (JB.getWidthFromPercent 32)
     , gravity LEFT
-    , fontStyle $ FontStyle.regular LanguageStyle
-    ]
-    , textView
-    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    ] <> FontStyle.paragraphText TypoGraphy
+    , textView $
+    [ width $ V (JB.getWidthFromPercent 30)
       , height WRAP_CONTENT
+      , ellipsize true
+      , singleLine true
+      , gravity CENTER_VERTICAL
       , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
-      , textSize FontSize.a_14
-      , fontStyle $ FontStyle.bold LanguageStyle
-    ]
+    ] <> FontStyle.body4 TypoGraphy
   ]
 
 updateButtonIconAndText :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -942,18 +942,16 @@ updateButtonIconAndText push state =
     [ width $ V 20
     , height $ V 20
     , margin $ MarginRight 5
-    , imageWithFallback "ny_ic_refresh,https://assets.juspay.in/nammayatri/images/driver/ny_ic_refresh.png"
+    , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
     , gravity RIGHT
     ],
-    textView
+    textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text (getString UPDATE)
     , color Color.blueTextColor
-    , textSize FontSize.a_14
     , gravity RIGHT
-    , fontStyle $ FontStyle.bold LanguageStyle
-    ]
+    ] <> FontStyle.body4 TypoGraphy
   ]
 
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
