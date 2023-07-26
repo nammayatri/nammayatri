@@ -478,7 +478,6 @@ const bengaliStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "নম্মা যাত্রী সমর্থনে কল করুন",
   "CALL_112": "112 কল করুন",
   "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "বিবরণ 10 অক্ষরের বেশি হওয়া উচিত",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "ড্রাইভার যোগ করার সীমা ₹10 বৃদ্ধিতে রয়েছে ",
   "SEATS" : "আসন",
   "HATCHBACK" : "হ্যাচব্যাক", 
@@ -532,5 +531,6 @@ const bengaliStrings = {
   "AUTO_BROKEN" : "অটো ভেঙে পড়ে",
   "WE_WILL_GIVE_YOU_CALLBACK" : "আমরা আপনাকে 24 ঘন্টার মধ্যে একটি কলব্যাক দেব",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "আপনার সমস্যা সফলভাবে রিপোর্ট করা হয়েছে",
-  "OTP_RESENT_SUCCESSFULLY" : "OTP সফলভাবে পুনরায় পাঠানো হয়েছে"
+  "OTP_RESENT_SUCCESSFULLY" : "OTP সফলভাবে পুনরায় পাঠানো হয়েছে",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "বর্ণনা 10টির বেশি বর্ণমালার অক্ষর হওয়া উচিত"
 }

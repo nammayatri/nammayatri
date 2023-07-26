@@ -57,6 +57,11 @@ getMerchant unit = case (decodeMerchantId (getMerchantId "")) of
   Just merchant -> merchant
   Nothing -> NAMMAYATRIPARTNER
 
+getMerchantVehicleSize :: Unit -> Int
+getMerchantVehicleSize unit = 
+  case getMerchant unit of 
+    _ -> 90
+    
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
 

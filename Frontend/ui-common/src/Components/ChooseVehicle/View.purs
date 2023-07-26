@@ -5,7 +5,7 @@ import Common.Types.App
 import Components.ChooseVehicle.Controller (Action(..), Config)
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width)
 import Common.Styles.Colors as Color
 import Merchant.Utils (getValueFromConfig)
@@ -96,7 +96,8 @@ vehicleDetailsView push config =
     ]
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-priceDetailsView push config =
+priceDetailsView push config = do 
+  let basePrice = config.basePrice 
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
@@ -106,7 +107,7 @@ priceDetailsView push config =
     [ textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "₹" <> config.price <> " - " <> "₹" <> config.maxPrice
+          , text $ if config.price == config.maxPrice then "₹" <> show ((config.price) + basePrice) else "₹" <> show ((config.price) + basePrice) <> " - " <> "₹" <> show((config.maxPrice) + basePrice)
           , color Color.black800
           , visibility if config.isCheckBox then GONE else VISIBLE
           ]

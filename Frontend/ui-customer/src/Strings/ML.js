@@ -482,7 +482,6 @@ const malayalamStrings = {
   "HATCHBACK" : "ഹാച്ച്ബാക്ക്", 
   "SUV" : "സ്ഉവി",
   "SEDAN" : "സെഡാൻ",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "വിവരണം 10 പ്രതീകങ്ങളിൽ കൂടുതലായിരിക്കണം", 
   "CHANGE_OF_PLANS" : "പദ്ധതികളുടെ മാറ്റം",
   "DRIVER_IS_NOT_MOVING" : "ഡ്രൈവർ നീങ്ങുന്നില്ല",
   "WRONG_PICKUP_LOCATION" : "തെറ്റായ പിക്കപ്പ് ലൊക്കേഷൻ",
@@ -532,5 +531,6 @@ const malayalamStrings = {
   "AUTO_BROKEN" : "ഓട്ടോ തകർന്നു",
   "WE_WILL_GIVE_YOU_CALLBACK" : "24 മണിക്കൂറിനുള്ളിൽ ഞങ്ങൾ നിങ്ങൾക്ക് ഒരു കോൾബാക്ക് നൽകും",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "നിങ്ങളുടെ പ്രശ്നം വിജയകരമായി റിപ്പോർട്ട് ചെയ്തു",
-  "OTP_RESENT_SUCCESSFULLY" : "OTP വീണ്ടും അയച്ചു"
+  "OTP_RESENT_SUCCESSFULLY" : "OTP വീണ്ടും അയച്ചു",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "വിവരണം 10 അക്ഷരമാലയിൽ കൂടുതലായിരിക്കണം"
 }

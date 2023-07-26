@@ -522,3 +522,11 @@ export const addCarousel = function (modelArray) {
     }
   };
 };
+
+export const strLenWithSpecificCharacters = function(input) {
+  return function(pattern){
+  const regex = new RegExp(pattern, 'g');
+  const matches = input.match(regex);
+  return matches ? matches.length : 0;
+  }
+}

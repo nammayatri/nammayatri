@@ -64,7 +64,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..))
+import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..))
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..), Snapped(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
@@ -207,9 +207,10 @@ currentRideFlow rideAssigned = do
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
             rideStatus = if status == "NEW" then RideAccepted else RideStarted
-            newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp) state.props.isSpecialZone
-                , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)},
-                  props{currentStage = rideStatus
+            newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp) ((length resp.rideList) == 0 )
+                 , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)
+                 , currentSearchResultType = if (length resp.rideList) == 0 then QUOTES else ESTIMATES}
+                , props{currentStage = rideStatus
                   , rideRequestFlow = true
                   , bookingId = resp.id
                   , isPopUp = NoPopUp
@@ -714,7 +715,7 @@ homeScreenFlow = do
                                               }) srcSpecialLocation.gates
         (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing && (MU.getValueFromConfig "specialLocationView") == "true" , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place}})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           else pure unit
@@ -936,7 +937,7 @@ homeScreenFlow = do
     SUBMIT_RATING state -> do
       _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props {isBanner=state.props.isBanner}})
       if state.data.rideRatingState.rating == 5 then do
         _ <- pure $ launchInAppRatingPopup unit
         pure unit
@@ -953,7 +954,7 @@ homeScreenFlow = do
           if state.homeScreen.props.sourceLat/=0.0 && state.homeScreen.props.sourceLong /= 0.0 then do
             (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong)
             if (sourceServiceabilityResp.serviceable ) then do
-              if (isJust sourceServiceabilityResp.geoJson && MU.getValueFromConfig "specialLocationView" == "true") then do
+              if (isJust sourceServiceabilityResp.geoJson) then do
                 let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
                 lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
                 else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
@@ -973,7 +974,7 @@ homeScreenFlow = do
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
       let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
-      if (sourceServiceabilityResp.serviceable && isJust sourceServiceabilityResp.geoJson && ((MU.getValueFromConfig "specialLocationView") == "true" || updatedState.props.currentStage == ConfirmingLocation)) then
+      if (sourceServiceabilityResp.serviceable && isJust sourceServiceabilityResp.geoJson && (updatedState.props.currentStage == ConfirmingLocation)) then
         lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
         else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
@@ -1247,7 +1248,7 @@ rideSearchFlow flowType = do
     then do
       case ((not finalState.props.isSpecialZone) && finalState.props.sourceSelectedOnMap) of
         false -> do
-          _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if (MU.getValueFromConfig "specialLocationView" == "true") then finalState.data.polygonCoordinates else "")  (if (MU.getValueFromConfig "specialLocationView" == "true") then finalState.data.nearByPickUpPoints else [])
+          _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if ((getMerchant FunctionCall) /= NAMMAYATRI) then finalState.data.polygonCoordinates else "")  (if ((getMerchant FunctionCall) /= NAMMAYATRI) then finalState.data.nearByPickUpPoints else [])
           _ <- pure $ removeAllPolylines ""
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
           _ <- pure $ updateLocalStage ConfirmingLocation

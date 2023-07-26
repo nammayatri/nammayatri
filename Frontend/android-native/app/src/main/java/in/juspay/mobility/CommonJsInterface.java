@@ -3628,7 +3628,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String specialLocation) {
+    public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String mapRouteConfig) {
         activity.runOnUiThread(() -> {
             if (googleMap != null) {
                 PolylineOptions polylineOptions = new PolylineOptions();
@@ -3637,14 +3637,17 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     System.out.println("inside_drawRoute_try");
                     JSONObject jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
+                    JSONObject mapRouteConfigObject = new JSONObject(mapRouteConfig);
                     if (coordinates.length() <= 1) {
                         JSONObject coordinate = (JSONObject) coordinates.get(0);
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
-                        upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
+                        Integer vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
+                        upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
                         animateCamera(lat,lng,20.0f);
                         return;
                     }
+                    
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                     JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
                     double sourceLong = sourceCoordinates.getDouble("lng");
@@ -3668,9 +3671,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         polylineOptions.add(fromPointObj);
                     }
 
-                    JSONObject specialLocationObject = new JSONObject(specialLocation);
-                    String sourceSpecialTagIcon = specialLocationObject.getString("sourceSpecialTagIcon");
-                    String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+                    String sourceSpecialTagIcon = mapRouteConfigObject.getString("sourceSpecialTagIcon");
+                    String destinationSpecialTagIcon = mapRouteConfigObject.getString("destSpecialTagIcon");
                     polylines = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
                     LatLng sourceLatLng = new LatLng(sourceLat, sourceLong);
                     LatLng destLatLng = new LatLng(destLat, destLong);
@@ -3692,7 +3694,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         {
                             List<LatLng> points = polylineOptions.getPoints();
                             LatLng source = points.get(points.size() - 1);
-                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
+                            Integer vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
+                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), vehicleSizeTagIcon, 0.5f, 0.5f);
                             Marker currMarker = (Marker) markers.get(sourceMarker);
                             int index = polylines.getPoints().size()-1;
                             float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));

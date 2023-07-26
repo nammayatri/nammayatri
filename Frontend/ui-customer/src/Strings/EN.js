@@ -503,7 +503,6 @@ const englishStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "Call Namma Yatri Support",
   "CALL_112": "Call 112",
   "CALL_EMERGENCY_CENTRE": "Call Emergency Centre",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "Description should be more than 10 characters",
   "SEATS" : "Seats",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "Driver addition limits are in increments of ₹10",
   "HATCHBACK" : "Hatchback", 
@@ -536,5 +535,6 @@ const englishStrings = {
   "AUTO_BROKEN" : "Auto broke down",
   "WE_WILL_GIVE_YOU_CALLBACK" : "We will give you a callback within 24 hrs",
   "YOUR_ISSUE_HAS_BEEN_REPORTED" : "Your issue has been reported successfully",
-  "OTP_RESENT_SUCCESSFULLY" : "OTP resent successfully"
+  "OTP_RESENT_SUCCESSFULLY" : "OTP resent successfully",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "Description should be more than 10 alphabetic characters"
 }

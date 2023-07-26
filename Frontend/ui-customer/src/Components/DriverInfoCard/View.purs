@@ -42,7 +42,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..))
+import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Storage (KeyStore(..))
@@ -56,13 +56,13 @@ view push state =
   , orientation VERTICAL
   ][  mapOptionsView push state
     , messageNotificationView push state
-    , if state.data.isSpecialZone then driverInfoViewSpecialZone push state else driverInfoView push state
+    , if state.props.currentSearchResultType == QUOTES then driverInfoViewSpecialZone push state else driverInfoView push state
     ]
 
 driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoViewSpecialZone push state =
   linearLayout
-  [ width MATCH_PARENT
+  [ width  MATCH_PARENT
   , height WRAP_CONTENT
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
@@ -88,7 +88,7 @@ driverInfoViewSpecialZone push state =
               ][]
             , titleAndETA push state
             , otpAndWaitView push state
-            , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted && (secondsToHms state.data.eta) /= "" && (state.props.isSpecialZone && (state.props.estimatedTime /= "--")))
+            , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted && (secondsToHms state.data.eta) /= "" && (state.props.currentSearchResultType == QUOTES && (state.props.estimatedTime /= "--")))
             , driverDetailsView push state
             , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
             , paymentMethodView push state (getString PAY_VIA_CASH_OR_UPI <> " :-") false
@@ -112,11 +112,11 @@ titleAndETA push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (spy "estimatedTimeABCD" state.props.estimatedTime == "--"))) then GONE else VISIBLE
+  , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (state.props.estimatedTime == "--"))) then GONE else VISIBLE
   ][ textView
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , text $ if state.props.currentStage == RideAccepted then getString BOARD_THE_FIRST_TAXI else "ETA: " <> if state.props.isSpecialZone then (state.props.estimatedTime) else (secondsToHms state.data.eta)
+      , text $ if state.props.currentStage == RideAccepted then getString BOARD_THE_FIRST_TAXI else "ETA: " <> if state.props.currentSearchResultType == QUOTES then (state.props.estimatedTime) else (secondsToHms state.data.eta)
       , color Color.black800
       , fontStyle $ FontStyle.bold LanguageStyle
       , textSize FontSize.a_18
@@ -244,7 +244,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
-  ][  if state.data.isSpecialZone && state.props.currentStage == RideAccepted then navigateView push state  else sosView push state
+  ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state  else sosView push state
     , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
@@ -510,13 +510,13 @@ waitTimeView push state =
   , gravity CENTER_VERTICAL
   , margin $ MarginLeft 12
   , padding $ Padding 14 2 14 2
-  , visibility case state.data.isSpecialZone of
+  , visibility case state.props.currentSearchResultType == QUOTES of
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
   ][ textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ if state.data.isSpecialZone then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
+      , text $ if state.props.currentSearchResultType == QUOTES then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
       , textSize FontSize.a_14
       , fontStyle $ FontStyle.medium LanguageStyle
       , lineHeight "18"
@@ -533,7 +533,7 @@ waitTimeView push state =
       , color Color.black800
       , afterRender
             ( \action -> do
-                if state.data.isSpecialZone && (isLocalStageOn RideAccepted) then do
+                if state.props.currentSearchResultType == QUOTES && (isLocalStageOn RideAccepted) then do
                   _ <- zoneOtpExpiryTimer (getExpiryTime state.data.bookingCreatedAt true) 1800 push ZoneOTPExpiryAction
                   pure unit
                   else pure unit
@@ -600,7 +600,7 @@ driverInfoView push state =
               , margin (MarginTop 8)
               , cornerRadius 4.0
               ][]
-              , if state.props.isSpecialZone  then headerTextView push state else contactView push state
+              , if state.props.currentSearchResultType == QUOTES  then headerTextView push state else contactView push state
               , otpAndWaitView push state
               , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ])
               , driverDetailsView push state
@@ -611,7 +611,7 @@ driverInfoView push state =
                 [ width MATCH_PARENT
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
                 , orientation VERTICAL
-                ][ if state.props.isSpecialZone then destinationView push state else  sourceDistanceView push state
+                ][ if state.props.currentSearchResultType == QUOTES then destinationView push state else  sourceDistanceView push state
                   , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])
                   , cancelRideLayout push state
                 ]
@@ -725,7 +725,7 @@ driverDetailsView push state =
   , height $ V 170
   , padding $ Padding 16 16 16 16
   , width MATCH_PARENT
-  , visibility if state.props.isSpecialZone then (if state.props.currentStage == RideStarted then VISIBLE else GONE) else VISIBLE
+  , visibility if state.props.currentSearchResultType == QUOTES then (if state.props.currentStage == RideStarted then VISIBLE else GONE) else VISIBLE
   , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL

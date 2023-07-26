@@ -38,7 +38,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getFaresList, getKmMeter)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, TripDetailsScreenState)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
+import Screens.Types (DriverInfoCard, SearchResultType(..), LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
@@ -105,14 +105,15 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     }
 
 getDriverInfo :: RideBookingRes -> Boolean -> DriverInfoCard
-getDriverInfo (RideBookingRes resp) isSpecialZone =
+getDriverInfo (RideBookingRes resp) isQuote =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
-        otp : if isSpecialZone then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
+        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : 0
+      , currentSearchResultType : if isQuote == true then QUOTES else ESTIMATES
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber
       , rating : ceil (fromMaybe 0.0 rideList.driverRatings)
@@ -315,7 +316,7 @@ getSpecialZoneQuote quote index =
           _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
-      , price = show quoteEntity.estimatedTotalFare
+      , price = quoteEntity.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
@@ -343,14 +344,14 @@ getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
           "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
           _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
       , vehicleVariant = estimate.vehicleVariant
-      , price = show estimate.estimatedTotalFare
+      , price = estimate.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
       , capacity = case estimate.vehicleVariant of
           "SUV" -> "6 " <> (getString SEATS)
           _ -> "4 " <> (getString SEATS)
-      , maxPrice = show $ (fromMaybe dummyFareRange estimate.totalFareRange)^. _maxFare
+      , maxPrice = (fromMaybe dummyFareRange estimate.totalFareRange)^. _maxFare
       }
 
 dummyFareRange :: FareRange

@@ -183,16 +183,17 @@ enterOTPView state lang push =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation HORIZONTAL
-      , clickable state.props.resendEnable
+      , alpha if state.props.resendEnable then 1.0 else 0.5
       ][linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , alpha if state.props.resendEnable then 1.0 else 0.5
+      
       ][  textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString RESEND)
+        , clickable state.props.resendEnable
         , textSize FontSize.a_12
         , clickable state.props.resendEnable
         , fontStyle $ FontStyle.semiBold LanguageStyle

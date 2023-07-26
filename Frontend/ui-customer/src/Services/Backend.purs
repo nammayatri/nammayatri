@@ -34,7 +34,7 @@ import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Presto.Core.Types.API (Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService, SpecialLocationTag)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService, MapRouteConfig)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
@@ -686,7 +686,7 @@ sendIssueBT req = do
             BackT $ pure GoBack
 
 ----------------------------------------------------------------------------------------------
-drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> SpecialLocationTag -> FlowBT String (Maybe Route)
+drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> MapRouteConfig -> FlowBT String (Maybe Route)
 drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute routeAPIType specialLocation = do
     _ <- pure $ removeAllPolylines ""
     case existingRoute of
