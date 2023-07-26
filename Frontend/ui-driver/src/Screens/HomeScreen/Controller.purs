@@ -479,9 +479,9 @@ eval RemoveChat state = do
   ]
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]  
+  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
   case (Array.last messages) of
-    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else 
+    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
                     if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
                     else do
                       let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
@@ -623,13 +623,13 @@ showDriverMarker state marker location = do
     "1789234" -> updateAutoIcon 12.522069908884921 76.89518072273476
     _ -> do
       _ <- pure $ enableMyLocation true
-      animateCamera location.lat location.lon 17
+      animateCamera location.lat location.lon 17 "ZOOM"
 
 updateAutoIcon :: Number -> Number -> Effect Unit
 updateAutoIcon lat lng = do
   _ <- showMarker "ic_vehicle_side" lat lng 100 0.5 0.5
   _ <- pure $ enableMyLocation true
-  animateCamera lat lng 17
+  animateCamera lat lng 17 "ZOOM"
 
 constructLatLong :: String -> String -> ST.Location
 constructLatLong lat lon =

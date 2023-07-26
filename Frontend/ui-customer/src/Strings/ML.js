@@ -479,7 +479,7 @@ const malayalamStrings = {
   "CALL_EMERGENCY_CENTRE": "എമർജൻസി സെന്ററിലേക്ക് വിളിക്കുക",
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS": "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ ₹10 ഇൻക്രിമെന്റിലാണ്",
   "SEATS" : "സീറ്റുകൾ",
-  "HATCHBACK" : "ഹാച്ച്ബാക്ക്", 
+  "HATCHBACK" : "ഹാച്ച്ബാക്ക്",
   "SUV" : "സ്ഉവി",
   "SEDAN" : "സെഡാൻ",
   "CHANGE_OF_PLANS" : "പദ്ധതികളുടെ മാറ്റം",
@@ -516,7 +516,7 @@ const malayalamStrings = {
   "LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED" : "പരിധി കവിഞ്ഞു! 3-ൽ 3 എമർജൻസി കോൺടാക്റ്റുകൾ ഇതിനകം ചേർത്തിട്ടുണ്ട്",
   "INVALID_CONTACT_FORMAT" : "അസാധുവായ കോൺടാക്റ്റ് ഫോർമാറ്റ്",
   "OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP വീണ്ടും അയയ്ക്കുന്നതിനുള്ള പരിധി എത്തിയിരിക്കുന്നു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
-  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്", 
+  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്",
   "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്",
   "RATE_YOUR_EXPERIENCE" : "നിങ്ങളുടെ അനുഭവം വിലയിരുത്തുക",
   "REPORT_ISSUE_" : "റിപ്പോർട്ട് പ്രശ്നം",
@@ -535,5 +535,7 @@ const malayalamStrings = {
   "DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS" : "വിവരണം 10 അക്ഷരമാലയിൽ കൂടുതലായിരിക്കണം",
   "IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_" : "നിങ്ങൾക്ക് ഒരു ബുക്കിംഗ് നടക്കുന്നുണ്ടെന്ന് തോന്നുന്നു, അത് കാണുന്നതിന് ദയവായി ആപ്പ് പുനരാരംഭിക്കുക",
   "INCORRECT_OTP_PLEASE_TRY_AGAIN" : "തെറ്റായ OTP, വീണ്ടും ശ്രമിക്കുക.",
-  "N_MORE_ATTEMPTS_LEFT" : " കൂടുതൽ ശ്രമങ്ങൾ അവശേഷിക്കുന്നു"
+  "N_MORE_ATTEMPTS_LEFT" : " കൂടുതൽ ശ്രമങ്ങൾ അവശേഷിക്കുന്നു",
+  "GO_TO_SELECTED_PICKUP_SPOT" : "തിരഞ്ഞെടുത്ത പിക്കപ്പ് സ്ഥലത്തേക്ക് പോകുക",
+  "GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED" : "ഈ പ്രദേശത്ത് ഓട്ടോകൾ നിയന്ത്രിച്ചിരിക്കുന്നതിനാൽ നിർദ്ദേശിച്ച പിക്കപ്പ് ലൊക്കേഷനിലേക്ക് ഡ്രൈവ് ചെയ്യുക"
 }

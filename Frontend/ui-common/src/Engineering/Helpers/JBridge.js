@@ -946,8 +946,14 @@ export const openNavigation = function (slat) {
 export const animateCamera = function (lat) {
   return function (lng) {
     return function (zoom) {
-      return function () {
-        window.JBridge.animateCamera(lat, lng, zoom);
+      return function (zoomType) {
+        return function () {
+          try {
+            window.JBridge.animateCamera(lat, lng, zoom, zoomType);
+          } catch (err) {
+            window.JBridge.animateCamera(lat, lng, zoom);
+          }
+        };
       };
     };
   };
@@ -1335,11 +1341,11 @@ export const locateOnMap = function (str) {
     return function (lon) {
       return function (geoJson) {
         return function (coodinates) {
-          try {
-            return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
-          } catch (err) {
-            return JBridge.locateOnMap(str, lat, lon);
-          }s
+              try {
+                return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+              } catch (err) {
+                return JBridge.locateOnMap(str, lat, lon);
+          }
         };
       };
     };

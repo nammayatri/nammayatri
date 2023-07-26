@@ -1567,7 +1567,8 @@ newtype SpecialLocation = SpecialLocation
 
 newtype GatesInfo = GatesInfo {
   name :: String,
-  point :: LatLong
+  point :: LatLong,
+  address :: Maybe String
 }
 
 instance makeOriginServiceabilityReq :: RestEndpoint ServiceabilityReq ServiceabilityRes where

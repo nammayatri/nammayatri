@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -18,12 +18,12 @@ module Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig where
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Data.Maybe (Maybe(..))
-import Data.String as DS 
+import Data.String as DS
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import JBridge as JB 
+import JBridge as JB
 import Screens.Types as ST
 import Styles.Colors as Color
 import Prelude (not, (&&), (+), (<>), (==), (||))
@@ -32,11 +32,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 
-primaryButtonConfigConfirmLoc :: ST.AddNewAddressScreenState -> PrimaryButton.Config 
-primaryButtonConfigConfirmLoc state = let 
-  config = PrimaryButton.config 
-  primaryButtonConfig' = config 
-    { textConfig 
+primaryButtonConfigConfirmLoc :: ST.AddNewAddressScreenState -> PrimaryButton.Config
+primaryButtonConfigConfirmLoc state = let
+  config = PrimaryButton.config
+  primaryButtonConfig' = config
+    { textConfig
       { text = (getString CONFIRM_LOCATION)
       , color = Color.yellow900
       , textSize = FontSize.a_16
@@ -44,13 +44,14 @@ primaryButtonConfigConfirmLoc state = let
     , background = Color.black900
     , margin = (Margin 0 22 0 16)
     , id = "AddNewaddressConfirmLocationButton"
+    , isClickable = state.props.isServiceable
     }
   in primaryButtonConfig'
 
 genericHeaderConfig :: ST.AddNewAddressScreenState -> GenericHeader.Config
-genericHeaderConfig state = let 
+genericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , background = Color.transparent
@@ -74,13 +75,13 @@ genericHeaderConfig state = let
   in genericHeaderConfig'
 
 primaryEditTextConfig :: ST.AddNewAddressScreenState -> PrimaryEditText.Config
-primaryEditTextConfig state = let 
+primaryEditTextConfig state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
       { editText
         { color = Color.black800
         , singleLine = true
-        , placeholder = (getString GIVE_THIS_LOCATION_A_NAME) 
+        , placeholder = (getString GIVE_THIS_LOCATION_A_NAME)
         , fontStyle = FontStyle.semiBold LanguageStyle
         , textSize = FontSize.a_14
         , pattern = Just "[a-zA-Z0-9'‘’. ]*,30"
@@ -96,7 +97,7 @@ primaryEditTextConfig state = let
       , stroke = ("1,"<> Color.black500)
       , margin = (Margin 0 0 0 0)
       , id = (EHC.getNewIDWithTag "SaveAsEditText")
-      , errorLabel 
+      , errorLabel
         { text = (getString NAME_ALREADY_IN_USE)
         , fontStyle = FontStyle.medium LanguageStyle
         , margin = (MarginTop 1)
@@ -106,10 +107,10 @@ primaryEditTextConfig state = let
       }
     in primaryEditTextConfig'
 
-primaryButtonConfig :: ST.AddNewAddressScreenState -> PrimaryButton.Config 
-primaryButtonConfig state = let 
+primaryButtonConfig :: ST.AddNewAddressScreenState -> PrimaryButton.Config
+primaryButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig{ text = if (state.props.editSavedLocation) then (getString CONFIRM_CHANGES) else (getString CONFIRM_AND_SAVE)
       , textSize = FontSize.a_16 }
       , margin = (MarginBottom 24)

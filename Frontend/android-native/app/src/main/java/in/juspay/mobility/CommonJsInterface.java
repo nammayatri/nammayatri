@@ -136,6 +136,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.ButtCap;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.CustomCap;
 import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Dot;
@@ -211,6 +212,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.io.ByteArrayOutputStream;
 import java.lang.Math;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -1737,7 +1739,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @SuppressLint("MissingPermission")
-    private void updateLastKnownLocation(String callback, boolean animate) {
+    private void updateLastKnownLocation(String callback, boolean animate, final String zoomType) {
         if (!isLocationPermissionEnabled()) return;
 
 //        LocationRequest mLocationRequest =
@@ -1772,7 +1774,19 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                         userPositionMarker.setVisible(true);
                                     userPositionMarker.setPosition(latLng);
                                 }
-                                googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+                                try {
+                                    if (zoomType.equals(ZoomType.NO_ZOOM)) {
+                                        CameraPosition cameraPosition = new CameraPosition.Builder()
+                                                .target(latLng)
+                                                .zoom(googleMap.getCameraPosition().zoom)
+                                                .build();
+                                        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                                    } else {
+                                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
                             }
                         } else getLastKnownLocationFromClientFallback(callback, animate);
                     }
@@ -1833,7 +1847,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void getLocationName(String latitude, String longitude, String defaultText, String callback) {
         if (!isLocationPermissionEnabled()) return;
 
-        updateLastKnownLocation(null, false);
+        updateLastKnownLocation(null, false, ZoomType.ZOOM);
 
         if (defaultText.equals(CURRENT_LOCATION_LATLON)) {
             latitude = String.valueOf(lastLatitudeValue);
@@ -1873,7 +1887,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void fetchAndUpdateCurrentLocation(String callback) {
         if (!isLocationPermissionEnabled()) return;
-        updateLastKnownLocation(callback, true);
+        updateLastKnownLocation(callback, true, ZoomType.ZOOM);
     }
 
     @JavascriptInterface
@@ -2043,7 +2057,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void getCurrentPosition(String callback) {
         if (!isLocationPermissionEnabled()) return;
-        updateLastKnownLocation(callback, false);
+        updateLastKnownLocation(callback, false, ZoomType.ZOOM);
     }
 
     private NetworkInfo getInfo() {
@@ -2604,7 +2618,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     MarkerOptions markerOptionsObj = new MarkerOptions()
                                                 .title("")
                                                 .position(new LatLng(lat,lng))
-                                                .anchor(0.49f, 0.78f)
+                                                .anchor(0.5f, 0.5f)
                                                 .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name,"ny_ic_zone_pickup_marker", null)));
                     Marker m = googleMap.addMarker(markerOptionsObj);
                     m.hideInfoWindow();
@@ -2616,47 +2630,76 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         });
     }
 
+    private ArrayList<LatLng> getCoordinateEndPoint(JSONArray coor) {
+        try {
+            ArrayList<Double> all_latitudes = new ArrayList<Double>();
+            ArrayList<Double> all_longitudes = new ArrayList<Double>();
+            for (int i = 0; i < coor.length(); i++) {
+                JSONArray coordinate = (JSONArray) coor.get(i);
+                double lat = (double) coordinate.get(1);
+                double lon = (double) coordinate.get(0);
+                all_latitudes.add(lat);
+                all_longitudes.add(lon);
+            }
+
+            double minLat = Collections.min(all_latitudes);
+            double maxLat = Collections.max(all_latitudes);
+            double minLon = Collections.min(all_longitudes);
+            double maxLon = Collections.max(all_longitudes);
+
+            double left = minLon - 0.1*(maxLon - minLon);
+            double right = maxLon + 0.1*(maxLon - minLon);
+            double top = maxLat + 0.1*(maxLat - minLat);
+            double bottom = minLat - (maxLat - minLat);
+
+            LatLng topLeft = new LatLng(top, left);
+            LatLng bottomRight = new LatLng(bottom, right);
+
+            ArrayList<LatLng> result = new ArrayList<>();
+            result.add(topLeft);
+            result.add(bottomRight);
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     @JavascriptInterface
-    public void drawPolygon(String geoJson, String locationName) throws JSONException {
+    public void drawPolygon(String geoJson, String locationName) {
 
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("Inside drawPolygon function");
                 if(layer != null){
                     layer.removeLayerFromMap();
                 }
-                JSONObject geo = null;
-                try {
-                    geo = new JSONObject(geoJson);
-                    PatternItem DASH = new Dash(20);
-                    PatternItem GAP = new Gap(20);
-                    List<PatternItem> PATTERN_POLYGON_ALPHA = Arrays.asList(GAP, DASH);
-                    layer = new GeoJsonLayer(googleMap, geo);
-                    GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
-                    polyStyle.setFillColor(Color.argb(25,0, 102, 255));
-                    polyStyle.setStrokePattern(PATTERN_POLYGON_ALPHA);
-                    polyStyle.setStrokeWidth(2);
-                    polyStyle.setStrokeColor(Color.BLUE);
-                    if (locationName.length() > 0){
-                        zoom = 14.0f;
-                        if (userPositionMarker == null) {
-                            upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf( getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")),160, 0.5f,0.9f); //TODO this function will be removed
-                        } else {
+                if (googleMap != null) {
+                    try {
+                        JSONObject geo = new JSONObject(geoJson);
+                        layer = new GeoJsonLayer(googleMap, geo);
+                        GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
+                        polyStyle.setFillColor(Color.argb(25, 0, 102, 255));
+                        polyStyle.setStrokeWidth(2);
+                        polyStyle.setStrokeColor(Color.BLUE);
+                        if (locationName.length() > 0) {
+                            if (userPositionMarker == null) {
+                                upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
+                            } else {
+                                userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null)));
+                                userPositionMarker.setTitle("");
+                                LatLng latLng = new LatLng(Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
+                            }
                         }
-                        userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName,CURRENT_LOCATION, null)));
-                        userPositionMarker.setTitle("");
-                        LatLng latLng = new LatLng(Double.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")) , Double.valueOf( getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
+                        layer.addLayerToMap();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                    layer.addLayerToMap();
-//                    return;
-                } catch (JSONException e) {
-                    e.printStackTrace();
                 }
-//                return ;
             }
         });
-//        return ;
 
     }
 
@@ -2682,51 +2725,87 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         return;
     }
 
+    // TODO :: Will use this function in future with hotspots
+    private void drawDottedLine(Double srcLat, Double srcLon, Double destLat, Double destLon) {
+        if (googleMap != null) {
+            if (polylines != null) {
+                polylines.remove();
+                polylines = null;
+            }
+            PolylineOptions polylineOptions = new PolylineOptions();
+            polylineOptions.add(new LatLng(srcLat, srcLon));
+            polylineOptions.add(new LatLng(destLat, destLon));
+            int color = Color.parseColor("#323643");
+            polylines = setRouteCustomTheme(polylineOptions, color, "DOT", 8);
+        }
+    }
+
     @JavascriptInterface
     public void locateOnMap (boolean goToCurrentLocation, final String lat, final String lon, String geoJson, String points){
-        System.out.println("Inside locateOnMap" + geoJson);
-        if (geoJson.equals("")){
+        if (geoJson.equals("") || points.equals("[]")){
             locateOnMap(goToCurrentLocation,lat,lon);
             return;
         }
         try {
             activity.runOnUiThread(new Runnable() {
+                double x = 0.0;
+                double y = 0.0;
                 @Override
                 public void run() {
                     try {
+                        for (Marker m : pickupPointsZoneMarkers) {
+                            m.setVisible(false);
+                        }
                         drawPolygon(geoJson, "");
+                        JSONObject geo = new JSONObject(geoJson);
+                        JSONArray coordinates = geo.getJSONArray("coordinates");
+                        JSONArray multiplePolygons = (JSONArray) coordinates.get(0);
+                        JSONArray polygon = (JSONArray) multiplePolygons.get(0);
+                        ArrayList<LatLng> endPoints = getCoordinateEndPoint(polygon);
+
+                        if (endPoints != null) {
+                            LatLng topLeft = endPoints.get(0);
+                            LatLng bottomRight = endPoints.get(1);
+
+                            x = bottomRight.longitude - topLeft.longitude;
+                            y = topLeft.latitude - bottomRight.latitude;
+
+                            double currentLat = goToCurrentLocation ? lastLatitudeValue : Double.parseDouble(lat);
+                            double currentLon = goToCurrentLocation ? lastLongitudeValue : Double.parseDouble(lon);
+
+                            LatLngBounds bounds = LatLngBounds.builder().include(new LatLng(currentLat - y/2, currentLon - x/2)).include(new LatLng(currentLat + y/2, currentLon + x/2)).build();
+                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,0));
+                        }
+
+                        removeMarker("ny_ic_customer_current_location");
+                        JSONArray zonePoints = null;
+                        zonePoints = new JSONArray(points);
+                        for (int i = 0; i < zonePoints.length(); i++) {
+                            drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "");
+                        }
                     } catch (JSONException e) {
                         e.printStackTrace();
+                        e.printStackTrace();
                     }
-                    removeMarker("ny_ic_customer_current_location");
-                    if(goToCurrentLocation){
-                        LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
-                    }else{
-                        LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
-                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
-                    }
+
                     googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
                         @Override
                         public void onCameraIdle() {
                             double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
                             double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
-                            System.out.println("Inside OnCameraIdle");
+                            Boolean insidePolygon = pointInsidePolygon(geoJson, lat, lng);
                             ExecutorService executor = Executors.newSingleThreadExecutor();
                             Handler handler = new Handler(Looper.getMainLooper());
-                            System.out.println("Inside OnCameraIdle");
                             executor.execute(() -> {
                                 try {
                                     new Thread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            Boolean res =  isPointInside(lat, lng);
-                                            System.out.println("Inside OnCameraIdle");
                                             handler.post(() -> {
                                                 try {
-                                                    if(res){
-                                                        System.out.println("Inside OnCameraIdle"+res);
+                                                    boolean isPointInsidePolygon = pointInsidePolygon(geoJson, lat, lng);
+                                                    boolean isOnGate = false;
+                                                    if(isPointInsidePolygon){
                                                         JSONArray zonePoints = new JSONArray(points);
                                                         System.out.println("Inside zonepoints" + zonePoints);
                                                         JSONObject nearestPickupPointObj = getNearestPoint(lat, lng, zonePoints);
@@ -2734,36 +2813,35 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                                         nearestPickupPoint.setLatitude(nearestPickupPointObj.getDouble("lat"));
                                                         nearestPickupPoint.setLongitude(nearestPickupPointObj.getDouble("long"));
 
-                                                        for (Marker m : pickupPointsZoneMarkers) {
-                                                            m.setVisible(false);
-                                                        }
-
                                                         for(int i=0;i<zonePoints.length();i++){
                                                             if(SphericalUtil.computeDistanceBetween(CommonJsInterface.this.googleMap.getCameraPosition().target, new LatLng((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng")))<=1){
-                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"),  (String)zonePoints.getJSONObject(i).get("place"));
                                                                 zoneName = (String)zonePoints.getJSONObject(i).get("place");
-                                                            }
-                                                            else{
-                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"), "");
+                                                                isOnGate = true;
                                                             }
                                                         }
 
                                                         if(SphericalUtil.computeDistanceBetween(CommonJsInterface.this.googleMap.getCameraPosition().target, new LatLng(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude()))>1){
-                                                            animateCamera(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude(),25.0f);
+                                                            double latitude = nearestPickupPoint.getLatitude();
+                                                            double longitude = nearestPickupPoint.getLongitude();
+                                                            LatLngBounds bounds = LatLngBounds.builder().include(new LatLng(latitude - y/2, longitude - x/2)).include(new LatLng(latitude + y/2, longitude + x/2)).build();
+                                                            LatLng newLatLng = new LatLng(latitude, longitude); // Los Angeles coordinates
+                                                            CameraPosition cameraPosition = new CameraPosition.Builder()
+                                                                    .target(newLatLng)
+                                                                    .zoom(googleMap.getCameraPosition().zoom)
+                                                                    .build();
+                                                            googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                                                         }
                                                     }
                                                     else {
-                                                        for (Marker m : pickupPointsZoneMarkers) {
-                                                            m.setVisible(false);
-                                                        }
+                                                        zoneName = "LatLon";
                                                     }
-                                                    if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+                                                    if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null && (!isPointInsidePolygon || isOnGate)){
                                                         String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, zoneName, lat, lng);
                                                         Log.e(LOG_TAG, javascript);
                                                         dynamicUI.addJsToWebView(javascript);
                                                     }
-                                                } catch (JSONException e) {
-                                                    System.out.println("Exception " + e);
+                                                } catch (Exception e) {
+                                                    e.printStackTrace();
                                                 }
                                                 executor.shutdown();
                                             });
@@ -2773,21 +2851,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                     Log.e ("api response error",e.toString());
                                 }
                             });
-//                            if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
-//                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, zoneName, lat, lng);
-//                                Log.e(LOG_TAG, javascript);
-//                                dynamicUI.addJsToWebView(javascript);
-//                            }
                         }
                     });
-                    if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
-                        LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
-                    }else{
-                        LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
-                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
-                    }
                 }
             });
         } catch (Exception e) {
@@ -2795,8 +2860,36 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
     }
 
-    private Boolean isPointInside(Double lat, Double lng) {
-        System.out.println("Inside isPOinteINside");
+    private Boolean pointInsidePolygon(String geoJson, Double latitude, Double longitide) {
+        try {
+            JSONObject geo = new JSONObject(geoJson);
+            JSONArray coor = geo.getJSONArray("coordinates");
+            JSONArray coor2 = (JSONArray) coor.get(0);
+            JSONArray coor3 = (JSONArray) coor2.get(0);
+
+            double y = latitude;
+            double x = longitide;
+            boolean inside = false;
+            for (int i = 0, j = coor3.length() - 1; i < coor3.length(); j = i++) {
+                JSONArray point1 = (JSONArray) coor3.get(i);
+                JSONArray point2 = (JSONArray) coor3.get(j);
+                double xi = (double) point1.get(0), yi = (double) point1.get(1);
+                double xj = (double) point2.get(0), yj = (double) point2.get(1);
+
+                boolean intersect = ((yi > y) != (yj > y)) && (x <= (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) {
+                    inside = !inside;
+                }
+            }
+
+            return inside;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private Boolean isServiceable(Double lat, Double lng) {
         StringBuilder result = new StringBuilder();
         sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         regToken = sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null");
@@ -2854,42 +2947,54 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon) {
-        try {
-            activity.runOnUiThread(() -> {
-                removeMarker("ny_ic_customer_current_location");
-                if (goToCurrentLocation) {
-                    LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
-                } else {
-                    LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
-                    googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
-                }
-                googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-                    @Override
-                    public void onCameraIdle() {
-                        double lat1 = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
-                        double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
-                        if (storeMapCallBack != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
-                            String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, "LatLon", lat1, lng);
-                            Log.e(LOG_TAG, javascript);
-                            dynamicUI.addJsToWebView(javascript);
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        removeMarker("ny_ic_customer_current_location");
+                        if (goToCurrentLocation) {
+                            LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                        } else {
+                            LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                            googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                         }
+                        googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+                            @Override
+                            public void onCameraIdle() {
+                                ExecutorService executor = Executors.newSingleThreadExecutor();
+                                Handler handler = new Handler(Looper.getMainLooper());
+                                double lat1 = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
+                                double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+                                executor.execute(() -> {
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            if (storeMapCallBack != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
+                                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, "LatLon", lat1, lng);
+                                                Log.e(LOG_TAG, javascript);
+                                                dynamicUI.addJsToWebView(javascript);
+                                            }
+                                        }
+                                    }).start();
+                                });
+                            }
+                        });
+
+                        if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
+                            LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                            CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                        } else {
+                            LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                            CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                            googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                });
-                if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
-                    LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
-                    CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
-                } else {
-                    LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                    CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
-                    googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
             });
-
-        } catch (Exception e) {
-            Log.i(LOG_TAG, "LocateOnMap error for ", e);
-        }
     }
 
     @JavascriptInterface
@@ -2978,7 +3083,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             if (imageName.equals("ny_ic_dest_marker")) {
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
             } else if(imageName.equals("ny_ic_zone_pickup_marker")){
-                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker_yellow));
+                ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
+                layoutParams.height = 40;
+                layoutParams.width = 40;
+                pointer.setLayoutParams(layoutParams);
             } else if(imageName.equals("ny_ic_customer_current_location")){
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_customer_current_location));
                 ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
@@ -3339,7 +3448,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             polylines.remove();
                             polylines = null;
                             currMarker.setAnchor(0.5f, 0);
-                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, 17.0f);
+                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, 17.0f, ZoomType.ZOOM);
                         } else {
                             double destinationLat = path.get(0).latitude;
                             double destinationLon = path.get(0).longitude;
@@ -3676,10 +3785,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         double lat = coordinate.getDouble("lat");
                         Integer vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
                         upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
-                        animateCamera(lat,lng,20.0f);
+                        animateCamera(lat,lng,20.0f, ZoomType.ZOOM);
                         return;
                     }
-                    
+
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                     JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
                     double sourceLong = sourceCoordinates.getDouble("lng");
@@ -3837,13 +3946,20 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void animateCamera(final double lat, final double lng, final float zoom) {
-        System.out.println("animateCamera " + lat + " " + lng);
+    public void animateCamera(final double lat, final double lng, final float zoom, final String zoomType) {
         activity.runOnUiThread(() -> {
             try {
                 if (googleMap != null) {
                     LatLng latLngObj = new LatLng(lat, lng);
-                    googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom));
+                    if (zoomType.equals(ZoomType.NO_ZOOM)) {
+                        CameraPosition cameraPosition = new CameraPosition.Builder()
+                                                .target(latLngObj)
+                                                .zoom(googleMap.getCameraPosition().zoom)
+                                                .build();
+                        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                    } else {
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngObj, zoom));
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -3965,9 +4081,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void currentPosition(String str) {
-        System.out.println("Fetch Current Position");
-        showLocationOnMap();
+    public void currentPosition(final String zoomType) {
+        showLocationOnMap(zoomType);
     }
 
     @JavascriptInterface
@@ -4054,12 +4169,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
     }
 
-    private void showLocationOnMap() {
+    private void showLocationOnMap(final String zoomType) {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if(!isLocationPermissionEnabled()) return;
-                updateLastKnownLocation(null, true);
+                updateLastKnownLocation(null, true, zoomType);
             }
         });
     }
@@ -4478,6 +4593,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
         private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
+    }
+
+    private class ZoomType {
+        private static final String NO_ZOOM = "NO_ZOOM";
+        private static final String ZOOM = "ZOOM";
     }
 
 

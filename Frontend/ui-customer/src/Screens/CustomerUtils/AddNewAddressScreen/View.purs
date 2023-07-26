@@ -34,7 +34,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Gravity(..), Visibility(..), Padding(..), PrestoDOM, Screen, height, width, color, background, orientation, padding, margin, onBackPressed, linearLayout, gravity, textView, text, textSize, fontStyle, scrollView, scrollBarY, relativeLayout, editText, hint, singleLine, hintColor, ellipsize, cornerRadius, lineHeight, stroke, onChange, id, visibility, maxLines, onClick, imageView, imageUrl, alignParentBottom, afterRender, adjustViewWithKeyboard, weight, alpha, frameLayout, clickable, onFocus, imageWithFallback)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
 import Screens.Types as ST
@@ -42,6 +42,8 @@ import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
+import Debug (spy)
+import Data.String as DS
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -51,15 +53,20 @@ screen initialState =
   , globalEvents : [(\push -> do
                       if initialState.props.isLocateOnMap then do
                         pure (pure unit)
-                        else do
+                      else do
                         _ <- HU.storeCallBackLocateOnMap push UpdateLocation
-                        pure unit
                         pure (pure unit))]
-  , eval
+  , eval:
+      \action state -> do
+        let _ = spy "Add New Address action " action
+        let _ = spy "Add New Address state " state
+        eval action state
   }
 
 view :: forall w . (Action  -> Effect Unit) -> ST.AddNewAddressScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  let showLabel = if state.props.defaultPickUpPoint == "" then false else true
+  in
   Anim.screenAnimation $
   relativeLayout[
     width MATCH_PARENT
@@ -90,9 +97,24 @@ view push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , background Color.transparent
-      , padding (PaddingBottom 45)
+      , padding (PaddingBottom if showLabel then 80 else 44)
       , gravity CENTER
-      ][ imageView
+      , orientation VERTICAL
+      ][ textView
+         [ width WRAP_CONTENT
+         , height WRAP_CONTENT
+         , background Color.black800
+         , color Color.white900
+         , text if DS.length state.props.defaultPickUpPoint > 30 then
+                  (DS.take 28 state.props.defaultPickUpPoint) <> "..."
+                else
+                  state.props.defaultPickUpPoint
+         , padding (Padding 5 5 5 5)
+         , margin (MarginBottom 5)
+         , cornerRadius 5.0
+         , visibility if showLabel then VISIBLE else GONE
+         ]
+       , imageView
          [ width $ V 60
          , height $ V 60
          , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> ",https://assets.juspay.in/nammayatri/images/user/ny_ic_customer_current_location.png"
@@ -388,11 +410,11 @@ searchResultsView state push =
                     , background Color.lightGreyShade
                     ][]
               ]
-              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData state else []) else state.data.locationList )) 
+              )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData state else []) else state.data.locationList ))
   ]
 
-bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
-bottomBtnsData state = 
+bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState
+bottomBtnsData state =
   [ { prefixImageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP)
     , subTitle :  (getString DRAG_THE_MAP )
@@ -487,7 +509,7 @@ savePlaceView state push =
                           pure unit)
               $ const ChangeAddress
           ][  textView
-              ([ text (state.data.selectedItem).description 
+              ([ text (state.data.selectedItem).description
               , textSize FontSize.a_14
               , fontStyle $ FontStyle.medium LanguageStyle
               , color Color.black600
@@ -495,11 +517,11 @@ savePlaceView state push =
               , gravity CENTER_VERTICAL
               , padding (PaddingRight 8)
               , maxLines 1
-              , ellipsize true 
+              , ellipsize true
               ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) )
             , linearLayout([
               height WRAP_CONTENT
-            , gravity RIGHT 
+            , gravity RIGHT
             ] <> (if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT]) )[  textView
                 [ text (getString EDIT)
                 , color Color.blue900

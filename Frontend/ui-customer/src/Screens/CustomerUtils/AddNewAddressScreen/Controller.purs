@@ -143,9 +143,8 @@ eval (AddressChanged input) state = do
           else continue state{props{isLocationServiceable = (input /= state.data.address)}}
     else continue state
 
-eval (MAPREADY key latitude longitude) state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0 "" []
-  case key of 
+eval (MAPREADY key latitude longitude) state = do
+  case key of
     _ -> continueWithCmd state[ do
       _ <- checkPermissionAndUpdatePersonMarker state
       pure AfterRender
@@ -155,9 +154,8 @@ eval (ClearEditText) state = do
   void $ pure $ requestKeyboardShow (getNewIDWithTag "SavedLocationEditText")
   continue state{props{isSearchedLocationServiceable = true}}
 
-eval SetLocationOnMap state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0 "" []
-  _ <- pure $ currentPosition ""
+eval SetLocationOnMap state = do
+  _ <- pure $ locateOnMap true 0.0 0.0 state.data.polygonCoordinates state.data.nearByPickUpPoints
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
@@ -168,8 +166,10 @@ eval SetLocationOnMap state = do
 eval (UpdateLocation key lat lon) state = do
   case key of
     "LatLon" -> do
-      exit $ UpdateLocationName state (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
-    _ -> continue state
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
+    _ ->  if DA.length (DA.filter( \item -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
+            exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
+          else continue state
 
 eval (UpdateCurrLocName lat lon name) state = do
   continue state {data{locSelectedFromMap = name, latSelectedFromMap = (fromMaybe 0.0 (Number.fromString lat)), lonSelectedFromMap = (fromMaybe 0.0 (Number.fromString lon))}}
@@ -181,7 +181,7 @@ eval (SelectedCurrentLocation lat lon name) state = do
 eval (UpdateCurrentLocation lat lng) state = continue state{data{ lat = (fromMaybe 0.0 (Number.fromString lat) ), lon = (fromMaybe 0.0 (Number.fromString lng))}}
 
 eval RecenterCurrentLocation state = continueWithCmd state [do
-  _ <- pure $ currentPosition ""
+  _ <- pure $ currentPosition "NO_ZOOM"
   pure NoAction
   ]
 
@@ -414,13 +414,14 @@ checkPermissionAndUpdatePersonMarker state = do
       else pure unit
 
 showPersonMarker :: AddNewAddressScreenState -> String -> Location -> Effect Unit
-showPersonMarker state marker location = animateCamera location.lat location.lng 19
+showPersonMarker state marker location = animateCamera location.lat location.lng 19 ""
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =
   { lat: lat
   , lng : lng
   , place : ""
+  , address : Nothing
   }
 
 calculateDistance ::Array LocationListItemState -> String -> Number -> Number -> Array DistInfo

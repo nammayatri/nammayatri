@@ -126,7 +126,7 @@ foreign import isLocationEnabled :: Unit -> Effect Boolean
 foreign import getCurrentPosition  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
 
 foreign import isMockLocation :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import animateCamera :: Number -> Number -> Int -> Effect Unit
+foreign import animateCamera :: Number -> Number -> Int -> String -> Effect Unit
 -- foreign import moveCamera :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import minimizeApp    :: String -> Unit
 foreign import toast          :: String -> Unit
@@ -369,7 +369,8 @@ type IsLocationOnPath = {
 type Location = {
   lat :: Number,
   lng :: Number,
-  place :: String
+  place :: String,
+  address :: Maybe String
 }
 
 type UpdateRouteMarker = {
