@@ -37,6 +37,8 @@ mkPersist
       associatedTill UTCTime Maybe
       consent Bool
       consentTimestamp UTCTime
+      isRcActive Bool
+      isDeleted Bool
       Primary id
       deriving Generic
     |]

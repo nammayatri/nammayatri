@@ -166,7 +166,7 @@ rideInfo merchantShortId reqRideId = do
     if ride.status == DRide.CANCELLED
       then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
       else pure Nothing
-  driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByRideId rideId
+  driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByEntityId rideId
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))

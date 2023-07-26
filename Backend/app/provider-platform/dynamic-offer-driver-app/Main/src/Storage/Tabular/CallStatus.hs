@@ -24,7 +24,6 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Storage.Tabular.Ride (RideTId)
 
 mkPersist
   defaultSqlSettings
@@ -32,7 +31,7 @@ mkPersist
     CallStatusT sql=call_status
       id Text
       callId Text
-      rideId RideTId
+      entityId Text
       dtmfNumberUsed Text Maybe
       status Call.CallStatus
       recordingUrl Text Maybe
@@ -53,7 +52,6 @@ instance FromTType CallStatusT Domain.CallStatus where
     return $
       Domain.CallStatus
         { id = Id id,
-          rideId = fromKey rideId,
           ..
         }
 
@@ -61,6 +59,5 @@ instance ToTType CallStatusT Domain.CallStatus where
   toTType Domain.CallStatus {..} =
     CallStatusT
       { id = getId id,
-        rideId = toKey rideId,
         ..
       }
