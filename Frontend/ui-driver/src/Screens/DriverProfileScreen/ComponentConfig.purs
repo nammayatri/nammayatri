@@ -80,15 +80,25 @@ primaryEditTextConfig state = let
   primaryEditTextConfig' = config
     { editText
       { singleLine = true
-        , pattern = Just "[0-9]*,10"
+        , pattern = case state.props.detailsUpdationType of 
+                      Just ST.AUTO_AGE -> Just "[0-9]*,2"
+                      Just ST.AUTO_NAME -> Just "[a-zA-Z0-9]*,30"
+                      _ ->  Just "[a-zA-Z0-9]*,30"
         , fontStyle = FontStyle.medium LanguageStyle
         , textSize = FontSize.a_16
         , text = ""
         , placeholder = ""
       }
+    , height = V 54
+    , margin = Margin 16 24 16 0
+    , stroke = ("1,"<> Color.blue800)
+    , id = (EHC.getNewIDWithTag "UpdateDetailsEditText")
     , topLabel
       { textSize = FontSize.a_14
-      , text = ""
+      , text =  case state.props.detailsUpdationType of 
+                  Just ST.AUTO_AGE -> "How old is your auto (in years)?" 
+                  Just ST.AUTO_NAME -> "Enter Name of your Auto"
+                  _ -> ""
       , color = Color.greyTextColor
       }
     }
@@ -133,6 +143,26 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
+
+updateButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
+updateButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig
+      { text = getString UPDATE
+      , color = Color.primaryButtonColor
+      , textSize = FontSize.a_18}
+      , margin = MarginHorizontal 10 10
+      , cornerRadius = 10.0
+      , background = Color.black900
+      , height = (V 48)
+      , isClickable = state.props.btnActive
+      , alpha = if state.props.btnActive then 1.0 else 0.5
+      -- , alpha = if (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber) then 1.0 else 0.7
+      }
+  in primaryButtonConfig'
+
+  
 alternatePrimaryEditTextConfig :: ST.DriverProfileScreenState -> PrimaryEditText.Config
 alternatePrimaryEditTextConfig state = let 
     config = PrimaryEditText.config

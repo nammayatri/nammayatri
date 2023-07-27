@@ -530,5 +530,17 @@ const mlStrings = {
   TYPE : "തരം",
   MODEL_NAME : "മോഡലിന്റെ പേര്",
   COLOUR : "നിറം",
-  BADGE: "ബാഡ്ജുകൾ"
+  BADGE: "ബാഡ്ജുകൾ",
+  BADGE: "ব্যাজ",
+  SUMMARY : "Summary",
+  EARNED_ON_ : "Earned On",
+  NAMMA_BONUS  : "Namma Bonus",
+  TRIPS_COMPLETED : "Trip Compleyed",
+  LATE_NATE_TRIPS  : "Late night trips",
+  ABOUT_ME  : "About me",
+  ABOUT_VEHICLE : "About vehicle",
+  ADD : "Add",
+  TRAVELLED_ON  : "Travelled On",
+  YEARS_OLD  : "years Old",
+  HOMETOWN  : "Home Town"
 }
