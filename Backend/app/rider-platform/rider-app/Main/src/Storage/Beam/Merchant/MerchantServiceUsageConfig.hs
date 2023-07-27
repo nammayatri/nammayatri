@@ -38,6 +38,7 @@ import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS (SmsService)
+import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
@@ -126,6 +127,19 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [SmsService]
 
 instance FromBackendRow Postgres [SmsService]
 
+instance FromField IssueTicketService where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be IssueTicketService where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be IssueTicketService
+
+instance FromBackendRow Postgres IssueTicketService
+
+instance IsString IssueTicketService where
+  fromString = show
+
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
     initiateCall :: B.C f CallService,
@@ -142,6 +156,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     useFraudDetection :: B.C f Bool,
     smsProvidersPriorityList :: B.C f [SmsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
+    issueTicketService :: B.C f IssueTicketService,
     enableDashboardSms :: B.C f Bool,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
@@ -174,6 +189,7 @@ merchantServiceUsageConfigTMod =
       useFraudDetection = B.fieldNamed "use_fraud_detection",
       smsProvidersPriorityList = B.fieldNamed "sms_providers_priority_list",
       whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
+      issueTicketService = B.fieldNamed "issue_ticket_service",
       enableDashboardSms = B.fieldNamed "enable_dashboard_sms",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"

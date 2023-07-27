@@ -62,6 +62,7 @@ data IssueReportT f = IssueReportT
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
+    ticketId :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
     updatedAt :: B.C f Time.LocalTime
   }
@@ -101,6 +102,7 @@ issueReportTMod =
       optionId = B.fieldNamed "option_id",
       deleted = B.fieldNamed "deleted",
       mediaFiles = B.fieldNamed "media_files",
+      ticketId = B.fieldNamed "ticket_id",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
@@ -120,4 +122,4 @@ issueReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueReportToPSModifiers =
   M.empty
 
-$(enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId]])
+$(enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId], ['ticketId]])

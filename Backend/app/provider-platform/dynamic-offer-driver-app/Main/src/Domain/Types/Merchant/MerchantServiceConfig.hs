@@ -26,6 +26,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.SMS as Sms
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
@@ -42,6 +43,7 @@ data ServiceName
   | AadhaarVerificationService AadhaarVerification.AadhaarVerificationService
   | CallService Call.CallService
   | PaymentService Payment.PaymentService
+  | IssueTicketService Ticket.IssueTicketService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -53,6 +55,7 @@ instance Show ServiceName where
   show (AadhaarVerificationService s) = "AadhaarVerification_" <> show s
   show (CallService s) = "Call_" <> show s
   show (PaymentService s) = "Payment_" <> show s
+  show (IssueTicketService s) = "Ticket_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -87,6 +90,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Payment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (IssueTicketService v1, r2)
+                 | r1 <- stripPrefix "Ticket_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -100,6 +107,7 @@ data ServiceConfigD (s :: UsageSafety)
   | AadhaarVerificationServiceConfig !AadhaarVerificationServiceConfig
   | CallServiceConfig !CallServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
+  | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -143,6 +151,8 @@ getServiceName osc = case osc.serviceConfig of
     Call.ExotelConfig _ -> CallService Call.Exotel
   PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
+  IssueTicketServiceConfig ticketCfg -> case ticketCfg of
+    Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
 
 buildMerchantServiceConfig ::
   MonadTime m =>

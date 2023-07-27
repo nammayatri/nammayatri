@@ -14,18 +14,22 @@
 
 module API.Dashboard.IssueList where
 
+import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified Domain.Action.Dashboard.IssueList as DDI
 import qualified Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 
 type API =
   "issue"
-    :> ListCustomerIssue
+    :> ( ListCustomerIssue
+           :<|> TicketStatusCallBack
+       )
 
 type ListCustomerIssue =
   "list"
@@ -37,8 +41,15 @@ type ListCustomerIssue =
     :> QueryParam "to" UTCTime
     :> Get '[JSON] DI.IssueListRes
 
+type TicketStatusCallBack = Common.TicketStatusCallBackAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
-handler = listIssue
+handler merchantShortId =
+  listIssue merchantShortId
+    :<|> ticketStatusCallBack merchantShortId
 
 listIssue :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
 listIssue merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
+
+ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack merchantShortId = withFlowHandlerAPI . DDI.ticketStatusCallBack merchantShortId

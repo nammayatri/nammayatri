@@ -19,6 +19,12 @@ import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Types.Id
 
+data IssueStatus
+  = OPEN
+  | PENDING
+  | RESOLVED
+  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
+
 data Issue = Issue
   { id :: Id Issue,
     customerId :: Id DPerson.Person,
@@ -26,6 +32,8 @@ data Issue = Issue
     contactEmail :: Maybe Text,
     reason :: Text,
     description :: Text,
+    ticketId :: Maybe Text,
+    status :: IssueStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
