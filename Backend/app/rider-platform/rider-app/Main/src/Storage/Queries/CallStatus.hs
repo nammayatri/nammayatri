@@ -23,7 +23,7 @@ import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
-import Storage.Tabular.CallStatus ()
+-- import Storage.Tabular.CallStatus ()
 import qualified Tools.Call as Call
 
 -- import qualified EulerHS.KVConnector.Flow as KV

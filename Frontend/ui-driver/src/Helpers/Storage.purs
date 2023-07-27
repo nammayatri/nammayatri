@@ -80,6 +80,10 @@ data KeyStore = USER_NAME
                 | WAYPOINT_DEVIATION_COUNT
                 | TOLERANCE_EARTH
                 | RIDE_ID
+                | SUGGESTIONS_ENABLED
+                | LAUNCH_DATE_SETTING
+                | MESSAGES_DELAY
+                | NEGOTIATION_UNIT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

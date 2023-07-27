@@ -137,7 +137,7 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
 let tables =
-      { kVTables =
+      { enableKVForWriteAlso =
             [ "registration_token"
             , "search_request"
             , "search_request_for_driver"
@@ -158,7 +158,7 @@ let tables =
             , "search_request_location"
             ]
           : List Text
-      , kVHardKilledTables =
+      , enableKVForRead =
             [ "registration_token"
             , "search_request"
             , "search_request_for_driver"
@@ -179,6 +179,7 @@ let tables =
             , "search_request_location"
             ]
           : List Text
+      , tableAllocation = 50 : Natural
       }
 
 in  { esqDBCfg

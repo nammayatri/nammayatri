@@ -124,7 +124,7 @@ findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq pers
 
 updateCustomerExtraFeeAndPaymentMethod :: (L.MonadFlow m, Log m) => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m ()
 updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId =
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamSR.customerExtraFee customerExtraFee,
       Se.Set BeamSR.selectedPaymentMethodId (getId <$> paymentMethodId)
     ]
@@ -146,7 +146,7 @@ updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee payment
 
 updateAutoAssign :: (L.MonadFlow m, Log m) => Id SearchRequest -> Bool -> Bool -> m ()
 updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 = do
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled,
       Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2
     ]
@@ -163,7 +163,7 @@ updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 
 
 updatePaymentMethods :: (L.MonadFlow m, Log m) => Id SearchRequest -> [Id MerchantPaymentMethod] -> m ()
 updatePaymentMethods (Id searchReqId) availablePaymentMethods =
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamSR.availablePaymentMethods (getId <$> availablePaymentMethods)
     ]
     [Se.Is BeamSR.id (Se.Eq searchReqId)]

@@ -25,6 +25,7 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 -- import Database.Beam.Backend
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 -- import Database.Beam.Postgres
 --   ( Postgres,
 --   )
@@ -74,6 +75,12 @@ instance ModelMeta DriverInformationT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverInformation = DriverInformationT Identity
+
+dInformationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverInformationT)
+dInformationTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "driver_information"
+    <> B.modifyTableFields driverInformationTMod
 
 instance FromJSON DriverInformation where
   parseJSON = A.genericParseJSON A.defaultOptions

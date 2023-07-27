@@ -18,6 +18,6 @@ import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 
 newtype StatusMessage = StatusMessage
-  { order_id :: Text -- BPP ride id
+  { order_id :: Text -- bpp bookingId
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

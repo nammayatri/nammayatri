@@ -15,6 +15,7 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import qualified Debug.Trace as T
 import qualified Domain.Types.DriverOffer as DomainDO
 -- import qualified Domain.Types.FarePolicy.FareProductType as DomainFPT
 import qualified Domain.Types.VehicleVariant as VehVar
@@ -34,6 +35,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Mesh as Mesh
 import Sequelize
+import System.Random
 
 fromFieldMoney ::
   DPSF.Field ->
@@ -217,31 +219,41 @@ setFlagsInMeshConfig meshCfg modelName = do
     isKVEnabled _ = False
     isHardKillEnabled _ = True
 
--- kvTables :: [Text]
--- kvTables = [] -- ["app_installs", "black_list_org", "booking", "booking_cancellation_reason", "callback_request", "call_status", "cancellation_reason", "driver_offer", "estimate", "estimate_breakup", "exophone", "geometry", "issue", "merchant", "merchant_config", "on_search_event", "person", "quote", "registration_token", "rental_slab", "ride", "saved_location", "search_request", "sos", "special_zone_quote", "trip_terms", "webengage", "booking_location", "fare_breakup", "place_name_cache", "merchant_message", "merchant_payment_method", "merchant_service_config", "merchant_service_usage_config", "payment_order", "payment_transaction", "person_default_emergency_number", "person_flow_status", "search_request_location"]
+-- enableKVForWriteAlso :: [Text]
+-- enableKVForWriteAlso = [] -- ["app_installs", "black_list_org", "booking", "booking_cancellation_reason", "callback_request", "call_status", "cancellation_reason", "driver_offer", "estimate", "estimate_breakup", "exophone", "geometry", "issue", "merchant", "merchant_config", "on_search_event", "person", "quote", "registration_token", "rental_slab", "ride", "saved_location", "search_request", "sos", "special_zone_quote", "trip_terms", "webengage", "booking_location", "fare_breakup", "place_name_cache", "merchant_message", "merchant_payment_method", "merchant_service_config", "merchant_service_usage_config", "payment_order", "payment_transaction", "person_default_emergency_number", "person_flow_status", "search_request_location"]
 
--- kvHardKilledTables :: [Text]
--- kvHardKilledTables = [] -- ["app_installs", "black_list_org", "booking", "booking_cancellation_reason", "callback_request", "call_status", "cancellation_reason", "driver_offer", "estimate", "estimate_breakup", "exophone", "geometry", "issue", "merchant", "merchant_config", "on_search_event", "person", "quote", "registration_token", "rental_slab", "ride", "saved_location", "search_request", "sos", "special_zone_quote", "trip_terms", "webengage", "booking_location", "fare_breakup", "place_name_cache", "merchant_message", "merchant_payment_method", "merchant_service_config", "merchant_service_usage_config", "payment_order", "payment_transaction", "person_default_emergency_number", "person_flow_status", "search_request_location"]
+-- enableKVForRead :: [Text]
+-- enableKVForRead = [] -- ["app_installs", "black_list_org", "booking", "booking_cancellation_reason", "callback_request", "call_status", "cancellation_reason", "driver_offer", "estimate", "estimate_breakup", "exophone", "geometry", "issue", "merchant", "merchant_config", "on_search_event", "person", "quote", "registration_token", "rental_slab", "ride", "saved_location", "search_request", "sos", "special_zone_quote", "trip_terms", "webengage", "booking_location", "fare_breakup", "place_name_cache", "merchant_message", "merchant_payment_method", "merchant_service_config", "merchant_service_usage_config", "payment_order", "payment_transaction", "person_default_emergency_number", "person_flow_status", "search_request_location"]
 
 setMeshConfig :: (L.MonadFlow m, HasCallStack) => Text -> m MeshConfig
 setMeshConfig modelName = do
-  tables <- L.getOption KBT.Tables
+  tables <- T.trace "getting the tables" $ L.getOption KBT.Tables
+  randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
-      let kvTables = tables'.kVTables
-      let kvHardKilledTables = tables'.kVHardKilledTables
-      pure $ meshConfig {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+      let enableKVForWriteAlso = tables'.enableKVForWriteAlso
+      let enableKVForRead = tables'.enableKVForRead
+      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
+      let tableAllocation = fromIntegral tables'.tableAllocation
+      if randomIntV <= tableAllocation
+        then pure $ meshConfig {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
+        else pure $ meshConfig {meshEnabled = False, kvHardKilled = modelName `notElem` enableKVForRead}
 
 setMeshConfig' :: (L.MonadFlow m, HasCallStack) => Text -> MeshConfig -> m MeshConfig
 setMeshConfig' modelName meshConfig' = do
   tables <- L.getOption KBT.Tables
+  randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
-      let kvTables = tables'.kVTables
-      let kvHardKilledTables = tables'.kVHardKilledTables
-      pure $ meshConfig' {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+      let enableKVForWriteAlso = tables'.enableKVForWriteAlso
+      let enableKVForRead = tables'.enableKVForRead
+      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
+      let tableAllocation = fromIntegral tables'.tableAllocation
+      if randomIntV <= tableAllocation
+        then pure $ meshConfig' {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
+        else pure $ meshConfig' {meshEnabled = False, kvHardKilled = modelName `notElem` enableKVForRead}
 
 class
   FromTType' t a
@@ -381,6 +393,38 @@ updateWithKV setClause whereClause = do
   updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
   res <- KV.updateAllWithKVConnector dbConf updatedMeshConfig setClause whereClause
+  case res of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
+
+updateOneWithKV ::
+  forall table m.
+  ( HasCallStack,
+    -- FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    SqlReturning Pg Postgres,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  -- DBConfig beM ->throwError
+  [Set Postgres table] ->
+  Where Postgres table ->
+  m ()
+-- m (Maybe (table Identity))
+updateOneWithKV setClause whereClause = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig
+  res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err

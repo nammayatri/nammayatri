@@ -54,7 +54,8 @@ createOrderService ::
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m Payment.CreateOrderResp
 createOrderService merchantId personId orderId createOrderReq createOrderCall = do
-  mbExistingOrder <- runInReplica $ QOrder.findById orderId
+  -- mbExistingOrder <- runInReplica $ QOrder.findById orderId
+  mbExistingOrder <- QOrder.findById orderId
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
@@ -159,7 +160,8 @@ orderStatusService ::
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
   m PaymentStatusResp
 orderStatusService personId orderId orderStatusCall = do
-  order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+  -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   unless (personId == order.personId) $ throwError NotAnExecutor
   let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
   orderStatusResp <- orderStatusCall orderStatusReq -- api call
@@ -177,8 +179,10 @@ updateOrderTransaction ::
 updateOrderTransaction order resp respDump = do
   mbTransaction <- do
     case resp.transactionUUID of
-      Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
-      Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
+      -- Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
+      Just transactionUUID -> QTransaction.findByTxnUUID transactionUUID
+      -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
+      Nothing -> QTransaction.findNewTransactionByOrderId order.id
   let updOrder = order{status = resp.transactionStatus}
   case mbTransaction of
     Nothing -> do
@@ -232,6 +236,7 @@ juspayWebhookService ::
   m AckResponse
 juspayWebhookService resp respDump = do
   let orderShortId = ShortId resp.orderShortId
-  order <- runInReplica $ QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
+  -- order <- runInReplica $ QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
+  order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
   updateOrderTransaction order resp $ Just respDump
   return Ack

@@ -84,7 +84,7 @@ findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
 update org = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamM.name org.name,
       Se.Set BeamM.gatewayUrl (showBaseUrl org.gatewayUrl),
       Se.Set BeamM.registryUrl (showBaseUrl org.registryUrl),

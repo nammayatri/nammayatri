@@ -39,6 +39,19 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
+-- instance FromField Domain.ImageType where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.ImageType where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.ImageType
+
+-- instance FromBackendRow Postgres Domain.ImageType
+
+-- instance IsString Domain.ImageType where
+--   fromString = show
+
 instance FromField Domain.DriverOnboardingError where
   fromField = fromFieldEnum
 
@@ -84,8 +97,6 @@ instance ToJSON Image where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Image
-
-deriving stock instance Ord Domain.ImageType
 
 deriving stock instance Ord Domain.DriverOnboardingError
 

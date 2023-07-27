@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Ride as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -91,6 +92,12 @@ instance ModelMeta RideT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Ride = RideT Identity
+
+rideTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideT)
+rideTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "ride"
+    <> B.modifyTableFields rideTMod
 
 instance FromJSON Ride where
   parseJSON = A.genericParseJSON A.defaultOptions

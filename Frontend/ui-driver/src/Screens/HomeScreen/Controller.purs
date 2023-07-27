@@ -37,7 +37,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, differenceBetweenTwoUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, scrollToEnd)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -48,7 +48,7 @@ import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 -- import Screens.Types(DriverStatus(..))
-import Services.APITypes (GetRidesHistoryResp, RidesInfo(..), Status(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -143,6 +143,7 @@ instance loggableAction :: Loggable Action where
     InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
     RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
     UpdateInChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_in_chat"
+    ScrollToBottom -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "scroll_to_bottom"
     ChatViewActionController act -> pure unit -- case act of
       -- ChatView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
       -- ChatView.SendSuggestion suggestion -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_suggestion"
@@ -234,6 +235,7 @@ data Action = NoAction
             | GenderBannerModal Banner.Action
             | RemoveGenderBanner
             | RequestInfoCardAction RequestInfoCard.Action
+            | ScrollToBottom
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -340,7 +342,7 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) true
+  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
@@ -464,6 +466,10 @@ eval (UpdateMessages message sender timeStamp size) state = do
                       updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestions, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
 
+eval ScrollToBottom state = do
+  _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
+  continue state
+
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
   let sendMessageActive = if (length (trim value)) >= 1 then
                           true
@@ -472,7 +478,7 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
   continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = sendMessageActive}}
 
 eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) true
+  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
@@ -541,7 +547,7 @@ eval ClickAddAlternateButton state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
-    pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+    pure $ toast $ getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
     continue state
   else do
     exit $ AddAlternateNumber state

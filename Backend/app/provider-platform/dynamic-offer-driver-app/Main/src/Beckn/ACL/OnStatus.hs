@@ -18,10 +18,10 @@ import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
 import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
-import Kernel.Types.Id (Id)
+import Kernel.Prelude
 
-mkOnStatusMessage :: Id DRide.Ride -> DStatus.DStatusRes -> OnStatus.OnStatusMessage
-mkOnStatusMessage rideId res = do
+mkOnStatusMessage :: DStatus.DStatusRes -> OnStatus.OnStatusMessage
+mkOnStatusMessage res =
   OnStatus.OnStatusMessage
     { order =
         OnStatus.Order
@@ -32,10 +32,11 @@ mkOnStatusMessage rideId res = do
     }
   where
     fulfillment =
-      OnStatus.FulfillmentInfo
-        { id = rideId.getId,
-          status = mapToBecknRideStatus res.rideStatus
-        }
+      res.mbRide <&> \ride ->
+        OnStatus.FulfillmentInfo
+          { id = ride.id.getId,
+            status = mapToBecknRideStatus ride.status
+          }
 
 mapToBecknBookingStatus :: DBooking.BookingStatus -> OnStatus.BookingStatus
 mapToBecknBookingStatus DBooking.NEW = OnStatus.NEW_BOOKING

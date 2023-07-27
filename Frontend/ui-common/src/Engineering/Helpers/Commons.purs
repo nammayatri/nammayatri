@@ -75,6 +75,7 @@ foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
+foreign import getCurrentTimeStamp :: Unit -> Number
 
 os :: String
 os = getOs unit

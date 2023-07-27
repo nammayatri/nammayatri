@@ -35,6 +35,8 @@ module Domain.Action.Dashboard.Driver
     clearOnRideStuckDrivers,
     getDriverDue,
     collectCash,
+    driverAadhaarInfoByPhone,
+    updateByPhoneNumber,
   )
 where
 
@@ -42,6 +44,7 @@ import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
+import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import Domain.Types.DriverFee
@@ -58,7 +61,6 @@ import Environment
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -89,7 +91,8 @@ driverDocumentsInfo merchantShortId = do
   now <- getCurrentTime
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
-  drivers <- Esq.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
+  -- drivers <- Esq.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
+  drivers <- QDocStatus.fetchDriverDocsInfo merchant.id Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
   where
     oneMonth :: NominalDiffTime
@@ -163,7 +166,8 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSu
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
-  driversWithInfo <- Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
+  -- driversWithInfo <- Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
+  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
@@ -395,23 +399,31 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
     (Just mobileNumber, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
-          >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+      --     >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+      QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+        >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber, Nothing, Nothing) -> do
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
-          >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
+      --     >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
+        >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     (Nothing, Nothing, Just driverLicenseNumber, Nothing) -> do
       dlNumberHash <- getDbHash driverLicenseNumber
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
-          >>= fromMaybeM (InvalidRequest "License does not exist.")
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
+      --     >>= fromMaybeM (InvalidRequest "License does not exist.")
+      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
+        >>= fromMaybeM (InvalidRequest "License does not exist.")
     (Nothing, Nothing, Nothing, Just rcNumber) -> do
       rcNumberHash <- getDbHash rcNumber
-      Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
-          >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
+      -- Esq.runInReplica $
+      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
+      --     >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
+      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
+        >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
   let driverId = driverWithRidesCount.person.id
   -- mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
@@ -443,7 +455,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         blocked = info.blocked,
         verified = info.verified,
         subscribed = info.subscribed,
-        aadhaarVerified = info.aadhaarVerified,
         onboardingDate = info.lastEnabledOn,
         canDowngradeToSedan = info.canDowngradeToSedan,
         canDowngradeToHatchback = info.canDowngradeToHatchback,
@@ -654,7 +665,7 @@ unlinkDL merchantShortId driverId = do
 unlinkAadhaar :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 unlinkAadhaar merchantShortId driverId = do
   merchant <- findMerchantByShortId merchantShortId
-
+  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -664,7 +675,7 @@ unlinkAadhaar merchantShortId driverId = do
   -- Esq.runTransaction $ do
   AV.deleteByDriverId personId
   CQDriverInfo.updateAadhaarVerifiedState driverId_ False
-  unless (merchant.aadhaarVerificationRequired) $ void $ CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+  unless (transporterConfig.aadhaarVerificationRequired) $ CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
@@ -691,7 +702,8 @@ endRCAssociation merchantShortId reqDriverId = do
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  driverInfos <- Esq.runInReplica QPerson.getOnRideStuckDriverIds
+  -- driverInfos <- Esq.runInReplica QPerson.getOnRideStuckDriverIds
+  driverInfos <- QPerson.getOnRideStuckDriverIds
   driverIds <-
     mapM
       ( \driverInf -> do
@@ -700,3 +712,46 @@ clearOnRideStuckDrivers merchantShortId = do
       )
       driverInfos
   return Common.ClearOnRideStuckDriversRes {driverIds = driverIds}
+
+---------------------------------------------------------------------
+
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoByPhoneReq
+driverAadhaarInfoByPhone merchantShortId phoneNumber = do
+  merchant <- findMerchantByShortId merchantShortId
+  mobileNumberHash <- getDbHash phoneNumber
+  driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  res <- AV.findByDriverId driver.id
+  case res of
+    Just aadhaarData -> do
+      pure
+        Common.DriverAadhaarInfoRes
+          { driverName = aadhaarData.driverName,
+            driverGender = aadhaarData.driverGender,
+            driverDob = aadhaarData.driverDob,
+            driverImage = aadhaarData.driverImage
+          }
+    Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
+
+---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+updateByPhoneNumber :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
+updateByPhoneNumber merchantShortId phoneNumber req = do
+  mobileNumberHash <- getDbHash phoneNumber
+  aadhaarNumberHash <- getDbHash req.driverAadhaarNumber
+  aadhaarInfo <- AV.findByAadhaarNumberHash aadhaarNumberHash
+  when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
+  merchant <- findMerchantByShortId merchantShortId
+  driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  res <- AV.findByDriverId driver.id
+  case res of
+    -- Just _ -> Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+    Just _ -> AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+    Nothing -> do
+      aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True
+      -- Esq.runTransaction $ AV.create aadhaarEntity
+      AV.create aadhaarEntity
+  CQDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
+  pure Success
+
+---------------------------------------------------------------------

@@ -21,9 +21,11 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Styles.Colors as Color
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
+import Prelude(negate)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 initData :: HomeScreenState
 initData = {
@@ -45,13 +47,13 @@ initData = {
     , selectList : []
     , quoteListModelState : []
     , driverInfoCardState : dummyDriverInfo
-    , previousRideRatingState : dummyPreviousRiderating
+    , rideRatingState : dummyPreviousRiderating
     , settingSideBar : dummySettingBar
     , sourceAddress : dummyAddress
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
-    , rateCard : { baseFare : 0, extraFare : 0, pickUpCharges : 0, additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false,currentRateCardType : DefaultRateCard,onFirstPage:false}
+    , rateCard : { rateCardArray : [] ,additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false,currentRateCardType : DefaultRateCard,onFirstPage:false, driverAdditionsImage : "", driverAdditionsLogic : "" , title : "Rate Card"}
     , speed : 0
     , selectedLocationListItem : Nothing
     , saveFavouriteCard : {
@@ -66,7 +68,7 @@ initData = {
     , rideDuration : "--"
     , showPreferences : false
     , messages : []
-    , messagesSize : ""
+    , messagesSize : "-1"
     , suggestionsList : []
     , messageToBeSent : ""
     , nearByPickUpPoints : dummyPickUpPoints
@@ -85,9 +87,23 @@ initData = {
       , activeIndex: 0
       , index: 0
       , id: ""
+      , maxPrice : ""
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
+    , pickUpCharges : 0
+    , ratingViewState : {
+        selectedYesNoButton : -1,
+        selectedRating : -1,
+        issueReportActiveIndex : Nothing ,
+        issueReasonCode : Nothing,
+        openReportIssue : false,
+        doneButtonVisibility : false,
+        issueFacedView : false,
+        issueReason : Nothing,
+        issueDescription : "",
+        rideBookingRes : dummyRideBooking
+    }
     },
     props: {
       rideRequestFlow : false
@@ -120,7 +136,6 @@ initData = {
     , cancelReasonCode : ""
     , isPopUp : NoPopUp
     , forFirst : true
-    , ratingModal : false
     , callbackInitiated : false
     , isLocationTracking : false
     , isInApp : true
@@ -381,3 +396,40 @@ dummyLocation = {
    lng : 0.0
  }
 
+
+dummyRideBooking :: RideBookingRes
+dummyRideBooking = RideBookingRes
+  {
+  agencyNumber : "",
+  status : "",
+  rideStartTime : Nothing,
+  rideEndTime : Nothing,
+  duration : Nothing,
+  fareBreakup :[],
+  createdAt : "",
+  discount : Nothing ,
+  estimatedTotalFare : 0,
+  agencyName : "",
+  rideList :[] ,
+  estimatedFare : 0,
+  tripTerms : [],
+  id : "",
+  updatedAt : "",
+  bookingDetails : dummyRideBookingAPIDetails ,
+  fromLocation :  dummyBookingDetails,
+  merchantExoPhone : "",
+  specialLocationTag : Nothing
+  }
+
+dummyRideBookingAPIDetails ::RideBookingAPIDetails
+dummyRideBookingAPIDetails= RideBookingAPIDetails{
+  contents : dummyRideBookingDetails,
+  fareProductType : ""
+}
+
+dummyRideBookingDetails :: RideBookingDetails
+dummyRideBookingDetails = RideBookingDetails {
+  toLocation : dummyBookingDetails,
+  estimatedDistance : Nothing,
+  otpCode : Nothing
+}

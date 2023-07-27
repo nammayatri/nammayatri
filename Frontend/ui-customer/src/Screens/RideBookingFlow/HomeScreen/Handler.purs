@@ -25,6 +25,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
+import Screens.HomeScreen.Transformer(getTripDetailsState)
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
@@ -155,3 +156,10 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType)
     ExitToPermissionFlow flowType -> App.BackT $ App.NoBack <$> (pure $ TRIGGER_PERMISSION_FLOW flowType)
+    ReportIssue updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ REPORT_ISSUE updatedState)
+    RideDetailsScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes state.tripDetailsScreen)
+      App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)

@@ -31,7 +31,8 @@ import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Person ()
+
+-- import Storage.Tabular.Person ()
 
 instance IsString Language where
   fromString = show

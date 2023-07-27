@@ -24,7 +24,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, updateAllWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 
@@ -89,19 +89,19 @@ deleteByDriverId (Id personId) =
 
 setInactiveBySTId :: (L.MonadFlow m, Log m) => Id SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) =
-  updateAllWithKV
+  updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
 setInactiveBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) =
-  updateAllWithKV
+  updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.requestId (Se.Eq searchReqId)]
 
 updateDriverResponse :: (L.MonadFlow m, Log m) => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
 updateDriverResponse (Id id) response =
-  updateWithKV
+  updateOneWithKV
     [Se.Set BeamSRFD.response (Just response)]
     [Se.Is BeamSRFD.id (Se.Eq id)]
 

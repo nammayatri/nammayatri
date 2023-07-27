@@ -15,6 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Beam.Maps.PlaceNameCache where
 
@@ -34,7 +35,6 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -43,11 +43,11 @@ instance FromField [Domain.AddressResp] where
   fromField f mbValue = V.toList <$> fromField f mbValue
 
 instance FromField Domain.AddressResp where
-  fromField = fromFieldJSON
+  fromField = fromFieldEnum
 
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Domain.AddressResp] where
+instance (HasSqlValueSyntax be (V.Vector String)) => HasSqlValueSyntax be [Domain.AddressResp] where
   sqlValueSyntax addressRespList =
-    let x = encodeToText <$> addressRespList
+    let x = show <$> addressRespList
      in sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.AddressResp]

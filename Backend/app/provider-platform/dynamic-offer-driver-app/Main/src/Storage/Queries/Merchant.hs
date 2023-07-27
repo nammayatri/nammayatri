@@ -26,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
@@ -93,7 +93,7 @@ findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
 update org = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamM.name org.name,
       Se.Set BeamM.description org.description,
       Se.Set BeamM.headCount org.headCount,
@@ -122,7 +122,6 @@ instance FromTType' BeamM.Merchant Merchant where
             toTime = toTime,
             headCount = headCount,
             geoHashPrecisionValue = geoHashPrecisionValue,
-            aadhaarVerificationRequired = aadhaarVerificationRequired,
             status = status,
             verified = verified,
             enabled = enabled,
@@ -150,7 +149,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.toTime = toTime,
         BeamM.headCount = headCount,
         BeamM.geoHashPrecisionValue = geoHashPrecisionValue,
-        BeamM.aadhaarVerificationRequired = aadhaarVerificationRequired,
         BeamM.status = status,
         BeamM.verified = verified,
         BeamM.enabled = enabled,

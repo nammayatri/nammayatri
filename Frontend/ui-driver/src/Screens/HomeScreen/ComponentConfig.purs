@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
-import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
+import Prelude(unit, show, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -186,7 +186,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = if state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
                   else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -208,7 +208,7 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , suggestionsList = getDriverSuggestions state
+    , suggestionsList = if (state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) || state.data.messagesSize == "-1") then getDriverSuggestions state else getSuggestionsfromKey "driverDefaultBP" 
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)

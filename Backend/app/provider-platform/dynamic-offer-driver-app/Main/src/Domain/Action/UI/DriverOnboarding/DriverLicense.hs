@@ -106,7 +106,7 @@ verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
     Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id $ T.toLower req.operatingCity
     Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
   when (null operatingCity') $
-    throwError $ InvalidOperatingCity req.operatingCity
+    throwError $ InvalidOperatingCity $ T.toLower req.operatingCity
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   onboardingDocumentConfig <- QODC.findByMerchantIdAndDocumentType person.merchantId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show DTO.DL))
   when

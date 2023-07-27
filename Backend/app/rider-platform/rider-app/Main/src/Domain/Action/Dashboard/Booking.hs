@@ -14,9 +14,11 @@
 
 module Domain.Action.Dashboard.Booking
   ( stuckBookingsCancel,
+    multipleBookingSync,
   )
 where
 
+import Beckn.ACL.Status
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
@@ -26,8 +28,11 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation)
+import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
@@ -94,3 +99,53 @@ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems = do
   Common.StuckBookingsCancelRes
     { cancelledBookings = rideItems <> bookingItems
     }
+
+---------------------------------------------------------------------
+multipleBookingSync ::
+  ShortId DM.Merchant ->
+  Common.MultipleBookingSyncReq ->
+  Flow Common.MultipleBookingSyncResp
+multipleBookingSync merchantShortId req = do
+  runRequestValidation Common.validateMultipleBookingSyncReq req
+  merchant <- findMerchantByShortId merchantShortId
+  respItems <- forM req.bookings $ \reqItem -> do
+    info <- handle Common.listItemErrHandler $ do
+      bookingSync merchant reqItem.bookingId
+      pure Common.SuccessItem
+    pure $ Common.MultipleBookingSyncRespItem {bookingId = reqItem.bookingId, info}
+  logTagInfo "dashboard -> multipleBookingSync: " $ show (req.bookings <&> (.bookingId))
+  pure $ Common.MultipleBookingSyncResp {list = respItems}
+
+---------------------------------------------------------------------
+bookingSync ::
+  DM.Merchant ->
+  Id Common.Booking ->
+  Flow ()
+bookingSync merchant reqBookingId = do
+  let bookingId = cast @Common.Booking @DBooking.Booking reqBookingId
+  -- booking <- Esq.runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  unless (merchant.id == booking.merchantId) $
+    throwError (BookingDoesNotExist bookingId.getId)
+
+  -- mbRide <- Esq.runInReplica $ QRide.findActiveByRBId bookingId
+  mbRide <- QRide.findActiveByRBId bookingId
+  case mbRide of
+    Just ride -> do
+      let bookingNewStatus = case ride.status of
+            DRide.NEW -> DBooking.TRIP_ASSIGNED
+            DRide.INPROGRESS -> DBooking.TRIP_ASSIGNED
+            DRide.COMPLETED -> DBooking.COMPLETED
+            DRide.CANCELLED -> DBooking.CANCELLED
+      unless (bookingNewStatus == booking.status) $ do
+        let cancellationReason = mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
+        QBooking.updateStatus bookingId bookingNewStatus
+        when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
+      let updBooking = booking{status = bookingNewStatus}
+      let dStatusReq = DStatusReq {booking = updBooking, merchant}
+      becknStatusReq <- buildStatusReq dStatusReq
+      void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+    Nothing -> do
+      let cancellationReason = mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
+      QBooking.updateStatus bookingId DBooking.CANCELLED
+      QBCR.upsert cancellationReason

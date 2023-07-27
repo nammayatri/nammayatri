@@ -99,3 +99,7 @@ data FullFarePolicy = FullFarePolicy
 farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FarePolicy -> FullFarePolicy
 farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
   FullFarePolicy {..}
+
+type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
+
+type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)

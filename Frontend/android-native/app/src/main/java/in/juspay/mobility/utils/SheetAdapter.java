@@ -68,7 +68,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, zoneText, fixedFareText, customerTipText, textIncludesCharges;
+        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, zoneText, fixedFareText, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
         ImageView assetZonePickup, assetZoneDrop;
@@ -100,6 +100,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             zoneDot = itemView.findViewById(R.id.zoneDot);
             assetZoneDrop = itemView.findViewById(R.id.assetZoneDrop);
             assetZonePickup = itemView.findViewById(R.id.assetZonePickup);
+            sourcePinCode = itemView.findViewById(R.id.sourcePinCode);
+            destinationPinCode = itemView.findViewById(R.id.destinationPinCode);
         }
     }
 

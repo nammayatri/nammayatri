@@ -18,7 +18,7 @@ module Screens.NotificationsScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import PrestoDOM (Visibility(..), toPropValue)
 import Screens.Types (AnimationState(..), NotificationCardPropState, NotificationsScreenState, NotificationCardState)
-import Services.APITypes (MediaType(..))
+import Services.API (MediaType(..))
 
 initData :: NotificationsScreenState
 initData = {

@@ -231,6 +231,8 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putInt("rideRequestPopupDelayDuration",entity_payload.has("rideRequestPopupDelayDuration")?entity_payload.getInt("rideRequestPopupDelayDuration"):0);
                     sheetData.putInt("customerExtraFee",(entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
                     sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                    sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");
+                    sheetData.putString("destinationPinCode", addressDrop.has("areaCode") && !addressDrop.isNull("areaCode") ? addressDrop.getString("areaCode") : "");
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(String.valueOf(entity_payload));

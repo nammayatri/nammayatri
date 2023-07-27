@@ -118,6 +118,8 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
+let cacheFeedbackFormConfig = { configsExpTime = +5184000 }
+
 let registryMap =
       [ { mapKey = "YATRI", mapValue = "http://localhost:8020/" }
       , { mapKey = "YATRI_2", mapValue = "http://localhost:8020/" }
@@ -136,10 +138,9 @@ let hccfg =
       }
 
 let tables =
-      { kVTables =
+      { enableKVForWriteAlso =
             [ "app_installs"
             , "black_list_org"
-            , "booking"
             , "booking_cancellation_reason"
             , "callback_request"
             , "call_status"
@@ -178,10 +179,9 @@ let tables =
             , "search_request_location"
             ]
           : List Text
-      , kVHardKilledTables =
+      , enableKVForRead =
             [ "app_installs"
             , "black_list_org"
-            , "booking"
             , "booking_cancellation_reason"
             , "callback_request"
             , "call_status"
@@ -220,6 +220,7 @@ let tables =
             , "search_request_location"
             ]
           : List Text
+      , tableAllocation = 50 : Natural
       }
 
 in  { esqDBCfg
@@ -269,6 +270,7 @@ in  { esqDBCfg
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , cacheTranslationConfig
+    , cacheFeedbackFormConfig
     , maxEmergencyNumberCount = +3
     , minTripDistanceForReferralCfg = Some +1000
     , registryMap

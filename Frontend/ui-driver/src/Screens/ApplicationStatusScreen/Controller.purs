@@ -22,7 +22,7 @@ import JBridge (openWhatsAppSupport, minimizeApp,toast,showDialer, hideKeyboardO
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent,trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
-import Services.APITypes(DriverRegistrationStatusResp(..))
+import Services.API(DriverRegistrationStatusResp(..))
 import Components.PrimaryButton as PrimaryButtonController
 import Data.Array (any)
 import Components.PopUpModal.Controller as PopUpModal
@@ -100,12 +100,12 @@ eval BackPressed state = do
   _ <- pure $ minimizeApp ""
   continue state
 eval (PrimaryButtonActionController) state = exit GoToHomeScreen
-eval (CompleteOnBoardingAction PrimaryButtonController.OnClick) state = do
-  let timelimit = (((getExpiryTime (getValueToLocalStore INVALID_OTP_TIME) true))/60)
+eval (CompleteOnBoardingAction PrimaryButtonController.OnClick) state = do 
+  let timelimit = (getExpiryTime (getValueToLocalStore INVALID_OTP_TIME) true)/60
   if state.props.onBoardingFailure then  continue state{props{popupview = true}} else do
-    if (not ((timelimit)<=10)||(getValueToLocalStore INVALID_OTP_TIME == "__failed")) then continue state{props{enterMobileNumberView =true,isValidOtp = false,isAlternateMobileNumberExists = false , isValidAlternateNumber = false},data{mobileNumber=""}}
+    if not (timelimit<=10)||(getValueToLocalStore INVALID_OTP_TIME == "__failed") then continue state{props{enterMobileNumberView =true,isValidOtp = false,isAlternateMobileNumberExists = false , isValidAlternateNumber = false},data{mobileNumber=""}}
     else continueWithCmd state [do
-      _ <- pure $ toast $ (getString LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN)
+      _ <- pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_RESENDING_OTP
       pure Dummy
     ]
 eval (ReTry docType) state = case docType of
@@ -128,7 +128,7 @@ eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state 
       else continue state { data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus}, props{onBoardingFailure = onBoardingStatus, isVerificationFailed = popup_visibility}}
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{popupview=false}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ showDialer (getSupportNumber "") true
+  _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
   if state.props.enterOtp then do

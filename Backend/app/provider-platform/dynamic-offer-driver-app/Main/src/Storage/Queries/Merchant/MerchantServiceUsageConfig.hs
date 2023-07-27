@@ -26,7 +26,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 
@@ -66,7 +66,7 @@ findByMerchantId (Id merchantId) = do
 updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m, Log m) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamMSUC.getDistances getDistances,
       Se.Set BeamMSUC.getEstimatedPickupDistances getEstimatedPickupDistances,
       Se.Set BeamMSUC.getRoutes getRoutes,

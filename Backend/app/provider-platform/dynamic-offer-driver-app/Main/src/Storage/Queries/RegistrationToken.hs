@@ -21,7 +21,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
@@ -34,7 +34,7 @@ findById (Id registrationTokenId) = findOneWithKV [Se.Is BeamRT.id $ Se.Eq regis
 setVerified :: (L.MonadFlow m, MonadTime m, Log m) => Id RegistrationToken -> m ()
 setVerified (Id rtId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamRT.verified True,
       Se.Set BeamRT.updatedAt now
     ]
@@ -46,7 +46,7 @@ findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 updateAttempts :: (L.MonadFlow m, MonadTime m, Log m) => Int -> Id RegistrationToken -> m ()
 updateAttempts attempts (Id rtId) = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamRT.attempts attempts,
       Se.Set BeamRT.updatedAt now
     ]

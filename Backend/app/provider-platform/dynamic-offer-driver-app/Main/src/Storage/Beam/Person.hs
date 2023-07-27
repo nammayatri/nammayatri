@@ -29,6 +29,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Person as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -118,6 +119,7 @@ data PersonT f = PersonT
     identifier :: B.C f (Maybe Text),
     rating :: B.C f (Maybe Centesimal),
     isNew :: B.C f Bool,
+    onboardedFromDashboard :: B.C f Bool,
     merchantId :: B.C f Text,
     deviceToken :: B.C f (Maybe FCMRecipientToken),
     language :: B.C f (Maybe Language),
@@ -145,6 +147,12 @@ instance ModelMeta PersonT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Person = PersonT Identity
+
+personTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
+personTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "person"
+    <> B.modifyTableFields personTMod
 
 instance FromJSON Person where
   parseJSON = A.genericParseJSON A.defaultOptions
@@ -183,6 +191,7 @@ personTMod =
       identifier = B.fieldNamed "identifier",
       rating = B.fieldNamed "rating",
       isNew = B.fieldNamed "is_new",
+      onboardedFromDashboard = B.fieldNamed "onboarded_from_dashboard",
       merchantId = B.fieldNamed "merchant_id",
       deviceToken = B.fieldNamed "device_token",
       language = B.fieldNamed "language",

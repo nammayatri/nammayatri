@@ -32,7 +32,6 @@ import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
-import Storage.Tabular.Person ()
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 

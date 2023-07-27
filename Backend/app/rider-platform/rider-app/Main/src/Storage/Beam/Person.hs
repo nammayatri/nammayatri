@@ -29,6 +29,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Person as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -146,6 +147,12 @@ instance ModelMeta PersonT where
   modelSchemaName = Just "atlas_app"
 
 type Person = PersonT Identity
+
+personTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
+personTable =
+  BST.setEntitySchema (Just "atlas_app")
+    <> B.setEntityName "person"
+    <> B.modifyTableFields personTMod
 
 instance FromJSON Person where
   parseJSON = A.genericParseJSON A.defaultOptions

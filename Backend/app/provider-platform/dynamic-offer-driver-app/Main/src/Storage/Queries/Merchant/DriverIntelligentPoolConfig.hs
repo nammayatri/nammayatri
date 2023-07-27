@@ -27,7 +27,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 
@@ -37,7 +37,7 @@ findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamDIPC.merchantId $ Se
 update :: (L.MonadFlow m, MonadTime m, Log m) => DriverIntelligentPoolConfig -> m ()
 update config = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamDIPC.availabilityTimeWeightage config.availabilityTimeWeightage,
       Se.Set BeamDIPC.actualPickupDistanceWeightage config.actualPickupDistanceWeightage,
       Se.Set BeamDIPC.availabilityTimeWindowOption config.availabilityTimeWindowOption,

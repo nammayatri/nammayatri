@@ -96,6 +96,7 @@ dependencies:
   - location-updates
   - driver-offer-allocator
   - dashboard-helper-api
+  - sequelize
 
 ghc-options:
   - -fwrite-ide-info

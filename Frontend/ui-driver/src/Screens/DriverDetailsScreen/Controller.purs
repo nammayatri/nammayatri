@@ -37,7 +37,7 @@ import Debug (spy)
 import Data.String (take, length, drop)
 import Data.String.CodeUnits (charAt)
 import Data.Int (fromString)
-import Helpers.Utils(toString)
+import Helpers.Utils(toString,getGenderIndex)
 import Components.SelectListModal as SelectListModal
 import Components.PrimaryButton as PrimaryButtonController
 import Common.Types.App (OptionButtonList)
@@ -106,17 +106,23 @@ data Action = NoAction
 eval :: Action -> DriverDetailsScreenState -> Eval Action ScreenOutput DriverDetailsScreenState
 
 eval BackPressed state = do
-  if state.props.keyboardModalType /= NONE then continueWithCmd state[do 
-    pure $ InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)
+  if state.props.keyboardModalType /= NONE then continueWithCmd state[
+      do 
+        pure $ InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)
     ] 
-    else exit (GoBack state {data = state.data {driverEditAlternateMobile = Nothing} ,props = state.props { keyboardModalType = NONE,
-      otpAttemptsExceeded = false,
-      enterOtpFocusIndex = 0,
-      otpIncorrect = false,
-      alternateMobileOtp = "",
-      removeNumberPopup = false,
-      isEditAlternateMobile = false,
-      numberExistError = false}})
+  else if state.props.genderSelectionModalShow then continueWithCmd state[
+      do
+        pure $ GenderSelectionModalAction (SelectListModal.OnGoBack)
+    ]
+  else exit (GoBack state {data = state.data {driverEditAlternateMobile = Nothing} ,props = state.props { keyboardModalType = NONE,
+    otpAttemptsExceeded = false,
+    enterOtpFocusIndex = 0,
+    otpIncorrect = false,
+    alternateMobileOtp = "",
+    removeNumberPopup = false,
+    isEditAlternateMobile = false,
+    numberExistError = false,
+    genderSelectionModalShow = false}})
 
 eval (CallBackImageUpload image imageName imagePath) state = if (image /= "") then
                                             continueWithCmd (state { data { base64Image = image}}) [do pure RenderBase64Image]
@@ -138,7 +144,7 @@ eval ClickAddAlternateButton state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
-    pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+    pure $ toast (getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
     continue state
   else
     continue state {props = state.props{keyboardModalType = MOBILE__NUMBER , isEditAlternateMobile = false}}
@@ -149,7 +155,7 @@ eval ClickEditAlternateNumber state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
-   pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+   pure $ toast (getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
    continue state
   else
     continue state {data = state.data {driverEditAlternateMobile = state.data.driverAlternateMobile}, props = state.props{keyboardModalType = MOBILE__NUMBER , isEditAlternateMobile = true, checkAlternateNumber = true}}
@@ -169,9 +175,9 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state
   continue state {data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile) then (state.data.driverAlternateMobile) else Nothing), driverEditAlternateMobile = Nothing }, props = state.props {checkAlternateNumber = (state.props.isEditAlternateMobile == false), numberExistError = false}}
   else if length newVal <= 10 then (do
               let isValidMobileNumber = case (charAt 0 newVal) of
-                                    Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false
-                                              else if a=='3' || a=='4' then(
-                                                   if newVal=="4000400040" || newVal=="3000300030" then
+                                    Just a -> if a=='0' || a=='1' || a=='2' then false
+                                              else if a=='3' || a=='4' || a=='5' then(
+                                                   if newVal=="4000400040" || newVal=="3000300030" || newVal=="5000500050" then
                                                    true
                                                    else false )
                                               else true
@@ -221,7 +227,7 @@ eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = do
 
 
 eval (GenderSelectionModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { genderSelectionModal  { activeIndex = Just indexValue}}}
-eval (GenderSelectionModalAction (SelectListModal.OnGoBack)) state = continue state { data { genderSelectionModal {activeIndex = Nothing}} ,props{ genderSelectionModalShow = false}}
+eval (GenderSelectionModalAction (SelectListModal.OnGoBack)) state = continue state { data { genderSelectionModal {activeIndex = if (state.data.driverGender == Nothing) then Nothing else getGenderIndex (fromMaybe "UNKNOWN" state.data.driverGender) (genders FunctionCall)}} ,props{ genderSelectionModalShow = false}}
 
 eval GenderSelectionOpen state = do
   continue state{props {genderSelectionModalShow = true},data{genderSelectionModal{selectionOptions = genders FunctionCall}}}
@@ -294,4 +300,12 @@ getGenderValue gender =
       "OTHER" -> Just (getString OTHER)
       "PREFER_NOT_TO_SAY" -> Just (getString PREFER_NOT_TO_SAY)
       _ -> Nothing
+    Nothing -> Nothing
+
+getGenderState :: Maybe String -> Maybe String
+getGenderState gender = 
+  case gender of 
+    Just value -> case value of
+      "UNKNOWN" -> Nothing
+      _ -> Just value
     Nothing -> Nothing

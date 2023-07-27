@@ -35,7 +35,7 @@ findById (Id bookingLocationId) = findOneWithKV [Se.Is BeamBL.id $ Se.Eq booking
 updateAddress :: (L.MonadFlow m, MonadTime m, Log m) => Id BookingLocation -> LocationAddress -> m ()
 updateAddress (Id blId) LocationAddress {..} = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamBL.street street,
       Se.Set BeamBL.city city,
       Se.Set BeamBL.state state,

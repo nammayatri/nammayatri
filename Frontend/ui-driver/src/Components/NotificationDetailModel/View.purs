@@ -39,7 +39,7 @@ import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NotificationDetailModelState, YoutubeData, YoutubeVideoStatus(..))
-import Services.APITypes (MediaType(..))
+import Services.API (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
@@ -51,7 +51,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , clickable true
-        , afterRender
+        , onAnimationEnd
             ( \action -> do
                 if state.notificationNotSeen then push IncreaseViewCount else pure unit
                 _ <- push action

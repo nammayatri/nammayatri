@@ -19,7 +19,9 @@
 
 module Storage.Queries.Message.MessageReport where
 
+import qualified Data.Aeson as A
 import qualified Data.Map as Map
+import qualified Data.Time as T
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.Message.Message
@@ -47,7 +49,7 @@ import Lib.Utils
     findOneWithKvInReplica,
     getMasterBeamConfig,
     getReplicaBeamConfig,
-    updateWithKV,
+    updateOneWithKV,
   )
 import Sequelize
 import qualified Sequelize as Se
@@ -97,6 +99,9 @@ create = createWithKV
 --     limit $ fromIntegral limitVal
 --     offset $ fromIntegral offsetVal
 --     return (messageReport, message, mbMessageTranslation)
+
+findById :: (L.MonadFlow m, Log m) => Id MessageReport -> m (Maybe MessageReport)
+findById (Id id) = findOneWithKV [Se.Is BeamMR.messageId $ Se.Eq id]
 
 findAllMessageWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
 findAllMessageWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamM.createdAt) Nothing Nothing
@@ -414,10 +419,10 @@ getMessageCountByReadStatusInReplica (Id messageID) = do
 updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m ()
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamMR.readStatus readStatus,
       Se.Set BeamMR.reply reply,
-      Se.Set BeamMR.updatedAt now
+      Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
     ]
     [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
@@ -427,9 +432,9 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
     Just report -> do
       let likeStatus = not report.likeStatus
       now <- getCurrentTime
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamMR.likeStatus likeStatus,
-          Se.Set BeamMR.updatedAt now
+          Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
         ]
         [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId, Se.Is BeamMR.readStatus $ Se.Eq True]]
     Nothing -> pure ()
@@ -437,9 +442,9 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
 updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m ()
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamMR.deliveryStatus deliveryStatus,
-      Se.Set BeamMR.updatedAt now
+      Se.Set BeamMR.updatedAt $ T.utcToLocalTime T.utc now
     ]
     [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
@@ -457,9 +462,11 @@ instance FromTType' BeamMR.MessageReport MessageReport where
             readStatus = readStatus,
             likeStatus = likeStatus,
             reply = reply,
-            messageDynamicFields = messageDynamicFields,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            messageDynamicFields = case A.fromJSON messageDynamicFields of
+              A.Success val -> val
+              _ -> Map.empty,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc updatedAt
           }
 
 instance ToTType' BeamMR.MessageReport MessageReport where
@@ -471,7 +478,7 @@ instance ToTType' BeamMR.MessageReport MessageReport where
         BeamMR.readStatus = readStatus,
         BeamMR.likeStatus = likeStatus,
         BeamMR.reply = reply,
-        BeamMR.messageDynamicFields = messageDynamicFields,
-        BeamMR.createdAt = createdAt,
-        BeamMR.updatedAt = updatedAt
+        BeamMR.messageDynamicFields = A.toJSON messageDynamicFields,
+        BeamMR.createdAt = T.utcToLocalTime T.utc createdAt,
+        BeamMR.updatedAt = T.utcToLocalTime T.utc updatedAt
       }

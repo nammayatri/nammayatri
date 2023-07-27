@@ -33,11 +33,12 @@ data SavedReqLocation = SavedReqLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     tag :: Text,
+    isMoved :: Maybe Bool,
     riderId :: Id Person,
     placeId :: Maybe Text,
     ward :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
   { lat :: Double,

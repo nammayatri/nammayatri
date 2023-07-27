@@ -57,7 +57,7 @@ import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, Screen
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..))
 import Screens.Types as ST
-import Services.APITypes (GetRidesHistoryResp(..))
+import Services.API (GetRidesHistoryResp(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -68,12 +68,13 @@ import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Components.Banner.View as Banner
 import Components.Banner.Controller as BannerConfig
-import Services.APITypes (Status(..))
+import Services.API (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
 import Merchant.Utils (getValueFromConfig)
 import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Suggestions (getMessageFromKey)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -112,6 +113,7 @@ screen initialState =
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
                                   _ <- JB.startChatListenerService
+                                  _ <- pure $ JB.scrollOnResume push ScrollToBottom
                                   push InitializeChat
                                   pure unit
                                 else pure unit
@@ -131,7 +133,6 @@ screen initialState =
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toString initialState.data.activeRide.src_lon)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toString initialState.data.activeRide.dest_lat)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toString initialState.data.activeRide.dest_lon)
-                                _ <- pure $ setValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "30.0"
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
@@ -145,7 +146,7 @@ screen initialState =
                                   else pure unit
             "ChatWithCustomer" -> do
                                 if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
-                                  _ <- pure $ JB.sendMessage (getEN I_HAVE_ARRIVED)
+                                  _ <- pure $ JB.sendMessage $ getMessageFromKey "dis1AP" "EN_US"
                                   push UpdateInChat
                                   else pure unit
             _                -> do

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -18,9 +19,10 @@ module Storage.Queries.DriverOnboarding.AadhaarVerification where
 import Domain.Types.DriverOnboarding.AadhaarVerification
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
+import Kernel.Utils.Common
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
@@ -65,6 +67,56 @@ findByDriverIdInReplica (Id driverId) = findOneWithKvInReplica [Se.Is BeamAV.dri
 deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq driverId)]
 
+-- findByAadhaarNumberHash ::
+--   Transactionable m =>
+--   DbHash ->
+--   m (Maybe AadhaarVerification)
+-- findByAadhaarNumberHash aadhaarHash = do
+--   findOne $ do
+--     aadhaar <- from $ table @AadhaarVerificationT
+--     where_ $ aadhaar ^. AadhaarVerificationAadhaarNumberHash ==. val (Just aadhaarHash)
+--     return aadhaar
+
+findByAadhaarNumberHash :: (L.MonadFlow m, Log m) => DbHash -> m (Maybe AadhaarVerification)
+findByAadhaarNumberHash aadhaarHash = findOneWithKV [Se.Is BeamAV.aadhaarNumberHash $ Se.Eq (Just aadhaarHash)]
+
+findByPhoneNumberAndUpdate :: (L.MonadFlow m, Log m, MonadTime m) => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
+findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamAV.driverName name,
+      Se.Set BeamAV.driverGender gender,
+      Se.Set BeamAV.driverDob dob,
+      Se.Set BeamAV.aadhaarNumberHash aadhaarNumberHash,
+      Se.Set BeamAV.isVerified isVerified,
+      Se.Set BeamAV.updatedAt now
+    ]
+    [Se.Is BeamAV.driverId (Se.Eq $ getId personId)]
+
+-- findByPhoneNumberAndUpdate :: Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> Esq.SqlDB ()
+-- findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ AadhaarVerificationDriverName =. val name,
+--         AadhaarVerificationDriverGender =. val gender,
+--         AadhaarVerificationDriverDob =. val dob,
+--         AadhaarVerificationAadhaarNumberHash =. val aadhaarNumberHash,
+--         AadhaarVerificationIsVerified =. val isVerified,
+--         AadhaarVerificationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. AadhaarVerificationDriverId ==. val (toKey personId)
+
+-- deleteByPersonId :: Id Person -> SqlDB ()
+-- deleteByPersonId personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @AadhaarVerificationT
+--     where_ $ verifications ^. AadhaarVerificationDriverId ==. val (toKey personId)
+
+deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq personId)]
+
 instance FromTType' BeamAV.AadhaarVerification AadhaarVerification where
   fromTType' BeamAV.AadhaarVerificationT {..} = do
     pure $
@@ -74,9 +126,12 @@ instance FromTType' BeamAV.AadhaarVerification AadhaarVerification where
             driverId = Id driverId,
             driverName = driverName,
             driverGender = driverGender,
+            aadhaarNumberHash = aadhaarNumberHash,
             driverDob = driverDob,
             driverImage = driverImage,
-            createdAt = createdAt
+            isVerified = isVerified,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' BeamAV.AadhaarVerification AadhaarVerification where
@@ -86,7 +141,10 @@ instance ToTType' BeamAV.AadhaarVerification AadhaarVerification where
         BeamAV.driverId = getId driverId,
         BeamAV.driverName = driverName,
         BeamAV.driverGender = driverGender,
+        BeamAV.aadhaarNumberHash = aadhaarNumberHash,
         BeamAV.driverDob = driverDob,
         BeamAV.driverImage = driverImage,
-        BeamAV.createdAt = createdAt
+        BeamAV.isVerified = isVerified,
+        BeamAV.createdAt = createdAt,
+        BeamAV.updatedAt = updatedAt
       }

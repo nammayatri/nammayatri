@@ -28,11 +28,12 @@ import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+import Kernel.Types.Common (Money)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
-import Storage.Tabular.Vehicle ()
+
+-- import Storage.Tabular.Vehicle ()
 
 instance IsString Vehicle.Variant where
   fromString = show

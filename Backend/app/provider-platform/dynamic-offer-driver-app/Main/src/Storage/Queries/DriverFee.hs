@@ -24,7 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 
@@ -91,11 +91,11 @@ findPendingFeesByDriverId (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDF.dr
 --     return driverFee
 
 findLatestFeeByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
-findLatestFeeByDriverId (Id driverId) = do
-  res <- findAllWithOptionsKV [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing
-  pure $ case res of
-    (x : _) -> Just x
-    _ -> Nothing
+findLatestFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
+
+-- pure $ case res of
+--   (x : _) -> Just x
+--   _ -> Nothing
 
 -- findOldestFeeByStatus :: Transactionable m => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
 -- findOldestFeeByStatus driverId status = do
@@ -109,16 +109,10 @@ findLatestFeeByDriverId (Id driverId) = do
 --     return driverFee
 
 findOldestFeeByStatus :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
-findOldestFeeByStatus (Id driverId) status = do
-  findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing >>= \case
-    (x : _) -> pure $ Just x
-    _ -> pure Nothing
+findOldestFeeByStatus (Id driverId) status = findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
 
 findOldestFeeByStatusInReplica :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
-findOldestFeeByStatusInReplica (Id driverId) status = do
-  findAllWithOptionsKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing >>= \case
-    (x : _) -> pure $ Just x
-    _ -> pure Nothing
+findOldestFeeByStatusInReplica (Id driverId) status = findAllWithOptionsKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
 
 -- findFeesInRangeWithStatus :: Transactionable m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
 -- findFeesInRangeWithStatus startTime endTime status = do
@@ -179,17 +173,6 @@ findOngoingAfterEndTime (Id driverId) now = findOneWithKV [Se.And [Se.Is BeamDF.
 findOngoingAfterEndTimeInReplica :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findOngoingAfterEndTimeInReplica (Id driverId) now = findOneWithKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
 
--- findUnpaidAfterPayBy :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
--- findUnpaidAfterPayBy driverId now = do
---   findOne $ do
---     -- assuming only one such entry only
---     driverFee <- from $ table @DriverFeeT
---     where_ $
---       driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
---         &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
---         &&. driverFee ^. DriverFeePayBy <=. val now
---     return driverFee
-
 findUnpaidAfterPayBy :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findUnpaidAfterPayBy (Id driverId) now =
   findOneWithKV
@@ -229,7 +212,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
       let totalEarnings = df.totalEarnings
       let numRides = df.numRides
       let fare = fromMaybe 0 mbFare
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
           Se.Set BeamDF.platformFee $ platformFee' + platformFee,
           Se.Set BeamDF.cgst $ cgst' + cgst,
@@ -254,10 +237,8 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
 
 updateStatus :: (L.MonadFlow m, Log m) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now =
-  updateWithKV
-    [ Se.Set BeamDF.status status,
-      Se.Set BeamDF.updatedAt now
-    ]
+  updateOneWithKV
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
 instance FromTType' BeamDF.DriverFee DriverFee where

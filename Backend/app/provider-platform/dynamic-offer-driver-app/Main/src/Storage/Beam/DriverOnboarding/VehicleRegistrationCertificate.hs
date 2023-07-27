@@ -23,12 +23,8 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
--- import Database.Beam.Backend
 import Database.Beam.MySQL ()
--- import Database.Beam.Postgres
---   ( Postgres,
---   )
--- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Domain.Types.Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -39,6 +35,19 @@ import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
+
+-- instance FromField Domain.VerificationStatus where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VerificationStatus where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
+
+-- instance FromBackendRow Postgres Domain.VerificationStatus
+
+-- instance IsString Domain.VerificationStatus where
+--   fromString = show
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
@@ -52,7 +61,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleClass :: B.C f (Maybe Text),
     vehicleVariant :: B.C f (Maybe Variant),
     vehicleManufacturer :: B.C f (Maybe Text),
-    vehicleCapacity :: B.C f (Maybe Int),
+    vehicleCapacity :: B.C f (Maybe Text),
     vehicleModel :: B.C f (Maybe Text),
     vehicleColor :: B.C f (Maybe Text),
     vehicleEnergyType :: B.C f (Maybe Text),
@@ -75,6 +84,12 @@ instance ModelMeta VehicleRegistrationCertificateT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
+
+vehicleRegistrationCertificateTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleRegistrationCertificateT)
+vehicleRegistrationCertificateTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "vehicle_registration_certificate"
+    <> B.modifyTableFields vehicleRegistrationCertificateTMod
 
 instance FromJSON VehicleRegistrationCertificate where
   parseJSON = A.genericParseJSON A.defaultOptions

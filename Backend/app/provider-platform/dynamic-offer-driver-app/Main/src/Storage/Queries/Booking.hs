@@ -25,7 +25,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
@@ -52,7 +52,7 @@ findBySTId searchTryId = do
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.status rbStatus,
       Se.Set BeamB.updatedAt now
     ]
@@ -61,7 +61,7 @@ updateStatus rbId rbStatus = do
 updateRiderId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id RiderDetails -> m ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.riderId $ Just $ getId riderId,
       Se.Set BeamB.updatedAt now
     ]
@@ -70,12 +70,12 @@ updateRiderId rbId riderId = do
 updateRiderName :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateRiderName bookingId riderName = do
   now <- getCurrentTime
-  updateWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+  updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 updateSpecialZoneOtpCode :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode,
       Se.Set BeamB.updatedAt now
     ]
@@ -141,48 +141,6 @@ cancelBookings bookingIds now =
     ]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
-transformBeamBookingToDomain :: (L.MonadFlow m, Log m) => BeamB.Booking -> m (Maybe Booking)
-transformBeamBookingToDomain BeamB.BookingT {..} = do
-  fl <- QBBL.findById (Id fromLocationId)
-  tl <- QBBL.findById (Id toLocationId)
-  fp <- QueriesFP.findById (Id fareParametersId)
-  pUrl <- parseBaseUrl bapUri
-  if isJust fl && isJust tl && isJust fp
-    then
-      pure $
-        Just
-          Booking
-            { id = Id id,
-              transactionId = transactionId,
-              quoteId = quoteId,
-              status = status,
-              bookingType = bookingType,
-              specialLocationTag = specialLocationTag,
-              specialZoneOtpCode = specialZoneOtpCode,
-              area = area,
-              providerId = Id providerId,
-              primaryExophone = primaryExophone,
-              bapId = bapId,
-              bapUri = pUrl,
-              bapCity = bapCity,
-              bapCountry = bapCountry,
-              startTime = startTime,
-              riderId = Id <$> riderId,
-              fromLocation = fromJust fl,
-              toLocation = fromJust tl,
-              vehicleVariant = vehicleVariant,
-              estimatedDistance = estimatedDistance,
-              maxEstimatedDistance = maxEstimatedDistance,
-              estimatedFare = estimatedFare,
-              estimatedDuration = estimatedDuration,
-              fareParams = fromJust fp,
-              paymentMethodId = Id <$> paymentMethodId,
-              riderName = riderName,
-              createdAt = createdAt,
-              updatedAt = updatedAt
-            }
-    else pure Nothing
-
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
     fl <- QBBL.findById (Id fromLocationId)
@@ -224,39 +182,6 @@ instance FromTType' BeamB.Booking Booking where
                 updatedAt = updatedAt
               }
       else pure Nothing
-
-transformDomainBookingToBeam :: Booking -> BeamB.Booking
-transformDomainBookingToBeam Booking {..} =
-  BeamB.BookingT
-    { BeamB.id = getId id,
-      BeamB.transactionId = transactionId,
-      BeamB.quoteId = quoteId,
-      BeamB.status = status,
-      BeamB.bookingType = bookingType,
-      BeamB.specialLocationTag = specialLocationTag,
-      BeamB.specialZoneOtpCode = specialZoneOtpCode,
-      BeamB.area = area,
-      BeamB.providerId = getId providerId,
-      BeamB.primaryExophone = primaryExophone,
-      BeamB.bapId = bapId,
-      BeamB.bapUri = showBaseUrl bapUri,
-      BeamB.bapCity = bapCity,
-      BeamB.bapCountry = bapCountry,
-      BeamB.startTime = startTime,
-      BeamB.riderId = getId <$> riderId,
-      BeamB.fromLocationId = getId fromLocation.id,
-      BeamB.toLocationId = getId toLocation.id,
-      BeamB.vehicleVariant = vehicleVariant,
-      BeamB.estimatedDistance = estimatedDistance,
-      BeamB.maxEstimatedDistance = maxEstimatedDistance,
-      BeamB.estimatedFare = estimatedFare,
-      BeamB.estimatedDuration = estimatedDuration,
-      BeamB.fareParametersId = getId fareParams.id,
-      BeamB.paymentMethodId = getId <$> paymentMethodId,
-      BeamB.riderName = riderName,
-      BeamB.createdAt = createdAt,
-      BeamB.updatedAt = updatedAt
-    }
 
 instance ToTType' BeamB.Booking Booking where
   toTType' Booking {..} =

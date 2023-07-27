@@ -27,7 +27,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
@@ -39,8 +39,7 @@ import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 --     return config
 
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId (Id merchantId) = do
-  findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
+findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
 
 -- updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
 -- updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
@@ -56,7 +55,7 @@ findByMerchantId (Id merchantId) = do
 updateFCMConfig :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamTC.fcmUrl $ showBaseUrl fcmUrl,
       Se.Set BeamTC.fcmServiceAccount fcmServiceAccount,
       Se.Set BeamTC.updatedAt now
@@ -76,7 +75,7 @@ updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
 updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Text -> m ()
 updateReferralLinkPassword (Id merchantId) newPassword = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamTC.referralLinkPassword newPassword,
       Se.Set BeamTC.updatedAt now
     ]
@@ -94,7 +93,7 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
 update :: (L.MonadFlow m, MonadTime m, Log m) => TransporterConfig -> m ()
 update config = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamTC.pickupLocThreshold config.pickupLocThreshold,
       Se.Set BeamTC.dropLocThreshold config.dropLocThreshold,
       Se.Set BeamTC.rideTimeEstimatedThreshold config.rideTimeEstimatedThreshold,

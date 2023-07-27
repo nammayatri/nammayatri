@@ -24,6 +24,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
@@ -60,6 +61,12 @@ instance ModelMeta RiderDetailsT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type RiderDetails = RiderDetailsT Identity
+
+rDetailsTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RiderDetailsT)
+rDetailsTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "rider_details"
+    <> B.modifyTableFields riderDetailsTMod
 
 instance FromJSON RiderDetails where
   parseJSON = A.genericParseJSON A.defaultOptions

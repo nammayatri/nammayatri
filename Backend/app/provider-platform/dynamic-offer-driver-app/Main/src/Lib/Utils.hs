@@ -20,10 +20,16 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+-- import Kernel.External.Encryption
+-- import Kernel.External.Types
+
+-- import Kernel.Storage.Esqueleto.Types
+
+import Debug.Trace as T
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DomainDI
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
-import qualified Domain.Types.DriverOnboarding.Image as Image
+-- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
+-- import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.FarePolicy as DomainFP
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DomainODC
@@ -31,11 +37,6 @@ import Domain.Types.Vehicle.Variant (Variant (..))
 import EulerHS.CachedSqlDBQuery (SqlReturning)
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
--- import Kernel.External.Encryption
--- import Kernel.External.Types
-
--- import Kernel.Storage.Esqueleto.Types
-
 import qualified EulerHS.Language as L
 import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn)
 import Kernel.Beam.Types (PsqlDbCfg (..), PsqlDbCfgR1 (..))
@@ -48,6 +49,7 @@ import Kernel.Utils.Common (encodeToText)
 import Kernel.Utils.Error (throwError)
 import Lib.Mesh as Mesh
 import Sequelize (Model, ModelMeta (modelTableName), OrderBy, Set, Where)
+import System.Random
 
 fromFieldCenti ::
   DPSF.Field ->
@@ -304,33 +306,33 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainDI.DriverMode
 
 instance FromBackendRow Postgres DomainDI.DriverMode
 
-instance FromField DomainIdfy.VerificationStatus where
-  fromField = fromFieldEnum
+-- instance FromField DomainIdfy.VerificationStatus where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainIdfy.VerificationStatus where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainIdfy.VerificationStatus where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainIdfy.VerificationStatus
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainIdfy.VerificationStatus
 
-instance FromBackendRow Postgres DomainIdfy.VerificationStatus
+-- instance FromBackendRow Postgres DomainIdfy.VerificationStatus
 
-instance IsString DomainIdfy.VerificationStatus where
-  fromString = show
+-- instance IsString DomainIdfy.VerificationStatus where
+--   fromString = show
 
-instance FromField Image.ImageType where
-  fromField = fromFieldEnum
+-- instance FromField Image.ImageType where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
 
-instance FromBackendRow Postgres Image.ImageType
+-- instance FromBackendRow Postgres Image.ImageType
 
--- deriving stock instance Ord Image.ImageType
+-- -- deriving stock instance Ord Image.ImageType
 
-instance IsString Image.ImageType where
-  fromString = show
+-- instance IsString Image.ImageType where
+--   fromString = show
 
 instance FromField DomainODC.DocumentType where
   fromField = fromFieldEnum
@@ -426,23 +428,33 @@ setFlagsInMeshConfig meshCfg modelName = do
 
 setMeshConfig :: (L.MonadFlow m, HasCallStack) => Text -> m MeshConfig
 setMeshConfig modelName = do
-  tables <- L.getOption KBT.Tables
+  tables <- T.trace "getting the tables" $ L.getOption KBT.Tables
+  randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
-      let kvTables = tables'.kVTables
-      let kvHardKilledTables = tables'.kVHardKilledTables
-      pure $ meshConfig {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+      let enableKVForWriteAlso = tables'.enableKVForWriteAlso
+      let enableKVForRead = tables'.enableKVForRead
+      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
+      let tableAllocation = fromIntegral tables'.tableAllocation
+      if randomIntV <= tableAllocation
+        then pure $ meshConfig {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
+        else pure $ meshConfig {meshEnabled = False, kvHardKilled = modelName `notElem` enableKVForRead}
 
 setMeshConfig' :: (L.MonadFlow m, HasCallStack) => Text -> MeshConfig -> m MeshConfig
 setMeshConfig' modelName meshConfig' = do
   tables <- L.getOption KBT.Tables
+  randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
-      let kvTables = tables'.kVTables
-      let kvHardKilledTables = tables'.kVHardKilledTables
-      pure $ meshConfig' {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+      let enableKVForWriteAlso = tables'.enableKVForWriteAlso
+      let enableKVForRead = tables'.enableKVForRead
+      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
+      let tableAllocation = fromIntegral tables'.tableAllocation
+      if randomIntV <= tableAllocation
+        then pure $ meshConfig' {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
+        else pure $ meshConfig' {meshEnabled = False, kvHardKilled = modelName `notElem` enableKVForRead}
 
 class
   FromTType' t a
@@ -586,7 +598,7 @@ updateWithKV setClause whereClause = do
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err
 
-updateAllWithKV ::
+updateOneWithKV ::
   forall table m.
   ( HasCallStack,
     -- FromTType' (table Identity) a,
@@ -610,10 +622,10 @@ updateAllWithKV ::
   Where Postgres table ->
   m ()
 -- m (Maybe (table Identity))
-updateAllWithKV setClause whereClause = do
+updateOneWithKV setClause whereClause = do
   updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
-  res <- KV.updateAllWithKVConnector dbConf updatedMeshConfig setClause whereClause
+  res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err

@@ -40,7 +40,7 @@ view push state =
   relativeLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][  shimmerView push state
+  ][  if os == "IOS" then textView [] else shimmerView push state 
     , cardView push state
   ]
 

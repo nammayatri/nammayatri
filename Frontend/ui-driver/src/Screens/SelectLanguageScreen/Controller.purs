@@ -24,6 +24,7 @@ import Components.PrimaryButton.Controller as PrimaryButtonController
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Screens (ScreenName(..), getScreen)
+import JBridge (setCleverTapUserProp)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -45,6 +46,7 @@ data Action = BackPressed | MenuButtonAction MenuButton.Action | PrimaryButtonAc
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
    _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage
+   _ <- pure $ setCleverTapUserProp "Preferred Language" state.props.selectedLanguage
    exit GoBack
 eval BackPressed state = exit GoBack
 eval AfterRender state = continue state {props {selectedLanguage = if getValueToLocalStore LANGUAGE_KEY == "__failed" then "EN_US" else getValueToLocalStore LANGUAGE_KEY}}

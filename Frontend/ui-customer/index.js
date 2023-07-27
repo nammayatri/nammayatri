@@ -115,7 +115,7 @@ window.onMerchantEvent = function (event, payload) {
     {
       clientId = clientId.replace("_ios","");
     }
-    if (clientId == "open-kochi") {
+    if (clientId == "open-kochi" || clientId == "yatriconsumer") {
       window.merchantID = "YATRI"
     } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
       window.merchantID = "JATRISAATHI"
@@ -193,6 +193,9 @@ window.onPause = function () {
   }
 }
 window.onResume = function () {
+  if(window.scrollAction) {
+    window.scrollAction();
+  }
   if (window.eventListeners && window.eventListeners["onResume"]) {
     if (Array.isArray(window.eventListeners["onResume"])) {
       var onResumeEvents = window.eventListeners["onResume"];

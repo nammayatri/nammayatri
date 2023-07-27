@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common.Ride
@@ -22,17 +23,33 @@ where
 import Dashboard.Common as Reexport
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
+import Kernel.Types.Id
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data RideEndpoint
   = RideStartEndpoint
   | RideEndEndpoint
-  | MultipleRideEndEndpoint
   | RideCancelEndpoint
-  | MultipleRideCancelEndpoint
   | RideSyncEndpoint
-  | RideForceSyncEndpoint
+  | MultipleRideCancelEndpoint
+  | MultipleRideEndEndpoint
   | MultipleRideSyncEndpoint
   deriving (Show, Read)
 
 derivePersistField "RideEndpoint"
+
+newtype MultipleRideSyncResp = MultipleRideSyncResp
+  { list :: [MultipleRideSyncRespItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultipleRideSyncRespItem = MultipleRideSyncRespItem
+  { rideId :: Id Ride,
+    info :: ListItemResult
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideSyncResp where
+  hideSecrets = identity

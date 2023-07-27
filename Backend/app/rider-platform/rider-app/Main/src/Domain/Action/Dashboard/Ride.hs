@@ -19,14 +19,15 @@ module Domain.Action.Dashboard.Ride
     rideInfo,
     multipleRideCancel,
     MultipleRideCancelReq,
-    rideForceSync,
+    rideSync,
   )
 where
 
-import Beckn.ACL.Status (buildStatusReq)
+import Beckn.ACL.Status
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as DTB
 import Domain.Types.Booking.BookingLocation (BookingLocation (..))
 import qualified Domain.Types.Booking.Type as DB
@@ -158,7 +159,8 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
-  rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
+  rideItems <- QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
+  logDebug ((T.pack $ "rideItems: ") <> (T.pack $ show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?
@@ -313,20 +315,20 @@ multipleRideCancel req = do
   pure Success
 
 ---------------------------------------------------------------------
-
-rideForceSync ::
-  ShortId DM.Merchant ->
+rideSync ::
+  DM.Merchant ->
   Id Common.Ride ->
   Flow APISuccess
-rideForceSync merchantShortId rideId = do
+rideSync merchant reqRideId = do
+  let rideId = cast @Common.Ride @DRide.Ride reqRideId
   -- ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   -- booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
 
-  merchant <- findMerchantByShortId merchantShortId
-
-  becknStatusReq <- buildStatusReq ride.bppRideId booking merchant
+  unless (merchant.id == booking.merchantId) $
+    throwError (RideDoesNotExist rideId.getId)
+  let dStatusReq = DStatusReq {booking, merchant}
+  becknStatusReq <- buildStatusReq dStatusReq
   void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
-
   pure Success

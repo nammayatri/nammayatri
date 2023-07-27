@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
@@ -40,6 +41,16 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Beam.DriverOnboarding.Image ()
+
+-- instance FromField Image.ImageType where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
+
+-- instance FromBackendRow Postgres Image.ImageType
 
 instance FromField Domain.ImageExtractionValidation where
   fromField = fromFieldEnum
@@ -80,6 +91,12 @@ instance ModelMeta IdfyVerificationT where
   modelFieldModification = idfyVerificationTMod
   modelTableName = "idfy_verification"
   modelSchemaName = Just "atlas_driver_offer_bpp"
+
+idfyVerificationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity IdfyVerificationT)
+idfyVerificationTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "idfy_verification"
+    <> B.modifyTableFields idfyVerificationTMod
 
 type IdfyVerification = IdfyVerificationT Identity
 

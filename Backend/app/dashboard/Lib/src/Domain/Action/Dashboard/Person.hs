@@ -143,7 +143,7 @@ listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
     decPerson <- decrypt encPerson
     pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
   let count = length res
-  let summary = Summary {totalCount = count, count}
+  let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
 
 assignRole ::
@@ -316,6 +316,7 @@ buildPerson req = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
+  --TODO write query to make existing email in person table to lower case
   email <- encrypt (T.toLower req.email)
   passwordHash <- getDbHash req.password
   return

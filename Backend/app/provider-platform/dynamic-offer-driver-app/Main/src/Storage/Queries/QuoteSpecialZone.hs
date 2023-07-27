@@ -16,6 +16,7 @@
 
 module Storage.Queries.QuoteSpecialZone where
 
+import qualified Data.Time as T
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.QuoteSpecialZone
@@ -71,9 +72,9 @@ instance FromTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where
                 vehicleVariant = vehicleVariant,
                 distance = distance,
                 estimatedFinishTime = estimatedFinishTime,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
-                validTill = validTill,
+                createdAt = T.localTimeToUTC T.utc createdAt,
+                updatedAt = T.localTimeToUTC T.utc updatedAt,
+                validTill = T.localTimeToUTC T.utc validTill,
                 estimatedFare = estimatedFare,
                 specialLocationTag = specialLocationTag,
                 fareParams = fromJust fp -- to take a default value?
@@ -89,9 +90,9 @@ instance ToTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where
         BeamQSZ.vehicleVariant = vehicleVariant,
         BeamQSZ.distance = distance,
         BeamQSZ.estimatedFinishTime = estimatedFinishTime,
-        BeamQSZ.createdAt = createdAt,
-        BeamQSZ.updatedAt = updatedAt,
-        BeamQSZ.validTill = validTill,
+        BeamQSZ.createdAt = T.utcToLocalTime T.utc createdAt,
+        BeamQSZ.updatedAt = T.utcToLocalTime T.utc updatedAt,
+        BeamQSZ.validTill = T.utcToLocalTime T.utc validTill,
         BeamQSZ.estimatedFare = estimatedFare,
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id

@@ -76,8 +76,8 @@ instance FromBackendRow Postgres Base64
 instance FromField GeoRestriction where
   fromField = fromFieldEnum'
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be GeoRestriction where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be (Maybe [Text]) => HasSqlValueSyntax be GeoRestriction where
+  sqlValueSyntax = sqlValueSyntax . Geo.geoRestrictionToMaybeList
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be GeoRestriction
 

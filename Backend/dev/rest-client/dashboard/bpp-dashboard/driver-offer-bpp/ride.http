@@ -84,3 +84,53 @@ token: {{customer_service}}
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/sync
 token: {{customer_service}}
+
+###
+
+# @name multipleRidesEnd
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/end
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "rides": [
+    {
+      "rideId": "{{rideId}}",
+      "point": {
+              "lon": 76.318364,
+              "lat": 10.025263
+      }
+    },
+    {
+      "rideId": "fakeRideId",
+      "point": {
+              "lon": 76.318364,
+              "lat": 10.025263
+      }
+    }
+  ]
+}
+
+###
+
+# @name multipleRidesCancel
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/cancel
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "rides": [
+    {
+      "additionalInfo": "additionalInfo1",
+      "rideId": "{{rideId}}",
+      "reasonCode": "reasonCode1"
+    },
+    {
+      "additionalInfo": "additionalInfo1",
+      "rideId": "fakeRideId",
+      "reasonCode": "reasonCode1"
+    }
+  ]
+}

@@ -87,7 +87,7 @@ defaultGlobalState = GlobalState {
   }
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
-data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState
+data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState
 
 data CONTACT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_CONTACT ContactUsScreenState
 
@@ -148,6 +148,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | RETRY_FINDING_QUOTES Boolean
                         | ON_CALL HomeScreenState CallType
                         | TRIGGER_PERMISSION_FLOW String
+                        | REPORT_ISSUE HomeScreenState
+                        | RIDE_DETAILS_SCREEN HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

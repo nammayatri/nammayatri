@@ -61,7 +61,8 @@ createOrder (personId, merchantId) rideId = do
   totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
   -- person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  riderId <- runInReplica $ QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
+  -- riderId <- runInReplica $ QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
+  riderId <- QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
   unless (person.id == riderId) $ throwError NotAnExecutor
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -112,7 +113,8 @@ getOrder ::
   Id DOrder.PaymentOrder ->
   m DOrder.PaymentOrderAPIEntity
 getOrder (personId, _) orderId = do
-  order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 

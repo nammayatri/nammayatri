@@ -5,9 +5,10 @@ import Common.Types.App
 import Components.ChooseVehicle.Controller (Action(..), Config)
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width)
 import Common.Styles.Colors as Color
+import Merchant.Utils (getValueFromConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -32,13 +33,19 @@ view push config =
         , height $ V 48
         , width $ V 60
         ]
-    , vehicleDetailsView push config
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][
+        vehicleDetailsView push config
+      , priceDetailsView push config
+      ]
     , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         ]
         []
-    , priceDetailsView push config
     ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -46,7 +53,7 @@ vehicleDetailsView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , orientation VERTICAL
+    , orientation HORIZONTAL
     , padding $ PaddingLeft 8
     ]
     [ textView
@@ -65,9 +72,18 @@ vehicleDetailsView push config =
           ]
         <> FontStyle.subHeading1 TypoGraphy
     , linearLayout
+        [ height $ V 4
+        , width $ V 4
+        , cornerRadius 2.5
+        , background Color.black600
+        , margin (Margin 5 12 0 0)
+        ]
+        []
+    , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
+        , margin (Margin 5 5 0 0)
         ]
         [ textView
             $ [ width WRAP_CONTENT
@@ -81,20 +97,27 @@ vehicleDetailsView push config =
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
-  relativeLayout
+  linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
-    , gravity TOP_VERTICAL
+    , padding $ PaddingLeft 8
     ]
     [ textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "₹" <> config.price
+          , text $ "₹" <> config.price <> " - " <> "₹" <> config.maxPrice
           , color Color.black800
           , visibility if config.isCheckBox then GONE else VISIBLE
           ]
         <> FontStyle.subHeading1 TypoGraphy
+      , imageView
+        [ imageWithFallback "ny_ic_info_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
+        , width $ V 14
+        , height $ V 14
+        , margin $ Margin 4 6 0 0
+        , onClick push $ const $ ShowRateCard config.vehicleVariant
+        ]
     , relativeLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -116,3 +139,4 @@ priceDetailsView push config =
             ]
         ]
     ]
+

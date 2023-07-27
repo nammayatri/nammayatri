@@ -20,24 +20,33 @@ data Action = Close | BackPressed | NoAction | GoToDefaultStart | GoToDriverAddi
 
 
 type Config = {
-    baseFare :: String,
-    extraFare :: String,
-    pickUpCharges :: String,
-    additionalFare :: String,
-    nightCharges :: Boolean,
-    nightShiftMultiplier :: String, 
-    currentRateCardType :: RateCardType,
-    onFirstPage :: Boolean
+  nightCharges :: Boolean,
+  nightShiftMultiplier :: String, 
+  rateCardArray :: Array RateCardDetails,
+  currentRateCardType :: RateCardType,
+  nightChargesApplicable :: Boolean,
+  onFirstPage :: Boolean,
+  vehicleType :: String,
+  driverAdditionsImage :: String,
+  driverAdditionsLogic :: String,
+  title :: String 
+}
+
+type RateCardDetails = {
+  title :: String,
+  description :: String 
 }
 
 config :: Config 
 config = {
-    baseFare : "₹45",
-    extraFare : "₹23",
-    pickUpCharges : "₹10", 
-    additionalFare : "₹30",
-    nightCharges : false,
-    nightShiftMultiplier : "1.5",
-    currentRateCardType : DefaultRateCard,
-    onFirstPage : false
+  nightCharges : false,
+  nightShiftMultiplier : "1.5",
+  currentRateCardType : DefaultRateCard,
+  onFirstPage : false,
+  vehicleType : "",
+  nightChargesApplicable : true,
+  rateCardArray : [],
+  driverAdditionsImage : "",
+  driverAdditionsLogic : "",
+  title : ""
 }

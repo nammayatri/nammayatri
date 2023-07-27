@@ -27,7 +27,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Visibility, LetterSpacing)
-import Services.APITypes (Route, Status, MediaType)
+import Services.API (Route, Status, MediaType)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
@@ -1053,7 +1053,16 @@ type DriverRideRatingScreenProps = {
 
 type AppUpdatePopUpScreenState = {
   version :: Int
+  , updatePopup :: UpdatePopupType
 }
+
+data UpdatePopupType =  AppVersion
+                      | DateAndTime
+                      | NoUpdatePopup
+
+derive instance genericUpdatePopupType :: Generic UpdatePopupType _
+instance showUpdatePopupType :: Show UpdatePopupType where show = genericShow
+instance eqUpdatePopupType :: Eq UpdatePopupType where eq = genericEq
 
 data FeedbackSuggestions
  = CUSTOMER_RUDE_BEHAVIOUR

@@ -57,7 +57,7 @@ updateStatus (Id estimateId) status = do
     [ Se.Set BeamDO.updatedAt now,
       Se.Set BeamDO.status status
     ]
-    [Se.Is BeamDO.id (Se.Eq estimateId)]
+    [Se.Is BeamDO.estimateId (Se.Eq estimateId)]
 
 instance FromTType' BeamDO.DriverOffer DriverOffer where
   fromTType' BeamDO.DriverOfferT {..} = do

@@ -21,7 +21,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
-import Kernel.Types.APISuccess
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Types.Validation (Validate)
 import qualified Kernel.Utils.Predicates as P

@@ -35,7 +35,7 @@ import Lib.Utils
     findOneWithKvInReplica,
     getMasterBeamConfig,
     getReplicaBeamConfig,
-    updateWithKV,
+    updateOneWithKV,
   )
 import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
@@ -49,7 +49,7 @@ upsert a@Vehicle {..} = do
   res <- findOneWithKV [Se.Is BeamV.driverId $ Se.Eq (getId a.driverId)]
   if isJust res
     then
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamV.capacity capacity,
           Se.Set BeamV.category category,
           Se.Set BeamV.make make,
@@ -70,7 +70,7 @@ findById (Id driverId) = findOneWithKV [Se.Is BeamV.driverId $ Se.Eq driverId]
 updateVehicleRec :: (L.MonadFlow m, MonadTime m, Log m) => Vehicle -> m ()
 updateVehicleRec vehicle = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamV.capacity vehicle.capacity,
       Se.Set BeamV.category vehicle.category,
       Se.Set BeamV.make vehicle.make,

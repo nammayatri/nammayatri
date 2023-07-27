@@ -67,20 +67,14 @@ findImagesByPersonAndType :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person 
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamI.personId $ Se.Eq personId,
-          Se.Is BeamI.merchantId $ Se.Eq merchantId,
-          Se.Is BeamI.imageType $ Se.Eq imgType
-        ]
+        [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
     ]
 
 findImagesByPersonAndTypeInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndTypeInReplica (Id merchantId) (Id personId) imgType =
   findAllWithKvInReplica
     [ Se.And
-        [ Se.Is BeamI.personId $ Se.Eq personId,
-          Se.Is BeamI.merchantId $ Se.Eq merchantId,
-          Se.Is BeamI.imageType $ Se.Eq imgType
-        ]
+        [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
     ]
 
 -- findRecentByPersonIdAndImageType ::
@@ -115,14 +109,11 @@ findRecentByPersonIdAndImageType personId imgtype = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
-  let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
+      onBoardingRetryTimeInHours' = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamI.personId $ Se.Eq $ getId personId,
-          Se.Is BeamI.imageType $ Se.Eq imgtype,
-          Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours now)
-        ]
+        [Se.Is BeamI.personId $ Se.Eq $ getId personId, Se.Is BeamI.imageType $ Se.Eq imgtype, Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours' now)]
     ]
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
@@ -137,8 +128,7 @@ findRecentByPersonIdAndImageType personId imgtype = do
 updateToValid :: (L.MonadFlow m, Log m) => Id Image -> m ()
 updateToValid (Id id) =
   updateWithKV
-    [ Se.Set BeamI.isValid True
-    ]
+    [Se.Set BeamI.isValid True]
     [Se.Is BeamI.id (Se.Eq id)]
 
 -- findByMerchantId ::
@@ -152,10 +142,7 @@ updateToValid (Id id) =
 --     return images
 
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Image]
-findByMerchantId (Id merchantId) =
-  findAllWithKV
-    [ Se.Is BeamI.merchantId $ Se.Eq merchantId
-    ]
+findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamI.merchantId $ Se.Eq merchantId]
 
 -- addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
 -- addFailureReason id reason = do
@@ -168,8 +155,7 @@ findByMerchantId (Id merchantId) =
 addFailureReason :: (L.MonadFlow m, Log m) => Id Image -> DriverOnboardingError -> m ()
 addFailureReason (Id id) reason =
   updateWithKV
-    [ Se.Set BeamI.failureReason $ Just reason
-    ]
+    [Se.Set BeamI.failureReason $ Just reason]
     [Se.Is BeamI.id (Se.Eq id)]
 
 -- deleteByPersonId :: Id Person -> SqlDB ()

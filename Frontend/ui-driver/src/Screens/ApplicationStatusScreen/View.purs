@@ -32,7 +32,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
 import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
-import Services.APITypes (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
+import Services.API (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
 import Services.Backend (driverRegistrationStatusBT)
 import Styles.Colors as Color
 import Common.Types.App

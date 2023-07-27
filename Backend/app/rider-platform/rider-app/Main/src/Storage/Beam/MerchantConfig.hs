@@ -20,7 +20,6 @@ module Storage.Beam.MerchantConfig where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import Data.ByteString.Lazy (toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -31,6 +30,7 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -40,14 +40,24 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
+fromFieldSWC ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion SWC.SlidingWindowOptions
+fromFieldSWC f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
 instance IsString Minutes where
   fromString = show
 
 instance FromField SWC.SlidingWindowOptions where
-  fromField = fromFieldJSON
+  fromField = fromFieldSWC
 
-instance HasSqlValueSyntax be ByteString => HasSqlValueSyntax be SWC.SlidingWindowOptions where
-  sqlValueSyntax = sqlValueSyntax . toStrict . A.encode
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be SWC.SlidingWindowOptions where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be SWC.SlidingWindowOptions
 

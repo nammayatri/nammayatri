@@ -39,7 +39,6 @@ import HSpec
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
@@ -374,10 +373,10 @@ withFakeBapUrl :: TRB.Booking -> ClientsM () -> ClientsM ()
 withFakeBapUrl booking action = do
   liftIO $
     runARDUFlow "fake bap url" $ do
-      Esq.runTransaction $
-        Queries.updateBapUrlWithFake booking.id
+      -- Esq.runTransaction $
+      Queries.updateBapUrlWithFake booking.id
   action
   liftIO $
     runARDUFlow "update bap url" $ do
-      Esq.runTransaction $
-        Queries.updateBapUrl booking.bapUri booking.id
+      -- Esq.runTransaction $
+      Queries.updateBapUrl booking.bapUri booking.id

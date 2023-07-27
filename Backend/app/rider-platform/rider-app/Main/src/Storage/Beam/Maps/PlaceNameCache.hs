@@ -15,6 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Beam.Maps.PlaceNameCache where
 
@@ -22,27 +23,31 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Maps.PlaceNameCache as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+import Kernel.Utils.Common (fromFieldEnum)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
 instance FromField [Domain.AddressResp] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance FromField Domain.AddressResp where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Domain.AddressResp] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance (HasSqlValueSyntax be (V.Vector String)) => HasSqlValueSyntax be [Domain.AddressResp] where
+  sqlValueSyntax addressRespList =
+    let x = show <$> addressRespList
+     in sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.AddressResp]
 

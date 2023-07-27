@@ -18,6 +18,7 @@ module Storage.Queries.DriverStats where
 import Domain.Types.DriverStats as Domain
 import Domain.Types.Person (Driver)
 import qualified EulerHS.Language as L
+import GHC.Float (double2Int, int2Double)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -30,6 +31,7 @@ import Lib.Utils
     findAllWithOptionsKV,
     findOneWithKV,
     findOneWithKvInReplica,
+    updateOneWithKV,
     updateWithKV,
     updateWithKvInReplica,
   )
@@ -140,9 +142,9 @@ findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&
 incrementTotalRidesAndTotalDist :: (L.MonadFlow m, Log m) => Id Driver -> Meters -> m ()
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   findTotalRides (Id driverId') >>= \(rides, distance) ->
-    updateWithKV
+    updateOneWithKV
       [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
-        Se.Set BeamDS.totalDistance (rideDist + distance)
+        Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance)
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
@@ -161,9 +163,9 @@ findTotalRidesAssigned (Id driverId) = (Domain.totalRidesAssigned =<<) <$> findO
 incrementTotalRidesAssigned :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
 incrementTotalRidesAssigned (Id driverId') number = do
   findTotalRidesAssigned (Id driverId') >>= \case
-    Nothing -> updateWithKV [Se.Set BeamDS.totalRidesAssigned (Just number)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    Nothing -> updateOneWithKV [Se.Set BeamDS.totalRidesAssigned (Just number)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Just newRides -> do
-      updateWithKV [Se.Set BeamDS.totalRidesAssigned (Just (newRides + number))] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+      updateOneWithKV [Se.Set BeamDS.totalRidesAssigned (Just (newRides + number))] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 -- setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
 -- setCancelledRidesCount driverId cancelledCount = do
@@ -175,7 +177,7 @@ incrementTotalRidesAssigned (Id driverId') number = do
 --     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 setCancelledRidesCount :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
-setCancelledRidesCount (Id driverId') cancelledCount = updateWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+setCancelledRidesCount (Id driverId') cancelledCount = updateOneWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 setCancelledRidesCountInReplica :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
 setCancelledRidesCountInReplica (Id driverId') cancelledCount = updateWithKvInReplica [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -199,7 +201,7 @@ instance FromTType' BeamDS.DriverStats DriverStats where
           { driverId = Id driverId,
             idleSince = idleSince,
             totalRides = totalRides,
-            totalDistance = totalDistance,
+            totalDistance = Meters $ double2Int totalDistance,
             ridesCancelled = ridesCancelled,
             totalRidesAssigned = totalRidesAssigned
           }
@@ -210,7 +212,7 @@ instance ToTType' BeamDS.DriverStats DriverStats where
       { BeamDS.driverId = getId driverId,
         BeamDS.idleSince = idleSince,
         BeamDS.totalRides = totalRides,
-        BeamDS.totalDistance = totalDistance,
+        BeamDS.totalDistance = (\(Meters m) -> int2Double m) totalDistance,
         BeamDS.ridesCancelled = ridesCancelled,
         BeamDS.totalRidesAssigned = totalRidesAssigned
       }

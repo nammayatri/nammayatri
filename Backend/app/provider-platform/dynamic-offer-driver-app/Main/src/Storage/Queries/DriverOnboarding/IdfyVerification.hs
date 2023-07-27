@@ -46,19 +46,14 @@ updateResponse :: (L.MonadFlow m, MonadTime m, Log m) => Text -> Text -> Text ->
 updateResponse requestId status resp = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamIV.status status,
-      Se.Set BeamIV.idfyResponse $ Just resp,
-      Se.Set BeamIV.updatedAt now
-    ]
+    [Se.Set BeamIV.status status, Se.Set BeamIV.idfyResponse $ Just resp, Se.Set BeamIV.updatedAt now]
     [Se.Is BeamIV.requestId (Se.Eq requestId)]
 
 updateExtractValidationStatus :: (L.MonadFlow m, MonadTime m, Log m) => Text -> ImageExtractionValidation -> m ()
 updateExtractValidationStatus requestId status = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamIV.imageExtractionValidation status,
-      Se.Set BeamIV.updatedAt now
-    ]
+    [Se.Set BeamIV.imageExtractionValidation status, Se.Set BeamIV.updatedAt now]
     [Se.Is BeamIV.requestId (Se.Eq requestId)]
 
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()

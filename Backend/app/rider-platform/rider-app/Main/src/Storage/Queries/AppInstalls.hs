@@ -18,7 +18,7 @@ upsert a@AppInstalls {..} = do
   res <- findOneWithKV [Se.Is BeamAI.id $ Se.Eq (getId a.id)]
   if isJust res
     then
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamAI.deviceToken deviceToken,
           Se.Set BeamAI.source source,
           Se.Set BeamAI.merchantId $ getId merchantId,

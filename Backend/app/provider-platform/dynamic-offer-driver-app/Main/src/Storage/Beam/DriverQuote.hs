@@ -37,7 +37,6 @@ import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-import Storage.Tabular.Vehicle ()
 
 instance FromField Domain.DriverQuoteStatus where
   fromField = fromFieldEnum

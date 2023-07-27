@@ -15,13 +15,14 @@
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
+import qualified Data.Text as T
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 
@@ -29,8 +30,7 @@ import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as
 -- create = Esq.create
 
 create :: (L.MonadFlow m, Log m) => VehicleRegistrationCertificate -> m ()
-create vehicleRegistrationCertificate = do
-  createWithKV vehicleRegistrationCertificate
+create = createWithKV
 
 -- upsert :: VehicleRegistrationCertificate -> SqlDB ()
 -- upsert a@VehicleRegistrationCertificate {..} =
@@ -55,14 +55,14 @@ upsert a@VehicleRegistrationCertificate {..} = do
   res <- findOneWithKV [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
   if isJust res
     then
-      updateWithKV
+      updateOneWithKV
         [ Se.Set BeamVRC.permitExpiry permitExpiry,
           Se.Set BeamVRC.pucExpiry pucExpiry,
           Se.Set BeamVRC.insuranceValidity insuranceValidity,
           Se.Set BeamVRC.vehicleClass vehicleClass,
           Se.Set BeamVRC.vehicleVariant vehicleVariant,
           Se.Set BeamVRC.vehicleManufacturer vehicleManufacturer,
-          Se.Set BeamVRC.vehicleCapacity vehicleCapacity,
+          Se.Set BeamVRC.vehicleCapacity $ show <$> vehicleCapacity,
           Se.Set BeamVRC.vehicleModel vehicleModel,
           Se.Set BeamVRC.vehicleColor vehicleColor,
           Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
@@ -135,7 +135,7 @@ instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCe
             vehicleVariant = vehicleVariant,
             failedRules = failedRules,
             vehicleManufacturer = vehicleManufacturer,
-            vehicleCapacity = vehicleCapacity,
+            vehicleCapacity = (readMaybe . T.unpack) =<< vehicleCapacity,
             vehicleModel = vehicleModel,
             vehicleColor = vehicleColor,
             vehicleEnergyType = vehicleEnergyType,
@@ -159,7 +159,7 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.vehicleVariant = vehicleVariant,
         BeamVRC.failedRules = failedRules,
         BeamVRC.vehicleManufacturer = vehicleManufacturer,
-        BeamVRC.vehicleCapacity = vehicleCapacity,
+        BeamVRC.vehicleCapacity = show <$> vehicleCapacity,
         BeamVRC.vehicleModel = vehicleModel,
         BeamVRC.vehicleColor = vehicleColor,
         BeamVRC.vehicleEnergyType = vehicleEnergyType,

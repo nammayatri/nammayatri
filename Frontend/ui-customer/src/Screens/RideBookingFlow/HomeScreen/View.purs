@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.View where
 
-import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig,genderBannerConfig,cancelAppConfig, specialLocationIcons, specialLocationConfig, requestInfoCardConfig)
+import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig,genderBannerConfig,cancelAppConfig, specialLocationIcons, specialLocationConfig, reportIssuePopUpConfig, requestInfoCardConfig)
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
@@ -60,7 +60,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -68,7 +68,7 @@ import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width ,gradient , adjustViewWithKeyboard)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width ,gradient , adjustViewWithKeyboard, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -85,6 +85,7 @@ import Services.Backend as Remote
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Control.Monad.Trans.Class (lift)
 import Types.App (GlobalState, defaultGlobalState)
+import Halogen.VDom.DOM.Prop (Prop)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -96,7 +97,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
-            _ <- isMockLocation push IsMockLocation
+            _ <- if (getMerchant FunctionCall == NAMMAYATRI) then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -148,6 +149,7 @@ screen initialState =
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
                   _ <- startChatListenerService
+                  _ <- pure $ scrollOnResume push ScrollToBottom
                   push InitializeChat
                   pure unit
                 else
@@ -281,17 +283,12 @@ view push state =
             , homeScreenView push state
             , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
-            , linearLayout
-                [ width MATCH_PARENT
-                , height MATCH_PARENT
-                , background if (state.props.currentStage == RideCompleted || state.props.currentStage == RideRating) then Color.black9000 else Color.transparent
-                ]
-                []
             , rideRequestFlowView push state
+            , rideCompletedCardView state push
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , rideTrackingView push state
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
-            , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
+            , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
@@ -299,7 +296,6 @@ view push state =
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
-            , if state.props.ratingModal then previousRideRatingView push state else emptyTextView state
             , if state.props.currentStage == DistanceOutsideLimits then (distanceOutsideLimitsView push state) else emptyTextView state
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
@@ -817,6 +813,7 @@ homeScreenTopIconView push state =
             , disableClickFeedback true
             , clickable if state.props.currentStage == SearchLocationModel then false else true
             , onClick push $ const OpenSettings
+            , visibility if (any (_ == state.props.currentStage) [RideCompleted]) then GONE else VISIBLE
             ]
             [ imageView
                 [ imageWithFallback if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck")  then "ic_menu_notify,https://assets.juspay.in/nammayatri/images/user/ic_menu_notify.png" else "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
@@ -883,7 +880,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes ]) then VISIBLE else GONE
+    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then VISIBLE else GONE
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -899,7 +896,7 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone && (getValueFromConfig "specialLocationView") == "true") then
+                if ((state.props.isSpecialZone && (getValueFromConfig "specialLocationView") == "true") || ((getMerchant FunctionCall) /= NAMMAYATRI)) then
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
                 else
                 suggestedPriceView push state
@@ -911,7 +908,6 @@ rideRequestFlowView push state =
             (loaderView push state)
           else
             emptyTextView state
-        , rideCompletedCardView state push
         ]
     ]
 
@@ -927,106 +923,266 @@ rideRatingCardView state push =
     [ RatingCard.view (push <<< RatingCardAC) $ ratingCardViewState state
     ]
 
+rateExperienceView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rateExperienceView state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , cornerRadius 8.0
+  , stroke $ "1,"<>Color.grey800
+  , padding $ Padding 10 10 10 10
+  , gravity CENTER
+  ][ commonTextView state push (getString RATE_YOUR_EXPERIENCE) Color.black800 (FontStyle.h3 TypoGraphy) 10
+    , commonTextView state push (getString YOUR_FEEDBACK_HELPS_US) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginTop 15
+      ](mapWithIndex (\_ item -> 
+          linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , margin $ MarginHorizontal 5 5
+          , onClick push $ const $ RateClick item
+          ][imageView
+              [ height $ V 30
+              , width $ V 30
+              , imageWithFallback if item <= state.data.ratingViewState.selectedRating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" 
+                                      else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+              ]
+          ]) [1,2,3,4,5])
+  ]
+
+didYouFaceIssue :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+didYouFaceIssue state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , cornerRadius 8.0
+  , stroke $ "1,"<>Color.grey800
+  , orientation VERTICAL
+  , padding $ Padding 10 10 10 10
+  ][  commonTextView state push (getString DID_YOU_FACE_ANY_ISSUE) Color.black800 (FontStyle.h3 TypoGraphy) 0
+    , commonTextView state push (getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
+    , yesNoRadioButton state push
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginTop 15
+      , orientation VERTICAL
+      , visibility if state.data.ratingViewState.selectedYesNoButton == 0 then VISIBLE else GONE
+      ](mapWithIndex (\ index item -> 
+          linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , padding $ PaddingHorizontal 10 10
+          , orientation VERTICAL
+          , onClick push $ const $ IssueReportIndex index
+          ][  linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , margin $ MarginBottom 15
+              ][  textView
+                  [ height WRAP_CONTENT
+                  , text item
+                  , color Color.black900
+                  , weight 1.0
+                  , textSize FontSize.a_14
+                  , fontStyle $ FontStyle.medium TypoGraphy
+                  ]
+                , imageView
+                  [ width $ V 15
+                  , height $ V 15
+                  , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                  ]
+              ]
+            , linearLayout
+              [ width MATCH_PARENT
+              , height $ V 1
+              , background Color.grey900
+              , margin $ MarginBottom 15
+              , visibility if index == 0 then VISIBLE else GONE
+              ][]
+          ]) [getString REPORT_ISSUE_, getString GET_CALLBACK_FROM_US])
+  ]
+
+
+completedRideDetails :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+completedRideDetails state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height $ V ((screenHeight unit)/ 2)
+  , orientation VERTICAL
+  , padding $ Padding 16 16 16 16
+  , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) [Color.black900, Color.black900, Color.pickledBlue, Color.black900]
+  , gravity CENTER
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity RIGHT
+      , layoutGravity "right"
+      , padding $ PaddingTop safeMarginTop
+      ][  imageView
+          [ height $ V 40
+          , width $ V 40
+          , imageWithFallback "ic_headphone_white,https://assets.juspay.in/nammayatri/images/user/ic_headphone_white.png"
+          , onClick push $ const Support
+          ]
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , weight 1.0
+      , orientation VERTICAL
+      , gravity CENTER
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString RIDE_COMPLETED
+          , color Color.grey900
+          ] <> FontStyle.h1 TypoGraphy
+        , linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][ textView
+              [ text $ "₹" <> show state.data.finalAmount
+              , color Color.white900
+              , textSize FontSize.a_72
+              , width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , fontStyle $ FontStyle.bold LanguageStyle
+              ]
+          , textView
+              [ textFromHtml $ "<strike> ₹" <> (show state.data.driverInfoCardState.price) <> "</strike>"
+              , textSize FontSize.a_28
+              , margin $ Margin 8 5 0 0
+              , width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , fontStyle $ FontStyle.medium LanguageStyle
+              , lineHeight "40"
+              , color Color.black600
+              , visibility if state.data.finalAmount /= state.data.driverInfoCardState.price then VISIBLE else GONE
+              ]
+          ]
+        , fareUpdatedView state push
+            
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height $ V 1
+      , background Color.black800
+      ][]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 10
+      , gravity CENTER_VERTICAL
+      , onClick push $ const RideDetails
+      ][  textView
+          [ height WRAP_CONTENT
+          , text $ getString RIDE_DETAILS
+          , color Color.white900
+          , weight 1.0
+          , textSize FontSize.a_14
+          , fontStyle $ FontStyle.medium TypoGraphy
+          ]
+        , imageView
+          [ width $ V 18
+          , height $ V 18
+          , imageWithFallback "ny_ic_chevron_right_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right_white.png"
+          ]
+      ]
+  ]
+
 -------------- rideCompletedCardView -------------
 rideCompletedCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rideCompletedCardView state push =
+  relativeLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , clickable true
+  , onClick push $ const NoAction
+  , visibility if (state.props.currentStage == RideCompleted || state.props.currentStage == RideRating ) then VISIBLE else GONE
+  ][  linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ][ completedRideDetails state push
+      , issueFacedAndRateView state push
+      ]
+    , if state.data.ratingViewState.openReportIssue then reportIssueView push state else linearLayout[][]
+  ]
+
+reportIssueView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+reportIssueView push state =
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding (Padding 16 16 16 16)
-    , stroke ("1," <> Color.grey900)
-    , background Color.white900
-    , cornerRadii $ Corners 24.0 true true false false
-    , visibility if state.props.currentStage == RideCompleted then VISIBLE else GONE
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , gravity CENTER
-        ]
-        [ linearLayout
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , background Color.transparentBlue
-            , cornerRadius $ if os == "IOS" then 25.0 else 60.0
-            , orientation HORIZONTAL
-            , gravity CENTER
-            , padding (Padding 14 14 14 14)
-            , visibility if state.props.zoneType.priorityTag == METRO then VISIBLE else GONE
-            ][ imageView
-                [ width (V 20)
-                , height (V 20)
-                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_blue.png"
-                , margin (MarginRight 5)
-                ]
-              , textView
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , text (getString METRO_RIDE)
-                , fontStyle $ FontStyle.semiBold LanguageStyle
-                , color Color.blue900
-                , textSize FontSize.a_14
-                ]
-              ]
-        , linearLayout
-            [ width WRAP_CONTENT
-            , height MATCH_PARENT
-            , gravity CENTER
-            ]
-            [ textView
-                [ text $ "₹" <> show state.data.finalAmount
-                , color Color.black800
-                , textSize FontSize.a_40
-                , width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , fontStyle $ FontStyle.bold LanguageStyle
-                ]
-            , textView
-                [ textFromHtml $ "<strike> ₹" <> (show state.data.driverInfoCardState.price) <> "</strike>"
-                , textSize FontSize.a_24
-                , margin $ Margin 8 5 0 0
-                , width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , fontStyle $ FontStyle.medium LanguageStyle
-                , lineHeight "40"
-                , color Color.black600
-                , visibility if state.data.finalAmount /= state.data.driverInfoCardState.price then VISIBLE else GONE
-                ]
-            ]
-        , textView
-            [ text $ getString PAY_DRIVER_USING_CASH_OR_UPI
-            , textSize FontSize.a_16
-            , lineHeight "20"
-            , width MATCH_PARENT
-            , gravity CENTER_HORIZONTAL
-            , fontStyle $ FontStyle.medium LanguageStyle
-            , color Color.black800
-            , margin $ MarginVertical 4 24
-            ]
-        ]
-    , fareUpdatedView state push
+    ][ CancelRidePopUp.view (push <<< IssueReportPopUpAC) (reportIssuePopUpConfig state)]
+
+yesNoRadioButton :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+yesNoRadioButton state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ PaddingHorizontal 10 10
+  , margin $ MarginVertical 15 10
+  , gravity CENTER
+  ](mapWithIndex (\index item ->
+      linearLayout
+      [ weight 1.0
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 8.0
+      , stroke $ "1,"<> if state.data.ratingViewState.selectedYesNoButton == index then Color.blue900 else Color.grey800
+      , background if state.data.ratingViewState.selectedYesNoButton == index then Color.blue600 else Color.white900
+      , gravity CENTER
+      , onClick push $ const $ SelectButton index
+      , margin $ MarginLeft if index == 0 then 0 else 10
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text item
+          , color Color.black800
+          , padding $ Padding 10 12 10 12
+          ] <> FontStyle.subHeading1 TypoGraphy
+      ]
+    ) [(getString YES), (getString NO)])
+
+issueFacedAndRateView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+issueFacedAndRateView state push =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding $ Padding 16 16 16 16
+  , background Color.white900
+  , weight 1.0
+  ][  if state.data.ratingViewState.issueFacedView then didYouFaceIssue state push 
+        else rateExperienceView state push
     , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , stroke ("1," <> Color.grey900)
-        , clickable true
-        , cornerRadius 8.0
-        , padding (Padding 16 24 16 24)
-        , margin (MarginBottom 24)
-        ]
-        [ FareBreakUp.view (push <<< FareBreakUpActionController) (fareBreakUpConfig state) ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        , gravity CENTER_VERTICAL
-        ]
-        [ PrimaryButton.view (push <<< SkipButtonActionController) (skipButtonConfig state)
-        , PrimaryButton.view (push <<< RateRideButtonActionController) (rateRideButtonConfig state)
-        ]
-    ]
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , weight 1.0
+      , gravity BOTTOM
+      , visibility if not state.data.ratingViewState.issueFacedView || state.data.ratingViewState.doneButtonVisibility then VISIBLE else GONE
+      , padding $ PaddingBottom safeMarginBottom
+      ][ PrimaryButton.view (push <<< SkipButtonActionController) (skipButtonConfig state)]
+  ]
+
+commonTextView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> String -> String ->(forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
+commonTextView state push text' color' fontStyle marginTop =
+  textView $
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , text text'
+  , color color'
+  , gravity CENTER
+  , margin $ MarginTop marginTop
+  ] <> fontStyle
 
 fareUpdatedView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 fareUpdatedView state push =
@@ -1034,27 +1190,25 @@ fareUpdatedView state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , cornerRadius 8.0
-    , stroke $ "1," <> Color.grey900
+    , stroke $ "1," <> Color.black700
     , padding $ Padding 16 12 16 12
-    , margin $ MarginBottom 20
+    , margin $ MarginVertical 10 20
     , gravity CENTER_VERTICAL
     , visibility if (state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing) then VISIBLE else GONE
     ]
     [ imageView
-        [ width $ V 16
-        , height $ V 16
+        [ width $ V 20
+        , height $ V 20
         , imageWithFallback "ny_ic_parallel_arrows,https://assets.juspay.in/nammayatri/images/common/ny_ic_parallel_arrows.png"
         , margin $ MarginRight 12
         ]
-    , textView
-        $ ( [ height MATCH_PARENT
-            , width WRAP_CONTENT
-            , gravity CENTER_VERTICAL
-            , text $ FareBreakUp.getFareUpdatedString state.data.previousRideRatingState.distanceDifference
-            , color Color.black700
-            ]
-          )
-        <> FontStyle.body3 TypoGraphy
+    , textView $ 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , text $ FareBreakUp.getFareUpdatedString state.data.rideRatingState.distanceDifference
+        , color Color.black600
+        ] <> FontStyle.tags TypoGraphy
     ]
 
 ----------- topLeftIconView -------------
@@ -1657,7 +1811,6 @@ rideTrackingView push state =
         ]
     ]
 
-
 getPeakHeight :: Stage -> Int
 getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
                       "true" , RideAccepted -> getHeightFromPercent 65
@@ -1667,16 +1820,6 @@ getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
                       "true" , _ ->  getHeightFromPercent 52
                       "false" , _ ->  getHeightFromPercent 47
                       _ , _ -> getHeightFromPercent 47
-
-previousRideRatingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-previousRideRatingView push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , gravity BOTTOM
-    , background Color.black9000
-    ]
-    [ RatingCard.view (push <<< RatingCardAC) $ previousRideRatingViewState state ]
 
 distanceOutsideLimitsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 distanceOutsideLimitsView push state =

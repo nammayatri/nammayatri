@@ -35,7 +35,7 @@ buildStatusReq subscriber req = do
   unless (subscriber.subscriber_id == req.context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
 
-  let rideId = Id req.message.order_id
+  let bookingId = Id req.message.order_id
   return $
     DStatus.StatusReq
       { ..

@@ -49,7 +49,8 @@ data SavedReqLocationT f = SavedReqLocationT
     updatedAt :: B.C f Time.UTCTime,
     tag :: B.C f Text,
     riderId :: B.C f Text,
-    ward :: B.C f (Maybe Text)
+    ward :: B.C f (Maybe Text),
+    isMoved :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
@@ -93,7 +94,8 @@ savedReqLocationTMod =
       updatedAt = B.fieldNamed "updated_at",
       tag = B.fieldNamed "tag",
       riderId = B.fieldNamed "rider_id",
-      ward = B.fieldNamed "ward"
+      ward = B.fieldNamed "ward",
+      isMoved = B.fieldNamed "is_moved"
     }
 
 instance Serialize SavedReqLocation where

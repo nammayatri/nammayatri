@@ -9,16 +9,25 @@ GET {{bap-dashboard-host}}
 # @name rideList
 
 GET {{bap-dashboard-host}}/bap/YATRI/ride/list
-?bookingStatus="COMPLETED"
-&customerPhoneNo=9999999999
-&limit=10
-&offset=0
+?bookingStatus="RCOMPLETED"
+# &customerPhoneNo=9999999999
+# &limit=10
+# &offset=0
 
 ###
 
-# @name rideForceSync
+# @name multipleRideSync
 
 @rideId = {{rideList.response.body.rides[0].rideId}}
 
-POST {{bap-dashboard-host}}/bap/YATRI/ride/{{rideId}}/forceSync
+POST {{bap-dashboard-host}}/bap/YATRI/ride/sync
 token: {{customer_service}}
+content-type: application/json
+
+{
+    "rides" :
+    [
+        {"rideId" : "{{rideId}}"},
+        {"rideId" : "fakeRideId"}
+    ]
+}

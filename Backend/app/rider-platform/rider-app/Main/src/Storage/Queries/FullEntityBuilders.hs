@@ -15,15 +15,15 @@
 
 module Storage.Queries.FullEntityBuilders where
 
-import Domain.Types.Booking.Type as Booking
-import Domain.Types.FarePolicy.FareProductType
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Domain.Types.Booking.Type as Booking
+-- import Domain.Types.FarePolicy.FareProductType
+-- import Kernel.Prelude
+-- import Kernel.Storage.Esqueleto as Esq
 -- import Storage.Queries.EstimateBreakup as QEB
-import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Booking.BookingLocation
-import Storage.Tabular.RentalSlab
-import Storage.Tabular.TripTerms
+-- import Storage.Tabular.Booking as Booking
+-- import Storage.Tabular.Booking.BookingLocation
+-- import Storage.Tabular.RentalSlab
+-- import Storage.Tabular.TripTerms
 
 -- buildFullQuote ::
 --   Transactionable m =>
@@ -37,17 +37,17 @@ import Storage.Tabular.TripTerms
 --     ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
 --   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
-buildFullBooking ::
-  Transactionable m =>
-  (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
-  DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
-  bookingDetails <- case fareProductType of
-    ONE_WAY -> hoistMaybe (Booking.OneWayDetailsT <$> mbToLocT)
-    RENTAL -> hoistMaybe (Booking.RentalDetailsT <$> mbRentalSlab)
-    DRIVER_OFFER -> hoistMaybe (Booking.DriverOfferDetailsT <$> mbToLocT)
-    ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
-  return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
+-- buildFullBooking ::
+--   Transactionable m =>
+--   (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
+--   DTypeBuilder m (Maybe (SolidType FullBookingT))
+-- buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
+--   bookingDetails <- case fareProductType of
+--     ONE_WAY -> hoistMaybe (Booking.OneWayDetailsT <$> mbToLocT)
+--     RENTAL -> hoistMaybe (Booking.RentalDetailsT <$> mbRentalSlab)
+--     DRIVER_OFFER -> hoistMaybe (Booking.DriverOfferDetailsT <$> mbToLocT)
+--     ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
+--   return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
 
 -- buildFullEstimate ::
 --   Transactionable m =>

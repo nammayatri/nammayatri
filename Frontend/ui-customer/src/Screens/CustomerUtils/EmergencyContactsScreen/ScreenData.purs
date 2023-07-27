@@ -14,7 +14,7 @@ initData = {
     , prestoListArrayItems: []
     , loadMoreDisabled: true
     , offsetForEmergencyContacts : 0
-    , limitForEmergencyContacts : 100
+    , limitForEmergencyContacts : 20
     , removedContactDetail : { isSelected :false
                               , name : ""
                               , number : ""
