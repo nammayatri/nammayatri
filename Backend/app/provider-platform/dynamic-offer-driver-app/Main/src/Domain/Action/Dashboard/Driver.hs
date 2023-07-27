@@ -87,6 +87,7 @@ import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -735,8 +736,30 @@ unlinkAadhaar merchantShortId driverId = do
 
 ---------------------------------------------------------------------
 endRCAssociation :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-endRCAssociation _ _ = do
-  throwError $ InvalidRequest "This API is deprecated please use deleteRC API to delete the RC"
+endRCAssociation merchantShortId reqDriverId = do
+  -- API should be deprecated
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+
+  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  associations <- QRCAssociation.findAllLinkedByDriverId personId
+  mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
+  let mVehicleRC = listToMaybe (catMaybes mVehicleRCs)
+
+  case mVehicleRC of
+    Just vehicleRC -> do
+      rcNo <- decrypt vehicleRC.certificateNumber
+      void $ DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {rcNo})
+    Nothing -> throwError (InvalidRequest "No linked RC  to driver")
+
+  CQDriverInfo.updateEnabledVerifiedState driverId False False
+  logTagInfo "dashboard -> endRCAssociation : " (show personId)
+  pure Success
 
 setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
 setRCStatus merchantShortId reqDriverId Common.RCStatusReq {..} = do

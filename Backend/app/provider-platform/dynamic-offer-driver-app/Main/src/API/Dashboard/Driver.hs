@@ -51,10 +51,10 @@ type API =
            :<|> Common.UpdateDriverAadhaarAPI
            :<|> Common.AddVehicleAPI
            :<|> Common.UpdateDriverNameAPI
-           :<|> Reg.API
-           :<|> Common.ClearOnRideStuckDrivers
            :<|> Common.SetRCStatusAPI
            :<|> Common.DeleteRCAPI
+           :<|> Reg.API
+           :<|> Common.ClearOnRideStuckDrivers
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -83,10 +83,10 @@ handler merchantId =
     :<|> updateByPhoneNumber merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
-    :<|> Reg.handler merchantId
-    :<|> clearOnRideStuckDrivers merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
+    :<|> Reg.handler merchantId
+    :<|> clearOnRideStuckDrivers merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo

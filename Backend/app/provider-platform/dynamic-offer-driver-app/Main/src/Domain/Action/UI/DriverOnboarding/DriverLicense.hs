@@ -178,6 +178,7 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
             docType = Image.DriverLicense,
             status = "pending",
             idfyResponse = Nothing,
+            multipleRC = Nothing, -- added for backward compatibility
             createdAt = now,
             updatedAt = now
           }

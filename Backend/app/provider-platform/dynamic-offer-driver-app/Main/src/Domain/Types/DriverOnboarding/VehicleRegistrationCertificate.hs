@@ -52,11 +52,24 @@ type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE '
 
 deriving instance Show DecryptedVehicleRegistrationCertificate
 
-deriving instance ToSchema DecryptedVehicleRegistrationCertificate
-
-deriving instance ToJSON DecryptedVehicleRegistrationCertificate
-
-deriving instance FromJSON DecryptedVehicleRegistrationCertificate
+data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
+  { certificateNumber :: Text,
+    fitnessExpiry :: UTCTime,
+    permitExpiry :: Maybe UTCTime,
+    pucExpiry :: Maybe UTCTime,
+    insuranceValidity :: Maybe UTCTime,
+    vehicleClass :: Maybe Text,
+    vehicleVariant :: Maybe Variant,
+    failedRules :: [Text],
+    vehicleManufacturer :: Maybe Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleModel :: Maybe Text,
+    vehicleColor :: Maybe Text,
+    vehicleEnergyType :: Maybe Text,
+    verificationStatus :: VerificationStatus,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
@@ -71,6 +84,13 @@ instance EncryptedItem' VehicleRegistrationCertificate where
   type UnencryptedItem VehicleRegistrationCertificate = DecryptedVehicleRegistrationCertificate
   toUnencrypted a salt = (a, salt)
   fromUnencrypted a = fst a
+
+makeRCAPIEntity :: VehicleRegistrationCertificate -> Text -> VehicleRegistrationCertificateAPIEntity
+makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
+  VehicleRegistrationCertificateAPIEntity
+    { certificateNumber = rcDecrypted,
+      ..
+    }
 
 makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Vehicle
 makeVehicleFromRC now driverId merchantId certificateNumber rc =

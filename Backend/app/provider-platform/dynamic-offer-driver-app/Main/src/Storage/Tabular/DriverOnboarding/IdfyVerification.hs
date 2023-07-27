@@ -47,6 +47,7 @@ mkPersist
       documentNumberHash DbHash
       imageExtractionValidation Domain.ImageExtractionValidation
       idfyResponse Text Maybe
+      multipleRC Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

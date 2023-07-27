@@ -21,13 +21,16 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC -- temp import for backward compatibility should be removed later
 import Domain.Types.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Error
@@ -57,12 +60,16 @@ data StatusRes = StatusRes
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant) -> Flow StatusRes
-statusHandler (personId, merchantId) = do
+statusHandler :: (Id SP.Person, Id DM.Merchant) -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, merchantId) multipleRC = do
+  -- multipleRC flag is temporary to support backward compatibility
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
-  rcStatus <- getRCAndStatus personId transporterConfig.onboardingTryLimit
+  (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit multipleRC
   (aadhaarStatus, _) <- getAadhaarStatus personId
+
+  when (rcStatus == VALID && isNothing multipleRC) $
+    activateRCAutomatically personId merchantId mRC
 
   when (dlStatus == VALID && rcStatus == VALID && (aadhaarStatus == VALID || not transporterConfig.aadhaarVerificationRequired)) $ do
     enableDriver personId mDL
@@ -88,23 +95,31 @@ getDLAndStatus driverId onboardingTryLimit = do
         checkIfInVerification driverId onboardingTryLimit Image.DriverLicense
   return (status, mDriverLicense)
 
-getRCAndStatus :: Id SP.Person -> Int -> Flow ResponseStatus
-getRCAndStatus driverId onboardingTryLimit = do
+getRCAndStatus :: Id SP.Person -> Int -> Maybe Bool -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate)
+getRCAndStatus driverId onboardingTryLimit multipleRC = do
   associations <- DRAQuery.findAllLinkedByDriverId driverId
   if null associations
     then do
-      checkIfInVerification driverId onboardingTryLimit Image.VehicleRegistrationCertificate
+      status <- checkIfInVerification driverId onboardingTryLimit Image.VehicleRegistrationCertificate
+      return (status, Nothing)
     else do
       mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
       let vehicleRCs = catMaybes mVehicleRCs
-      let mValidVehicleRC = find (\rc -> rc.verificationStatus == IV.VALID) vehicleRCs
-      if isJust mValidVehicleRC
-        then do return VALID
+      if isNothing multipleRC -- for backward compatibility
+        then do
+          let firstRC = listToMaybe vehicleRCs
+          case firstRC of
+            Just vehicleRC -> return (mapStatus vehicleRC.verificationStatus, Just vehicleRC)
+            Nothing -> return (NO_DOC_AVAILABLE, Nothing)
         else do
-          let mVehicleRC = listToMaybe vehicleRCs
-          case mVehicleRC of
-            Just vehicleRC -> return (mapStatus vehicleRC.verificationStatus)
-            Nothing -> return NO_DOC_AVAILABLE
+          let mValidVehicleRC = find (\rc -> rc.verificationStatus == IV.VALID) vehicleRCs
+          case mValidVehicleRC of
+            Just validVehicleRC -> return (VALID, Just validVehicleRC)
+            Nothing -> do
+              let mVehicleRC = listToMaybe vehicleRCs
+              case mVehicleRC of
+                Just vehicleRC -> return (mapStatus vehicleRC.verificationStatus, Just vehicleRC)
+                Nothing -> return (NO_DOC_AVAILABLE, Nothing)
 
 mapStatus :: IV.VerificationStatus -> ResponseStatus
 mapStatus = \case
@@ -137,3 +152,14 @@ enableDriver personId (Just dl) = do
   case dl.driverName of
     Just name -> DB.runTransaction $ Person.updateName personId name
     Nothing -> return ()
+
+activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Flow ()
+activateRCAutomatically _ _ Nothing = return ()
+activateRCAutomatically personId merchantId (Just rc) = do
+  rcNumber <- decrypt rc.certificateNumber
+  let rcStatusReq =
+        DomainRC.RCStatusReq
+          { rcNo = rcNumber,
+            isActivate = True
+          }
+  void $ DomainRC.linkRCStatus (personId, merchantId) rcStatusReq
