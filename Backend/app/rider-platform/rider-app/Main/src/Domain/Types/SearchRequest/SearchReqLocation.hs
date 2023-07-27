@@ -36,12 +36,6 @@ data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-makeSearchReqLocationAPIEntity :: SearchReqLocation -> SearchReqLocationAPIEntity
-makeSearchReqLocationAPIEntity SearchReqLocation {..} =
-  SearchReqLocationAPIEntity
-    { ..
-    }
-
 makeLocationAPIEntity :: Location -> SearchReqLocationAPIEntity
 makeLocationAPIEntity Location {..} =
   SearchReqLocationAPIEntity

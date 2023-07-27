@@ -20,11 +20,9 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Location as DLocation
-import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
@@ -78,42 +76,3 @@ data Ride = Ride
     numberOfDeviation :: Maybe Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
-
-locationIdGenerator :: (MonadFlow m) => (Int, DLocation.Location) -> m DLocation.Location
-locationIdGenerator bookingWithIndex = do
-  id <- generateGUID
-  let booking = snd bookingWithIndex
-  pure $
-    DLocation.Location
-      { lat = booking.lat,
-        lon = booking.lon,
-        address = booking.address,
-        createdAt = booking.createdAt,
-        updatedAt = booking.updatedAt,
-        ..
-      }
-
-locationMappingMakerForRide :: (MonadFlow m) => Ride -> m [DLocationMapping.LocationMapping]
-locationMappingMakerForRide ride = do
-  let bookingWithIndexes = zip ([1 ..] :: [Int]) ride.toLocation
-  toLocationMappers <- mapM (locationMappingMakerForRideInstance ride) bookingWithIndexes
-  fromLocationMapping <- locationMappingMakerForRideInstance ride (0, ride.fromLocation)
-  return $ fromLocationMapping : toLocationMappers
-
-locationMappingMakerForRideInstance :: (MonadFlow m) => Ride -> (Int, DLocation.Location) -> m DLocationMapping.LocationMapping
-locationMappingMakerForRideInstance Ride {..} location = do
-  locationMappingId <- generateGUID
-  let getIntEpochTime = round `fmap` Time.getPOSIXTime
-  epochVersion <- liftIO getIntEpochTime
-  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
-  let locationMapping =
-        DLocationMapping.LocationMapping
-          { id = Id locationMappingId,
-            tag = DLocationMapping.Ride,
-            order = fst location,
-            version = show epochVersionLast5Digits,
-            tagId = getId id,
-            location = snd location,
-            ..
-          }
-  return locationMapping

@@ -162,7 +162,7 @@ fulfillmentInfoJSONOptions =
     }
 
 data LocationInfo = LocationInfo
-  { latLon :: Gps,
+  { gps :: Gps,
     address :: Address
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)

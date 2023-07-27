@@ -111,18 +111,18 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
     offset $ fromIntegral offsetVal
     pure (person, info, mbVeh)
 
-countDrivers :: Transactionable m => Id Merchant -> m Int
-countDrivers merchantId =
-  mkCount <$> do
-    Esq.findAll $ do
-      person <- from $ table @PersonT
-      where_ $
-        person ^. PersonMerchantId ==. val (toKey merchantId)
-          &&. person ^. PersonRole ==. val Person.DRIVER
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- countDrivers :: Transactionable m => Id Merchant -> m Int
+-- countDrivers merchantId =
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       person <- from $ table @PersonT
+--       where_ $
+--         person ^. PersonMerchantId ==. val (toKey merchantId)
+--           &&. person ^. PersonRole ==. val Person.DRIVER
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
 
 findAllDriversByIdsFirstNameAsc ::
   (Transactionable m, Functor m, EsqLocRepDBFlow m r, EsqDBReplicaFlow m r) =>
@@ -906,7 +906,7 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
   location <- HashMap.lookup driverId' locationHashMap
   quote <- HashMap.lookup driverId' quotesHashMap
   booking <- HashMap.lookup quote.id.getId bookingHashMap
-  let destination = last booking.toLocation
+  destination <- lastMaybe booking.toLocation
   bookingLocation <- HashMap.lookup destination.id.getId bookingLocsHashMap
   info <- HashMap.lookup driverId' driverInfoHashMap
   person <- HashMap.lookup driverId' personHashMap

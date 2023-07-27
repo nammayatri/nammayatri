@@ -20,11 +20,9 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Data.Time.Clock.POSIX as Time
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLocation
-import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
@@ -86,28 +84,3 @@ data Booking = Booking
 
 data BookingType = SpecialZoneBooking | NormalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-locationMappingMakerForBooking :: (MonadFlow m) => Booking -> m [DLocationMapping.LocationMapping]
-locationMappingMakerForBooking booking = do
-  let bookingWithIndexes = zip ([1 ..] :: [Int]) booking.toLocation
-  toLocationMappers <- mapM (locationMappingMakerForBookingInstanceMaker booking) bookingWithIndexes
-  fromLocationMapping <- locationMappingMakerForBookingInstanceMaker booking (0, booking.fromLocation)
-  return $ fromLocationMapping : toLocationMappers
-
-locationMappingMakerForBookingInstanceMaker :: (MonadFlow m) => Booking -> (Int, DLocation.Location) -> m DLocationMapping.LocationMapping
-locationMappingMakerForBookingInstanceMaker Booking {..} location = do
-  locationMappingId <- generateGUID
-  let getIntEpochTime = round `fmap` Time.getPOSIXTime
-  epochVersion <- liftIO getIntEpochTime
-  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
-  let locationMapping =
-        DLocationMapping.LocationMapping
-          { id = Id locationMappingId,
-            tag = DLocationMapping.Booking,
-            order = fst location,
-            version = show epochVersionLast5Digits,
-            tagId = getId id,
-            location = snd location,
-            ..
-          }
-  return locationMapping

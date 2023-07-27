@@ -85,8 +85,7 @@ rentalSearch personId bundleVersion clientVersion device req = do
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
-  mappings <- DSearchReq.locationMappingMakerForSearch searchRequest
-  DB.runNoTransaction $ QSearchRequest.create searchRequest mappings
+  DB.runNoTransaction $ QSearchRequest.create searchRequest
   let dSearchRes =
         RentalSearchRes
           { origin = req.origin,

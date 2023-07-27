@@ -14,8 +14,10 @@
 
 module Domain.Types.LocationMapping where
 
-import Domain.Types.Location
+import qualified Data.Time.Clock.POSIX as Time
+import Domain.Types.Location as DLoc
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
 
 data LocationMapping = LocationMapping
@@ -30,3 +32,50 @@ data LocationMapping = LocationMapping
 
 data LocationMappingTags = SearchRequest | Booking | Ride
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+locationMappingMaker ::
+  ( MonadGuid m,
+    MonadTime m,
+    HasField "fromLocation" entity DLoc.Location,
+    HasField "toLocation" entity [DLoc.Location],
+    HasField "id" entity (Id entity)
+  ) =>
+  entity ->
+  LocationMappingTags ->
+  m [LocationMapping]
+locationMappingMaker entity tag = do
+  let searchWithIndexes = zip ([1 ..] :: [Int]) entity.toLocation
+  toLocationMappers <- mapM (locationMappingInstanceMaker entity tag) searchWithIndexes
+  fromLocationMapping <- locationMappingInstanceMaker entity tag (0, entity.fromLocation)
+  return $ fromLocationMapping : toLocationMappers
+
+locationMappingInstanceMaker ::
+  ( MonadGuid m,
+    MonadTime m,
+    HasField "id" entity (Id entity)
+  ) =>
+  entity ->
+  LocationMappingTags ->
+  (Int, DLoc.Location) ->
+  m LocationMapping
+locationMappingInstanceMaker entity tag location = do
+  locationMappingId <- generateGUID
+  epochVersion <- getMappingVersion
+  let locationMapping =
+        LocationMapping
+          { id = Id locationMappingId,
+            tag,
+            order = fst location,
+            version = show epochVersion,
+            tagId = entity.id.getId,
+            location = snd location,
+            ..
+          }
+  return locationMapping
+
+getMappingVersion :: MonadTime m => m Text
+getMappingVersion = do
+  now <- getCurrentTime
+  let epochVersion = round $ Time.utcTimeToPOSIXSeconds now
+  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
+  pure $ show epochVersionLast5Digits

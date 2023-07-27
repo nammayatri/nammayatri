@@ -119,8 +119,7 @@ confirm DConfirmReq {..} = do
     unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
       throwError (InvalidRequest "Payment method not allowed")
     pure paymentMethod
-  mappings <- DRB.locationMappingMakerForBooking booking
-  DB.runNoTransaction $ QRideB.create booking mappings
+  DB.runNoTransaction $ QRideB.create booking
   DB.runTransaction $ do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
     QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED

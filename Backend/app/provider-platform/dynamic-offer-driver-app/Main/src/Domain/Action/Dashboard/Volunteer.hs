@@ -26,7 +26,7 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified Storage.Queries.Booking as QBooking
@@ -37,9 +37,7 @@ bookingInfo merchantShortId otpCode = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
-  toLoc <- case lastMaybe booking.toLocation of
-    Just toLoc -> return toLoc
-    Nothing -> throwError $ InternalError "To location not found."
+  toLoc <- (lastMaybe booking.toLocation) & fromMaybeM (InternalError "To location not found.")
   return $ buildMessageInfoResponse booking toLoc
   where
     buildMessageInfoResponse Domain.Booking {..} toLoc =

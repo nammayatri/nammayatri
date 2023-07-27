@@ -183,9 +183,7 @@ rideInfo merchantShortId reqRideId = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
-  toLoc <- case lastMaybe booking.toLocation of
-    Just toLoc -> return toLoc
-    Nothing -> throwError $ InternalError "To location not found."
+  toLoc <- (lastMaybe booking.toLocation) & fromMaybeM (InternalError "To location not found.")
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -193,7 +191,7 @@ rideInfo merchantShortId reqRideId = do
         customerPhoneNo,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
-        customerDropLocation = Just $ mkLocationAPIEntity $ toLoc,
+        customerDropLocation = Just $ mkLocationAPIEntity toLoc,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,

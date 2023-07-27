@@ -254,12 +254,13 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
   callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq [driverQuote] <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::
-      (MonadTime m, HasPrettyLogger m r) =>
+      (MonadTime m, HasPrettyLogger m r, Log m, MonadThrow m) =>
       DM.Merchant ->
       DSR.SearchRequest ->
       [DDQ.DriverQuote] ->
       m ACL.DOnSelectReq
     buildOnSelectReq org searchRequest quotes = do
+      toLocation <- lastMaybe searchRequest.toLocation & fromMaybeM (InternalError "To location not found.")
       now <- getCurrentTime
       logPretty DEBUG "on_select: searchRequest" searchRequest
       logPretty DEBUG "on_select: quotes" quotes
@@ -275,6 +276,7 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
       pure $
         ACL.DOnSelectReq
           { transporterInfo,
+            toLocation,
             quotes,
             now,
             searchRequest

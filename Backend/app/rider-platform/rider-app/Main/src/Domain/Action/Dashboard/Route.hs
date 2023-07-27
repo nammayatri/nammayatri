@@ -44,9 +44,7 @@ mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
         DRB.OneWayDetails details -> details.toLocation
         DRB.DriverOfferDetails details -> details.toLocation
         DRB.OneWaySpecialZoneDetails details -> details.toLocation
-  destination <- case lastMaybe bookingLocation of
-    Just toLoc -> return toLoc
-    Nothing -> throwError $ InternalError "To location not found."
+  destination <- lastMaybe bookingLocation & fromMaybeM (InternalError "To location not found.")
   let fromLocation = LatLong pickupLocationLat pickupLocationLon
   let toLocation = LatLong destination.lat destination.lon
   let listOfLatLong = [fromLocation, toLocation]

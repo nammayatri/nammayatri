@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction) where
 
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Location as DLocation
@@ -65,16 +64,13 @@ startRideTransaction driverId ride bookingId firstPoint merchantId = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   startLocationCustomer <- do
     fromLocationResponse <- Maps.getTripPlaceName merchantId Maps.GetPlaceNameReq {getBy = ByLatLong LatLong {lat = firstPoint.lat, lon = firstPoint.lon}, sessionToken = Nothing, language = Nothing}
-    actualFromLocationId <- generateGUID
     fromAddress <- GoogleMaps.mkLocation fromLocationResponse
-    actualFromLocation <- buildLocation actualFromLocationId firstPoint fromAddress
+    actualFromLocation <- DLocation.buildLocation firstPoint fromAddress
     mappers <- QLocationMapping.findByTagId $ ride.id.getId
     let toLocationMappers = filter (\mapper -> mapper.order /= 0) mappers
     Esq.runTransaction $ QLocation.create actualFromLocation
-    epochVersion <- liftIO $ round `fmap` Time.getPOSIXTime
-    let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
     for_ toLocationMappers $ \locMap -> do
-      Esq.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualFromLocation epochVersionLast5Digits
+      Esq.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualFromLocation.id
     return actualFromLocation
 
   Esq.runTransaction $ do
@@ -86,26 +82,3 @@ startRideTransaction driverId ride bookingId firstPoint merchantId = do
   void $ runInLocationDB $ DrLoc.upsertGpsCoord driverId firstPoint now merchantId
   CQRide.clearCache driverId
   return $ Just startLocationCustomer
-
-buildLocation :: (MonadFlow m) => Id DLocation.Location -> LatLong -> DLocation.LocationAddress -> m DLocation.Location
-buildLocation locationId LatLong {..} address = do
-  currTime <- getCurrentTime
-  return $
-    DLocation.Location
-      { id = locationId,
-        address =
-          DLocation.LocationAddress
-            { street = address.street,
-              city = address.city,
-              state = address.state,
-              country = address.country,
-              building = address.building,
-              areaCode = address.areaCode,
-              area = address.area,
-              door = address.door,
-              full_address = address.full_address
-            },
-        createdAt = currTime,
-        updatedAt = currTime,
-        ..
-      }

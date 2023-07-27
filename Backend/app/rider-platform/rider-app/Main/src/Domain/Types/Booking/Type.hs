@@ -18,9 +18,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -108,7 +106,18 @@ data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   }
   deriving (Show)
 
-locationMappingMakerForBooking :: (MonadFlow m) => Booking -> m [DLocationMapping.LocationMapping]
+locationMappingMakerForBooking ::
+  ( MonadGuid m,
+    MonadTime m,
+    HasField
+      "bookingDetails"
+      entity
+      BookingDetails,
+    HasField "id" entity (Id entity),
+    HasField "fromLocation" entity DLoc.Location
+  ) =>
+  entity ->
+  m [DLocationMapping.LocationMapping]
 locationMappingMakerForBooking booking = do
   ifBookingWithIndexes <- case booking.bookingDetails of
     OneWayDetails details -> return $ Just $ zip ([1 ..] :: [Int]) details.toLocation
@@ -117,25 +126,7 @@ locationMappingMakerForBooking booking = do
     RentalDetails _ -> return Nothing
   case ifBookingWithIndexes of
     Just bookingWithIndexes -> do
-      toLocationMappers <- mapM (locationMappingMakerForBookingInstanceMaker booking) bookingWithIndexes
-      fromLocationMapping <- locationMappingMakerForBookingInstanceMaker booking (0, booking.fromLocation)
+      toLocationMappers <- mapM (DLocationMapping.locationMappingInstanceMaker booking DLocationMapping.Booking) bookingWithIndexes
+      fromLocationMapping <- DLocationMapping.locationMappingInstanceMaker booking DLocationMapping.Booking (0, booking.fromLocation)
       return $ fromLocationMapping : toLocationMappers
     Nothing -> return []
-
-locationMappingMakerForBookingInstanceMaker :: (MonadFlow m) => Booking -> (Int, DLocation.Location) -> m DLocationMapping.LocationMapping
-locationMappingMakerForBookingInstanceMaker Booking {..} location = do
-  locationMappingId <- generateGUID
-  let getIntEpochTime = round `fmap` Time.getPOSIXTime
-  epochVersion <- liftIO getIntEpochTime
-  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
-  let locationMapping =
-        DLocationMapping.LocationMapping
-          { id = Id locationMappingId,
-            tag = DLocationMapping.Booking,
-            order = fst location,
-            version = show epochVersionLast5Digits,
-            tagId = getId id,
-            location = snd location,
-            ..
-          }
-  return locationMapping

@@ -136,9 +136,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
-    toLoc <- case lastMaybe ride.toLocation of
-      Just toLoc -> return toLoc
-      Nothing -> throwError $ InternalError "To location not found."
+    toLoc <- (lastMaybe ride.toLocation) & fromMaybeM (InternalError "To location not found.")
     pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) ride.fromLocation toLoc bapMetadata
   pure . DriverRideListRes $ driverRideLis
 
@@ -238,10 +236,9 @@ otpRideCreate driver otpCode booking = do
   when driverInfo.onRide $ throwError DriverOnRide
   ride <- buildRide otpCode driver.id (Just transporter.id)
   rideDetails <- buildRideDetails ride
-  mappings <- DRide.locationMappingMakerForRide ride
   Esq.runTransaction $ do
     QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
-    QRide.create ride mappings
+    QRide.create ride
     QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
     QRideD.create rideDetails
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
@@ -254,9 +251,7 @@ otpRideCreate driver otpCode booking = do
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
-  toLoc <- case lastMaybe ride.toLocation of
-    Just toLoc -> return toLoc
-    Nothing -> throwError $ InternalError "To location not found."
+  toLoc <- (lastMaybe ride.toLocation) & fromMaybeM (InternalError "To location not found.")
   pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) ride.fromLocation toLoc bapMetadata
   where
     notificationType = FCM.DRIVER_ASSIGNMENT

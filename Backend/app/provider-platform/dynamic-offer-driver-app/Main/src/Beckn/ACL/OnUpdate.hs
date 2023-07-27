@@ -263,7 +263,7 @@ mkLocation :: DLocation.Location -> LocationInfo
 mkLocation DLocation.Location {..} = do
   let LocationAddress {..} = address
   LocationInfo
-    { latLon = Gps {..},
+    { gps = Gps {..},
       address =
         Address
           { locality = address.area,

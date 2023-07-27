@@ -799,9 +799,7 @@ getNearbySearchRequests (driverId, merchantId) = do
       let searchTryId = nearbyReq.searchTryId
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-      toLoc <- case lastMaybe searchRequest.toLocation of
-        Just toLoc -> return toLoc
-        Nothing -> throwError $ InternalError "To location not found."
+      toLoc <- (lastMaybe searchRequest.toLocation) & fromMaybeM (InternalError "To location not found.")
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) toLoc -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.

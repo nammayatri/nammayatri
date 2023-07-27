@@ -19,6 +19,7 @@ import Beckn.Types.Core.Taxi.Common.Gps as Common
 import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import qualified Domain.Types.DriverQuote as DQuote
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
@@ -26,6 +27,7 @@ import Kernel.Types.Id (ShortId)
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
+    toLocation :: DLoc.Location,
     searchRequest :: SearchRequest,
     quotes :: [DQuote.DriverQuote],
     now :: UTCTime
@@ -106,7 +108,6 @@ mkQuoteEntities dReq quote = do
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
   let fromLocation = dReq.searchRequest.fromLocation
-  let toLocation = last dReq.searchRequest.toLocation
   OS.FulfillmentInfo
     { id = mkFulfId quote.id.getId,
       start =
@@ -117,7 +118,7 @@ mkFulfillment dReq quote = do
       end =
         Just
           OS.StopInfo
-            { location = OS.Location $ Common.Gps {lat = toLocation.lat, lon = toLocation.lon}
+            { location = OS.Location $ Common.Gps {lat = dReq.toLocation.lat, lon = dReq.toLocation.lon}
             },
       vehicle =
         OS.FulfillmentVehicle

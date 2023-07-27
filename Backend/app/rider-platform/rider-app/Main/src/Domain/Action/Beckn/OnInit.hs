@@ -74,7 +74,7 @@ onInit req = do
         DRB.OneWayDetails details -> details.toLocation
         DRB.DriverOfferDetails details -> details.toLocation
         DRB.OneWaySpecialZoneDetails details -> details.toLocation
-
+  destination <- lastMaybe mbToLocation & fromMaybeM (InternalError "To location not found.")
   return $
     OnInitRes
       { bookingId = booking.id,
@@ -82,7 +82,7 @@ onInit req = do
         bppUrl = booking.providerUrl,
         estimatedTotalFare = booking.estimatedTotalFare,
         fromLocationAddress = fromLocation.address,
-        mbToLocationAddress = if not (null mbToLocation) then Just $ DL.address (head mbToLocation) else Nothing,
+        mbToLocationAddress = Just $ DL.address destination,
         mbRiderName = decRider.firstName,
         transactionId = booking.transactionId,
         merchant = merchant,

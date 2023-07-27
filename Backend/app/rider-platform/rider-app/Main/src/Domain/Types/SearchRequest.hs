@@ -15,9 +15,7 @@
 
 module Domain.Types.SearchRequest where
 
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
@@ -53,29 +51,3 @@ data SearchRequest = SearchRequest
     createdAt :: UTCTime
   }
   deriving (Generic, Show)
-
-locationMappingMakerForSearch :: (MonadFlow m) => SearchRequest -> m [DLocationMapping.LocationMapping]
-locationMappingMakerForSearch search = do
-  let searchWithIndexes = zip ([1 ..] :: [Int]) search.toLocation
-  toLocationMappers <- mapM (locationMappingMakerForSearchInstanceMaker search) searchWithIndexes
-  fromLocationMapping <- locationMappingMakerForSearchInstanceMaker search (0, search.fromLocation)
-  let d = fromLocationMapping : toLocationMappers
-  return d
-
-locationMappingMakerForSearchInstanceMaker :: (MonadFlow m) => SearchRequest -> (Int, DLoc.Location) -> m DLocationMapping.LocationMapping
-locationMappingMakerForSearchInstanceMaker SearchRequest {..} location = do
-  locationMappingId <- generateGUID
-  let getIntEpochTime = round `fmap` Time.getPOSIXTime
-  epochVersion <- liftIO getIntEpochTime
-  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
-  let locationMapping =
-        DLocationMapping.LocationMapping
-          { id = Id locationMappingId,
-            tag = DLocationMapping.SearchRequest,
-            order = fst location,
-            version = show epochVersionLast5Digits,
-            tagId = getId id,
-            location = snd location,
-            ..
-          }
-  return locationMapping

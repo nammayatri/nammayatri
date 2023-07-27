@@ -26,13 +26,13 @@ module Domain.Action.Beckn.OnUpdate
 where
 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent (LocationInfo (..))
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.Location
 import Domain.Types.LocationAddress
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -263,10 +263,9 @@ onUpdate ::
 onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
-  mappings <- SRide.locationMappingMakerForRide ride
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
-    QRide.create ride mappings
+    QRide.create ride
     QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
@@ -321,13 +320,11 @@ onUpdate ValidatedRideStartedReq {..} = do
     startingLocation
     ( \actualFromLocation -> do
         fromLocationMapping <- QLocationMapping.findByTagIdAndOrder ride.id.getId 0 >>= fromMaybeM (InternalError "location not found")
-        epochVersion <- liftIO $ round `fmap` Time.getPOSIXTime
-        let version = epochVersion `mod` 100000 :: Integer
         DB.runTransaction $ do
           logDebug $ "actual from location is " <> show actualFromLocation
           QLocation.create actualFromLocation
           logDebug "UPDATED from location "
-          QLocationMapping.updateLocationInMapping fromLocationMapping actualFromLocation version
+          QLocationMapping.updateLocationInMapping fromLocationMapping actualFromLocation.id
     )
   DB.runTransaction $ do
     QRide.updateMultiple updRideForStartReq.id updRideForStartReq
@@ -394,7 +391,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
         if null ride.toLocation
           then do
             let rideWithIndexes = zip ([1 ..] :: [Int]) [actualToLocation]
-            toLocationMappers <- mapM (SRide.locationMappingMakerForRideInstanceMaker ride) rideWithIndexes
+            toLocationMappers <- mapM (DLocationMapping.locationMappingInstanceMaker ride DLocationMapping.Ride) rideWithIndexes
             for_ toLocationMappers $ \locMap -> do
               DB.runTransaction $ QLocationMapping.create locMap
           else do
@@ -403,10 +400,8 @@ onUpdate ValidatedRideCompletedReq {..} = do
             logDebug $ "actual to location is " <> show actualToLocation
             DB.runTransaction $ QLocation.create actualToLocation
             logDebug "UPDATED to location"
-            epochVersion <- liftIO $ round `fmap` Time.getPOSIXTime
-            let version = epochVersion `mod` 100000 :: Integer
             for_ toLocationMappers $ \locMap -> do
-              DB.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualToLocation version
+              DB.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualToLocation.id
     )
 
   Notify.notifyOnRideCompleted booking updRide
@@ -579,8 +574,8 @@ buildLocation locationId location = do
   return $
     Location
       { id = locationId,
-        lat = location.latLon.lat,
-        lon = location.latLon.lon,
+        lat = location.gps.lat,
+        lon = location.gps.lon,
         address =
           LocationAddress
             { street = location.address.street,

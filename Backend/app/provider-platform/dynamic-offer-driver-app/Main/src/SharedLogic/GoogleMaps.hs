@@ -52,7 +52,7 @@ mkLocation placeNameResp = do
         country = getField ["country"] hashMap,
         building = getField ["premise", "sub_premise"] hashMap,
         area = getField ["sublocality_level_5", "sublocality_level_4", "sublocality_level_3", "sublocality_level_2", "sublocality_level_1"] hashMap <|> getField ["sublocality"] hashMap,
-        full_address = resultsResp.formattedAddress
+        fullAddress = resultsResp.formattedAddress
       }
 
 iterateAddrResp :: [AddressResp] -> HashMap Text Text

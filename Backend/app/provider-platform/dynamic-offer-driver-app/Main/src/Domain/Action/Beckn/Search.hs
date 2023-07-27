@@ -63,7 +63,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
-import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
@@ -157,11 +156,7 @@ handler merchant sReq = do
           (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation [toLocation] result.distance result.duration allFarePoliciesProduct.area
-        Esq.runTransaction $ do
-          QSearchRequestSpecialZone.create searchRequestSpecialZone
-        mappings <- DSR.locationMappingMakerForSearchSP searchRequestSpecialZone
-        for_ mappings $ \locMap -> do
-          Esq.runTransaction $ QLocationMapping.create locMap
+        Esq.runNoTransaction $ QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
         let listOfVehicleVariants = listVehicleVariantHelper farePolicies
         listOfSpecialZoneQuotes <- do
@@ -254,9 +249,8 @@ handler merchant sReq = do
 
           forM_ estimates $ \est -> do
             triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
-          mappings <- DSR.locationMappingMakerForSearch searchReq
           Esq.runTransaction $ do
-            QSR.create searchReq mappings
+            QSR.create searchReq
             QEst.createMany estimates
 
           let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
@@ -419,7 +413,7 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
               country = loc.country,
               building = loc.building,
               area = loc.ward,
-              full_address = decodeAddress loc
+              fullAddress = decodeAddress loc
             }
     _ -> getAddressByGetPlaceName merchantId sessionToken latLong
   id <- Id <$> generateGUID

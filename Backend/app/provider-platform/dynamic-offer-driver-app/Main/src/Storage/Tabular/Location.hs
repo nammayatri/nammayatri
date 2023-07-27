@@ -38,7 +38,7 @@ mkPersist
       state Text Maybe
       country Text Maybe
       building Text Maybe
-      full_address Text Maybe
+      fullAddress Text Maybe
       areaCode Text Maybe
       area Text Maybe
       createdAt UTCTime

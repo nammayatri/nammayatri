@@ -33,8 +33,9 @@ import Storage.Tabular.DriverQuote as DriverQuote
 
 -- fareParams already created with driverQuote
 
-create :: Booking -> [DLocationMapping.LocationMapping] -> SqlDB ()
-create dBooking mappings = do
+create :: Booking -> SqlDB ()
+create dBooking = do
+  mappings <- DLocationMapping.locationMappingMaker dBooking DLocationMapping.Booking
   Esq.runTransaction $
     withFullEntity dBooking $ \(booking, _, _, _fareParams) -> do
       Esq.create' booking

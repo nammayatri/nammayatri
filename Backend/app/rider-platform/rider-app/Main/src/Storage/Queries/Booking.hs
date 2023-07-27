@@ -17,7 +17,6 @@ module Storage.Queries.Booking where
 
 import Domain.Types.Booking as DRB
 import Domain.Types.Estimate (Estimate)
-import qualified Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Kernel.Prelude
@@ -34,8 +33,9 @@ import qualified Storage.Tabular.Ride as R
 
 -- we already created TripTerms and RentalSlab when created Quote
 
-create :: Booking -> [DLocationMapping.LocationMapping] -> SqlDB ()
-create booking mappings = do
+create :: Booking -> SqlDB ()
+create booking = do
+  mappings <- DRB.locationMappingMakerForBooking booking
   Esq.withFullEntity booking $ \(bookingT, fromLoc, _mbTripTermsT, bookingDetailsT) -> do
     void $ Esq.createUnique' fromLoc
     case bookingDetailsT of
@@ -105,49 +105,6 @@ findLatestByRiderIdAndStatus riderId statusList =
     orderBy [desc $ booking ^. RB.BookingCreatedAt]
     limit 1
     pure $ booking ^. RB.BookingStatus
-
-compressBooking :: [Booking] -> Maybe Booking
-compressBooking list =
-  if null list
-    then Nothing
-    else do
-      let Booking {..} = head list
-      let toLoc =
-            concatMap
-              ( \booking -> case booking.bookingDetails of
-                  DRB.OneWayDetails owbd -> owbd.toLocation
-                  DRB.RentalDetails _ -> []
-                  DRB.DriverOfferDetails owbd -> owbd.toLocation
-                  DRB.OneWaySpecialZoneDetails owszbd -> owszbd.toLocation
-              )
-              list
-
-      let finalDetails = case bookingDetails of
-            DRB.OneWayDetails OneWayBookingDetails {..} ->
-              DRB.DriverOfferDetails
-                OneWayBookingDetails
-                  { toLocation = toLoc,
-                    ..
-                  }
-            DRB.RentalDetails rs -> DRB.RentalDetails rs
-            DRB.DriverOfferDetails OneWayBookingDetails {..} ->
-              DRB.DriverOfferDetails
-                OneWayBookingDetails
-                  { toLocation = toLoc,
-                    ..
-                  }
-            DRB.OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails {..} ->
-              DRB.DriverOfferDetails
-                OneWayBookingDetails
-                  { toLocation = toLoc,
-                    ..
-                  }
-
-      Just
-        Booking
-          { bookingDetails = finalDetails,
-            ..
-          }
 
 findCountByRideIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
 findCountByRideIdAndStatus personId status = do

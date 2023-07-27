@@ -32,8 +32,6 @@ import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 import qualified Tools.Maps as Maps
 
--- import Storage.Tabular.LocationMapping (LocationMappingT)
-
 derivePersistField "FareProductD.Area"
 
 mkPersist

@@ -15,20 +15,25 @@
 
 module Storage.Queries.SearchRequestSpecialZone where
 
+import qualified Domain.Types.LocationMapping as LM
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.SearchRequestSpecialZone
 
 create :: SearchRequestSpecialZone -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
-    Esq.create' fromLoc
-    traverse_ Esq.create' mbToLoc
-    Esq.create' sReq
+create dsReq = do
+  mappings <- LM.locationMappingMaker dsReq LM.SearchRequest
+  Esq.runTransaction $
+    withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
+      Esq.create' sReq
+      void $ Esq.createUnique' fromLoc
+      traverse_ Esq.createUnique' toLoc
+  QLocationMapping.createMany mappings
 
 findById ::
   (Transactionable m) =>

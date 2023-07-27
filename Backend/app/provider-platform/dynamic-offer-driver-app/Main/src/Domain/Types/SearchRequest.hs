@@ -15,12 +15,9 @@
 
 module Domain.Types.SearchRequest where
 
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.SearchRequestSpecialZone
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -48,53 +45,3 @@ data SearchRequest = SearchRequest
     createdAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)
-
-locationMappingMakerForSearch :: (MonadFlow m) => SearchRequest -> m [DLocationMapping.LocationMapping]
-locationMappingMakerForSearch search = do
-  let searchWithIndexes = zip ([1 ..] :: [Int]) search.toLocation
-  toLocationMappers <- mapM (locationMappingMakerForSearchInstanceMaker search) searchWithIndexes
-  fromLocationMapping <- locationMappingMakerForSearchInstanceMaker search (0, search.fromLocation)
-  return $ fromLocationMapping : toLocationMappers
-
-locationMappingMakerForSearchInstanceMaker :: (MonadFlow m) => SearchRequest -> (Int, DLoc.Location) -> m DLocationMapping.LocationMapping
-locationMappingMakerForSearchInstanceMaker SearchRequest {..} location = do
-  locationMappingId <- generateGUID
-  let getIntEpochTime = round `fmap` Time.getPOSIXTime
-  epochVersion <- liftIO getIntEpochTime
-  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
-  let locationMapping =
-        DLocationMapping.LocationMapping
-          { id = Id locationMappingId,
-            tag = DLocationMapping.SearchRequest,
-            order = fst location,
-            version = show epochVersionLast5Digits,
-            tagId = getId id,
-            location = snd location,
-            ..
-          }
-  return locationMapping
-
-locationMappingMakerForSearchSP :: (MonadFlow m) => SearchRequestSpecialZone -> m [DLocationMapping.LocationMapping]
-locationMappingMakerForSearchSP search = do
-  let searchWithIndexes = zip ([1 ..] :: [Int]) search.toLocation
-  toLocationMappers <- mapM (locationMappingMakerSPForSearchSPInstanceMaker search) searchWithIndexes
-  fromLocationMapping <- locationMappingMakerSPForSearchSPInstanceMaker search (0, search.fromLocation)
-  return $ fromLocationMapping : toLocationMappers
-
-locationMappingMakerSPForSearchSPInstanceMaker :: (MonadFlow m) => SearchRequestSpecialZone -> (Int, DLoc.Location) -> m DLocationMapping.LocationMapping
-locationMappingMakerSPForSearchSPInstanceMaker SearchRequestSpecialZone {..} location = do
-  locationMappingId <- generateGUID
-  let getIntEpochTime = round `fmap` Time.getPOSIXTime
-  epochVersion <- liftIO getIntEpochTime
-  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
-  let locationMapping =
-        DLocationMapping.LocationMapping
-          { id = Id locationMappingId,
-            tag = DLocationMapping.SearchRequest,
-            order = fst location,
-            version = show epochVersionLast5Digits,
-            tagId = getId id,
-            location = snd location,
-            ..
-          }
-  return locationMapping

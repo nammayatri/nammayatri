@@ -191,9 +191,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           driverLocation <- findDriverLoc booking.providerId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
     CallBasedReq _ -> do
-      toLoc <- case lastMaybe booking.toLocation of
-        Just toLoc -> return toLoc
-        Nothing -> throwError $ InternalError "To location not found."
+      toLoc <- (lastMaybe booking.toLocation) & fromMaybeM (InternalError "To location not found.")
       pure $ getCoordinates toLoc
 
   whenWithLocationUpdatesLock driverId $ do
@@ -278,9 +276,7 @@ isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
       let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
       let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
-      toLoc <- case lastMaybe booking.toLocation of
-        Just toLoc -> return toLoc
-        Nothing -> throwError $ InternalError "To location not found."
+      toLoc <- (lastMaybe booking.toLocation) & fromMaybeM (InternalError "To location not found.")
       let dropDifference = abs $ distanceBetweenInMeters (getCoordinates toLoc) tripEndPoint
       let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 

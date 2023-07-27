@@ -19,26 +19,22 @@ import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.LocationMapping as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import qualified Storage.Tabular.Location as QLocation
 import Storage.Tabular.LocationMapping
-
-createMappingWithLocation :: Domain.LocationMapping -> SqlDB ()
-createMappingWithLocation locationMapping =
-  Esq.withFullEntity locationMapping $ \(locationMappingT, locationT) -> do
-    Esq.create' locationMappingT
-    Esq.create' locationT
 
 create :: Domain.LocationMapping -> SqlDB ()
 create locationMapping =
   Esq.withFullEntity locationMapping $ \(locationMappingT, _) -> do
     Esq.create' locationMappingT
 
-updateLocationInMapping :: Domain.LocationMapping -> Domain.Location -> Integer -> SqlDB ()
-updateLocationInMapping mapping newLocation version = do
+updateLocationInMapping :: Domain.LocationMapping -> Id Domain.Location -> SqlDB ()
+updateLocationInMapping mapping newLocationId = do
+  version <- Domain.getMappingVersion
   Esq.update $ \tbl -> do
     set
       tbl
-      [ LocationMappingLocationId =. val (toKey newLocation.id),
+      [ LocationMappingLocationId =. val (toKey newLocationId),
         LocationMappingVersion =. val (show version)
       ]
     where_ $ tbl ^. LocationMappingTId ==. val (toKey mapping.id)
@@ -47,17 +43,7 @@ createMany :: [Domain.LocationMapping] -> SqlDB ()
 createMany quotes =
   Esq.withFullEntities quotes $ \list -> do
     let locationMappingTs = map fst list
-    -- locationTs = map fst list
     Esq.createMany' locationMappingTs
-
--- Esq.createMany' locationTs
-
-putLocationMappingTs :: [FullLocationMappingT] -> FullEntitySqlDB ()
-putLocationMappingTs toLocT = do
-  let locationMappingT = map fst toLocT
-  let locationT = map snd toLocT
-  Esq.createMany' locationMappingT
-  Esq.createMany' locationT
 
 fullLocationMappingTable ::
   From

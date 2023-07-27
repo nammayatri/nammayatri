@@ -15,8 +15,10 @@
 module Domain.Types.Location where
 
 import Kernel.External.Maps.HasCoordinates
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 
 data Location = Location
@@ -38,6 +40,30 @@ data LocationAddress = LocationAddress
     building :: Maybe Text,
     areaCode :: Maybe Text,
     area :: Maybe Text,
-    full_address :: Maybe Text
+    fullAddress :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show, Eq, PrettyShow)
+
+buildLocation :: (MonadFlow m) => LatLong -> LocationAddress -> m Location
+buildLocation LatLong {..} address = do
+  currTime <- getCurrentTime
+  locationId <- generateGUID
+  return $
+    Location
+      { id = locationId,
+        address =
+          LocationAddress
+            { street = address.street,
+              city = address.city,
+              state = address.state,
+              country = address.country,
+              building = address.building,
+              areaCode = address.areaCode,
+              area = address.area,
+              door = address.door,
+              fullAddress = address.fullAddress
+            },
+        createdAt = currTime,
+        updatedAt = currTime,
+        ..
+      }

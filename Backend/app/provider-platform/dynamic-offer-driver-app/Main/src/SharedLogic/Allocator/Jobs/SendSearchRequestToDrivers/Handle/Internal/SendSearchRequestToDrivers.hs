@@ -31,7 +31,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, logInfo, throwError)
+import Kernel.Utils.Common (addUTCTime, fromMaybeM, logInfo)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
@@ -87,9 +87,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    toLoc <- case lastMaybe translatedSearchReq.toLocation of
-      Just toLoc -> return toLoc
-      Nothing -> throwError $ InternalError "To location not found."
+    toLoc <- (lastMaybe translatedSearchReq.toLocation) & fromMaybeM (InternalError "To location not found.")
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds toLoc
 
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
@@ -162,7 +160,7 @@ buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
             country = address.country,
             building = address.building,
             areaCode = address.areaCode,
-            full_address = address.full_address,
+            fullAddress = address.fullAddress,
             ..
           }
   pure
@@ -181,7 +179,8 @@ translateSearchReq ::
   m DSR.SearchRequest
 translateSearchReq DSR.SearchRequest {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation (last toLocation) (Just language)
+  destination <- lastMaybe toLocation & fromMaybeM (InternalError "To location not found.")
+  to <- buildTranslatedSearchReqLocation destination (Just language)
   pure
     DSR.SearchRequest
       { fromLocation = from,

@@ -23,6 +23,8 @@ import Domain.Types.Quote as Quote
 import Domain.Types.SearchRequest as SR
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Error (GenericError (InternalError))
+import Kernel.Utils.Common
 import Storage.Queries.EstimateBreakup as QEB
 import Storage.Queries.LocationMapping as QLM
 import qualified Storage.Tabular.Booking as Booking
@@ -58,35 +60,21 @@ buildFullSearchRequest ::
   Transactionable m =>
   SearchRequestT ->
   DTypeBuilder m (Maybe (SolidType FullSearchRequestT))
-buildFullSearchRequest searchRequestT@SR.SearchRequestT {..} = do
-  mappings <- Esq.findAll' $ do
-    mapping <- from $ table @LocationMappingT
-    where_ $ mapping ^. LocationMappingTagId ==. val id
-    orderBy [asc $ mapping ^. LocationMappingOrder]
-    return mapping
-  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
-  mAllLocations <- mapM (Esq.findById' @LocationT) allIds
-  let allLocations = sequence mAllLocations
-  case allLocations of
-    Just locations -> do
-      searchReq <- runMaybeT $ do
-        return (searchRequestT, head locations, drop 1 locations)
-      case searchReq of
-        Just sReq -> return $ Just (extractSolidType @SearchRequest sReq)
-        Nothing -> return Nothing
-    Nothing -> return Nothing
+buildFullSearchRequest searchRequestT@SR.SearchRequestT {..} = runMaybeT $ do
+  mappings <- lift $ findAllLocationMappingsByTagId id
+  let allIds :: [LocationTId] = map (\(LocationMappingT {locationId}) -> locationId) mappings
+  allLocations <- mapM (Esq.findByIdM @LocationT) allIds
+  fromLoc <- hoistMaybe $ headMay allLocations
+  let fullSearchRequestT = (searchRequestT, fromLoc, drop 1 allLocations)
+  return (extractSolidType @SearchRequest fullSearchRequestT)
 
 buildFullBooking ::
   Transactionable m =>
   Booking.BookingT ->
   DTypeBuilder m (Maybe (SolidType Booking.FullBookingT))
 buildFullBooking bookingT@Booking.BookingT {..} = do
-  mappings <- Esq.findAll' $ do
-    mapping <- from $ table @LocationMappingT
-    where_ $ mapping ^. LocationMappingTagId ==. val id
-    orderBy [asc $ mapping ^. LocationMappingOrder]
-    return mapping
-  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  mappings <- findAllLocationMappingsByTagId id
+  let allIds :: [LocationTId] = map (\(LocationMappingT {locationId}) -> locationId) mappings
   mAllLocations <- mapM (Esq.findById' @LocationT) allIds
   tripTerms <- case tripTermsId of
     Just _ -> return Nothing
@@ -95,15 +83,16 @@ buildFullBooking bookingT@Booking.BookingT {..} = do
 
   case allLocations of
     Just locations -> do
-      bookin <- runMaybeT $ do
+      fromLoc <- headMay locations & fromMaybeM (InternalError "From location does not exist.")
+      booking <- runMaybeT $ do
         let mbToLocT = drop 1 locations
         bookingDetails <- case fareProductType of
           ONE_WAY -> hoistMaybe (Booking.OneWayDetailsT <$> Just mbToLocT)
           RENTAL -> hoistMaybe (Booking.RentalDetailsT <$> Nothing)
           DRIVER_OFFER -> hoistMaybe (Booking.DriverOfferDetailsT <$> Just mbToLocT)
           ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Booking.OneWaySpecialZoneDetailsT <$> Just mbToLocT)
-        return (bookingT, head locations, tripTerms, bookingDetails)
-      case bookin of
+        return (bookingT, fromLoc, tripTerms, bookingDetails)
+      case booking of
         Just book -> return $ Just (extractSolidType @Booking book)
         Nothing -> return Nothing
     Nothing -> return Nothing
@@ -124,3 +113,10 @@ buildFullEstimate ::
 buildFullEstimate (estimateT@EstimateT {..}, tripTermsT) = do
   estimateBreakupT <- QEB.findAllByEstimateId' (EstimateTKey id)
   return $ extractSolidType @Estimate (estimateT, estimateBreakupT, tripTermsT)
+
+findAllLocationMappingsByTagId :: Transactionable m => Text -> DTypeBuilder m [LocationMappingT]
+findAllLocationMappingsByTagId tagId = Esq.findAll' $ do
+  mapping <- from $ table @LocationMappingT
+  where_ $ mapping ^. LocationMappingTagId ==. val tagId
+  orderBy [asc $ mapping ^. LocationMappingOrder]
+  return mapping

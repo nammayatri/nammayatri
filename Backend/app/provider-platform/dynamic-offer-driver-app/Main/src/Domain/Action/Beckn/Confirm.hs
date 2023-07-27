@@ -124,11 +124,7 @@ handler transporter req quote = do
           case routeInfo of
             Just route -> setExp (searchRequestKey $ getId ride.id) route 14400
             Nothing -> logDebug "Unable to get the key"
-          let toLocation = lastMaybe booking.toLocation
-          destination <- case toLocation of
-            Just toLoc -> return toLoc
-            Nothing -> throwError $ InternalError "To location not found."
-          mappings <- DRide.locationMappingMakerForRide ride
+          destination <- (lastMaybe booking.toLocation) & fromMaybeM (InternalError "To location not found.")
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
             QRB.updateRiderId booking.id riderDetails.id
@@ -136,8 +132,7 @@ handler transporter req quote = do
             QL.updateAddress booking.fromLocation.id req.fromAddress
             QL.updateAddress destination.id req.toAddress
             whenJust req.mbRiderName $ QRB.updateRiderName booking.id
-            QRide.create ride mappings
-          Esq.runTransaction $ do
+            QRide.create ride
             QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
             QRideD.create rideDetails
             QBE.logRideConfirmedEvent booking.id
@@ -159,9 +154,7 @@ handler transporter req quote = do
 
           uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
           Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
-          toLoc <- case lastMaybe uBooking.toLocation of
-            Just toLoc -> return toLoc
-            Nothing -> throwError $ InternalError "To location not found."
+          toLoc <- (lastMaybe booking.toLocation) & fromMaybeM (InternalError "To location not found.")
           pure
             DConfirmRes
               { booking = uBooking,
@@ -177,10 +170,7 @@ handler transporter req quote = do
         Left _ -> throwError AccessDenied
         Right _ -> do
           otpCode <- generateOTPCode
-          let toLocation = lastMaybe booking.toLocation
-          toLoc <- case toLocation of
-            Just toLoc -> return toLoc
-            Nothing -> throwError $ InternalError "To location not found."
+          toLoc <- (lastMaybe booking.toLocation) & fromMaybeM (InternalError "To location not found.")
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
             QRB.updateRiderId booking.id riderDetails.id

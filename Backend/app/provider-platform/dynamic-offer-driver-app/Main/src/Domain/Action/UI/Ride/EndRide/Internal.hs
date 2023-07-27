@@ -28,9 +28,6 @@ where
 
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
--- import qualified Storage.Queries.Person as QPerson
-
-import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
@@ -82,8 +79,6 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
 
--- import qualified Domain.Types.Location as Loc
-
 endRideTransaction ::
   ( Metrics.CoreMetrics m,
     CacheFlow m r,
@@ -115,18 +110,15 @@ endRideTransaction driverId booking ride pickupDropOutsideOfThreshold tripEndPoi
     if pickupDropOutsideOfThreshold
       then do
         toLocationResponse <- Maps.getTripPlaceName merchantId GetPlaceNameReq {getBy = ByLatLong LatLong {lat = tripEndPoint.lat, lon = tripEndPoint.lon}, sessionToken = Nothing, language = Nothing}
-        actualToLocationId <- generateGUID
         toAddress <- GoogleMaps.mkLocation toLocationResponse
-        actualToLocation <- buildLocation actualToLocationId tripEndPoint toAddress
+        actualToLocation <- DLocation.buildLocation tripEndPoint toAddress
         mappers <- QLocationMapping.findByTagId $ ride.id.getId
         let toLocationMappers = filter (\mapper -> mapper.order /= 0) mappers
         logDebug $ "updating location mappings " <> show toLocationMappers
         logDebug $ "trip end point is " <> show actualToLocation
-        epochVersion <- liftIO $ round `fmap` Time.getPOSIXTime
-        let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
         Esq.runTransaction $ QLocation.create actualToLocation
         for_ toLocationMappers $ \locMap -> do
-          Esq.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualToLocation epochVersionLast5Digits
+          Esq.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualToLocation.id
         return $ Just actualToLocation
       else return Nothing
 
@@ -394,26 +386,3 @@ getOverduePaymentCache endTime = Hedis.get (mkOverduePaymentProcessingKey endTim
 
 setOverduePaymentCache :: CacheFlow m r => UTCTime -> NominalDiffTime -> m ()
 setOverduePaymentCache endTime expTime = Hedis.setExp (mkOverduePaymentProcessingKey endTime) False (round expTime)
-
-buildLocation :: (MonadFlow m) => Id DLocation.Location -> LatLong -> DLocation.LocationAddress -> m DLocation.Location
-buildLocation locationId LatLong {..} address = do
-  currTime <- getCurrentTime
-  return $
-    DLocation.Location
-      { id = locationId,
-        address =
-          DLocation.LocationAddress
-            { street = address.street,
-              city = address.city,
-              state = address.state,
-              country = address.country,
-              building = address.building,
-              areaCode = address.areaCode,
-              area = address.area,
-              door = address.door,
-              full_address = address.full_address
-            },
-        createdAt = currTime,
-        updatedAt = currTime,
-        ..
-      }

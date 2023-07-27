@@ -47,4 +47,4 @@ buildConfirmReq req = do
       { ..
       }
   where
-    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, full_address = Nothing, ..}
+    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, fullAddress = Nothing, ..}

@@ -23,8 +23,9 @@ import Storage.Queries.FullEntityBuilders
 import Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.SearchRequest
 
-create :: SearchRequest -> [LM.LocationMapping] -> SqlDB ()
-create dsReq mappings = do
+create :: SearchRequest-> SqlDB ()
+create dsReq = do
+  mappings <- LM.locationMappingMaker dsReq LM.SearchRequest
   Esq.runTransaction $
     withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
       Esq.create' sReq

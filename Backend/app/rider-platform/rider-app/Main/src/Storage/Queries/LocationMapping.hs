@@ -21,13 +21,15 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.Location
 import Storage.Tabular.LocationMapping
+import Kernel.Types.Id
 
-updateLocationInMapping :: Domain.LocationMapping -> Domain.Location -> Integer -> SqlDB ()
-updateLocationInMapping mapping newLocation version = do
+updateLocationInMapping :: Domain.LocationMapping -> Id Domain.Location -> SqlDB ()
+updateLocationInMapping mapping newLocationId = do
+  version <- Domain.getMappingVersion
   Esq.update $ \tbl -> do
     set
       tbl
-      [ LocationMappingLocationId =. val (toKey newLocation.id),
+      [ LocationMappingLocationId =. val (toKey newLocationId),
         LocationMappingVersion =. val (show version)
       ]
     where_ $ tbl ^. LocationMappingTId ==. val (toKey mapping.id)
@@ -41,10 +43,7 @@ createMany :: [LocationMapping] -> SqlDB ()
 createMany quotes =
   Esq.withFullEntities quotes $ \list -> do
     let locationMappingTs = map fst list
-    -- locationTs = map fst list
     Esq.createMany' locationMappingTs
-
--- Esq.createMany' locationTs
 
 putLocationMappingTs :: [FullLocationMappingT] -> FullEntitySqlDB ()
 putLocationMappingTs toLocT = do

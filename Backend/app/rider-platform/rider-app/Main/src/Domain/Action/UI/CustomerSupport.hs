@@ -174,7 +174,7 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
         DRB.OneWaySpecialZoneDetails details -> details.toLocation
   rbStatus <- DRB.buildBookingAPIEntity booking
   decMobNum <- mapM decrypt mobileNumber
-  let mbToLocation = if not (null toLocationList) then Just (head toLocationList) else Nothing
+  let mbToLocation = lastMaybe toLocationList
   let details =
         OrderDetails
           { id = getId booking.id,

@@ -209,14 +209,10 @@ rideInfo merchantShortId reqRideId = do
         _ -> Nothing
   let mbtoLocation = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> do
-          toLoc <- case lastMaybe locationDetail.toLocation of
-            Just toLoc -> return toLoc
-            Nothing -> throwError $ InternalError "To location not found."
+          toLoc <- (lastMaybe locationDetail.toLocation) & fromMaybeM (InternalError "To location not found.")
           pure $ Just $ mkCommonBookingLocation toLoc
         DB.DriverOfferDetails driverOfferDetail -> do
-          toLoc <- case lastMaybe driverOfferDetail.toLocation of
-            Just toLoc -> return toLoc
-            Nothing -> throwError $ InternalError "To location not found."
+          toLoc <- (lastMaybe driverOfferDetail.toLocation) & fromMaybeM (InternalError "To location not found.")
           pure $ Just $ mkCommonBookingLocation toLoc
         _ -> pure Nothing
   let mbDistance = case booking.bookingDetails of

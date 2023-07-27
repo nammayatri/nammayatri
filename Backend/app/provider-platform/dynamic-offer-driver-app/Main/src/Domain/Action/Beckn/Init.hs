@@ -138,18 +138,16 @@ handler merchantId req eitherReq = do
         Left (driverQuote, searchRequest, searchTry) -> do
           booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
-          mappings <- DRB.locationMappingMakerForBooking booking
           Esq.runTransaction $ do
             QST.updateStatus searchTry.id DST.COMPLETED
-            QRB.create booking mappings
+            QRB.create booking
           return booking
         Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
-          mappings <- DRB.locationMappingMakerForBooking booking
-          Esq.runNoTransaction $ QRB.create booking mappings
+          Esq.runNoTransaction $ QRB.create booking
           return booking
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
 

@@ -14,7 +14,6 @@
 
 module Domain.Types.SearchRequest.SearchReqLocation where
 
-import Domain.Types.Location
 import Kernel.External.Maps.HasCoordinates (HasCoordinates)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -52,16 +51,3 @@ data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-convertLocationToSearchRequestLocation :: Location -> SearchReqLocation
-convertLocationToSearchRequestLocation Location {..} = do
-  let LocationAddress {..} = address
-  SearchReqLocation
-    { id = Id id.getId,
-      ..
-    }
-
-makeSearchReqLocationAPIEntity :: SearchReqLocation -> SearchReqLocationAPIEntity
-makeSearchReqLocationAPIEntity SearchReqLocation {..} =
-  SearchReqLocationAPIEntity
-    { ..
-    }

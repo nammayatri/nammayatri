@@ -126,9 +126,9 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
   triggerSearchEvent SearchEventData {searchRequest = searchRequest}
-  mappings <- DSearchReq.locationMappingMakerForSearch searchRequest
-  DB.runTransaction $ QSearchRequest.create searchRequest mappings
-  DB.runTransaction $ QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
+  DB.runTransaction $ do
+    QSearchRequest.create searchRequest
+    QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
   let dSearchRes =
         OneWaySearchRes

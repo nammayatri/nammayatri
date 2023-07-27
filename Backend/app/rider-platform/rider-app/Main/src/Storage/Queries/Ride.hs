@@ -37,26 +37,17 @@ buildFullRide ::
   Transactionable m =>
   Ride.RideT ->
   DTypeBuilder m (Maybe (SolidType Ride.FullRideT))
-buildFullRide rideT@Ride.RideT {..} = do
-  mappings <- Esq.findAll' $ do
-    mapping <- from $ table @LocationMappingT
-    where_ $ mapping ^. LocationMappingTagId ==. val id
-    orderBy [asc $ mapping ^. LocationMappingOrder]
-    return mapping
-  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
-  mAllLocations <- mapM (Esq.findById' @LocationT) allIds
-  let allLocations = sequence mAllLocations
-  case allLocations of
-    Just locations -> do
-      ride <- runMaybeT $ do
-        return (rideT, head locations, drop 1 locations)
-      case ride of
-        Just ride' -> return $ Just (extractSolidType @Ride ride')
-        Nothing -> return Nothing
-    Nothing -> return Nothing
+buildFullRide rideT@Ride.RideT {..} = runMaybeT $ do
+  mappings <- lift $ findAllLocationMappingsByTagId id
+  let allIds :: [LocationTId] = map (\(LocationMappingT {locationId}) -> locationId) mappings
+  allLocations <- mapM (Esq.findByIdM @LocationT) allIds
+  fromLoc <- hoistMaybe $ headMay allLocations
+  let fullrideT = (rideT, fromLoc, drop 1 allLocations)
+  return (extractSolidType @Ride fullrideT)
 
-create :: Ride -> [DLocationMapping.LocationMapping] -> SqlDB ()
-create dRide mappings = do
+create :: Ride -> SqlDB ()
+create dRide = do
+  mappings <- DLocationMapping.locationMappingMaker dRide DLocationMapping.Ride
   Esq.runTransaction $
     withFullEntity dRide $ \(ride, _, _) -> do
       Esq.create' ride
@@ -291,3 +282,10 @@ findRiderIdByRideId rideId = findOne $ do
   where_ $
     ride ^. RideTId ==. val (toKey rideId)
   pure $ booking ^. BookingRiderId
+
+findAllLocationMappingsByTagId :: Transactionable m => Text -> DTypeBuilder m [LocationMappingT]
+findAllLocationMappingsByTagId tagId = Esq.findAll' $ do
+  mapping <- from $ table @LocationMappingT
+  where_ $ mapping ^. LocationMappingTagId ==. val tagId
+  orderBy [asc $ mapping ^. LocationMappingOrder]
+  return mapping

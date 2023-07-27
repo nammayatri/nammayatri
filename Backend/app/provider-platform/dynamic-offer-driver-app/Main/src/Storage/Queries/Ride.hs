@@ -38,8 +38,9 @@ import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
 
-create :: Ride -> [DLocationMapping.LocationMapping] -> SqlDB ()
-create dRide mappings = do
+create :: Ride -> SqlDB ()
+create dRide = do
+  mappings <- locationMappingMaker dRide DLocationMapping.Ride
   Esq.runTransaction $
     withFullEntity dRide $ \(ride, _, _) -> do
       Esq.create' ride
