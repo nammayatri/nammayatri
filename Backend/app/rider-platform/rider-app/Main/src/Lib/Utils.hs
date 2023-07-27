@@ -15,7 +15,6 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import qualified Debug.Trace as T
 import qualified Domain.Types.DriverOffer as DomainDO
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.CachedSqlDBQuery
@@ -213,14 +212,13 @@ setFlagsInMeshConfig meshCfg modelName = do
 
 setMeshConfig :: (L.MonadFlow m, HasCallStack) => Text -> m MeshConfig
 setMeshConfig modelName = do
-  tables <- T.trace "getting the tables" $ L.getOption KBT.Tables
+  tables <- L.getOption KBT.Tables
   randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
       let enableKVForWriteAlso = tables'.enableKVForWriteAlso
       let enableKVForRead = tables'.enableKVForRead
-      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
       let tableAllocation = fromIntegral tables'.tableAllocation
       if randomIntV <= tableAllocation
         then pure $ meshConfig {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
@@ -235,7 +233,6 @@ setMeshConfig' modelName meshConfig' = do
     Just tables' -> do
       let enableKVForWriteAlso = tables'.enableKVForWriteAlso
       let enableKVForRead = tables'.enableKVForRead
-      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
       let tableAllocation = fromIntegral tables'.tableAllocation
       if randomIntV <= tableAllocation
         then pure $ meshConfig' {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
