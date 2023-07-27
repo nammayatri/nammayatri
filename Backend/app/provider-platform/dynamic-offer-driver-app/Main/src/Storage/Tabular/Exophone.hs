@@ -25,6 +25,8 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Storage.Tabular.Merchant as SM
 
+derivePersistField "Domain.ExophoneType"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -33,6 +35,7 @@ mkPersist
       merchantId SM.MerchantTId
       primaryPhone Text
       backupPhone Text
+      exophoneType Domain.ExophoneType
       isPrimaryDown Bool
       createdAt UTCTime
       updatedAt UTCTime
