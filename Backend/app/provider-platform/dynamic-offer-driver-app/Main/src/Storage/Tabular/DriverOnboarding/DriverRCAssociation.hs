@@ -38,7 +38,6 @@ mkPersist
       consent Bool
       consentTimestamp UTCTime
       isRcActive Bool
-      isDeleted Bool
       Primary id
       deriving Generic
     |]

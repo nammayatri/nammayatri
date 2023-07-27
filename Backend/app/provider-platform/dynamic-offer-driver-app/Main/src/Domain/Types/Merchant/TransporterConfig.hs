@@ -56,7 +56,8 @@ data TransporterConfigD u = TransporterConfig
     aadhaarVerificationRequired :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    rcLimit :: Int
+    rcLimit :: Int,
+    automaticRCActivationCutOff :: Seconds
   }
   deriving (Generic, Show)
 

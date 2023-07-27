@@ -62,6 +62,7 @@ mkPersist
       driverPaymentCycleStartTime Seconds
       driverPaymentReminderInterval Seconds
       rcLimit Int
+      automaticRCActivationCutOff Seconds
       timeDiffFromUtc Seconds
       minLocationAccuracy Double
       subscription Bool

@@ -17,6 +17,8 @@ module Domain.Types.DriverOnboarding.VehicleRegistrationCertificate where
 
 import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import Domain.Types.Merchant
+import Domain.Types.Person
 import Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -69,3 +71,24 @@ instance EncryptedItem' VehicleRegistrationCertificate where
   type UnencryptedItem VehicleRegistrationCertificate = DecryptedVehicleRegistrationCertificate
   toUnencrypted a salt = (a, salt)
   fromUnencrypted a = fst a
+
+makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Vehicle
+makeVehicleFromRC now driverId merchantId certificateNumber rc =
+  Vehicle
+    { driverId,
+      capacity = rc.vehicleCapacity,
+      category = getCategory <$> rc.vehicleVariant,
+      make = rc.vehicleManufacturer,
+      model = fromMaybe "Unkown" rc.vehicleModel,
+      size = Nothing,
+      merchantId,
+      variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant, -- Value will be always Just if reaching here
+      color = fromMaybe "Unkown" rc.vehicleColor,
+      energyType = rc.vehicleEnergyType,
+      registrationNo = certificateNumber,
+      registrationCategory = Nothing,
+      vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
+      vehicleName = Nothing,
+      createdAt = now,
+      updatedAt = now
+    }

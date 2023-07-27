@@ -38,6 +38,8 @@ module Domain.Action.Dashboard.Driver
     collectCash,
     driverAadhaarInfoByPhone,
     updateByPhoneNumber,
+    setRCStatus,
+    deleteRC,
   )
 where
 
@@ -48,6 +50,7 @@ import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DrInfo
@@ -274,7 +277,12 @@ enableDriver merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+  mVehicle <- QVehicle.findById personId
+  linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
+
+  when (isNothing mVehicle && null linkedRCs) $
+    throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
+
   CQDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
@@ -567,9 +575,8 @@ unlinkVehicle merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
-    QVehicle.deleteById personId
-    QRCAssociation.endAssociation personId
+  DomainRC.deactivateCurrentRC personId
+  Esq.runTransaction $ QVehicle.deleteById personId
   CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
@@ -728,21 +735,32 @@ unlinkAadhaar merchantShortId driverId = do
 
 ---------------------------------------------------------------------
 endRCAssociation :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-endRCAssociation merchantShortId reqDriverId = do
+endRCAssociation _ _ = do
+  throwError $ InvalidRequest "This API is deprecated please use deleteRC API to delete the RC"
+
+setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
+setRCStatus merchantShortId reqDriverId Common.RCStatusReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
 
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
   driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
-    QRCAssociation.endAssociation personId
-  CQDriverInfo.updateEnabledVerifiedState driverId False False
-  logTagInfo "dashboard -> endRCAssociation : " (show personId)
-  pure Success
+  DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {..})
+
+deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
+deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+
+  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {..})
 
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes

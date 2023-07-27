@@ -53,6 +53,8 @@ type API =
            :<|> Common.UpdateDriverNameAPI
            :<|> Reg.API
            :<|> Common.ClearOnRideStuckDrivers
+           :<|> Common.SetRCStatusAPI
+           :<|> Common.DeleteRCAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -83,6 +85,8 @@ handler merchantId =
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
     :<|> clearOnRideStuckDrivers merchantId
+    :<|> setRCStatus merchantId
+    :<|> deleteRC merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
@@ -160,3 +164,9 @@ updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateD
 
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> FlowHandler Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers
+
+setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
+setRCStatus merchantShortId driverId = withFlowHandlerAPI . DDriver.setRCStatus merchantShortId driverId
+
+deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> FlowHandler APISuccess
+deleteRC merchantShortId driverId = withFlowHandlerAPI . DDriver.deleteRC merchantShortId driverId

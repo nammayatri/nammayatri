@@ -475,6 +475,23 @@ data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RCStatusReq = RCStatusReq
+  { rcNo :: Text,
+    isActivate :: Bool
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+instance HideSecrets RCStatusReq where
+  hideSecrets = identity
+
+newtype DeleteRCReq = DeleteRCReq
+  { rcNo :: Text
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+instance HideSecrets DeleteRCReq where
+  hideSecrets = identity
+
 ---------------------------------------------------------
 -- delete driver ----------------------------------------
 
@@ -513,6 +530,24 @@ type UnlinkAadhaarAPI =
 type EndRCAssociationAPI =
   Capture "driverId" (Id Driver)
     :> "endRCAssociation"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- set rc status -----------------------------------
+
+type SetRCStatusAPI =
+  Capture "driverId" (Id Driver)
+    :> "setRCStatus"
+    :> ReqBody '[JSON] RCStatusReq
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- delete rc -----------------------------------
+
+type DeleteRCAPI =
+  Capture "driverId" (Id Driver)
+    :> "deleteRC"
+    :> ReqBody '[JSON] DeleteRCReq
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

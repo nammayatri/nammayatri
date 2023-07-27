@@ -17,6 +17,7 @@ module Domain.Types.DriverOnboarding.DriverRCAssociation where
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
 
 data DriverRCAssociation = DriverRCAssociation
@@ -27,7 +28,22 @@ data DriverRCAssociation = DriverRCAssociation
     associatedTill :: Maybe UTCTime,
     consent :: Bool,
     consentTimestamp :: UTCTime,
-    isRcActive :: Bool,
-    isDeleted :: Bool
+    isRcActive :: Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+makeRCAssociation :: (MonadFlow m) => Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
+makeRCAssociation driverId rcId end = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DriverRCAssociation
+      { id,
+        driverId,
+        rcId,
+        associatedOn = now,
+        associatedTill = end,
+        consent = True,
+        consentTimestamp = now,
+        isRcActive = False
+      }
