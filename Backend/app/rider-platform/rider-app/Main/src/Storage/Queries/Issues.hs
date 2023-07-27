@@ -20,6 +20,7 @@ import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Utils.Common (getCurrentTime)
 import Storage.Tabular.Issue
 import Storage.Tabular.Person
 
@@ -67,3 +68,31 @@ findAllIssue merchantId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset
+
+updateIssueStatus :: Text -> IssueStatus -> SqlDB ()
+updateIssueStatus ticketId status = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ IssueStatus =. val status,
+        IssueUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. IssueTicketId ==. val (Just ticketId)
+
+updateTicketId :: Id Issue -> Text -> SqlDB ()
+updateTicketId issueId ticketId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ IssueTicketId =. val (Just ticketId),
+        IssueUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. IssueTId ==. val (toKey issueId)
+
+findByTicketId :: Transactionable m => Text -> m (Maybe Issue)
+findByTicketId ticketId = Esq.findOne $ do
+  issueReport <- from $ table @IssueT
+  where_ $ issueReport ^. IssueTicketId ==. val (Just ticketId)
+  return issueReport

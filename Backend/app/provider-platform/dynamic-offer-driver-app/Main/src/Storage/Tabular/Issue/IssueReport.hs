@@ -32,6 +32,7 @@ mkPersist
       optionId IssueOptionTId Maybe
       deleted Bool
       mediaFiles (PostgresList MediaFileTId)
+      ticketId Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

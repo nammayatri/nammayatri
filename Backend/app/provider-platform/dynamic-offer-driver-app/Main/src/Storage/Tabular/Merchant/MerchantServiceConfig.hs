@@ -27,6 +27,7 @@ import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
+import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
@@ -73,6 +74,7 @@ instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> decodeFromText configJSON
       Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> decodeFromText configJSON
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> decodeFromText configJSON
+      Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
@@ -108,3 +110,5 @@ getServiceNameConfigJSON = \case
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, encodeToText cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, encodeToText cfg)
+  Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
+    Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, encodeToText cfg)

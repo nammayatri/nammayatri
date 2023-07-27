@@ -20,6 +20,7 @@ import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.Types
 import Kernel.External.SMS.Types
+import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -39,6 +40,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getDistancesForCancelRide :: MapsService,
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
+    issueTicketService :: IssueTicketService,
     useFraudDetection :: Bool,
     enableDashboardSms :: Bool,
     updatedAt :: UTCTime,

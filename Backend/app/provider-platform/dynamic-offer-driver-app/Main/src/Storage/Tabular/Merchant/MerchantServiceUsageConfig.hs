@@ -25,6 +25,7 @@ import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
+import Kernel.External.Ticket.Types
 import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
@@ -53,6 +54,7 @@ mkPersist
       verificationService VerificationService
       aadhaarVerificationService AadhaarVerificationService
       faceVerificationService VerificationService
+      issueTicketService IssueTicketService
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId

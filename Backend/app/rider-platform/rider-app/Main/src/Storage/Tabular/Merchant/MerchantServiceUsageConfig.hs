@@ -25,6 +25,7 @@ import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS (SmsService)
+import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -51,6 +52,7 @@ mkPersist
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
       enableDashboardSms Bool
+      issueTicketService IssueTicketService
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId

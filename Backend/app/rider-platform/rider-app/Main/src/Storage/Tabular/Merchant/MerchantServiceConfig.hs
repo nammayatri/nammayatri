@@ -27,6 +27,7 @@ import qualified Kernel.External.Maps.Interface as Maps
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
+import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -71,6 +72,7 @@ instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> decodeFromText configJSON
       Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> decodeFromText configJSON
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> decodeFromText configJSON
+      Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
@@ -104,3 +106,5 @@ getServiceNameConfigJSON = \case
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, encodeToText cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, encodeToText cfg)
+  Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
+    Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, encodeToText cfg)

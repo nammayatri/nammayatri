@@ -62,7 +62,7 @@ data IssueReportDriverListItem = IssueReportDriverListItem
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data IssueStatus = NEW | INPROGRESS | RESOLVED
+data IssueStatus = OPEN | PENDING | RESOLVED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

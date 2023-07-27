@@ -42,14 +42,14 @@ issueCategoryList _merchantShortId = do
 
 toDomainIssueStatus :: Common.IssueStatus -> DIR.IssueStatus
 toDomainIssueStatus = \case
-  Common.NEW -> DIR.NEW
-  Common.INPROGRESS -> DIR.INPROGRESS
+  Common.OPEN -> DIR.OPEN
+  Common.PENDING -> DIR.PENDING
   Common.RESOLVED -> DIR.RESOLVED
 
 toCommonIssueStatus :: DIR.IssueStatus -> Common.IssueStatus
 toCommonIssueStatus = \case
-  DIR.NEW -> Common.NEW
-  DIR.INPROGRESS -> Common.INPROGRESS
+  DIR.OPEN -> Common.OPEN
+  DIR.PENDING -> Common.PENDING
   DIR.RESOLVED -> Common.RESOLVED
 
 issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
@@ -178,3 +178,9 @@ issueAddComment _merchantShortId issueReportId req = do
 issueFetchMedia :: ShortId DM.Merchant -> Text -> Flow Text
 issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
+
+ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
+ticketStatusCallBack _ req = do
+  _ <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+  Esq.runNoTransaction $ QIR.updateIssueStatus req.ticketId (toDomainIssueStatus req.status)
+  return Success

@@ -102,3 +102,31 @@ updateOption issueReportId optionId = do
     where_ $
       tbl ^. IssueReportTId ==. val (toKey issueReportId)
         &&. tbl ^. IssueReportDeleted ==. val False
+
+updateIssueStatus :: Text -> IssueStatus -> SqlDB ()
+updateIssueStatus ticketId status = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ IssueReportStatus =. val status,
+        IssueReportUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. IssueReportTicketId ==. val (Just ticketId)
+
+updateTicketId :: Id IssueReport -> Text -> SqlDB ()
+updateTicketId issueId ticketId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ IssueReportTicketId =. val (Just ticketId),
+        IssueReportUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. IssueReportTId ==. val (toKey issueId)
+
+findByTicketId :: Transactionable m => Text -> m (Maybe IssueReport)
+findByTicketId ticketId = Esq.findOne $ do
+  issueReport <- from $ table @IssueReportT
+  where_ $ issueReport ^. IssueReportTicketId ==. val (Just ticketId)
+  return issueReport

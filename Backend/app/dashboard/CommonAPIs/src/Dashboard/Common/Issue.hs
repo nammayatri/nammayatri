@@ -25,6 +25,7 @@ import Servant hiding (Summary)
 data IssueEndpoint
   = IssueUpdateEndpoint
   | IssueAddCommentEndpoint
+  | TicketStatusCallBackEndpoint
   deriving (Show, Read)
 
 derivePersistField "IssueEndpoint"
@@ -80,7 +81,7 @@ data IssueReportListItem = IssueReportListItem
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data IssueStatus = NEW | INPROGRESS | RESOLVED
+data IssueStatus = OPEN | PENDING | RESOLVED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -233,3 +234,22 @@ type IssueFetchMediaAPI =
   "media"
     :> MandatoryQueryParam "filePath" Text
     :> Get '[JSON] Text
+
+---------------------------------------------------------
+-- Ticket Status Call Back --------------------------------------
+
+type TicketStatusCallBackAPI =
+  "kapture"
+    :> "ticketStatus"
+    :> ReqBody '[JSON] TicketStatusCallBackReq
+    :> Post '[JSON] APISuccess
+
+data TicketStatusCallBackReq = TicketStatusCallBackReq
+  { ticketId :: Text,
+    status :: IssueStatus
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets TicketStatusCallBackReq where
+  hideSecrets = identity

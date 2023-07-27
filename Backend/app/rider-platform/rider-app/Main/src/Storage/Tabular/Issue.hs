@@ -27,6 +27,9 @@ import qualified Storage.Tabular.Person as SPerson
 import qualified Storage.Tabular.Quote as SQuote
 
 --FIXME: bookingId SQuote.QuoteTId Maybe
+
+derivePersistField "Domain.IssueStatus"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -37,6 +40,8 @@ mkPersist
       contactEmail Text Maybe
       reason Text
       description Text
+      ticketId Text Maybe
+      status Domain.IssueStatus
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
