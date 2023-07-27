@@ -15,26 +15,57 @@
 module API.RiderPlatform.IssueList where
 
 import qualified "rider-app" API.Dashboard.IssueList as BAP
+import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
+import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 
 type API =
   "issue"
-    :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'LIST_ISSUE
+    :> ( IssueListAPI
+           :<|> TicketStatusCallBackAPI
+       )
+
+type IssueListAPI =
+  ApiAuth 'APP_BACKEND 'CUSTOMERS 'LIST_ISSUE
     :> BAP.ListCustomerIssue
 
+type TicketStatusCallBackAPI =
+  ApiAuth 'APP_BACKEND 'ISSUE 'TICKET_STATUS_CALL_BACK
+    :> BAP.TicketStatusCallBack
+
 handler :: ShortId DM.Merchant -> FlowServer API
-handler = listIssue
+handler merchantId =
+  listIssue merchantId
+    :<|> ticketStatusCallBack merchantId
+
+buildTransaction ::
+  ( MonadFlow m,
+    Common.HideSecrets request
+  ) =>
+  Common.IssueEndpoint ->
+  ApiTokenInfo ->
+  Maybe request ->
+  m DT.Transaction
+buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
 listIssue :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
 listIssue merchantShortId apiTokenInfo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callRiderApp checkedMerchantId (.issues.listIssue) mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
+
+ticketStatusCallBack :: ShortId DM.Merchant -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callRiderApp checkedMerchantId (.issues.ticketStatusCallBack) req

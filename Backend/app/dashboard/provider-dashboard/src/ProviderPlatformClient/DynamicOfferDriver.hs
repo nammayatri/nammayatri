@@ -171,7 +171,8 @@ data IssueAPIs = IssueAPIs
     issueInfo :: Id Issue.IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
     issueUpdate :: Id Issue.IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
     issueAddComment :: Id Issue.IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
-    issueFetchMedia :: Text -> Euler.EulerClient Text
+    issueFetchMedia :: Text -> Euler.EulerClient Text,
+    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }
 
 data SubscriptionAPIs = SubscriptionAPIs
@@ -308,7 +309,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> issueInfo
       :<|> issueUpdate
       :<|> issueAddComment
-      :<|> issueFetchMedia = issueClient
+      :<|> issueFetchMedia
+      :<|> ticketStatusCallBack = issueClient
 
 callDriverOfferBPP ::
   forall m r b c.

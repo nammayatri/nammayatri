@@ -324,6 +324,7 @@ library
       Tools.SignatureAuth
       Tools.SMS
       Tools.Streaming.Kafka
+      Tools.Ticket
       Tools.Whatsapp
   other-modules:
       Paths_rider_app
