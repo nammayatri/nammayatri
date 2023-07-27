@@ -31,7 +31,7 @@ import Kernel.Types.Error
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (Seconds, fromMaybeM)
 
 derivePersistField "ByteString"
 mkPersist
@@ -59,6 +59,7 @@ mkPersist
       signatureExpiry Int
       updatedAt UTCTime
       createdAt UTCTime
+      timeDiffFromUtc Seconds
       Primary id
       UniqueMerchantShortId shortId
       deriving Generic

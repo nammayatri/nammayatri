@@ -18,16 +18,16 @@ module Consumer.BroadcastMessage.Processor
 where
 
 import qualified Data.Map as HM
-import qualified Domain.Types.Message.Message as Types
-import qualified Domain.Types.Message.MessageReport as Types
+import "dynamic-offer-driver-app" Domain.Types.Message.Message as Types
+import "dynamic-offer-driver-app" Domain.Types.Message.MessageReport as Types
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Storage.Queries.Message.MessageReport as MRQuery
-import qualified Storage.Queries.Person as Person
-import Tools.Notifications (sendMessageToDriver)
+import "dynamic-offer-driver-app" Storage.Queries.Message.MessageReport as MRQuery
+import "dynamic-offer-driver-app" Storage.Queries.Person as Person
+import "dynamic-offer-driver-app" Tools.Notifications (sendMessageToDriver)
 
 broadcastMessage :: Types.MessageDict -> Text -> Flow ()
 broadcastMessage messageDict driverId = do

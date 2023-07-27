@@ -43,6 +43,16 @@ findAllByRiderId perId =
     orderBy [desc $ saveReqLocation ^. SavedReqLocationUpdatedAt]
     return saveReqLocation
 
+countAllByRiderId :: Transactionable m => Id Person -> m Int
+countAllByRiderId perId =
+  fromMaybe 0
+    <$> Esq.findOne
+      ( do
+          saveReqLocation <- from $ table @SavedReqLocationT
+          where_ $ saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
+          return (countRows :: SqlExpr (Esq.Value Int))
+      )
+
 deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
 deleteByRiderIdAndTag perId addressTag = do
   Esq.delete $ do
