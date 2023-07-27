@@ -22,6 +22,7 @@ import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Domain.Types.Merchant
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
@@ -34,7 +35,7 @@ import Tools.Error
 
 type AckResp = AckResponse
 
-callBasedEndRide :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => EndRide.ServiceHandle m -> Id Merchant -> DbHash -> Text -> m AckResp
+callBasedEndRide :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasFlowEnv m r '["smsCfg" ::: SmsConfig]) => EndRide.ServiceHandle m -> Id Merchant -> DbHash -> Text -> m AckResp
 callBasedEndRide shandle merchantId mobileNumberHash callFrom = do
   driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)

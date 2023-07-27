@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Tools.SMS as Sms
 
 data RideConfirmEndPoint = ConfirmEndPoint
   deriving (Show, Read)
@@ -54,4 +55,8 @@ handler =
 callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> FlowHandler UC.ConfirmRes
 callConfirm merchantId personId quote mbPaymentMethodId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UC.confirm (personId, m.id) quote mbPaymentMethodId
+  res <- UC.confirm (personId, m.id) quote mbPaymentMethodId
+  withFlowHandlerAPI $ do
+    fork "sending Booking confirmed dasboard sms" $ do
+      Sms.sendBookingOTPMessage m.id personId res.bookingId
+  return res

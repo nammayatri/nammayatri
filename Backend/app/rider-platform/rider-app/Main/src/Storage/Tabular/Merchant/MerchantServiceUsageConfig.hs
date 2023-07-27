@@ -50,6 +50,7 @@ mkPersist
       useFraudDetection Bool
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
+      enableDashboardSms Bool
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId
