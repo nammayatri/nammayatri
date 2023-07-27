@@ -526,5 +526,16 @@ const bengaliStrings = {
   TYPE : "টাইপ",
   MODEL_NAME : "মডেলের নাম",
   COLOUR : "রঙ",
-  BADGE: "ব্যাজ"
+  BADGE: "ব্যাজ",
+  SUMMARY : "Summary",
+  EARNED_ON_ : "Earned On",
+  NAMMA_BONUS  : "Namma Bonus",
+  TRIPS_COMPLETED : "Trip Compleyed",
+  LATE_NATE_TRIPS  : "Late night trips",
+  ABOUT_ME  : "About me",
+  ABOUT_VEHICLE : "About vehicle",
+  ADD : "Add",
+  TRAVELLED_ON  : "Travelled On",
+  YEARS_OLD  : "years Old",
+  HOMETOWN  : "Home Town"
 }

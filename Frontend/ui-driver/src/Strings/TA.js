@@ -524,5 +524,16 @@ const tamilStrings = {
   TYPE : "வகை",
   MODEL_NAME : "மாடல் பெயர்",
   COLOUR : "நிறம்",
-  BADGE: "பேட்ஜ்கள்"
+  BADGE: "பேட்ஜ்கள்",
+  SUMMARY : "Summary",
+  EARNED_ON_ : "Earned On",
+  NAMMA_BONUS  : "Namma Bonus",
+  TRIPS_COMPLETED : "Trip Compleyed",
+  LATE_NATE_TRIPS  : "Late night trips",
+  ABOUT_ME  : "About me",
+  ABOUT_VEHICLE : "About vehicle",
+  ADD : "Add",
+  TRAVELLED_ON  : "Travelled On",
+  YEARS_OLD  : "years Old",
+  HOMETOWN  : "Home Town"
 }

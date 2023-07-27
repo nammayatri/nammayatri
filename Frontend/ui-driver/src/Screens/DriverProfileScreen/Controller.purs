@@ -22,13 +22,13 @@ import JBridge (firebaseLogEvent, goBackPrevWebPage, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not)
+import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (>=))
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
-import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..))
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..))
 import Services.API (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
@@ -47,6 +47,7 @@ import Data.String.CodeUnits (charAt)
 import Screens.Types as ST
 import Components.CheckListView as CheckList
 import Common.Types.App (CheckBoxOptions)
+import Data.Int (fromString)
 import Data.Array (filter)
 
 instance showAction :: Show Action where
@@ -139,11 +140,12 @@ data Action = BackPressed Boolean
             | ChangeScreen DriverProfileScreenType
             | GenericHeaderAC GenericHeaderController.Action
             | PrimaryEditTextAC PrimaryEditTextController.Action
-            | UpdateValue String
+            | UpdateValue UpdateType
             | DriverGenericHeaderAC GenericHeaderController.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | PrimaryEditTextActionController PrimaryEditText.Action 
             | InAppKeyboardModalOtp InAppKeyboardModal.Action
+            | UpdateValueAC PrimaryButton.Action 
             | OpenSettings 
             | SelectGender
             | UpdateAlternateNumber
@@ -158,6 +160,12 @@ eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverPro
 
 eval AfterRender state = continue state
 
+eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = do
+  case state.props.detailsUpdationType of 
+    Just AUTO_AGE -> continue state{props{btnActive = (length val >= 1)}, data{autoAge = (fromMaybe 0 (fromString val))}}
+    Just AUTO_NAME -> continue state{props{btnActive = (length val >= 3)}, data{autoName = val}}
+    _ -> continue state
+
 eval (BackPressed flag) state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
@@ -169,7 +177,8 @@ eval (BackPressed flag) state = if state.props.logoutModalView then continue $ s
                                   pure NoAction
                                 ]
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
-                                
+                                else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
+                                else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
                                 else exit GoBack
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
@@ -183,6 +192,13 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    _ -> continue state
+
+eval (UpdateValue value) state = do 
+  case value of 
+    LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}}
+    AUTO_AGE -> continue state {props{ detailsUpdationType = Just AUTO_AGE}}
+    AUTO_NAME -> continue state{props {detailsUpdationType = Just AUTO_NAME}}
     _ -> continue state
 
 eval (OptionClick optionIndex) state = do
@@ -227,9 +243,13 @@ eval (ChangeScreen screenType) state = continue state{props{ screenType = screen
 
 eval OpenSettings state = continue state{props{openSettings = true}}
 
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { openSettings = false }}
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do 
+  if state.props.updateLanguages then continue state{props{updateLanguages = false}}
+  else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
+  else continue state{ props { openSettings = false }}
 
 eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = continue state {props{showGenderView=false, alternateNumberView=false}}
+
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   if state.props.alternateNumberView then do
@@ -309,6 +329,11 @@ eval (LanguageSelection (CheckList.ChangeCheckBoxSate item)) state = do
 eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   let languagesSelected = getSelectedLanguages state
   continue state
+
+eval (UpdateValueAC (PrimaryButton.OnClick)) state = do 
+  if (state.props.detailsUpdationType == Just AUTO_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
+    else if (state.props.detailsUpdationType == Just AUTO_NAME) then continue state{props{detailsUpdationType = Nothing}} -- update name 
+    else continue state
 
 eval _ state = continue state
 

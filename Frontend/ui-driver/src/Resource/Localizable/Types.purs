@@ -534,6 +534,20 @@ data STR = LETS_GET_STARTED
         | MODEL_NAME
         | COLOUR
         | BADGES
+        | CANCELLATION_RATE
+        | RIDES_CANCELLED 
+        | EARNINGS_MISSED
+        | SUMMARY
+        | EARNED_ON_
+        | NAMMA_BONUS 
+        | TRIPS_COMPLETED
+        | LATE_NATE_TRIPS 
+        | ABOUT_ME 
+        | ABOUT_VEHICLE
+        | ADD
+        | TRAVELLED_ON 
+        | YEARS_OLD 
+        | HOMETOWN 
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1058,3 +1072,17 @@ getStringFromEnum key = case key of
     MODEL_NAME -> "MODEL_NAME"
     COLOUR -> "COLOUR"
     BADGES -> "BADGES"
+    CANCELLATION_RATE -> "CANCELLATION_RATE"
+    RIDES_CANCELLED  -> "RIDES_CANCELLED"
+    EARNINGS_MISSED -> "EARNINGS_MISSED" 
+    SUMMARY -> "SUMMARY"
+    EARNED_ON_ -> "EARNED_ON_"
+    NAMMA_BONUS  -> "NAMMA_BONUS"
+    TRIPS_COMPLETED -> "TRIPS_COMPLETED"
+    LATE_NATE_TRIPS  -> "LATE_NATE_TRIPS"
+    ABOUT_ME  -> "ABOUT_ME"
+    ABOUT_VEHICLE -> "ABOUT_VEHICLE"
+    ADD -> "ADD"
+    TRAVELLED_ON  -> "TRAVELLED_ON"
+    YEARS_OLD  -> "YEARS_OLD"
+    HOMETOWN  -> "HOMETOWN"
