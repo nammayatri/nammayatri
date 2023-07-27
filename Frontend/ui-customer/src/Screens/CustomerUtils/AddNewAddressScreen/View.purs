@@ -75,8 +75,8 @@ view push state =
   , afterRender
     (\action -> do
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
-          _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
-          _ <- HU.setText' (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
+          pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
+          pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
           _ <- runEffectFn5 JB.locateOnMap true 0.0 0.0 "" []
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
@@ -281,7 +281,7 @@ addNewScreenView state push =
           , onClick
             (\action -> do
                   _ <- push action
-                  _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") ("")
+                  _ <- pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") ("")
                   pure unit
                   ) (const $ ClearEditText)
           , visibility if state.data.address /= ""  then VISIBLE else GONE
@@ -480,7 +480,7 @@ savePlaceView state push =
           , gravity CENTER_VERTICAL
           , onClick (\action -> do
                           _ <- push action
-                          _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
+                          _ <- pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
                           pure unit)
               $ const ChangeAddress
           ][  textView $ 
@@ -491,7 +491,7 @@ savePlaceView state push =
               , padding (PaddingRight 8)
               , maxLines 1
               , ellipsize true 
-              , width $ V (4 * (EHC.screenWidth unit / 5) - (if EHC.os == "IOS" then 75 else 50))
+              , if EHC.os == "IOS" then  width $ V (4 * (EHC.screenWidth unit / 5) - 75) else weight 1.0
               ] <> FontStyle.body1 LanguageStyle
             , linearLayout([
               height WRAP_CONTENT

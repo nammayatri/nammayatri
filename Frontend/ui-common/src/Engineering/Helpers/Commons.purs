@@ -21,7 +21,7 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..))
+import Common.Types.App (Version(..), DateObj)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Int as INT
@@ -53,7 +53,7 @@ import Data.Int as INT
 import Data.Array ((!!))
 import Data.Number.Format as Number
 import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (Fn1(..), runFn2)
 
 foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
 showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
@@ -72,15 +72,15 @@ foreign import safeMarginTopImpl :: Unit -> Int
 foreign import safeMarginBottomImpl :: Unit -> Int
 foreign import getNewIDWithTag :: String -> String
 foreign import getOs :: Unit -> String
-foreign import setTextImpl :: String -> String -> Effect Unit
-setText' :: String -> String -> Effect Unit
-setText' = setTextImpl
+foreign import setText :: String -> String -> Unit
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
 foreign import getCurrentTimeStamp :: Unit -> Number
+foreign import getDateFromObj :: Fn1 DateObj String
+foreign import getFormattedDate :: Fn1 DateObj String
 
 os :: String
 os = getOs unit

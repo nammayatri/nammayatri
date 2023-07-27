@@ -20,7 +20,7 @@ import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
 import Components.PrimaryEditText.Controller (Action(..), Config)
-import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable)
+import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat)
 import Font.Style as FontStyle
 import Common.Types.App
 
@@ -115,8 +115,12 @@ editTextView push config =
                           "number" -> [inputType Numeric]
                           "password" -> [inputType Password]
                           _    -> []) 
-  <> if config.editText.capsLock then [inputTypeI 4097] else []
-  <> if not config.editText.enabled then if os == "IOS" then [clickable false] else [inputTypeI 0] else[]
+  <> (if config.editText.capsLock then [inputTypeI 4097] else [])
+  <> (if not config.editText.enabled then if os == "IOS" then [clickable false] else [inputTypeI 0] else[])
+  <> (if config.editText.separator == "" then [] else [
+    separator config.editText.separator
+  , separatorRepeat config.editText.separatorRepeat
+  ])
 
 errorLabelLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
 errorLabelLayout config =

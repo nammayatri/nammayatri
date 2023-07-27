@@ -1051,9 +1051,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
             case IMAGE_CAPTURE_REQ_CODE:
+                isUploadPopupOpen = false;
                 if (resultCode == RESULT_OK) {
                     if (bridgeComponents.getActivity() != null) {
-                        isUploadPopupOpen = false;
                         Utils.captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
                     }
                 }
@@ -1094,7 +1094,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 break;
             case REQUEST_CALL:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showDialer(phoneNumber);
+                    showDialer(phoneNumber, false);
                 } else {
                     toast("Permission Denied");
                 }

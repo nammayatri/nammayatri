@@ -5,7 +5,6 @@ import Prelude ((==))
 import Data.Maybe (Maybe(..), fromMaybe)
 import JBridge (getSuggestionfromKey, getSuggestionsfromLocal)
 
-suggestionsDefinitions ∷ String -> SuggestionDefinitions
 suggestionsDefinitions dummy = [
   {key : "cis1AP", value : {en_us : "At pick-up, Where are you ?", ta_in : "பிக்-அப்பில் உள்ளேன், நீங்க?", kn_in : "ಪಿಕ್-ಅಪ್‌ನಲ್ಲಿದ್ದೇನೆ  ನೀವು ಎಲ್ಲಿದ್ದೀರಿ?", hi_in : "मैं लोकेशन पे हूं , आप कहा हो ?", ml_in : "ഞാൻ പിക്ക്-അപ്പിൽ ആണ്, താങ്കൾ എവിടെ?", bn_in : "আমি পিক-আপ স্থানে আছি, আপনি কোথায়?"}},
   {key : "cis2AP", value : {en_us : "Reaching shortly", ta_in : "விரைவில் வருகிறேன்", kn_in : "ಶೀಘ್ರದಲ್ಲೇ ತಲುಪುತ್ತೇನೆ", hi_in : "मैं थोड़ी देर में पहुँच रहा हूँ ", ml_in : "ഉടൻ എത്തും", bn_in : "আমি শীঘ্রই পৌঁছাচ্ছি" }},

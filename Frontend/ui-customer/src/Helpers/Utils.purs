@@ -52,7 +52,7 @@ import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
-import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
@@ -61,7 +61,7 @@ import JBridge (emitJOSEvent)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import MerchantConfig.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
@@ -191,7 +191,7 @@ otpRule =
   Reader.OtpRule
     { matches:
         { sender: []
-        , message : "is your OTP for login to Namma Yatri App"
+        , message : (getValueFromConfig "OTP_MESSAGE_REGEX")
         }
     , otp: "\\d{4}"
     , group: Nothing
@@ -351,10 +351,10 @@ getPreviousVersion _ =
   if os == "IOS" then
     case getMerchant FunctionCall of
       NAMMAYATRI -> "1.2.5"
-      JATRISAATHI -> "0.0.0"
+      YATRISATHI -> "0.0.0"
       _ -> "1.0.0"
     else case getMerchant FunctionCall of
-        JATRISAATHI -> "0.0.0"
+        YATRISATHI -> "0.0.0"
         _ -> "0.0.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
@@ -382,7 +382,7 @@ sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 getAssetStoreLink :: LazyCheck -> String
 getAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
+  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
@@ -391,7 +391,7 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
@@ -400,7 +400,7 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
+  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/"

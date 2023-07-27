@@ -108,7 +108,7 @@ config =
   , logs : ["JUSPAY", "FIREBASE"]
   , showCorporateAddress : false
   , terminateBtnConfig : {
-          visibility: true, 
+          visibility: false, 
           title : "Paytm",
           imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
       }

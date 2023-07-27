@@ -1,6 +1,9 @@
 package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.content.Context.MODE_PRIVATE;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -64,11 +67,12 @@ import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import android.widget.HorizontalScrollView;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.location.LocationManagerCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -1022,7 +1026,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // region Shared Preference Utils
     @JavascriptInterface
     public void setKeysInSharedPrefs(String key, String value) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         sharedPref.edit().putString(key, value).apply();
         if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
             updateLocaleResource(value, bridgeComponents.getContext());
@@ -1031,7 +1035,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public String getKeysInSharedPref(String key) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         return sharedPref.getString(key, "__failed");
     }
 
@@ -1349,14 +1353,13 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void showDialer(String phoneNum) {
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_DIAL);
-        phoneNumber = phoneNum;
-        if (phoneNum != null) {
-            phoneNumber = "tel:" + phoneNum;
-            intent.setData(Uri.parse(phoneNumber));
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    public void showDialer(String phoneNum, boolean call) {
+        Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setData(Uri.parse("tel:" + phoneNum));
+        if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+        } else {
             bridgeComponents.getContext().startActivity(intent);
         }
     }
@@ -1709,6 +1712,18 @@ public class MobilityCommonBridge extends HyperBridge {
         return file;
     }
 
+    protected boolean checkAndAskStoragePermission (){
+        if (Build.VERSION.SDK_INT < 30) {
+            if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
+                return false;
+            } else {
+                return true;
+            }
+        }
+        return true;
+    }
+
     public ImageView.ScaleType getScaleTypes(String scale) {
         switch (scale) {
             case "MATRIX":
@@ -1774,6 +1789,33 @@ public class MobilityCommonBridge extends HyperBridge {
         Configuration configuration = context.getResources().getConfiguration();
         configuration.setLocale(locale);
         context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
+        
+    @JavascriptInterface
+    public void horizontalScrollToPos(final String id, final String childId, final int focus) {
+        if (bridgeComponents.getActivity() != null) {
+            Activity activity = bridgeComponents.getActivity();
+            HorizontalScrollView scrollView = activity.findViewById(Integer.parseInt(id));
+            View child = activity.findViewById(Integer.parseInt(childId));
+            int x = 0;
+            int y = 0;
+           if (child != null) {
+                x = child.getLeft();
+                y = child.getTop();
+            }
+           if (scrollView != null) {
+                if (x ==0 && y == 0) {
+                scrollView.fullScroll(focus);
+                } else {
+                scrollView.scrollTo(x, y);
+                }
+           }
+        }
+    }
+
+    @JavascriptInterface
+    public void clearStorageFile(String fileName){
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(fileName,MODE_PRIVATE);
+        sharedPref.edit().clear().apply();
     }
     // endregion
 

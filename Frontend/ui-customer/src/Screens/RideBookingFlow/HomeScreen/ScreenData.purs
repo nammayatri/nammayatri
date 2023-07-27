@@ -15,6 +15,7 @@
 
 module Screens.HomeScreen.ScreenData where
 
+import Common.Types.App (RateCardType(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
@@ -122,6 +123,7 @@ initData = {
     , estimateId : ""
     , selectedQuote : Nothing
     , locationRequestCount : 0
+    , zoneTimerExpired : false
     , customerTip : {
         enableTips: false
       , tipForDriver: 10
@@ -279,6 +281,7 @@ dummyDriverInfo =
   , createdAt : ""
   , initDistance : Nothing
   , config : DC.config
+  , vehicleVariant : ""
   }
 
 dummySettingBar :: SettingSideBarState

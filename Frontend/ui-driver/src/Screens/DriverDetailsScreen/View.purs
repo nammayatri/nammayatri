@@ -70,7 +70,9 @@ view push state =
   relativeLayout
   [height MATCH_PARENT
     , width MATCH_PARENT
-    , orientation VERTICAL]
+    , orientation VERTICAL
+    , background Color.white900
+    ]
   ([ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT

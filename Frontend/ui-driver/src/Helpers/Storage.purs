@@ -85,6 +85,8 @@ data KeyStore = USER_NAME
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY
                 | NEGOTIATION_UNIT
+                | SHOW_PAYMENT_MODAL
+                | PAYMENT_STATUS_POOLING
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

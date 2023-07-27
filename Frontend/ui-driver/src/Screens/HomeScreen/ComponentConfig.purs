@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
-import Prelude(unit, show, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
+import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -27,7 +27,6 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
-import Components.ChatView as ChatView
 import Components.RequestInfoCard as RequestInfoCard
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -35,7 +34,7 @@ import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday)
 import Helpers.Utils as HU
 import Language.Types (STR(..))
 import Prelude ((<>))
@@ -44,10 +43,13 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
+import Components.MakePaymentModal as MakePaymentModal
+import Components.RateCard as RateCard
+import Common.Types.App as CommonTypes
+import Services.APITypes ( PaymentBreakUp(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 
-
+import Styles.Colors as Color
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -153,6 +155,39 @@ genderBannerConfig state =
         isBanner = true
       }
   in config'
+
+------------------------------------ linkAadhaarPopupConfig -----------------------------
+linkAadhaarPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+linkAadhaarPopupConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    primaryText {
+      text = (getString AADHAAR_LINKING_REQUIRED)
+    , margin = Margin 16 24 16 4 },
+    secondaryText {
+      text = (getString AADHAAR_LINKING_REQUIRED_DESCRIPTION)
+    , margin = MarginBottom 24},
+    option1 {
+      text = (getString LINK_AADHAAR_ID)
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
+    , visibility = VISIBLE
+    , height = V 178
+    , width = V 204
+    }
+  }
+  in popUpConfig'
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
 cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -361,3 +396,101 @@ requestInfoCardConfig _ = let
     }
   }
   in requestInfoCardConfig'
+
+makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
+makePaymentState state = {
+  title : getString GREAT_JOB,
+  description : getDescription state,
+  description2 : ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                        "HI_IN" -> "यात्री साथी का उपयोग जारी रखने के लिए, कृपया "<> state.data.paymentState.date <>" के लिए अपना भुगतान पूरा करें"
+                        "KN_IN" -> "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು "<> state.data.paymentState.date <> " ಕ್ಕೆ ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
+                        "TA_IN" -> "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, "<> state.data.paymentState.date <> " க்கு உங்கள் கட்டணத்தைச் செலுத்தவும்"
+                        "BN_IN" -> "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে " <> state.data.paymentState.date <> " -এর জন্য আপনার অর্থপ্রদান সম্পূর্ণ করুন"
+                        _       -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                     ),
+  okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
+                        "HI_IN" -> "अभी ₹" <> (show state.data.paymentState.payableAndGST) <>" का भुगतान करें"
+                        "KN_IN" -> "ಈಗ ₹"<> (show state.data.paymentState.payableAndGST)<>" ಪಾವತಿಸಿ"
+                        "TA_IN" -> "இப்போது ₹" <> (show state.data.paymentState.payableAndGST) <> " செலுத்துங்கள்"
+                        "BN_IN" -> "এখন " <> (show state.data.paymentState.payableAndGST) <> " পে করুন"
+                        _       -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
+                     ),
+  cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")) then Nothing else Just $ getString LATER,
+  ridesCount : state.data.paymentState.rideCount,
+  feeItem : [
+    { feeType : MakePaymentModal.TOTAL_COLLECTED,
+      title : getString TOTAL_MONEY_COLLECTED,
+      val : state.data.paymentState.totalMoneyCollected},
+    { feeType : MakePaymentModal.EARNED_OF_THE_DAY,
+      title : getString FARE_EARNED_OF_THE_DAY,
+      val : (state.data.paymentState.totalMoneyCollected - state.data.paymentState.payableAndGST)},
+    { feeType : MakePaymentModal.GST_PAYABLE,
+      title : getString GST_PLUS_PAYABLE,
+      val : state.data.paymentState.payableAndGST}
+  ]
+}
+
+getDescription :: ST.HomeScreenState -> String
+getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> case (isYesterday state.data.paymentState.dateObj) of
+                                  true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides</b> yesterday!"))
+                                  false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on " else " Rides</b> on ") <> state.data.paymentState.date))
+                        "HI_IN" -> if (isYesterday state.data.paymentState.dateObj) then "आपने कल <b>"<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!" else 
+                                    "आपने " <> state.data.paymentState.date <>  " को "<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!"
+                        "BN_IN" -> if (isYesterday state.data.paymentState.dateObj) then "আপনি গতকাল "<> (show state.data.paymentState.rideCount) <>"টি রাইড সম্পূর্ণ করেছেন" else 
+                                    "আপনি " <> state.data.paymentState.date <>" তারিখে " <> (show state.data.paymentState.rideCount) <> "টি রাইড সম্পূর্ণ করেছেন"
+                        "TA_IN" -> "நீங்கள் நேற்று "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
+                        "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
+                        _       -> case (isYesterday state.data.paymentState.dateObj) of
+                                    true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides yesterday!"))
+                                    false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on" else " Rides on") <> state.data.paymentState.date))
+
+rateCardState :: ST.HomeScreenState -> RateCard.Config
+rateCardState state =
+  let
+    config' = RateCard.config
+    rateCardConfig' =
+      config'
+        { title = getString FEE_BREAKUP
+        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE <> " " <> state.data.paymentState.date
+        , buttonText = Nothing
+        , currentRateCardType = CommonTypes.PaymentFareBreakup
+        , primaryButtonText = getString GOT_IT
+        , additionalStrings = [
+          {key : "FEE_CORRESPONDING_TO_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
+          {key : "GOT_IT", val : getString GOT_IT},
+          {key : "TOTAL_PAYABLE", val : getString TOTAL_PAYABLE},
+          {key : "TOTAL_PAYABLE_VAL", val : "₹" <> (show state.data.paymentState.payableAndGST)}]
+          
+        , fareList = getChargesBreakup state.data.paymentState.chargesBreakup
+
+        }
+  in
+    rateCardConfig'
+
+paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
+paymentStatusConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = state.data.paymentState.bannerBG,
+        title = state.data.paymentState.bannerTitle,
+        titleColor = state.data.paymentState.bannerTitleColor,
+        actionText = state.data.paymentState.banneActionText,
+        actionTextColor = state.data.paymentState.actionTextColor,
+        imageUrl = state.data.paymentState.bannerImage,
+        isBanner = true
+      }
+  in config'
+
+
+getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
+getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
+  key : case item.component of
+        "Government Charges" -> getString GOVERMENT_CHARGES
+        "Platform Fee" -> getString PLATFORM_FEE
+        _ -> item.component
+    } ) paymentBreakUpArr

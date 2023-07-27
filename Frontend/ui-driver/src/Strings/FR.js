@@ -467,5 +467,8 @@ const frenchStrings = {
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL: "Website : <u> https://nammayatriin/ </u>",
   NEW_: "Nouvelle",
   WITH: "avec",
-  CHOOSE_LANGUAGE: "Choisissez la langue"
+  CHOOSE_LANGUAGE: "Choisissez la langue",
+  TODAY : "আজ",
+  AADHAAR_ALREADY_LINKED : "déjà lié",
+  OPTIONAL : " (Facultatif)"
 }

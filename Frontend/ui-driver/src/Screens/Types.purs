@@ -15,19 +15,22 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App as Common
+import Components.ChatView.Controller as ChatView
+import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
-import Data.Generic.Rep (class Generic)
+import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
-import Data.Show.Generic (genericShow)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
+import Data.Show.Generic (genericShow)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import PrestoDOM (Visibility, LetterSpacing)
-import Services.API (Route, Status, MediaType)
+import PrestoDOM (LetterSpacing, Visibility, visibility)
+import Services.API (Route, Status, MediaType, PaymentBreakUp)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
@@ -377,7 +380,22 @@ type RideHistoryScreenState =
     loadMoreDisabled :: Boolean,
     recievedResponse :: Boolean,
     logField :: Object Foreign
+  , datePickerState :: DatePickerState
+  , props :: RideHistoryScreenStateProps
+  , data :: RideHistoryScreenStateData
   }
+type DatePickerState = {
+  activeIndex :: Int
+, selectedItem :: Common.DateObj
+}
+type RideHistoryScreenStateProps = {
+    showDatePicker :: Boolean
+ , showPaymentHistory :: Boolean
+}
+type RideHistoryScreenStateData = {
+    pastDays :: Int
+  , paymentHistory :: PaymentHistoryModelState
+}
 
 type RideSelectionScreenState =
   {
@@ -614,8 +632,32 @@ type HomeScreenData =  {
   suggestionsList :: Array String,
   messageToBeSent :: String,
   driverAlternateMobile :: Maybe String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  paymentState :: PaymentState
  }
+
+type PaymentState = {
+  rideCount :: Int,
+  totalMoneyCollected :: Int,
+  payableAndGST :: Int,
+  platFromFee :: Int,
+  date :: String,
+  makePaymentModal :: Boolean,
+  showRateCard :: Boolean,
+  paymentStatusBanner :: Boolean,
+  paymentStatus :: Common.PaymentStatus,
+  driverFeeId :: String,
+  bannerBG :: String,
+  bannerTitle :: String,
+  bannerTitleColor :: String,
+  banneActionText :: String,
+  actionTextColor :: String,
+  bannerImage :: String,
+  showBannerImage :: Boolean,
+  chargesBreakup :: Array PaymentBreakUp,
+  blockedDueToPayment :: Boolean,
+  dateObj :: String
+}
 
 type CancelRidePopUpData = {
   delayInSeconds :: Int,
@@ -625,7 +667,7 @@ type CancelRidePopUpData = {
 }
 
 type CancelRideModalData = {
-  selectionOptions :: Array OptionButtonList,
+  selectionOptions :: Array Common.OptionButtonList,
   activeIndex ::Maybe Int,
   selectedReasonCode :: String,
   selectedReasonDescription :: String,
@@ -634,7 +676,7 @@ type CancelRideModalData = {
 }
 
 type GenderSelectionModalData = {
-  selectionOptions :: Array OptionButtonList,
+  selectionOptions :: Array Common.OptionButtonList,
   activeIndex ::Maybe Int,
   selectedReasonCode :: String,
   selectedReasonDescription :: String,
@@ -705,7 +747,8 @@ type HomeScreenProps =  {
   zoneRideBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
-  showBonusInfo :: Boolean
+  showBonusInfo :: Boolean,
+  showlinkAadhaarPopup :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
@@ -1248,4 +1291,66 @@ type RankCardData = {
   , profileUrl :: Maybe String
   , rank :: Int
   , rides :: Int
+}
+type AcknowledgementScreenState = {
+  data :: AcknowledgementScreenData,
+  props :: AcknowledgementScreenProps
+}
+
+type AcknowledgementScreenData = {
+  illustrationAsset :: String,
+  title :: Maybe String,
+  description ::Maybe String,
+  primaryButtonText :: Maybe String,
+  orderId  :: Maybe String,
+  amount :: String
+}
+
+type AcknowledgementScreenProps = {
+  primaryButtonVisibility :: Visibility,
+  paymentStatus :: Common.PaymentStatus,
+  illustrationType :: IllustrationType
+}
+
+data IllustrationType = Image | Lottie
+
+derive instance genericIllustrationType:: Generic IllustrationType _
+instance showIllustrationType :: Show IllustrationType where show = genericShow
+instance eqIllustrationType :: Eq IllustrationType where eq = genericEq
+
+type PaymentHistoryModelState = {
+  paymentHistoryList :: Array PaymentHistoryListItem.Config
+}
+--------------------------------------------------------------- AadhaarVerificationScreenState -----------------------------------------------------------------------------
+type AadhaarVerificationScreenState = {
+  data :: EnterAadhaarNumberScreenStateData,
+  props :: EnterAadhaarNumberScreenStateProps
+}
+
+type EnterAadhaarNumberScreenStateData = {
+    aadhaarNumber :: String
+  , timer :: String
+  , otp :: String
+  , driverName :: String
+  , driverGender :: String
+  , driverDob :: String
+}
+
+type EnterAadhaarNumberScreenStateProps = {
+  btnActive :: Boolean
+, isValid :: Boolean
+, resendEnabled :: Boolean
+, currentStage :: AadhaarStage
+, showErrorAadhaar :: Boolean
+, fromHomeScreen :: Boolean
+, showLogoutPopup :: Boolean
+}
+
+data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
+
+derive instance genericAadhaarStage :: Generic AadhaarStage _
+instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+type GlobalProps = {
+  aadhaarVerificationRequired :: Boolean
 }

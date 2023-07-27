@@ -17,13 +17,14 @@ module Screens.HomeScreen.View where
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
 import Types.App (defaultGlobalState)
 import Components.BottomNavBar as BottomNavBar
 import Components.SelectListModal as SelectListModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
+import Components.MakePaymentModal as MakePaymentModal
 import Components.StatsModel as StatsModel
 import Components.ChatView as ChatView
 import Components.RequestInfoCard as RequestInfoCard
@@ -57,7 +58,7 @@ import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, Screen
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..))
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -77,6 +78,7 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
+import Components.RateCard as RateCard
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -90,7 +92,7 @@ screen initialState =
           _ <- HU.storeCallBackTime push TimeUpdate
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null"
+              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
                 Nothing -> setValueToLocalStore IS_RIDE_ACTIVE "false"
@@ -121,7 +123,7 @@ screen initialState =
                                 else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -143,7 +145,7 @@ screen initialState =
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
             "ChatWithCustomer" -> do
@@ -159,6 +161,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
+                                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.driverFeeId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
           pure $ pure unit
         )
@@ -193,8 +196,9 @@ view push state =
           driverMapsHeaderView push state
         , rideActionModelView push state
         ]
-      , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]
+      -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
+      , if state.data.paymentState.makePaymentModal then makePaymentModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
@@ -202,6 +206,7 @@ view push state =
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
+      , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -228,7 +233,7 @@ driverMapsHeaderView push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           ][  googleMap state
-            , if state.props.driverStatusSet == Offline then offlineView push state else dummyTextView
+            , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
             , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -256,10 +261,46 @@ driverMapsHeaderView push state =
               ]
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
+            , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
             ]
         ]
         , bottomNavBar push state
   ]
+
+rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rateCardView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ RateCard.view (push <<< RateCardAC) (rateCardState state) ]
+
+paymentStatusBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+paymentStatusBanner state push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 10 10 10 10
+    , gravity BOTTOM
+    ][  linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , gravity RIGHT
+        ][ imageView
+            [ height $ V 24
+            , width $ V 24
+            , gravity RIGHT
+            , margin $ MarginRight 4
+            , onClick push $ const RemovePaymentBanner
+            , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
+            , visibility if state.data.paymentState.blockedDueToPayment then GONE else VISIBLE
+            ]
+          , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
+        ]
+    ]
+
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 alternateNumberOrOTPView state push =
@@ -322,7 +363,7 @@ otpButtonView state push =
     , margin $ MarginLeft 8
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
-    ][ imageView 
+    ][ imageView
         [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
@@ -346,6 +387,13 @@ cancelConfirmation push state =
   , width MATCH_PARENT
   , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalCancelConfirmationAction) (cancelConfirmationConfig state )]
+
+linkAadhaarPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+linkAadhaarPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< LinkAadhaarPopupAC) (linkAadhaarPopupConfig state )]
 
 googleMap :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
 googleMap state =
@@ -502,7 +550,7 @@ driverDetail push state =
          [ width $ V 42
          , height $ V 42
          , onClick push $ const GoToProfile
-         , imageWithFallback "ic_new_avatar,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png"
+         , imageWithFallback $ "ny_ic_new_avatar," <> (if (MU.getMerchant FunctionCall == MU.YATRISATHI) then "https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_new_avatar.png" else "https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png")
          ]
       ]
     , linearLayout
@@ -769,6 +817,10 @@ showOfflineStatus push state =
       ]
   ]
 
+makePaymentModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+makePaymentModal push state = MakePaymentModal.view (push <<< MakePaymentModalAC) (makePaymentState state)
+
+
 goOfflineModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 goOfflineModal push state =
   linearLayout
@@ -887,14 +939,17 @@ addAlternateNumber push state =
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback $ "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
+      , imageWithFallback if state.props.showlinkAadhaarPopup then
+                            "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
+                          else
+                            "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
       , margin (MarginRight 5)
-      ] 
+      ]
     , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER
-      , text (getString ADD_ALTERNATE_NUMBER)
+      , text $ getString if state.props.showlinkAadhaarPopup then ENTER_AADHAAR_DETAILS else ADD_ALTERNATE_NUMBER
       , color Color.black900
       ] <> FontStyle.paragraphText TypoGraphy
    ]
@@ -1030,7 +1085,7 @@ enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAc
 rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 rideStatusPolling pollingId duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && (DA.any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithCustomer]) then do
-    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
+    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
     _ <- pure $ spy "polling inside rideStatusPolling function" activeRideResponse
     case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
@@ -1048,7 +1103,7 @@ rideStatusPolling pollingId duration state push action = do
 rideRequestPolling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 rideRequestPolling pollingId count duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && isLocalStageOn RideRequested then do
-    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
+    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
     _ <- pure $ spy "polling inside rideRequestPolling function" activeRideResponse
     case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
@@ -1063,9 +1118,25 @@ rideRequestPolling pollingId count duration state push action = do
       Left err -> pure unit
     else pure unit
 
+paymentStatusPooling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
+paymentStatusPooling orderId count delayDuration state push action = do
+  if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && isLocalStageOn HomeScreen && count > 0 && orderId /= "" then do
+    orderStatus <- Remote.paymentOrderStatus orderId
+    _ <- pure $ spy "polling inside paymentStatusPooling function" orderStatus
+    case orderStatus of
+      Right (OrderStatusRes resp) -> do
+        if (DA.any (_ == resp.status) [CHARGED, AUTHORIZATION_FAILED, AUTHENTICATION_FAILED, JUSPAY_DECLINED]) then do
+            _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
+            doAff do liftEffect $ push $ action resp.status
+        else do
+            void $ delay $ Milliseconds delayDuration
+            paymentStatusPooling orderId (count - 1) delayDuration state push action
+      Left err -> pure unit
+    else pure unit
+
 checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 checkCurrentRide push action = do
-  activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
+  activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
   case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
         if (DA.null rideList.list) then

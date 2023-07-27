@@ -245,6 +245,7 @@ mapOptionsView push state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
+      , margin $ MarginVertical 5 5
       ][ supportButton push state
        , locationTrackButton push state
       ]
@@ -498,12 +499,12 @@ waitTimeView push state =
   , background Color.grey800
   , gravity CENTER_VERTICAL
   , margin $ MarginLeft 12
-  , padding $ Padding 14 2 14 2
+  , padding $ Padding 10 2 10 2
   , visibility case state.data.isSpecialZone of
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
   ][ textView (
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ if state.data.isSpecialZone then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
       , color Color.black700
@@ -540,7 +541,7 @@ driverInfoView push state =
          , height WRAP_CONTENT
          , width MATCH_PARENT
          , margin $ MarginTop 14
-         , background Color.blue800
+         , background if state.props.zoneType == METRO then Color.blue800 else Color.white900
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ state.data.config.driverInfoConfig.cardStroke
@@ -751,7 +752,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback $ "ic_driver_vehicle," <> (getAssetStoreLink FunctionCall) <> "ic_driver_vehicle.png"
+              [ imageWithFallback (getVehicleImage state.data.vehicleVariant)
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -1087,3 +1088,10 @@ configurations =
               , letterSpacing : 3.0
               , paddingOTP : Padding 11 0 11 7
               }
+
+getVehicleImage :: String -> String 
+getVehicleImage variant = case variant of 
+  "TAXI" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
+  "TAXI_PLUS" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
+  "AUTO_RICKSHAW" -> "ic_auto_rickshaw,https://assets.juspay.in/beckn/merchantcommon/images/ic_auto_rickshaw.png"
+  _ ->  "ic_white_taxi,https://assets.juspay.in/beckn/merchantcommon/images/ic_white_taxi.png"

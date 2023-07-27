@@ -125,5 +125,10 @@
             android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat" />
 
+        <service android:name=".OverlayMessagingService"
+            android:enabled="true"
+            android:exported="true"
+            android:largeHeap="true" />
+
     </application>
 </manifest>

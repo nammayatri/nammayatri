@@ -15,22 +15,26 @@
 
 module Screens.UploadDrivingLicenseScreen.Controller where
 
-import Prelude (pure, (==), unit, ($), class Show, bind, discard, (<), (<>), show, (+), (/=), (/), (&&))
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
-import Screens.Types (UploadDrivingLicenseState)
-import Components.RegistrationModal as RegistrationModalController
+import Data.Maybe
+
+import Common.Types.App (LazyCheck(..))
+import Components.GenericMessageModal as GenericMessageModal
 import Components.OnboardingHeader as OnboardingHeaderController
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Components.GenericMessageModal as GenericMessageModal
-import PrestoDOM.Types.Core (class Loggable)
+import Components.RegistrationModal as RegistrationModalController
 import Components.TutorialModal as TutorialModalController
-import JBridge (disableActionEditText, uploadFile, hideKeyboardOnNavigation, openWhatsAppSupport)
-import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, showDialer, uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude (pure, (==), unit, ($), class Show, bind, discard, (<), (<>), show, (+), (/=), (/), (&&))
+import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Data.Maybe
+import Screens.Types (UploadDrivingLicenseState)
+import Services.Config (getSupportNumber)
 
 
 instance showAction :: Show Action where
@@ -137,7 +141,9 @@ eval (TutorialModal manual) state = do
     _ -> continue state
 eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = continue state{props{openLicenseManual = false, openDateOfIssueManual = false}} 
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
-  _ <- liftEffect $ openWhatsAppSupport "+918618963188"
+  _ <- liftEffect $ case getMerchant FunctionCall of
+    NAMMAYATRI -> openWhatsAppSupport "+918618963188"
+    _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
   ]
 eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
