@@ -945,7 +945,6 @@ homeScreenFlow = do
             pure unit
         case notification of
             "TRIP_STARTED"        -> do -- OTP ENTERED
-                                      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_started"
                                       let shareAppCount = getValueToLocalStore SHARE_APP_COUNT
                                       if shareAppCount == "__failed" then do
                                         setValueToLocalStore SHARE_APP_COUNT "1"
@@ -961,14 +960,12 @@ homeScreenFlow = do
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
-                                        _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_first_ride_completed"
                                         _ <- pure $ metaLogEvent "ny_user_first_ride_completed"
                                         (GetProfileRes response) <- Remote.getProfileBT ""
                                         setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
                                         else pure unit
                                       let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
                                           destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
-                                      _ <- lift $ lift $ liftFlow $ logEvent logField_  "ny_user_ride_completed"
                                       _ <- pure $ metaLogEvent "ny_user_ride_completed"
                                       _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
                                       _ <- updateLocalStage HomeScreen
@@ -985,7 +982,6 @@ homeScreenFlow = do
                                         homeScreenFlow
                                         else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
-                                      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_cancelled"
                                       _ <- pure $ removeAllPolylines ""
                                       _ <- updateLocalStage HomeScreen
                                       removeChatService ""
