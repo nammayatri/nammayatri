@@ -178,9 +178,9 @@ updateOtpCodeBookingId rbId otp = do
 --     pure $ booking ^. RB.BookingStatus
 
 findLatestByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatus (Id bookingId) bookingStatus =
+findLatestByRiderIdAndStatus (Id riderId) bookingStatusList =
   do
-    let options = [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.In bookingStatus]]
+    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.In bookingStatusList]]
         sortBy = Se.Desc BeamB.createdAt
         limit' = Just 1
     findAllWithOptionsKV options sortBy limit' Nothing
@@ -188,9 +188,9 @@ findLatestByRiderIdAndStatus (Id bookingId) bookingStatus =
     <&> (Domain.status <$>)
 
 findLatestByRiderIdAndStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatusInReplica (Id bookingId) bookingStatus =
+findLatestByRiderIdAndStatusInReplica (Id riderId) bookingStatusList =
   do
-    let options = [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.In bookingStatus]]
+    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.In bookingStatusList]]
         sortBy = Se.Desc BeamB.createdAt
         limit' = Just 1
     findAllWithOptionsKvInReplica options sortBy limit' Nothing
