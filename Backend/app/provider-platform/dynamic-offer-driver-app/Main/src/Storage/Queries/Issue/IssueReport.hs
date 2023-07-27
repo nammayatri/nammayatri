@@ -167,6 +167,23 @@ updateOption issueReportId (Id optionId) = do
     [Se.Set BeamIR.optionId (Just optionId), Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
 
+updateIssueStatus :: (L.MonadFlow m, Log m, MonadTime m) => Text -> IssueStatus -> m ()
+updateIssueStatus ticketId status = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamIR.status status, Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Se.Is BeamIR.ticketId (Se.Eq (Just ticketId))]
+
+updateTicketId :: (L.MonadFlow m, Log m, MonadTime m) => Id IssueReport -> Text -> m ()
+updateTicketId issueId ticketId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamIR.ticketId (Just ticketId), Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Se.Is BeamIR.id (Se.Eq $ getId issueId)]
+
+findByTicketId :: (L.MonadFlow m, Log m) => Text -> m (Maybe IssueReport)
+findByTicketId ticketId = findOneWithKV [Se.Is BeamIR.ticketId $ Se.Eq (Just ticketId)]
+
 instance FromTType' BeamIR.IssueReport IssueReport where
   fromTType' BeamIR.IssueReportT {..} = do
     pure $
@@ -182,6 +199,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             optionId = Id <$> optionId,
             deleted = deleted,
             mediaFiles = Id <$> mediaFiles,
+            ticketId = ticketId,
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt
           }
@@ -199,6 +217,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.optionId = getId <$> optionId,
         BeamIR.deleted = deleted,
         BeamIR.mediaFiles = getId <$> mediaFiles,
+        BeamIR.ticketId = ticketId,
         BeamIR.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt
       }

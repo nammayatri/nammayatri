@@ -22,13 +22,31 @@ module Storage.Beam.Issue where
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
+import Database.Beam.Backend
 import Database.Beam.MySQL ()
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Domain.Types.Issue as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common (fromFieldEnum)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
+
+instance FromField Domain.IssueStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.IssueStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.IssueStatus
+
+instance FromBackendRow Postgres Domain.IssueStatus
+
+instance IsString Domain.IssueStatus where
+  fromString = show
 
 data IssueT f = IssueT
   { id :: B.C f Text,
@@ -37,6 +55,8 @@ data IssueT f = IssueT
     contactEmail :: B.C f (Maybe Text),
     reason :: B.C f Text,
     description :: B.C f Text,
+    ticketId :: B.C f (Maybe Text),
+    status :: B.C f Domain.IssueStatus,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -59,10 +79,12 @@ issueTMod =
       contactEmail = B.fieldNamed "contact_email",
       reason = B.fieldNamed "reason",
       description = B.fieldNamed "description",
+      ticketId = B.fieldNamed "ticket_id",
+      status = B.fieldNamed "status",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
 
-$(enableKVPG ''IssueT ['id] [])
+$(enableKVPG ''IssueT ['id] [['ticketId]])
 
 $(mkTableInstances ''IssueT "issue" "atlas_app")

@@ -39,6 +39,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
+import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
@@ -105,6 +106,8 @@ getServiceNameConfigJSON = \case
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
+  Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
+    Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
 
 $(enableKVPG ''MerchantServiceConfigT ['merchantId, 'serviceName] [])
 

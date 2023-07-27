@@ -23,6 +23,7 @@ import qualified "rider-app" API.Dashboard.RideBooking.Registration as CR
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified "rider-app" API.UI.Search as SH
 import qualified Dashboard.Common.Booking as Booking
+import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
@@ -161,8 +162,9 @@ newtype CancelBookingAPIs = CancelBookingAPIs
   { cancelBooking :: Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> Euler.EulerClient APISuccess
   }
 
-newtype ListIssueAPIs = ListIssueAPIs
-  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes
+data ListIssueAPIs = ListIssueAPIs
+  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes,
+    ticketStatusCallBack :: Common.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
@@ -257,7 +259,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate = merchantClient
 
-    listIssue = issueClient
+    listIssue
+      :<|> ticketStatusCallBack = issueClient
 
 callRiderApp ::
   forall m r b c.

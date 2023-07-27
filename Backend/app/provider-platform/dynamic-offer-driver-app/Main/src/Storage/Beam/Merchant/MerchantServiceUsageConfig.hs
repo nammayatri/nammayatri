@@ -39,6 +39,7 @@ import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
+import Kernel.External.Ticket.Types
 import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude hiding (Generic)
@@ -95,6 +96,19 @@ instance FromField [SmsService] where
 
 instance FromField SmsService where
   fromField = fromFieldEnum
+
+instance FromField IssueTicketService where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be IssueTicketService where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be IssueTicketService
+
+instance FromBackendRow Postgres IssueTicketService
+
+instance IsString IssueTicketService where
+  fromString = show
 
 fromFieldSmsService ::
   DPSF.Field ->
@@ -153,6 +167,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     verificationService :: B.C f VerificationService,
     faceVerificationService :: B.C f VerificationService,
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
+    issueTicketService :: B.C f IssueTicketService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }
@@ -199,6 +214,7 @@ merchantServiceUsageConfigTMod =
       verificationService = B.fieldNamed "verification_service",
       faceVerificationService = B.fieldNamed "face_verification_service",
       aadhaarVerificationService = B.fieldNamed "aadhaar_verification_service",
+      issueTicketService = B.fieldNamed "issue_ticket_service",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }

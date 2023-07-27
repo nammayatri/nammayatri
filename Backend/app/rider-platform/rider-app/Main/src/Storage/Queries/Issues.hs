@@ -29,6 +29,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
+import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue as BeamI
 import qualified Storage.Beam.Person as BeamP
@@ -95,6 +96,8 @@ instance FromTType' BeamI.Issue Issue where
             contactEmail = contactEmail,
             reason = reason,
             description = description,
+            ticketId = ticketId,
+            status = status,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -108,6 +111,25 @@ instance ToTType' BeamI.Issue Issue where
         BeamI.contactEmail = contactEmail,
         BeamI.reason = reason,
         BeamI.description = description,
+        BeamI.ticketId = ticketId,
+        BeamI.status = status,
         BeamI.createdAt = createdAt,
         BeamI.updatedAt = updatedAt
       }
+
+updateIssueStatus :: (L.MonadFlow m, Log m, MonadTime m) => Text -> IssueStatus -> m ()
+updateIssueStatus ticketId status = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamI.status status, Se.Set BeamI.updatedAt now]
+    [Se.Is BeamI.ticketId (Se.Eq (Just ticketId))]
+
+updateTicketId :: (L.MonadFlow m, Log m, MonadTime m) => Id Issue -> Text -> m ()
+updateTicketId issueId ticketId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamI.ticketId (Just ticketId), Se.Set BeamI.updatedAt now]
+    [Se.Is BeamI.id (Se.Eq $ getId issueId)]
+
+findByTicketId :: (L.MonadFlow m, Log m) => Text -> m (Maybe Issue)
+findByTicketId ticketId = findOneWithKV [Se.Is BeamI.ticketId $ Se.Eq (Just ticketId)]

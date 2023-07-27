@@ -474,6 +474,7 @@ library
       Tools.Notifications
       Tools.Payment
       Tools.SMS
+      Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
   other-modules:

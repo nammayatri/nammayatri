@@ -15,6 +15,7 @@
 
 module Domain.Action.Dashboard.IssueList where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Issue as DI
 import qualified Domain.Types.Merchant as DM
@@ -26,6 +27,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -107,3 +109,15 @@ buildIssueList (issues, person) = do
         createdAt = issues.createdAt,
         updatedAt = issues.updatedAt
       }
+
+ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
+ticketStatusCallBack _ req = do
+  _ <- QIssue.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+  QIssue.updateIssueStatus req.ticketId (toDomainIssueStatus req.status)
+  return Success
+
+toDomainIssueStatus :: Common.IssueStatus -> DI.IssueStatus
+toDomainIssueStatus = \case
+  Common.OPEN -> DI.OPEN
+  Common.PENDING -> DI.PENDING
+  Common.RESOLVED -> DI.RESOLVED
