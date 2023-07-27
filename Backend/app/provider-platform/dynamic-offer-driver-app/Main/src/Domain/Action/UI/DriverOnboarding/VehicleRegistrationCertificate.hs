@@ -79,14 +79,15 @@ data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
     imageId :: Id Image.Image,
     operatingCity :: Text,
-    dateOfRegistration :: Maybe UTCTime
+    dateOfRegistration :: Maybe UTCTime,
+    multipleRC :: Maybe Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 type DriverRCRes = APISuccess
 
 data LinkedRC = LinkedRC
-  { rcDetails :: Domain.DecryptedVehicleRegistrationCertificate,
+  { rcDetails :: Domain.VehicleRegistrationCertificateAPIEntity,
     rcActive :: Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
@@ -165,9 +166,9 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
           -- if no association to driver, create one. No need to verify RC as already verified except in fallback case
           if isNothing dateOfRegistration
             then createRCAssociation person.id vehicleRC.id
-            else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
+            else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC
     Nothing ->
-      verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
+      verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC
 
   return Success
   where
@@ -184,8 +185,8 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
       driverRCAssoc <- Domain.makeRCAssociation driverId rcId (convertTextToUTC (Just "2099-12-12"))
       Esq.runNoTransaction $ DAQuery.create driverRCAssoc
 
-verifyRCFlow :: Person.Person -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
-verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
+verifyRCFlow :: Person.Person -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Flow ()
+verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration multipleRC = do
   now <- getCurrentTime
   encryptedRC <- encrypt rcNumber
   let imageExtractionValidation =
@@ -214,6 +215,7 @@ verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
             issueDateOnDoc = dateOfRegistration,
             status = "pending",
             idfyResponse = Nothing,
+            multipleRC,
             createdAt = now,
             updatedAt = now
           }
@@ -335,15 +337,17 @@ deleteRC (driverId, _) DeleteRCReq {..} = do
 getAllLinkedRCs :: (Id Person.Person, Id DM.Merchant) -> Flow [LinkedRC]
 getAllLinkedRCs (driverId, _) = do
   allLinkedRCs <- DAQuery.findAllLinkedByDriverId driverId
-  decryptedRcsData <- mapM decrypt =<< RCQuery.findAllById (map (.rcId) allLinkedRCs)
+  rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
   let activeRcs = buildRcHM allLinkedRCs
-  return $ map (getCombinedRcData activeRcs) decryptedRcsData
+  mapM (getCombinedRcData activeRcs) rcs
   where
-    getCombinedRcData activeRcs Domain.VehicleRegistrationCertificate {..} =
-      LinkedRC
-        { rcActive = fromMaybe False $ HM.lookup id.getId activeRcs <&> (.isRcActive),
-          rcDetails = Domain.VehicleRegistrationCertificate {..}
-        }
+    getCombinedRcData activeRcs rc = do
+      rcNo <- decrypt rc.certificateNumber
+      return $
+        LinkedRC
+          { rcActive = fromMaybe False $ HM.lookup rc.id.getId activeRcs <&> (.isRcActive),
+            rcDetails = Domain.makeRCAPIEntity rc rcNo
+          }
 
 createRC ::
   ODC.OnboardingDocumentConfig ->

@@ -121,7 +121,7 @@ verifyAadhaarOtp mbMerchant personId req = do
           aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just res.image) True
           Esq.runNoTransaction $ Q.create aadhaarEntity
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
-          Status.statusHandler (person.id, person.merchantId)
+          Status.statusHandler (person.id, person.merchantId) Nothing
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError TransactionIdNotFound

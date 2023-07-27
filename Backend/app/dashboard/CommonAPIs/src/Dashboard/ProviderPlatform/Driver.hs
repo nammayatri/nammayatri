@@ -48,6 +48,8 @@ data DriverEndpoint
   | AddVehicleEndpoint
   | UpdateDriverNameEndpoint
   | CollectCashEndpoint
+  | SetRCStatusEndpoint
+  | DeleteRCEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"

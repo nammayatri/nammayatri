@@ -1,4 +1,5 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN is_rc_active boolean DEFAULT false;
+ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN is_rc_active boolean DEFAULT false not null;
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN multiple_rc boolean;
 
 -- make currently linked RC to driver as active RC
 update atlas_driver_offer_bpp.driver_rc_association set is_rc_active = true where associated_till > now();

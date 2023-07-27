@@ -40,6 +40,7 @@ data IdfyVerificationE e = IdfyVerification
     documentNumber :: EncryptedHashedField e Text,
     imageExtractionValidation :: ImageExtractionValidation,
     idfyResponse :: Maybe Text,
+    multipleRC :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

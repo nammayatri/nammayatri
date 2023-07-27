@@ -85,13 +85,13 @@ data DriversAPIs = DriversAPIs
     unlinkDL :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkAadhaar :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    setRCStatus :: Id Common.Driver -> Common.RCStatusReq -> Common.RCStatusReq,
-    deleteRC :: Id Common.Driver -> Common.DeleteRCReq -> Common.RCStatusReq,
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
-    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
+    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
+    setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
+    deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -205,12 +205,12 @@ mkDriverOfferAPIs merchantId token = do
       :<|> unlinkDL
       :<|> unlinkAadhaar
       :<|> endRCAssociation
-      :<|> setRCStatus
-      :<|> deleteRC
       :<|> updatePhoneNumber
       :<|> updateByPhoneNumber
       :<|> addVehicle
       :<|> updateDriverName
+      :<|> setRCStatus
+      :<|> deleteRC
       :<|> ( documentsList
                :<|> getDocument
                :<|> uploadDocument
