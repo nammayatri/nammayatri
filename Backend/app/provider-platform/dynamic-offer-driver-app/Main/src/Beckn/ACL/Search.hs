@@ -14,13 +14,9 @@
 
 module Beckn.ACL.Search where
 
--- import qualified Data.Text as T
-
 import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
--- import EulerHS.Prelude
-
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -33,8 +29,6 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Tools.Error
 import qualified Tools.Maps as Maps
-
--- import Data.ByteString.UTF8 as BS
 
 buildSearchReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
@@ -50,7 +44,6 @@ buildSearchReq subscriber req = do
       dropOff = intent.fulfillment.end
   let distance = getDistance =<< intent.fulfillment.tags
   let duration = getDuration =<< intent.fulfillment.tags
-  -- let (distance, duration) = maybe (Nothing, Nothing) (buildDistanceAndDuration) intent.fulfillment.tags
   let customerLanguage = buildCustomerLanguage =<< intent.fulfillment.customer
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -75,123 +68,27 @@ buildSearchReq subscriber req = do
         routeDuration = duration,
         device = Nothing,
         routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
-        customerLanguage = customerLanguage --intent.fulfillment.tags.customer_language
+        customerLanguage = customerLanguage
       }
-
--- buildDistanceAndDuration :: [Search.TagGroup] -> (Maybe Meters, Maybe Seconds)
--- buildDistanceAndDuration tags = do
---   tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tags
---   if tags.code == "route_info"
---     then
---       let distance = getDistance tagGroup
---           duration = getDuration tagGroup
---        in (distance, duration)
---     else (Nothing, Nothing)
 
 getDistance :: Search.TagGroups -> Maybe Meters
 getDistance tagGroups = do
   tagValue <- getTag "route_info" "distance_info_in_m" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "distance_info_in_m") tagGroup.list
-  -- tagValue <- tag.value
   distanceValue <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceValue
-
--- if list1Code == "distance_info_in_m"
---   then do
---     list1Value <- tags.list_1_value
---     distanceValue <- readMaybe $ T.unpack list1Value
---     Just $ Meters distanceValue
---   else Nothing
 
 getDuration :: Search.TagGroups -> Maybe Seconds
 getDuration tagGroups = do
   tagValue <- getTag "route_info" "duration_info_in_s" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "duration_info_in_s") tagGroup.list
-  -- tagValue <- tag.value
   durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
-
--- list2Code <- tags.list_2_code
--- if list2Code == "duration_info_in_s"
---   then do
---     list2Value <- tags.list_2_value
---     durationValue <- readMaybe $ T.unpack list2Value
---     Just $ Seconds durationValue
---   else -- readMaybe list2Value
---     Nothing
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do
   tagValue <- getTag "customer_info" "customer_language" person.tags
-  -- tagGroup <- findTagGroup "customer_info" person.tags
-  -- tag <- find (\tag -> tag.code == Just "customer_language") tagGroup.list
-  -- tagValue <- tag.value
   readMaybe $ T.unpack tagValue
 
 buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
 buildRoutePoints tagGroups = do
   tagValue <- getTag "route_info" "route_points" tagGroups
   decode $ encodeUtf8 tagValue
-
--- route_points
--- findTagGroup :: Text -> Search.TagGroups -> Maybe Search.TagGroup
--- findTagGroup code (Search.TG tagGroups) = find (\tagGroup -> tagGroup.code == code) tagGroups
-
--- list1Code <- tags.list_1_code
--- if tags.code == "customer_info" && list1Code == "customer_language"
---   then do
---     list1Value <- tags.list_1_value
---     readMaybe $ T.unpack list1Value
---   else -- Just $ Seconds durationValue
---   -- readMaybe list2Value
---     Nothing
-
--- when isRouteTag $ do
---   distance <- if isDistanceTag then
---     maybe Nothing (\metersL -> do
---       maybe Nothing
---       ) list_1_value
---     whenJust list_1_value $ \meters -> do
---       whenJust (readMaybe meters) $ \distanceInt -> Just $ Meters distanceInt
---       return Nothing
---     return Nothing
---   -- case (isDistanceTag,isDurationTag) of
---   --   (True, True) ->  do
---   --     distance <- do
---   --       whenJust list_1_value $ \meters -> do
---   --         whenJust (readMaybe meters) $ \distanceInt -> Just $ Meters distanceInt
---   --       Nothing
---   --     duration <- do
---   --       whenJust list_2_value $ \seconds -> do
---   --         whenJust (readMaybe seconds) $ \durationInt -> Seconds durationInt
---   --       Nothing
---   --   (True,False) -> do
---     distance <- do
---       whenJust list_1_value $ \meters -> do
---         whenJust (readMaybe meters) $ \distanceInt -> Just $ Meters distanceInt
---       Nothing
---     return (distance, Nothing)
---   (False,True) -> do
---     duration <- do
---       whenJust list_2_value $ \seconds -> do
---         whenJust (readMaybe seconds) $ \durationInt -> Seconds durationInt
---       Nothing
---     return (Nothing,duration)
---     _,_ -> Nothing
-
--- return (Nothing,Nothing)
-
--- where isRouteTag = tag.code == "route_info"
---       isDistanceTag = tag.list_1_code == Just "distance_info_in_m" && isJust list_1_value
---       isDurationTag = tag.list_2_code == Just "duration_info_in_s" && isJust list_2_value
-
--- code = "route_info",--------TagGroup
--- -- name = "Route Information",
--- list_1_code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
--- -- list_1_name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance, --"Distance Information In Meters",
--- list_1_value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance,
--- list_2_code = maybe Nothing (\_ -> Just "duration_info_in_s") duration, --"duration_info_in_s",
--- -- list_2_name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration, --"Duration Information In Seconds",
--- list_2_value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration

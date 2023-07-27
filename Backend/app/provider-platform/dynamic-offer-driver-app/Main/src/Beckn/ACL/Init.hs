@@ -62,7 +62,6 @@ buildInitReq subscriber req = do
         bapCountry = context.country,
         vehicleVariant = castVehicleVariant order.fulfillment.vehicle.category,
         driverId = order.provider <&> (.id),
-        -- maxEstimatedDistance = order.fulfillment.tags.max_estimated_distance,
         paymentMethodInfo = mkPaymentMethodInfo order.payment,
         ..
       }

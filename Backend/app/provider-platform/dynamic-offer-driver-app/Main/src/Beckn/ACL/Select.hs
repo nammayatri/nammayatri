@@ -66,8 +66,5 @@ buildSelectReq subscriber req = do
 getCustomerExtraFee :: Select.TagGroups -> Maybe Money
 getCustomerExtraFee tagGroups = do
   tagValue <- getTag "customer_tip_info" "customer_tip" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "customer_tip_info") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "customer_tip") tagGroup.list
-  -- tagValue <- tag.value
   customerExtraFee <- readMaybe $ T.unpack tagValue
   Just $ Money customerExtraFee

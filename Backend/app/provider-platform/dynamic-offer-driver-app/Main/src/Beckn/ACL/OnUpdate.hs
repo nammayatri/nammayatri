@@ -179,9 +179,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
                 state = "ACTIVE",
                 ..
               },
-        -- update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> if booking.bookingType == DRB.SpecialZoneBooking then ", order.fulfillment.start.authorization" else ", order.fulfillment.start.authorization", -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
-
-        update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> if booking.bookingType == DRB.SpecialZoneBooking then ", order.fulfillment.start.authorization" else ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+        update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing
@@ -193,8 +191,6 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
               { id = booking.id.getId,
                 ..
               },
-        -- update_target = "order.fufillment.state.code",
-
         update_target = "order.fufillment.state.code"
       }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
@@ -231,7 +227,6 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
           OnUpdate.RideCompleted
             RideCompletedOU.RideCompletedEvent
               { id = req.booking.id.getId,
-                -- update_target = "order.payment, order.quote, order.fulfillment.tags, order.fulfillment.state.tags",
                 quote =
                   RideCompletedOU.RideCompletedQuote
                     { price,
@@ -282,7 +277,6 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
             BookingCancelledOU.BookingCancelledEvent
               { id = booking.id.getId,
                 state = "CANCELLED",
-                -- update_target = "state,fufillment.state.code",
                 cancellation_reason = castCancellationSource cancellationSource
               },
         update_target = "state,fufillment.state.code"
@@ -303,7 +297,6 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
           OnUpdate.DriverArrived $
             DriverArrivedOU.DriverArrivedEvent
               { id = ride.bookingId.getId,
-                -- update_target = "order.fufillment.state.code, order.fulfillment.tags",
                 fulfillment
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
@@ -325,7 +318,6 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
           OnUpdate.EstimateRepetition $
             EstimateRepetitionOU.EstimateRepetitionEvent
               { id = booking.id.getId,
-                -- update_target = "order.fufillment.state.code, order.tags",
                 item = item,
                 fulfillment
               },
@@ -348,10 +340,8 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
           OnUpdate.NewMessage $
             NewMessageOU.NewMessageEvent
               { id = ride.bookingId.getId,
-                -- update_target = "order.fufillment.state.code, order.fulfillment.tags",
                 fulfillment = fulfillment
               }
-              -- update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

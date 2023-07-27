@@ -38,10 +38,6 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import Tools.Error
 
--- import qualified Beckn.ACL.OnSearch as item.price
-
--- import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as provider
-
 buildOnSearchReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
     EsqDBFlow m r
@@ -103,17 +99,14 @@ buildEstimateOrQuoteInfo ::
 buildEstimateOrQuoteInfo provider item = do
   fulfillment <- find (\fulf -> fulf.id == item.fulfillment_id) provider.fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
   let itemId = item.id
-  -- (item.tags >>= buildEstimateBreakUpList item.price.currency)
-  -- & fromMaybeM (InvalidRequest "Missing fare breakup item")
-  -- let itemCode = item.descriptor.code     ----------fulfillment Vehicle
-  let vehicleVariant = castVehicleVariant fulfillment.vehicle.category ----------fulfillment Vehicle
+  let vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.offered_value
       descriptions = []
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
-      driversLocation = provider.locations -- provider_locations --fromMaybe [] $ item.tags <&> (.drivers_location)
-      specialLocationTag = buildSpecialLocationTag =<< item.tags -- >>= (.special_location_tag)
+      driversLocation = provider.locations
+      specialLocationTag = buildSpecialLocationTag =<< item.tags
   validatePrices estimatedFare estimatedTotalFare
   let totalFareRange =
         DEstimate.FareRange
@@ -125,16 +118,9 @@ buildEstimateOrQuoteInfo provider item = do
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
   case fulfillment._type of
-    -- OnSearch.ONE_WAY_TRIP -> do
-    --   quoteDetails <- DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
-    --   pure $ Right DOnSearch.QuoteInfo {..}
-    -- OnSearch.RENTAL_TRIP -> do
-    --   quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
-    --   pure $ Right DOnSearch.QuoteInfo {..}
     OnSearch.RIDE -> do
       estimateBreakupList <- buildEstimateBreakUpList item
       pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id fulfillment.id, ..}
-    -- OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
     OnSearch.RIDE_OTP -> do
       quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails fulfillment
       pure $ Right DOnSearch.QuoteInfo {..}
@@ -187,19 +173,6 @@ validateFareRange totalFare DEstimate.FareRange {..} = do
   when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
   when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"
 
--- buildEstimateBreakUpList ::
---   BreakupItem ->
---   DOnSearch.EstimateBreakupInfo
--- buildEstimateBreakUpList BreakupItem {..} = do
---   DOnSearch.EstimateBreakupInfo
---     { title = title,
---       price =
---         DOnSearch.BreakupPriceInfo
---           { currency = price.currency,
---             value = roundToIntegral price.value
---           }
---     }
-
 buildEstimateBreakUpItem ::
   (MonadThrow m, Log m) =>
   Text ->
@@ -222,23 +195,8 @@ buildEstimateBreakUpList :: (MonadThrow m, Log m) => OnSearch.Item -> m [DOnSear
 buildEstimateBreakUpList item = do
   (OnSearch.TG tagGroups) <- item.tags & fromMaybeM (InvalidRequest "Missing fare breakup item")
 
-  -- tagValue <- getTag "rate_card" "waiting_charge_per_min" tagGroups
   tagGroup <- find (\tagGroup -> tagGroup.code == "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup")
   mapM (buildEstimateBreakUpItem item.price.currency) tagGroup.list
-
--- tag <- find (\tag -> tag.code == Just "waiting_charge_per_min") tagGroup.list
--- tagValue <- tag.value
--- waitingChargeValue <- readMaybe $ T.unpack tagValue
--- Just $ Money waitingChargeValue
-
--- buildEstimateBreakUpItem :: OnSearch.Tag -> Maybe Money
--- buildEstimateBreakUpItem tag = do
---   -- tagValue <- getTag "rate_card" "waiting_charge_per_min" tagGroups
---   -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
---   -- tag <- find (\tag -> tag.code == Just "waiting_charge_per_min") tagGroup
---   -- tagValue <- tag.value
---   waitingChargeValue <- readMaybe $ T.unpack tagValue
---   Just $ Money waitingChargeValue
 
 buildNightShiftInfo ::
   OnSearch.TagGroups ->
@@ -248,8 +206,6 @@ buildNightShiftInfo itemTags = do
   oldNightShiftCharge <- getOldNightShiftCharge itemTags
   nightShiftStart <- getNightShiftStart itemTags
   nightShiftEnd <- getNightShiftEnd itemTags
-  -- ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
-  --   <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftStart, nightShiftEnd) ->
   Just $
     DOnSearch.NightShiftInfo
       { oldNightShiftCharge = realToFrac oldNightShiftCharge,
@@ -259,20 +215,8 @@ buildNightShiftInfo itemTags = do
 buildWaitingChargeInfo' :: OnSearch.TagGroups -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do
   tagValue <- getTag "rate_card" "waiting_charge_per_min" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "waiting_charge_per_min") tagGroup.list
-  -- tagValue <- tag.value
   waitingChargeValue <- readMaybe $ T.unpack tagValue
   Just $ Money waitingChargeValue
-
--- code_1 <- tags.code_1
--- list4Code <- tags.list_4_code
--- if list4Code == "waiting_charge_per_min" && code_1 == "rate_card"
---   then do
---     list4Value <- tags.list_4_value
---     waitingChargeValue <- readMaybe $ T.unpack list4Value
---     Just $ Money waitingChargeValue
---   else Nothing
 
 buildWaitingChargeInfo :: OnSearch.TagGroups -> DOnSearch.WaitingChargesInfo
 buildWaitingChargeInfo tags = do
@@ -283,124 +227,29 @@ buildWaitingChargeInfo tags = do
 buildSpecialLocationTag :: OnSearch.TagGroups -> Maybe Text
 buildSpecialLocationTag = getTag "general_info" "special_location_tag"
 
--- code_2 <- tags.code_2
--- list22Code <- tags.list_2_2_code
--- if list22Code == "special_location_tag" && code_2 == "general_info"
---   then do
---     tags.list_2_2_value
---   else -- waitingChargeValue <- readMaybe $ T.unpack list22Value
---   -- Just $ Meters waitingChargeValue
---     Nothing
-
--- tagGroup <- find (\tagGroup -> tagGroup.code == "general_info") tagGroups
--- tag <- find (\tag -> tag.code == Just "special_location_tag") tagGroup.list
--- tag.value
-
--- distanceValue <- readMaybe $ T.unpack tagValue
--- Just $ Meters distanceValue
-
 getNightShiftCharge :: OnSearch.TagGroups -> Maybe Money
 getNightShiftCharge tagGroups = do
   tagValue <- getTag "rate_card" "night_shift_charge" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "night_shift_charge") tagGroup.list
-  -- tagValue <- tag.value
   nightShiftCharge <- readMaybe $ T.unpack tagValue
   Just $ Money nightShiftCharge
-
--- code_1 <- tags.code_1
--- list1Code <- tags.list_1_code
--- if list1Code == "night_shift_charge" && code_1 == "rate_card"
--- then do
---   list1Value <- tags.list_1_value
---   nightShiftCharge <- readMaybe $ T.unpack list1Value
---   Just $ Money nightShiftCharge
--- else Nothing
 
 getOldNightShiftCharge :: OnSearch.TagGroups -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
   tagValue <- getTag "rate_card" "old_night_shift_charge" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "old_night_shift_charge") tagGroup.list
-  -- tagValue <- tag.value
   DecimalValue.valueFromString tagValue
-
--- tags = do
--- code_1 <- tags.code_1
--- list2Code <- tags.list_2_code
--- if list2Code == "old_night_shift_charge" && code_1 == "rate_card"
---   then do
---     list2Value <- tags.list_2_value
---     DecimalValue.valueFromString list2Value
---   else -- Just $ Money oldNightShiftCharge
---     Nothing
 
 buildDistanceToNearestDriver :: OnSearch.TagGroups -> Maybe DecimalValue
 buildDistanceToNearestDriver tagGroups = do
   tagValue <- getTag "general_info" "distance_to_nearest_driver" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "general_info") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "distance_to_nearest_driver") tagGroup.list
-  -- tagValue <- tag.value
   distanceToNearestDriver <- readMaybe $ T.unpack tagValue
   Just $ realToFrac $ int2Double distanceToNearestDriver
-
--- DecimalValue.valueFromString list2Value
-
--- code_2 <- tags.code_2
--- list21Code <- tags.list_2_1_code
--- if list21Code == "distance_to_nearest_driver" && code_2 == "general_info"
---   then do
---     list21Value <- tags.list_2_1_value
---     distanceToNearestDriver <- readMaybe $ T.unpack list21Value
---     -- HighPrecMeters . realToFrac $ int2Double n
---     Just $ realToFrac $ int2Double distanceToNearestDriver
---   else Nothing
-
--- buildWaitingChargeInfo' tags
-
--- buildWaitingChargeInfo ::
---   [OnSearch.TagGroup] ->
---   DOnSearch.WaitingChargesInfo
--- buildWaitingChargeInfo itemTags = do
---   DOnSearch.WaitingChargesInfo
---     { waitingChargePerMin = itemTags.waiting_charge_per_min
---     }
 
 getNightShiftStart :: OnSearch.TagGroups -> Maybe TimeOfDay
 getNightShiftStart tagGroups = do
   tagValue <- getTag "rate_card" "night_shift_start" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "night_shift_start") tagGroup.list
-  -- tagValue <- tag.value
   readMaybe $ T.unpack tagValue
-
--- nightShiftCharge <- readMaybe $ T.unpack tagValue
--- Just $ Money nightShiftCharge
-
--- tags = do
---   code_1 <- tags.code_1
---   list3Code <- tags.list_3_code
---   if list3Code == "night_shift_start" && code_1 == "rate_card"
---     then do
---       list3Value <- tags.list_3_value
---       readMaybe $ T.unpack list3Value
---     else -- Just $ Money nightShiftStart
---       Nothing
 
 getNightShiftEnd :: OnSearch.TagGroups -> Maybe TimeOfDay
 getNightShiftEnd tagGroups = do
   tagValue <- getTag "rate_card" "night_shift_end" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
-  -- tag <- find (\tag -> tag.code == Just "night_shift_end") tagGroup.list
-  -- tagValue <- tag.value
   readMaybe $ T.unpack tagValue
-
--- tags = do
---   code_1 <- tags.code_1
---   list5Code <- tags.list_5_code
---   if list5Code == "night_shift_start" && code_1 == "rate_card"
---     then do
---       list5Value <- tags.list_5_value
---       readMaybe $ T.unpack list5Value
---     else -- Just $ Money nightShiftStart
---       Nothing

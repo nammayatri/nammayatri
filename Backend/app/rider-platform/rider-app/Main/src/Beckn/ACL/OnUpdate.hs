@@ -59,21 +59,15 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
   vehicle <- fromMaybeM (InvalidRequest "vehicle is not present in RideAssigned Event.") $ taEvent.fulfillment.vehicle
   agent <- fromMaybeM (InvalidRequest "agent is not present in RideAssigned Event.") $ taEvent.fulfillment.agent
   agentPhone <- fromMaybeM (InvalidRequest "agent phoneNumber is not present in RideAssigned Event.") $ agent.phone
-  -- let agentTagGroup = find (\tagGroup -> tagGroup.code == "driver_details") agent.tags
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideAssigned Event.") agent.tags
   registeredAt :: UTCTime <-
     fromMaybeM (InvalidRequest "registered_at is not present.") $
       readMaybe . T.unpack
         =<< getTag "driver_details" "registered_at" tagsGroup
-  -- =<< find (\tag -> tag.code == Just "registered_at") . (.list)
-  -- =<< agentTagGroup
   let rating :: Maybe HighPrecMeters =
         readMaybe . T.unpack
-          -- =<< (.value)
           =<< getTag "driver_details" "rating" tagsGroup
   authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideAssigned Event.") $ taEvent.fulfillment.start.authorization
-  -- =<< find (\tag -> tag.code == Just "rating") . (.list)
-  -- =<< agentTagGroup
   return $
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id taEvent.id,
@@ -96,19 +90,14 @@ parseEvent _ (OnUpdate.RideStarted rsEvent) = do
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Event.") rcEvent.fulfillment.tags
-  -- distanceInfoGroup = find (\tagGroup -> tagGroup.code == "ride_distance_details") tagsGroup -- maybe don't have tags and all in our domain types, get rid of them in formJSON toJSON itself similar to agentTags above?
   chargeableDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
       readMaybe . T.unpack
         =<< getTag "ride_distance_details" "chargeable_distance" tagsGroup
-  -- =<< find (\tag -> tag.code == Just "chargeable_distance") . (.list)
-  -- =<< distanceInfoGroup
   traveledDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "traveled_distance is not present.") $
       readMaybe . T.unpack
         =<< getTag "ride_distance_details" "traveled_distance" tagsGroup
-  -- =<< find (\tag -> tag.code == Just "traveled_distance") . (.list)
-  -- =<< distanceInfoGroup
   return $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
@@ -141,12 +130,10 @@ parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
       }
 parseEvent _ (OnUpdate.DriverArrived daEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DriverArrived Event.") daEvent.fulfillment.tags
-  -- driverArrivalGroup = find (\tagGroup -> tagGroup.code == "driver_arrived_info") tagsGroup
   let arrival_time =
         readMaybe . T.unpack
           =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
-  -- =<< find (\tag -> tag.code == Just "arrival_time") . (.list)
-  -- =<< driverArrivalGroup
+
   return $
     DOnUpdate.DriverArrivedReq
       { bppBookingId = Id daEvent.id,
@@ -155,12 +142,9 @@ parseEvent _ (OnUpdate.DriverArrived daEvent) = do
       }
 parseEvent _ (OnUpdate.NewMessage daEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in NewMessage Event.") daEvent.fulfillment.tags
-  -- driverArrivalGroup = find (\tagGroup -> tagGroup.code == "driver_new_message") tagsGroup
   message :: Text <-
     fromMaybeM (InvalidRequest "message is not present.") $
       getTag "driver_new_message" "message" tagsGroup
-  -- =<< find (\tag -> tag.code == Just "message") . (.list)
-  -- =<< driverArrivalGroup
   return $
     DOnUpdate.NewMessageReq
       { bppBookingId = Id daEvent.id,
@@ -169,13 +153,10 @@ parseEvent _ (OnUpdate.NewMessage daEvent) = do
       }
 parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in EstimateRepetition Event.") erEvent.fulfillment.tags
-  -- previousCancellationReasonsGroup = find (\tagGroup -> tagGroup.code == "previous_cancellation_reasons") tagsGroup
   cancellationReason <-
     fromMaybeM (InvalidRequest "cancellation_reason is not present.") $
       readMaybe . T.unpack
         =<< getTag "previous_cancellation_reasons" "cancellation_reason" tagsGroup
-  -- =<< find (\tag -> tag.code == Just "cancellation_reason") . (.list)
-  -- =<< previousCancellationReasonsGroup
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,
