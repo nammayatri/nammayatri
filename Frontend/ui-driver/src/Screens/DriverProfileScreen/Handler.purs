@@ -75,4 +75,7 @@ driverProfileScreen = do
     ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
     RemoveAlternateNumber state -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE1 state)
     UpdateGender state -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER1 state)
+    UpdateLanguages updatedState language -> do
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
+      App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
     GoBack -> App.BackT $ pure App.GoBack

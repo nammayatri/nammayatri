@@ -15,61 +15,61 @@
 
 module Screens.DriverProfileScreen.View where
 
-import Effect.Aff (launchAff)
 import Common.Types.App
-import Types.App (defaultGlobalState)
+import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
-import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion)
 
 import Animation as Anim
+import Animation.Config as AnimConfig
 import Components.BottomNavBar.Controller (navData)
 import Components.BottomNavBar.View as BottomNavBar
+import Components.CheckListView.View as CheckListView
+import Components.GenericHeader.View as GenericHeader
+import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
+import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryEditText.View as PrimaryEditText
+import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!))
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe (fromMaybe)
+import Debug (spy)
+import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=),(<<<), (>), pure, discard, show, (&&), void, negate, not)
+import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
 import Screens.Types as ST
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
-import Styles.Colors as Color
-import Screens as ScreenNames
-import Helpers.Utils (getVehicleType)
-import Debug(spy)
-import PrestoDOM.Animation as PrestoAnim
-import Animation.Config as AnimConfig
-import Data.Maybe (Maybe(..), isJust)
-import Components.GenericHeader.View as GenericHeader
-import Components.PrimaryEditText.View as PrimaryEditText
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Properties (cornerRadii)
-import Components.PrimaryButton as PrimaryButton
-import Components.PrimaryEditText as PrimaryEditText
-import Components.InAppKeyboardModal.View as InAppKeyboardModal
-import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import Components.CheckListView.View as CheckListView
-
-import Components.PopUpModal as PopUpModal
 import Storage (isLocalStageOn)
-import Debug (spy)
-import Control.Applicative (unless)
-import Data.List
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -78,9 +78,11 @@ screen initialState =
   , name : "DriverProfileScreen"
   , globalEvents : [(\push -> do
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+        lift $ lift $ JB.toggleLoader true
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+        lift $ lift $ JB.toggleLoader false
         let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
-        lift $ lift $ doAff do liftEffect $ push $ GetDriverInfoResponse (GetDriverInfoResp getDriverInfoResp)
+        liftFlowBT $ push $ GetDriverInfoResponse (GetDriverInfoResp getDriverInfoResp)
         pure unit
       pure $ pure unit
     )]
@@ -350,7 +352,8 @@ missedOppArray state = [{key : (getString CANCELLATION_RATE), value : "10,254km"
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push = 
-  linearLayout
+  let analyticsData = state.data.analyticsData
+  in linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL 
@@ -369,21 +372,21 @@ driverAnalyticsView state push =
       , margin $ Margin 0 12 0 12
       , background Color.blue600
       , cornerRadius 10.0
-      ][  infoTileView state {primaryText: "₹45,67,892", subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+      ][  infoTileView state {primaryText:  analyticsData.totalEarnings, subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         , linearLayout
           [ height MATCH_PARENT
           , width (V 1)
           , margin (Margin 0 16 0 16)
           , background Color.lightGreyShade
           ][]
-        , infoTileView state {primaryText: "₹52,000", subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+        , infoTileView state {primaryText: analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         ]
       , linearLayout  
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: "4.9", subText: "rated by 392 users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
-          , infoTileView state {primaryText: "502", subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
+        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: "rated by " <> show analyticsData.totalUsersRated <> " users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
+          , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
         [ width MATCH_PARENT
@@ -393,57 +396,37 @@ driverAnalyticsView state push =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation HORIZONTAL
-            ][  linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , cornerRadius 20.0
-                , background Color.blue600
-                , padding $ Padding 12 10 12 10
-                , gravity CENTER_VERTICAL
-                , margin $ MarginRight 16
-                ][ textView
-                    [ text "243"
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , textSize FontSize.a_14
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , color Color.black900
-                    , margin $ MarginRight 4
-                    ]
-                  , textView
-                    ([ text (getString LATE_NIGHT_TRIPS)
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , color Color.black700
-                    ] <> FontStyle.body3 TypoGraphy)
-                  ]
-              , linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , cornerRadius 20.0
-                , background Color.blue600
-                , padding $ Padding 12 10 12 10
-                , gravity CENTER_VERTICAL
-                ][  textView
-                    [ text "243"
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , textSize FontSize.a_14
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , color Color.black900
-                    , margin $ MarginRight 4
-                    ]
-                  , textView
-                    [ text (getString LATE_NIGHT_TRIPS)
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , textSize FontSize.a_12
-                    , color Color.black700
-                    ]
-                ]
-              ]
+            ] $ map (\item -> chipRailView item) state.data.analyticsData.chipRailData
            ]
   ]
+
+------------------------------ CHIP RAIL LAYOUT ---------------------------------------------
+chipRailView :: forall w. ST.ChipRailData -> PrestoDOM (Effect Unit) w
+chipRailView item = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , cornerRadius 20.0
+    , background Color.blue600
+    , padding $ Padding 12 10 12 10
+    , gravity CENTER_VERTICAL
+    ][  textView
+        [ text item.mainTxt
+        , width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , textSize FontSize.a_14
+        , fontStyle $ FontStyle.bold LanguageStyle
+        , color Color.black900
+        , margin $ MarginRight 4
+        ]
+      , textView $
+        [ text item.subTxt
+        , width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , textSize FontSize.a_12
+        , color Color.black700
+        ] <> FontStyle.body3 TypoGraphy
+    ]
 
 ------------------------------ BADGE LAYOUT ---------------------------------------------
 
@@ -923,7 +906,7 @@ infoTileView state config =
                         , width $ V 13
                         , imageWithFallback if item <= 5 then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                         ]
-                    ]) [1,2,3,4,5])
+                    ]) [1,2,3,4,5]) -- TODO replace with proper api response
           ]
       , textView 
         ([ width WRAP_CONTENT

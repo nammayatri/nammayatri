@@ -55,7 +55,16 @@ initData = {
     gender : Nothing,
     languageList : languagesChoices,
     vehicleAge : 0 ,
-    vehicleName : ""
+    vehicleName : "",
+    analyticsData : {
+        totalEarnings : ""
+      , bonusEarned : ""
+      , totalCompletedTrips : 0
+      , totalUsersRated : 0
+      , rating : Just 0.0
+      , chipRailData : []
+      , badges : []
+      }
     },
   props: {
     logoutModalView: false,

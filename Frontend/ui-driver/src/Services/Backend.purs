@@ -20,7 +20,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
-import Presto.Core.Types.API (Header(..), Headers(..))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
 import Foreign.Generic (encode)
@@ -425,25 +425,30 @@ updateDriverInfoBT payload = do
             BackT $ pure GoBack
 
 mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
-mkUpdateDriverInfoReq dummy = UpdateDriverInfoReq {
-       "middleName": Nothing,
-       "firstName" : Nothing,
-       "lastName"  : Nothing,
-       "deviceToken" : Nothing,
-       "canDowngradeToSedan" : Nothing,
-       "canDowngradeToHatchback" : Nothing,
-       "canDowngradeToTaxi" : Nothing,
-        "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
-            "EN_US" -> "ENGLISH"
-            "KN_IN" -> "KANNADA"
-            "HI_IN" -> "HINDI"
-            "ML_IN" -> "MALAYALAM"
-            "BN_IN" -> "BENGALI"
-            "TA_IN" -> "TAMIL"
-            _       -> "ENGLISH",
-       "bundleVersion" : Nothing,
-       "clientVersion" : Nothing,
-       "gender"        : Nothing
+mkUpdateDriverInfoReq dummy 
+  = UpdateDriverInfoReq
+    { middleName: Nothing
+    , firstName: Nothing
+    , lastName: Nothing
+    , deviceToken: Nothing
+    , canDowngradeToSedan: Nothing
+    , canDowngradeToHatchback: Nothing
+    , canDowngradeToTaxi: Nothing
+    , language:
+        Just case getValueToLocalNativeStore LANGUAGE_KEY of
+          "EN_US" -> "ENGLISH"
+          "KN_IN" -> "KANNADA"
+          "HI_IN" -> "HINDI"
+          "ML_IN" -> "MALAYALAM"
+          "BN_IN" -> "BENGALI"
+          "TA_IN" -> "TAMIL"
+          _ -> "ENGLISH"
+    , bundleVersion: Nothing
+    , clientVersion: Nothing
+    , gender: Nothing
+    , languagesSpoken: Nothing
+    , hometown: Nothing
+    , vehicleName: Nothing
     }
 
 
@@ -873,3 +878,8 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
+
+driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverProfileSummaryRes)
+driverProfileSummary lazy = do
+  headers <- getHeaders ""
+  withAPIResult (EP.profileSummary lazy) (\x -> x) (callAPI headers DriverProfileSummaryReq)

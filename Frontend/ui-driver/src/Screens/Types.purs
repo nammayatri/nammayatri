@@ -262,8 +262,30 @@ type DriverProfileScreenData = {
   driverGender :: Maybe String,
   languageList :: Array CheckBoxOptions,
   vehicleAge :: Int,
-  vehicleName :: String
+  vehicleName :: String,
+  analyticsData :: AnalyticsData
 }
+
+type AnalyticsData = {
+    totalEarnings :: String
+  , bonusEarned :: String
+  , totalCompletedTrips :: Int
+  , totalUsersRated :: Int
+  , rating :: Maybe Number
+  , chipRailData :: Array ChipRailData
+  , badges :: Array Badge
+}
+
+type ChipRailData = {
+    mainTxt :: String
+  , subTxt :: String
+}
+
+type Badge =  {
+    badgeImage :: String
+  , primaryText :: String
+  , subText :: String
+  }
 
 type VehicleP = {
   vehicleName :: String,

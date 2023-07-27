@@ -48,7 +48,7 @@ import Screens.Types as ST
 import Components.CheckListView as CheckList
 import Common.Types.App (CheckBoxOptions)
 import Data.Int (fromString)
-import Data.Array (filter)
+import Data.Array (filter,foldl)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -128,6 +128,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToReferralScreen
                     | GoToLogout
                     | GoBack
+                    | UpdateLanguages DriverProfileScreenState (Array String)
 
 data Action = BackPressed Boolean
             | NoAction
@@ -328,7 +329,12 @@ eval (LanguageSelection (CheckList.ChangeCheckBoxSate item)) state = do
 
 eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   let languagesSelected = getSelectedLanguages state
-  continue state
+  exit $ UpdateLanguages state languagesSelected
+
+eval (UpdateValue value) state = do 
+  case value of 
+    "Languages" -> continue state {props{updateLanguages = true}}
+    _ -> continue state
 
 eval (UpdateValueAC (PrimaryButton.OnClick)) state = do 
   if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
@@ -389,7 +395,8 @@ getGenderName gender =
       "PREFER_NOT_TO_SAY" -> Just (getString STR.PREFER_NOT_TO_SAY)
       _ -> Nothing
     Nothing -> Nothing
-getSelectedLanguages :: DriverProfileScreenState -> Array CheckBoxOptions
-getSelectedLanguages state = do
+
+getSelectedLanguages :: DriverProfileScreenState -> Array String
+getSelectedLanguages state = 
   let languages = filter (\a -> a.isSelected == true) state.data.languageList
-  languages
+  in  foldl (\acc item -> acc <> [item.text]) [] languages
