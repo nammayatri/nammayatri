@@ -183,14 +183,12 @@ headerView state push =
       , onClick push $ const (BackPressed true)
       ]
     , textView
-      [ weight 1.0
+      ([ weight 1.0
       , height MATCH_PARENT
       , text "My Profile"
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      , textSize FontSize.a_18
       , margin $ MarginLeft 20
       , color Color.black900
-      ]
+      ] <> FontStyle.h3 TypoGraphy)
     , linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
@@ -203,12 +201,10 @@ headerView state push =
           , imageWithFallback "ic_settings,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
           ]
         , textView
-          [ text "Settings"
-          , textSize FontSize.a_14 
+          ([ text "Settings"
           , color Color.blue900
           , padding $ PaddingBottom 2
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          ]
+          ] <> FontStyle.body1 TypoGraphy)
       ]
   ]
 
@@ -370,12 +366,11 @@ driverAnalyticsView state push =
                     , margin $ MarginRight 4
                     ]
                   , textView
-                    [ text "Late Night Trips"
+                    ([ text "Late Night Trips"
                     , width WRAP_CONTENT
                     , height WRAP_CONTENT
-                    , textSize FontSize.a_12
                     , color Color.black700
-                    ]
+                    ] <> FontStyle.body3 TypoGraphy)
                   ]
               , linearLayout
                 [ width WRAP_CONTENT
@@ -888,13 +883,12 @@ infoTileView state config =
                     ]) [1,2,3,4,5])
           ]
       , textView 
-        [ width WRAP_CONTENT
+        ([ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text config.subText
         , margin (MarginLeft 7)
-        , textSize FontSize.a_14
         , color Color.black700
-        ]
+        ] <> FontStyle.body3 TypoGraphy)
     ]
 
 -------------------------------------------- MENU BUTTON VIEW COMPONENT ---------------------------------------------
