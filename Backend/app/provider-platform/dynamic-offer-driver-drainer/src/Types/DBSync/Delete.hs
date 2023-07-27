@@ -145,6 +145,9 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyPr
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FarePolicySlabDetailsSlab
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.RestrictedExtraFare as RestrictedExtraFare
 import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProduct
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
@@ -357,6 +360,9 @@ data DeleteModel
   | SearchRequestSpecialZoneDelete
   | SearchTryDelete
   | VehicleDelete
+  | FeedbackFormDelete
+  | FeedbackDelete
+  | FeedbackBadgeDelete
   deriving (Generic, Show)
 
 -- getTagDelete :: DeleteModel -> Text
@@ -532,6 +538,9 @@ getTagDelete SearchRequestForDriverDelete = "SearchRequestForDriverOptions"
 getTagDelete SearchRequestSpecialZoneDelete = "SearchRequestSpecialZoneOptions"
 getTagDelete SearchTryDelete = "SearchTryOptions"
 getTagDelete VehicleDelete = "VehicleOptions"
+getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
+getTagDelete FeedbackDelete = "FeedbackOptions"
+getTagDelete FeedbackBadgeDelete = "FeedbackBadgeOptions"
 
 -- parseTagDelete :: Text -> Parser DeleteModel
 -- parseTagDelete "TxnOfferInfoOptions" = return TxnOfferInfoDelete
@@ -707,6 +716,9 @@ parseTagDelete "SearchRequestForDriverOptions" = return SearchRequestForDriverDe
 parseTagDelete "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneDelete
 parseTagDelete "SearchTryOptions" = return SearchTryDelete
 parseTagDelete "VehicleOptions" = return VehicleDelete
+parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
+parseTagDelete "FeedbackOptions" = return FeedbackDelete
+parseTagDelete "FeedbackBadgeOptions" = return FeedbackBadgeDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 -- data DBDeleteObject
@@ -871,6 +883,9 @@ data DBDeleteObject
   | SearchRequestSpecialZoneDeleteOptions DeleteModel (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryDeleteOptions DeleteModel (Where Postgres SearchTry.SearchTryT)
   | VehicleDeleteOptions DeleteModel (Where Postgres Vehicle.VehicleT)
+  | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
+  | FeedbackDeleteOptions DeleteModel (Where Postgres Feedback.FeedbackT)
+  | FeedbackBadgeDeleteOptions DeleteModel (Where Postgres FeedbackBadge.FeedbackBadgeT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -1363,3 +1378,12 @@ instance FromJSON DBDeleteObject where
       VehicleDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ VehicleDeleteOptions deleteModel whereClause
+      FeedbackFormDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ FeedbackFormDeleteOptions deleteModel whereClause
+      FeedbackDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ FeedbackDeleteOptions deleteModel whereClause
+      FeedbackBadgeDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ FeedbackBadgeDeleteOptions deleteModel whereClause

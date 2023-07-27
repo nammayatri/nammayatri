@@ -17,7 +17,9 @@ import qualified "rider-app" Storage.Beam.Estimate as Estimate
 import qualified "rider-app" Storage.Beam.EstimateBreakup as EstimateBreakup
 import qualified "rider-app" Storage.Beam.Exophone as Exophone
 import qualified "rider-app" Storage.Beam.FarePolicy.FareBreakup as FareBreakup
+import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
+import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
@@ -85,6 +87,8 @@ data DBCreateObject
   | SpecialZoneQuoteObject SpecialZoneQuote.SpecialZoneQuote
   | TripTermsObject TripTerms.TripTerms
   | WebengageObject Webengage.Webengage
+  | FeedbackFormObject FeedbackForm.FeedbackForm
+  | HotSpotConfigObject HotSpotConfig.HotSpotConfig
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types
@@ -131,3 +135,5 @@ modelName (SosObject _) = "Sos"
 modelName (SpecialZoneQuoteObject _) = "SpecialZoneQuote"
 modelName (TripTermsObject _) = "TripTerms"
 modelName (WebengageObject _) = "Webengage"
+modelName (FeedbackFormObject _) = "FeedbackForm"
+modelName (HotSpotConfigObject _) = "HotSpotConfig"

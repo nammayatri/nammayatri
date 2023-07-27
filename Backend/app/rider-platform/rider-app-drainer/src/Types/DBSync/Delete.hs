@@ -21,7 +21,9 @@ import qualified "rider-app" Storage.Beam.Estimate as Estimate
 import qualified "rider-app" Storage.Beam.EstimateBreakup as EstimateBreakup
 import qualified "rider-app" Storage.Beam.Exophone as Exophone
 import qualified "rider-app" Storage.Beam.FarePolicy.FareBreakup as FareBreakup
+import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
+import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
@@ -192,6 +194,8 @@ data DeleteModel
   | SpecialZoneQuoteDelete
   | TripTermsDelete
   | WebengageDelete
+  | FeedbackFormDelete
+  | HotSpotConfigDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -234,6 +238,8 @@ getTagDelete SosDelete = "SosOptions"
 getTagDelete SpecialZoneQuoteDelete = "SpecialZoneQuoteOptions"
 getTagDelete TripTermsDelete = "TripTermsOptions"
 getTagDelete WebengageDelete = "WebengageOptions"
+getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
+getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 
 -- parseTagDelete :: Text -> Parser DeleteModel
 -- parseTagDelete "TxnOfferInfoOptions" = return TxnOfferInfoDelete
@@ -378,6 +384,8 @@ parseTagDelete "SosOptions" = return SosDelete
 parseTagDelete "SpecialZoneQuoteOptions" = return SpecialZoneQuoteDelete
 parseTagDelete "TripTermsOptions" = return TripTermsDelete
 parseTagDelete "WebengageOptions" = return WebengageDelete
+parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
+parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 -- data DBDeleteObject
@@ -511,6 +519,8 @@ data DBDeleteObject
   | SpecialZoneQuoteDeleteOptions DeleteModel (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsDeleteOptions DeleteModel (Where Postgres TripTerms.TripTermsT)
   | WebengageDeleteOptions DeleteModel (Where Postgres Webengage.WebengageT)
+  | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
+  | HotSpotConfigDeleteOptions DeleteModel (Where Postgres HotSpotConfig.HotSpotConfigT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -910,3 +920,9 @@ instance FromJSON DBDeleteObject where
       WebengageDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ WebengageDeleteOptions deleteModel whereClause
+      FeedbackFormDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ FeedbackFormDeleteOptions deleteModel whereClause
+      HotSpotConfigDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ HotSpotConfigDeleteOptions deleteModel whereClause

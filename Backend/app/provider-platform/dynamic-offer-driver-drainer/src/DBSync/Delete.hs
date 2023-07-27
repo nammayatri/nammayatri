@@ -91,6 +91,9 @@ runDeleteCommands (cmd, val) = do
     DeleteDBCommand id _ _ _ _ (SearchRequestSpecialZoneDeleteOptions _ whereClause) -> runDelete id val whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchTryDeleteOptions _ whereClause) -> runDelete id val whereClause ("SearchTry" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (VehicleDeleteOptions _ whereClause) -> runDelete id val whereClause ("Vehicle" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (FeedbackFormDeleteOptions _ whereClause) -> runDelete id val whereClause ("FeedbackForm" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (FeedbackDeleteOptions _ whereClause) -> runDelete id val whereClause ("Feedback" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (FeedbackBadgeDeleteOptions _ whereClause) -> runDelete id val whereClause ("FeedbackBadge" :: Text) =<< dbConf
   where
     -- DeleteDBCommand id _ _ _ _ (TxnOfferInfoDeleteOptions                  _ whereClause) -> runDelete id val whereClause ("TxnOfferInfo"                  :: Text) =<< Config.getEulerDbConf
     -- DeleteDBCommand id _ _ _ _ (HdfcHashedNumDeleteOptions                 _ whereClause) -> runDelete id val whereClause ("HdfcHashedNum"                 :: Text) =<< Config.getEulerDbConf

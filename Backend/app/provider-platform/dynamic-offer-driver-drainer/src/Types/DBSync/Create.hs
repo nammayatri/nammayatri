@@ -41,6 +41,9 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyPr
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FarePolicySlabDetailsSlab
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.RestrictedExtraFare as RestrictedExtraFare
 import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProduct
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
@@ -334,6 +337,9 @@ data DBCreateObject
   | SearchTryObject SearchTry.SearchTry
   | VehicleObject Vehicle.Vehicle
   | RegistrationTokenObject RegistrationToken.RegistrationToken
+  | FeedbackFormObject FeedbackForm.FeedbackForm
+  | FeedbackObject Feedback.Feedback
+  | FeedbackBadgeObject FeedbackBadge.FeedbackBadge
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types
@@ -501,3 +507,6 @@ modelName (SearchRequestSpecialZoneObject _) = "SearchRequestSpecialZone"
 modelName (SearchTryObject _) = "SearchTry"
 modelName (VehicleObject _) = "Vehicle"
 modelName (RegistrationTokenObject _) = "RegistrationToken"
+modelName (FeedbackFormObject _) = "FeedBackForm"
+modelName (FeedbackObject _) = "FeedBack"
+modelName (FeedbackBadgeObject _) = "FeedBackBadge"

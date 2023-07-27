@@ -181,6 +181,8 @@ runUpdateCommands (cmd, val) = do
     UpdateDBCommand id _ _ _ _ (SpecialZoneQuoteOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SpecialZoneQuote" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (TripTermsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("TripTerms" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (WebengageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Webengage" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FeedbackFormOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FeedbackForm" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (HotSpotConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("HotSpotConfig" :: Text) =<< dbConf
   where
     runUpdate id value setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

@@ -19,7 +19,9 @@ import qualified "rider-app" Storage.Beam.Estimate as Estimate
 import qualified "rider-app" Storage.Beam.EstimateBreakup as EstimateBreakup
 import qualified "rider-app" Storage.Beam.Exophone as Exophone
 import qualified "rider-app" Storage.Beam.FarePolicy.FareBreakup as FareBreakup
+import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
+import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
@@ -181,6 +183,8 @@ data UpdateModel
   | SpecialZoneQuoteUpdate
   | TripTermsUpdate
   | WebengageUpdate
+  | FeedbackFormUpdate
+  | HotSpotConfigUpdate
   deriving (Generic, Show)
 
 -- getTagUpdate :: UpdateModel -> Text
@@ -314,6 +318,8 @@ getTagUpdate SosUpdate = "SosOptions"
 getTagUpdate SpecialZoneQuoteUpdate = "SpecialZoneQuoteOptions"
 getTagUpdate TripTermsUpdate = "TripTermsOptions"
 getTagUpdate WebengageUpdate = "WebengageOptions"
+getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
+getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -355,6 +361,8 @@ parseTagUpdate "SosOptions" = return SosUpdate
 parseTagUpdate "SpecialZoneQuoteOptions" = return SpecialZoneQuoteUpdate
 parseTagUpdate "TripTermsOptions" = return TripTermsUpdate
 parseTagUpdate "WebengageOptions" = return WebengageUpdate
+parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
+parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 -- parseTagUpdate :: Text -> Parser UpdateModel
@@ -580,6 +588,8 @@ data DBUpdateObject
   | SpecialZoneQuoteOptions UpdateModel [Set Postgres SpecialZoneQuote.SpecialZoneQuoteT] (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsOptions UpdateModel [Set Postgres TripTerms.TripTermsT] (Where Postgres TripTerms.TripTermsT)
   | WebengageOptions UpdateModel [Set Postgres Webengage.WebengageT] (Where Postgres Webengage.WebengageT)
+  | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
+  | HotSpotConfigOptions UpdateModel [Set Postgres HotSpotConfig.HotSpotConfigT] (Where Postgres HotSpotConfig.HotSpotConfigT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -981,3 +991,9 @@ instance FromJSON DBUpdateObject where
       WebengageUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ WebengageOptions updateModel updVals whereClause
+      FeedbackFormUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ FeedbackFormOptions updateModel updVals whereClause
+      HotSpotConfigUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ HotSpotConfigOptions updateModel updVals whereClause

@@ -94,6 +94,8 @@ cancel req merchant booking = do
   -- let merchantId' = booking.providerId
   -- unless (merchantId' == merchantId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
+  whenJust mbRide $ \ride' -> do
+    void $ QDI.updateOnRide (cast ride'.driverId) False
   bookingCR <- buildBookingCancellationReason
   -- Esq.runTransaction $ do
   QBCR.upsert bookingCR
@@ -102,8 +104,6 @@ cancel req merchant booking = do
     _ <- QRide.updateStatus ride.id SRide.CANCELLED
     driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
-    whenJust mbRide $ \ride' -> do
-      void $ QDI.updateOnRide (cast ride'.driverId) False
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
     void (DLoc.updateOnRideCacheForCancelledOrEndRide (cast ride.driverId) booking.providerId)

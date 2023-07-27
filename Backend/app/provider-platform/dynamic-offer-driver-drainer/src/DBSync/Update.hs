@@ -212,6 +212,9 @@ runUpdateCommands (cmd, val) = do
     UpdateDBCommand id _ _ _ _ (SearchRequestSpecialZoneOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (SearchTryOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchTry" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (VehicleOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Vehicle" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FeedbackFormOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FeedbackForm" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FeedbackOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Feedback" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FeedbackBadgeOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FeedbackBadge" :: Text) =<< dbConf
   where
     runUpdate id value setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

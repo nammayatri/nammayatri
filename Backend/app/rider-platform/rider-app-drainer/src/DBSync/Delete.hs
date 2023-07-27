@@ -60,6 +60,8 @@ runDeleteCommands (cmd, val) = do
     DeleteDBCommand id _ _ _ _ (SpecialZoneQuoteDeleteOptions _ whereClause) -> runDelete id val whereClause ("SpecialZoneQuote" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (TripTermsDeleteOptions _ whereClause) -> runDelete id val whereClause ("TripTerms" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (WebengageDeleteOptions _ whereClause) -> runDelete id val whereClause ("Webengage" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (FeedbackFormDeleteOptions _ whereClause) -> runDelete id val whereClause ("FeedbackForm" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (HotSpotConfigDeleteOptions _ whereClause) -> runDelete id val whereClause ("HotSpotConfig" :: Text) =<< dbConf
   where
     runDelete id value whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

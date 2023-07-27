@@ -143,6 +143,9 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyPr
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FarePolicySlabDetailsSlab
 import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.RestrictedExtraFare as RestrictedExtraFare
 import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProduct
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Feedback
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
+import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
@@ -346,6 +349,9 @@ data UpdateModel
   | SearchRequestSpecialZoneUpdate
   | SearchTryUpdate
   | VehicleUpdate
+  | FeedbackFormUpdate
+  | FeedbackUpdate
+  | FeedbackBadgeUpdate
   deriving (Generic, Show)
 
 -- getTagUpdate :: UpdateModel -> Text
@@ -510,6 +516,9 @@ getTagUpdate SearchRequestForDriverUpdate = "SearchRequestForDriverOptions"
 getTagUpdate SearchRequestSpecialZoneUpdate = "SearchRequestSpecialZoneOptions"
 getTagUpdate SearchTryUpdate = "SearchTryOptions"
 getTagUpdate VehicleUpdate = "VehicleOptions"
+getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
+getTagUpdate FeedbackUpdate = "FeedbackOptions"
+getTagUpdate FeedbackBadgeUpdate = "FeedbackBadgeOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "BookingOptions" = return BookingUpdate
@@ -582,6 +591,9 @@ parseTagUpdate "SearchRequestForDriverOptions" = return SearchRequestForDriverUp
 parseTagUpdate "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneUpdate
 parseTagUpdate "SearchTryOptions" = return SearchTryUpdate
 parseTagUpdate "VehicleOptions" = return VehicleUpdate
+parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
+parseTagUpdate "FeedbackOptions" = return FeedbackUpdate
+parseTagUpdate "FeedbackBadgeOptions" = return FeedbackBadgeUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 -- parseTagUpdate :: Text -> Parser UpdateModel
@@ -838,6 +850,9 @@ data DBUpdateObject
   | SearchRequestSpecialZoneOptions UpdateModel [Set Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT] (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryOptions UpdateModel [Set Postgres SearchTry.SearchTryT] (Where Postgres SearchTry.SearchTryT)
   | VehicleOptions UpdateModel [Set Postgres Vehicle.VehicleT] (Where Postgres Vehicle.VehicleT)
+  | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
+  | FeedbackOptions UpdateModel [Set Postgres Feedback.FeedbackT] (Where Postgres Feedback.FeedbackT)
+  | FeedbackBadgeOptions UpdateModel [Set Postgres FeedbackBadge.FeedbackBadgeT] (Where Postgres FeedbackBadge.FeedbackBadgeT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -1332,3 +1347,12 @@ instance FromJSON DBUpdateObject where
       VehicleUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ VehicleOptions updateModel updVals whereClause
+      FeedbackFormUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ FeedbackFormOptions updateModel updVals whereClause
+      FeedbackUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ FeedbackOptions updateModel updVals whereClause
+      FeedbackBadgeUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ FeedbackBadgeOptions updateModel updVals whereClause
