@@ -184,9 +184,6 @@ paymentHistory to from status = case status of
   Nothing -> (getBaseUrl "") <> "/driver/payments/history?from=" <> from <> "&to=" <> to
   Just status' -> (getBaseUrl "") <> "/driver/payments/history" <> "?status=" <> (show status')
 
-getOrder :: String -> String
-getOrder orderId = (getBaseUrl "37") <> "/payment/" <> orderId
-
 triggerAadhaarOTP :: String -> String
 triggerAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/generateAadhaarOtp"
 

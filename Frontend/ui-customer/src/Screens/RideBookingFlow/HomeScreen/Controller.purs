@@ -72,7 +72,7 @@ import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os,
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText', terminateApp, updateInputString, withinTimeRange, toString)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText, terminateApp, updateInputString, withinTimeRange, toString)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -91,7 +91,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), FeedbackAnswer(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -1810,14 +1810,12 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   continue $ if state.data.currentSearchResultType == QUOTES then newState{data{specialZoneSelectedQuote = Just config.id }}
               else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleType))) state =
-  continue state{ props { showRateCard = true }
-                , data {  rateCard {  rateCardArray = getRateCardValue vehicleType state
-                                    , title = getVehicleTitle vehicleType
-                                    , onFirstPage = false
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleVariant))) state = 
+  continue state{ props { showRateCard = true } 
+                , data {  rateCard {  onFirstPage = false
+                                    , vehicleVariant = vehicleVariant
                                     , currentRateCardType = DefaultRateCard
-                                    , driverAdditionsLogic = if (getMerchant FunctionCall == NAMMAYATRI) then (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) else (getString DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS)
-                                    , driverAdditionsImage = if (getMerchant FunctionCall == YATRI) then "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" else "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"}}}
+                                    }}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   if state.data.currentSearchResultType == QUOTES then  do
@@ -2185,10 +2183,10 @@ estimatesFlow estimatedQuotes state = do
                                   , nightCharges: nightCharges
                                   , currentRateCardType: DefaultRateCard
                                   , onFirstPage: false
-                                  , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
-                                  , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
-                                  , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
-                                  },
+                                  , baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges
+                                  , vehicleVariant : ""
+                                  }
+                                  ,
                       showPreferences = getPreferenceValue "" }
             , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon, zoneType = zoneType}
             }
@@ -2204,9 +2202,8 @@ estimatesFlow estimatedQuotes state = do
                             , nightCharges: nightCharges
                             , currentRateCardType: DefaultRateCard
                             , onFirstPage: false
-                            , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
-                            , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
-                            , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
+                            , baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges
+                            , vehicleVariant : ""
                             }
                 }
         }
@@ -2241,7 +2238,7 @@ estimatesListFlow estimates state = do
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
-    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = ESTIMATES, selectedEstimatesObject = defaultQuote, pickUpCharges = pickUpCharges}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
+    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = ESTIMATES, rateCard {vehicleVariant = defaultQuote.vehicleVariant}, selectedEstimatesObject = defaultQuote, pickUpCharges = pickUpCharges}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
@@ -2253,9 +2250,9 @@ estimatesListTryAgainFlow :: GetQuotesRes -> HomeScreenState -> Eval Action Scre
 estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
   let
     estimates = quotesRes.estimates
-    quoteList = getEstimateList estimates
     estimatedVarient = filter (\x -> x ^. _vehicleVariant == state.data.selectedEstimatesObject.vehicleVariant) estimates
     estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
+    quoteList = getEstimateList estimatedVarient
     defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
   case (null estimatedVarient) of
     true -> do
@@ -2263,7 +2260,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
       _ <- pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
       continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
     false -> do
-      if (estimatedPrice >  state.data.selectedEstimatesObject.price) then
+      if (estimatedPrice >  state.data.selectedEstimatesObject.basePrice) then
             continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, isEstimateChanged = true } }
       else do
         _ <- pure $ updateLocalStage FindingQuotes
@@ -2324,37 +2321,38 @@ getZoneType tag =
     Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
 
-getVehicleTitle :: String -> String
-getVehicleTitle vehicle =
-  (case vehicle of
-    "HATCHBACK" -> (getString HATCHBACK)
-    "SUV" -> (getString SUV)
-    "SEDAN" -> (getString SEDAN)
-    _ -> "") <> " - " <> (getString RATE_CARD)
-getRateCardValue :: String -> HomeScreenState -> Array RateCardDetails
-getRateCardValue vehicleVariant state = do
-  let lang = getValueToLocalStore LANGUAGE_KEY
-  case vehicleVariant of
-    "HATCHBACK" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , description : "₹140"}
-                   , { title : "5 km - 13 km" , description : "₹18 / km"}
-                   , { title : "13 km - 30 km" , description : "₹25 / km"}
-                   , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN), description : "₹36 / km"}
-                   , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
-                   , { title : (getString DRIVER_ADDITIONS) , description : "₹0 - ₹60"}]
+-- getVehicleTitle :: String -> String 
+-- getVehicleTitle vehicle = 
+--   (case vehicle of 
+--     "HATCHBACK" -> (getString HATCHBACK)
+--     "SUV" -> (getString SUV)
+--     "SEDAN" -> (getString SEDAN)
+--     _ -> "") <> " - " <> (getString RATE_CARD)
+-- getRateCardValue :: String -> HomeScreenState -> Array RateCardDetails
+-- getRateCardValue vehicleVariant state = do
+--   let lang = getValueToLocalStore LANGUAGE_KEY
+--   case vehicleVariant of 
+--     "HATCHBACK" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , description : "₹122"}
+--                    , { title : "4 km - 13 km" , description : "₹18 / km"}
+--                    , { title : "13 km - 30 km" , description : "₹25 / km"}
+--                    , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN), description : "₹36 / km"}
+--                    , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
+--                    , { title : (getString DRIVER_ADDITIONS) , description : "₹0 - ₹60"}]
 
-    "SEDAN"     -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), description : "₹150"}
-                   , { title : "5 km - 13 km" , description : "₹18 / km"}
-                   , { title : "13 km - 30 km" , description : "₹25 / km"}
-                   , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) ,description : "₹36 / km"}
-                   , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
-                   , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
+--     "SEDAN"     -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), description : "₹150"}
+--                    , { title : "5 km - 13 km" , description : "₹18 / km"}
+--                    , { title : "13 km - 30 km" , description : "₹25 / km"}
+--                    , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) ,description : "₹36 / km"}
+--                    , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
+--                    , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
 
-    "SUV"       -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , description : "₹225"}
-                   , { title : "5 km - 30 km" , description : "₹30 / km"}
-                   , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , description :"₹40 / km"}
-                   , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
-                   , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
-    _ -> []
+--     "SUV"       -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , description : "₹165"}
+--                    , { title : "5 km - 13 km" , description : "₹20 / km"}
+--                    , { title : "13 km - 30 km" , description : "₹28 / km"}
+--                    , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , description :"₹40 / km"}
+--                    , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
+--                    , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
+--     _ -> []
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
 getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }

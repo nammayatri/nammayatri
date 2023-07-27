@@ -506,12 +506,11 @@ export const addMarkerImpl = function (title) {
 
 export const removeMarker = function (title) {
   try {
-    console.log("I AM HERE to remove marker------------------");
     window.JBridge.removeMarker(title);
     return true;
   } catch (e) {
     console.log(e);
-    console.log("error in removeMarker----------------------------------");
+    console.log("error in removeMarker----------------------------------", e);
   }
 };
 

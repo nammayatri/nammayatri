@@ -1864,38 +1864,7 @@ instance standardEncodeCallDriverToDriverResp :: StandardEncode CallDriverToDriv
 instance decodeCallDriverToDriverResp :: Decode CallDriverToDriverResp where decode = defaultDecode
 instance encodeCallDriverToDriverResp :: Encode CallDriverToDriverResp where encode = defaultEncode
 
--- getOrder status API
-
-data GetOrderReq = GetOrderReq String
-
-newtype GetOrderRes = GetOrderRes {
-  sdk_payload :: PaymentPagePayload,
-  status :: String ,
-  id :: String,
-  order_id :: String,
-  payment_links :: PaymentLinks
-  }
-
-instance makeGetOrderReq :: RestEndpoint GetOrderReq GetOrderRes where
- makeRequest reqBody@(GetOrderReq orderId) headers = defaultMakeRequest GET (EP.getOrder orderId) headers reqBody
- decodeResponse = decodeJSON
- encodeRequest req = standardEncode req
-
-derive instance genericGetOrderReq :: Generic GetOrderReq _
-instance standardEncodeGetOrderReq :: StandardEncode GetOrderReq where standardEncode (GetOrderReq id) = standardEncode id
-instance showGetOrderReq :: Show GetOrderReq where show = genericShow
-instance decodeGetOrderReq :: Decode GetOrderReq where decode = defaultDecode
-instance encodeGetOrderReq :: Encode GetOrderReq where encode = defaultEncode
-
-derive instance genericGetOrderRes :: Generic GetOrderRes _
-derive instance newtypeGetOrderRes :: Newtype GetOrderRes _
-instance standardEncodeGetOrderRes :: StandardEncode GetOrderRes where standardEncode (GetOrderRes res) = standardEncode res
-instance showGetOrderRes :: Show GetOrderRes where show = genericShow
-instance decodeGetOrderRes :: Decode GetOrderRes where decode = defaultDecode
-instance encodeGetOrderRes :: Encode GetOrderRes where encode = defaultEncode
-
 -- order status api
-
 data CreateOrderReq = CreateOrderReq String
 
 newtype CreateOrderRes = CreateOrderRes

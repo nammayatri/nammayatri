@@ -130,13 +130,13 @@ android {
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
-        jsUser {
+        ysUser {
             applicationId "in.juspay.jatrisaathi"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"WB\""
             dimension "app"
         }
-        jsDriver {
+        ysDriver {
             applicationId "in.juspay.jatrisaathidriver"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"WB\""
@@ -167,16 +167,16 @@ android {
     sourceSets {
         nyUser.setRoot('src/user/nammaYatri')
         nyDriver.setRoot('src/driver/nammaYatriPartner')
-        jsUser.setRoot('src/user/jatriSaathi')
-        jsDriver.setRoot('src/driver/jatriSaathiDriver')
+        ysUser.setRoot('src/user/jatriSaathi')
+        ysDriver.setRoot('src/driver/jatriSaathiDriver')
         yatriUser.setRoot('src/user/yatri')
         yatriDriver.setRoot('src/driver/yatriPartner')
         passCulturePartner.setRoot('src/driver/passCulturePartner')
         nyUser.res.srcDir('src/user/common/res')
-        jsUser.res.srcDir('src/user/common/res')
+        ysUser.res.srcDir('src/user/common/res')
         yatriUser.res.srcDir('src/user/common/res')
         nyDriver.res.srcDir('src/driver/common/res')
-        jsDriver.res.srcDir('src/driver/common/res')
+        ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
         passCulturePartner.res.srcDir('src/driver/common/res')
     }
@@ -213,10 +213,10 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
     nyDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
-    jsDriverImplementation project(path: ':mobility-driver')
+    ysDriverImplementation project(path: ':mobility-driver')
     yatriDriverImplementation project(path: ':mobility-driver')
     nyUserImplementation project(path: ':mobility-customer')
-    jsUserImplementation project(path: ':mobility-customer')
+    ysUserImplementation project(path: ':mobility-customer')
     yatriUserImplementation project(path: ':mobility-customer')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'

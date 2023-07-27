@@ -31,6 +31,7 @@ to generate this file without the comments in this block.
   , "functions"
   , "halogen-vdom"
   , "integers"
+  , "lists"
   , "maybe"
   , "newtype"
   , "numbers"

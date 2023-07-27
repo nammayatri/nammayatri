@@ -275,10 +275,16 @@ getVehicleImage variant = case fetchVehicleVariant variant of
           _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
 
 getVehicleCapacity :: String -> String 
-getVehicleCapacity variant = case fetchVehicleVariant variant of
+getVehicleCapacity variant = case getMerchant FunctionCall of
+  YATRISATHI -> case fetchVehicleVariant variant of
           Just ST.TAXI -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
           Just ST.TAXI_PLUS -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
           Just ST.SEDAN -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
           Just ST.SUV -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
           Just ST.HATCHBACK -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
+          Just ST.AUTO_RICKSHAW -> ""
           _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+  YATRI -> case fetchVehicleVariant variant of
+          Just ST.SUV -> "6 " <> (getString SEATS)
+          _ -> "4 " <> (getString SEATS)
+  _ ->    ""

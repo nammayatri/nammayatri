@@ -53,6 +53,8 @@ import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (consumeBP, decodeErrorCode, decodeErrorMessage, getDatebyCount, getDowngradeOptions, getGenderIndex, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, parseFloat, secondsLeft, startPP, toString)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime, withinTimeRange)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -1533,7 +1535,7 @@ checkDriverPaymentStatus :: Boolean -> FlowBT String Unit
 checkDriverPaymentStatus paymentPending = when
   (paymentPending &&
     (getValueToLocalStore SHOW_PAYMENT_MODAL) /= "false" &&
-    not all ( _ == true )[isLocalStageOn RideAccepted, isLocalStageOn RideStarted, isLocalStageOn ChatWithCustomer]
+    not any ( _ == true )[isLocalStageOn RideAccepted, isLocalStageOn RideStarted, isLocalStageOn ChatWithCustomer]
     ) do
     resp <- lift $ lift $ Remote.getPaymentHistory "" "" (Just "PAYMENT_PENDING")
     case resp of
@@ -1551,10 +1553,10 @@ checkDriverPaymentStatus paymentPending = when
               dateObj = paymentDetailsEntity.date
               }}})
           Nothing -> do
-            resp1 <- lift $ lift $ Remote.getPaymentHistory "" "" (Just "PAYMENT_OVERDUE")
-            case resp1 of
-              Right (GetPaymentHistoryResp resp1') ->
-                case resp1'!!0 of
+            overDueResp <- lift $ lift $ Remote.getPaymentHistory "" "" (Just "PAYMENT_OVERDUE")
+            case overDueResp of
+              Right (GetPaymentHistoryResp overDueResp') ->
+                case overDueResp'!!0 of
                   Just (PaymentDetailsEntity paymentDetailsEntity) ->
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { paymentState {
                       makePaymentModal = true,
@@ -1876,56 +1878,22 @@ homeScreenFlow = do
     ON_CALL state -> do
       (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id)
       homeScreenFlow
-    OPEN_PAYMENT_PAGE state -> startPaymentPageFlow
+    OPEN_PAYMENT_PAGE state -> paymentFlow
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
       aadhaarVerificationFlow
   pure unit
 
-dummyPayload :: PaymentPagePayload
-dummyPayload = PaymentPagePayload {
-    requestId: Nothing ,
-    service: Nothing,
-    payload : PayPayload {
-        clientId: Nothing,
-        amount:  "",
-        merchantId: Nothing,
-        clientAuthToken: "",
-        clientAuthTokenExpiry: "",
-        environment: Nothing,
-        lastName: Nothing,
-        action: Nothing,
-        customerId: Nothing,
-        currency: "",
-        firstName: Nothing,
-        customerPhone: Nothing,
-        customerEmail: Nothing,
-        orderId: Nothing,
-        description: Nothing,
-        options_getUpiDeepLinks  : Nothing,
-        returnUrl  : Nothing
-    }
-}
 
-
-startPaymentPageFlow :: FlowBT String Unit
-startPaymentPageFlow = do
+paymentFlow :: FlowBT String Unit
+paymentFlow = do
   (GlobalState state) <- getState
   let homeScreenState = state.homeScreen
   response <- lift $ lift $ Remote.createPaymentOrder homeScreenState.data.paymentState.driverFeeId
   case response of
     Right (CreateOrderRes listResp) -> do
       let (PaymentPagePayload sdk_payload) = listResp.sdk_payload
-      let (PayPayload innerpayload) = sdk_payload.payload
-      let finalPayload = PayPayload $ innerpayload{
-        clientId = Just "yatrisathi",
-        merchantId = Just "yatrisathi"
-        -- environment = Just "production"
-        -- lastName = Just "wick"
-        -- options_getUpiDeepLinks = Just ""
-        }
-      let (final_payload) = PaymentPagePayload $ sdk_payload{payload = finalPayload}
-      paymentPageOutput <- startPP  listResp.sdk_payload-- final_payload --
+      paymentPageOutput <- paymentPageUI listResp.sdk_payload
       let _ = consumeBP unit
       if (paymentPageOutput == "backpressed") then homeScreenFlow else pure unit-- backpressed FAIL
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus homeScreenState.data.paymentState.driverFeeId
@@ -1944,8 +1912,8 @@ startPaymentPageFlow = do
             PS.AUTO_REFUNDED -> setPaymentStatus Pending sdk_payload.payload
         Left error -> setPaymentStatus Failed sdk_payload.payload
     Left (error) -> do
-      let (PaymentPagePayload sdk_payload) = dummyPayload
-      setPaymentStatus Failed sdk_payload.payload
+      pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+      homeScreenFlow
   ackScreenFlow
 
 
@@ -2001,7 +1969,7 @@ ackScreenFlow = do
   action <- UI.acknowledgementScreen
   case action of
     EXIT_TO_HOME_SCREEN -> homeScreenFlow
-    RETRY_PAYMENT -> startPaymentPageFlow
+    RETRY_PAYMENT -> paymentFlow
 
 
 constructLatLong :: String -> String -> Location

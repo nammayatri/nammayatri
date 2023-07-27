@@ -749,6 +749,9 @@ public class LocationUpdateService extends Service {
     /* Creating alert notification to notify that he is offline */
     private void showAlertNotification() {
         System.out.println("Notification");
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        if (token.equals("null") || token.equals("__failed")) return;
         Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");

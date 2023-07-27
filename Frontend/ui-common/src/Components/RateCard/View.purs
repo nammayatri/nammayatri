@@ -27,7 +27,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/=), (+), (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
@@ -38,6 +38,7 @@ import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Engineering.Helpers.Commons (os)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -138,94 +139,98 @@ fareList push config =
 
 defaultRateCardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 defaultRateCardView push config = 
-  linearLayout
+  scrollView
   [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
+  , height if os == "IOS" then (V 330) else WRAP_CONTENT
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , padding $ PaddingHorizontal 20 20
-      ][ fareList push config]
-    , imageView
-      [ width MATCH_PARENT
-      , height $ V 2 
-      , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
-      , margin $ Margin 20 20 20 12
-      ]
-    , textView
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , color Color.black700
-      , text config.applicableCharges
-      , textSize FontSize.a_14
-      , lineHeight "16"
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , padding $ PaddingHorizontal 20 20
-      ]
-    , imageView
-      [ width MATCH_PARENT
-      , height $ V 2 
-      , visibility if config.showDetails then VISIBLE else GONE
-      , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
-      , margin $ Margin 20 12 20 0
-      ]
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , visibility if config.showDetails then VISIBLE else GONE
-        ](DA.mapWithIndex (\index item -> 
-            linearLayout
+      , orientation VERTICAL
+      ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , padding $ PaddingHorizontal 20 20
+          ][ fareList push config]
+        , imageView
+          [ width MATCH_PARENT
+          , height $ V 2 
+          , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
+          , margin $ Margin 20 20 20 12
+          ]
+        , textView
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , color Color.black700
+          , text config.applicableCharges
+          , textSize FontSize.a_14
+          , lineHeight "16"
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , padding $ PaddingHorizontal 20 20
+          ]
+        , imageView
+          [ width MATCH_PARENT
+          , height $ V 2 
+          , visibility if config.showDetails then VISIBLE else GONE
+          , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
+          , margin $ Margin 20 12 20 0
+          ]
+        , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
-            ][  linearLayout
+            , visibility if config.showDetails then VISIBLE else GONE
+            ](DA.mapWithIndex (\index item -> 
+                linearLayout
                 [ width MATCH_PARENT
-                  , height WRAP_CONTENT
-                  , orientation HORIZONTAL
-                  , margin $ MarginVertical 12 12
-                  , padding $ PaddingHorizontal 20 20
-                  , onClick push $ const case item.key of
-                    "DRIVER_ADDITIONS" -> GoToDriverAddition
-                    "FARE_UPDATE_POLICY" -> GoToFareUpdate
-                    _  -> NoAction
-                ][  textView
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , color Color.black700
-                    , text item.val
-                    , textSize FontSize.a_14
-                    , lineHeight "16"
-                    , fontStyle $ FontStyle.regular LanguageStyle
-                    , padding $ PaddingRight 20
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                ][  linearLayout
+                    [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , orientation HORIZONTAL
+                      , margin $ MarginVertical 12 12
+                      , padding $ PaddingHorizontal 20 20
+                      , onClick push $ const case item.key of
+                        "DRIVER_ADDITIONS" -> GoToDriverAddition
+                        "FARE_UPDATE_POLICY" -> GoToFareUpdate
+                        _  -> NoAction
+                    ][  textView
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , color Color.black700
+                        , text item.val
+                        , textSize FontSize.a_14
+                        , lineHeight "16"
+                        , fontStyle $ FontStyle.regular LanguageStyle
+                        , padding $ PaddingRight 20
+                        ]
+                      , linearLayout
+                        [ weight 1.0
+                        , height WRAP_CONTENT
+                        , orientation HORIZONTAL
+                        , padding $ PaddingLeft 20
+                        , gravity RIGHT
+                        ][
+                          imageView
+                          [ height $ V 12
+                          , width $ V 12
+                          , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                          , margin $ MarginTop 4
+                          , color Color.black900
+                          , fontStyle $ FontStyle.semiBold LanguageStyle
+                          ] 
+                        ]           
                     ]
-                  , linearLayout
-                    [ weight 1.0
-                    , height WRAP_CONTENT
-                    , orientation HORIZONTAL
-                    , padding $ PaddingLeft 20
-                    , gravity RIGHT
-                    ][
-                      imageView
-                      [ height $ V 12
-                      , width $ V 12
-                      , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
-                      , margin $ MarginTop 4
-                      , color Color.black900
-                      , fontStyle $ FontStyle.semiBold LanguageStyle
-                      ] 
-                    ]           
+                , linearLayout 
+                  [ height $ V 1
+                  , width MATCH_PARENT
+                  , background Color.grey800
+                  , margin $ MarginHorizontal 16 16
+                  , visibility if (index + 1) /= (DA.length config.otherOptions) then VISIBLE else GONE
+                  ][]
                 ]
-            , linearLayout 
-              [ height $ V 1
-              , width MATCH_PARENT
-              , background Color.grey800
-              , margin $ MarginHorizontal 16 16
-              , visibility if (index + 1) /= (DA.length config.otherOptions) then VISIBLE else GONE
-              ][]
-            ]
-          )config.otherOptions)
+              )config.otherOptions)
+      ]
   ]
       
 driverAdditionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -241,7 +246,7 @@ driverAdditionView push config =
      , imageView
         [ height $ V 110
         , width MATCH_PARENT
-        , imageWithFallback "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+        , imageWithFallback config.driverAdditionsImage
         , margin $ MarginTop 12
         ] 
      , commonTV push (getStringByKey config "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE") Color.black650 FontStyle.body3 LEFT 12 NoAction
