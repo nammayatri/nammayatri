@@ -524,5 +524,6 @@ const englishStrings = {
   REG_NUMBER : "Reg. Number",
   TYPE : "Type",
   MODEL_NAME : "Model Name",
-  COLOUR : "Colour"
+  COLOUR : "Colour",
+  BADGES : "Badges"
 }

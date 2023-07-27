@@ -526,5 +526,7 @@ const hindiStrings = {
   REG_NUMBER : "पंजीकरण संख्या",
   TYPE : "प्रकार",
   MODEL_NAME : "मॉडल का नाम",
-  COLOUR : "रंग"
+  COLOUR : "रंग",
+  BADGES : "बैज"
+
 }

@@ -61,7 +61,7 @@ genericHeaderConfig state = let
       , width = (V 25)
       , margin = (Margin 16 16 16 16)
       } 
-    , padding = (Padding 0 5 0 5)
+    , padding = (PaddingVertical 5 5)
     , textConfig {
         text = "Settings"
       , textSize = FontSize.a_18
@@ -84,7 +84,7 @@ primaryEditTextConfig state = let
         , fontStyle = FontStyle.medium LanguageStyle
         , textSize = FontSize.a_16
         , text = ""
-        , placeholder =""
+        , placeholder = ""
       }
     , topLabel
       { textSize = FontSize.a_14

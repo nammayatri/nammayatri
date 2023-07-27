@@ -533,7 +533,7 @@ data STR = LETS_GET_STARTED
         | TYPE
         | MODEL_NAME
         | COLOUR
-
+        | BADGES
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1057,3 +1057,4 @@ getStringFromEnum key = case key of
     TYPE -> "TYPE"
     MODEL_NAME -> "MODEL_NAME"
     COLOUR -> "COLOUR"
+    BADGES -> "BADGES"

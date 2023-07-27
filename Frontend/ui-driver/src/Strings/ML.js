@@ -471,7 +471,6 @@ const mlStrings = {
   COMPLAINTS_DESCRIPTION_ADDITIONAL : "പരാതികൾ പരിഹരിക്കുന്നതിന്, ഞങ്ങളുടെ <u>സ്വകാര്യതാ നയം</u> പരിശോധിക്കുക",
   REGISTERED_ADDRESS : "രേഖപ്പെടുത്തിയ വിലാസം",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "സ്റ്റാലിയൻ ബിസിനസ് സെന്റർ, നമ്പർ 444, 3rd & 4th നിലകൾ, 18th മെയിൻ, 6th ബ്ലോക്ക്, കോറമംഗല, ബെംഗളൂരു, കർണാടക- 560095, ഇന്ത്യ",
-  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
   SELECT_YOUR_GENDER : "നിങ്ങളുടെ ലിംഗഭേദം തിരഞ്ഞെടുക്കുക",
   FEMALE : "സ്ത്രീ",
   MALE : "പുരുഷൻ",
@@ -530,5 +529,6 @@ const mlStrings = {
   REG_NUMBER : "രജിസ്‌ട്രേഷൻ നമ്പർ",
   TYPE : "തരം",
   MODEL_NAME : "മോഡലിന്റെ പേര്",
-  COLOUR : "നിറം"
+  COLOUR : "നിറം",
+  BADGE: "ബാഡ്ജുകൾ"
 }

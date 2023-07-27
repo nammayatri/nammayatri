@@ -525,5 +525,6 @@ const bengaliStrings = {
   REG_NUMBER : "রেজিস্ট্রেশন নম্বর",
   TYPE : "টাইপ",
   MODEL_NAME : "মডেলের নাম",
-  COLOUR : "রঙ"
-	}
+  COLOUR : "রঙ",
+  BADGE: "ব্যাজ"
+}

@@ -523,5 +523,6 @@ const tamilStrings = {
   REG_NUMBER : "பதிவு எண்",
   TYPE : "வகை",
   MODEL_NAME : "மாடல் பெயர்",
-  COLOUR : "நிறம்"
+  COLOUR : "நிறம்",
+  BADGE: "பேட்ஜ்கள்"
 }

@@ -523,6 +523,7 @@ const kannadaStrings = {
   REG_NUMBER : "ನೋಂದಣಿ ಸಂಖ್ಯೆ",
   TYPE : "ಟೈಪ್",
   MODEL_NAME : "ಮಾದರಿ ಹೆಸರು",
-  COLOUR : "ಬಣ್ಣ"
+  COLOUR : "ಬಣ್ಣ",
+  BADGES : "ಬ್ಯಾಡ್ಜ್‌ಗಳು"
 
 }
