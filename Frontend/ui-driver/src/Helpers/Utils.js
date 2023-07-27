@@ -666,7 +666,7 @@ export const getMerchantId = function(id) {
   return window.merchantID;
 }
 
-export const startPP1 = function (payload) {
+export const startPP = function (payload) {
 	return function (sc) {
 		return function () {
 			var cb = function (code) {

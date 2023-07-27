@@ -46,7 +46,7 @@ import Styles.Colors as Color
 import Components.MakePaymentModal as MakePaymentModal
 import Components.RateCard as RateCard
 import Common.Types.App as CommonTypes
-import Services.APITypes ( PaymentBreakUp(..))
+import Services.API ( PaymentBreakUp(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 
 import Styles.Colors as Color

@@ -50,7 +50,8 @@ type Config = {
     primaryButtonText :: String,
     fareList :: Array FareList,
     otherOptions :: Array FareList,
-    additionalStrings :: Array FareList
+    additionalStrings :: Array FareList,
+    driverAdditionsImage :: String
 }
 
 config :: Config 
@@ -70,6 +71,7 @@ config = {
     buttonText : Nothing,
     primaryButtonText : "",
     applicableCharges : "",
+    driverAdditionsImage : "",
     fareList : [],
     otherOptions : [],
     additionalStrings : []

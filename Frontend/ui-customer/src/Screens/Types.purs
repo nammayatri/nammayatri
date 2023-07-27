@@ -717,15 +717,15 @@ type Contact = {
 
 type RateCard =
   {
+    baseFare :: Int,
+    extraFare :: Int,
+    pickUpCharges :: Int,
     additionalFare :: Int,
     nightShiftMultiplier :: Number,
     nightCharges :: Boolean,
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
-    rateCardArray :: Array RateCardDetails,
-    driverAdditionsImage :: String,
-    driverAdditionsLogic :: String,
-    title :: String
+    vehicleVariant :: String
   }
 
 type RateCardDetails = {

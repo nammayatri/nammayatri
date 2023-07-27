@@ -1789,6 +1789,7 @@ public class MobilityCommonBridge extends HyperBridge {
         Configuration configuration = context.getResources().getConfiguration();
         configuration.setLocale(locale);
         context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
+    }
         
     @JavascriptInterface
     public void horizontalScrollToPos(final String id, final String childId, final int focus) {

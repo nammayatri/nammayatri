@@ -16,7 +16,7 @@
 module Services.Backend where
 
 import Data.Maybe
-import Services.APITypes
+import Services.API
 
 import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
@@ -916,12 +916,6 @@ getPaymentHistory from to status = do
         unwrapResponse (x) = x
 
 
-getOrder :: String -> Flow GlobalState (Either ErrorResponse GetOrderRes)
-getOrder id = do
-      headers <- getHeaders ""
-      withAPIResult (EP.getOrder id) unwrapResponse (callAPI headers (GetOrderReq id))
-   where
-        unwrapResponse (x) = x
 ---------------------------------------- triggerAadhaarOtp ---------------------------------------------
 triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)
 triggerAadhaarOtp aadhaarNumber = do

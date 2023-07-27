@@ -280,15 +280,9 @@ type AffSuccess s = (s -> Effect Unit)
 type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 
 
-foreign import startPP1 :: MicroAPPInvokeSignature
+foreign import startPP :: MicroAPPInvokeSignature
 
 foreign import consumeBP :: Unit -> Unit
 
-startPP'' :: forall a. PaymentPagePayload -> Flow a String
-startPP'' payload = do
-  response <- doAff $ makeAff (\cb -> (startPP1 (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
-  pure $ response
-
-
-startPP :: PaymentPagePayload -> FlowBT String String
-startPP payload = lift $ lift $ startPP'' payload
+paymentPageUI :: PaymentPagePayload -> FlowBT String String
+paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)

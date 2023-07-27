@@ -37,7 +37,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getVehicleImage, getFaresList, getKmMeter)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState)
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
@@ -48,6 +48,7 @@ import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -299,11 +300,12 @@ getSpecialZoneQuote quote index =
         vehicleImage = getVehicleImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
-      , price = show quoteEntity.estimatedTotalFare
+      , price = "₹" <> (show quoteEntity.estimatedTotalFare)
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
       , capacity = getVehicleCapacity quoteEntity.vehicleVariant
+      , showInfo = (getMerchant FunctionCall) == YATRI
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -315,15 +317,15 @@ getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
         vehicleImage = getVehicleImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
-      , price = show estimate.estimatedTotalFare
+      , price = case estimate.totalFareRange of 
+                Nothing -> "₹" <> (show estimate.estimatedTotalFare)
+                Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then "₹" <> (show estimate.estimatedTotalFare)
+                                              else (show fareRange.minFare) <> " - " <> "₹" <> (show fareRange.maxFare)
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
-      , capacity = case estimate.vehicleVariant of
-          "SUV" -> "6 " <> (getString SEATS)
-          _ -> "4 " <> (getString SEATS)
-      , maxPrice = show $ (fromMaybe dummyFareRange estimate.totalFareRange)^. _maxFare
       , capacity = getVehicleCapacity estimate.vehicleVariant
+      , showInfo = (getMerchant FunctionCall) == YATRI
       }
 
 dummyFareRange :: FareRange

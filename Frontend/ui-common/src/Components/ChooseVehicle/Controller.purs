@@ -18,21 +18,21 @@ type Config
     , index :: Int
     , activeIndex :: Int
     , id :: String
-    , maxPrice :: String
+    , showInfo :: Boolean
     }
 
 config :: Config
 config =
   { vehicleImage: ""
   , isSelected: false
-  , vehicleVariant: "Non AC Taxi"
-  , vehicleType: "Economical"
-  , capacity: "4 people"
-  , price: "246"
+  , vehicleVariant: ""
+  , vehicleType: ""
+  , capacity: ""
+  , price: ""
   , isCheckBox: false
   , isEnabled: true
   , activeIndex: 0
   , index: 0
   , id: ""
-  , maxPrice : "123"
+  , showInfo : false
   }

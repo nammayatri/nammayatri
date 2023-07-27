@@ -19,7 +19,7 @@ import Common.Types.App (RateCardType(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -54,7 +54,17 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
-    , rateCard : { rateCardArray : [] ,additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false,currentRateCardType : DefaultRateCard,onFirstPage:false, driverAdditionsImage : "", driverAdditionsLogic : "" , title : "Rate Card"}
+    , rateCard : { 
+       additionalFare : 0,
+       nightShiftMultiplier : 0.0, 
+       nightCharges : false,
+       currentRateCardType : DefaultRateCard,
+       onFirstPage:false, 
+       baseFare : 0,
+       extraFare : 0,
+       pickUpCharges : 0,
+       vehicleVariant : ""
+       }
     , speed : 0
     , selectedLocationListItem : Nothing
     , saveFavouriteCard : {
@@ -88,7 +98,7 @@ initData = {
       , activeIndex: 0
       , index: 0
       , id: ""
-      , maxPrice : ""
+      , showInfo : true
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
