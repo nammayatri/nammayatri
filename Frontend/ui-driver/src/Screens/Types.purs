@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList,CheckBoxOptions)
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
@@ -253,7 +253,14 @@ type DriverProfileScreenData = {
   capacity :: Int,
   downgradeOptions :: Array String,
   vehicleSelected :: Array VehicleP,
-  driverGender :: Maybe String
+  genderTypeSelect :: Maybe String,
+  alterNumberEditableText :: Boolean,
+  driverEditAlternateMobile :: Maybe String,
+  otpLimit :: Int,
+  otpBackAlternateNumber :: Maybe String,
+  gender :: Maybe String,
+  driverGender :: Maybe String,
+  languageList :: Array CheckBoxOptions
 }
 
 type VehicleP = {
@@ -263,8 +270,31 @@ type VehicleP = {
 
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
-  showLiveDashboard :: Boolean
+  showLiveDashboard :: Boolean,
+  screenType :: DriverProfileScreenType,
+  openSettings :: Boolean,
+  updateDetails :: Boolean,
+  showGenderView :: Boolean,
+  alternateNumberView :: Boolean,
+  removeAlternateNumber :: Boolean,
+  enterOtpModal :: Boolean,
+  enterOtpFocusIndex :: Int,
+  otpIncorrect :: Boolean,
+  otpAttemptsExceeded :: Boolean,
+  alternateMobileOtp :: String,
+  checkAlternateNumber :: Boolean,
+  isEditAlternateMobile :: Boolean,
+  numberExistError :: Boolean,
+  mNumberEdtFocused :: Boolean,
+  updateLanguages :: Boolean
 }
+data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
+
+data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS | SETTINGS
+
+derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
+instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
+instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq 
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
   data :: ApplicationStatusScreenData,
