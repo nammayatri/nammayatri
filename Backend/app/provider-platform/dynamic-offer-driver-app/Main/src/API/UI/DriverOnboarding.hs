@@ -71,9 +71,9 @@ type API =
       :> ReqBody '[JSON] DriverOnboarding.ReferralReq
       :> Post '[JSON] DriverOnboarding.ReferralRes
     :<|> "rc"
-      :> ( "linkStatus"
+      :> ( "setStatus"
              :> TokenAuth
-             :> ReqBody '[JSON] DriverOnboarding.RCLinkStatusReq
+             :> ReqBody '[JSON] DriverOnboarding.RCStatusReq
              :> Post '[JSON] APISuccess
              :<|> "delete"
                :> TokenAuth
@@ -81,7 +81,7 @@ type API =
                :> Post '[JSON] APISuccess
              :<|> "all"
                :> TokenAuth
-               :> Get '[JSON] [DriverOnboarding.LinkedRCs]
+               :> Get '[JSON] [DriverOnboarding.LinkedRC]
          )
 
 handler :: FlowServer API
@@ -96,9 +96,9 @@ handler =
       :<|> unVerifiedAadhaarData
   )
     :<|> addReferral
-    :<|> rcLinkStatus
-    :<|> rcDelete
-    :<|> rcAll
+    :<|> setRCStatus
+    :<|> deleteRC
+    :<|> getAllLinkedRCs
 
 verifyDL :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
 verifyDL (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId)
@@ -127,11 +127,11 @@ unVerifiedAadhaarData (personId, _) = withFlowHandlerAPI . AV.unVerifiedAadhaarD
 addReferral :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId)
 
-rcLinkStatus :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.RCLinkStatusReq -> FlowHandler APISuccess
-rcLinkStatus (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId)
+setRCStatus :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.RCStatusReq -> FlowHandler APISuccess
+setRCStatus (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId)
 
-rcDelete :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DeleteRCReq -> FlowHandler APISuccess
-rcDelete (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.deleteRc (personId, merchantId)
+deleteRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DeleteRCReq -> FlowHandler APISuccess
+deleteRC (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.deleteRC (personId, merchantId)
 
-rcAll :: (Id DP.Person, Id DM.Merchant) -> FlowHandler [DriverOnboarding.LinkedRCs]
-rcAll (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.getAllRcData (personId, merchantId)
+getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant) -> FlowHandler [DriverOnboarding.LinkedRC]
+getAllLinkedRCs (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId)

@@ -16,16 +16,15 @@
 module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
   ( DriverRCReq (..),
     DriverRCRes,
-    RCLinkStatusReq (..),
+    RCStatusReq (..),
     verifyRC,
     onVerifyRC,
     convertUTCTimetoDate,
-    activateRC,
+    deactivateCurrentRC,
     linkRCStatus,
-    inactivateRC,
-    deleteRc,
-    getAllRcData,
-    LinkedRCs (..),
+    deleteRC,
+    getAllLinkedRCs,
+    LinkedRC (..),
     DeleteRCReq (..),
   )
 where
@@ -46,7 +45,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as ODC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Vehicle as Vehicle
-import Domain.Types.Vehicle.Variant
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -87,7 +85,7 @@ data DriverRCReq = DriverRCReq
 
 type DriverRCRes = APISuccess
 
-data LinkedRCs = LinkedRCs
+data LinkedRC = LinkedRC
   { rcDetails :: Domain.DecryptedVehicleRegistrationCertificate,
     rcActive :: Bool
   }
@@ -98,7 +96,7 @@ newtype DeleteRCReq = DeleteRCReq
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-data RCLinkStatusReq = RCLinkStatusReq
+data RCStatusReq = RCStatusReq
   { rcNo :: Text,
     isActivate :: Bool
   }
@@ -132,6 +130,10 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
   when (null operatingCity') $
     throwError $ InvalidOperatingCity req.operatingCity
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+
+  allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
+  unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
+
   when
     ( isNothing dateOfRegistration && onboardingDocumentConfig.checkExtraction
         && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
@@ -150,11 +152,22 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
             throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
         Nothing -> throwImageError imageId ImageExtractionFailed
 
-  totalRcs <- DAQuery.findNumberOfRcs personId
-  unless (length totalRcs < transporterConfig.rcLimit) $ throwError RCLimitReached
-
-  checkForRCDuplicacy personId vehicleRegistrationCertNumber
-  verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
+  mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
+  case mVehicleRC of
+    Just vehicleRC -> do
+      mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id person.id
+      case mRCAssociation of
+        Just assoc -> do
+          now <- getCurrentTime
+          when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
+            createRCAssociation person.id vehicleRC.id
+        Nothing -> do
+          -- if no association to driver, create one. No need to verify RC as already verified except in fallback case
+          if isNothing dateOfRegistration
+            then createRCAssociation person.id vehicleRC.id
+            else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
+    Nothing ->
+      verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
 
   return Success
   where
@@ -167,14 +180,9 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
         throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-checkForRCDuplicacy :: Id Person.Person -> Text -> Flow ()
-checkForRCDuplicacy driverId vehicleRegistrationCertNumber = do
-  mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
-  case mVehicleRC of
-    Just vehicleRC -> do
-      mRCAssociation <- DAQuery.findByRCIdAndDriverId vehicleRC.id driverId
-      when (isJust mRCAssociation) $ throwError DriverAlreadyLinked
-    Nothing -> return ()
+    createRCAssociation driverId rcId = do
+      driverRCAssoc <- Domain.makeRCAssociation driverId rcId (convertTextToUTC (Just "2099-12-12"))
+      Esq.runNoTransaction $ DAQuery.create driverRCAssoc
 
 verifyRCFlow :: Person.Person -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
 verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
@@ -214,10 +222,7 @@ onVerifyRC :: Domain.IdfyVerification -> Idfy.RCVerificationOutput -> Flow AckRe
 onVerifyRC verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   if verificationReq.imageExtractionValidation == Domain.Skipped
-    && isJust verificationReq.issueDateOnDoc
-    && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
-           /= (convertUTCTimetoDate <$> (convertTextToUTC output.registration_date))
-       )
+    && compareRegistrationDates output.registration_date verificationReq.issueDateOnDoc
     then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> return Ack
     else do
       now <- getCurrentTime
@@ -231,110 +236,111 @@ onVerifyRC verificationReq output = do
         Just vehicleRC -> do
           runTransaction $ RCQuery.upsert vehicleRC
           -- linking to driver
-          rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (InternalError "RC not found")
-          driverRCAssoc <- mkAssociation person.id rc.id
+          rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" output.registration_number))
+          driverRCAssoc <- Domain.makeRCAssociation person.id rc.id (convertTextToUTC (Just "2099-12-12"))
           runTransaction $ DAQuery.create driverRCAssoc
           return Ack
         _ -> return Ack
-  where
-    mkAssociation driverId rcId = do
-      id <- generateGUID
-      now <- getCurrentTime
-      return $
-        Domain.DriverRCAssociation
-          { id,
-            driverId,
-            rcId,
-            associatedOn = now,
-            associatedTill = convertTextToUTC (Just "2099-12-12"),
-            consent = True,
-            consentTimestamp = now,
-            isRcActive = False,
-            isDeleted = False
-          }
 
-linkRCStatus :: (Id Person.Person, Id DM.Merchant) -> RCLinkStatusReq -> Flow APISuccess
-linkRCStatus (driverId, merchantId) req@RCLinkStatusReq {..} = do
+compareRegistrationDates :: Maybe Text -> Maybe UTCTime -> Bool
+compareRegistrationDates actualDate providedDate =
+  isJust providedDate
+    && ((convertUTCTimetoDate <$> providedDate) /= (convertUTCTimetoDate <$> convertTextToUTC actualDate))
+
+linkRCStatus :: (Id Person.Person, Id DM.Merchant) -> RCStatusReq -> Flow APISuccess
+linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
+  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
+  now <- getCurrentTime
+
   if req.isActivate
     then do
-      activateRC (driverId, merchantId) rcNo
-      return Success
-    else inactivateRC (driverId, merchantId) rcNo
-
-inactivateRC :: (Id Person.Person, Id DM.Merchant) -> Text -> Flow APISuccess
-inactivateRC (pId, _) rcNo = do
-  isOnRide <- DIQuery.findByDriverIdActiveRide (cast pId)
-  when (isJust isOnRide) $ throwError (InvalidRequest "Vehicle on ride. try again later.")
-  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (InvalidRequest "Rc not found")
-  Esq.runNoTransaction $ DAQuery.updateIsRcActiveByRcAndDriver pId rc.id
-  Esq.runNoTransaction $ VQuery.deleteById pId
+      validateRCActivation driverId merchantId rc
+      activateRC driverId merchantId now rc
+    else do
+      deactivateRC driverId rc
   return Success
 
-inactiveOldRC :: Id Person.Person -> Flow ()
-inactiveOldRC driverId = do
-  Esq.runNoTransaction $ VQuery.deleteById driverId
-  Esq.runNoTransaction $ DAQuery.findByDriverIdAndUpdateIsRcActive driverId
+deactivateRC :: Id Person.Person -> Domain.VehicleRegistrationCertificate -> Flow ()
+deactivateRC driverId rc = do
+  activeAssociation <- DAQuery.findActiveAssociationByRC rc.id >>= fromMaybeM ActiveRCNotFound
 
-activateRC :: (Id Person.Person, Id DM.Merchant) -> Text -> Flow APISuccess
-activateRC (driverId, merchantId) vehicleRegistrationCertNumber = do
-  rc <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber >>= fromMaybeM (InvalidRequest "Rc not found")
-  mactiveRC <- DAQuery.findActiveAssociationByRC rc.id
-  case mactiveRC of
-    Just activeRC -> do
-      isOnRide <- DIQuery.findByDriverIdActiveRide (cast activeRC.driverId)
-      when (isJust isOnRide) $ throwError (InvalidRequest "Vehicle on ride. try again later.")
-      lastRideAssignedOn <- RQuery.findLastRideAssigned activeRC.driverId >>= fromMaybeM (PersonNotFound activeRC.driverId.getId)
-      now <- getCurrentTime
-      if abs (diffUTCTime now lastRideAssignedOn.createdAt) > 5 * 24 * 60 * 60
-        then do
-          Esq.runNoTransaction $ DAQuery.findByDriverIdAndUpdateIsRcActive lastRideAssignedOn.driverId
-          let vehicle = buildVehicle now driverId merchantId vehicleRegistrationCertNumber rc
-          Esq.runTransaction $ VQuery.upsert vehicle
-          inactiveOldRC driverId
-          return Success
-        else throwError $ InvalidRequest "Rc Active on another driver account"
-    Nothing -> do
-      now <- getCurrentTime
-      let vehicle = buildVehicle now driverId merchantId vehicleRegistrationCertNumber rc
-      inactiveOldRC driverId
-      Esq.runTransaction $ VQuery.upsert vehicle
-      Esq.runTransaction $ DAQuery.updateIsRcAndDriverIdActiveByRc rc.id driverId
-      return Success
+  unless (activeAssociation.driverId == driverId) $ throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
+
+  isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
+  when (isJust isOnRide) $ throwError RCVehicleOnRide
+
+  Esq.runNoTransaction $ DAQuery.deactivateRCForDriver driverId rc.id
+  Esq.runNoTransaction $ VQuery.deleteById driverId -- delete the vehicle entry too for the driver
+  return ()
+
+validateRCActivation :: Id Person.Person -> Id DM.Merchant -> Domain.VehicleRegistrationCertificate -> Flow ()
+validateRCActivation driverId merchantId rc = do
+  now <- getCurrentTime
+  _ <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now >>= fromMaybeM (InvalidRequest "RC not linked to driver. Please link.")
+
+  mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id
+  case mActiveAssociation of
+    Just activeAssociation -> do
+      when (activeAssociation.driverId == driverId) $ throwError (InvalidRequest "RC already active with driver requested")
+
+      transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+      mLastRideAssigned <- RQuery.findLastRideAssigned activeAssociation.driverId
+      case mLastRideAssigned of
+        Just lastRide -> do
+          if nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff
+            then deactivateRC activeAssociation.driverId rc
+            else throwError RCActiveOnOtherAccount
+        Nothing -> return () -- TODO: handle this case too
+    Nothing -> return ()
+  checkIfVehicleAlreadyExists -- checking for manually entry created for vehicle during manual onboarding
   where
-    buildVehicle now personId_ merchantId_ certificateNumber rc =
-      Vehicle.Vehicle
-        { Vehicle.driverId = personId_,
-          Vehicle.capacity = rc.vehicleCapacity,
-          Vehicle.category = Vehicle.getCategory <$> rc.vehicleVariant,
-          Vehicle.make = rc.vehicleManufacturer,
-          Vehicle.model = fromMaybe "Unkown" rc.vehicleModel,
-          Vehicle.size = Nothing,
-          Vehicle.merchantId = merchantId_,
-          Vehicle.variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant, -- Value will be always Just if reaching here
-          Vehicle.color = fromMaybe "Unkown" rc.vehicleColor,
-          Vehicle.energyType = rc.vehicleEnergyType,
-          Vehicle.registrationNo = certificateNumber,
-          Vehicle.registrationCategory = Nothing,
-          Vehicle.vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
-          Vehicle.createdAt = now,
-          Vehicle.updatedAt = now
-        }
+    checkIfVehicleAlreadyExists = do
+      rcNumber <- decrypt rc.certificateNumber
+      mVehicle <- VQuery.findByRegistrationNo rcNumber
+      when (isJust mVehicle) $ throwError RCActiveOnOtherAccount
 
-deleteRc :: (Id Person.Person, Id DM.Merchant) -> DeleteRCReq -> Flow APISuccess
-deleteRc (driverId, _) DeleteRCReq {..} = do
-  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (InvalidRequest "Rc not found")
-  Esq.runNoTransaction $ DAQuery.updateByDriverIdAndRCIdisDeleted driverId rc.id
+activateRC :: Id Person.Person -> Id DM.Merchant -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
+activateRC driverId merchantId now rc = do
+  deactivateCurrentRC driverId
+  addVehicleToDriver
+  Esq.runTransaction $ DAQuery.activateRCForDriver driverId rc.id now
+  return ()
+  where
+    addVehicleToDriver = do
+      rcNumber <- decrypt rc.certificateNumber
+      let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc
+      Esq.runTransaction $ VQuery.upsert vehicle
+
+deactivateCurrentRC :: Id Person.Person -> Flow ()
+deactivateCurrentRC driverId = do
+  mActiveAssociation <- DAQuery.findActiveAssociationByDriver driverId
+  case mActiveAssociation of
+    Just association -> do
+      rc <- RCQuery.findById association.rcId >>= fromMaybeM (RCNotFound "")
+      deactivateRC driverId rc -- call deativate RC flow
+    Nothing -> return () -- Do nothing if no active association to driver
+
+deleteRC :: (Id Person.Person, Id DM.Merchant) -> DeleteRCReq -> Flow APISuccess
+deleteRC (driverId, _) DeleteRCReq {..} = do
+  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  mAssoc <- DAQuery.findActiveAssociationByRC rc.id
+  case mAssoc of
+    Just assoc -> do
+      when (assoc.driverId == driverId) $ throwError (InvalidRequest "Deactivate RC first to delete!")
+    Nothing -> return ()
+  Esq.runNoTransaction $ DAQuery.endAssociationForRC driverId rc.id
   return Success
 
-getAllRcData :: (Id Person.Person, Id DM.Merchant) -> Flow [LinkedRCs]
-getAllRcData (driverId, _) = do
-  rcAssociations <- DAQuery.findNumberOfRcs driverId
-  decryptedRcsData <- mapM decrypt =<< RCQuery.findAllById (map (.rcId) rcAssociations)
-  let activeRcs = buildRcHM rcAssociations
+getAllLinkedRCs :: (Id Person.Person, Id DM.Merchant) -> Flow [LinkedRC]
+getAllLinkedRCs (driverId, _) = do
+  allLinkedRCs <- DAQuery.findAllLinkedByDriverId driverId
+  decryptedRcsData <- mapM decrypt =<< RCQuery.findAllById (map (.rcId) allLinkedRCs)
+  let activeRcs = buildRcHM allLinkedRCs
   return $ map (getCombinedRcData activeRcs) decryptedRcsData
   where
     getCombinedRcData activeRcs Domain.VehicleRegistrationCertificate {..} =
-      LinkedRCs
+      LinkedRC
         { rcActive = fromMaybe False $ HM.lookup id.getId activeRcs <&> (.isRcActive),
           rcDetails = Domain.VehicleRegistrationCertificate {..}
         }

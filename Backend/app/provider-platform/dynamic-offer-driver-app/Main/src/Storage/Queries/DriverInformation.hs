@@ -179,9 +179,11 @@ updateOnRide driverId onRide = do
 findByDriverIdActiveRide :: (Transactionable m) => Id Person.Driver -> m (Maybe DriverInformation)
 findByDriverIdActiveRide driverId = do
   Esq.findOne $ do
-    isOnRide <- from $ table @DriverInformationT
-    where_ $ isOnRide ^. DriverInformationOnRide ==. val True &&. isOnRide ^. DriverInformationDriverId ==. val (toKey (Id driverId.getId))
-    return isOnRide
+    driverInfo <- from $ table @DriverInformationT
+    where_ $
+      driverInfo ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+        &&. driverInfo ^. DriverInformationOnRide ==. val True
+    return driverInfo
 
 updateNotOnRideMultiple :: [Id Person.Driver] -> SqlDB ()
 updateNotOnRideMultiple driverIds = do

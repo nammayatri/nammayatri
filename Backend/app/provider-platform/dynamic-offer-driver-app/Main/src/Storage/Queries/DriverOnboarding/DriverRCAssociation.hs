@@ -34,19 +34,6 @@ findById ::
   m (Maybe DriverRCAssociation)
 findById = Esq.findById
 
-getActiveAssociationByDriver ::
-  (Transactionable m, MonadFlow m) =>
-  Id Person ->
-  m (Maybe DriverRCAssociation)
-getActiveAssociationByDriver driverId = do
-  now <- getCurrentTime
-  findOne $ do
-    association <- from $ table @DriverRCAssociationT
-    where_ $
-      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
-    return association
-
 findAllByDriverId ::
   Transactionable m =>
   Id Person ->
@@ -103,23 +90,11 @@ getRcAssocs driverId = do
     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
     return rcAssoc
 
-getActiveAssociationByRC ::
-  (Transactionable m, MonadFlow m) =>
-  Id VehicleRegistrationCertificate ->
-  m (Maybe DriverRCAssociation)
-getActiveAssociationByRC rcId = do
-  now <- getCurrentTime
-  findOne $ do
-    association <- from $ table @DriverRCAssociationT
-    where_ $
-      association ^. DriverRCAssociationRcId ==. val (toKey rcId)
-        &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
-    return association
-
-endAssociation ::
+endAssociationForRC ::
   Id Person ->
+  Id VehicleRegistrationCertificate ->
   SqlDB ()
-endAssociation driverId = do
+endAssociationForRC driverId rcId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
@@ -128,6 +103,7 @@ endAssociation driverId = do
       ]
     where_ $
       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+        &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
         &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
 
 deleteByDriverId :: Id Person -> SqlDB ()
@@ -139,56 +115,75 @@ deleteByDriverId driverId =
 findActiveAssociationByRC :: (Transactionable m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
 findActiveAssociationByRC rcId =
   Esq.findOne $ do
-    isRcActiveRes <- from $ table @DriverRCAssociationT
-    where_ $ isRcActiveRes ^. DriverRCAssociationIsRcActive ==. val True &&. isRcActiveRes ^. DriverRCAssociationRcId ==. val (toKey rcId)
-    return isRcActiveRes
+    rcAssoc <- from $ table @DriverRCAssociationT
+    where_ $
+      rcAssoc ^. DriverRCAssociationRcId ==. val (toKey rcId)
+        &&. rcAssoc ^. DriverRCAssociationIsRcActive ==. val True
+    return rcAssoc
 
-updateByDriverIdAndRCIdisDeleted :: Id Person -> Id VehicleRegistrationCertificate -> SqlDB ()
-updateByDriverIdAndRCIdisDeleted driverId rcId = do
+findActiveAssociationByDriver ::
+  Transactionable m =>
+  Id Person ->
+  m (Maybe DriverRCAssociation)
+findActiveAssociationByDriver driverId = do
+  findOne $ do
+    association <- from $ table @DriverRCAssociationT
+    where_ $
+      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+        &&. association ^. DriverRCAssociationIsRcActive ==. val True
+    return association
+
+deactivateRCForDriver :: Id Person -> Id VehicleRegistrationCertificate -> SqlDB ()
+deactivateRCForDriver driverId rcId = do
   Esq.update $ \tbl -> do
     set
       tbl
       [ DriverRCAssociationIsRcActive =. val False
       ]
-    where_ $ tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId) &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
+    where_ $
+      tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+        &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
 
-updateIsRcActiveByRcAndDriver :: Id Person -> Id VehicleRegistrationCertificate -> SqlDB ()
-updateIsRcActiveByRcAndDriver driverId rcId = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverRCAssociationIsRcActive =. val False
-      ]
-    where_ $ tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId) &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
-
-findByDriverIdAndUpdateIsRcActive :: Id Person -> SqlDB ()
-findByDriverIdAndUpdateIsRcActive driverId = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverRCAssociationIsRcActive =. val False
-      ]
-    where_ $ tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-
-findByRCIdAndDriverId :: Transactionable m => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
-findByRCIdAndDriverId rcId driverId =
-  Esq.findOne $ do
-    res <- from $ table @DriverRCAssociationT
-    where_ $ res ^. DriverRCAssociationRcId ==. val (toKey rcId) &&. res ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-    return res
-
-findNumberOfRcs :: Transactionable m => Id Person -> m [DriverRCAssociation]
-findNumberOfRcs driverId =
-  Esq.findAll $ do
-    res <- from $ table @DriverRCAssociationT
-    where_ $ res ^. DriverRCAssociationDriverId ==. val (toKey driverId) &&. res ^. DriverRCAssociationIsDeleted ==. val True
-    return res
-
-updateIsRcAndDriverIdActiveByRc :: Id VehicleRegistrationCertificate -> Id Person -> SqlDB ()
-updateIsRcAndDriverIdActiveByRc rcId driverId = do
+activateRCForDriver :: Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> SqlDB ()
+activateRCForDriver driverId rcId now = do
   Esq.update $ \tbl -> do
     set
       tbl
       [ DriverRCAssociationIsRcActive =. val True
       ]
-    where_ $ tbl ^. DriverRCAssociationRcId ==. val (toKey rcId) &&. tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+    where_ $
+      tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+        &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
+        &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
+
+findLinkedByRCIdAndDriverId :: Transactionable m => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
+findLinkedByRCIdAndDriverId driverId rcId now = do
+  Esq.findOne $ do
+    res <- from $ table @DriverRCAssociationT
+    where_ $
+      res ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+        &&. res ^. DriverRCAssociationRcId ==. val (toKey rcId)
+        &&. res ^. DriverRCAssociationAssociatedTill >. val (Just now)
+    return res
+
+findLatestByRCIdAndDriverId :: Transactionable m => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
+findLatestByRCIdAndDriverId rcId driverId =
+  Esq.findOne $ do
+    rcAssoc <- from $ table @DriverRCAssociationT
+    where_ $
+      rcAssoc ^. DriverRCAssociationRcId ==. val (toKey rcId)
+        &&. rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+    orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedTill]
+    limit 1
+    return rcAssoc
+
+findAllLinkedByDriverId :: (Transactionable m, MonadFlow m) => Id Person -> m [DriverRCAssociation]
+findAllLinkedByDriverId driverId = do
+  now <- getCurrentTime
+  Esq.findAll $ do
+    association <- from $ table @DriverRCAssociationT
+    where_ $
+      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+        &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
+    orderBy [desc $ association ^. DriverRCAssociationAssociatedOn]
+    return association

@@ -31,6 +31,7 @@ where
 
 import qualified Data.Text as T
 import qualified Domain.Types.CallStatus as SCS
+import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
@@ -124,8 +125,8 @@ initiateCallToCustomer rideId = do
 
 getDriverMobileNumber :: (EncFlow m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => (Id Person.Person, Id DM.Merchant) -> Text -> m CallRes
 getDriverMobileNumber (driverId, merchantId) rcNo = do
-  vehicleRC <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (InvalidRequest "Rc not found")
-  rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM (InvalidRequest "No active Rc found")
+  vehicleRC <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
   callStatusId <- generateGUID
   linkedDriverNumber <- getDecryptedMobileNumberByDriverId rcActiveAssociation.driverId
   driverRequestedNumber <- getDecryptedMobileNumberByDriverId driverId

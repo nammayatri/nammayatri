@@ -57,6 +57,8 @@ type API =
            :<|> UnlinkDLAPI
            :<|> UnlinkAadhaarAPI
            :<|> EndRCAssociationAPI
+           :<|> SetRCStatusAPI
+           :<|> DeleteRCAPI
            :<|> UpdatePhoneNumberAPI
            :<|> UpdateDriverAadhaarAPI
            :<|> AddVehicleAPI
@@ -138,6 +140,14 @@ type EndRCAssociationAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'END_RC_ASSOCIATION
     :> Common.EndRCAssociationAPI
 
+type SetRCStatusAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'SET_RC_STATUS
+    :> Common.SetRCStatusAPI
+
+type DeleteRCAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DELETE_RC
+    :> Common.DeleteRCAPI
+
 type UnlinkDLAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_DL
     :> Common.UnlinkDLAPI
@@ -188,6 +198,8 @@ handler merchantId =
     :<|> unlinkDL merchantId
     :<|> unlinkAadhaar merchantId
     :<|> endRCAssociation merchantId
+    :<|> setRCStatus merchantId
+    :<|> deleteRC merchantId
     :<|> updatePhoneNumber merchantId
     :<|> updateByPhoneNumber merchantId
     :<|> addVehicle merchantId
@@ -369,6 +381,20 @@ endRCAssociation merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.endRCAssociation) driverId
+
+setRCStatus :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
+setRCStatus merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo driverId $ Just req
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.setRCStatus) driverId req
+
+deleteRC :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.DeleteRCReq -> FlowHandler APISuccess
+deleteRC merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo driverId $ Just req
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.deleteRC) driverId req
 
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
