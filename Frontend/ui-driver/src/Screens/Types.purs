@@ -13,7 +13,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types where
+module Screens.Types
+  where
 
 import Common.Types.App (OptionButtonList,CheckBoxOptions)
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
@@ -23,7 +24,7 @@ import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show )
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Visibility, LetterSpacing)
@@ -148,7 +149,8 @@ type AddVehicleDetailsScreenProps =  {
   isValidState :: Boolean,
   limitExceedModal :: Boolean,
   errorVisibility :: Boolean,
-  openRegistrationDateManual :: Boolean
+  openRegistrationDateManual :: Boolean,
+  addRcFromProfile :: Boolean
  }
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
@@ -260,8 +262,25 @@ type DriverProfileScreenData = {
   otpBackAlternateNumber :: Maybe String,
   gender :: Maybe String,
   driverGender :: Maybe String,
-  languageList :: Array CheckBoxOptions
+  languageList :: Array CheckBoxOptions,
+  rcDataArray :: Array RcData,
+  inactiveRCArray :: Array RcData,
+  activeRCData :: RcData,
+  rcNumber :: String,
+  isRCActive :: Boolean,
+  openInactiveRCViewOrNotArray :: Array Int
 }
+
+type RcData = {
+  rcStatus  :: Boolean,
+  rcDetails :: RcDetails
+  }
+
+type RcDetails = {
+    certificateNumber :: String,
+    vehicleModel      :: String,
+    vehicleColor      :: String
+    }
 
 type VehicleP = {
   vehicleName :: String,
@@ -286,7 +305,14 @@ type DriverProfileScreenProps = {
   isEditAlternateMobile :: Boolean,
   numberExistError :: Boolean,
   mNumberEdtFocused :: Boolean,
-  updateLanguages :: Boolean
+  updateLanguages :: Boolean,
+  activateRcView :: Boolean,
+  activateOrDeactivateRcView :: Boolean,
+  activeRcIndex :: Int,
+  deleteRcView :: Boolean,
+  alreadyActive :: Boolean,
+  callDriver :: Boolean,
+  openRcView :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -410,6 +436,18 @@ type RideHistoryScreenState =
     recievedResponse :: Boolean
   }
 
+data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC 
+
+derive instance genericEditRc :: Generic EditRc _
+instance eqEditRc :: Eq EditRc where eq = genericEq
+
+data CallOptions = CALLING_DRIVER | CALLING_CUSTOMER_SUPPORT
+derive instance genericCallOptions :: Generic CallOptions _
+instance eqCallOptions :: Eq CallOptions where eq = genericEq
+instance showCallOptions :: Show CallOptions where show = genericShow
+instance encodeCallOptions :: Encode CallOptions where encode = defaultEnumEncode
+instance decodeCallOptions :: Decode CallOptions where decode = defaultEnumDecode
+
 type RideSelectionScreenState =
   {
     shimmerLoader :: AnimationState,
@@ -422,6 +460,13 @@ type RideSelectionScreenState =
     recievedResponse :: Boolean,
     selectedCategory :: CategoryListType
   }
+
+type VehicleDetails = { rcStatus :: Boolean 
+                , rcDetails :: { certificateNumber  :: String
+                , vehicleModel :: String
+                , vehicleColor :: String
+                }}
+
 ------------------------------------------- ReferralScreenState -----------------------------------------
 
 type ReferralScreenState = {

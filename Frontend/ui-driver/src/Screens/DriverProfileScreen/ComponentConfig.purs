@@ -33,9 +33,14 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Prelude ((<>), (||),(&&),(==),(<), not)
 import Engineering.Helpers.Commons as EHC
-import Data.String (length)
+import Data.String as DS
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
+import PrestoDOM.Types.DomAttributes  (Corners(..))
+import Prelude 
+import Screens.DriverProfileScreen.Controller
+import Effect (Effect)
+import Data.Array (length)
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let 
@@ -128,8 +133,8 @@ primaryButtonConfig state = let
       , cornerRadius = 10.0
       , background = Color.black900
       , height = (V 48)
-      , isClickable = (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && (length (fromMaybe "" state.data.driverEditAlternateMobile))==10 && state.props.checkAlternateNumber)
-      , alpha = if (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber) then 1.0 else 0.7
+      , isClickable = (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && (DS.length (fromMaybe "" state.data.driverEditAlternateMobile))==10 && state.props.checkAlternateNumber)
+      , alpha = if (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && DS.length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber) then 1.0 else 0.7
       }
   in primaryButtonConfig'
 
@@ -232,7 +237,7 @@ enterOtpState state = let
       , visibility = if state.props.otpIncorrect == false then VISIBLE else GONE
       },
       imageConfig {
-          alpha = if length state.props.alternateMobileOtp < 4 || state.props.otpIncorrect then 0.3 else 1.0
+          alpha = if DS.length state.props.alternateMobileOtp < 4 || state.props.otpIncorrect then 0.3 else 1.0
       }
       }
       in inAppModalConfig'
@@ -264,3 +269,130 @@ primaryButtonConfig1 state = let
       , alpha = 1.0
       }
   in primaryButtonConfig'
+
+activateAndDeactivateRcPopUpConfig :: forall w. (Action -> Effect Unit) ->  ST.DriverProfileScreenState -> PopUpModal.Config
+activateAndDeactivateRcPopUpConfig push state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { primaryText { text = if state.data.isRCActive then (getString DEACTIVATE_RC) else (getString ACTIVATE_RC)}
+        , buttonLayoutMargin = (MarginHorizontal 16 16)
+        , dismissPopup = true
+        , optionButtonOrientation = "VERTICAL"
+        , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black600}
+        , option1 {
+          text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE) 
+        , fontSize = FontSize.a_16
+        , width = MATCH_PARENT
+        , color = Color.yellow900
+        , strokeColor = Color.black900
+        , background = Color.black900
+        , padding = (PaddingVertical 10 10)
+        , fontStyle = FontStyle.semiBold LanguageStyle
+        }
+        , option2 {
+            text = (getString CANCEL)
+          , fontSize = FontSize.a_16
+          , width = MATCH_PARENT
+          , background = Color.white900
+          , strokeColor = Color.white900
+          , margin = MarginTop 14
+          , color = Color.black650
+          , padding = (Padding 0 0 0 0)
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          }
+        }
+  in
+    popUpConfig'
+
+callDriverPopUpConfig :: forall w. (Action -> Effect Unit) ->  ST.DriverProfileScreenState -> PopUpModal.Config
+callDriverPopUpConfig push state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { primaryText { text = (getString (CALL_DRIVER))}
+        , gravity = CENTER
+        , buttonLayoutMargin = (MarginHorizontal 16 16)
+        , dismissPopup = true
+        , backgroundColor = Color.transparent
+        , cornerRadius = (Corners 24.0 true true true true)
+        , optionButtonOrientation = "VERTICAL"
+        , secondaryText { text = (getString CONNECT_CALL_ANONYMOUSLY), color = Color.black600}
+        , option1 {
+          text = (getString PLACE_CALL)
+        , fontSize = FontSize.a_16
+        , width = MATCH_PARENT
+        , color = Color.yellow900
+        , strokeColor = Color.black900
+        , background = Color.black900
+        , padding = (PaddingVertical 10 10)
+        , fontStyle = FontStyle.semiBold LanguageStyle
+        }
+        , option2 {
+            text = (getString GO_BACK)
+          , fontSize = FontSize.a_16
+          , width = MATCH_PARENT
+          , background = Color.white900
+          , strokeColor = Color.white900
+          , margin = MarginTop 14
+          , color = Color.black650
+          , padding = (PaddingBottom 12)
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          }
+        }
+  in
+    popUpConfig'
+
+addRCButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
+addRCButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig
+      { text = (getString ADD_NEW_RC)
+      , color = Color.blue900
+      , textSize = FontSize.a_14}
+      , margin = (Margin 16 15 16 0)
+      , cornerRadius = 10.0
+      , background = Color.blue600
+      , height = (V 60)
+      }
+  in primaryButtonConfig'
+
+
+deleteRcPopUpConfig :: ST.DriverProfileScreenState -> PopUpModal.Config
+deleteRcPopUpConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { primaryText { text = (getString DELETE_RC)}
+        , buttonLayoutMargin = (MarginHorizontal 16 16)
+        , dismissPopup = true
+        , optionButtonOrientation = "VERTICAL"
+        , secondaryText { text = (getString CONFIRMATION_FOR_DELETING_RC) <>"- " <> state.data.vehicleRegNumber <> "?" , color = Color.black600}
+        , option1 {
+          text = (getString YES_DELETE)
+        , fontSize = FontSize.a_16
+        , width = MATCH_PARENT
+        , color = Color.white900
+        , strokeColor = Color.red 
+        , background = Color.red
+        , padding = (Padding 0 10 0 10)
+        , fontStyle = FontStyle.semiBold LanguageStyle
+        }
+        , option2 {
+            text = (getString CANCEL)
+          , fontSize = FontSize.a_16
+          , width = MATCH_PARENT
+          , background = Color.white900
+          , strokeColor = Color.white900
+          , margin = MarginTop 14
+          , color = Color.black650
+          , padding = (Padding 0 0 0 0)
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          }
+        }
+  in
+    popUpConfig'
