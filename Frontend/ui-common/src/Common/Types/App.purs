@@ -125,6 +125,14 @@ newtype Version = Version
     maintenance :: Int
   }
 
+type CheckBoxOptions = {
+    text :: String,
+    subText :: String,
+    value :: String,
+    isSelected :: Boolean
+}
+
+
 derive instance genericVersion :: Generic Version _
 derive instance newtypeVersion :: Newtype Version _
 instance standardEncodeVersion :: StandardEncode Version where standardEncode (Version body) = standardEncode body
