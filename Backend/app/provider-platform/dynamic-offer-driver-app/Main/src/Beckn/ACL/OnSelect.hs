@@ -14,27 +14,16 @@
 
 module Beckn.ACL.OnSelect where
 
--- import Beckn.ACL.Common
--- import Beckn.Types.Core.Taxi.Common.Gps as Common
--- import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
-
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import qualified Data.Text as T
 import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
--- import Data.Time.Format.ISO8601
--- import Data.Time.LocalTime (calendarTimeTime)
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
--- import qualified Domain.Types.FareParameters as DFParams
 import SharedLogic.FareCalculator (mkBreakupList)
-
--- import Data.Fixed
-
--- import qualified Kernel.Utils.Common
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
@@ -52,30 +41,14 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
--- driverOfferCategory :: OS.Category
--- driverOfferCategory =
---   OS.Category
---     { id = OS.DRIVER_OFFER,
---       descriptor =
---         OS.Descriptor
---           { name = ""
---           }
---     }
-
 mkOnSelectMessage ::
   DOnSelectReq ->
   OS.OnSelectMessage
 mkOnSelectMessage req@DOnSelectReq {..} = do
-  -- let quoteEntitiesList :: QuoteEntities
-  --     quote = mkQuoteEntities req driverQuote
   let fulfillment = mkFulfillment req driverQuote
-      -- fulfillments_ = quote.fulfillment quote
-      -- categories_ = [driverOfferCategory]
-      -- offers_ = mapMaybe (.offer) quoteEntitiesList
       item = mkItem fulfillment.id driverQuote transporterInfo
       items = [item]
       quote = mkQuote driverQuote req.now
-      -- add_ons = []
       payment =
         OS.Payment
           { params =
@@ -91,44 +64,9 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
   let provider =
         OS.Provider
           { id = driverQuote.driverId.getId
-          -- descriptor = OS.Descriptor {name = transporterInfo.name},
-          -- locations = [],
-          -- categories = categories_
-          -- items = items_,
-          -- offers = offers_,
-          -- add_ons = [],
-          -- fulfillment = fulfillment,
-          -- contacts = transporterInfo.contacts,
-          -- quote = mkQuote driverQuote,
-          -- tags =
-          --   OS.ProviderTags
-          --     { rides_inprogress = transporterInfo.ridesInProgress,
-          --       rides_completed = transporterInfo.ridesCompleted,
-          --       rides_confirmed = transporterInfo.ridesConfirmed
-          --     }
-          -- payment =
-          --   OS.Payment
-          --     { collected_by = "BPP",
-          --       _type = OS.ON_FULFILLMENT,
-          --       time = OS.TimeDuration "P2A" -- FIXME: what is this?
-          --     }
           }
   OS.OnSelectMessage $
     OS.Order {..}
-
--- data QuoteEntities = QuoteEntities
---   { category :: OS.Category,
---     -- offer :: Maybe OS.Offer,
---     item :: OS.Item
---   }
-
--- mkQuoteEntities :: DOnSelectReq -> DQuote.DriverQuote -> QuoteEntities
--- mkQuoteEntities dReq quote = do
---   let fulfillment = mkFulfillment dReq quote
---       category = driverOfferCategory
---       -- offer = Nothing
---       item = mkItem fulfillment.id quote
---   QuoteEntities {..}
 
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
@@ -154,11 +92,6 @@ mkFulfillment dReq quote = do
           { name = Just quote.driverName,
             rateable = Just True,
             tags = OS.TG [mkAgentTags]
-            -- Just $
-            --   OS.AgentTags
-            --     { agent_info_rating = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating,
-            --       agent_info_duration_to_pickup_in_s = Just $ show $ quote.durationToPickup.getSeconds
-            --     }
           }
     }
   where
@@ -183,53 +116,13 @@ mkFulfillment dReq quote = do
             ]
         }
 
--- mkCustomerTipTags =
---   Select.TagGroup
---     { display = False,
---       code = "customer_tip_info",
---       name = "Customer Tip Info",
---       list =
---         [ Select.Tag
---             { display = (\_ -> Just False) =<< res.customerExtraFee,
---               code = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
---               name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
---               value = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
---             }
---         ]
---     }
-
 mkItem :: Text -> DQuote.DriverQuote -> TransporterInfo -> OS.Item
 mkItem fulfillmentId q provider =
   OS.Item
     { id = mkItemId provider.merchantShortId.getShortId q.vehicleVariant,
-      -- category_id = driverOfferCategory.id,
       fulfillment_id = fulfillmentId,
-      -- offer_id = Nothing,
       price = mkPrice q,
-      -- descriptor =
-      --   OS.ItemDescriptor
-      --     { name = "",
-      --       code =
-      --         OS.ItemCode
-      --           { fareProductType = OS.DRIVER_OFFER,
-      --             vehicleVariant = castVariant q.vehicleVariant,
-      --             distance = Nothing,
-      --             duration = Nothing
-      --           }
-      --     },
-      -- quote_terms = [],
       tags = Just $ OS.TG [mkItemTags]
-      -- Just $
-      --   OS.ItemTags
-      --     { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
-      --       special_location_tag = q.specialLocationTag
-      --     },
-      -- base_distance = Nothing,
-      -- base_duration = Nothing,
-      -- driver_name = Just q.driverName,
-      -- duration_to_pickup = Just q.durationToPickup.getSeconds,
-      -- valid_till = Just q.validTill
-      -- rating = q.driverRating
     }
   where
     mkItemTags =
@@ -259,22 +152,12 @@ mkItem fulfillmentId q provider =
             ]
         }
 
--- where
---   price_ = do
---     let value_ = fromIntegral q.estimatedFare
---     OS.ItemPrice
---       { currency = "INR",
---         value = value_,
---         offered_value = value_
---       }
-
 mkPrice :: DQuote.DriverQuote -> OS.Price
 mkPrice quote =
   let value_ = fromIntegral quote.estimatedFare
    in OS.Price
         { currency = "INR",
           value = value_
-          -- offered_value = value_
         }
 
 mkQuote :: DQuote.DriverQuote -> UTCTime -> OS.Quote
@@ -284,8 +167,6 @@ mkQuote driverQuote now = do
         mkBreakupList (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
           & filter filterRequiredBreakups
   let nominalDifferenceTime = diffUTCTime driverQuote.validTill now
-  -- let diffDuration = calendarTimeTime nominalDifferenceTime
-  -- let iso8601Duration = formatShow iso8601Format diffDuration
   OS.Quote
     { price = mkPrice driverQuote,
       ttl = Just $ T.pack $ formatTimeDifference nominalDifferenceTime, --------- todo
@@ -301,118 +182,6 @@ mkQuote driverQuote now = do
         || breakup.title == "TOTAL_FARE"
     formatTimeDifference duration =
       let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
-          -- (nominalDiffTimeToSeconds duration) / 1000000000000
           (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
-          -- (hours, remainingSeconds) = divMod (round duration) (3600 :: Int)
           (minutes, seconds) = divMod remainingSeconds 60
        in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"
-
--- formatTimeDifferenceTest :: NominalDiffTime -> Text
--- formatTimeDifferenceTest duration =
---       let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
---         -- (nominalDiffTimeToSeconds duration) / 1000000000000
---           (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
---           -- (hours, remainingSeconds) = divMod (round duration) (3600 :: Int)
---           (minutes, seconds) = divMod remainingSeconds 60
---       in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"
-
--- mkQuoteBreakupList :: DQuote.DriverQuote -> [Maybe OS.PriceBreakup]
--- mkQuoteBreakupList driverQuote =
---   mkBreakupList
---   let parameters = driverQuote.fareParams
---   in
---   [
---     Just $ OS.PriceBreakup {
---         title = "BASE_FARE",
---         price = OS.Price
---           { currency = "INR",
---             value = OS.DecimalValue $ toRational parameters.baseFare.getMoney,
---             offered_value = OS.DecimalValue $ toRational parameters.baseFare.getMoney
---           }
---       },
---     if isJust parameters.customerExtraFee then Just $ OS.PriceBreakup {
---         title = "BASE_FARE",
---         price = OS.Price
---           { currency = "INR",
---             value = OS.DecimalValue $ toRational parameters.baseFare.getMoney,
---             offered_value = OS.DecimalValue $ toRational parameters.baseFare.getMoney
---           }
---       } else Nothing,
---   ]
-
--- fareParams :: Params.FareParameters,
-
--- data FareParameters = FareParameters
---   { id :: Id FareParameters,
---     driverSelectedFare :: Maybe Money,
---     customerExtraFee :: Maybe Money,
---     serviceCharge :: Maybe Money,
---     govtCharges :: Maybe Money,
---     baseFare :: Money,
---     waitingCharge :: Maybe Money,
---     nightShiftCharge :: Maybe Money,
---     nightShiftRateIfApplies :: Maybe Double,
---     fareParametersDetails :: FareParametersDetails
---   }
-
--- data PriceBreakup = PriceBreakup
---   { title :: Text,
---     price :: Price
---   }
---   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
--- data Price = Price
---   { currency :: Text,
---     value :: DecimalValue,
---     offered_value :: DecimalValue
---   }
---   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
--- -- (fromIntegral $ div (fromEnum . nominalDiffTimeToSeconds $ latency) 1000000000000)
--- -- let Duration =
--- -- calendarTimeTime
-
---       baseFareCaption = "BASE_FARE"
---       serviceChargeCaption = "SERVICE_CHARGE"
---       mkSelectedFareCaption = "DRIVER_SELECTED_FARE"
---       customerExtraFareCaption = "CUSTOMER_SELECTED_FARE"
---       totalFareCaption = "TOTAL_FARE"
---       nightShiftCaption = "NIGHT_SHIFT_CHARGE"
---       waitingChargesCaption = "WAITING_OR_PICKUP_CHARGES"
---       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
--- import Data.Time
-
--- formatTimeDifference :: NominalDiffTime -> String
--- formatTimeDifference duration =
---     let (hours, remainingSeconds) = divMod (round duration) 3600
---         (minutes, seconds) = divMod remainingSeconds 60
---     in "P" ++ show hours ++ "H" ++ show minutes ++ "M" ++ show seconds ++ "S"
-
--- main :: IO ()
--- main = do
---     currentTime <- getCurrentTime
---     let targetTime = read "2023-07-13 18:19:51 UTC" :: UTCTime
---         duration = diffUTCTime currentTime targetTime
---         iso8601Duration = formatTimeDifference duration
---     putStrLn iso8601Duration
-
--- import Data.Time
--- import Data.Time.Format.ISO8601 (iso8601ParseM)
-
--- -- Parse ISO8601 duration and return the number of seconds
--- parseISO8601Duration :: String -> Maybe NominalDiffTime
--- parseISO8601Duration durationStr = do
---     (d, t) <- iso8601ParseM $ "P" ++ durationStr
---     return $ diffTimeToPicoseconds d / 10^12 + diffTimeToPicoseconds t / 10^12
-
--- -- Add the parsed duration to a given UTCTime
--- addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
--- addDurationToUTCTime time duration = addUTCTime duration time
-
--- main :: IO ()
--- main = do
---     currentTime <- getCurrentTime
---     let iso8601DurationStr = "0DT1H15M30S"  -- Replace this with your desired ISO8601 duration
---         Just duration = parseISO8601Duration iso8601DurationStr
---         updatedTime = addDurationToUTCTime currentTime duration
---     print updatedTime

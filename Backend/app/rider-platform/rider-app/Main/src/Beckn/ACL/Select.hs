@@ -28,12 +28,6 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 import Tools.Error
 
--- import Domain.Action.UI.Select (select)
--- import Beckn.ACL.OnSearch (currency')
--- import qualified Beckn.Types.Core.Metro.OnSearch as Select
--- import qualified Beckn.Types.Core.Taxi.Confirm as Select
--- import qualified Tools.Metrics.BAPMetrics as res
-
 buildSelectReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSelect.DSelectRes ->
@@ -62,20 +56,6 @@ buildOrder res = do
                 },
             tags = if isJust res.customerExtraFee then Just $ Select.TG [mkCustomerTipTags] else Nothing
           }
-  -- breakups =
-  --   catMaybes
-  --     [ ( \customerExtraFee ->
-  --           Select.BreakupItem
-  --             { title = "Extra fee",
-  --               price =
-  --                 Select.BreakupItemPrice
-  --                   { currency = "INR",
-  --                     value = realToFrac customerExtraFee
-  --                   }
-  --             }
-  --       )
-  --         <$> res.customerExtraFee
-  --     ]
   return
     Select.Order
       { items = [item],
@@ -92,12 +72,7 @@ buildOrder res = do
               id = res.estimate.bppEstimateId.getId,
               vehicle = Select.Vehicle {category = variant},
               _type = Select.RIDE
-              -- tags = Select.Tags res.autoAssignEnabled
             }
-            -- quote =
-            --   Select.Quote
-            --     { breakup = breakups
-            --     }
       }
   where
     mkCustomerTipTags =
