@@ -1,30 +1,30 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Components.PrimaryButton.View where
 
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==))
+import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==))
 import Components.PrimaryButton.Controller (Action(..), Config)
 import PrestoDOM (Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
-import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
+import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
+view push config =
  relativeLayout
   [ height config.height
   , width config.width
@@ -35,24 +35,24 @@ view push config =
   , margin config.margin
   , onClick (\action -> do
               _ <- pure $ toggleBtnLoader config.id true
-              _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag config.id) true 0.6 "CENTER_CROP"
+              void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader", lottieId = (getNewIDWithTag config.id), scaleType = "CENTER_CROP" }
               push action
               ) (const OnClick)
   , orientation HORIZONTAL
-  , afterRender (\action -> do 
+  , afterRender (\action -> do
               _ <- pure $ toggleBtnLoader "" false
               pure unit) (const NoAction)
-  , alpha if config.enableLoader then 0.5 else config.alpha                
+  , alpha if config.enableLoader then 0.5 else config.alpha
   , visibility config.visibility
   , stroke config.stroke
   ][  linearLayout
       [ width config.width
       , height config.height
-      , orientation HORIZONTAL 
+      , orientation HORIZONTAL
       , gravity config.gravity
       , visibility if config.enableLoader then GONE else VISIBLE
       ][ prefixImageLayout config
-        , textView 
+        , textView
           [ height config.textConfig.height
           , width config.textConfig.width
           , textSize config.textConfig.textSize
@@ -64,7 +64,7 @@ view push config =
           ]
         , suffixImageLayout config
         ]
-    , lottieAnimationView 
+    , lottieAnimationView
       [ id (getNewIDWithTag config.id)
       , visibility if config.enableLoader then VISIBLE else GONE
       , height $ V 50
@@ -82,9 +82,9 @@ prefixImageLayout config =
     , visibility if config.isPrefixImage then VISIBLE else GONE
     , margin config.prefixImageConfig.margin
     ]
-    
+
 suffixImageLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
-suffixImageLayout config = 
+suffixImageLayout config =
   imageView
     [ height config.suffixImageConfig.height
     , width $ if config.isSuffixImage then config.suffixImageConfig.width else V 0
@@ -93,4 +93,3 @@ suffixImageLayout config =
     , visibility if config.isSuffixImage then VISIBLE else GONE
     , margin config.suffixImageConfig.margin
     ]
-  

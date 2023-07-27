@@ -182,8 +182,6 @@ foreign import isInternetAvailable :: Unit -> Effect Boolean
 foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
 foreign import openWhatsAppSupport :: String -> Effect Unit
-
-foreign import startLottieProcess :: String -> String -> Boolean -> Number -> String -> Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
 
@@ -206,6 +204,30 @@ foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
 foreign import launchDateSettings :: String -> Unit
+foreign import startLottieProcess :: LottieAnimationConfig -> Unit
+foreign import methodArgumentCount :: String -> Int
+
+type LottieAnimationConfig = {
+    rawJson :: String
+  , lottieId :: String
+  , repeat :: Boolean
+  , speed :: Number
+  , scaleType :: String
+  , minProgress :: Number
+  , maxProgress :: Number
+}
+
+lottieAnimationConfig :: LottieAnimationConfig
+lottieAnimationConfig = {
+    rawJson : ""
+  , lottieId : ""
+  , repeat : true
+  , speed : 0.6
+  , scaleType : "DEFAULT"
+  , minProgress : 0.0
+  , maxProgress : 1.0
+}
+
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
 

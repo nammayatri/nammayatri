@@ -56,7 +56,7 @@ import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
-import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, getSpecialTag)
+import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, getSpecialTag, findingQuotesSearchExpired)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
@@ -263,7 +263,7 @@ currentRideFlow rideAssigned = do
               when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
-                          , estimatedDistance = contents.estimatedDistance 
+                          , estimatedDistance = contents.estimatedDistance
                           , zoneType = getSpecialTag resp.specialLocationTag}
                   , data { rideRatingState
                           { driverName = currRideListItem.driverName
@@ -386,11 +386,8 @@ currentFlowStatus = do
       if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do
         updateFlowStatus SEARCH_CANCELLED
       else do
-        let secondsPassed = spy "secondsPassed" (getExpiryTime (getValueToLocalStore FINDING_QUOTES_START_TIME) true)
         let searchExpiryTime = getSearchExpiryTime "LazyCheck"
-        let secondsLeft = case driverOfferedQuote of
-                            true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
-                            false -> (searchExpiryTime - secondsPassed)
+            secondsLeft = findingQuotesSearchExpired driverOfferedQuote
         if secondsLeft > 0 then do
           _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
           updateLocalStage FindingQuotes
@@ -418,7 +415,8 @@ currentFlowStatus = do
                         enableTips = (getValueToLocalStore ENABLE_TIPS) == "true"
                       }
                      , selectedQuote = Nothing
-                     , tipViewProps = tipViewData}
+                     , tipViewProps = tipViewData
+                     , findingQuotesProgress = 1.0 - (INT.toNumber secondsLeft)/(INT.toNumber searchExpiryTime)}
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place
                        , sourceAddress = flowStatusData.sourceAddress
@@ -634,11 +632,11 @@ homeScreenFlow = do
           _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
           if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000) then do
             updateLocalStage DistanceOutsideLimits
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0}})
             homeScreenFlow
             else if response.distance < 500 && getValueToLocalStore LOCAL_STAGE /= "ShortDistance" then do
               updateLocalStage ShortDistance
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ShortDistance ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ShortDistance ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, findingQuotesProgress = 0.0}})
               homeScreenFlow
               else pure unit
           pure unit
@@ -647,7 +645,7 @@ homeScreenFlow = do
                                                       , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination}
                                                       , sourceAddress : (encodeAddress address.formattedAddress [] state.props.sourcePlaceId)
                                                       , destinationAddress : state.data.destinationAddress })
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}})
       updateLocalStage FindingEstimate
       homeScreenFlow
     RETRY_FINDING_QUOTES showLoader-> do
@@ -686,7 +684,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = true } })
         let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps else HomeScreenData.initData.props.tipViewProps
         _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData }})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData, findingQuotesProgress = 0.0 }})
       homeScreenFlow
     LOCATION_SELECTED item addToRecents-> do
         void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
@@ -715,7 +713,7 @@ homeScreenFlow = do
                                               }) srcSpecialLocation.gates
         (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place, findingQuotesProgress = 0.0 }})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           else pure unit
@@ -1204,12 +1202,12 @@ homeScreenFlow = do
       homeScreenFlow
     TRIGGER_PERMISSION_FLOW flowType -> permissionScreenFlow flowType
     REPORT_ISSUE state -> do
-       if isNothing state.data.ratingViewState.issueReason then do 
+       if isNothing state.data.ratingViewState.issueReason then do
         _ <- Remote.callbackRequestBT FunctionCall
         _ <- pure $ toast $ getString WE_WILL_GIVE_YOU_CALLBACK
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false} }})
         homeScreenFlow
-       else do 
+       else do
         _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  Nothing (Just state.props.bookingId) (fromMaybe "" state.data.ratingViewState.issueReason) state.data.ratingViewState.issueDescription )
         _ <- pure $ toast $ getString YOUR_ISSUE_HAS_BEEN_REPORTED
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false, openReportIssue = false} }})
@@ -1336,7 +1334,7 @@ tripDetailsScreenFlow fromMyRides = do
       modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen = false},data{totalAmount = updatedState.data.totalAmount, date = updatedState.data.date, tripCharges = updatedState.data.totalAmount, selectedItem = updatedState.data.selectedItem}})
       invoiceScreenFlow
     GO_TO_HOME state -> do
-      if state.props.fromMyRides == Home then 
+      if state.props.fromMyRides == Home then
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
         else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow

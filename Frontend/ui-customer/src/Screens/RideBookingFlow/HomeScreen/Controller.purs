@@ -52,7 +52,6 @@ import Components.SourceToDestination.Controller as SourceToDestinationControlle
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union, any)
-import Data.Int (toNumber, round)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -62,7 +61,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess, getSuggestionfromKey, scrollToEnd)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, getSuggestionfromKey, scrollToEnd, startLottieProcess, lottieAnimationConfig, methodArgumentCount)
 import Helpers.Utils (Merchant(..), addToRecentSearches, clearCountDownTimer, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback, toString)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -627,9 +626,22 @@ eval (UpdateCurrentStage stage) state = do
     continue state
 
 eval OnResumeCallback state =
-  if (isLocalStageOn FindingQuotes) && flowWithoutOffers WithoutOffers then
-    exit $ OnResumeApp state
-  else continue state
+  case getValueToLocalNativeStore LOCAL_STAGE of
+    "FindingQuotes" -> do
+      case (methodArgumentCount "startLottieProcess") == 1 of
+        true  -> do
+          let secondsLeft = findingQuotesSearchExpired false
+              findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
+          void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+        false -> pure unit
+      case flowWithoutOffers WithoutOffers of
+        true  -> exit $ OnResumeApp state
+        false -> continue state
+    "QuoteList" -> do
+      let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
+      void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+      continue state
+    _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
@@ -651,8 +663,8 @@ eval (RateClick index) state = do
         }
       }
 
-eval (IssueReportIndex index) state = 
-  case index of 
+eval (IssueReportIndex index) state =
+  case index of
     0 -> continue state { data { ratingViewState { openReportIssue = true }}}
     1 -> exit $ ReportIssue state { data {  ratingViewState { issueReason = Nothing }}}
     _ -> continue state
@@ -749,7 +761,7 @@ eval BackPressed state = do
     SettingPrice    -> do
                       _ <- pure $ performHapticFeedback unit
                       if state.props.showRateCard then do
-                        if (state.data.rateCard.currentRateCardType /= DefaultRateCard) then 
+                        if (state.data.rateCard.currentRateCardType /= DefaultRateCard) then
                          continue state{data{rateCard {currentRateCardType = DefaultRateCard}}}
                         else continue state{props{showRateCard = false}}
                       else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
@@ -985,7 +997,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
 
 
 eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
-  case state.data.ratingViewState.issueFacedView of 
+  case state.data.ratingViewState.issueFacedView of
     true -> do
             _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
             continue
@@ -998,9 +1010,9 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
                       , rideId = state.data.driverInfoCardState.rideId
                       }
                   }
-                }    
+                }
     _ ->  if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
-          else do 
+          else do
             _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
             _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
             updateAndExit state GoToHome
@@ -1169,7 +1181,7 @@ eval (IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index)) state = continue s
 eval (IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
   let issue = reportIssueOptions!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
   let reason = (fromMaybe dummyCancelReason issue).description
-  exit $ ReportIssue state { data { 
+  exit $ ReportIssue state { data {
     ratingViewState { issueReason = Just reason, issueDescription = reason},
     rideRatingState {rideId = state.data.driverInfoCardState.rideId, feedback = ""}
     }}
@@ -1364,7 +1376,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
   _ <- pure $ clearTimer state.props.timerId
-  _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
+  void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
   let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
@@ -1586,10 +1598,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               let newState = state{data{quoteListModelState = quoteListModelState },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
               if isLocalStageOn QuoteList then do
                 _ <- pure $ spy "checking " "state"
-                let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp}} else newState{props{isPopUp = ConfirmBack}}
-                _ <- pure $ spy "checking zxc" newState
-                _ <- pure $ spy "checking zxc 2" newState
-                -- exit $ GetSelectList newState{props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else NoPopUp}}
+                let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
                 exit $ GetSelectList updatedState
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
                 let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
@@ -1734,8 +1743,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   continue $ if state.data.currentSearchResultType == QUOTES then newState{data{specialZoneSelectedQuote = Just config.id }}
               else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleType))) state = 
-  continue state{ props { showRateCard = true } 
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleType))) state =
+  continue state{ props { showRateCard = true }
                 , data {  rateCard {  rateCardArray = getRateCardValue vehicleType state
                                     , title = getVehicleTitle vehicleType
                                     , onFirstPage = false
@@ -1744,7 +1753,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , driverAdditionsImage = if (getMerchant FunctionCall == YATRI) then "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" else "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"}}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
-  if state.data.currentSearchResultType == QUOTES then  do   
+  if state.data.currentSearchResultType == QUOTES then  do
     _ <- pure $ updateLocalStage ConfirmingRide
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
   else do
@@ -2080,16 +2089,16 @@ estimatesFlow estimatedQuotes state = do
     exit
       $ SelectEstimate
           state
-            { data  { suggestedAmount = estimatedPrice, 
+            { data  { suggestedAmount = estimatedPrice,
                       currentSearchResultType = ESTIMATES,
                       rateCard =  { additionalFare: additionalFare
                                   , nightShiftMultiplier: nightShiftMultiplier
                                   , nightCharges: nightCharges
                                   , currentRateCardType: DefaultRateCard
                                   , onFirstPage: false
-                                  , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare 
-                                  , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
-                                  , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD) 
+                                  , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
+                                  , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+                                  , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
                                   },
                       showPreferences = getPreferenceValue "" }
             , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon, zoneType = zoneType}
@@ -2106,9 +2115,9 @@ estimatesFlow estimatedQuotes state = do
                             , nightCharges: nightCharges
                             , currentRateCardType: DefaultRateCard
                             , onFirstPage: false
-                            , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare 
-                            , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
-                            , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD) 
+                            , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
+                            , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+                            , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
                             }
                 }
         }
@@ -2225,9 +2234,9 @@ getZoneType tag =
     Just "SureMetro" -> METRO
     _                -> NOZONE
 
-getVehicleTitle :: String -> String 
-getVehicleTitle vehicle = 
-  (case vehicle of 
+getVehicleTitle :: String -> String
+getVehicleTitle vehicle =
+  (case vehicle of
     "HATCHBACK" -> (getString HATCHBACK)
     "SUV" -> (getString SUV)
     "SEDAN" -> (getString SEDAN)
@@ -2235,7 +2244,7 @@ getVehicleTitle vehicle =
 getRateCardValue :: String -> HomeScreenState -> Array RateCardDetails
 getRateCardValue vehicleVariant state = do
   let lang = getValueToLocalStore LANGUAGE_KEY
-  case vehicleVariant of 
+  case vehicleVariant of
     "HATCHBACK" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , description : "₹122"}
                    , { title : "4 km - 13 km" , description : "₹18 / km"}
                    , { title : "13 km - 30 km" , description : "₹25 / km"}
@@ -2259,5 +2268,14 @@ getRateCardValue vehicleVariant state = do
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
 getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }
-                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} ] 
+                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} ]
                       <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
+
+findingQuotesSearchExpired :: Boolean -> Int
+findingQuotesSearchExpired gotQuotes =
+  let secondsPassed = getExpiryTime (getValueToLocalStore FINDING_QUOTES_START_TIME) true
+      searchExpiryTime = getSearchExpiryTime "LazyCheck"
+      secondsLeft = case gotQuotes of
+                      true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
+                      false -> (searchExpiryTime - secondsPassed)
+  in secondsLeft

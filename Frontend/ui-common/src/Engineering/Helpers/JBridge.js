@@ -749,7 +749,7 @@ export const getSuggestionfromKey = function (key) {
           case "EN_US" :
             suggestion = val[en_us];
             break;
-          case "HI_IN" : 
+          case "HI_IN" :
             suggestion = val[hi_in];
             break;
           case "KN_IN" :
@@ -1438,27 +1438,26 @@ export const deletePopUpCallBack = function (dummy) {
   return true;
 }
 
-export const startLottieProcess = function (rawJson) {
-  return function (lottieId) {
-    return function (loop) {
-      return function (speed) {
-        return function (scaleType){
-          if (JBridge.startLottieProcess) {
-            try {
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType);
-            } catch (err) {
-              /*
-              * This Function is deprecated on 12 Jan - 2023
-              * Remove this function once it is not begin used.
-              */
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed);
-            }
-          }
-        };
-      };
-    };
-  };
+export const startLottieProcess = function (configObj) {
+  try {
+    if (window.__OS == "IOS") {
+      return JBridge.startLottieProcess(configObj.rawJson, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType, JSON.stringify(configObj));
+    }
+    return JBridge.startLottieProcess(JSON.stringify(configObj));
+  }
+  catch (err) {
+    return JBridge.startLottieProcess(configObj.rawJson, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType);
+  }
 };
+
+export const methodArgumentCount = function (functionName) {
+  try {
+    return window.JBridge.methodArgumentCount(functionName);
+  } catch (error) {
+    console.log("error inside argumentCount : " + error)
+    return 0;
+  }
+}
 
 export const generateSessionToken = function (type) {
   if (window.__OS == "IOS"){

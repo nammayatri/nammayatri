@@ -95,7 +95,7 @@ screen initialState =
           let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
           if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
             _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))
-            _ <- JB.waitingCountdownTimer startingTime push WaitTimerCallback 
+            _ <- JB.waitingCountdownTimer startingTime push WaitTimerCallback
             pure unit
           else pure unit
           case (getValueToLocalNativeStore LOCAL_STAGE) of
@@ -420,8 +420,8 @@ offlineView push state =
           ][ lottieAnimationView
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
               , afterRender (\action-> do
-                              _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
-                              pure unit)(const NoAction)
+                              void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "rippling_online_effect", lottieId = (EHC.getNewIDWithTag "RippleGoOnlineLottie"), speed = 1.0 }
+                            )(const NoAction)
               , height WRAP_CONTENT
               , width MATCH_PARENT
               ]
