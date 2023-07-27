@@ -2179,8 +2179,8 @@ estimatesFlow estimatedQuotes state = do
         Nothing -> 0
       showRateCardIcon = if (null estimateFareBreakup) then false else true
       zoneType = getSpecialTag $ if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _specialLocationTag else Nothing
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate"
   if not (null estimatedVarient) then do
-    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate"
     let lang = getValueToLocalStore LANGUAGE_KEY
     exit
       $ SelectEstimate

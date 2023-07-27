@@ -357,6 +357,8 @@ public class NotificationUtils {
         if (notificationType.equals(ALLOCATION_TYPE)) {
             System.out.println("In clean notification if");
         }
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         if (TRIP_CHANNEL_ID.equals(notificationType)) {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -368,10 +370,15 @@ public class NotificationUtils {
         if (TRIP_FINISHED.equals(notificationType)) {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-            if (key.equals("USER"))
-                mFirebaseAnalytics.logEvent("ny_user_ride_completed", params);
+            if (key.equals("USER")){
+                mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
+                String rideTaken = sharedPref.getString("HAS_TAKEN_FIRST_RIDE", "false");
+                if(rideTaken.equals("false")){
+                    mFirebaseAnalytics.logEvent("ny_user_first_ride_completed",params);
+                }
+            }
             else
-                mFirebaseAnalytics.logEvent("ride_completed", params);
+                mFirebaseAnalytics.logEvent("ride_completed",params);
         }
         if (CANCELLED_PRODUCT.equals(notificationType) ||REALLOCATE_PRODUCT.equals(notificationType)) {
             Bundle params = new Bundle();

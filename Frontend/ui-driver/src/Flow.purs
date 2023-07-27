@@ -1781,7 +1781,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
-      liftFlowBT $ logEvent logField_ "ny_user_ride_completed"
+      liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
 
       if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
