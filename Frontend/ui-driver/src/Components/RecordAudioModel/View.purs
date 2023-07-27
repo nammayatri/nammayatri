@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -22,7 +22,7 @@ import Components.RecordAudioModel.Controller (Action(..), RecordAudioModelState
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style (bold)
-import JBridge (startLottieProcess)
+import JBridge (startLottieProcess, lottieAnimationConfig)
 import PrestoDOM (frameLayout, id, linearLayout)
 import PrestoDOM.Elements.Elements (imageView, lottieAnimationView, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
@@ -86,7 +86,7 @@ view push state =
           , padding (PaddingRight 50)
           , id (getNewIDWithTag "recordAnimation")
           , afterRender (\action -> do
-                 _ <- pure $ startLottieProcess "record_audio_animation" (getNewIDWithTag "recordAnimation") true 1.0 "FIT_CENTER"
+                 void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "record_audio_animation", lottieId = (getNewIDWithTag "recordAnimation"), scaleType = "FIT_CENTER", speed = 1.0 }
                  pure unit
                 ) (const NoAction)
           ]

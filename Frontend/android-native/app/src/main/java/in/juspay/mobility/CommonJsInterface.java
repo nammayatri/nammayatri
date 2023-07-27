@@ -194,6 +194,7 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -315,6 +316,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private String zoneName = "";
     private float zoom = 17.0f;
     public static String detectPhoneNumbersCallBack = null;
+    public Method[] methods = null;
 
 
     public CommonJsInterface() {
@@ -2202,19 +2204,49 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void startLottieProcess(String rawJson, String id, boolean repeat, float speed, String scaleType) {
-        if (activity != null) activity.runOnUiThread(() -> {
-            try {
-                animationView = activity.findViewById(Integer.parseInt(id));
-                animationView.setAnimationFromJson(getJsonFromResources(rawJson));
-                animationView.loop(repeat);
-                animationView.setSpeed(speed);
-                animationView.playAnimation();
-                animationView.setScaleType(getScaleTypes(scaleType));
-            } catch (Exception e) {
-                Log.d("TAG", "exception in startLottieAnimation", e);
+    public void startLottieProcess(String configObj) {
+        if (activity != null) activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSONObject jsonObject = new JSONObject(configObj);
+                    float minProgress = Float.parseFloat(jsonObject.getString("minProgress"));
+                    float maxProgress = Float.parseFloat(jsonObject.getString("maxProgress"));
+                    String scaleType = jsonObject.getString("scaleType");
+                    boolean repeat = Boolean.parseBoolean(jsonObject.getString("repeat"));
+                    int lottieId = Integer.parseInt(jsonObject.getString("lottieId"));
+                    float speed = Float.parseFloat(jsonObject.getString("speed"));
+                    String rawJson = jsonObject.getString("rawJson");
+
+                    animationView = activity.findViewById(lottieId);
+                    animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
+                    animationView.setRepeatCount(repeat ? ValueAnimator.INFINITE : 0);
+                    animationView.setSpeed(speed);
+                    animationView.setMinAndMaxProgress(minProgress, maxProgress);
+                    animationView.setScaleType(getScaleTypes(scaleType));
+                    animationView.playAnimation();
+                } catch (Exception e) {
+                    Log.d("TAG", "exception in startLottieProcess" , e);
+                }
             }
         });
+    }
+
+    @JavascriptInterface
+    public int methodArgumentCount(String functionName) {
+        try {
+            methods = methods == null ? this.getClass().getMethods() : methods;
+            for (Method m : methods) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (m.getName().equals(functionName)) {
+                        return m.getParameterCount();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     private String getJsonFromResources(String rawJson) {
@@ -3929,7 +3961,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     System.out.println("In mmove camera in catch exception" + e);
                 }
             }
-        }); 
+        });
     }
 
     @JavascriptInterface
@@ -4116,7 +4148,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             context.startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         }
     }
-    
+
     @JavascriptInterface
     public void adjustViewWithKeyboard(String flag) {
         activity.runOnUiThread(() -> {

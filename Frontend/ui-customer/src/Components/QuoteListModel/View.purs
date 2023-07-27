@@ -27,10 +27,10 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginTop, screenWidth,safeMarginBottom, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (getBtnLoader, startLottieProcess)
+import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, map, pure, unit, not, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
+import Prelude (Unit, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback , cornerRadius ,stroke)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -79,8 +79,8 @@ paymentView state =
   ][  lottieAnimationView
           [ id (getNewIDWithTag "lottieLoaderAnimProgress")
           , afterRender (\action-> do
-                        _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
-                        pure unit)(const NoAction)
+                        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = state.progress, scaleType = "CENTER_CROP"}
+                        )(const NoAction)
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , visibility if state.showProgress then VISIBLE else GONE
@@ -219,9 +219,9 @@ findingRidesView state push =
     [
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
-      , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
-                    pure unit)(const NoAction)
+      , afterRender (\action->
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "finding_rides_loader_with_text", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
+                    )(const NoAction)
       , height $ V 300
       , width $ V 300
       ]
@@ -230,13 +230,13 @@ findingRidesView state push =
   ]
 
 addTipView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-addTipView state push = 
+addTipView state push =
   linearLayout
     [ width MATCH_PARENT
     , orientation VERTICAL
     , visibility if state.tipViewProps.isVisible then VISIBLE else GONE
     ]
-    [ 
+    [
       linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -247,7 +247,7 @@ addTipView state push =
         , cornerRadius 12.0
         , padding $ Padding 20 16 20 16
         ]
-        [ 
+        [
           textView
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -534,9 +534,9 @@ homeOrTryAgain state push =
 
 ---------------------------- continueWithTipButtonConfig ---------------------------------
 continueWithTipButtonConfig :: QuoteListModelState -> PrimaryButton.Config
-continueWithTipButtonConfig state = let 
+continueWithTipButtonConfig state = let
     config = PrimaryButton.config
-    continueWithTipButtonConfig' = config 
+    continueWithTipButtonConfig' = config
       { textConfig
         { text = state.tipViewProps.primaryButtonText}
       , id = "ContinueWithTipButtonQuoteList"

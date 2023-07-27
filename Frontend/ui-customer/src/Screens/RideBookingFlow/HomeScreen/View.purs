@@ -60,7 +60,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeError, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -924,7 +924,7 @@ rideRatingCardView state push =
     ]
 
 rateExperienceView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rateExperienceView state push = 
+rateExperienceView state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -940,7 +940,7 @@ rateExperienceView state push =
       , width MATCH_PARENT
       , gravity CENTER
       , margin $ MarginTop 15
-      ](mapWithIndex (\_ item -> 
+      ](mapWithIndex (\_ item ->
           linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -949,14 +949,14 @@ rateExperienceView state push =
           ][imageView
               [ height $ V 30
               , width $ V 30
-              , imageWithFallback if item <= state.data.ratingViewState.selectedRating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" 
+              , imageWithFallback if item <= state.data.ratingViewState.selectedRating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
                                       else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
               ]
           ]) [1,2,3,4,5])
   ]
 
 didYouFaceIssue :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-didYouFaceIssue state push = 
+didYouFaceIssue state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -974,7 +974,7 @@ didYouFaceIssue state push =
       , margin $ MarginTop 15
       , orientation VERTICAL
       , visibility if state.data.ratingViewState.selectedYesNoButton == 0 then VISIBLE else GONE
-      ](mapWithIndex (\ index item -> 
+      ](mapWithIndex (\ index item ->
           linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -1011,7 +1011,7 @@ didYouFaceIssue state push =
 
 
 completedRideDetails :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-completedRideDetails state push = 
+completedRideDetails state push =
   linearLayout
   [ width MATCH_PARENT
   , height $ V ((screenHeight unit)/ 2)
@@ -1068,7 +1068,7 @@ completedRideDetails state push =
               ]
           ]
         , fareUpdatedView state push
-            
+
       ]
     , linearLayout
       [ width MATCH_PARENT
@@ -1124,7 +1124,7 @@ reportIssueView push state =
     ][ CancelRidePopUp.view (push <<< IssueReportPopUpAC) (reportIssuePopUpConfig state)]
 
 yesNoRadioButton :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-yesNoRadioButton state push = 
+yesNoRadioButton state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -1161,7 +1161,7 @@ issueFacedAndRateView state push =
   , padding $ Padding 16 16 16 16
   , background Color.white900
   , weight 1.0
-  ][  if state.data.ratingViewState.issueFacedView then didYouFaceIssue state push 
+  ][  if state.data.ratingViewState.issueFacedView then didYouFaceIssue state push
         else rateExperienceView state push
     , linearLayout
       [ width MATCH_PARENT
@@ -1202,7 +1202,7 @@ fareUpdatedView state push =
         , imageWithFallback "ny_ic_parallel_arrows,https://assets.juspay.in/nammayatri/images/common/ny_ic_parallel_arrows.png"
         , margin $ MarginRight 12
         ]
-    , textView $ 
+    , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , gravity CENTER_VERTICAL
@@ -1881,7 +1881,7 @@ lottieLoaderView state push =
     [ id (getNewIDWithTag "lottieLoader")
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess "ic_vehicle_processing" (getNewIDWithTag "lottieLoader") true 0.6 "Default"
+            void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "ic_vehicle_processing", lottieId = (getNewIDWithTag "lottieLoader") }
             pure unit
         )
         (const LottieLoaderAction)

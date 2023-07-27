@@ -492,7 +492,7 @@ logOutPopUpModelConfig state =
             , fontSize = FontSize.a_22
             },
           secondaryText {
-            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS) 
+            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
           , fontSize = FontSize.a_14
           , color = Color.black650}
           , tipLayoutMargin = (Margin 22 2 22 22)
@@ -748,7 +748,7 @@ getCustomerSuggestions state = case (DA.length state.data.suggestionsList == 0),
 
 showSuggestions :: ST.HomeScreenState -> Boolean
 showSuggestions state = do
-  case (DA.last state.data.messages) of 
+  case (DA.last state.data.messages) of
     Just value -> if value.sentBy == "Customer" then false else true
     Nothing -> true
 
@@ -830,6 +830,7 @@ quoteListModelViewState state = { source: state.data.source
                             , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
                             , tipViewProps : getTipViewProps state.props.tipViewProps
                             , findingRidesAgain : state.props.findingRidesAgain
+                            , progress : state.props.findingQuotesProgress
                             }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig

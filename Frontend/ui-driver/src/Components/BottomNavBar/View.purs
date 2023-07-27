@@ -24,10 +24,10 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (toString)
-import JBridge (startLottieProcess)
+import JBridge (startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=))
+import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=), void)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Visibility(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility)
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
@@ -94,11 +94,9 @@ lottieLoaderView state push activeIndex text =
     , width (V 25)
     , id (getIdForScreenIndex activeIndex)
     , afterRender
-        ( \action -> do
-            _ <- pure $ startLottieProcess "notification_bell" (getIdForScreenIndex activeIndex) true 1.0 "default"
-            pure unit
-        )
-        (const OnNavigate text)
+        ( \action ->
+            void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "notification_bell", lottieId = (getIdForScreenIndex activeIndex), speed = 1.0 }
+        )(const OnNavigate text)
     ]
   ]
 
