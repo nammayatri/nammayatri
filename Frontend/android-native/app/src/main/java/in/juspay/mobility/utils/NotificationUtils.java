@@ -11,6 +11,7 @@ package in.juspay.mobility.utils;
 
 import static android.content.Context.ACTIVITY_SERVICE;
 import static android.content.Context.BIND_AUTO_CREATE;
+import static android.graphics.Color.rgb;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
@@ -26,6 +27,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Typeface;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -38,6 +40,9 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.StyleSpan;
 import android.util.Log;
 import android.util.Pair;
 
@@ -645,16 +650,22 @@ public class NotificationUtils {
         notificationIntent.putExtra("NOTIFICATION_DATA", payload.toString());
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, chatNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        String _sentBy = "Message from " + sentBy;
+        SpannableString titleBold = new SpannableString(_sentBy);
+        titleBold.setSpan(new StyleSpan(Typeface.BOLD),0,_sentBy.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         Notification notification =
                 new NotificationCompat.Builder(context, "MessageUpdates")
-                        .setContentTitle(sentBy)
+                        .setContentTitle(titleBold)
                         .setAutoCancel(true)
+                        .setColor(rgb(33,148,255))
                         .setContentText(message)
                         .setSmallIcon(R.drawable.ny_ic_launcher)
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)
+                        .setLargeIcon(BitmapFactory.decodeResource(context.getResources(),R.drawable.ny_ic_driver_profile))
                         .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                        .addAction(1, "Reply", pendingIntent)
                         .build();
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
