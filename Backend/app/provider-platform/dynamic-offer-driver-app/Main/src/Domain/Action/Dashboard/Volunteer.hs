@@ -26,13 +26,15 @@ import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (Success))
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.SMS as Sms
 
 bookingInfo :: ShortId DM.Merchant -> Text -> Flow Common.BookingInfoResponse
 bookingInfo merchantShortId otpCode = do
@@ -80,6 +82,9 @@ assignCreateAndStartOtpRide _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
 
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  fork "sending dashboard sms - start ride" $ do
+    mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
+    Sms.sendDashboardSms booking.providerId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0
   shandle <- RideStart.buildStartRideHandle requestor.merchantId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return Success

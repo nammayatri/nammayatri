@@ -18,6 +18,14 @@ module SharedLogic.MessageBuilder
     WelcomeToPlatformMessageReq (..),
     buildWelcomeToPlatformMessage,
     buildSendAlternateNumberOTPMessage,
+    BuildEndRideMessageReq (..),
+    buildEndRideMessage,
+    BuildOnboardingMessageReq (..),
+    buildOnboardingMessage,
+    BuildBookingMessageReq (..),
+    buildBookingMessage,
+    BuildCollectCashMessageReq (..),
+    buildCollectCashMessage,
   )
 where
 
@@ -73,3 +81,60 @@ buildSendAlternateNumberOTPMessage merchantId req = do
     merchantMessage.message
       & T.replace (templateText "otp") req.otp
       & T.replace (templateText "hash") req.hash
+
+data BuildEndRideMessageReq = BuildEndRideMessageReq
+  { rideAmount :: Text,
+    rideShortId :: Text
+  }
+  deriving (Generic)
+
+buildEndRideMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildEndRideMessageReq -> m Text
+buildEndRideMessage merchantId req = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.END_RIDE_MESSAGE
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.END_RIDE_MESSAGE))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "rideAmount") req.rideAmount
+      & T.replace (templateText "rideId") req.rideShortId
+
+data BuildOnboardingMessageReq = BuildOnboardingMessageReq {}
+  deriving (Generic)
+
+buildOnboardingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildOnboardingMessageReq -> m Text
+buildOnboardingMessage merchantId _ = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.ONBOARDING_YATRI_MESSAGE
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.ONBOARDING_YATRI_MESSAGE))
+  return $
+    merchantMessage.message
+
+data BuildBookingMessageReq = BuildBookingMessageReq
+  { otp :: Text,
+    amount :: Text
+  }
+  deriving (Generic)
+
+buildBookingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildBookingMessageReq -> m Text
+buildBookingMessage merchantId req = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.BOOKING_MESSAGE
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.BOOKING_MESSAGE))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "otp") req.otp
+      & T.replace (templateText "amount") req.amount
+
+newtype BuildCollectCashMessageReq = BuildCollectCashMessageReq
+  { amount :: Text
+  }
+  deriving (Generic)
+
+buildCollectCashMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildCollectCashMessageReq -> m Text
+buildCollectCashMessage merchantId req = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.CASH_COLLECTED_MESSAGE
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.CASH_COLLECTED_MESSAGE))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "amount") req.amount

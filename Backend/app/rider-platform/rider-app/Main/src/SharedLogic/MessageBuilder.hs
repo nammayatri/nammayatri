@@ -15,6 +15,8 @@
 module SharedLogic.MessageBuilder
   ( BuildSendOTPMessageReq (..),
     buildSendOTPMessage,
+    BuildSendBookingOTPMessageReq (..),
+    buildSendBookingOTPMessage,
   )
 where
 
@@ -46,3 +48,19 @@ buildSendOTPMessage merchantId req = do
     merchantMessage.message
       & T.replace (templateText "otp") req.otp
       & T.replace (templateText "hash") req.hash
+
+data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
+  { otp :: Text,
+    amount :: Text
+  }
+  deriving (Generic)
+
+buildSendBookingOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildSendBookingOTPMessageReq -> m Text
+buildSendBookingOTPMessage merchantId req = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.SEND_BOOKING_OTP
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.SEND_BOOKING_OTP))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "otp") req.otp
+      & T.replace (templateText "amount") req.amount

@@ -67,6 +67,7 @@ mkPersist
       minLocationAccuracy Double
       subscription Bool
       aadhaarVerificationRequired Bool
+      enableDashboardSms Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId

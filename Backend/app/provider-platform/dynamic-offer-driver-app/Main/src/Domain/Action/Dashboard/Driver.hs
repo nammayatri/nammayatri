@@ -94,6 +94,7 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.SMS as Sms
 
 -- FIXME: not tested yet because of no onboarding test data
 driverDocumentsInfo :: ShortId DM.Merchant -> Flow Common.DriverDocumentsInfoRes
@@ -287,6 +288,8 @@ enableDriver merchantShortId reqDriverId = do
 
   CQDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
+  fork "sending dashboard sms - onboarding" $ do
+    Sms.sendDashboardSms merchant.id Sms.ONBOARDING Nothing personId Nothing 0
   pure Success
 
 ---------------------------------------------------------------------
@@ -414,6 +417,9 @@ recordPayment isExempted merchantShortId reqDriverId = do
   Esq.runTransaction $ do
     QDF.updateStatus (paymentStatus isExempted) driverFee.id now
     QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
+  fork "sending dashboard sms - collected cash" $ do
+    let totalDriverFee = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
+    Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalDriverFee
   pure Success
 
 ---------------------------------------------------------------------

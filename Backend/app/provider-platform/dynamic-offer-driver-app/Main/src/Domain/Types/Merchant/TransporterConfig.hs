@@ -54,6 +54,7 @@ data TransporterConfigD u = TransporterConfig
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     aadhaarVerificationRequired :: Bool,
+    enableDashboardSms :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     rcLimit :: Int,

@@ -40,6 +40,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
     useFraudDetection :: Bool,
+    enableDashboardSms :: Bool,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
