@@ -355,7 +355,7 @@ findBookingIdAssignedByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> m 
 findBookingIdAssignedByEstimateId (Id estimateId) = do
   driverOffer <- findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
   quote <- findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In $ map (\x -> Just (getId x.id)) driverOffer]
-  booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote]
+  booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]
   return $ listToMaybe $ Domain.id <$> booking
 
 -- findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
@@ -475,7 +475,7 @@ findStuckBookings (Id merchantId) bookingIds now =
       [ Se.And
           [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
-            Se.Is BeamB.status $ Se.Eq NEW,
+            Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
           ]
       ]
@@ -489,7 +489,7 @@ findStuckBookingsInReplica (Id merchantId) bookingIds now =
       [ Se.And
           [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
-            Se.Is BeamB.status $ Se.Eq NEW,
+            Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
           ]
       ]
