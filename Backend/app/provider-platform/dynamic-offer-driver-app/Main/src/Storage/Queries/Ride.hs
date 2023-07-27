@@ -313,7 +313,7 @@ getCountByStatus merchantId = do
 getRidesForDate :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Day -> Seconds -> m [Ride]
 getRidesForDate driverId date diffTime = do
   let minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
-  let maxDayTime = UTCTime date (secondsToDiffTime $ toInteger diffTime.getSeconds)
+  let maxDayTime = UTCTime date (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
   findAllWithKV
     [ Se.And
         [ Se.Is BeamR.driverId $ Se.Eq $ getId driverId,

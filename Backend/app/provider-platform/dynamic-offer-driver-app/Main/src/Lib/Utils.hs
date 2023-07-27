@@ -25,7 +25,6 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 
 -- import Kernel.Storage.Esqueleto.Types
 
-import Debug.Trace as T
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DomainDI
 -- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
@@ -428,14 +427,13 @@ setFlagsInMeshConfig meshCfg modelName = do
 
 setMeshConfig :: (L.MonadFlow m, HasCallStack) => Text -> m MeshConfig
 setMeshConfig modelName = do
-  tables <- T.trace "getting the tables" $ L.getOption KBT.Tables
+  tables <- L.getOption KBT.Tables
   randomIntV <- L.runIO (randomRIO (1, 100) :: IO Int)
   case tables of
     Nothing -> L.throwException $ InternalError "Tables not found"
     Just tables' -> do
       let enableKVForWriteAlso = tables'.enableKVForWriteAlso
       let enableKVForRead = tables'.enableKVForRead
-      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
       let tableAllocation = fromIntegral tables'.tableAllocation
       if randomIntV <= tableAllocation
         then pure $ meshConfig {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
@@ -450,7 +448,6 @@ setMeshConfig' modelName meshConfig' = do
     Just tables' -> do
       let enableKVForWriteAlso = tables'.enableKVForWriteAlso
       let enableKVForRead = tables'.enableKVForRead
-      _ <- T.trace ("enableKVForWriteAlso: " <> show tables') $ pure ()
       let tableAllocation = fromIntegral tables'.tableAllocation
       if randomIntV <= tableAllocation
         then pure $ meshConfig' {meshEnabled = modelName `elem` enableKVForWriteAlso, kvHardKilled = modelName `notElem` enableKVForRead}
