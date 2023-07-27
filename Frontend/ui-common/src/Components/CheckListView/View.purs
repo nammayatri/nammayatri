@@ -112,7 +112,7 @@ checkBoxView config item push =
             imageView
                 [ width (V 18)
                 , height (V 18)
-                , imageWithFallback "ny_ic_check_box,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_box.png"
+                , imageWithFallback "ny_ic_check_box,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_check_box.png"
                 , visibility if item.isSelected then VISIBLE else GONE
                 ]
             ]

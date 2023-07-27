@@ -360,7 +360,6 @@ driverAnalyticsView state push =
                 , padding $ Padding 12 10 12 10
                 , gravity CENTER_VERTICAL
                 , margin $ MarginRight 16
-                -- , margin $ MarginHorizontal 16 10
                 ][ textView
                     [ text "243"
                     , width WRAP_CONTENT
@@ -375,7 +374,6 @@ driverAnalyticsView state push =
                     , width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , textSize FontSize.a_12
-                    -- , fontStyle $ FontStyle.bold LanguageStyle
                     , color Color.black700
                     ]
                   ]
@@ -386,7 +384,6 @@ driverAnalyticsView state push =
                 , background Color.blue600
                 , padding $ Padding 12 10 12 10
                 , gravity CENTER_VERTICAL
-                -- , margin $ MarginHorizontal 16 10
                 ][  textView
                     [ text "243"
                     , width WRAP_CONTENT
@@ -401,7 +398,6 @@ driverAnalyticsView state push =
                     , width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , textSize FontSize.a_12
-                    -- , fontStyle $ FontStyle.bold LanguageStyle
                     , color Color.black700
                     ]
                 ]
@@ -994,7 +990,7 @@ detailsListViewComponent state push config =
                 , width $ V 11
                 , margin $ MarginLeft 7
                 , onClick push $ const item.action
-                , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+                , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ic_edit_pencil.png"
                 ]]  else [])
           , linearLayout
             [ height $ V 1
@@ -1056,7 +1052,6 @@ infoCard state push config =
 
 
 ------------------------------------------ ANIMATION -----------------------------------------------------
-
 addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
 
 scaleUpConfig :: Boolean -> AnimConfig.AnimConfig
