@@ -115,18 +115,25 @@ updateAffectedPhonesHelper primaryNumbers = do
 updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
-  isPrimary <- updateAffectedPhonesHelper primaryPhones
   dbConf <- getMasterBeamConfig
+  let indianMobileCode = "+91"
   void $
     L.runDB dbConf $
       L.updateRows $
-        B.update
+        B.update'
           (BeamCommon.exophone BeamCommon.atlasDB)
           ( \BeamE.ExophoneT {..} ->
-              (isPrimaryDown B.<-. B.val_ isPrimary)
+              ( isPrimaryDown
+                  B.<-. ( B.current_ primaryPhone `B.in_` (B.val_ <$> primaryPhones)
+                            B.||. (B.concat_ [B.val_ indianMobileCode, B.current_ primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
+                        )
+              )
                 <> (updatedAt B.<-. B.val_ now)
           )
-          (\BeamE.ExophoneT {..} -> isPrimaryDown B.==. B.val_ isPrimary)
+          ( \BeamE.ExophoneT {..} -> do
+              isPrimaryDown B.==?. (primaryPhone `B.in_` (B.val_ <$> primaryPhones))
+                B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
+          )
 
 -- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
 -- updateAffectedPhones' primaryPhones = do
