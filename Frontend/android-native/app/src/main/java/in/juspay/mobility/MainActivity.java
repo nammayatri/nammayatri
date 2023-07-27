@@ -410,7 +410,8 @@ public class MainActivity extends AppCompatActivity {
             payload.put("clientId", getResources().getString(R.string.client_id));
             payload.put("action", "initiate");
             payload.put("service", getService());
-            payload.put(PaymentConstants.ENV, "master");
+            payload.put("merchantId", "yatrisathi");
+            payload.put(PaymentConstants.ENV, "prod");
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -644,7 +645,9 @@ public class MainActivity extends AppCompatActivity {
             Handler handler = new Handler(context.getMainLooper());
             handler.postDelayed(() -> {
                 try {
-                    inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
+                    if (inAppNotification != null){
+                        inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
+                    }
                 } catch (JSONException e) {
                     Log.e(LOG_TAG, "Error in In App Notification Handler " + e);
                 }
@@ -742,6 +745,7 @@ public class MainActivity extends AppCompatActivity {
                 currentSharedPref.edit().putBoolean(entry.getKey(),(boolean) current).apply();
             }
         }
+        oldSharedPref.edit().clear().apply();
         return true;
     }
 }

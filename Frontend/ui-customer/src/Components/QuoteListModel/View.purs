@@ -478,7 +478,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 161
-        , imageWithFallback $ "ny_ic_no_quotes," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes.png"
+        , imageWithFallback $ "ny_ic_no_quotes_color," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_color.png"
         ]
       , textView $
         [ height WRAP_CONTENT

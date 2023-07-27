@@ -101,6 +101,12 @@ homeScreen = do
     CallCustomer updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState)
+    OpenPaymentPage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ OPEN_PAYMENT_PAGE updatedState)
+    AadhaarVerificationFlow updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
     
 -- DTHS.GoToStart screenState -> do
 --       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)

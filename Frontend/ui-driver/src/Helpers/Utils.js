@@ -401,6 +401,17 @@ export const getcurrentdate = function (string) {
   return today;
 }
 
+export const getDatebyCount = function (count) {
+  var today = new Date();
+  today.setDate(today.getDate() - count);
+  var dd = String(today.getDate()).padStart(2, '0');
+  var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+  var yyyy = today.getFullYear();
+
+  today = yyyy + '-' + mm + '-' + dd;
+  return today;
+}
+
 export const hideSplash = JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
 
 export const currentPosition = function (str) {
@@ -650,3 +661,60 @@ export const getPastWeeks = function (count) {
     console.log("error in getPastWeeks", e);
   }
 };
+
+export const getMerchantId = function(id) {
+  return window.merchantID;
+}
+
+export const startPP1 = function (payload) {
+	return function (sc) {
+		return function () {
+			var cb = function (code) {
+				return function (_response) {
+					return function () {
+            var response = JSON.parse(_response);
+						console.log("%cHyperpay Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                               
+						sc(response.payload.payload.status.value0)();
+					}
+				}
+			}
+			if (JOS) {      
+				try {
+					payload = JSON.parse(payload);                    
+					console.log("%cHyperpay Request ", "background:darkblue;color:white;font-size:13px;padding:2px", payload);
+
+					if (JOS.isMAppPresent("in.juspay.hyperpay")()){
+            console.log("inside process call");
+						JOS.emitEvent("in.juspay.hyperpay")("onMerchantEvent")(["process",JSON.stringify(payload)])(cb)();
+					} else {
+            sc("FAIL")();
+					}
+				} catch (err) {
+					console.error("Hyperpay Request not sent : ", err);
+				}
+			}else{
+            sc("FAIL")();
+        }
+		}
+	}
+}
+
+export const consumeBP = function (unit){
+  var jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: true }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+}
+
+export const isYesterday = function (dateString){
+  try {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1);
+    var date = new Date(dateString);
+    return (yesterday.toDateString() == date.toDateString());
+  }catch(error){
+    console.error(error);
+  }
+  return false;
+}

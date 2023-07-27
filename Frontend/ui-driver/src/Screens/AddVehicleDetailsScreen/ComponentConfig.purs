@@ -27,18 +27,26 @@ import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
 import Components.ReferralMobileNumber as ReferralMobileNumber
+import MerchantConfig.Utils (getValueFromConfig)
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    imageUploadCondition = getValueFromConfig "imageUploadOptional" || state.props.isValidState
     primaryButtonConfig' = config 
       { textConfig{ text = (getString NEXT)}
       , width = MATCH_PARENT
       , cornerRadius = 0.0
       , height = (V 60)
       , background = Color.black900 
-      , alpha = if ((state.props.isValidState) && (toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && (state.data.dateOfRegistration /= Just "") )  then 1.0 else 0.8
-      , isClickable = ((state.props.isValidState) && (toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && (state.data.dateOfRegistration /= Just "") )
+      , alpha = if ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
+                    (state.data.dateOfRegistration /= Just "") && 
+                    state.data.vehicle_registration_number /= "" &&
+                     imageUploadCondition)  then 1.0 else 0.8
+      , isClickable = ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
+                        (state.data.dateOfRegistration /= Just "") &&
+                        state.data.vehicle_registration_number /= "" &&
+                        imageUploadCondition)
       , margin = (Margin 0 0 0 0)
       }
   in primaryButtonConfig'

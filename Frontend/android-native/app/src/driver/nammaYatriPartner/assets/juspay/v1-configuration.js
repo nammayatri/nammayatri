@@ -17,6 +17,7 @@ window.getMerchantConfig = function () {
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : true,
+    "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
     "languageList" : [
       {"name":"English","value":"EN_US", "subtitle": ""}, 
@@ -72,11 +73,12 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
-    , "showGenderBanner" : false
-    , "defaultLanguage" : "EN_US"
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
     , "packageName" : "com.google.android.apps.maps"
   }
+    , "showGenderBanner" : true
+    , "defaultLanguage" : "EN_US"
+    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   })
 }

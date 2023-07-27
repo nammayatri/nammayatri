@@ -571,5 +571,21 @@ const mlStrings = {
   MISSED_OPPORTUNITY : "അവസരങ്ങൾ നഷ്ടപ്പെടുത്തി",
   HOW_OLD_IS_YOUR_VEHICLE : "നിങ്ങളുടെ വാഹനത്തിന് എത്ര പഴക്കമുണ്ട് (വർഷങ്ങളിൽ)?",
   ENTER_NAME_OF_VEHICLE : "നിങ്ങളുടെ വാഹനത്തിന്റെ പേര് നൽകുക",
-  NEW_ : "പുതിയത്"
+  NEW_ : "പുതിയത്",
+  TODAY : "ഇന്ന്",
+  OKAY :"ശരി ശരി",
+  NO_PAYMENT_HISTORY_AVAILABLE : "പേയ്‌മെന്റ് ചരിത്രമൊന്നും ലഭ്യമല്ല",
+  YOU_DONT_HAVEANY_PAYMENTS : "നിങ്ങൾ ഇതുവരെ പണമടച്ചിട്ടില്ല",
+  ENTER_AADHAAR_NUMBER : "ആധാർ നമ്പർ/യുഐഡി നൽകുക",
+  ENTER_AADHAAR_OTP_ : "ആധാർ OTP നൽകുക",
+  AADHAAR_LINKING_REQUIRED : "ആധാർ ലിങ്കിംഗ് ആവശ്യമാണ്",
+  AADHAAR_LINKING_REQUIRED_DESCRIPTION : "യാത്രി സതിക്കായി ഡ്രൈവിംഗ് ആരംഭിക്കാൻ, ദയവായി \n നിങ്ങളുടെ ആധാർ ഐഡി ലിങ്ക് ചെയ്യുക",
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC : "തുടരുക ക്ലിക്കുചെയ്യുന്നതിലൂടെ, നിങ്ങൾ ഞങ്ങളുടെ T&C അംഗീകരിക്കുന്നു",
+  TERMS_AND_CONDITIONS_SHORT : "T&C",
+  TC_TAIL : "അംഗീകരിക്കുന്നു",
+  OTP_SENT_TO_AADHAAR_NUMBER: "നിങ്ങളുടെ ആധാറുമായി ലിങ്ക് ചെയ്‌തിരിക്കുന്ന മൊബൈൽ നമ്പറിലേക്ക് OTP അയച്ചു",
+  ENTER_SIX_DIGIT_OTP : "ആറക്ക OTP നൽകുക",
+  LINK_AADHAAR_ID : "ലിങ്ക് ആധാർ ഐഡി",
+  AADHAAR_ALREADY_LINKED : "ആധാർ ഇതിനകം ലിങ്ക് ചെയ്തിട്ടുണ്ട്",
+  OPTIONAL : " (ഓപ്ഷണൽ)"
 }
