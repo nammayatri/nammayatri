@@ -24,8 +24,12 @@ data Exophone = Exophone
     primaryPhone :: Text,
     backupPhone :: Text,
     isPrimaryDown :: Bool,
+    exophoneType :: ExophoneType,
     -- isBackupDown Bool -- do we need this?
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data ExophoneType = CALL_RIDE | END_RIDE
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
