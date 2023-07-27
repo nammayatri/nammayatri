@@ -4,8 +4,9 @@ const common = require('./webpack.config.js');
 const webpack = require('webpack');
 const packageJSON = require("./package.json");
 var path = require('path');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
-const getOutputFileDir = (mode) => mode ==  "development" ? "" :"android/";
+const getOutputFileDir = (mode) => mode ==  "development" ? "" : "../../android-native/app/src/user/nammaYatri/assets/juspay/";
 const outputFileName = "index_bundle.js";
 const getOutputFileLocation = (mode) => getOutputFileDir(mode) + outputFileName;
 
@@ -16,7 +17,7 @@ module.exports = (env, argv) => {
         "window.__OS": JSON.stringify("ANDROID"),
         __VERSION__: JSON.stringify(packageJSON.version),
         "window.configEnv": JSON.stringify(env)
-      })]
+      }), new BundleAnalyzerPlugin()]
   return merge(common(env), {
     output: {
       filename: getOutputFileLocation(argv.mode),

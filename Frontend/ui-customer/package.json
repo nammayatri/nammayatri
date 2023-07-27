@@ -5,6 +5,8 @@
   "private": true,
   "main": "index.js",
   "scripts": {
+    "bundle-analyze": "webpack --profile --json > stats.json; webpack-bundle-analyzer ./stats.json",
+    "build": "spago build && webpack --mode=production --node-env=production",
     "compile:purs": "spago build",
     "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
@@ -14,7 +16,7 @@
     "dev": "spago build --watch",
     "webpack-dev-sandbox": "webpack-dev-server --env sandbox --mode development --config webpack.android.js --host",
     "webpack-dev-master": "webpack-dev-server --env master --mode development --config webpack.android.js --host",
-    "webpack-dev-prod": "webpack-dev-server --env prod --mode development --config webpack.android.js --host",
+    "webpack-dev-prod": "webpack-dev-server --env prod --mode production --config webpack.android.js --host",
     "webpack-dev-ios-master": "webpack-dev-server --env master --mode development --config webpack.ios.js --host",
     "webpack-dev-ios-sandbox": "webpack-dev-server --env sandbox --mode development --config webpack.ios.js --host",
     "webpack-dev-ios-prod": "webpack-dev-server --env prod --mode development --config webpack.ios.js --host",
@@ -53,7 +55,8 @@
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
     "webpack-merge": "^5.8.0",
-    "purty": "^7.0.0"
+    "purty": "^7.0.0",
+    "webpack-bundle-analyzer": "^4.8.0"
   },
   "dependencies": {
     "axios": "^0.27.1",
