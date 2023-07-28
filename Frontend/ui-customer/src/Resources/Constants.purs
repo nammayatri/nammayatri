@@ -200,7 +200,7 @@ getFaresList fares baseDistance =
             (show $ case item.description of 
               "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
               "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
-              "WAITING_OR_PICKUP_CHARGE" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
+              "WAITING_OR_PICKUP_CHARGES" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
               _ -> item.amount)
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
