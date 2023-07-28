@@ -138,3 +138,6 @@ onCall _ = (getBaseUrl "38") <> "/onCall"
 
 callbackRequest :: String -> String
 callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
+
+bookingFeedback :: String -> String
+bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"
