@@ -38,8 +38,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.OnboardingDocumentConfig as BeamODC
 
 create :: (L.MonadFlow m, Log m) => OnboardingDocumentConfig -> m ()
-create config = do
-  createWithKV config
+create = createWithKV
 
 -- findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
 -- findAllByMerchantId merchantId =
