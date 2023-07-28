@@ -310,7 +310,6 @@ disableDriver merchantShortId reqDriverId = do
 
 blockDriverWithReason :: ShortId DM.Merchant -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> Flow APISuccess
 blockDriverWithReason merchantShortId reqDriverId req = do
-  logDebug "we are reaching till here "
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -323,8 +322,8 @@ blockDriverWithReason merchantShortId reqDriverId req = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (not driverInf.blocked) do
-    CQDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
+  when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
+  CQDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
   maxShards <- asks (.maxShards)
   case req.blockTimeInHours of
     Just hrs -> do

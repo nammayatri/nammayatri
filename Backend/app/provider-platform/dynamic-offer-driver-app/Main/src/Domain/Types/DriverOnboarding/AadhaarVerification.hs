@@ -20,8 +20,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 
 data AadhaarVerification = AadhaarVerification
-  { id :: Id AadhaarVerification,
-    driverId :: Id Person,
+  { driverId :: Id Person,
     driverName :: Text,
     driverGender :: Text,
     driverDob :: Text,

@@ -26,12 +26,6 @@ import Storage.Tabular.DriverOnboarding.AadhaarVerification
 create :: AadhaarVerification -> Esq.SqlDB ()
 create = Esq.create
 
-findById ::
-  Transactionable m =>
-  Id AadhaarVerification ->
-  m (Maybe AadhaarVerification)
-findById = Esq.findById
-
 findByDriverId ::
   Transactionable m =>
   Id Person ->

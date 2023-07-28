@@ -314,7 +314,7 @@ type BlockDriverWithReasonAPI =
     :> Post '[JSON] APISuccess
 
 data BlockDriverWithReasonReq = BlockDriverWithReasonReq
-  { code :: Text,
+  { reasonCode :: Text,
     blockReason :: Maybe Text,
     blockTimeInHours :: Maybe Int
   }
