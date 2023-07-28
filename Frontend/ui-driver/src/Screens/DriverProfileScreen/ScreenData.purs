@@ -53,7 +53,9 @@ initData = {
     otpLimit : 5,
     otpBackAlternateNumber : Nothing,
     gender : Nothing,
-    languageList : languagesChoices
+    languageList : languagesChoices,
+    vehicleAge : 0 ,
+    vehicleName : ""
     },
   props: {
     logoutModalView: false,
@@ -73,7 +75,9 @@ initData = {
     isEditAlternateMobile : false,
     numberExistError : false,
     mNumberEdtFocused : false,
-    updateLanguages : false
+    updateLanguages : false,
+    detailsUpdationType : Nothing,
+    btnActive : false
    }
 }
 

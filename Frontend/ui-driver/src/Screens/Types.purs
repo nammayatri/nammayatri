@@ -260,7 +260,9 @@ type DriverProfileScreenData = {
   otpBackAlternateNumber :: Maybe String,
   gender :: Maybe String,
   driverGender :: Maybe String,
-  languageList :: Array CheckBoxOptions
+  languageList :: Array CheckBoxOptions,
+  vehicleAge :: Int,
+  vehicleName :: String
 }
 
 type VehicleP = {
@@ -286,15 +288,25 @@ type DriverProfileScreenProps = {
   isEditAlternateMobile :: Boolean,
   numberExistError :: Boolean,
   mNumberEdtFocused :: Boolean,
-  updateLanguages :: Boolean
+  updateLanguages :: Boolean,
+  detailsUpdationType :: Maybe UpdateType,
+  btnActive :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
-data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS | SETTINGS
+data DriverProfileScreenType = DRIVER_DETAILS | VEHICLE_DETAILS | SETTINGS
 
 derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
 instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
 instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq 
+
+
+data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME
+
+derive instance genericUpdateType :: Generic UpdateType _
+instance showUpdateType :: Show UpdateType where show = genericShow
+instance eqUpdateType :: Eq UpdateType where eq = genericEq 
+
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
   data :: ApplicationStatusScreenData,
