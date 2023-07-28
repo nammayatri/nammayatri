@@ -25,7 +25,7 @@ import Lib.Utils
   ( FromTType' (fromTType'),
     ToTType' (toTType'),
     deleteWithKV,
-    findAllWithKV,
+    findAllWithOptionsKV,
     findOneWithKV,
   )
 import qualified Sequelize as Se
@@ -35,7 +35,7 @@ findAll' ::
   (L.MonadFlow m, Log m) =>
   Id DFP.FarePolicy ->
   m [BeamFPSS.FullFarePolicySlabsDetailsSlab]
-findAll' (Id farePolicyId) = findAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
+findAll' (Id farePolicyId) = findAllWithOptionsKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] (Se.Asc BeamFPSS.startDistance) Nothing Nothing
 
 findById'' ::
   (L.MonadFlow m, Log m) =>

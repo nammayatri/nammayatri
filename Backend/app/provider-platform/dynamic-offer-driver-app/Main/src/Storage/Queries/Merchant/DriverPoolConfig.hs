@@ -27,7 +27,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Meters, MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 
@@ -35,7 +35,7 @@ create :: (L.MonadFlow m, Log m) => DriverPoolConfig -> m ()
 create = createWithKV
 
 findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [DriverPoolConfig]
-findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
+findAllByMerchantId (Id merchantId) = findAllWithOptionsKV [Se.Is BeamDPC.merchantId $ Se.Eq merchantId] (Se.Desc BeamDPC.tripDistance) Nothing Nothing
 
 findByMerchantIdAndTripDistance :: (L.MonadFlow m, Log m) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantId) tripDistance = findOneWithKV [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]

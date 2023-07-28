@@ -347,54 +347,20 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
   updateWithKV
-    ( [ Se.Set BeamP.updatedAt now
-      ]
-        <> if isJust mbFirstName
-          then [Se.Set BeamP.firstName mbFirstName]
-          else
-            []
-              <> if isJust mbMiddleName
-                then [Se.Set BeamP.middleName mbMiddleName]
-                else
-                  []
-                    <> if isJust mbLastName
-                      then [Se.Set BeamP.lastName mbLastName]
-                      else
-                        []
-                          <> if isJust mbEmailEncrypted
-                            then [Se.Set BeamP.emailEncrypted mbEmailEncrypted]
-                            else
-                              []
-                                <> if isJust mbEmailHash
-                                  then [Se.Set BeamP.emailHash mbEmailHash]
-                                  else
-                                    []
-                                      <> if isJust mbDeviceToken
-                                        then [Se.Set BeamP.deviceToken mbDeviceToken]
-                                        else
-                                          []
-                                            <> if isJust mbNotificationToken
-                                              then [Se.Set BeamP.notificationToken mbNotificationToken]
-                                              else
-                                                []
-                                                  <> if isJust mbReferralCode
-                                                    then [Se.Set BeamP.referralCode mbReferralCode]
-                                                    else
-                                                      []
-                                                        <> if isJust mbReferralCode
-                                                          then [Se.Set BeamP.referredAt $ Just now]
-                                                          else
-                                                            []
-                                                              <> if isJust mbLanguage
-                                                                then [Se.Set BeamP.language mbLanguage]
-                                                                else
-                                                                  []
-                                                                    <> maybe [] (\gender -> [Se.Set BeamP.gender gender]) mbGender
-                                                                    <> if isJust mbCVersion
-                                                                      then [Se.Set BeamP.clientVersion $ versionToText <$> mbCVersion]
-                                                                      else
-                                                                        []
-                                                                          <> ([Se.Set BeamP.bundleVersion $ versionToText <$> mbBVersion | isJust mbBVersion])
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.firstName mbFirstName | isJust mbFirstName]
+        <> [Se.Set BeamP.middleName mbMiddleName | isJust mbFirstName]
+        <> [Se.Set BeamP.lastName mbLastName | isJust mbLastName]
+        <> [Se.Set BeamP.emailEncrypted mbEmailEncrypted | isJust mbEmailEncrypted]
+        <> [Se.Set BeamP.emailHash mbEmailHash | isJust mbEmailHash]
+        <> [Se.Set BeamP.deviceToken mbDeviceToken | isJust mbDeviceToken]
+        <> [Se.Set BeamP.notificationToken mbNotificationToken | isJust mbNotificationToken]
+        <> [Se.Set BeamP.referralCode mbReferralCode | isJust mbReferralCode]
+        <> [Se.Set BeamP.referredAt (Just now) | isJust mbReferralCode]
+        <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
+        <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
+        <> [Se.Set BeamP.clientVersion (versionToText <$> mbCVersion) | isJust mbCVersion]
+        <> ([Se.Set BeamP.bundleVersion $ versionToText <$> mbBVersion | isJust mbBVersion])
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -556,10 +522,10 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
   findAllWithOptionsKV
     [ Se.And
         ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchantId)),
-            Se.Is BeamP.role (Se.Eq USER),
-            Se.Is BeamP.enabled (maybe (Se.Eq True) Se.Eq mbEnabled),
-            Se.Is BeamP.blocked (maybe (Se.Eq True) Se.Eq mbBlocked)
+            Se.Is BeamP.role (Se.Eq USER)
           ]
+            <> [Se.Is BeamP.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled]
+            <> [Se.Is BeamP.blocked $ Se.Eq (fromJust mbBlocked) | isJust mbBlocked]
             <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
         )
     ]
@@ -572,10 +538,10 @@ findAllCustomersInReplica merchantId limitVal offsetVal mbEnabled mbBlocked mbSe
   findAllWithOptionsKvInReplica
     [ Se.And
         ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchantId)),
-            Se.Is BeamP.role (Se.Eq USER),
-            Se.Is BeamP.enabled (maybe (Se.Eq True) Se.Eq mbEnabled),
-            Se.Is BeamP.blocked (maybe (Se.Eq True) Se.Eq mbBlocked)
+            Se.Is BeamP.role (Se.Eq USER)
           ]
+            <> [Se.Is BeamP.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled]
+            <> [Se.Is BeamP.blocked $ Se.Eq (fromJust mbBlocked) | isJust mbBlocked]
             <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
         )
     ]

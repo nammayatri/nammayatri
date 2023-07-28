@@ -39,8 +39,7 @@ import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 --     return orgMapsCfg
 
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
-findByMerchantId (Id merchantId) = do
-  findOneWithKV [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
+findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
 
 -- updateMerchantServiceUsageConfig ::
 --   MerchantServiceUsageConfig ->

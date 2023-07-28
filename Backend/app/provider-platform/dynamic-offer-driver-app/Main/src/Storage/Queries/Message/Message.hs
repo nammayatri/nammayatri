@@ -29,8 +29,10 @@ import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
 
 createMessage :: (L.MonadFlow m, Log m) => Message -> m ()
-createMessage message = do
-  createWithKV message
+createMessage msg = do
+  let mT = fmap (fn msg.id) (msg.messageTranslations)
+      fn id' (Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) = DomainMT.MessageTranslation id' language_ title_ label_ description_ shortDescription_ createdAt_
+  MT.createMany mT >> createWithKV msg
 
 create :: (L.MonadFlow m, Log m) => Message -> m ()
 create = createWithKV

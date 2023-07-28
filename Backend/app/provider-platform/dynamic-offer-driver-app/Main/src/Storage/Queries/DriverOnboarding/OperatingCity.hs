@@ -85,7 +85,7 @@ findEnabledCityByName city = do
         B.select $
           B.filter_' (\BeamOC.OperatingCityT {..} -> (B.lower_ cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
             B.all_ (BeamCommon.operatingCity BeamCommon.atlasDB)
-  pure (either (const []) (transformBeamOperatingCityToDomain <$>) operatingCities)
+  either (pure . const []) ((catMaybes <$>) . mapM fromTType') operatingCities
 
 -- findEnabledCityByMerchantIdAndName ::
 --   Transactionable m =>
@@ -110,7 +110,7 @@ findEnabledCityByMerchantIdAndName (Id mId) city = do
         B.select $
           B.filter_' (\BeamOC.OperatingCityT {..} -> (merchantId B.==?. B.val_ mId) B.&&?. (B.lower_ cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
             B.all_ (meshModelTableEntity @BeamOC.OperatingCityT @Postgres @(Se.DatabaseWith BeamOC.OperatingCityT))
-  pure (either (const []) (transformBeamOperatingCityToDomain <$>) operatingCities)
+  either (pure . const []) ((catMaybes <$>) . mapM fromTType') operatingCities
 
 transformBeamOperatingCityToDomain :: BeamOC.OperatingCity -> OperatingCity
 transformBeamOperatingCityToDomain BeamOC.OperatingCityT {..} = do

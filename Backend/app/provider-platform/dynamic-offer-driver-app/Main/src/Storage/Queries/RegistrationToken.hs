@@ -62,10 +62,10 @@ findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [RegistrationToken
 findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
 
 getAlternateNumberAttempts :: (L.MonadFlow m, Log m) => Id Person -> m Int
-getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 0 DRT.attempts
+getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
 
 getAlternateNumberAttemptsInReplica :: (L.MonadFlow m, Log m) => Id Person -> m Int
-getAlternateNumberAttemptsInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 0 DRT.attempts
+getAlternateNumberAttemptsInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
 
 instance FromTType' BeamRT.RegistrationToken RegistrationToken where
   fromTType' BeamRT.RegistrationTokenT {..} = do

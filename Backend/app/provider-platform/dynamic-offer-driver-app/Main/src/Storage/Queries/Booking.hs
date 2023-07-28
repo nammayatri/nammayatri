@@ -53,18 +53,14 @@ updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStat
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamB.status rbStatus,
-      Se.Set BeamB.updatedAt now
-    ]
+    [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 updateRiderId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id RiderDetails -> m ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamB.riderId $ Just $ getId riderId,
-      Se.Set BeamB.updatedAt now
-    ]
+    [Se.Set BeamB.riderId $ Just $ getId riderId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 updateRiderName :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
@@ -76,9 +72,7 @@ updateSpecialZoneOtpCode :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking ->
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode,
-      Se.Set BeamB.updatedAt now
-    ]
+    [Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
@@ -136,9 +130,7 @@ findBookingIdBySpecialZoneOTPInReplica (Id merchantId) otpCode now = do
 cancelBookings :: (L.MonadFlow m, Log m) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
   updateWithKV
-    [ Se.Set BeamB.status CANCELLED,
-      Se.Set BeamB.updatedAt now
-    ]
+    [Se.Set BeamB.status CANCELLED, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
 instance FromTType' BeamB.Booking Booking where

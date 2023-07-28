@@ -144,7 +144,7 @@ findWindowsWithStatus :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> UTCTi
 findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVal =
   findAllWithOptionsKV
     [Se.And $ [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime] <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]]
-    (Se.Asc BeamDF.createdAt)
+    (Se.Desc BeamDF.createdAt)
     (Just limitVal)
     (Just offsetVal)
 
@@ -152,7 +152,7 @@ findWindowsWithStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> UTCTime
 findWindowsWithStatusInReplica (Id driverId) startTime endTime mbStatus limitVal offsetVal =
   findAllWithOptionsKvInReplica
     [Se.And $ [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime] <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]]
-    (Se.Asc BeamDF.createdAt)
+    (Se.Desc BeamDF.createdAt)
     (Just limitVal)
     (Just offsetVal)
 
