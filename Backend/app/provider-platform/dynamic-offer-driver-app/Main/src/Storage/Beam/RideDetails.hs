@@ -65,7 +65,7 @@ type RideDetails = RideDetailsT Identity
 rideDetailsTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideDetailsT)
 rideDetailsTable =
   BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "ride_detials"
+    <> B.setEntityName "ride_details"
     <> B.modifyTableFields rideDetailsTMod
 
 instance FromJSON RideDetails where
