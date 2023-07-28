@@ -525,6 +525,9 @@ type HomeScreenStateData =
     suggestedAmount :: Int
   , currentSearchResultType :: SearchResultType
   , finalAmount :: Int
+  , sourceLength :: Int
+  , prevLocation :: String
+  , destinationLength :: Int
   , startedAt :: String
   , endedAt :: String
   , source :: String
@@ -573,6 +576,8 @@ type HomeScreenStateData =
 type HomeScreenStateProps =
   {
     currentStage :: Stage
+  , isAutoComplete :: Boolean
+  , showLoader :: Boolean
   , showCallPopUp :: Boolean
   , rideRequestFlow :: Boolean
   , isSearchLocation :: SearchLocationModelType
@@ -1095,6 +1100,7 @@ type LocationListItemState = {
   , locationItemType :: Maybe LocationItemType
   , distance :: Maybe String
   , showDistance :: Maybe Boolean
+  , actualDistance :: Int
 }
 
 data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION

@@ -62,7 +62,7 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -75,6 +75,7 @@ import Types.App (GlobalState(..))
 import Types.App (GlobalState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Int (round, toNumber)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -385,6 +386,15 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/mobilityredbus/user/images/"
+getDistanceString :: Int -> String
+getDistanceString distanceInMeters
+  | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
+  | otherwise = show distanceInMeters <> " m"
+
+recentDistance :: Array LocationListItemState -> Number -> Number -> Array LocationListItemState
+recentDistance arr currLat currLon = map (\item -> item{actualDistance = round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0))}) arr
+
+foreign import getMerchantId :: String -> Foreign
 
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of

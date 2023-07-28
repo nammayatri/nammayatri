@@ -50,7 +50,7 @@ view push state =
         , padding $ Padding 6 8 6 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
-        , cornerRadius 16.0
+        , cornerRadius 8.0
         ][ imageView
             [ width $ V 15
             , height $ V 17
@@ -62,7 +62,9 @@ view push state =
           , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
+            , textSize if os == "IOS" then FontSize.a_13 else FontSize.a_14
             , margin $ MarginLeft 8
+            , fontStyle $ FontStyle.semiBold LanguageStyle
             , singleLine true
             , color Color.black800
             , gravity CENTER_VERTICAL

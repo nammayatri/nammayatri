@@ -776,6 +776,11 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , savedlocationList: state.data.savedLocations
                                     , homeScreenConfig : state.data.config
                                     , logField : state.data.logField
+                                    , sourceLength: state.data.sourceLength
+                                    , destinationLength: state.data.destinationLength
+                                    , isAutoComplete: state.props.isAutoComplete
+                                    , showLoader: state.props.showLoader
+                                    , prevLocation: state.data.prevLocation
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

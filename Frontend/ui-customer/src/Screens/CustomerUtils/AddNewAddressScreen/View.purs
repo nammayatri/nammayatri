@@ -289,8 +289,8 @@ addNewScreenView state push =
               , padding (Padding 21 27 16 27)
               , lineHeight "24"
               , onChange push AddressChanged
-              , hintColor "#A7A7A7"
-              ] <> FontStyle.subHeading1 LanguageStyle
+              , hintColor Color.black600
+              ]
         ,linearLayout
           [  height MATCH_PARENT
           , width WRAP_CONTENT
@@ -384,7 +384,7 @@ searchResultsView state push =
   , width MATCH_PARENT
   , cornerRadius 8.0
   , padding (PaddingVertical 0 3)
-  , stroke "1,#E5E7EB"
+  , stroke $ "1," <> Color.grey900
   , visibility if state.props.isSearchedLocationServiceable then VISIBLE else GONE
   , background Color.white900
   , scrollBarY false
@@ -399,7 +399,7 @@ searchResultsView state push =
                 width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              ][  (LocationListItem.view (push <<< LocationListItemAC ) item )
+              ][  (LocationListItem.view (push <<< LocationListItemAC ) item 0)
                 , linearLayout
                     [ height $ V 1
                     , width MATCH_PARENT
@@ -434,6 +434,7 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
     }
   , { prefixImageUrl : "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -458,6 +459,7 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+    , actualDistance : 0
     }
 
   ]

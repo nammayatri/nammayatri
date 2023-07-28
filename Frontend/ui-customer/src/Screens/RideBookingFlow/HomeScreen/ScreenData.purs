@@ -34,6 +34,9 @@ initData = {
     , finalAmount : 0
     , startedAt : ""
     , currentSearchResultType : ESTIMATES
+    , sourceLength : 0
+    , prevLocation : ""
+    , destinationLength : 0
     , endedAt : ""
     , source : ""
     , destination : ""
@@ -111,6 +114,8 @@ initData = {
     },
     props: {
       rideRequestFlow : false
+    , isAutoComplete : false
+    , showLoader : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false
