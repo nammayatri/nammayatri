@@ -122,4 +122,4 @@ instance Serialize Message where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''MessageT ['id] [['merchantId]])
+$(enableKVPG ''MessageT ['id] [['merchantId]]) -- DON'T Enable for KV
