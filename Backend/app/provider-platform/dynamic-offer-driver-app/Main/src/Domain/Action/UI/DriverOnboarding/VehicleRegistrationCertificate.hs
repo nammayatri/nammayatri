@@ -156,6 +156,7 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
   mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
   case mVehicleRC of
     Just vehicleRC -> do
+      when (isNothing multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
       mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id person.id
       case mRCAssociation of
         Just assoc -> do
@@ -295,12 +296,15 @@ validateRCActivation driverId merchantId rc = do
             else throwError RCActiveOnOtherAccount
         Nothing -> return () -- TODO: handle this case too
     Nothing -> return ()
-  checkIfVehicleAlreadyExists -- checking for manually entry created for vehicle during manual onboarding
-  where
-    checkIfVehicleAlreadyExists = do
-      rcNumber <- decrypt rc.certificateNumber
-      mVehicle <- VQuery.findByRegistrationNo rcNumber
-      when (isJust mVehicle) $ throwError RCActiveOnOtherAccount
+  checkIfVehicleAlreadyExists driverId rc -- checking for manually entry created for vehicle during manual onboarding
+
+checkIfVehicleAlreadyExists :: Id Person.Person -> Domain.VehicleRegistrationCertificate -> Flow ()
+checkIfVehicleAlreadyExists driverId rc = do
+  rcNumber <- decrypt rc.certificateNumber
+  mVehicle <- VQuery.findByRegistrationNo rcNumber
+  case mVehicle of
+    Just vehicle -> unless (vehicle.driverId == driverId) $ throwError RCActiveOnOtherAccount
+    Nothing -> return ()
 
 activateRC :: Id Person.Person -> Id DM.Merchant -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverId merchantId now rc = do
@@ -323,14 +327,15 @@ deactivateCurrentRC driverId = do
       deactivateRC driverId rc -- call deativate RC flow
     Nothing -> return () -- Do nothing if no active association to driver
 
-deleteRC :: (Id Person.Person, Id DM.Merchant) -> DeleteRCReq -> Flow APISuccess
-deleteRC (driverId, _) DeleteRCReq {..} = do
+deleteRC :: (Id Person.Person, Id DM.Merchant) -> DeleteRCReq -> Bool -> Flow APISuccess
+deleteRC (driverId, _) DeleteRCReq {..} isOldFlow = do
   rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
   mAssoc <- DAQuery.findActiveAssociationByRC rc.id
-  case mAssoc of
-    Just assoc -> do
+  case (mAssoc, isOldFlow) of
+    (Just assoc, False) -> do
       when (assoc.driverId == driverId) $ throwError (InvalidRequest "Deactivate RC first to delete!")
-    Nothing -> return ()
+    (Just _, True) -> deactivateRC driverId rc
+    (_, _) -> return ()
   Esq.runNoTransaction $ DAQuery.endAssociationForRC driverId rc.id
   return Success
 

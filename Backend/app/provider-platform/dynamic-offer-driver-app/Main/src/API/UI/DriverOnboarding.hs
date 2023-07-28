@@ -132,7 +132,7 @@ setRCStatus :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.RCStatusReq ->
 setRCStatus (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId)
 
 deleteRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DeleteRCReq -> FlowHandler APISuccess
-deleteRC (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.deleteRC (personId, merchantId)
+deleteRC (personId, merchantId) req = withFlowHandlerAPI $ DriverOnboarding.deleteRC (personId, merchantId) req False
 
 getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant) -> FlowHandler [DriverOnboarding.LinkedRC]
 getAllLinkedRCs (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId)

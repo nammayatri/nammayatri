@@ -1,5 +1,5 @@
 ALTER TABLE atlas_driver_offer_bpp.driver_rc_association ADD COLUMN is_rc_active boolean DEFAULT false not null;
-ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN multiple_rc boolean;
+ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN multiple_r_c boolean;
 
 -- make currently linked RC to driver as active RC
 update atlas_driver_offer_bpp.driver_rc_association set is_rc_active = true where associated_till > now();
@@ -24,7 +24,7 @@ ALTER TABLE atlas_driver_offer_bpp.call_status ALTER COLUMN entity_id SET DEFAUL
 ALTER TABLE atlas_driver_offer_bpp.call_status ALTER COLUMN entity_id SET NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD rc_limit integer DEFAULT 3 not null;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD automatic_rc_activation_cut_off integer DEFAULT 432000 not null; -- 5 days
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD automatic_r_c_activation_cut_off integer DEFAULT 432000 not null; -- 5 days
 
 ---- DROPS ----
 ALTER TABLE atlas_driver_offer_bpp.call_status DROP COLUMN ride_id;
