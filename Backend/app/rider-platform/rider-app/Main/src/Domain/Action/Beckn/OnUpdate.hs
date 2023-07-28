@@ -381,12 +381,12 @@ onUpdate ValidatedBookingCancelledReq {..} = do
       logDebug "No ride found for the booking."
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
   -- DB.runTransaction $ do
+  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
   unless (cancellationSource == SBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
-  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   QPFS.clearCache booking.riderId
   -- notify customer
   Notify.notifyOnBookingCancelled booking cancellationSource

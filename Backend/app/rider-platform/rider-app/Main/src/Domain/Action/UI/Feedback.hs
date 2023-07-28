@@ -63,8 +63,8 @@ feedback request = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   -- DB.runTransaction $ do
-  _ <- QRide.updateRideRating rideId ratingValue
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
+  _ <- QRide.updateRideRating rideId ratingValue
   QPFS.clearCache booking.riderId
   pure
     FeedbackRes
