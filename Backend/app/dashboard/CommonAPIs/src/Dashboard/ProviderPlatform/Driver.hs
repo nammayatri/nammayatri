@@ -444,6 +444,7 @@ data DriverLicenseAPIEntity = DriverLicenseAPIEntity
 data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
   { associatedOn :: UTCTime,
     associatedTill :: Maybe UTCTime,
+    isRcActive :: Bool,
     details :: VehicleRegistrationCertificateAPIEntity
     -- consent :: Bool, -- do we need it?
     -- consentTimestamp :: UTCTime
