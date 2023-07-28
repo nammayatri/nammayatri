@@ -426,7 +426,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       | ride.status == Ride.NEW && ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.UPCOMING_6HRS
       | ride.status == Ride.INPROGRESS && ((ride.tripStartTime) > (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.CANCELLED
-      | otherwise = Common.COMPLETED
+      | otherwise = Common.ONGOING_6HRS
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) =
       RideItem {..}
 
@@ -560,21 +560,21 @@ data StuckRideItem = StuckRideItem
 findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-  rides <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
-            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
-          ]
-      ]
-  let bookingSeCondition =
+      bookingSeCondition =
         [ Se.And
-            [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
-              Se.Is BeamB.providerId $ Se.Eq merchantId,
+            [ Se.Is BeamB.providerId $ Se.Eq merchantId,
               Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
             ]
         ]
   bookings <- findAllBookingsWithSeConditions bookingSeCondition
+  rides <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore,
+            Se.Is BeamR.bookingId $ Se.In $ getId . DBooking.id <$> bookings
+          ]
+      ]
   driverInfos <- findAllDriverInfromationFromRides rides
   let rideBooking = foldl' (getRideWithBooking bookings) [] rides
   let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking

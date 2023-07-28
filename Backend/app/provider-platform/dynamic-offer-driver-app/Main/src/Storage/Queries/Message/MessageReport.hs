@@ -184,9 +184,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
             createdAt = createdAt
           }
   let mtSeCondition =
-        [ Se.And
-            [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
-        ]
+        [Se.And [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]]
   messageTranslation <- findAllMessageTranslationWithSeConditionCreatedAtdesc mtSeCondition
 
   let messageReportAndMessage = [(mr, msg) | mr <- messageReport, msg <- message, mr.messageId == msg.id]

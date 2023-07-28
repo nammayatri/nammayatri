@@ -112,17 +112,6 @@ findEnabledCityByMerchantIdAndName (Id mId) city = do
             B.all_ (meshModelTableEntity @BeamOC.OperatingCityT @Postgres @(Se.DatabaseWith BeamOC.OperatingCityT))
   either (pure . const []) ((catMaybes <$>) . mapM fromTType') operatingCities
 
-transformBeamOperatingCityToDomain :: BeamOC.OperatingCity -> OperatingCity
-transformBeamOperatingCityToDomain BeamOC.OperatingCityT {..} = do
-  OperatingCity
-    { id = Id id,
-      merchantId = Id merchantId,
-      cityName = cityName,
-      enabled = enabled,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
-
 instance FromTType' BeamOC.OperatingCity OperatingCity where
   fromTType' BeamOC.OperatingCityT {..} = do
     pure $
