@@ -178,7 +178,7 @@ totalAmountView state =
     [ textView $
         [ text $ getString TOTAL_PAID
         , color Color.black800
-        , lineHeight "28"
+        , height $ V 31
         ] <> FontStyle.h1 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT

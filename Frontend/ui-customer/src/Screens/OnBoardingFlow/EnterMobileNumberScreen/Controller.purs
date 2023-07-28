@@ -123,6 +123,7 @@ eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = contin
 
 eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
     _ <- pure $ hideKeyboardOnNavigation true
+    _ <- pure $ clearCountDownTimer state.data.timerID
     updateAndExit state $ GoToAccountSetUp state
 
 eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do
@@ -153,6 +154,7 @@ eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state 
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
     if length value == 4 then do
         pure $ hideKeyboardOnNavigation true
+        _ <- pure $ clearCountDownTimer state.data.timerID
         updateAndExit newState $ GoToAccountSetUp newState
     else
         continue newState
