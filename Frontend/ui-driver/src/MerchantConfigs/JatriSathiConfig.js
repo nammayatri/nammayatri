@@ -63,7 +63,9 @@ const bengaliStrings = {
     NEED_IT_TO_ENABLE_LOCATION : "জাটি সাথি ড্রাইভার ড্রাইভারের বর্তমান অবস্থান নিরীক্ষণের জন্য আপনার অবস্থানটি ভাগ করে নিতে সক্ষম করতে অবস্থানের ডেটা সংগ্রহ করে, এমনকি অ্যাপটি বন্ধ থাকলেও বা ব্যবহার না করা হয়।",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "বর্তমানে, আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
-    YOUR_LOCATION_HELPS_OUR_SYSTEM : "আপনার অবস্থান আমাদের সিস্টেমকে ট্যাক্সি দ্বারা আশেপাশের সমস্ত স্থান ম্যাপ করতে এবং আপনাকে দ্রুততম রাইড করতে সাহায্য করে৷"
+    YOUR_LOCATION_HELPS_OUR_SYSTEM : "আপনার অবস্থান আমাদের সিস্টেমকে ট্যাক্সি দ্বারা আশেপাশের সমস্ত স্থান ম্যাপ করতে এবং আপনাকে দ্রুততম রাইড করতে সাহায্য করে৷",
+    EARNED_ON_APP : "YS এ অর্জিত মূল্য",
+    TRAVELLED_ON_APP : "যাত্রী সাথীতে দূরত্ব ভ্রমণ"
 }
 
 const hindiStrings = {
@@ -72,7 +74,10 @@ const hindiStrings = {
     NEED_IT_TO_ENABLE_LOCATION : "Jatri Sathi partner ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "Currently,We allow only West Bengal registered number",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "आप जात्री साथी सपोर्ट टीम को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
-    YOUR_LOCATION_HELPS_OUR_SYSTEM : "आपका स्थान हमारे सिस्टम को आस पास के सभी टैक्सियों को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है"
+    YOUR_LOCATION_HELPS_OUR_SYSTEM : "आपका स्थान हमारे सिस्टम को आस पास के सभी टैक्सियों को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
+    EARNED_ON_APP : "YS पर अर्जित मूल्य",
+    TRAVELLED_ON_APP : "यात्री साथी पर तय की गई दूरी"
+    
 }
 
 const englishStrings = {
@@ -81,5 +86,7 @@ const englishStrings = {
     NEED_IT_TO_ENABLE_LOCATION : "Jatri Sathi Driver collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "Currently,We allow only West Bengal registered number",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
-    YOUR_LOCATION_HELPS_OUR_SYSTEM : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible."
+    YOUR_LOCATION_HELPS_OUR_SYSTEM : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
+    EARNED_ON_APP : "Earned on YS",
+    TRAVELLED_ON_APP : "Travelled On Yatri Sathi"
 }
