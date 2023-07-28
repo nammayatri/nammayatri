@@ -21,13 +21,11 @@ module Storage.Queries.DriverInformation where
 
 -- import Control.Applicative (liftA2)
 import qualified Database.Beam as B
-import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -40,6 +38,7 @@ import qualified Sequelize as Se
 -- import Storage.Tabular.DriverInformation
 -- import Storage.Tabular.Person
 
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
@@ -324,8 +323,8 @@ countDrivers merchantID =
           B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
             B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
               do
-                driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
-                person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
+                driverInformation <- B.all_ (BeamCommon.dInformation BeamCommon.atlasDB)
+                person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
                 pure (driverInformation, person)
     pure (either (const []) Prelude.id res)
   where
@@ -345,8 +344,8 @@ countDriversInReplica merchantID =
           B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
             B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
               do
-                driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
-                person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
+                driverInformation <- B.all_ (BeamCommon.dInformation BeamCommon.atlasDB)
+                person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
                 pure (driverInformation, person)
     pure (either (const []) Prelude.id res)
   where

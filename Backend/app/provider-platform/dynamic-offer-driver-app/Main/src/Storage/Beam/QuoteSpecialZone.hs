@@ -24,6 +24,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -70,6 +71,12 @@ instance ModelMeta QuoteSpecialZoneT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type QuoteSpecialZone = QuoteSpecialZoneT Identity
+
+quoteSpecialZoneTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity QuoteSpecialZoneT)
+quoteSpecialZoneTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "quote_special_zone"
+    <> B.modifyTableFields quoteSpecialZoneTMod
 
 instance FromJSON QuoteSpecialZone where
   parseJSON = A.genericParseJSON A.defaultOptions

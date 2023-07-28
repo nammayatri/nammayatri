@@ -29,7 +29,6 @@ import qualified Domain.Types.Message.Message as Msg (Message (id))
 import Domain.Types.Message.MessageReport as DTMR
 import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as P
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Types
 import Kernel.Prelude
@@ -51,8 +50,8 @@ import Lib.Utils
     getReplicaBeamConfig,
     updateOneWithKV,
   )
-import Sequelize
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Beam.Message.MessageReport as BeamMR
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
@@ -375,7 +374,7 @@ getMessageCountByStatus (Id messageID) status = do
         B.select $
           B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
             B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. (deliveryStatus B.==?. B.val_ status)) $
-              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+              B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
 getMessageCountStatusInReplica :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
@@ -387,7 +386,7 @@ getMessageCountStatusInReplica (Id messageID) status = do
         B.select $
           B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
             B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. (deliveryStatus B.==?. B.val_ status)) $
-              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+              B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
 getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
@@ -399,7 +398,7 @@ getMessageCountByReadStatus (Id messageID) = do
         B.select $
           B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
             B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. readStatus B.==?. B.val_ True) $
-              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+              B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
 getMessageCountByReadStatusInReplica :: L.MonadFlow m => Id Msg.Message -> m Int
@@ -411,7 +410,7 @@ getMessageCountByReadStatusInReplica (Id messageID) = do
         B.select $
           B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
             B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. readStatus B.==?. B.val_ True) $
-              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+              B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
 updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m ()

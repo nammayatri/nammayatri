@@ -16,10 +16,8 @@
 module Storage.Queries.CallStatus where
 
 import qualified Database.Beam as B
-import Database.Beam.Postgres
 import Domain.Types.CallStatus
 import Domain.Types.Ride
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
@@ -28,6 +26,7 @@ import Kernel.Types.Logging (Log)
 import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica, getMasterBeamConfig, getReplicaBeamConfig, updateWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
+import qualified Storage.Beam.Common as BeamCommon
 
 create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
 create = createWithKV
@@ -68,7 +67,7 @@ countCallsByRideId rideID = do
         B.select $
           B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
             B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
-              B.all_ (meshModelTableEntity @BeamCT.CallStatusT @Postgres @(DatabaseWith BeamCT.CallStatusT))
+              B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
   pure $ either (const 0) (maybe 0 snd) resp
 
 countCallsByRideIdInReplica :: L.MonadFlow m => Id Ride -> m Int
@@ -80,7 +79,7 @@ countCallsByRideIdInReplica rideID = do
         B.select $
           B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
             B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
-              B.all_ (meshModelTableEntity @BeamCT.CallStatusT @Postgres @(DatabaseWith BeamCT.CallStatusT))
+              B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
   pure $ either (const 0) (maybe 0 snd) resp
 
 instance FromTType' BeamCT.CallStatus CallStatus where

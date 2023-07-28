@@ -36,6 +36,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Message.MessageReport as Domain
@@ -123,6 +124,12 @@ instance ModelMeta MessageReportT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MessageReport = MessageReportT Identity
+
+messageReportTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity MessageReportT)
+messageReportTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "message_report"
+    <> B.modifyTableFields messageReportTMod
 
 instance FromJSON MessageReport where
   parseJSON = A.genericParseJSON A.defaultOptions

@@ -46,7 +46,6 @@ import Domain.Types.Ride as Ride
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
@@ -305,8 +304,8 @@ getCountByStatus merchantId = do
         B.aggregate_ (\(ride, _) -> (B.group_ (BeamR.status ride), B.as_ @Int B.countAll_)) $
           B.filter_' (\(_, BeamB.BookingT {..}) -> providerId B.==?. B.val_ (getId merchantId)) $
             do
-              ride <- B.all_ (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT))
-              booking <- B.join_' (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT)) (\booking -> BeamB.id booking B.==?. BeamR.bookingId ride)
+              ride <- B.all_ (BeamCommon.ride BeamCommon.atlasDB)
+              booking <- B.join_' (BeamCommon.booking BeamCommon.atlasDB) (\booking -> BeamB.id booking B.==?. BeamR.bookingId ride)
               pure (ride, booking)
   pure (EulerHS.Prelude.fromRight [] resp)
 
