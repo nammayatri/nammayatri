@@ -75,9 +75,12 @@ aadhaarVerificationTMod =
       driverId = B.fieldNamed "driver_id",
       driverName = B.fieldNamed "driver_name",
       driverGender = B.fieldNamed "driver_gender",
+      aadhaarNumberHash = B.fieldNamed "aadhaar_number_hash",
       driverDob = B.fieldNamed "driver_dob",
       driverImage = B.fieldNamed "driver_image",
-      createdAt = B.fieldNamed "created_at"
+      isVerified = B.fieldNamed "is_verified",
+      createdAt = B.fieldNamed "created_at",
+      updatedAt = B.fieldNamed "updated_at"
     }
 
 instance Serialize AadhaarVerification where
