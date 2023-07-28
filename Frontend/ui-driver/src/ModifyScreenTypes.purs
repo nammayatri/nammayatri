@@ -42,7 +42,6 @@ modifyScreenState st =
     ReportIssueChatScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { reportIssueChatScreen = a state.reportIssueChatScreen})
     RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
     BankDetailScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { bankDetailsScreen = a state.bankDetailsScreen})
-    DriverDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverDetailsScreen = a state.driverDetailsScreen})
     VehicleDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {vehicleDetailsScreen = a state.vehicleDetailsScreen})
     AboutUsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {aboutUsScreen = a state.aboutUsScreen})
     SelectLanguageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {selectedLanguageScreen = a state.selectedLanguageScreen})

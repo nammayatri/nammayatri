@@ -48,6 +48,7 @@ import Screens.Types as ST
 import Components.CheckListView as CheckList
 import Common.Types.App (CheckBoxOptions)
 import Data.Array (filter)
+import Common.Types.App (LazyCheck(..), OptionButtonList)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -109,8 +110,7 @@ instance loggableAction :: Loggable Action where
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickResendOtp) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
     _ -> pure unit
 
-data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
-                    | GoToVehicleDetailsScreen DriverProfileScreenState
+data ScreenOutput = GoToVehicleDetailsScreen DriverProfileScreenState
                     | GoToBookingOptions DriverProfileScreenState
                     | GoToSelectLanguageScreen DriverProfileScreenState
                     | GoToHelpAndSupportScreen DriverProfileScreenState
@@ -187,7 +187,6 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (OptionClick optionIndex) state = do
   case optionIndex of
-    Data.DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
     Data.DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
     Data.DRIVER_BANK_DETAILS -> continue state
     Data.DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
@@ -315,7 +314,6 @@ eval _ state = continue state
 getTitle :: Data.MenuOptions -> String
 getTitle menuOption =
   case menuOption of
-    Data.DRIVER_PRESONAL_DETAILS -> (getString PERSONAL_DETAILS)
     Data.DRIVER_VEHICLE_DETAILS -> (getString VEHICLE_DETAILS)
     Data.DRIVER_BANK_DETAILS -> (getString BANK_DETAILS)
     Data.MULTI_LANGUAGE -> (getString LANGUAGES)
@@ -354,6 +352,35 @@ checkGenderSelect genderTypeSelect genderType =
       ST.PREFER_NOT_TO_SAY -> gender == "PREFER_NOT_TO_SAY"
       ST.OTHER -> gender == "OTHER"
 
+getSelectedLanguages :: DriverProfileScreenState -> Array CheckBoxOptions
+getSelectedLanguages state = do
+  let languages = filter (\a -> a.isSelected == true) state.data.languageList
+  languages
+
+genders :: LazyCheck -> Array OptionButtonList
+genders dummy =
+  [ { reasonCode: "MALE"
+    , description: (getString MALE)
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "FEMALE"
+    , description: (getString FEMALE)
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "OTHER"
+    , description: (getString OTHER)
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "PREFER_NOT_TO_SAY"
+    , description: (getString PREFER_NOT_TO_SAY)
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  ]
+
 getGenderName :: Maybe String -> Maybe String
 getGenderName gender = 
   case gender of
@@ -364,7 +391,11 @@ getGenderName gender =
       "PREFER_NOT_TO_SAY" -> Just (getString PREFER_NOT_TO_SAY)
       _ -> Nothing
     Nothing -> Nothing
-getSelectedLanguages :: DriverProfileScreenState -> Array CheckBoxOptions
-getSelectedLanguages state = do
-  let languages = filter (\a -> a.isSelected == true) state.data.languageList
-  languages
+
+getGenderState :: Maybe String -> Maybe String
+getGenderState gender = 
+  case gender of 
+    Just value -> case value of
+      "UNKNOWN" -> Nothing
+      _ -> Just value
+    Nothing -> Nothing

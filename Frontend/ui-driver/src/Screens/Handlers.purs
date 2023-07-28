@@ -21,7 +21,6 @@ import Screens.AppUpdatePopUpScreen.Handler (handleAppUpdatePopUp) as UI
 import Screens.ApplicationStatusScreen.Handler (applicationStatus) as UI
 import Screens.BankDetailScreen.Handler (bankDetail) as UI
 import Screens.ChooseLanguageScreen.Handler (chooseLanguage) as UI
-import Screens.DriverDetailsScreen.Handler (driverDetailsScreen) as UI
 import Screens.DriverProfileScreen.Handler (driverProfileScreen) as UI
 import Screens.DriverRideRatingScreen.Handler (driverRideRatingScreen) as UI
 import Screens.EditAadhaarDetailsScreen.Handler (editAadhaarDetailsScreen) as UI

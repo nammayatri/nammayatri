@@ -31,20 +31,6 @@ driverProfileScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen
   case action of
-    GoToDriverDetailsScreen updatedState -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetails -> 
-        driverDetails { data { driverName = updatedState.data.driverName,
-        driverVehicleType = updatedState.data.driverVehicleType,
-        driverRating = updatedState.data.driverRating,
-        base64Image = updatedState.data.base64Image,
-        driverMobile = updatedState.data.driverMobile,
-        driverAlternateMobile = updatedState.data.driverAlternateNumber
-        },
-        props {
-          checkAlternateNumber = (if (updatedState.data.driverAlternateNumber == Nothing) then true else false)
-        }})
-      App.BackT $ App.BackPoint <$> pure DRIVER_DETAILS_SCREEN
-    
     GoToVehicleDetailsScreen updatedState -> do
       modifyScreenState $ VehicleDetailsScreenStateType (\vehicleDetails -> 
         vehicleDetails { data { vehicleRegNumber = updatedState.data.vehicleRegNumber,
@@ -70,9 +56,9 @@ driverProfileScreen = do
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
     GoToBookingOptions state -> App.BackT $ App.NoBack <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
-    VerifyAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP1 state)
-    ResendAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP1 state)
-    ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
-    RemoveAlternateNumber state -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE1 state)
+    VerifyAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP state)
+    ResendAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP state)
+    ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API updatedState)
+    RemoveAlternateNumber state -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE state)
     UpdateGender state -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER1 state)
     GoBack -> App.BackT $ pure App.GoBack
