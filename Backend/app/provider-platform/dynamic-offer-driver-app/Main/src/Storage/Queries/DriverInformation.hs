@@ -88,7 +88,7 @@ fetchAllByIds merchantId driversIds = do
         Nothing -> acc
 
 fetchAllAvailableByIds :: (L.MonadFlow m, Log m) => [Id Person.Driver] -> m [DriverInformation]
-fetchAllAvailableByIds driversIds = findAllWithKV [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
+fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds), Se.Is BeamDI.active $ Se.Eq True, Se.Is BeamDI.onRide $ Se.Eq False]]
 
 updateActivity :: (L.MonadFlow m, MonadTime m, Log m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
 updateActivity (Id driverId) isActive mode = do
@@ -174,8 +174,7 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled = do
       now <- getCurrentTime
       updateWithKV
         ( [ Se.Set BeamDI.enabled isEnabled,
-            Se.Set BeamDI.updatedAt now,
-            Se.Set BeamDI.lastEnabledOn (Just now)
+            Se.Set BeamDI.updatedAt now
           ]
             <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
         )
