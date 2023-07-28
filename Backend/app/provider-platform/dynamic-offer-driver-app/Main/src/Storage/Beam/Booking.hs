@@ -185,4 +185,4 @@ instance Serialize Booking where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''BookingT ['id] [['providerId], ['quoteId]])
+$(enableKVPG ''BookingT ['id] [['specialZoneOtpCode], ['quoteId]])

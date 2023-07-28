@@ -339,18 +339,6 @@ getDriversInReplica vehicles = findAllWithKvInReplica [Se.Is BeamP.id $ Se.In pe
   where
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
-getDriversWithMerchID ::
-  (L.MonadFlow m, Log m) =>
-  Id Merchant ->
-  m [Person]
-getDriversWithMerchID (Id merchantId) =
-  findAllWithKV
-    [ Se.And
-        ( [Se.Is BeamP.merchantId $ Se.Eq merchantId]
-            <> [Se.Is BeamP.role $ Se.Eq Person.DRIVER]
-        )
-    ]
-
 getDriverQuote ::
   (L.MonadFlow m, Log m) =>
   [Person] ->

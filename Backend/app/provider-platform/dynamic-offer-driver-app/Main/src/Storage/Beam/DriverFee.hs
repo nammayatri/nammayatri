@@ -127,4 +127,4 @@ driverFeeToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverFeeToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverFeeT ['id] [['shortId], ['driverId], ['status]])
+$(enableKVPG ''DriverFeeT ['id] [['shortId], ['driverId]])
