@@ -401,7 +401,7 @@ const hindiStrings = {
   "PLEASE_WAIT_I_WILL_BE_THERE": "कृपया प्रतीक्षा करें, मैं आ रहा हूँ|",
   "LOOKING_FOR_YOU_AT_PICKUP": "मैं पिकअप पर हूँ|",
   "START_YOUR_CHAT_WITH_THE_DRIVER": "ड्राइवर के साथ अपनी चैट शुरू करें|",
-  "MOBILE": "मोबाइल",
+  "MOBILE": "मोबाइल नंबर",
   "HOW_DO_YOU_IDENTIFY_YOURSELF": "आप अपने आप को कैसे पहचानते हैं?",
   "SELECT_YOUR_GENDER": "अपना लिंग चुनें",
   "FEMALE": "महिला",

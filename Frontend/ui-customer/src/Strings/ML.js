@@ -400,7 +400,7 @@ const malayalamStrings = {
   "PLEASE_COME_FAST_I_AM_WAITING" : "ദയവായി വേഗം വരിക, ഞാൻ കാത്തിരിക്കുകയാണ്",
   "PLEASE_WAIT_I_WILL_BE_THERE" : "ദയവായി കാത്തിരിക്കൂ, ഞാൻ അവിടെ ഉണ്ടാകും",
   "LOOKING_FOR_YOU_AT_PICKUP" : "പിക്കപ്പിൽ നിങ്ങളെ തിരയുന്നു",
-  "MOBILE" : "മൊബൈൽ",
+  "MOBILE" : "മൊബൈൽ നമ്പർ",
   "HOW_DO_YOU_IDENTIFY_YOURSELF" : "നിങ്ങളുടെ ലിംഗഭേദം തിരഞ്ഞെടുക്കുക",
   "SELECT_YOUR_GENDER" : "നിങ്ങളുടെ ലിംഗഭേദം തിരഞ്ഞെടുക്കുക",
   "FEMALE" : "സ്ത്രീ",

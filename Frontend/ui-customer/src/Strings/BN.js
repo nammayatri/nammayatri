@@ -399,7 +399,7 @@ const bengaliStrings = {
   "PLEASE_COME_FAST_I_AM_WAITING" : "দয়া করে দ্রুত আসুন, আমি অপেক্ষা করছি",
   "PLEASE_WAIT_I_WILL_BE_THERE" : "দয়া করে অপেক্ষা করুন, আমি সেখানে থাকব",
   "LOOKING_FOR_YOU_AT_PICKUP" : "পিক-আপে আপনাকে খুঁজছেন",
-  "MOBILE" : "মুঠোফোন",
+  "MOBILE" : "মোবাইল নম্বর",
   "HOW_DO_YOU_IDENTIFY_YOURSELF" : "আপনি নিজেকে কীভাবে চিহ্নিত করবেন?",
   "SELECT_YOUR_GENDER" : "আপনার লিঙ্গ নির্বাচন",
   "FEMALE" : "মহিলা",

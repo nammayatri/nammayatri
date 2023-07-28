@@ -403,7 +403,7 @@ const englishStrings = {
   "PLEASE_COME_FAST_I_AM_WAITING": "Please come fast, I'm waiting",
   "PLEASE_WAIT_I_WILL_BE_THERE": "Please wait, I'll be there",
   "LOOKING_FOR_YOU_AT_PICKUP": "Looking for you at pick-up",
-  "MOBILE": "Mobile",
+  "MOBILE": "Mobile number",
   "HOW_DO_YOU_IDENTIFY_YOURSELF": "How do you identify yourself as?",
   "SELECT_YOUR_GENDER": "Select Your Gender",
   "FEMALE": "Female",

@@ -395,7 +395,7 @@ const kannadaStrings = {
   "PLEASE_COME_FAST_I_AM_WAITING": "ಬೇಗ ಬನ್ನಿ, ನಾನು ಕಾಯುತ್ತಿದ್ದೇನೆ",
   "PLEASE_WAIT_I_WILL_BE_THERE": "ನಾನು ಬರುತ್ತಿದ್ದೇನೆ",
   "LOOKING_FOR_YOU_AT_PICKUP": "ನಾನು ಪಿಕಪ್‌ನಲ್ಲಿದ್ದೇನೆ",
-  "MOBILE": "ಮೊಬೈಲ್",
+  "MOBILE": "ಮೊಬೈಲ್ ನಂಬರ",
   "HOW_DO_YOU_IDENTIFY_YOURSELF": "ನಿಮ್ಮನ್ನು ನೀವು ಹೇಗೆ ಗುರುತಿಸಿಕೊಳ್ಳುತ್ತೀರಿ?",
   "SELECT_YOUR_GENDER": "ನಿಮ್ಮ ಲಿಂಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
   "FEMALE": "ಹೆಣ್ಣು",
