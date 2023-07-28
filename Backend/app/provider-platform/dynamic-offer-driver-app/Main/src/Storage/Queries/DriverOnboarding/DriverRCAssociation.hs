@@ -30,7 +30,7 @@ import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as
 import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 
 create :: (L.MonadFlow m, Log m) => DriverRCAssociation -> m ()
-create driverRCAssociation = createWithKV driverRCAssociation
+create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
 findById (Id drcaId) = findOneWithKV [Se.Is BeamDRCA.id $ Se.Eq drcaId]

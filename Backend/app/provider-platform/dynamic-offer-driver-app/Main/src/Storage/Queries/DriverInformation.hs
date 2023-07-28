@@ -232,8 +232,8 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
     Right res' -> do
       let p' = fst <$> res'
           di' = snd <$> res'
-      p <- catMaybes <$> (mapM fromTType' p')
-      di <- catMaybes <$> (mapM fromTType' di')
+      p <- catMaybes <$> mapM fromTType' p'
+      di <- catMaybes <$> mapM fromTType' di'
       pure $ zip p di
     Left _ -> pure []
 

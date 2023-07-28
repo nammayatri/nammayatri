@@ -120,4 +120,4 @@ feedbackFormToPSModifiers :: M.Map Text (A.Value -> A.Value)
 feedbackFormToPSModifiers =
   M.empty
 
-$(enableKVPG ''FeedbackFormT ['id] [])
+$(enableKVPG ''FeedbackFormT ['id] [['rating]])

@@ -88,4 +88,4 @@ feedbackBadgeToPSModifiers :: M.Map Text (A.Value -> A.Value)
 feedbackBadgeToPSModifiers =
   M.empty
 
-$(enableKVPG ''FeedbackBadgeT ['id] [])
+$(enableKVPG ''FeedbackBadgeT ['id] [['driverId]])

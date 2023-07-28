@@ -140,4 +140,4 @@ instance Serialize DriverQuote where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''DriverQuoteT ['id] [['driverId], ['searchTryId]])
+$(enableKVPG ''DriverQuoteT ['id] [['driverId], ['searchTryId], ['requestId]])

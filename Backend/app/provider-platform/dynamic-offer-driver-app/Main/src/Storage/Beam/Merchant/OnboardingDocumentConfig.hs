@@ -68,9 +68,9 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
 
 instance B.Table OnboardingDocumentConfigT where
   data PrimaryKey OnboardingDocumentConfigT f
-    = Id (B.C f Text)
+    = Id (B.C f Text) (B.C f Domain.DocumentType)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id <$> merchantId <*> documentType
 
 instance ModelMeta OnboardingDocumentConfigT where
   modelFieldModification = onboardingDocumentConfigTMod
@@ -121,4 +121,4 @@ onboardingDocumentConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 onboardingDocumentConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''OnboardingDocumentConfigT ['documentType] [])
+$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [])
