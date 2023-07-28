@@ -20,7 +20,7 @@ import Data.Maybe (fromMaybe, Maybe(..), isJust)
 import Helpers.Utils (launchAppSettings)
 import JBridge (firebaseLogEvent, goBackPrevWebPage, toast)
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..)) as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (>=))
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
@@ -162,8 +162,8 @@ eval AfterRender state = continue state
 
 eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = do
   case state.props.detailsUpdationType of 
-    Just AUTO_AGE -> continue state{props{btnActive = (length val >= 1)}, data{autoAge = (fromMaybe 0 (fromString val))}}
-    Just AUTO_NAME -> continue state{props{btnActive = (length val >= 3)}, data{autoName = val}}
+    Just VEHICLE_AGE -> continue state{props{btnActive = (length val >= 1)}, data{vehicleAge = (fromMaybe 0 (fromString val))}}
+    Just VEHICLE_NAME -> continue state{props{btnActive = (length val >= 3)}, data{vehicleName = val}}
     _ -> continue state
 
 eval (BackPressed flag) state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
@@ -197,8 +197,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 eval (UpdateValue value) state = do 
   case value of 
     LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}}
-    AUTO_AGE -> continue state {props{ detailsUpdationType = Just AUTO_AGE}}
-    AUTO_NAME -> continue state{props {detailsUpdationType = Just AUTO_NAME}}
+    VEHICLE_AGE -> continue state {props{ detailsUpdationType = Just VEHICLE_AGE}}
+    VEHICLE_NAME -> continue state{props {detailsUpdationType = Just VEHICLE_NAME}}
     _ -> continue state
 
 eval (OptionClick optionIndex) state = do
@@ -265,7 +265,7 @@ eval UpdateAlternateNumber state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
-    pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+    pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
   else 
     continue state{props{alternateNumberView = true, isEditAlternateMobile = false, mNumberEdtFocused = false}, data{alterNumberEditableText = isJust state.data.driverAlternateNumber}}
@@ -290,7 +290,7 @@ eval EditNumberText state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
-   pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+   pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    continue state
   else
     continue state {data{alterNumberEditableText=false}, props{numberExistError=false, isEditAlternateMobile = true, checkAlternateNumber = true, mNumberEdtFocused = false}}
@@ -331,8 +331,8 @@ eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   continue state
 
 eval (UpdateValueAC (PrimaryButton.OnClick)) state = do 
-  if (state.props.detailsUpdationType == Just AUTO_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
-    else if (state.props.detailsUpdationType == Just AUTO_NAME) then continue state{props{detailsUpdationType = Nothing}} -- update name 
+  if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
+    else if (state.props.detailsUpdationType == Just VEHICLE_NAME) then continue state{props{detailsUpdationType = Nothing}} -- update name 
     else continue state
 
 eval _ state = continue state
@@ -340,17 +340,17 @@ eval _ state = continue state
 getTitle :: Data.MenuOptions -> String
 getTitle menuOption =
   case menuOption of
-    Data.DRIVER_PRESONAL_DETAILS -> (getString PERSONAL_DETAILS)
-    Data.DRIVER_VEHICLE_DETAILS -> (getString VEHICLE_DETAILS)
-    Data.DRIVER_BANK_DETAILS -> (getString BANK_DETAILS)
-    Data.MULTI_LANGUAGE -> (getString LANGUAGES)
-    Data.HELP_AND_FAQS -> (getString HELP_AND_FAQ)
-    Data.ABOUT_APP -> (getString ABOUT)
-    Data.REFER -> (getString ADD_YOUR_FRIEND)
-    Data.DRIVER_LOGOUT -> (getString LOGOUT)
-    Data.APP_INFO_SETTINGS -> (getString APP_INFO)
-    Data.LIVE_STATS_DASHBOARD -> (getString LIVE_DASHBOARD)
-    Data.DRIVER_BOOKING_OPTIONS -> (getString BOOKING_OPTIONS)
+    Data.DRIVER_PRESONAL_DETAILS -> (getString STR.PERSONAL_DETAILS)
+    Data.DRIVER_VEHICLE_DETAILS -> (getString STR.VEHICLE_DETAILS)
+    Data.DRIVER_BANK_DETAILS -> (getString STR.BANK_DETAILS)
+    Data.MULTI_LANGUAGE -> (getString STR.LANGUAGES)
+    Data.HELP_AND_FAQS -> (getString STR.HELP_AND_FAQ)
+    Data.ABOUT_APP -> (getString STR.ABOUT)
+    Data.REFER -> (getString STR.ADD_YOUR_FRIEND)
+    Data.DRIVER_LOGOUT -> (getString STR.LOGOUT)
+    Data.APP_INFO_SETTINGS -> (getString STR.APP_INFO)
+    Data.LIVE_STATS_DASHBOARD -> (getString STR.LIVE_DASHBOARD)
+    Data.DRIVER_BOOKING_OPTIONS -> (getString STR.BOOKING_OPTIONS)
 
 getDowngradeOptionsSelected :: GetDriverInfoResp -> Array VehicleP
 getDowngradeOptionsSelected (GetDriverInfoResp driverInfoResponse) =
@@ -383,10 +383,10 @@ getGenderName :: Maybe String -> Maybe String
 getGenderName gender = 
   case gender of
     Just value -> case value of
-      "MALE" -> Just (getString MALE)
-      "FEMALE" -> Just (getString FEMALE)
-      "OTHER" -> Just (getString OTHER)
-      "PREFER_NOT_TO_SAY" -> Just (getString PREFER_NOT_TO_SAY)
+      "MALE" -> Just (getString STR.MALE)
+      "FEMALE" -> Just (getString STR.FEMALE)
+      "OTHER" -> Just (getString STR.OTHER)
+      "PREFER_NOT_TO_SAY" -> Just (getString STR.PREFER_NOT_TO_SAY)
       _ -> Nothing
     Nothing -> Nothing
 getSelectedLanguages :: DriverProfileScreenState -> Array CheckBoxOptions

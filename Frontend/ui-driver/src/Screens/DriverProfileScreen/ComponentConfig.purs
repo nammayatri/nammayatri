@@ -63,7 +63,7 @@ genericHeaderConfig state = let
       } 
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = "Settings"
+        text = (getString SETTINGS)
       , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
       , fontStyle = FontStyle.bold LanguageStyle
@@ -81,8 +81,8 @@ primaryEditTextConfig state = let
     { editText
       { singleLine = true
         , pattern = case state.props.detailsUpdationType of 
-                      Just ST.AUTO_AGE -> Just "[0-9]*,2"
-                      Just ST.AUTO_NAME -> Just "[a-zA-Z0-9]*,30"
+                      Just ST.VEHICLE_AGE -> Just "[0-9]*,2"
+                      Just ST.VEHICLE_NAME -> Just "[a-zA-Z0-9]*,30"
                       _ ->  Just "[a-zA-Z0-9]*,30"
         , fontStyle = FontStyle.medium LanguageStyle
         , textSize = FontSize.a_16
@@ -96,8 +96,8 @@ primaryEditTextConfig state = let
     , topLabel
       { textSize = FontSize.a_14
       , text =  case state.props.detailsUpdationType of 
-                  Just ST.AUTO_AGE -> "How old is your auto (in years)?" 
-                  Just ST.AUTO_NAME -> "Enter Name of your Auto"
+                  Just ST.VEHICLE_AGE -> (getString HOW_OLD_IS_YOUR_VEHICLE)
+                  Just ST.VEHICLE_NAME -> (getString ENTER_NAME_OF_VEHICLE)
                   _ -> ""
       , color = Color.greyTextColor
       }
@@ -158,7 +158,6 @@ updateButtonConfig state = let
       , height = (V 48)
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.5
-      -- , alpha = if (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber) then 1.0 else 0.7
       }
   in primaryButtonConfig'
 
@@ -290,7 +289,6 @@ primaryButtonConfig1 state = let
       , cornerRadius = 10.0
       , background = Color.black900
       , height = (V 48)
-      -- , isClickable = state.props.deleteButtonVisibility
       , alpha = 1.0
       }
   in primaryButtonConfig'
