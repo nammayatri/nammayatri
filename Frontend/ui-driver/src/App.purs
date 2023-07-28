@@ -203,6 +203,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | RESEND_ALTERNATE_OTP1 DriverProfileScreenState
                                     | ALTERNATE_NUMBER_REMOVE1 DriverProfileScreenState
                                     | DRIVER_GENDER1 DriverProfileScreenState
+                                    | UPDATE_LANGUAGES (Array String)
 
 
 

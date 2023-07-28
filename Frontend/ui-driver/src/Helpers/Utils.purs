@@ -121,6 +121,13 @@ foreign import parseNumber :: Int -> String
 foreign import currentPosition  :: String -> Effect Unit
 foreign import getPastDays :: Int -> Array LeaderBoardDay
 foreign import getPastWeeks :: Int -> Array LeaderBoardWeek
+foreign import getPeriod :: String -> Period
+
+type Period
+  = { period :: Int
+    , periodType :: String
+    }
+
 
 otpRule :: Reader.OtpRule
 otpRule = Reader.OtpRule {

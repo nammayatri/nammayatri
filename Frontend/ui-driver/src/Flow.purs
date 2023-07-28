@@ -17,39 +17,51 @@ module Flow where
 
 import Log
 
+import Common.Types.App (Version(..), LazyCheck(..))
+import Components.ChatView.Controller (makeChatComponent')
 import Control.Monad.Except.Trans (lift)
-import Common.Types.App (Version(..),LazyCheck(..))
 import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last)
 import Data.Either (Either(..))
-import Data.Int (round, toNumber, ceil,fromString)
+import Data.Functor (map)
+import Data.Int (round, toNumber, ceil, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString) as Number
+import Data.Ord (compare)
+import Data.Semigroup ((<>))
 import Data.String (Pattern(..), split, toUpper)
+import Data.String (length) as STR
+import Data.String.CodeUnits (splitAt)
+import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
-import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks,getGenderIndex)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime)
+import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
+import Foreign.Class (class Encode, encode, decode)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, discard, pure, unit, unless, negate,void, when, ($), (==), (/=), (&&), (||), (/),(>=), (<=), when, (+), show, (>), not, (<), (*), (-), (<$>))
+import Merchant.Utils (getMerchant, Merchant(..))
+import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, ($), (==), (/=), (&&), (||), (/), (>=), (<=), when, (+), show, (>), not, (<), (*), (-), (<$>))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
 import Resource.Constants (decodeAddress)
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
+import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import Screens.Handlers as UI
+import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail)
-import Screens.DriverDetailsScreen.Controller (getGenderValue,genders,getGenderState)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
+import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
+import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..), DriverStatus(..), UpdatePopupType(..))
 import Screens.Types as ST
 import Services.API (CurrentDateAndTimeRes(..), AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), UpdateDriverInfoReq(..), OnCallRes(..))
@@ -58,20 +70,8 @@ import Services.Backend (makeTriggerOTPReq, makeGetRouteReq, walkCoordinates, wa
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Data.Functor (map)
-import Data.String.Common (joinWith, split, toUpper, trim)
-import Data.String (length) as STR
-import Data.String.CodeUnits (splitAt)
-import Data.Semigroup ((<>))
-import Components.ChatView.Controller (makeChatComponent')
-import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
-import Data.Ord (compare)
-import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
-import Merchant.Utils(getMerchant, Merchant(..))
-import Screens.RideSelectionScreen.View (getCategoryName)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), defaultGlobalState)
-import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
+import Types.ModifyScreenState (modifyScreenState, updateStage)
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
@@ -771,6 +771,13 @@ driverProfileFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
       setValueToLocalStore IS_BANNER_ACTIVE "False"
       driverProfileFlow
+    UPDATE_LANGUAGES language -> do
+      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
+          requiredData = initialData{languagesSpoken = language}
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {updateLanguages = false}})
+      driverProfileFlow
+
 
 driverDetailsFlow :: FlowBT String Unit
 driverDetailsFlow = do

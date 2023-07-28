@@ -29,11 +29,12 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
 import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..))
-import Services.API (GetDriverInfoResp(..), Vehicle(..))
+import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
+import Screens.DriverProfileScreen.Transformer (getAnalyticsData)
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PrimaryButton as PrimaryButton
@@ -48,17 +49,16 @@ import Screens.Types as ST
 import Components.CheckListView as CheckList
 import Common.Types.App (CheckBoxOptions)
 import Data.Int (fromString)
-import Data.Array (filter)
+import Data.Array (filter,foldl)
 
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_PROFILE_SCREEN)
-    BackPressed flag -> do
+    BackPressed -> do
       trackAppBackPress appId (getScreen DRIVER_PROFILE_SCREEN)
-      if flag then trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "backpress_in_logout_modal"
-        else trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
+      trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
     OptionClick optionIndex -> do
       trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "profile_options_click"
       trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
@@ -76,6 +76,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
+    DriverSummary resp -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "get_driver_summary_response"
     GetDriverInfoResponse resp -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "get_driver_info_response"
     HideLiveDashboard val -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "hide_live_stats_dashboard"
     DriverGenericHeaderAC act -> case act of
@@ -128,11 +129,13 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToReferralScreen
                     | GoToLogout
                     | GoBack
+                    | UpdateLanguages DriverProfileScreenState (Array String)
 
-data Action = BackPressed Boolean
+data Action = BackPressed
             | NoAction
             | OptionClick Data.MenuOptions
             | BottomNavBarAction BottomNavBar.Action
+            | DriverSummary DriverProfileSummaryRes
             | GetDriverInfoResponse GetDriverInfoResp
             | PopUpModalAction PopUpModal.Action
             | AfterRender
@@ -166,7 +169,7 @@ eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = 
     Just VEHICLE_NAME -> continue state{props{btnActive = (length val >= 3)}, data{vehicleName = val}}
     _ -> continue state
 
-eval (BackPressed flag) state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
+eval BackPressed state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
                                 else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
@@ -237,7 +240,7 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
                                       driverAlternateNumber = driverProfileResp.alternateNumber ,
                                       driverGender = driverProfileResp.gender
                                       }})
-
+eval (DriverSummary response) state = continue state{data{analyticsData = getAnalyticsData response}}
 
 eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
 
@@ -328,7 +331,7 @@ eval (LanguageSelection (CheckList.ChangeCheckBoxSate item)) state = do
 
 eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   let languagesSelected = getSelectedLanguages state
-  continue state
+  exit $ UpdateLanguages state languagesSelected
 
 eval (UpdateValueAC (PrimaryButton.OnClick)) state = do 
   if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
@@ -389,7 +392,8 @@ getGenderName gender =
       "PREFER_NOT_TO_SAY" -> Just (getString STR.PREFER_NOT_TO_SAY)
       _ -> Nothing
     Nothing -> Nothing
-getSelectedLanguages :: DriverProfileScreenState -> Array CheckBoxOptions
-getSelectedLanguages state = do
+
+getSelectedLanguages :: DriverProfileScreenState -> Array String
+getSelectedLanguages state = 
   let languages = filter (\a -> a.isSelected == true) state.data.languageList
-  languages
+  in  foldl (\acc item -> acc <> [item.text]) [] languages

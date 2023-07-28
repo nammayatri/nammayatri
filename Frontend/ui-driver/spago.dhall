@@ -30,6 +30,7 @@ to generate this file without the comments in this block.
   , "halogen-vdom"
   , "integers"
   , "js-timers"
+  , "lists"
   , "maybe"
   , "newtype"
   , "numbers"

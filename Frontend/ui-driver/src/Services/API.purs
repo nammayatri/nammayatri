@@ -15,24 +15,24 @@
 
 module Services.API where
 
-import Control.Alt ((<|>))
 import Common.Types.App (Version(..))
-import Data.Generic.Rep (class Generic)
+import Control.Alt ((<|>))
+import Control.Monad.Except (runExcept)
+import Data.Either as Either
 import Data.Eq.Generic (genericEq)
-import Data.Show.Generic (genericShow)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
+import Data.Show.Generic (genericShow)
 import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
+import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
+import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
-import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Services.EndPoints as EP
-import Foreign.Index (readProp)
-import Control.Monad.Except (runExcept)
-import Data.Either as Either
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -596,19 +596,23 @@ instance encodeOfferRideResp :: Encode OfferRideResp where encode = defaultEncod
 -- UpdateDriverInfo API request, response types
 data UpdateDriverInfoRequest = UpdateDriverInfoRequest UpdateDriverInfoReq
 
-newtype UpdateDriverInfoReq = UpdateDriverInfoReq
-    {   middleName              :: Maybe String
-    ,   firstName               :: Maybe String
-    ,   lastName                :: Maybe String
-    ,   deviceToken             :: Maybe String
-    ,   canDowngradeToSedan     :: Maybe Boolean
-    ,   canDowngradeToHatchback :: Maybe Boolean
-    ,   canDowngradeToTaxi      :: Maybe Boolean
-    ,   language                :: Maybe String
-    ,   clientVersion           :: Maybe Version
-    ,   bundleVersion           :: Maybe Version
-    ,   gender                  :: Maybe String
-    }
+newtype UpdateDriverInfoReq
+  = UpdateDriverInfoReq
+  { middleName :: Maybe String
+  , firstName :: Maybe String
+  , lastName :: Maybe String
+  , deviceToken :: Maybe String
+  , canDowngradeToSedan :: Maybe Boolean
+  , canDowngradeToHatchback :: Maybe Boolean
+  , canDowngradeToTaxi :: Maybe Boolean
+  , language :: Maybe String
+  , clientVersion :: Maybe Version
+  , bundleVersion :: Maybe Version
+  , gender :: Maybe String
+  , languagesSpoken :: Array String
+  , hometown :: Maybe String
+  , vehicleName :: Maybe String
+  }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
 
@@ -1735,3 +1739,102 @@ instance standardEncodeCurrentDateAndTimeRes :: StandardEncode CurrentDateAndTim
 instance showCurrentDateAndTimeRes :: Show CurrentDateAndTimeRes where show = genericShow
 instance decodeCurrentDateAndTimeRes :: Decode CurrentDateAndTimeRes  where decode = defaultDecode
 instance encodeCurrentDateAndTimeRes :: Encode CurrentDateAndTimeRes where encode = defaultEncode
+
+------------------------------------------ driverProfileSummary --------------------------------------
+data DriverProfileSummaryReq = DriverProfileSummaryReq
+
+newtype DriverProfileSummaryRes
+  = DriverProfileSummaryRes
+  { id :: String
+  , firstName :: String
+  , middleName :: Maybe String
+  , lastName :: Maybe String
+  , totalRidesAssigned :: Int
+  , mobileNumber :: Maybe String
+  , linkedVehicle :: Maybe Vehicle
+  , totalDistanceTravelled :: Int
+  , rating :: Maybe Number
+  , totalUsersRated :: Int
+  , language :: Maybe String
+  , alternateNumber :: Maybe String
+  , gender :: Maybe String
+  , driverSummary :: DriverSummary
+  , missedOpp :: DriverMissedOpp
+  , feedbackBadges :: DriverBadges
+  , languagesSpoken :: Array String
+  , hometown :: Maybe String
+  }
+
+newtype DriverSummary
+  = DriverSummary
+  { totalEarnings :: Int
+  , bonusEarned :: Int
+  , totalCompletedTrips :: Int
+  , lateNightTrips :: Int
+  , lastRegistered :: String
+  }
+
+newtype DriverMissedOpp
+  = DriverMissedOpp
+  { cancellationRate :: Int
+  , ridesCancelled :: Int
+  , totalRides :: Int
+  , missedEarnings :: Int
+  }
+
+newtype DriverBadges
+  = DriverBadges
+  { driverBadges :: Array Badges
+  }
+
+newtype Badges
+  = Badges
+  { badgeName :: String
+  , badgeCount :: Int
+  }
+
+instance makeDriverProfileSummaryReq :: RestEndpoint DriverProfileSummaryReq DriverProfileSummaryRes where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.profileSummary "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = defaultEncode req
+
+derive instance genericDriverProfileSummaryReq :: Generic DriverProfileSummaryReq _
+instance standardEncodeDriverProfileSummaryReq :: StandardEncode DriverProfileSummaryReq where standardEncode reqBody = standardEncode {}
+instance showDDriverProfileSummaryReq :: Show DriverProfileSummaryReq where show = genericShow
+instance decodeDriverProfileSummaryReq :: Decode DriverProfileSummaryReq where decode = defaultDecode
+instance encodeDriverProfileSummaryReq :: Encode DriverProfileSummaryReq where encode = defaultEncode
+
+derive instance genericDriverProfileSummaryRes :: Generic DriverProfileSummaryRes _
+derive instance newtypeDriverProfileSummaryRes :: Newtype DriverProfileSummaryRes _
+instance standardEncodeDriverProfileSummaryRes :: StandardEncode DriverProfileSummaryRes where standardEncode (DriverProfileSummaryRes reqBody) = standardEncode reqBody
+instance showDDriverProfileSummaryRes :: Show DriverProfileSummaryRes where show = genericShow
+instance decodeDriverProfileSummaryRes :: Decode DriverProfileSummaryRes where decode = defaultDecode
+instance encodeDriverProfileSummaryRes :: Encode DriverProfileSummaryRes where encode = defaultEncode
+
+derive instance genericDriverSummary :: Generic DriverSummary _
+derive instance newtypeDriverSummary :: Newtype DriverSummary _
+instance standardEncodeDriverSummary :: StandardEncode DriverSummary where standardEncode (DriverSummary reqBody) = standardEncode reqBody
+instance showDDriverSummary :: Show DriverSummary where show = genericShow
+instance decodeDriverSummary :: Decode DriverSummary where decode = defaultDecode
+instance encodeDriverSummary :: Encode DriverSummary where encode = defaultEncode
+
+derive instance genericDriverMissedOpp :: Generic DriverMissedOpp _
+derive instance newtypeDriverMissedOpp :: Newtype DriverMissedOpp _
+instance standardEncodeDriverMissedOpp :: StandardEncode DriverMissedOpp where standardEncode (DriverMissedOpp reqBody) = standardEncode reqBody
+instance showDDriverMissedOpp :: Show DriverMissedOpp where show = genericShow
+instance decodeDriverMissedOpp :: Decode DriverMissedOpp where decode = defaultDecode
+instance encodeDriverMissedOpp :: Encode DriverMissedOpp where encode = defaultEncode
+
+derive instance genericDriverBadges :: Generic DriverBadges _
+derive instance newtypeDriverBadges :: Newtype DriverBadges _
+instance standardEncodeDriverBadges :: StandardEncode DriverBadges where standardEncode (DriverBadges reqBody) = standardEncode reqBody
+instance showDDriverBadges :: Show DriverBadges where show = genericShow
+instance decodeDriverBadges :: Decode DriverBadges where decode = defaultDecode
+instance encodeDriverBadges :: Encode DriverBadges where encode = defaultEncode
+
+derive instance genericBadges :: Generic Badges _
+derive instance newtypeBadges :: Newtype Badges _
+instance standardEncodeBadges :: StandardEncode Badges where standardEncode (Badges reqBody) = standardEncode reqBody
+instance showDBadges :: Show Badges where show = genericShow
+instance decodeBadges :: Decode Badges where decode = defaultDecode
+instance encodeBadges :: Encode Badges where encode = defaultEncode

@@ -15,61 +15,61 @@
 
 module Screens.DriverProfileScreen.View where
 
-import Effect.Aff (launchAff)
 import Common.Types.App
-import Types.App (defaultGlobalState)
+import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
-import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion)
 
 import Animation as Anim
+import Animation.Config as AnimConfig
 import Components.BottomNavBar.Controller (navData)
 import Components.BottomNavBar.View as BottomNavBar
+import Components.CheckListView.View as CheckListView
+import Components.GenericHeader.View as GenericHeader
+import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
+import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryEditText.View as PrimaryEditText
+import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!))
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe (fromMaybe)
+import Debug (spy)
+import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, liftFlow)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=),(<<<), (>), pure, discard, show, (&&), void, negate, not)
+import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
 import Screens.Types as ST
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
-import Styles.Colors as Color
-import Screens as ScreenNames
-import Helpers.Utils (getVehicleType)
-import Debug(spy)
-import PrestoDOM.Animation as PrestoAnim
-import Animation.Config as AnimConfig
-import Data.Maybe (Maybe(..), isJust)
-import Components.GenericHeader.View as GenericHeader
-import Components.PrimaryEditText.View as PrimaryEditText
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Properties (cornerRadii)
-import Components.PrimaryButton as PrimaryButton
-import Components.PrimaryEditText as PrimaryEditText
-import Components.InAppKeyboardModal.View as InAppKeyboardModal
-import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import Components.CheckListView.View as CheckListView
-
-import Components.PopUpModal as PopUpModal
 import Storage (isLocalStageOn)
-import Debug (spy)
-import Control.Applicative (unless)
-import Data.List
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
+import Data.Either (Either (..))
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -77,10 +77,16 @@ screen initialState =
   , view
   , name : "DriverProfileScreen"
   , globalEvents : [(\push -> do
-      void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-        getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-        let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
-        lift $ lift $ doAff do liftEffect $ push $ GetDriverInfoResponse (GetDriverInfoResp getDriverInfoResp)
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+        JB.toggleLoader true
+        summaryResponse <- Remote.driverProfileSummary ""
+        profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq { })
+        case summaryResponse, profileResponse of
+          Right summaryResp , Right profileResp -> do 
+            liftFlow $ push $ DriverSummary summaryResp
+            liftFlow $ push $ GetDriverInfoResponse profileResp
+          _ , _ -> liftFlow $ push $ BackPressed
+        JB.toggleLoader false
         pure unit
       pure $ pure unit
     )]
@@ -100,7 +106,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , onBackPressed push (const BackPressed state)
+        , onBackPressed push $ const BackPressed
         , background Color.white900
         , visibility if state.props.updateLanguages ||  state.props.updateDetails then GONE else VISIBLE
         , padding $ PaddingBottom 24
@@ -196,7 +202,7 @@ headerView state push =
       [ width $ V 30
       , height $ V 30
       , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
-      , onClick push $ const (BackPressed true)
+      , onClick push $ const BackPressed
       ]
     , textView
       ([ weight 1.0
@@ -340,17 +346,18 @@ missedOpportunityView state push  =
       [height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ](map (\item -> infoCard state push item) (missedOppArray ""))
+      ](map (\item -> infoCard state push item) (missedOppArray state.data.analyticsData))
   ]
 
-missedOppArray :: String -> Array {key :: String, value :: String , value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
-missedOppArray state = [{key : (getString CANCELLATION_RATE), value : "10,254km", value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-  {key : (getString RIDES_CANCELLED), value : "1" , value1 : "2" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-    {key : (getString EARNINGS_MISSED), value : "Amount" , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
+missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> " %"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+  {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+    {key : (getString EARNINGS_MISSED), value : show analyticsData.missedEarnings , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push = 
-  linearLayout
+  let analyticsData = state.data.analyticsData
+  in linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL 
@@ -369,21 +376,21 @@ driverAnalyticsView state push =
       , margin $ Margin 0 12 0 12
       , background Color.blue600
       , cornerRadius 10.0
-      ][  infoTileView state {primaryText: "₹45,67,892", subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+      ][  infoTileView state {primaryText: "₹ " <> analyticsData.totalEarnings, subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         , linearLayout
           [ height MATCH_PARENT
           , width (V 1)
           , margin (Margin 0 16 0 16)
           , background Color.lightGreyShade
           ][]
-        , infoTileView state {primaryText: "₹52,000", subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+        , infoTileView state {primaryText: "₹ " <> analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         ]
       , linearLayout  
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: "4.9", subText: "rated by 392 users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
-          , infoTileView state {primaryText: "502", subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
+        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: "rated by " <> show analyticsData.totalUsersRated <> " users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
+          , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
         [ width MATCH_PARENT
@@ -393,57 +400,38 @@ driverAnalyticsView state push =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation HORIZONTAL
-            ][  linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , cornerRadius 20.0
-                , background Color.blue600
-                , padding $ Padding 12 10 12 10
-                , gravity CENTER_VERTICAL
-                , margin $ MarginRight 16
-                ][ textView
-                    [ text "243"
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , textSize FontSize.a_14
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , color Color.black900
-                    , margin $ MarginRight 4
-                    ]
-                  , textView
-                    ([ text (getString LATE_NIGHT_TRIPS)
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , color Color.black700
-                    ] <> FontStyle.body3 TypoGraphy)
-                  ]
-              , linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , cornerRadius 20.0
-                , background Color.blue600
-                , padding $ Padding 12 10 12 10
-                , gravity CENTER_VERTICAL
-                ][  textView
-                    [ text "243"
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , textSize FontSize.a_14
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , color Color.black900
-                    , margin $ MarginRight 4
-                    ]
-                  , textView
-                    [ text (getString LATE_NIGHT_TRIPS)
-                    , width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , textSize FontSize.a_12
-                    , color Color.black700
-                    ]
-                ]
-              ]
+            ] $ map (\item -> chipRailView item) state.data.analyticsData.chipRailData
            ]
   ]
+
+------------------------------ CHIP RAIL LAYOUT ---------------------------------------------
+chipRailView :: forall w. ST.ChipRailData -> PrestoDOM (Effect Unit) w
+chipRailView item = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , cornerRadius 20.0
+    , background Color.blue600
+    , padding $ Padding 12 10 12 10
+    , margin $ MarginHorizontal 5 5
+    , gravity CENTER_VERTICAL
+    ][  textView
+        [ text item.mainTxt
+        , width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , textSize FontSize.a_14
+        , fontStyle $ FontStyle.bold LanguageStyle
+        , color Color.black900
+        , margin $ MarginRight 4
+        ]
+      , textView $
+        [ text item.subTxt
+        , width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , textSize FontSize.a_12
+        , color Color.black700
+        ] <> FontStyle.body3 TypoGraphy
+    ]
 
 ------------------------------ BADGE LAYOUT ---------------------------------------------
 
@@ -454,6 +442,7 @@ badgeLayoutView state =
   , width MATCH_PARENT
   , orientation VERTICAL 
   , margin $ MarginTop 40
+  , visibility if null state.data.analyticsData.badges then GONE else VISIBLE
   ][  textView 
       [ text (getString BADGES)
       , textSize FontSize.a_16 
@@ -469,7 +458,7 @@ badgeLayoutView state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , orientation HORIZONTAL
-          ](map(\item -> badgeView item)(getBadgeData state))
+          ](map(\item -> badgeView item) state.data.analyticsData.badges)
       ]
     ]
 
@@ -923,7 +912,7 @@ infoTileView state config =
                         , width $ V 13
                         , imageWithFallback if item <= 5 then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                         ]
-                    ]) [1,2,3,4,5])
+                    ]) [1,2,3,4,5]) -- TODO replace with proper api response and handle stars after Unification PR got merged
           ]
       , textView 
         ([ width WRAP_CONTENT
@@ -1140,7 +1129,7 @@ scaleDownConfig ifAnim =
 
 ---------------------------------------------- Data ARRAY -----------------------------------------------------
 
-driverDetailsArray :: forall w. ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
+driverDetailsArray :: ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
 driverDetailsArray state = [
     { key : (getString NAME) , value : Just state.data.driverName , action : NoAction , isEditable : false }
   , { key : (getString MOBILE_NUMBER), value : state.data.driverMobile , action : NoAction , isEditable : false }
@@ -1148,7 +1137,7 @@ driverDetailsArray state = [
   , { key : (getString GENDER) , value : (getGenderName state.data.driverGender) , action : SelectGender , isEditable : true } ]
 
 
-vehicleDetailsArray :: forall w. ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
+vehicleDetailsArray :: ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
 vehicleDetailsArray state = [
     { key : (getString REG_NUMBER ) , value : Just state.data.vehicleRegNumber , action : NoAction , isEditable : false }
   , { key : (getString TYPE), value : Just (getVehicleType state.data.driverVehicleType), action : NoAction , isEditable : false }
@@ -1194,3 +1183,15 @@ dummyTextView =
  [ width WRAP_CONTENT
  , height WRAP_CONTENT
  ]
+
+type MissedOpportunity
+  = { key :: String
+    , value :: String
+    , value1 :: String
+    , infoImageUrl :: String
+    , postfixImage :: String
+    , showInfoImage :: Boolean
+    , showPostfixImage :: Boolean
+    , action :: Action
+    , valueColor :: String
+    }
