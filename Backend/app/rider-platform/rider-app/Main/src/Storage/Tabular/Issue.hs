@@ -35,7 +35,7 @@ mkPersist
     IssueT sql=issue
       id Text
       customerId SPerson.PersonTId
-      rideBookingId SQuote.QuoteTId Maybe
+      bookingId SQuote.QuoteTId Maybe
       contactEmail Text Maybe
       reason Text
       description Text
@@ -58,7 +58,7 @@ instance FromTType IssueT Domain.Issue where
         { id = Id id,
           customerId = fromKey customerId,
           rideId = fromKey <$> rideId,
-          bookingId = fromKey <$> rideBookingId,
+          bookingId = fromKey <$> bookingId,
           ..
         }
 
@@ -67,7 +67,7 @@ instance ToTType IssueT Domain.Issue where
     IssueT
       { id = getId id,
         customerId = toKey customerId,
-        rideBookingId = toKey <$> bookingId,
+        bookingId = toKey <$> bookingId,
         rideId = toKey <$> rideId,
         ..
       }
