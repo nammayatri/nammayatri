@@ -794,6 +794,7 @@ driverInfoTransformer state =
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
     , lastMessage : state.data.lastMessage
+    , vehicleVariant : cardState.vehicleVariant
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

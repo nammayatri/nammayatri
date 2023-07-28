@@ -39,6 +39,7 @@ initData = {
     , destination : ""
     , eta : "2 mins"
     , vehicleDetails : "Bajaj RE Auto"
+    , vehicleVariant : ""
     , registrationNumber : "KA  01  YF  4921"
     , rating : 4.0
     , locationList : []
@@ -321,6 +322,7 @@ dummyDriverInfo =
   , merchantExoPhone : ""
   , createdAt : ""
   , initDistance : Nothing
+  , vehicleVariant : ""
   }
 
 dummySettingBar :: SettingSideBarState

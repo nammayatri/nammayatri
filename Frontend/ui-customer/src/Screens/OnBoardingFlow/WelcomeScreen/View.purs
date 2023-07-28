@@ -14,8 +14,8 @@ import Screens.Types (WelcomeScreenState)
 import Helpers.Utils (addCarousel)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Components.PrimaryButton as PrimaryButton
-
-
+import Helpers.Utils (getMerchant, Merchant (..))
+import Common.Types.App (LazyCheck(..))
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -47,7 +47,8 @@ view push state =
             [ height $ V 50
             , width $ V 147
             , margin $ MarginTop if os == "IOS" then 80 else 50
-            , imageWithFallback "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png"   -- "ic_namma_yatri_logo"
+            , imageWithFallback $ if (getMerchant FunctionCall == YATRI) then "ic_yatri_logo_dark,https://assets.juspay.in/nammayatri/images/user/ic_yatri_logo_dark.png"
+                                  else "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png"   -- "ic_namma_yatri_logo"
             ]
             , carouselView state push
             , PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)

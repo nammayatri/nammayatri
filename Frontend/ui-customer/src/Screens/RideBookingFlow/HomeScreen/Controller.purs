@@ -2292,6 +2292,7 @@ getVehicleTitle vehicle =
     "HATCHBACK" -> (getString HATCHBACK)
     "SUV" -> (getString SUV)
     "SEDAN" -> (getString SEDAN)
+    "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     _ -> "") <> " - " <> (getString RATE_CARD)
 getRateCardValue :: String -> HomeScreenState -> Array RateCardDetails
 getRateCardValue vehicleVariant state = do
@@ -2316,7 +2317,13 @@ getRateCardValue vehicleVariant state = do
                    , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , description :"₹40 / km"}
                    , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
                    , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
+
+    "AUTO_RICKSHAW" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 1.5 km" else "1.5 km " <> (getString MIN_FARE_UPTO) , description : "₹30"}
+                   , { title : if lang == "EN_US" then (getString RATE_ABOVE_MIN_FARE) <> "15 / km" else (getString RATE_ABOVE_MIN_FARE), description : "₹15 / km"}
+                   , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
+                   , { title : (getString DRIVER_ADDITIONS) , description : "10% of the base fare"}]
     _ -> []
+
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
 getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }

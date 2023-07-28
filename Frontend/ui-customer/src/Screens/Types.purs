@@ -438,6 +438,7 @@ type IndividualRideCardState =
   , isSpecialZone :: Boolean
   , nightCharges :: Boolean
   , zoneType :: ZoneType
+  , vehicleVariant :: String
   }
 
 type ItemState =
@@ -558,6 +559,7 @@ type HomeScreenStateData =
   , cancelRideConfirmationData :: CancelRideConfirmationData
   , pickUpCharges :: Int
   , ratingViewState :: RatingViewState
+  , vehicleVariant :: String
   }
 
 type HomeScreenStateProps =
@@ -893,6 +895,7 @@ type DriverInfoCard =
   , merchantExoPhone :: String
   , createdAt :: String
   , initDistance :: Maybe Int
+  , vehicleVariant :: String
   }
 
 type RatingCard =

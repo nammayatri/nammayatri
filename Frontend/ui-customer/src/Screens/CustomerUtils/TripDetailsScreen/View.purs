@@ -227,7 +227,8 @@ tripDetailsView state =
               , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
               ]
             , imageView
-              [ imageWithFallback "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+              [ imageWithFallback $ if state.data.selectedItem.vehicleVariant == "AUTO_RICKSHAW" then "ic_driver_auto,https://assets.juspay.in/nammayatri/images/user/ic_driver_auto.png"
+                                    else "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
               , width (V 40)
               , height (V 40)
               ]
