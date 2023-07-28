@@ -30,6 +30,9 @@ import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 create :: (L.MonadFlow m, Log m) => MessageTranslation -> m ()
 create = createWithKV
 
+createMany :: (L.MonadFlow m, Log m) => [MessageTranslation] -> m ()
+createMany = traverse_ createWithKV
+
 findByMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
 findByMessageIdAndLanguage (Id messageId) language = findOneWithKV [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
 

@@ -80,8 +80,7 @@ fetchAllByIds :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Driv
 fetchAllByIds merchantId driversIds = do
   dInfos <- findAllWithKV [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
   persons <- findAllPersonWithDriverInfos dInfos merchantId
-  let dInfos' = foldl' (getDriverInfoWithPerson persons) [] dInfos
-  pure dInfos'
+  pure $ foldl' (getDriverInfoWithPerson persons) [] dInfos
   where
     getDriverInfoWithPerson persons acc dInfo' =
       case find (\person -> person.id == dInfo'.driverId) persons of
