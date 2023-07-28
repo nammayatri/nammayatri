@@ -2236,8 +2236,8 @@ getRateCardValue :: String -> HomeScreenState -> Array RateCardDetails
 getRateCardValue vehicleVariant state = do
   let lang = getValueToLocalStore LANGUAGE_KEY
   case vehicleVariant of 
-    "HATCHBACK" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , description : "₹122"}
-                   , { title : "4 km - 13 km" , description : "₹18 / km"}
+    "HATCHBACK" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , description : "₹140"}
+                   , { title : "5 km - 13 km" , description : "₹18 / km"}
                    , { title : "13 km - 30 km" , description : "₹25 / km"}
                    , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN), description : "₹36 / km"}
                    , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }

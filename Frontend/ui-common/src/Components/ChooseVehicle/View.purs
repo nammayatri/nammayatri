@@ -107,7 +107,7 @@ priceDetailsView push config = do
     [ textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ if config.price == config.maxPrice then "₹" <> show ((config.price) + basePrice) else "₹" <> show ((config.price) + basePrice) <> " - " <> "₹" <> show((config.maxPrice) + basePrice)
+          , text $ if config.price == config.maxPrice then ("₹" <> show ((config.price) + basePrice)) else ("₹" <> show ((config.price) + basePrice) <> " - " <> "₹" <> show((config.maxPrice) + basePrice))
           , color Color.black800
           , visibility if config.isCheckBox then GONE else VISIBLE
           ]
