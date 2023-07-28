@@ -55,7 +55,7 @@ buildInitReq subscriber req = do
 
   pure
     DInit.InitReq
-      { driverQuoteId = fulfillmentId,
+      { estimateId = fulfillmentId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = context.city,

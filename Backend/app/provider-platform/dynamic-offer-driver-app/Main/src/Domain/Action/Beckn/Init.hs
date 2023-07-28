@@ -55,7 +55,7 @@ import Tools.Error
 import Tools.Event
 
 data InitReq = InitReq
-  { driverQuoteId :: Text,
+  { estimateId :: Text,
     driverId :: Maybe Text,
     vehicleVariant :: Veh.Variant,
     bapId :: Text,
@@ -150,7 +150,7 @@ handler merchantId req eitherReq = do
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote driverQuote.estimateId.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl
+          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           Esq.runTransaction $ do
             QST.updateStatus searchTry.id DST.COMPLETED
@@ -240,14 +240,14 @@ validateRequest merchantId req = do
   case req.initTypeReq of
     InitNormalReq -> do
       driverId <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-      driverQuote <- QDQuote.findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id req.driverQuoteId) (Id driverId) req.vehicleVariant now >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
+      driverQuote <- QDQuote.findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id req.estimateId) (Id driverId) req.vehicleVariant now >>= fromMaybeM (QuoteNotFound req.estimateId)
       when (driverQuote.validTill < now || driverQuote.status == DDQ.Inactive) $
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
       return $ Left (driverQuote, searchRequest, searchTry)
     InitSpecialZoneReq -> do
-      specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
+      specialZoneQuote <- QSZoneQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
       when (specialZoneQuote.validTill < now) $
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
