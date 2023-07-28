@@ -528,7 +528,6 @@ data STR = LETS_GET_STARTED
         | TAXI_PLUS
         | MY_PROFILE
         | SETTINGS
-        | AUTO_DETAILS
         | REG_NUMBER
         | TYPE
         | MODEL_NAME
@@ -538,16 +537,19 @@ data STR = LETS_GET_STARTED
         | RIDES_CANCELLED 
         | EARNINGS_MISSED
         | SUMMARY
-        | EARNED_ON_
         | NAMMA_BONUS 
         | TRIPS_COMPLETED
-        | LATE_NATE_TRIPS 
+        | LATE_NIGHT_TRIPS 
         | ABOUT_ME 
         | ABOUT_VEHICLE
         | ADD
-        | TRAVELLED_ON 
         | YEARS_OLD 
         | HOMETOWN 
+        | MISSED_OPPORTUNITY
+        | EARNED_ON_APP
+        | TRAVELLED_ON_APP
+        | HOW_OLD_IS_YOUR_VEHICLE
+        | ENTER_NAME_OF_VEHICLE
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1066,7 +1068,6 @@ getStringFromEnum key = case key of
     TAXI_PLUS -> "TAXI_PLUS"
     MY_PROFILE -> "MY_PROFILE"
     SETTINGS -> "SETTINGS"
-    AUTO_DETAILS -> "AUTO_DETAILS"
     REG_NUMBER -> "REG_NUMBER"
     TYPE -> "TYPE"
     MODEL_NAME -> "MODEL_NAME"
@@ -1076,13 +1077,16 @@ getStringFromEnum key = case key of
     RIDES_CANCELLED  -> "RIDES_CANCELLED"
     EARNINGS_MISSED -> "EARNINGS_MISSED" 
     SUMMARY -> "SUMMARY"
-    EARNED_ON_ -> "EARNED_ON_"
     NAMMA_BONUS  -> "NAMMA_BONUS"
     TRIPS_COMPLETED -> "TRIPS_COMPLETED"
-    LATE_NATE_TRIPS  -> "LATE_NATE_TRIPS"
+    LATE_NIGHT_TRIPS  -> "LATE_NIGHT_TRIPS"
     ABOUT_ME  -> "ABOUT_ME"
     ABOUT_VEHICLE -> "ABOUT_VEHICLE"
     ADD -> "ADD"
-    TRAVELLED_ON  -> "TRAVELLED_ON"
     YEARS_OLD  -> "YEARS_OLD"
     HOMETOWN  -> "HOMETOWN"
+    MISSED_OPPORTUNITY -> "MISSED_OPPORTUNITY"
+    EARNED_ON_APP -> "EARNED_ON_APP"
+    TRAVELLED_ON_APP -> "TRAVELLED_ON_APP"
+    HOW_OLD_IS_YOUR_VEHICLE -> "HOW_OLD_IS_YOUR_VEHICLE"
+    ENTER_NAME_OF_VEHICLE -> "ENTER_NAME_OF_VEHICLE"

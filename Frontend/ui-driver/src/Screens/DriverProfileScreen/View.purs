@@ -117,7 +117,7 @@ view push state =
         , if state.props.removeAlternateNumber then PopUpModal.view (push <<<  RemoveAlternateNumberAC) (removeAlternateNumberConfig state ) else dummyTextView
         , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
         , if state.props.updateLanguages then updateLanguageView state push else dummyTextView
-        , if  any (_ == state.props.detailsUpdationType) [Just ST.AUTO_AGE , Just ST.AUTO_NAME] then updateDetailsView state push else dummyTextView
+        , if  any (_ == state.props.detailsUpdationType) [Just ST.VEHICLE_AGE , Just ST.VEHICLE_NAME] then updateDetailsView state push else dummyTextView
         ]
 
 
@@ -175,7 +175,8 @@ profileView push state =
                 , tabImageView state push 
                 , infoView state push 
                 ] 
-            , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else autoDetailsView push state  -- TODO: Once APIs are deployed this code can be uncommented
+            , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state  -- TODO: Once APIs are deployed this code can be uncommented
+            , additionalDetails push state
             ]
         ]
     ]
@@ -251,12 +252,12 @@ tabView state push =
       , weight 1.0 
       , gravity CENTER
       , cornerRadius 24.0 
-      , onClick push $ const $ ChangeScreen ST.AUTO_DETAILS
+      , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
       , padding $ PaddingVertical 6 6
-      , text (getString AUTO_DETAILS)
+      , text (getString VEHICLE_DETAILS)
       , fontStyle $ FontStyle.medium LanguageStyle
-      , background if state.props.screenType == ST.AUTO_DETAILS then Color.black900 else Color.white900
-      , color if state.props.screenType == ST.AUTO_DETAILS then Color.white900 else Color.black900
+      , background if state.props.screenType == ST.VEHICLE_DETAILS then Color.black900 else Color.white900
+      , color if state.props.screenType == ST.VEHICLE_DETAILS then Color.white900 else Color.black900
       ]
   ]
 
@@ -273,7 +274,7 @@ tabImageView state push =
   , orientation HORIZONTAL
   ][  PrestoAnim.animationSet 
       [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
-      , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.AUTO_DETAILS)) {fromX = 44 , toX = -44}
+      , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
       ] $ imageView
           [ height $ V 88
           , width $ V 88 
@@ -284,18 +285,18 @@ tabImageView state push =
           , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png" --change the link once uploaded to asset
           ]
   ,  PrestoAnim.animationSet 
-    [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.AUTO_DETAILS)) {fromX = 44 , toX = -44}
+    [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
     , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
     ] $ linearLayout
         [ height $ V 88
         , width $ V 88
         , cornerRadius 44.0
         , background Color.white900
-        , onClick push $ const $ ChangeScreen ST.AUTO_DETAILS
+        , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
         , gravity CENTER
-        , alpha if (state.props.screenType == ST.AUTO_DETAILS) then 1.0 else 0.4
+        , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
         ][  imageView 
-            [ imageWithFallback "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
+            [ imageWithFallback if state.data.driverVehicleType == "AUTO_RICKSHAW" then "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" else "ny_ic_silhouette,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
             , height $ V 68
             , width $ V 68
             ]
@@ -313,8 +314,7 @@ driverDetailsView push state =
   , margin $ MarginHorizontal 16 16
   ][  driverAnalyticsView state push
     , missedOpportunityView state push 
-    , badgeLayoutView state 
-    , additionalDetails push state ]
+    , badgeLayoutView state  ]
 
 
 
@@ -330,7 +330,7 @@ missedOpportunityView state push  =
   , orientation VERTICAL 
   , margin $ Margin 0 40 0 0
   ][  textView  
-      [ text "Missed Opportunity"
+      [ text (getString MISSED_OPPORTUNITY)
       , margin $ Margin 0 0 16 12
       , textSize FontSize.a_16
       , color Color.black 
@@ -344,9 +344,9 @@ missedOpportunityView state push  =
   ]
 
 missedOppArray :: String -> Array {key :: String, value :: String , value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
-missedOppArray state = [{key : "Cancellation Rate", value : "10,254km", value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-  {key : "Rides Cancelled", value : "1" , value1 : "2" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-    {key : "Earnings Missed", value : "Amount" , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+missedOppArray state = [{key : (getString CANCELLATION_RATE), value : "10,254km", value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+  {key : (getString RIDES_CANCELLED), value : "1" , value1 : "2" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+    {key : (getString EARNINGS_MISSED), value : "Amount" , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push = 
@@ -358,7 +358,7 @@ driverAnalyticsView state push =
   ][  textView 
       [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text "Summary"
+        , text (getString SUMMARY)
         , textSize FontSize.a_16
         , color Color.black900
         , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -369,21 +369,21 @@ driverAnalyticsView state push =
       , margin $ Margin 0 12 0 12
       , background Color.blue600
       , cornerRadius 10.0
-      ][  infoTileView state {primaryText: "₹45,67,892", subText: "Earned on NY", postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+      ][  infoTileView state {primaryText: "₹45,67,892", subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         , linearLayout
           [ height MATCH_PARENT
           , width (V 1)
           , margin (Margin 0 16 0 16)
           , background Color.lightGreyShade
           ][]
-        , infoTileView state {primaryText: "₹52,000", subText: "Namma Bonus", postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+        , infoTileView state {primaryText: "₹52,000", subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         ]
       , linearLayout  
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
         ][  infoTileView state {primaryText: "4.9", subText: "rated by 392 users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
-          , infoTileView state {primaryText: "502", subText: "Trips Completed", postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
+          , infoTileView state {primaryText: "502", subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
         [ width MATCH_PARENT
@@ -411,7 +411,7 @@ driverAnalyticsView state push =
                     , margin $ MarginRight 4
                     ]
                   , textView
-                    ([ text "Late Night Trips"
+                    ([ text (getString LATE_NIGHT_TRIPS)
                     , width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , color Color.black700
@@ -434,7 +434,7 @@ driverAnalyticsView state push =
                     , margin $ MarginRight 4
                     ]
                   , textView
-                    [ text "Late Night Trips"
+                    [ text (getString LATE_NIGHT_TRIPS)
                     , width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , textSize FontSize.a_12
@@ -541,29 +541,27 @@ getBadgeData state = [{badgeImage: "ny_ic_five_star_badge,https://assets.juspay.
                       }
                       ]
 
---------------------------------------- AUTO DETAILS VIEW ------------------------------------------------------------
-autoDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-autoDetailsView push state = 
+--------------------------------------- VEHICLE DETAILS VIEW ------------------------------------------------------------
+vehicleDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
+vehicleDetailsView push state = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL 
   , margin $ MarginHorizontal 16 16
-  ][  autoAnalyticsView push state 
-    , additionalDetails push state 
-  ]
+  ][  vehicleAnalyticsView push state ]
 
 
---------------------------------------- AUTO ANALYTICS VIEW ------------------------------------------------------------
-autoAnalyticsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-autoAnalyticsView push state = 
+--------------------------------------- VEHICLE ANALYTICS VIEW ------------------------------------------------------------
+vehicleAnalyticsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
+vehicleAnalyticsView push state = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL 
   , margin $ Margin 0 40 0 0
   ][  textView  
-      [ text "Summary"
+      [ text (getString SUMMARY)
       , margin $ Margin 0 0 16 12
       , textSize FontSize.a_16
       , color Color.black 
@@ -573,7 +571,7 @@ autoAnalyticsView push state =
       [height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ](map (\item -> infoCard state push item) (autoSummaryArray ""))
+      ](map (\item -> infoCard state push item) (vehicleSummaryArray ""))
   ]
 
 --------------------------------------- ADDITIONAL DETAILS VIEW ------------------------------------------------------------
@@ -582,21 +580,19 @@ additionalDetails push state =
   linearLayout  
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ MarginTop 40
+  , margin $ Margin 16 40 16 0
   , orientation VERTICAL
-  ][  textView  
-      [ text if state.props.screenType == ST.DRIVER_DETAILS then "About Me" else "About Auto"
+  ]([  textView  
+      [ text if state.props.screenType == ST.DRIVER_DETAILS then (getString ABOUT_ME) else (getString ABOUT_VEHICLE)
       , margin $ Margin 0 0 0 12
       , textSize FontSize.a_16
       , color Color.black 
       , fontStyle $ FontStyle.medium LanguageStyle
       ]
-      , detailsListViewComponent state push {  backgroundColor : Color.blue600
+  ] <> [detailsListViewComponent state push {  backgroundColor : Color.blue600
                               , separatorColor : Color.white900
-                              , arrayList : if state.props.screenType == ST.DRIVER_DETAILS then driverAboutMeArray state else autoAboutMeArray state
-                                }
-
-  ]
+                              , arrayList : if state.props.screenType == ST.DRIVER_DETAILS then driverAboutMeArray state else vehicleAboutMeArray state
+                                }])
 
 -------------------------------------------- DRIVER NUMBER AND GENDER VIEW ----------------------------------------------------------------
 driverNumberGenderView :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -883,7 +879,7 @@ infoView state push =
                             , separatorColor : Color.grey700 
                             , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then 
                                                 (driverDetailsArray state) 
-                                              else (autoDetailsArray state)
+                                              else (vehicleDetailsArray state)
                             }
     ]
 
@@ -1022,10 +1018,10 @@ detailsListViewComponent state push config =
                 , weight 1.0
                 ][]
               , textView
-                [ text $ fromMaybe "Add" item.value
+                [ text $ fromMaybe (getString ADD) item.value
                 , textSize FontSize.a_14
                 , onClick push $ const item.action
-                , color if (isJust item.value) then (if item.value == Just  "Edit RC" then Color.blue900 else if item.value == Just  "Active" then Color.green900 else if item.value == Just "Inactive" then Color.red else Color.black900) else Color.blue900
+                , color if item.value == Nothing then Color.blue900 else Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
             ] <> if item.isEditable && (isJust item.value) then [imageView
@@ -1108,7 +1104,7 @@ infoCard state push config =
 
 
 ------------------------------------------ ANIMATION -----------------------------------------------------
-addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
+addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
 
 scaleUpConfig :: Boolean -> AnimConfig.AnimConfig
 scaleUpConfig ifAnim = 
@@ -1152,8 +1148,8 @@ driverDetailsArray state = [
   , { key : (getString GENDER) , value : (getGenderName state.data.driverGender) , action : SelectGender , isEditable : true } ]
 
 
-autoDetailsArray :: forall w. ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
-autoDetailsArray state = [
+vehicleDetailsArray :: forall w. ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
+vehicleDetailsArray state = [
     { key : (getString REG_NUMBER ) , value : Just state.data.vehicleRegNumber , action : NoAction , isEditable : false }
   , { key : (getString TYPE), value : Just (getVehicleType state.data.driverVehicleType), action : NoAction , isEditable : false }
   , { key : (getString MODEL_NAME) , value : Just state.data.vehicleModelName , action :  NoAction , isEditable : false}
@@ -1167,16 +1163,16 @@ genderOptionsArray _ =
   , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
   ]
 
-autoSummaryArray :: String -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
-autoSummaryArray state = [{key : "Travelled on Namma Yatri", value : "10,254km", value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+vehicleSummaryArray :: String -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
+vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : "10,254km", value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 
-autoAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-autoAboutMeArray state =  [{ key : "Years Old" , value : Nothing , action : UpdateValue ST.AUTO_AGE , isEditable : true }
-  , { key : "Name" , value : Nothing , action : UpdateValue ST.AUTO_NAME , isEditable : true }]
+vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
+vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , action : UpdateValue ST.VEHICLE_AGE , isEditable : true }
+  , { key : (getString NAME) , value : Nothing , action : UpdateValue ST.VEHICLE_NAME , isEditable : true }]
 
 driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-driverAboutMeArray state =  [{ key : "Languages" , value : Nothing , action : UpdateValue ST.LANGUAGE , isEditable : true }
-  , { key : "HomeTown" , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }]
+driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : Nothing , action : UpdateValue ST.LANGUAGE , isEditable : true }
+  , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }]
 
 
 --------------------------------------------------------------- SEPARATOR --------------------------------------------------------

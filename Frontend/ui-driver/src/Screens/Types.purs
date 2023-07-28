@@ -261,8 +261,8 @@ type DriverProfileScreenData = {
   gender :: Maybe String,
   driverGender :: Maybe String,
   languageList :: Array CheckBoxOptions,
-  autoAge :: Int,
-  autoName :: String
+  vehicleAge :: Int,
+  vehicleName :: String
 }
 
 type VehicleP = {
@@ -294,14 +294,14 @@ type DriverProfileScreenProps = {
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
-data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS | SETTINGS
+data DriverProfileScreenType = DRIVER_DETAILS | VEHICLE_DETAILS | SETTINGS
 
 derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
 instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
 instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq 
 
 
-data UpdateType = LANGUAGE | HOME_TOWN | AUTO_AGE | AUTO_NAME
+data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME
 
 derive instance genericUpdateType :: Generic UpdateType _
 instance showUpdateType :: Show UpdateType where show = genericShow

@@ -54,8 +54,8 @@ initData = {
     otpBackAlternateNumber : Nothing,
     gender : Nothing,
     languageList : languagesChoices,
-    autoAge : 0 ,
-    autoName : ""
+    vehicleAge : 0 ,
+    vehicleName : ""
     },
   props: {
     logoutModalView: false,

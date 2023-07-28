@@ -74,7 +74,9 @@ const kannadaStrings = {
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "ಪ್ರಸ್ತುತ, ನಾವು ಕರ್ನಾಟಕ ನೋಂದಾಯಿತ ಸಂಖ್ಯೆಯನ್ನು ಮಾತ್ರ ಅನುಮತಿಸುತ್ತೇವೆ",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
     YOUR_LOCATION_HELPS_OUR_SYSTEM : "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
-    WHAT_IS_NAMMA_YATRI_BONUS : "ನಮ್ಮ ಯಾತ್ರಿ ಬೋನಸ್ ಎಂದರೇನು?"
+    WHAT_IS_NAMMA_YATRI_BONUS : "ನಮ್ಮ ಯಾತ್ರಿ ಬೋನಸ್ ಎಂದರೇನು?",
+    EARNED_ON_APP : "NY ನಲ್ಲಿ ಗಳಿಸಿದ ಬೆಲೆ",
+    TRAVELLED_ON_APP : "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಪ್ರಯಾಣಿಸಿದೆ"
 }
 
 const hindiStrings = {
@@ -84,7 +86,9 @@ const hindiStrings = {
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "वर्तमान में, हम केवल कर्नाटक पंजीकृत संख्या की अनुमति देते हैं",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "आप नम्मा यात्री सपोर्ट टीम को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
     YOUR_LOCATION_HELPS_OUR_SYSTEM : "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
-    WHAT_IS_NAMMA_YATRI_BONUS : "नम्मा यात्री बोनस क्या है?"
+    WHAT_IS_NAMMA_YATRI_BONUS : "नम्मा यात्री बोनस क्या है?",
+    EARNED_ON_APP : "NY पर अर्जित मूल्य",
+    TRAVELLED_ON_APP : "नम्मा यात्री पर तय की गई दूरी"
 }
 
 const englishStrings = {
@@ -94,7 +98,9 @@ const englishStrings = {
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "Currently,We allow only Karnataka registered number",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
     YOUR_LOCATION_HELPS_OUR_SYSTEM : "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
-    WHAT_IS_NAMMA_YATRI_BONUS : "What is Namma Yatri Bonus?"
+    WHAT_IS_NAMMA_YATRI_BONUS : "What is Namma Yatri Bonus?",
+    EARNED_ON_APP : "Earned on NY",
+    TRAVELLED_ON_APP : "Travelled On Namma Yatri"
 }
 
 const tamilStrings = {
@@ -104,5 +110,7 @@ const tamilStrings = {
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "தற்போது, ​​கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "நீங்கள் நம்ம யாத்ரி ஆதரவுக் குழுவிற்கு அழைப்பு விடுக்க உள்ளீர்கள். தொடர வேண்டுமா?",
     YOUR_LOCATION_HELPS_OUR_SYSTEM : "உங்கள் இருப்பிடம் எங்கள் கணினியை ஆட்டோக்கள் மூலம் அருகிலுள்ள அனைத்து வரைபடத்தையும், விரைவாக சவாரி செய்ய உதவுகிறது.",
-    WHAT_IS_NAMMA_YATRI_BONUS : "நம்ம யாத்ரி போனஸ் என்றால் என்ன?"
+    WHAT_IS_NAMMA_YATRI_BONUS : "நம்ம யாத்ரி போனஸ் என்றால் என்ன?",
+    EARNED_ON_APP : "NY இல் பெறப்பட்ட விலை",
+    TRAVELLED_ON_APP : "நம்ம யாத்ரியில் நடந்த தூரம்"
 }
