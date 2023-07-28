@@ -522,11 +522,24 @@ const hindiStrings = {
   TAXI_PLUS : "एसी टैक्सी",
   MY_PROFILE : "मेरी प्रोफ़ाइल",
   SETTINGS : "सेटिंग्स",
-  AUTO_DETAILS : "ऑटो विवरण",
   REG_NUMBER : "पंजीकरण संख्या",
   TYPE : "प्रकार",
   MODEL_NAME : "मॉडल का नाम",
   COLOUR : "रंग",
-  BADGES : "बैज"
-
+  BADGES : "बैज",
+  CANCELLATION_RATE : "रद्दीकरण दर",
+  RIDES_CANCELLED : "रद्द की गई सवारी", 
+  EARNINGS_MISSED : "छूटी हुई कमाई",
+  SUMMARY : "सारांश",
+  NAMMA_BONUS  : "नम्मा बोनस",
+  TRIPS_COMPLETED : "पूर्ण यात्राएँ",
+  LATE_NIGHT_TRIPS  : "देर रात की यात्राएँ",
+  ABOUT_ME  : "मेरे बारे में",
+  ABOUT_VEHICLE : "वाहन के बारे में",
+  ADD : "जोड़ें",
+  YEARS_OLD  : "साल पुराना",
+  HOMETOWN  : "गृहनगर",
+  MISSED_OPPORTUNITY : "छूटे हुए अवसर",
+  HOW_OLD_IS_YOUR_VEHICLE : "आपका वाहन कितना पुराना है (वर्षों में)?",
+  ENTER_NAME_OF_VEHICLE : "अपने वाहन का नाम दर्ज करें"
 }
