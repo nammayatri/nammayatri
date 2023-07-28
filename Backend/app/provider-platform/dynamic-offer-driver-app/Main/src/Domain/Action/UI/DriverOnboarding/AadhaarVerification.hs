@@ -131,8 +131,8 @@ unVerifiedAadhaarData ::
   UnVerifiedDataReq ->
   Flow APISuccess
 unVerifiedAadhaarData personId req = do
-  driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
+  mAadhaarCard <- Q.findByDriverId personId
+  when (isJust mAadhaarCard) $ throwError AadhaarDataAlreadyPresent
   aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False
   Esq.runNoTransaction $ Q.create aadhaarEntity
   return Success
@@ -193,12 +193,10 @@ mkAadhaar ::
   Bool ->
   m VDomain.AadhaarVerification
 mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
-  id <- generateGUID
   now <- getCurrentTime
   return $
     VDomain.AadhaarVerification
-      { id,
-        driverId = personId,
+      { driverId = personId,
         driverName = name,
         driverGender = gender,
         driverDob = dob,
