@@ -25,6 +25,10 @@ create = createWithKV
 -- findAllWithOptions :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
 -- findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = Esq.findAll $ do
 --   issueReport <- from $ table @IssueReportT
+--   where_ $
+--     whenJust_ mbStatus (\statusVal -> issueReport ^. IssueReportStatus ==. val statusVal)
+--       &&. whenJust_ mbAssignee (\assignee -> issueReport ^. IssueReportAssignee ==. just (val assignee))
+--       &&. whenJust_ mbCategoryId (\categoryId -> issueReport ^. IssueReportCategoryId ==. val (toKey categoryId))
 --   orderBy [desc $ issueReport ^. IssueReportCreatedAt]
 --   limit limitVal
 --   offset offsetVal
@@ -34,16 +38,34 @@ create = createWithKV
 --     offsetVal = maybe 0 fromIntegral mbOffset
 
 findAllWithOptions :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
-findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = findAllWithOptionsKV [Se.And [Se.Is BeamIR.status $ Se.Eq (fromJust mbStatus), Se.Is BeamIR.categoryId $ Se.Eq (getId (fromJust mbCategoryId)), Se.Is BeamIR.assignee $ Se.Eq mbAssignee]] (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
+  findAllWithOptionsKV conditions (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
+    conditions =
+      [ Se.And $
+          catMaybes
+            [ fmap (Se.Is BeamIR.status . Se.Eq) mbStatus,
+              fmap (Se.Is BeamIR.assignee . Se.Eq . Just) mbAssignee,
+              fmap (Se.Is BeamIR.categoryId . Se.Eq . getId) mbCategoryId
+            ]
+      ]
 
 findAllWithOptionsInReplica :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
-findAllWithOptionsInReplica mbLimit mbOffset mbStatus mbCategoryId mbAssignee = findAllWithOptionsKvInReplica [Se.And [Se.Is BeamIR.status $ Se.Eq (fromJust mbStatus), Se.Is BeamIR.categoryId $ Se.Eq (getId (fromJust mbCategoryId)), Se.Is BeamIR.assignee $ Se.Eq mbAssignee]] (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
+findAllWithOptionsInReplica mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
+  findAllWithOptionsKvInReplica conditions (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
+    conditions =
+      [ Se.And $
+          catMaybes
+            [ fmap (Se.Is BeamIR.status . Se.Eq) mbStatus,
+              fmap (Se.Is BeamIR.assignee . Se.Eq . Just) mbAssignee,
+              fmap (Se.Is BeamIR.categoryId . Se.Eq . getId) mbCategoryId
+            ]
+      ]
 
 -- findById :: Transactionable m => Id IssueReport -> m (Maybe IssueReport)
 -- findById issueReportId = Esq.findOne $ do
@@ -54,10 +76,10 @@ findAllWithOptionsInReplica mbLimit mbOffset mbStatus mbCategoryId mbAssignee = 
 --   pure issueReport
 
 findById :: (L.MonadFlow m, Log m) => Id IssueReport -> m (Maybe IssueReport)
-findById (Id issueReportId) = findOneWithKV [Se.Is BeamIR.id $ Se.Eq issueReportId]
+findById (Id issueReportId) = findOneWithKV [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
 findByIdInReplica :: (L.MonadFlow m, Log m) => Id IssueReport -> m (Maybe IssueReport)
-findByIdInReplica (Id issueReportId) = findOneWithKvInReplica [Se.Is BeamIR.id $ Se.Eq issueReportId]
+findByIdInReplica (Id issueReportId) = findOneWithKvInReplica [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
 -- findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]
 -- findAllByDriver driverId = Esq.findAll $ do
@@ -68,8 +90,7 @@ findByIdInReplica (Id issueReportId) = findOneWithKvInReplica [Se.Is BeamIR.id $
 --   pure issueReport
 
 findAllByDriver :: (L.MonadFlow m, Log m) => Id SP.Person -> m [IssueReport]
-findAllByDriver (Id driverId) = do
-  findAllWithKV [Se.Is BeamIR.driverId $ Se.Eq driverId]
+findAllByDriver (Id driverId) = findAllWithKV [Se.And [Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
 -- safeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
 -- safeToDelete issueReportId driverId = Esq.findOne $ do
