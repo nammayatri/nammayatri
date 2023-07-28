@@ -753,7 +753,7 @@ endRCAssociation merchantShortId reqDriverId = do
   case mVehicleRC of
     Just vehicleRC -> do
       rcNo <- decrypt vehicleRC.certificateNumber
-      void $ DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {rcNo})
+      void $ DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
   CQDriverInfo.updateEnabledVerifiedState driverId False False
@@ -782,7 +782,7 @@ deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {..})
+  DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {..}) False
 
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes

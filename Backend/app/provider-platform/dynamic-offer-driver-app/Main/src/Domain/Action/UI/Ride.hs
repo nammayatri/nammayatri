@@ -232,6 +232,7 @@ otpRideCreate driver otpCode booking = do
   when (booking.vehicleVariant /= vehicle.variant) $ throwError $ InvalidRequest "Wrong Vehcile Variant"
 
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
+  unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
   ride <- buildRide otpCode driver.id (Just transporter.id)
   rideDetails <- buildRideDetails ride
