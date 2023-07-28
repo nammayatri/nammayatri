@@ -51,7 +51,8 @@ import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union, any)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem)
+import Data.Int (toNumber, round)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -78,7 +79,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZo
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), FeedbackAnswer(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -91,6 +92,9 @@ import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOpt
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 
+import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
+import Data.Function (const)
+import Data.List ((:))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -900,7 +904,14 @@ eval (OnIconClick autoAssign) state = do
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
-eval (RatingCardAC (RatingCard.Rating index)) state = continue state { data { rideRatingState { rating = index }, ratingViewState { selectedRating = index} } }
+eval (RatingCardAC (RatingCard.Rating index)) state = do 
+  let feedbackListArr = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
+  continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr}, ratingViewState { selectedRating = index} } }
+
+eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
+  let newFeedbackList = updateFeedback id feedbackItem state.data.rideRatingState.feedbackList
+      filterFeedbackList = filter (\item -> length item.answer > 0) newFeedbackList
+  continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_ride_give_feedback"
@@ -1806,6 +1817,9 @@ constructLatLong lat lng _ =
   , address: Nothing
   }
 
+addItemToFeedbackList :: Array String -> String -> Array String
+addItemToFeedbackList feedbackList feedbackItem = if (any (_ == feedbackItem) feedbackList ) then (filter (\item -> feedbackItem /= item) feedbackList) else snoc feedbackList feedbackItem
+
 checkPermissionAndUpdatePersonMarker :: HomeScreenState -> Effect Unit
 checkPermissionAndUpdatePersonMarker state = do
   conditionA <- isLocationPermissionEnabled unit
@@ -1820,6 +1834,28 @@ checkPermissionAndUpdatePersonMarker state = do
       _ <- getLocationName (showPersonMarker state (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))) 9.9 9.9 "Current Location" constructLatLong
       pure unit
     else pure unit
+
+updateFeedback :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
+updateFeedback feedbackId feedbackItem feedbackList =
+  if hasFeedbackId feedbackId feedbackList
+    then updateFeedbackAnswer feedbackId feedbackItem feedbackList
+    else addFeedbackAnswer feedbackId feedbackItem feedbackList
+  where
+    hasFeedbackId :: String -> Array FeedbackAnswer -> Boolean
+    hasFeedbackId fid list = any (\feedback -> feedback.questionId == fid) list
+
+    updateFeedbackAnswer :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
+    updateFeedbackAnswer fid newItem list =
+      map (\feedback ->
+        if feedback.questionId == fid
+                then feedback { answer = if newItem `elem` (feedback.answer) then filter (\x -> x /= newItem) feedback.answer else feedback.answer <> [newItem] }
+          else feedback
+        ) list
+
+    addFeedbackAnswer :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
+    addFeedbackAnswer fid newItem list = do
+      let config = {questionId : fid, answer : [newItem]}
+      list <> [config]
 
 showPersonMarker :: HomeScreenState -> String -> Location -> Effect Unit
 showPersonMarker state marker location = do
@@ -1913,7 +1949,8 @@ dummyRideRatingState = {
   dateDDMMYY          : "",
   offeredFare         : 0,
   distanceDifference  : 0,
-  feedback            : ""
+  feedback            : "",
+  feedbackList        : []
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

@@ -1892,3 +1892,32 @@ instance standardEncodeOnCallRes :: StandardEncode OnCallRes where standardEncod
 instance showOnCallRes :: Show OnCallRes where show = genericShow
 instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
 instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
+
+newtype RideFeedbackReq = RideFeedbackReq
+  { 
+    rideId :: String,
+    feedback :: Array FeedbackAnswer
+  }
+
+type FeedbackAnswer =  {
+    questionId :: String,
+    answer :: Array String
+  }
+
+data RideFeedbackRes = RideFeedbackRes
+
+instance makeRideFeedbackReq :: RestEndpoint RideFeedbackReq RideFeedbackRes where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.bookingFeedback "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericRideFeedbackReq :: Generic RideFeedbackReq _
+instance standardEncodeRideFeedbackReq :: StandardEncode RideFeedbackReq where standardEncode (RideFeedbackReq body) = standardEncode body
+instance showRideFeedbackReq :: Show RideFeedbackReq where show = genericShow
+instance decodeRideFeedbackReq :: Decode RideFeedbackReq where decode = defaultDecode
+instance encodeRideFeedbackReq  :: Encode RideFeedbackReq where encode = defaultEncode
+
+derive instance genericRideFeedbackRes :: Generic RideFeedbackRes _
+instance standardEncodeRideFeedbackRes :: StandardEncode RideFeedbackRes where standardEncode (RideFeedbackRes) = standardEncode {}
+instance decodeRideFeedbackRes :: Decode RideFeedbackRes where decode = defaultDecode
+instance encodeRideFeedbackRes  :: Encode RideFeedbackRes where encode = defaultEncode

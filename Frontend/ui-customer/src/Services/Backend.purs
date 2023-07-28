@@ -863,3 +863,20 @@ makeSosStatus :: String -> SosStatus
 makeSosStatus sosStatus = SosStatus {
      "status" : sosStatus
 }
+
+
+------------------------------------------------------------------------ Ride Feedback ------------------------------------------------------------------------------------
+
+bookingFeedbackBT :: RideFeedbackReq -> FlowBT String RideFeedbackRes
+bookingFeedbackBT payload = do
+    headers <- getHeaders' ""
+    withAPIResultBT (EP.bookingFeedback "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+      errorHandler errorPayload = do
+            BackT $ pure GoBack
+
+makeRideFeedBackReq :: String -> Array FeedbackAnswer -> RideFeedbackReq
+makeRideFeedBackReq id feedbackList = RideFeedbackReq
+    {   "rideId" : id
+    ,   "feedback" : feedbackList
+    }

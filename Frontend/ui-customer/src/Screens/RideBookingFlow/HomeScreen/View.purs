@@ -314,7 +314,6 @@ view push state =
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
             , if state.props.currentStage == DistanceOutsideLimits then (distanceOutsideLimitsView push state) else emptyTextView state
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
-            , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
             , if state.props.showShareAppPopUp then (shareAppPopUp push state) else emptyTextView state
@@ -324,6 +323,7 @@ view push state =
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
             , rideCompletedCardView state push
+            , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             ]
         ]
@@ -897,7 +897,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then VISIBLE else GONE
+    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating ]) then VISIBLE else GONE
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -950,7 +950,7 @@ rateExperienceView state push =
   , stroke $ "1,"<>Color.grey800
   , padding $ Padding 10 10 10 10
   , gravity CENTER
-  ][ commonTextView state push (getString RATE_YOUR_EXPERIENCE) Color.black800 (FontStyle.h3 TypoGraphy) 10
+  ][ commonTextView state push ((getString RATE_YOUR_RIDE_WITH) <> state.data.driverInfoCardState.driverName) Color.black800 (FontStyle.h3 TypoGraphy) 10
     , commonTextView state push (getString YOUR_FEEDBACK_HELPS_US) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
     , linearLayout
       [ height WRAP_CONTENT
@@ -1190,7 +1190,7 @@ issueFacedAndRateView state push =
       ][ PrimaryButton.view (push <<< SkipButtonActionController) (skipButtonConfig state)]
   ]
 
-commonTextView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> String -> String ->(forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
+commonTextView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
 commonTextView state push text' color' fontStyle marginTop =
   textView $
   [ width MATCH_PARENT

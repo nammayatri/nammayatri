@@ -29,7 +29,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes)
+import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
 
 type Contacts = {
   name :: String,
@@ -915,6 +915,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , feedbackList :: Array FeedbackAnswer 
   }
 
 type Address =
