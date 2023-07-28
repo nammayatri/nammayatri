@@ -331,10 +331,6 @@ eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   let languagesSelected = getSelectedLanguages state
   exit $ UpdateLanguages state languagesSelected
 
-eval (UpdateValue value) state = do 
-  case value of 
-    "Languages" -> continue state {props{updateLanguages = true}}
-    _ -> continue state
 
 eval (UpdateValueAC (PrimaryButton.OnClick)) state = do 
   if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
