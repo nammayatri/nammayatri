@@ -22,6 +22,7 @@ where
 import "dynamic-offer-driver-app" API.Dashboard as BPP
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.Common.Exotel as Exotel
+import Dashboard.ProviderPlatform.Driver as DCommon
 import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
@@ -85,13 +86,13 @@ data DriversAPIs = DriversAPIs
     unlinkDL :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkAadhaar :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    setRCStatus :: Id Common.Driver -> Common.RCStatusReq -> Common.RCStatusReq,
-    deleteRC :: Id Common.Driver -> Common.DeleteRCReq -> Common.RCStatusReq,
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
-    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
+    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
+    setRCStatus :: Id Common.Driver -> DCommon.RCStatusReq -> Euler.EulerClient APISuccess,
+    deleteRC :: Id Common.Driver -> DCommon.DeleteRCReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -205,12 +206,12 @@ mkDriverOfferAPIs merchantId token = do
       :<|> unlinkDL
       :<|> unlinkAadhaar
       :<|> endRCAssociation
-      :<|> setRCStatus
-      :<|> deleteRC
       :<|> updatePhoneNumber
       :<|> updateByPhoneNumber
       :<|> addVehicle
       :<|> updateDriverName
+      :<|> setRCStatus
+      :<|> deleteRC
       :<|> ( documentsList
                :<|> getDocument
                :<|> uploadDocument
