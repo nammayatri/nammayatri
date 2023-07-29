@@ -45,7 +45,8 @@ initData = {
           isDriverArrived : false,
           notifiedCustomer : false,
           exoPhone : "",
-          specialLocationTag : Nothing
+          specialLocationTag : Nothing,
+          requestedVehicleVariant : Nothing
         },
         cancelRideModal : {
           selectionOptions : [],

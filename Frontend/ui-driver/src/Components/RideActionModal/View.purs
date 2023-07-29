@@ -26,20 +26,20 @@ import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (countDown, getSpecialZoneConfig, getRequiredTag)
+import Helpers.Utils (getCommonAssetStoreLink)
+import JBridge (getVersionCode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (getValueFromConfig)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, fontSize)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..))
 import Storage (KeyStore(..), getValueToLocalStore)
-import JBridge (getVersionCode)
-import Helpers.Utils (getCommonAssetStoreLink)
 import Styles.Colors as Color
-import MerchantConfig.Utils(getValueFromConfig)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -157,6 +157,7 @@ rideActionViewWithZone push config =
       , gravity CENTER
       , stroke $ "1," <> Color.grey800
       ][  rideActionDataView push config
+        , rideTypeView push config
         , linearLayout
           [ width MATCH_PARENT
           , height $ V 1
@@ -165,6 +166,39 @@ rideActionViewWithZone push config =
           ][]
         , if config.startRideActive then startRide push config else endRide push config
         , cancelRide push config
+      ]
+  ]
+
+rideTypeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideTypeView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ PaddingHorizontal 16 16
+  , visibility if (config.startRideActive || config.requestedVehicleVariant == Maybe.Nothing) then GONE else VISIBLE
+  ][ linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.grey800
+      ][]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginTop 16
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString RIDE_TYPE
+          , color Color.black650
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getCategorizedVariant config.requestedVehicleVariant
+          , margin $ MarginLeft 8
+          , color Color.black800
+          ] <> FontStyle.body1 TypoGraphy
       ]
   ]
 
@@ -180,6 +214,7 @@ rideActionView push config =
   , gravity CENTER
   , stroke $ "1," <> Color.grey800
   ][  rideActionDataView push config
+    , rideTypeView push config
     , linearLayout
       [ width MATCH_PARENT
       , height $ V 1
@@ -557,3 +592,21 @@ getTitle config = case config.startRideActive of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
+
+getCategorizedVariant :: Maybe.Maybe String -> String
+getCategorizedVariant variant = case variant of
+  Maybe.Just var -> case (getMerchant FunctionCall) of
+    YATRISATHI -> case var of
+      "SEDAN"  -> "AC Taxi"
+      "HATCHBACK"  -> "AC Taxi"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "AC Taxi"
+      _ -> "Non AC"
+    _ -> case var of
+      "SEDAN"  -> "Sedan"
+      "HATCHBACK"  -> "Hatchback"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "Suv"
+      "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      _ -> var
+  Maybe.Nothing -> ""

@@ -41,7 +41,8 @@ type Config = {
   buttonTimeOut :: Int,
   currentStage :: HomeScreenStage,
   unReadMessages :: Boolean,
-  specialLocationTag :: Mb.Maybe String
+  specialLocationTag :: Mb.Maybe String,
+  requestedVehicleVariant :: Mb.Maybe String
   }
 
 type AddressConfig = {
@@ -69,5 +70,6 @@ config = {
   id : "buttonTimer",
   currentStage : RideAccepted,
   unReadMessages : false,
-  specialLocationTag : Mb.Nothing
+  specialLocationTag : Mb.Nothing,
+  requestedVehicleVariant : Mb.Nothing
 }

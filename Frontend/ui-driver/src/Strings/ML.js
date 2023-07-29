@@ -511,5 +511,6 @@ const mlStrings = {
   ENTER_SIX_DIGIT_OTP : "ആറക്ക OTP നൽകുക",
   LINK_AADHAAR_ID : "ലിങ്ക് ആധാർ ഐഡി",
   AADHAAR_ALREADY_LINKED : "ആധാർ ഇതിനകം ലിങ്ക് ചെയ്തിട്ടുണ്ട്",
-  OPTIONAL : " (ഓപ്ഷണൽ)"
+  OPTIONAL : " (ഓപ്ഷണൽ)",
+  RIDE_TYPE : "റൈഡ് തരം"
 }
