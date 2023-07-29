@@ -470,5 +470,6 @@ const frenchStrings = {
   CHOOSE_LANGUAGE :"Choisissez la langue",
   TODAY : "আজ",
   AADHAAR_ALREADY_LINKED : "déjà lié",
-  OPTIONAL : " (Facultatif)"
+  OPTIONAL : " (Facultatif)",
+  RIDE_TYPE : "Type de trajet"
 }

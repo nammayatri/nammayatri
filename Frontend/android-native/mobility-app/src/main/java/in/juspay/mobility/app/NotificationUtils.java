@@ -83,6 +83,7 @@ public class NotificationUtils extends AppCompatActivity {
     public static String RINGING_CHANNEL_ID = "RINGING_ALERT";
     public static String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
     public static String DRIVER_REACHED = "DRIVER_REACHED";
+    public static String NO_VARIANT = "NO_VARIANT";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -146,6 +147,7 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
                     sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                    sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
@@ -514,6 +516,35 @@ public class NotificationUtils extends AppCompatActivity {
             channel.setDescription(description);
             NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    public static String getCategorizedVariant(String variant, Context context){
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String driverVehicle = sharedPref.getString("VEHICLE_VARIANT","");
+//        if (driverVehicle.equals(variant)) return NO_VARIANT; TODO :: if driver's variant is same then don't show
+        String buildType = context.getResources().getString(R.string.service);
+        switch (buildType){
+            case  "yatrisathiprovider" :
+                switch (variant){
+                    case "SEDAN" :
+                    case "HATCHBACK" :
+                    case "TAXI_PLUS" :
+                    case "SUV" : return "AC Taxi";
+                    case "TAXI" : return "Non AC";
+                    default : return NO_VARIANT;
+                }
+            case "nammayatriprovider" : return NO_VARIANT;
+
+            case "yatripartner" :
+                switch (variant){
+                    case "SEDAN" : return  "Sedan";
+                    case "HATCHBACK" : return "Hatchback";
+                    case "TAXI_PLUS" : return "";
+                    case "SUV" : return "Suv";
+                    default : return NO_VARIANT;
+                }
+            default:return NO_VARIANT;
         }
     }
 }

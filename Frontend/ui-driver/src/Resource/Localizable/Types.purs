@@ -554,6 +554,7 @@ data STR = LETS_GET_STARTED
         | GOTO_YOUR_NEAREST_BOOTH
         | AADHAAR_ALREADY_LINKED
         | OPTIONAL
+        | RIDE_TYPE
 
 
 getStringFromEnum :: STR -> String
@@ -1097,3 +1098,4 @@ getStringFromEnum key = case key of
     GOTO_YOUR_NEAREST_BOOTH -> "GOTO_YOUR_NEAREST_BOOTH"
     AADHAAR_ALREADY_LINKED -> "AADHAAR_ALREADY_LINKED"
     OPTIONAL -> "OPTIONAL"
+    RIDE_TYPE -> "RIDE_TYPE"

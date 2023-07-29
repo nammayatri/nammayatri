@@ -516,5 +516,6 @@ const kannadaStrings = {
   TRANSACTION_ALREADY_COMPLETED : "ವಹಿವಾಟು ಈಗಾಗಲೇ ಪೂರ್ಣಗೊಂಡಿದೆ. ಈ ವಹಿವಾಟಿನ ಮೇಲೆ ಹೆಚ್ಚಿನ ಕಾರ್ಯಾಚರಣೆಯನ್ನು ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ.",
   GOTO_YOUR_NEAREST_BOOTH :"ನಿಮ್ಮ ಆಧಾರ್ ಅನ್ನು ಪರಿಶೀಲಿಸಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹತ್ತಿರದ ಬೂತ್ ಅನ್ನು ಸಂಪರ್ಕಿಸಿ.",
   AADHAAR_ALREADY_LINKED : "ಈಗಾಗಲೇ ಆಧಾರ್ ಲಿಂಕ್ ಮಾಡಲಾಗಿದೆ",
-  OPTIONAL : " (ಐಚ್ಛಿಕ)"
+  OPTIONAL : " (ಐಚ್ಛಿಕ)",
+  RIDE_TYPE : "ರೈಡ್ ಪ್ರಕಾರ"
 }

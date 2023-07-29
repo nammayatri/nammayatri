@@ -678,7 +678,8 @@ activeRideDetail state (RidesInfo ride) = {
   isDriverArrived : state.data.activeRide.isDriverArrived,
   notifiedCustomer : if (differenceBetweenTwoUTC ride.updatedAt ride.createdAt) == 0 then false else true,
   exoPhone : ride.exoPhone,
-  specialLocationTag : ride.specialLocationTag -- Just "SureMetro - Pickup"
+  specialLocationTag : ride.specialLocationTag,
+  requestedVehicleVariant : ride.requestedVehicleVariant
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList
