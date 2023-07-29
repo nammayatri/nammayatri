@@ -31,7 +31,7 @@ buildRatingReq ::
   m (BecknReq Rating.RatingMessage)
 buildRatingReq DFeedback.FeedbackRes {..} = do
   msgId <- generateGUID
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.city merchant.country False
   let message =
         Rating.RatingMessage

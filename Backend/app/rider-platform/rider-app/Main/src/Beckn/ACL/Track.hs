@@ -51,7 +51,7 @@ buildTrackReq ::
 buildTrackReq res = do
   messageId <- generateGUID
   Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
   pure $ BecknReq context $ mkTrackMessage res
   where

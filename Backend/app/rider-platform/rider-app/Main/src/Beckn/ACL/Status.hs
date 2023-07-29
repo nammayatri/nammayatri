@@ -39,7 +39,7 @@ buildStatusReq ::
 buildStatusReq DStatusReq {..} = do
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   messageId <- generateGUID
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <-
     buildTaxiContext
       Context.STATUS
