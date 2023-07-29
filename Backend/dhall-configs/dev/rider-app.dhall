@@ -154,7 +154,7 @@ in  { esqDBCfg
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8013/beckn"
+    , nwAddress = "http://localhost:8013/beckn/cab/v1"
     , selfUIUrl = "http://localhost:8013/v2/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
