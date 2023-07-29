@@ -254,15 +254,21 @@ getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.desc
 getKmMeter :: Int -> String
 getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
 
+-- Info ::
+-- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = case variant of  
-  "SUV" -> Just ST.SUV
-  "SEDAN" -> Just ST.SEDAN
-  "HATCHBACK" -> Just ST.HATCHBACK
-  "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-  "TAXI" -> Just ST.TAXI 
-  "TAXI_PLUS" -> Just ST.TAXI_PLUS
-  _ -> Nothing
+fetchVehicleVariant variant = case getMerchant FunctionCall of 
+  YATRISATHI -> case variant of  
+      "TAXI" -> Just ST.TAXI 
+      _      -> Just ST.TAXI_PLUS
+  _ -> case variant of 
+      "SUV" -> Just ST.SUV
+      "SEDAN" -> Just ST.SEDAN
+      "HATCHBACK" -> Just ST.HATCHBACK
+      "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+      "TAXI" -> Just ST.TAXI 
+      "TAXI_PLUS" -> Just ST.TAXI_PLUS
+      _ -> Nothing
 
 getVehicleImage :: String -> String
 getVehicleImage variant = case fetchVehicleVariant variant of 

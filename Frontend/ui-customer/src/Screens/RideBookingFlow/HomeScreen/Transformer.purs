@@ -142,7 +142,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : DC.config
-      , vehicleVariant : rideList.vehicleVariant
+      , vehicleVariant : getMappedVehicleVariant rideList.vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -299,7 +299,7 @@ getSpecialZoneQuote quote index =
       in ChooseVehicle.config { 
         vehicleImage = getVehicleImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
-      , vehicleVariant = quoteEntity.vehicleVariant
+      , vehicleVariant = getMappedVehicleVariant quoteEntity.vehicleVariant
       , price = "₹" <> (show quoteEntity.estimatedTotalFare)
       , activeIndex = 0
       , index = index
@@ -316,7 +316,7 @@ getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) q
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
         vehicleImage = getVehicleImage estimate.vehicleVariant
-      , vehicleVariant = estimate.vehicleVariant
+      , vehicleVariant = getMappedVehicleVariant estimate.vehicleVariant
       , price = case estimate.totalFareRange of 
                 Nothing -> "₹" <> (show estimate.estimatedTotalFare)
                 Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then "₹" <> (show estimate.estimatedTotalFare)
@@ -334,6 +334,12 @@ dummyFareRange = FareRange{
    minFare : 0
 }
 
+getMappedVehicleVariant :: String -> String 
+getMappedVehicleVariant variant = case (getMerchant FunctionCall) of 
+  YATRISATHI -> case variant of 
+      "TAXI" -> "TAXI"
+      _      -> "TAXI_PLUS" 
+  _ -> variant
 
 getTripDetailsState :: RideBookingRes -> TripDetailsScreenState -> TripDetailsScreenState
 getTripDetailsState (RideBookingRes ride) state = do 

@@ -247,7 +247,7 @@ mapOptionsView push state =
       , orientation VERTICAL
       , margin $ MarginVertical 5 5
       ][ supportButton push state
-       , locationTrackButton push state
+       , if state.data.isSpecialZone && state.props.currentStage == RideAccepted then dummyView push else locationTrackButton push state
       ]
     ]
 
@@ -1092,6 +1092,6 @@ configurations =
 getVehicleImage :: String -> String 
 getVehicleImage variant = case variant of 
   "TAXI" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
-  "TAXI_PLUS" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
+  "TAXI_PLUS" -> "ic_white_taxi,https://assets.juspay.in/beckn/merchantcommon/images/ic_white_taxi.png"
   "AUTO_RICKSHAW" -> "ic_auto_rickshaw,https://assets.juspay.in/beckn/merchantcommon/images/ic_auto_rickshaw.png"
   _ ->  "ic_white_taxi,https://assets.juspay.in/beckn/merchantcommon/images/ic_white_taxi.png"
