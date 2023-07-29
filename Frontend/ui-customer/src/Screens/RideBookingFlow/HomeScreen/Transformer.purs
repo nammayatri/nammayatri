@@ -47,6 +47,7 @@ import JBridge (fromMetersToKm)
 import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -140,7 +141,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : DC.config
-      , vehicleVariant : rideList.vehicleVariant
+      , vehicleVariant : getMappedVehicleVariant rideList.vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -297,7 +298,7 @@ getSpecialZoneQuote quote index =
       in ChooseVehicle.config { 
         vehicleImage = getVehicleImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
-      , vehicleVariant = quoteEntity.vehicleVariant
+      , vehicleVariant =  getMappedVehicleVariant quoteEntity.vehicleVariant
       , price = show quoteEntity.estimatedTotalFare
       , activeIndex = 0
       , index = index
@@ -313,10 +314,18 @@ getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) q
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
         vehicleImage = getVehicleImage estimate.vehicleVariant
-      , vehicleVariant = estimate.vehicleVariant
+      , vehicleVariant = getMappedVehicleVariant estimate.vehicleVariant
       , price = show estimate.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
       , capacity = getVehicleCapacity estimate.vehicleVariant
       }
+
+getMappedVehicleVariant :: String -> String 
+getMappedVehicleVariant variant = case (getMerchant FunctionCall) of 
+  YATRISATHI -> case variant of 
+      "TAXI" -> "TAXI"
+      _      -> "TAXI_PLUS" 
+  _ -> variant
+
