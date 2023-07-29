@@ -13,10 +13,9 @@ pipeline {
                         // branch, so as to provide Nix cache for people on
                         // macOS.
                         branch 'main'
-
                         // TODO: remove this
-                        // FIXME: Jenkins crashes when building for arm
-                        // changeRequest target: 'main'
+                        branch 'linux-arm'
+                        changeRequest target: 'main'
                     }
                 }
                 axes {
