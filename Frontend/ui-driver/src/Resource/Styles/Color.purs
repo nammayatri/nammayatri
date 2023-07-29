@@ -105,9 +105,6 @@ greyLight = "#ECECEC"
 orange :: Color
 orange = "#FF9F07"
 
-orange900 :: Color
-orange900 = "#FF8533"
-
 lightOrange :: Color
 lightOrange = "#16FFBD3E"
 
