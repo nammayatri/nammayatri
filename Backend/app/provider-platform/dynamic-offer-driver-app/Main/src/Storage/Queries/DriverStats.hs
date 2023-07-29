@@ -142,3 +142,14 @@ incrementTotalEarningsAndBonusEarnedAndLateNightTrip driverId increasedEarning i
         DriverStatsLateNightTrips =. (tbl ^. DriverStatsLateNightTrips) +. val tripCount
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+setMissedEarnings :: Id Driver -> Money -> SqlDB ()
+setMissedEarnings driverId missedEarnings = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsUpdatedAt =. val now,
+        DriverStatsEarningsMissed =. val missedEarnings
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
