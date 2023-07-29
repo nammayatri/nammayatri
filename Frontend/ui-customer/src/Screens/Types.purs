@@ -571,6 +571,7 @@ type HomeScreenStateData =
   , polygonCoordinates :: String
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
+  , specialZoneSelectedVariant :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponent
   , cancelRideConfirmationData :: CancelRideConfirmationData

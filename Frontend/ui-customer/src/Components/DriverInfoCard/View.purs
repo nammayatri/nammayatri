@@ -39,13 +39,14 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
+import Common.Styles.Colors as CommonColor
 import Storage (KeyStore(..))
 import Data.Maybe (Maybe(..))
 
@@ -53,10 +54,16 @@ view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( 
 view push state =
   linearLayout
   [ height WRAP_CONTENT
-  , width MATCH_PARENT
+  , width $ V (screenWidth unit)
   , background Color.transparent
   , orientation VERTICAL
-  ][  mapOptionsView push state
+  ][ linearLayout[
+       height WRAP_CONTENT
+      , width MATCH_PARENT 
+      , gravity RIGHT
+      , padding $ PaddingHorizontal 16 16
+      ][supportButton push state]  
+    , mapOptionsView push state
     , messageNotificationView push state
     , if state.props.currentSearchResultType == QUOTES then driverInfoViewSpecialZone push state else driverInfoView push state
     ]
@@ -115,14 +122,68 @@ titleAndETA push state =
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (state.props.estimatedTime == "--"))) then GONE else VISIBLE
-  ][ textView $ 
+  ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
+      else 
+      textView $ 
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , text $ if state.props.currentStage == RideAccepted then getString BOARD_THE_FIRST_TAXI else "ETA: " <> if state.props.currentSearchResultType == QUOTES then (state.props.estimatedTime) else (secondsToHms state.data.eta)
+      , text $ "ETA: " <> if state.props.currentSearchResultType == QUOTES then (state.props.estimatedTime) else (secondsToHms state.data.eta)
       , color Color.black800
       -- , fontSize FontSize.a_22
       ] <> FontStyle.h2 TypoGraphy
   ]
+
+specialZoneHeader :: forall w. String -> PrestoDOM ( Effect Unit) w
+specialZoneHeader vehicleVariant = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][  linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      ][  textView $
+          [ text $ getString BOARD_THE_FIRST <> " "
+          , color Color.black800
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
+          ] <> FontStyle.h2 TypoGraphy
+        , textView $
+          [ text $ (getTitleConfig vehicleVariant).text <> " "
+          , color $ (getTitleConfig vehicleVariant).color
+          , height WRAP_CONTENT
+          , visibility if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then GONE else VISIBLE
+          , width WRAP_CONTENT
+          ] <> FontStyle.h2 TypoGraphy
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL ]
+      [ textView $
+          [ text $ (getTitleConfig vehicleVariant).text <> " "
+          , color $ (getTitleConfig vehicleVariant).color
+          , height WRAP_CONTENT
+          , visibility if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then VISIBLE else GONE
+          , width WRAP_CONTENT
+          ] <> FontStyle.h2 TypoGraphy
+        , textView $
+          [ text $ getString TAXI_FROM_ZONE
+          , color Color.black800
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
+          ] <> FontStyle.h2 TypoGraphy]
+
+  ]
+
+getTitleConfig :: forall w. String -> {text :: String , color :: String} 
+getTitleConfig vehicleVariant = 
+  (case vehicleVariant of 
+        "TAXI_PLUS" -> { text : (getString AC) <> " " <> (getString TAXI), color : Color.blue800 }
+        "TAXI" -> {text : (getString NON_AC )<> " " <> (getString TAXI) , color : CommonColor.orange900 } 
+        _ -> {text : "" , color : ""}) 
+
 
 dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 dropPointView push state =
@@ -235,7 +296,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
-  ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state  else sosView push state
+  ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then textView[] else sosView push state
     , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
@@ -246,8 +307,8 @@ mapOptionsView push state =
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginVertical 5 5
-      ][ supportButton push state
-       , locationTrackButton push state
+      ][ if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state else textView[]
+        , if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else locationTrackButton push state
       ]
     ]
 
@@ -258,7 +319,6 @@ supportButton push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , gravity CENTER
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
@@ -431,25 +491,26 @@ navigateView push state =
   linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , background Color.blue900
-      , padding $ Padding 10 16 10 16
-      , margin $ MarginRight 16
+      , background Color.white900
+      , padding $ Padding 20 16 20 16
+      , margin $ MarginTop 16
       , cornerRadius 25.0
       , gravity CENTER
+      , stroke $ "1,"<>Color.grey900
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
       ][  imageView
           [ width $ V 20
           , height $ V 20
-          , imageWithFallback "ny_ic_navigation,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigation.png"
+          , imageWithFallback $ "ny_ic_walk_mode_blue," <>  (getAssetStoreLink FunctionCall) <> "ny_ic_walk_mode_blue.png"
           ]
         , textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , margin (MarginLeft 8)
-          , text $ getString NAVIGATE_TO_PICKUP
+          , text $ getString GO_TO_ZONE
           , gravity CENTER
-          , color Color.white900
+          , color Color.blue900
           ] <> FontStyle.body1 TypoGraphy
           )
       ]
@@ -733,9 +794,14 @@ driverDetailsView push state =
           , gravity LEFT
           ] <> FontStyle.body7 TypoGraphy
         , textView (
-          [ text state.data.vehicleDetails
+          [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of 
+                          "TAXI_PLUS" -> (getString AC_TAXI)
+                          "TAXI" -> (getString NON_AC_TAXI)
+                          _ -> "")
           , color Color.black700
-          , width MATCH_PARENT
+          , width $ V ((screenWidth unit) /2 - 20)
+          , maxLines 2
+          , singleLine false
           , height WRAP_CONTENT
           , margin $ Margin 0 4 0 13
           , gravity LEFT
@@ -983,12 +1049,14 @@ headerTextView push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  ][ textView $
-      [ text if state.props.currentStage == RideStarted then "ETA :" <> state.props.estimatedTime else  getString BOARD_THE_FIRST_TAXI
+  ][ if state.props.currentStage == RideStarted then 
+      textView $
+      [ text $ "ETA :" <> state.props.estimatedTime 
       , color Color.black800
       , padding $ PaddingBottom 16
       , ellipsize true
       ] <> FontStyle.body8 TypoGraphy
+      else specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
     ,  separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted)
     , if state.props.currentStage == RideStarted then  contactView push state else linearLayout[][]
   ]
@@ -1094,6 +1162,6 @@ getVehicleImage variant = do
   let url = getAssetStoreLink FunctionCall
   case variant of 
     "TAXI" -> "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
-    "TAXI_PLUS" -> "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
+    "TAXI_PLUS" -> "ic_white_taxi," <> url <> "ic_white_taxi.png"
     "AUTO_RICKSHAW" -> "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
     _ ->  "ic_white_taxi," <> url <> "ic_white_taxi.png"
