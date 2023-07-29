@@ -16,9 +16,14 @@
 module ConfigJBridge where
 
 import Effect (Effect)
+import Presto.Core.Flow (Flow)
+import Prelude (Unit)
+import Engineering.Helpers.Commons (liftFlow)
 
 foreign import getKeyInSharedPrefKeysConfig :: String -> String
-
 foreign import getValueToLocalNativeStoreConfig :: String -> String
 
-foreign import getKeyInSharedPrefKeysConfigEff :: String -> Effect String
+foreign import setKeyInSharedPrefKeysImpl :: String -> String -> Effect Unit
+
+setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit
+setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)

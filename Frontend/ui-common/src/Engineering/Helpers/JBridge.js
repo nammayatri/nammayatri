@@ -725,7 +725,7 @@ export const getSuggestionfromKey = function (key) {
   return function (language) {
     try {
       if (!window.suggestionsDefs) {
-        window.suggestionsDefs = JSON.parse(getKeyInSharedPrefKeys("SUGGESTIONS_DEFINITIONS"));
+        window.suggestionsDefs = JSON.parse(JBridge.getFromSharedPrefs("SUGGESTIONS_DEFINITIONS"));
       }
       let suggestionsDefs = window.suggestionDefs;
       let val = suggestionsDefs[key];

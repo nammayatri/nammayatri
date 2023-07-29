@@ -44,6 +44,8 @@ type Config =
     , leftsidebutton :: Boolean
     , lat :: Number
     , lng :: Number
+    , layoutBg :: String 
+    , layoutStroke :: String 
   }
 
 type TextConfig =
@@ -123,5 +125,7 @@ config =
     , leftsidebutton : false
     , lat : 0.0
     , lng : 0.0
+    , layoutBg : "" 
+    , layoutStroke : "0," <> Color.grey900
   }
 
