@@ -63,7 +63,8 @@ type Config = {
     fareEstimate :: String,
     tipSelected :: String,
     fareEstimateText :: String,
-    tipSelectedText :: String
+    tipSelectedText :: String,
+    backgroundColor  :: String
 }
 
 type ContactViewConfig = {
@@ -132,6 +133,7 @@ config = {
   , cornerRadius : (Corners 24.0 true true false false)
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
+  , backgroundColor : Color.black9000
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)

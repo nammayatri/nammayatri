@@ -363,6 +363,16 @@ getDriverInfoApi payload = do
     where
         unwrapResponse (x) = x
 
+--------------------------------- getAllRcDataBT ---------------------------------------------------------------------------------------------------------------------------------
+
+getAllRcDataBT :: GetAllRcDataReq -> FlowBT String GetAllRcDataResp
+getAllRcDataBT payload = do 
+    headers <- getHeaders' ""
+    withAPIResultBT ((EP.getAllRcData "")) (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where 
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
 dummyVehicleObject :: Vehicle
 dummyVehicleObject = Vehicle
    {
@@ -539,13 +549,48 @@ registerDriverRC payload = do
     where
         unwrapResponse (x) = x
 
-makeDriverRCReq :: String -> String -> Maybe String -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration = DriverRCReq
+makeRcActiveOrInactive payload = do
+     headers <- getHeaders ""
+     withAPIResult (EP.makeRcActiveOrInactive "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
+deleteRcBT :: DeleteRcReq -> FlowBT String  DeleteRcResp
+deleteRcBT payload = do
+        headers <- getHeaders' ""
+        withAPIResultBT (EP.deleteRc "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+    errorHandler (ErrorPayload errorPayload) = do
+        BackT $ pure GoBack
+
+deleteRcReq :: String -> DeleteRcReq
+deleteRcReq rcNo = DeleteRcReq 
+    {
+        "rcNo" : rcNo
+    }
+
+makeRcActiveOrInactiveReq :: Boolean -> String -> MakeRcActiveOrInactiveReq
+makeRcActiveOrInactiveReq isActivate rcNo =  MakeRcActiveOrInactiveReq 
+    {
+        "rcNo" : rcNo,
+        "isActivate" : isActivate
+    }
+
+callDriverToDriverBT :: String -> FlowBT String CallDriverToDriverResp
+callDriverToDriverBT rcNo = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.callDriverToDriver rcNo) (\x → x) errorHandler (lift $ lift $ callAPI headers (CallDriverToDriverReq rcNo))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc= DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
       "imageId" : imageId,
-      "dateOfRegistration" : dateOfRegistration
+      "dateOfRegistration" : dateOfRegistration,
+      "multipleRC" : multipleRc
     }
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp

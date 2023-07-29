@@ -52,9 +52,20 @@ initData = {
     driverEditAlternateMobile : Nothing,
     otpLimit : 5,
     otpBackAlternateNumber : Nothing,
-    gender : Nothing,
     languageList : languagesChoices,
-    vehicleAge : 0 ,
+    gender : Nothing,
+    rcNumber : "",
+    isRCActive : false,
+    rcDataArray : [],
+    inactiveRCArray : [],
+    activeRCData : { rcStatus  : true
+                  , rcDetails : { certificateNumber   : ""
+                                , vehicleColor : ""
+                                , vehicleModel : ""
+                                }
+                  },
+    openInactiveRCViewOrNotArray : [],
+    vehicleAge : 0,
     vehicleName : ""
     },
   props: {
@@ -76,10 +87,18 @@ initData = {
     numberExistError : false,
     mNumberEdtFocused : false,
     updateLanguages : false,
+    activateRcView : false,
+    activateOrDeactivateRcView : false,
+    activeRcIndex : 0,
+    deleteRcView : false,
+    alreadyActive : false,
+    callDriver : false,
+    openRcView : false,
     detailsUpdationType : Nothing,
     btnActive : false
    }
 }
+
 
 data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD
 derive instance genericMenuoptions :: Generic MenuOptions _
