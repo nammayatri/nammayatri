@@ -57,7 +57,7 @@ vehicleDetailsView push config =
               $ case config.vehicleVariant of
                   "AUTO_RICKSHAW" -> "Auto Rickshaw"
                   "TAXI" -> "Non AC Taxi"
-                  "TAXI_PLUS" -> "AC Taxi"
+                  "TAXI_PLUS" -> "Sedan AC"
                   "SEDAN" -> "Sedan"
                   "SUV" -> "SUV"
                   "HATCHBACK" -> "Hatchback"
