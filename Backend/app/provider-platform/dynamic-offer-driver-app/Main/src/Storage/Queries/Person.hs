@@ -411,7 +411,7 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
                        joinOnlyWhenJust mbRcNumberHash $
                          do
                            just (person ^. PersonTId) ==. mbRcAssoc ?. DriverRCAssociationDriverId
-                           &&. just (val True) <. mbRcAssoc ?. DriverRCAssociationIsRcActive
+                           &&. just (val True) ==. mbRcAssoc ?. DriverRCAssociationIsRcActive
                    )
           `leftJoin` table @VehicleRegistrationCertificateT
           `Esq.on` ( \(_ :& _ :& _ :& _ :& mbRcAssoc :& mbRegCert) ->
