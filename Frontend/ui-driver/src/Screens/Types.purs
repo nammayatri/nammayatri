@@ -715,7 +715,8 @@ type ActiveRide = {
   estimatedFare :: Int,
   isDriverArrived :: Boolean,
   notifiedCustomer :: Boolean,
-  specialLocationTag :: Maybe String
+  specialLocationTag :: Maybe String,
+  requestedVehicleVariant :: Maybe String
 }
 
 type HomeScreenProps =  {

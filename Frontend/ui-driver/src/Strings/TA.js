@@ -512,5 +512,6 @@ const tamilStrings = {
   UPSTREAM_INTERNAL_SERVER_ERROR : "அப்ஸ்ட்ரீம் மூல/அரசு மூல உள் சேவையகப் பிழை. செயல்முறையை மீண்டும் தொடங்கவும்.",
   TRANSACTION_ALREADY_COMPLETED : "பரிவர்த்தனை ஏற்கனவே முடிந்தது. இந்த பரிவர்த்தனையின் மீது மேற்கொண்டு செயல்பட முடியாது.",
   AADHAAR_ALREADY_LINKED : "ஆதார் ஏற்கனவே இணைக்கப்பட்டுள்ளது",
-  OPTIONAL : " (விருப்பமானது)"
+  OPTIONAL : " (விருப்பமானது)",
+  RIDE_TYPE : "சவாரி வகை"
 }

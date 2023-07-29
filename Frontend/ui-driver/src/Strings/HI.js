@@ -544,5 +544,6 @@ const hindiStrings = {
   TRANSACTION_ALREADY_COMPLETED : "लेन-देन पहले ही पूरा हो चुका है। इस लेन-देन पर आगे कार्रवाई नहीं की जा सकती।",
   GOTO_YOUR_NEAREST_BOOTH : "कृपया अपना आधार सत्यापित कराने के लिए अपने नजदीकी बूथ पर पहुंचें.",
   AADHAAR_ALREADY_LINKED : "आधार पहले से ही लिंक है",
-  OPTIONAL : " (वैकल्पिक)"
+  OPTIONAL : " (वैकल्पिक)",
+  RIDE_TYPE : "सवारी का प्रकार"
 }
