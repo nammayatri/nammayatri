@@ -42,11 +42,11 @@ import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSave
 import Services.Backend as Remote
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import Debug(spy)
 import JBridge (fromMetersToKm)
 import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -105,8 +105,8 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     , appConfig : DC.config
     }
 
-getDriverInfo :: RideBookingRes -> Boolean -> DriverInfoCard
-getDriverInfo (RideBookingRes resp) isSpecialZone =
+getDriverInfo :: String -> RideBookingRes -> Boolean -> DriverInfoCard
+getDriverInfo vehicleVariant (RideBookingRes resp) isSpecialZone =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
         otp : if isSpecialZone then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
@@ -140,7 +140,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : DC.config
-      , vehicleVariant : rideList.vehicleVariant
+      , vehicleVariant : getMappedVehicleVariant $ if rideList.vehicleVariant == "" then vehicleVariant else rideList.vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -288,7 +288,7 @@ getContact contact = {
 }
 
 getSpecialZoneQuotes :: Array OfferRes -> Array ChooseVehicle.Config
-getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) quotes
+getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) (getFilteredQuotes quotes)
 
 getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
 getSpecialZoneQuote quote index =
@@ -297,7 +297,7 @@ getSpecialZoneQuote quote index =
       in ChooseVehicle.config { 
         vehicleImage = getVehicleImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
-      , vehicleVariant = quoteEntity.vehicleVariant
+      , vehicleVariant =  getMappedVehicleVariant quoteEntity.vehicleVariant
       , price = show quoteEntity.estimatedTotalFare
       , activeIndex = 0
       , index = index
@@ -308,15 +308,63 @@ getSpecialZoneQuote quote index =
     Public body -> ChooseVehicle.config
 
 getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
-getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) quotes
+getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) (getFilteredEstimate quotes)
+
+
+getFilteredEstimate :: Array EstimateAPIEntity -> Array EstimateAPIEntity
+getFilteredEstimate quotes = do
+  case (getMerchant FunctionCall) of 
+    YATRISATHI -> do 
+      let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> (DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"])) quotes
+          nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> not (DA.any (_ ==item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"] )) quotes
+          taxiVariant = DA.sortBy (\(EstimateAPIEntity estimateEntity1) (EstimateAPIEntity estimateEntity2) -> compare (estimateEntity1.vehicleVariant) (estimateEntity2.vehicleVariant)) acTaxiVariants
+      ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
+    _ -> quotes
+
+getFilteredQuotes :: Array OfferRes -> Array OfferRes
+getFilteredQuotes quotes =  do 
+  case (getMerchant FunctionCall) of 
+    YATRISATHI -> do 
+      let acTaxiVariants = DA.filter(\item -> do 
+            case item of 
+              Quotes body -> do 
+                let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"]
+              _ -> false
+            ) quotes
+          nonAcTaxiVariants = DA.filter(\item -> do 
+            case item of 
+              Quotes body -> do 
+                let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                not (DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"])
+              _ -> false
+            ) quotes
+          sortedACTaxiVariants = DA.sortBy (\ quote1 quote2 -> 
+            case quote1 , quote2 of 
+              Quotes body , Quotes body2-> do
+                let (QuoteAPIEntity quoteEntity1) = body.onDemandCab
+                let (QuoteAPIEntity quoteEntity2) = body2.onDemandCab
+                compare (quoteEntity1.vehicleVariant) (quoteEntity2.vehicleVariant)
+              _ ,_ -> LT
+            ) acTaxiVariants
+      (DA.take 1 sortedACTaxiVariants) <> (nonAcTaxiVariants)
+    _ -> quotes
 
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
         vehicleImage = getVehicleImage estimate.vehicleVariant
-      , vehicleVariant = estimate.vehicleVariant
+      , vehicleVariant = getMappedVehicleVariant estimate.vehicleVariant
       , price = show estimate.estimatedTotalFare
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
       , capacity = getVehicleCapacity estimate.vehicleVariant
       }
+
+getMappedVehicleVariant :: String -> String 
+getMappedVehicleVariant variant = case (getMerchant FunctionCall) of 
+  YATRISATHI -> case variant of 
+      "TAXI" -> "TAXI"
+      _      -> "TAXI_PLUS" 
+  _ -> variant
+

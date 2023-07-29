@@ -251,7 +251,7 @@ currentRideFlow rideAssigned = do
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
             rideStatus = if status == "NEW" then RideAccepted else RideStarted
-            newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp) state.props.isSpecialZone
+            newState = state{data{driverInfoCardState = getDriverInfo (fromMaybe "TAXI" state.data.specialZoneSelectedVariant) (RideBookingRes resp) state.props.isSpecialZone
                 , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)},
                   props{currentStage = rideStatus
                   , rideRequestFlow = true

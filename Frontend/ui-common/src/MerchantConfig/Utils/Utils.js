@@ -41,7 +41,7 @@ function getStringFromCommon(key) {
     case "FR_FR":
       return frenchStrings.getStringValue(key);
     default:
-      return frenchStrings.getStringValue(key);
+      return englishStrings.getStringValue(key);
   }
 }
 

@@ -18,3 +18,9 @@ if (JBridge.getKeysInSharedPref) {
 }
 return JBridge.getKeyInNativeSharedPrefKeys(key);
 }
+
+export const setKeyInSharedPrefKeysImpl = function (key) {
+  return function (value) {
+    window.JBridge.setKeysInSharedPrefs(key, value);
+  };
+};

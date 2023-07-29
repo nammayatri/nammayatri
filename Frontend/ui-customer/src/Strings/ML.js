@@ -379,7 +379,11 @@ const malayalamStrings = {
   "CONFIRM_AND_BOOK" : "സ്ഥിരീകരിച്ച് ബുക്ക് ചെയ്യുക",
   "REQUEST_CALLBACK" : "തിരികെ വിളിക്കാൻ അഭ്യർത്ഥിക്കുക",
   "PAY_VIA_CASH_OR_UPI": "പണം / യുപിഐ വഴി പണമടയ്ക്കുക",
-  "BOARD_THE_FIRST_TAXI" : "",
+  "BOARD_THE_FIRST": "യാത്രി സതി സോണിൽ നിന്നുള്ള ആദ്യ",
+  "TAXI" : "ടാക്സിയിൽ" ,
+  "AC" : "എസി",
+  "NON_AC" : "നോൺ-എസി",
+  "TAXI_FROM_ZONE" : "കയറുക",
   "COMFY" : "സുഖപ്രദമായ",
   "NAVIGATE" : "നാവിഗേറ്റ് ചെയ്യുക",
   "GOVERNMENT_CHAGRES" : "റൈഡ് ജിഎസ്ടി (5%)",
@@ -437,7 +441,6 @@ const malayalamStrings = {
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "നിങ്ങളുടെ നമ്പർ ഡ്രൈവർക്ക് ദൃശ്യമാകും. രജിസ്റ്റർ ചെയ്ത നമ്പറിൽ നിന്ന് വിളിക്കുന്നില്ലെങ്കിൽ ഉപയോഗിക്കുക",
   "CALL_DRIVER_USING" : "ഇതുപയോഗിച്ച് ഡ്രൈവറെ വിളിക്കുക",
   "WAS_YOUR_CALL_SUCCESSFUL" : "നിങ്ങളുടെ കോൾ വിജയിച്ചോ",
-  "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "അഭ്യർത്ഥന ലഭിച്ചു. ഞങ്ങൾ നിങ്ങളെ ഉടൻ ബന്ധപ്പെടും",
   "CONTACT_REMOVED_SUCCESSFULLY" : "കോൺടാക്‌റ്റ് നീക്കം ചെയ്‌തു",
   "CORPORATE_ADDRESS" : "പരാതികളും ആവലാതികളും",
@@ -489,7 +492,7 @@ const malayalamStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ড্ഡ്രൈവർ നിങ്ങളുടെ പ്രത്യേക അഭ്യർത്ഥനയ്ക്ക് മുൻഗണന നൽകി, ഇതിനകം ",
   "AND_HAS_TRAVELLED": " യാത്ര ചെയ്തിട്ടുണ്ട്.",
   "PLEASE_FIND_REVISED_FARE_ESTIMATE": "പുതുക്കിയ കണക്കാക്കിയ നിരക്ക് ദയവായി കണ്ടെത്തുക. രാത്രി നിരക്കുകൾ പകലിന്റെ 1.5 ഇരട്ടിയാണ്.",
-  "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക" ,
+  "GO_TO_ZONE" : "യാത്രി സതി സോണിലേക്ക് പോകുക" ,
   "FARE_ESTIMATE" : "നിരക്ക് എസ്റ്റിമേറ്റ്" ,
   "TIP_SELECTED" : "നുറുങ്ങ് തിരഞ്ഞെടുത്തു",
   "ADD_A_TIP_TO_FIND_A_RIDE_QUICKER" : "വേഗത്തിലുള്ള സവാരി കണ്ടെത്താൻ ഒരു നുറുങ്ങ് ചേർക്കുക!",
@@ -516,5 +519,7 @@ const malayalamStrings = {
   "OTP_EXPIRED" : "OTP കാലഹരണപ്പെട്ടു",
   "OTP_EXPIRED_DESCRIPTION" : "നിങ്ങളുടെ റൈഡ് OTP കാലഹരണപ്പെട്ടു. ഒരു സവാരി ലഭിക്കാൻ ദയവായി വീണ്ടും ബുക്ക് ചെയ്യുക",
   "PLATFORM_GST" : "നികുതികൾ (ജിഎസ്ടി)",
-  "MISC_WAITING_CHARGE" : "മറ്റ്. (വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ)"
+  "MISC_WAITING_CHARGE" : "മറ്റ്. (വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ)",
+  "AC_TAXI" : "AC ടാക്സി",
+  "NON_AC_TAXI": "എസി ടാക്സി ഇല്ല"
 }

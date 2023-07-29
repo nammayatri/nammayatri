@@ -74,6 +74,7 @@ data KeyStore
   | TIP_VIEW_DATA
   | FARE_ESTIMATE_DATA
   | LAST_LOGIN
+  | SELECTED_VARIANT
 
 derive instance genericKeyStore :: Generic KeyStore _
 

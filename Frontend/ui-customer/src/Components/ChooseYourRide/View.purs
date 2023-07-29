@@ -99,7 +99,7 @@ quoteListView push config =
 
 getQuoteListViewHeight :: Config -> Length
 getQuoteListViewHeight config = 
-    if length config.quoteList >= 4 then V 300 else V 160
+    if length config.quoteList >= 4 then V 300 else if length config.quoteList == 1 then V 90 else V 164
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config

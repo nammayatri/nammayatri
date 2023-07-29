@@ -1,29 +1,17 @@
 export const getKeyInSharedPrefKeysConfig = function (key) {
-  if (JBridge.getKeysInSharedPref) {
-    return JBridge.getKeysInSharedPref(key);
-  }
-  if (window.__OS == "IOS") {
-    return JBridge.getKeysInSharedPrefs(key);
-  }
-  return JBridge.getKeyInNativeSharedPrefKeys(key);
+  return JBridge.getKeysInSharedPref(key);
 };
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-  if (JBridge.getKeysInSharedPref) {
-    return JBridge.getKeysInSharedPref(key);
-  }
-  if (window.__OS == "IOS") {
-    return JBridge.getKeysInSharedPrefs(key);
-  }
-  return JBridge.getKeyInNativeSharedPrefKeys(key);
+  return JBridge.getKeysInSharedPref(key);
 };
 
 export const getValueToLocalNativeStoreConfig = function (key) {
-  if (JBridge.getKeysInSharedPref) {
-    return JBridge.getKeysInSharedPref(key);
-  }
-  if (window.__OS == "IOS") {
-    return JBridge.getKeysInSharedPrefs(key);
-  }
-  return JBridge.getKeyInNativeSharedPrefKeys(key);
+  return JBridge.getFromSharedPrefs(key);
 }
+
+export const setKeyInSharedPrefKeysImpl = function (key) {
+  return function (value) {
+    window.JBridge.setInSharedPrefs(key, value);
+  };
+};
