@@ -727,9 +727,14 @@ driverDetailsView push state =
           , gravity LEFT
           ] <> FontStyle.body7 TypoGraphy
         , textView (
-          [ text state.data.vehicleDetails
+          [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of 
+                          "TAXI_PLUS" -> "(AC)" 
+                          "TAXI" -> "(Non-AC)"
+                          _ -> "")
           , color Color.black700
-          , width MATCH_PARENT
+          , width $ V ((screenWidth unit) /2 - 20)
+          , maxLines 2
+          , singleLine false
           , height WRAP_CONTENT
           , margin $ Margin 0 4 0 13
           , gravity LEFT
