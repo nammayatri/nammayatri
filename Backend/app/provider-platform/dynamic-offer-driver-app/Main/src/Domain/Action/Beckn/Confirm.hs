@@ -404,8 +404,8 @@ validateRequest subscriber transporterId req now = do
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   case booking.bookingType of
     DRB.NormalBooking -> do
-      driverId <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-      driverQuote <- QDQ.findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id booking.quoteId) (Id driverId) req.vehicleVariant now >>= fromMaybeM (QuoteNotFound booking.quoteId)
+      _ <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+      driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
       unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
         cancelBooking booking (Just driver) transporter
