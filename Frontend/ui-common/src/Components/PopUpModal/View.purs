@@ -42,7 +42,7 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
-    , background Color.black9000
+    , background state.backgroundColor
     , afterRender
         ( \action -> do
             _ <- push action

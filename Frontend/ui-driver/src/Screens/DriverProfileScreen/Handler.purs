@@ -75,4 +75,8 @@ driverProfileScreen = do
     ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
     RemoveAlternateNumber state -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE1 state)
     UpdateGender state -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER1 state)
+    ActivatingOrDeactivatingRC state -> App.BackT $ App.NoBack <$> pure (GO_TO_ACTIVATE_OR_DEACTIVATE_RC state)
+    DeletingRc state -> App.BackT $ App.NoBack <$> pure (GO_TO_DELETE_RC state)
+    CallingDriver state -> App.BackT $ App.NoBack <$> pure (GO_TO_CALL_DRIVER state)
+    AddingRC state -> App.BackT $ App.BackPoint <$> pure (ADD_RC state)
     GoBack -> App.BackT $ pure App.GoBack

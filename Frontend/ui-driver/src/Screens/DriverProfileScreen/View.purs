@@ -45,7 +45,7 @@ import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
 import Screens.Types as ST
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
-import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
+import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -69,7 +69,7 @@ import Components.PopUpModal as PopUpModal
 import Storage (isLocalStageOn)
 import Debug (spy)
 import Control.Applicative (unless)
-import Data.List
+import Data.List (elem)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -81,14 +81,16 @@ screen initialState =
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
         let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
         lift $ lift $ doAff do liftEffect $ push $ GetDriverInfoResponse (GetDriverInfoResp getDriverInfoResp)
+        getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
+        let (GetAllRcDataResp getAllRcsDataResp) = getAllRcsDataResp
+        lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse (GetAllRcDataResp getAllRcsDataResp)
         pure unit
       pure $ pure unit
     )]
-  , eval:
-      \state action -> do
-        let _ = spy "DriverProfileScreen action " state
-        let _ = spy "DriverProfileScreen state " action
-        eval state action
+  , eval : \state  action -> do
+      let _ = spy  "DriverProfileScreen action " action
+      let _ = spy  "DriverProfileScreen state "  state
+      eval state action
   }
 
 view  :: forall w. (Action -> Effect Unit)  -> ST.DriverProfileScreenState  -> PrestoDOM (Effect Unit) w
@@ -96,6 +98,7 @@ view push state =
   frameLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
+    , padding $ PaddingBottom $ if state.props.callDriver then 0 else 24
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -103,7 +106,6 @@ view push state =
         , onBackPressed push (const BackPressed state)
         , background Color.white900
         , visibility if state.props.updateLanguages ||  state.props.updateDetails then GONE else VISIBLE
-        , padding $ PaddingBottom 24
         ][  settingsView state push
           , profileView push state]
       , linearLayout
@@ -118,7 +120,8 @@ view push state =
         , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
         , if state.props.updateLanguages then updateLanguageView state push else dummyTextView
         , if  any (_ == state.props.detailsUpdationType) [Just ST.VEHICLE_AGE , Just ST.VEHICLE_NAME] then updateDetailsView state push else dummyTextView
-        ]
+        , if state.props.activateRcView then rcEditPopUpView push state else dummyTextView
+        , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView]
 
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
@@ -176,7 +179,9 @@ profileView push state =
                 , infoView state push 
                 ] 
             , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state  -- TODO: Once APIs are deployed this code can be uncommented
-            , additionalDetails push state
+            , if state.props.screenType == ST.DRIVER_DETAILS then additionalDetails push state else dummyTextView
+            , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
+            , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
             ]
         ]
     ]
@@ -223,6 +228,26 @@ headerView state push =
           ] <> FontStyle.body1 TypoGraphy)
       ]
   ]
+
+vehicleRcDetails :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
+vehicleRcDetails push state = 
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ Margin 0 0 12 0
+  , orientation VERTICAL
+  ][
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]( map (\rcData -> additionalRcsView state push rcData) $ getRcNumDetails state.data.inactiveRCArray
+    )
+  ]
+
+getRcNumDetails :: Array ST.RcData -> Array {key :: String, idx :: Int, value :: String, action :: Action, model :: String, color :: String}
+getRcNumDetails config = do 
+  mapWithIndex (\index item -> {key : "RC", idx : index+1,  value : item.rcDetails.certificateNumber, action : NoAction, model : item.rcDetails.vehicleModel, color : item.rcDetails.vehicleColor}) config
 
 --------------------------------------------------- TAB VIEW -----------------------------------------------------
 tabView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -445,6 +470,137 @@ driverAnalyticsView state push =
            ]
   ]
 
+
+addRcView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+addRcView state push =
+  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , alignParentBottom "true,-1"
+      ][ PrimaryButton.view (push <<< PrimaryButtonActionController2) (addRCButtonConfig state)]
+
+additionalRcsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { key :: String , idx :: Int, value ::  String , action :: Action, model :: String, color :: String} -> PrestoDOM (Effect Unit) w
+additionalRcsView state push config = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ Padding 15 7 15 7
+  , background Color.blue600
+  , margin $ Margin 16 15 5 0
+  , orientation VERTICAL
+  , cornerRadius 10.0
+  , onClick push (const (OpenRcView config.idx))
+  ][linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ][ (addAnimation state) $ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , gravity CENTER_VERTICAL
+            , padding $ PaddingVertical 16 16
+            ]([  textView
+                [ text config.key
+                , textSize FontSize.a_12 
+                , color Color.black700
+                , fontStyle $ FontStyle.regular LanguageStyle
+                ]
+              , linearLayout
+                [ height WRAP_CONTENT
+                , weight 1.0
+                ][]
+              , textView
+                [ text config.value
+                , textSize FontSize.a_14
+                , onClick push $ const config.action
+                , color Color.black900 
+                , fontStyle $ FontStyle.semiBold LanguageStyle
+                ]
+            ] <>  [imageView
+                [ height $ V 11
+                , width $ V 11
+                , margin $ MarginLeft 7
+                , imageWithFallback if elem config.idx state.data.openInactiveRCViewOrNotArray then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png"
+                ]] )
+            ],
+            linearLayout[
+              height $ V 1,
+              width MATCH_PARENT,
+              background Color.white900,
+              visibility if elem config.idx state.data.openInactiveRCViewOrNotArray then VISIBLE else GONE
+            ][]
+            ,linearLayout[
+              height WRAP_CONTENT
+            , width MATCH_PARENT
+            , visibility if elem config.idx state.data.openInactiveRCViewOrNotArray then VISIBLE else GONE
+            ][
+                detailsViewForInactiveRcs state push { backgroundColor : Color.blue600 
+                        , lineColor : Color.white900 
+                        , arrayList :  getRcDetailsForInactiveRcs config                 
+                      } 
+            ]
+        ]
+
+getRcDetailsForInactiveRcs config  = 
+  [ { key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
+  , { key : (getString MODEL_NAME) , value : Just config.model, action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : Just config.color, action :NoAction , isEditable : false } 
+  , { key : "" , value : Just (getString EDIT_RC), action : UpdateRC config.value false , isEditable : false } ]
+
+
+
+detailsViewForInactiveRcs :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {backgroundColor :: String , lineColor :: String , arrayList :: Array { key :: String , value :: Maybe String , action :: Action , isEditable :: Boolean }} -> PrestoDOM (Effect Unit) w
+detailsViewForInactiveRcs state push config = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , background config.backgroundColor
+  , orientation VERTICAL
+  , cornerRadius 10.0
+  ](mapWithIndex(\ index item ->  
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ][ (addAnimation state) $ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , gravity CENTER_VERTICAL
+            , padding $ PaddingVertical 16 16
+            ]([  textView
+                [ text item.key
+                , textSize FontSize.a_12 
+                , color Color.black700
+                , fontStyle $ FontStyle.regular LanguageStyle
+                ]
+              , linearLayout
+                [ height WRAP_CONTENT
+                , weight 1.0
+                ][]
+              , textView
+                [ text $ fromMaybe "Add" item.value
+                , textSize FontSize.a_14
+                , onClick push $ const item.action
+                , color if (isJust item.value) then (if item.value == Just (getString EDIT_RC) then Color.blue900 else Color.black900) else Color.blue900
+                , fontStyle $ FontStyle.semiBold LanguageStyle
+                ]
+            ] <> if item.isEditable && (isJust item.value) then [imageView
+                [ height $ V 11
+                , width $ V 11
+                , margin $ MarginLeft 7
+                , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+                ]]  else [])
+          , linearLayout
+            [ height $ V 1
+            , width MATCH_PARENT
+            , background config.lineColor
+            , visibility if index == length (config.arrayList) - 1 then GONE else VISIBLE
+            ][]
+            ]
+        ) (config.arrayList))
+
 ------------------------------ BADGE LAYOUT ---------------------------------------------
 
 badgeLayoutView :: forall w. ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
@@ -549,7 +705,8 @@ vehicleDetailsView push state =
   , width MATCH_PARENT
   , orientation VERTICAL 
   , margin $ MarginHorizontal 16 16
-  ][  vehicleAnalyticsView push state ]
+  ][  vehicleAnalyticsView push state
+   ]
 
 
 --------------------------------------- VEHICLE ANALYTICS VIEW ------------------------------------------------------------
@@ -559,7 +716,7 @@ vehicleAnalyticsView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL 
-  , margin $ Margin 0 40 0 0
+  , margin $ Margin 0 24 0 0
   ][  textView  
       [ text (getString SUMMARY)
       , margin $ Margin 0 0 16 12
@@ -875,13 +1032,22 @@ infoView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginHorizontal 16 16
-  ][ detailsListViewComponent state push { backgroundColor : Color.white900 
+  ][ detailsListViewComponent state push { 
+                              backgroundColor : Color.white900 
                             , separatorColor : Color.grey700 
-                            , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then 
-                                                (driverDetailsArray state) 
-                                              else (vehicleDetailsArray state)
+                            , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then (driverDetailsArray state) 
+                                           else (getRcDetails state.data.activeRCData)
                             }
     ]
+getRcDetails :: ST.RcData -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
+getRcDetails config = do 
+  [{ key : "RC Status" , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
+  , { key : "Reg. Number" , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }
+  , { key : "Type" , value : Just "Auto Rickshaw" , action : NoAction , isEditable : false }
+  , { key : "Model Name" , value : Just config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
+  , { key : "Colour" , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } 
+  , { key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false } ]
+
 
 ----------------------------------------------- INFO TILE VIEW COMPONENT -------------------------------------------------------
 infoTileView :: forall w. ST.DriverProfileScreenState -> {primaryText :: String, subText :: String, postImgVisibility :: Boolean, seperatorView :: Boolean, margin :: Margin } -> PrestoDOM (Effect Unit) w
@@ -930,6 +1096,7 @@ infoTileView state config =
         , height WRAP_CONTENT
         , text config.subText
         , margin (MarginLeft 7)
+        , textSize FontSize.a_14
         , color Color.black700
         ] <> FontStyle.body3 TypoGraphy)
     ]
@@ -1021,7 +1188,13 @@ detailsListViewComponent state push config =
                 [ text $ fromMaybe (getString ADD) item.value
                 , textSize FontSize.a_14
                 , onClick push $ const item.action
-                , color if item.value == Nothing then Color.blue900 else Color.black900
+                , color case item.value of 
+                          Nothing -> Color.blue900 
+                          Just val -> do 
+                                      let isRcActive = val == (getString ACTIVE_RC)
+                                      let isRcInActive = val == (getString INACTIVE_RC)
+                                      let isRCEdit = val == (getString EDIT_RC)
+                                      if isRcActive then Color.green900 else if isRcInActive then Color.red else if isRCEdit then Color.blue900 else Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
             ] <> if item.isEditable && (isJust item.value) then [imageView
@@ -1047,7 +1220,6 @@ infoCard state push config =
     height WRAP_CONTENT
   , width MATCH_PARENT
   , padding $ Padding 16 16 16 16 
-  , margin $ MarginBottom 12
   , cornerRadius 10.0
   , background Color.blue600
   ][
@@ -1171,8 +1343,8 @@ vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , 
   , { key : (getString NAME) , value : Nothing , action : UpdateValue ST.VEHICLE_NAME , isEditable : true }]
 
 driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : Nothing , action : UpdateValue ST.LANGUAGE , isEditable : true }
-  , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }]
+driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : Nothing , action : UpdateValue ST.LANGUAGE , isEditable : true }]
+  --, { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }]
 
 
 --------------------------------------------------------------- SEPARATOR --------------------------------------------------------
@@ -1194,3 +1366,280 @@ dummyTextView =
  [ width WRAP_CONTENT
  , height WRAP_CONTENT
  ]
+rcEditPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+rcEditPopUpView push state =
+  relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.black9000
+    , alignParentBottom "true,-1"
+    , disableClickFeedback true
+    ]
+    ([ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , orientation VERTICAL
+        , cornerRadii $ Corners 24.0 true true false false
+        , padding (Padding 20 32 20 0)
+        , alignParentBottom "true,-1"
+        , disableClickFeedback true
+        , gravity CENTER
+        ]
+        [ textView
+            $
+              [ text $ (getString EDIT_RC)<>" - " <> state.data.rcNumber
+              , fontStyle $ FontStyle.bold LanguageStyle
+              , height WRAP_CONTENT
+              , color Color.black800
+              , textSize FontSize.a_18
+              , margin (MarginBottom 4)
+              ]
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            ( map
+                ( \item ->
+                    linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      ]
+                      [ trackingCardRcEditView push state item
+                      , if(item.type /= ST.DELETING_RC) then linearLayout
+                          [ height $ V 1
+                          , width MATCH_PARENT
+                          , background Color.grey900
+                          ]
+                          []
+                        else linearLayout[][]
+                      ]
+                )
+                (rcEditPopUpData state)
+            )
+
+        ]
+    ]<> if state.props.activateOrDeactivateRcView then [activateAndDeactivateRcConfirmationPopUpView push state] else []
+     <> if state.props.deleteRcView then [deleteRcPopUpView push state] else [])
+
+rcEditPopUpData :: ST.DriverProfileScreenState -> Array { text :: String, imageWithFallback :: String, type :: ST.EditRc }
+rcEditPopUpData state =
+  [ { text: if state.data.isRCActive then (getString DEACTIVATE_RC) else (getString ACTIVATE_RC)
+    , imageWithFallback: if state.data.isRCActive then "ny_ic_deactivate,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_deactivate.png" else "ny_ic_activate,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_activate.png"
+    , type: if state.data.isRCActive then ST.ACTIVATING_RC else ST.DEACTIVATING_RC
+    }
+  , { text: (getString DELETE_RC)
+    , imageWithFallback: "ny_ic_bin,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_bin.png"
+    , type: ST.DELETING_RC
+    }
+  ]
+
+trackingCardRcEditView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> { text :: String, imageWithFallback :: String, type :: ST.EditRc} -> PrestoDOM (Effect Unit) w
+trackingCardRcEditView push state item =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , padding (Padding 0 18 0 18)
+    , gravity CENTER_VERTICAL
+    , alpha if (item.type == ST.DELETING_RC && length state.data.rcDataArray == 1) then 0.4 else 1.0
+    , onClick push (const (DeactivateRc item.type))
+    ]
+    [ imageView
+        [ imageWithFallback item.imageWithFallback
+        , height $ V 25
+        , width $ V 25
+        , margin (MarginRight 20)
+        ],
+      textView
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , textSize FontSize.a_18
+        , text item.text 
+        , color $ if item.type == ST.DELETING_RC then Color.red else Color.black800
+        ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity RIGHT
+      ][ imageView
+         [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_right.png"
+         , height $ V 30
+         , width $ V 32
+         , gravity RIGHT
+         , padding (Padding 3 3 3 3)
+         ]
+      ]
+    ]
+
+activateAndDeactivateRcConfirmationPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+activateAndDeactivateRcConfirmationPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< ActivateOrDeactivateRcPopUpModalAction) (activateAndDeactivateRcPopUpConfig push state) ]
+
+
+callDriverPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+callDriverPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding (Padding 24 20 24 20)
+    , background Color.black9000
+    ]
+    [ PopUpModal.view (push <<< CallDriverPopUpModalAction) (callDriverPopUpConfig push state) ]
+
+
+deleteRcPopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+deleteRcPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< DeleteRcPopUpModalAction) (deleteRcPopUpConfig state) ]
+
+
+rcActiveOnAnotherDriverProfilePopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+rcActiveOnAnotherDriverProfilePopUpView push state =
+  relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.black9000
+    , alignParentBottom "true,-1"
+    , disableClickFeedback true
+    ]
+    ([ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , orientation VERTICAL
+        , cornerRadii $ Corners 24.0 true true false false
+        , padding (Padding 20 32 20 25)
+        , alignParentBottom "true,-1"
+        , disableClickFeedback true
+        , gravity CENTER
+        ]
+        [ textView
+            $
+              [ text $ "RC - " <> state.data.rcNumber <> (getString ACTIVE_RC_ON_ANOTHER_DRIVER)
+              , fontStyle $ FontStyle.bold LanguageStyle
+              , height WRAP_CONTENT
+              , color Color.black9000
+              , textSize FontSize.a_18
+              , padding $ Padding 10 0 10 0
+              , margin $ Margin 4 0 4 4
+              , gravity CENTER
+              ]
+        , linearLayout
+        [
+          height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , orientation VERTICAL
+        , cornerRadii $ Corners 24.0 true true false false
+        , alignParentBottom "true,-1"
+        , disableClickFeedback true
+        , gravity CENTER
+        ][
+          textView
+            $
+              [ text $ (getString CALL_DRIVER_OR_CONTACT_SUPPORT)
+              , height WRAP_CONTENT
+              , color Color.black700
+              , textSize FontSize.a_14
+              , padding $ PaddingHorizontal 8 8 
+              , margin $ Margin 4 0 4 4
+              , gravity CENTER
+              ]
+        ]
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            ( map
+                ( \item ->
+                    linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      ]
+                      [ trackingCardRcActiveOnAnotherDriverProfileView push state item
+                      ,  linearLayout
+                          [ height $ V 1
+                          , width MATCH_PARENT
+                          , background Color.grey900
+                          ][]
+                      ]
+                )
+                (activeRcOnAnotherDriverProfilePopUpData state)
+            )
+            , linearLayout 
+            [
+              height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , gravity CENTER
+            , margin $ MarginTop 24
+            , onClick push $ const SkipActiveRc
+            ][
+              textView
+              $
+              [ text $ (getString CANCEL) 
+              , height WRAP_CONTENT
+              , color Color.black700
+              , textSize FontSize.a_16
+              , margin $ Margin 4 0 4 4
+              , gravity CENTER
+              ]
+            ]
+
+        ]
+    ]<> if state.props.callDriver then [callDriverPopUpView push state] else [])
+
+activeRcOnAnotherDriverProfilePopUpData :: ST.DriverProfileScreenState -> Array { text :: String, type :: ST.CallOptions}
+activeRcOnAnotherDriverProfilePopUpData state =
+  [
+    { text: (getString CALL_DRIVER)
+    , type: ST.CALLING_DRIVER
+    }
+  , { text: (getString CALL_CUSTOMER_SUPPORT)
+    , type: ST.CALLING_CUSTOMER_SUPPORT
+    }
+  ]
+
+trackingCardRcActiveOnAnotherDriverProfileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> { text :: String, type :: ST.CallOptions} -> PrestoDOM (Effect Unit) w
+trackingCardRcActiveOnAnotherDriverProfileView push state item =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , padding (Padding 3 16 3 16)
+    , gravity CENTER_VERTICAL
+    , onClick push (const $ if item.type == ST.CALLING_DRIVER then CallDriver else CallCustomerSupport)
+    ]
+    [
+        textView
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , textSize FontSize.a_16
+        , text item.text
+        , color $ Color.black900 
+        ]
+        ,linearLayout[
+          width MATCH_PARENT,
+          gravity RIGHT
+        ][
+          imageView
+          [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_right.png"
+          , height $ V 30
+          , width $ V 32
+          , gravity RIGHT
+          , padding (Padding 3 3 3 3)
+          ]
+        ]
+    ]
