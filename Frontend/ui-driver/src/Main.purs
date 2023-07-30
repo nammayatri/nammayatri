@@ -108,4 +108,4 @@ updateEventData event =
 type Event = {
     type :: String
   , data :: String
-}
+} 
