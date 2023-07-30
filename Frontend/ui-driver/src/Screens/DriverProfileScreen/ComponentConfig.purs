@@ -36,9 +36,11 @@ import Common.Types.App (LazyCheck(..))
 import Data.Maybe(fromMaybe, Maybe(..), isJust)
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Prelude ((<>), (||),(&&),(==),(<), not)
+import Prelude ((<>), (||),(&&),(==),(<), not, (>))
 import Engineering.Helpers.Commons as EHC
 import Data.String as DS
+import Data.String (length)
+import Data.Array as DA
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import PrestoDOM.Types.DomAttributes  (Corners(..))
@@ -140,8 +142,8 @@ primaryButtonConfig state = let
       , cornerRadius = 10.0
       , background = Color.black900
       , height = (V 48)
-      , isClickable = (state.props.showGenderView && isJust state.data.genderTypeSelect) || (length ( getSelectedLanguages state) > 0) || (state.props.alternateNumberView && (DS.length (fromMaybe "" state.data.driverEditAlternateMobile))==10 && state.props.checkAlternateNumber)
-      , alpha = if (state.props.showGenderView && isJust state.data.genderTypeSelect) || (length ( getSelectedLanguages state)  > 0) || (state.props.alternateNumberView && DS.length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber) then 1.0 else 0.7
+      , isClickable =  (DA.length (getSelectedLanguages state) > 0)|| (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && (DS.length (fromMaybe "" state.data.driverEditAlternateMobile))==10 && state.props.checkAlternateNumber)
+      , alpha = if (DA.length (getSelectedLanguages state) > 0) || (state.props.showGenderView && isJust state.data.genderTypeSelect) || (state.props.alternateNumberView && DS.length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber) then 1.0 else 0.7
       }
   in primaryButtonConfig'
 

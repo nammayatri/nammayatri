@@ -650,3 +650,17 @@ export const getPastWeeks = function (count) {
     console.log("error in getPastWeeks", e);
   }
 };
+
+export const getPeriod = function(date) {
+  var currentDate = new Date();
+  var pastDate = new Date(date);
+  var diff = Math.floor(currentDate.getTime() - pastDate.getTime());
+  var days = Math.floor(diff/(1000 * 60 * 60 * 24));
+  var months = Math.floor(days/31);
+  var years = Math.floor(months/12);
+  var period = years > 0 ? years : months > 0 ? months : days > 0 ? days : 0
+  var periodType = years > 0 ? "Yrs" : months > 0 ? "Months" : days > 0 ? "Days" : "new"
+  return {period : Math.abs(period)
+  , periodType : periodType}
+
+}

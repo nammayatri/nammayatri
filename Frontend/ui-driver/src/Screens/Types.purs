@@ -257,6 +257,7 @@ type DriverProfileScreenData = {
   driverEditAlternateMobile :: Maybe String,
   otpLimit :: Int,
   otpBackAlternateNumber :: Maybe String,
+  languagesSpoken :: Array String,
   gender :: Maybe String,
   driverGender :: Maybe String,
   languageList :: Array CheckBoxOptions,
@@ -268,7 +269,8 @@ type DriverProfileScreenData = {
   rcNumber :: String,
   isRCActive :: Boolean,
   openInactiveRCViewOrNotArray :: Array Int,
-  logField :: Object Foreign
+  logField :: Object Foreign, 
+  analyticsData :: AnalyticsData
 }
 
 type RcData = {
@@ -281,6 +283,31 @@ type RcDetails = {
     vehicleModel      :: String,
     vehicleColor      :: String
     }
+
+type AnalyticsData = {
+    totalEarnings :: String
+  , bonusEarned :: String
+  , totalCompletedTrips :: Int
+  , totalUsersRated :: Int
+  , rating :: Maybe Number
+  , chipRailData :: Array ChipRailData
+  , badges :: Array Badge
+  , missedEarnings :: Int
+  , ridesCancelled :: Int
+  , cancellationRate :: Int
+  , totalRidesAssigned :: Int
+}
+
+type ChipRailData = {
+    mainTxt :: String
+  , subTxt :: String
+}
+
+type Badge =  {
+    badgeImage :: String
+  , primaryText :: String
+  , subText :: String
+  }
 
 type VehicleP = {
   vehicleName :: String,
