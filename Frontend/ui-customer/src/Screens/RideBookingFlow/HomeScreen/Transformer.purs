@@ -289,7 +289,7 @@ getContact contact = {
 }
 
 getSpecialZoneQuotes :: Array OfferRes -> Array ChooseVehicle.Config
-getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) quotes
+getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) (getFilteredQuotes quotes)
 
 getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
 getSpecialZoneQuote quote index =
@@ -309,7 +309,49 @@ getSpecialZoneQuote quote index =
     Public body -> ChooseVehicle.config
 
 getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
-getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) quotes
+getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) (getFilteredEstimate quotes)
+
+
+getFilteredEstimate :: Array EstimateAPIEntity -> Array EstimateAPIEntity
+getFilteredEstimate quotes = do
+  case (getMerchant FunctionCall) of 
+    YATRISATHI -> do 
+      let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> ((DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"])) ) quotes
+          nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> not (DA.any (_ ==item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"] )) quotes
+          taxiVariant = DA.sortBy (\(EstimateAPIEntity a) (EstimateAPIEntity b) -> compare (a.vehicleVariant) (b.vehicleVariant)) acTaxiVariants
+      void $ pure $ spy "filteredEstimates" ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
+      ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
+    _ -> quotes
+
+getFilteredQuotes :: Array OfferRes -> Array OfferRes
+getFilteredQuotes quotes =  do 
+  case (getMerchant FunctionCall) of 
+    YATRISATHI -> do 
+      let acTaxiVariants = DA.filter(\item -> do 
+            case item of 
+              Quotes body -> do 
+                let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"]
+              _ -> false
+            ) quotes
+          nonAcTaxiVariants = DA.filter(\item -> do 
+            case item of 
+              Quotes body -> do 
+                let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                not (DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"])
+              _ -> false
+            ) quotes
+          sortedACTaxiVariants = DA.sortBy (\ a b -> 
+            case a , b of 
+              Quotes body , Quotes body2-> do
+                let (QuoteAPIEntity quoteEntity1) = body.onDemandCab
+                let (QuoteAPIEntity quoteEntity2) = body2.onDemandCab
+                compare (quoteEntity1.vehicleVariant) (quoteEntity2.vehicleVariant)
+              _ ,_ -> LT
+            ) acTaxiVariants
+      void $ pure $ spy "filteredQuotes" ((DA.take 1 sortedACTaxiVariants)<> (nonAcTaxiVariants ))
+      ((DA.take 1 sortedACTaxiVariants)<> (nonAcTaxiVariants ))
+    _ -> quotes
 
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
