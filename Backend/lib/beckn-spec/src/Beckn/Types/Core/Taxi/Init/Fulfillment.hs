@@ -35,7 +35,7 @@ data FulfillmentInfo = FulfillmentInfo
     _type :: FulfillmentType,
     start :: StartInfo,
     end :: Maybe StopInfo,
-    tags :: TagGroups,
+    tags :: Maybe TagGroups,
     vehicle :: Vehicle
   }
   deriving (Generic, Show)
