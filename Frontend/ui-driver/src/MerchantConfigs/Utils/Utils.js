@@ -11,7 +11,6 @@ const yatriConfig = require("./../../src/MerchantConfigs/YatriPartnerConfig.js")
 
 export const getStringFromConfig = function (constructorKey){
     let key = constructorKey.trim(); 
-    console.log("Window Merchant ID" + window.merchantID );
     switch(window.merchantID) {
         case "JATRISAATHIDRIVER" :
             if (jatriConfig.isCurrentMerchantString(key)){

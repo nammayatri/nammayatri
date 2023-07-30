@@ -56,6 +56,7 @@ initData = {
     languageList : languagesChoices,
     vehicleAge : 0 ,
     vehicleName : "",
+    languagesSpoken : [],
     analyticsData : {
         totalEarnings : ""
       , bonusEarned : ""

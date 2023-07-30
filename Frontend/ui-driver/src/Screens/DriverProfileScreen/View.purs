@@ -36,7 +36,7 @@ import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (length, mapWithIndex, null, any, (!!))
+import Data.Array (length, mapWithIndex, null, any, (!!), take)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe (fromMaybe)
 import Debug (spy)
@@ -1160,10 +1160,27 @@ vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , 
   , { key : (getString NAME) , value : Nothing , action : UpdateValue ST.VEHICLE_NAME , isEditable : true }]
 
 driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : Nothing , action : UpdateValue ST.LANGUAGE , isEditable : true }
+driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true }
   , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }]
 
 
+getLanguagesSpoken :: Array String -> Maybe String 
+getLanguagesSpoken languages = 
+  if (length languages >2) then Just $ (intercalate ", " (take 2 languages)) <> "+1"
+    else if (length languages > 0) then Just (intercalate ", " languages)
+    else Nothing
+
+getLangFromVal :: String -> String 
+getLangFromVal value = 
+  case value of 
+      "EN_US" -> "English"
+      "HI_IN" -> "Hindi"
+      "TA_IN" -> "Tamil"
+      "KN_IN" -> "Kannada"
+      "TE_IN" -> "Telugu"
+      "BN_IN" -> "Bengali"
+      "ML_IN" -> "Malayalam"
+      _ -> ""
 --------------------------------------------------------------- SEPARATOR --------------------------------------------------------
 horizontalLineView :: Int -> Number -> Int -> Int -> Int -> forall w . PrestoDOM (Effect Unit) w
 horizontalLineView heightOfLine lineAlpha marginLeft marginTop marginRight =

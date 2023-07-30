@@ -49,7 +49,9 @@ import Screens.Types as ST
 import Components.CheckListView as CheckList
 import Common.Types.App (CheckBoxOptions)
 import Data.Int (fromString)
-import Data.Array (filter,foldl)
+import Data.Lens((^.))
+import Services.Accessor (_languagesSpoken)
+import Data.Array (filter,foldl, any)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -240,7 +242,7 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
                                       driverAlternateNumber = driverProfileResp.alternateNumber ,
                                       driverGender = driverProfileResp.gender
                                       }})
-eval (DriverSummary response) state = continue state{data{analyticsData = getAnalyticsData response}}
+eval (DriverSummary response) state = continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = response^. _languagesSpoken, languageList = updateLanguageList state (response^. _languagesSpoken)}}
 
 eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
 
@@ -396,4 +398,10 @@ getGenderName gender =
 getSelectedLanguages :: DriverProfileScreenState -> Array String
 getSelectedLanguages state = 
   let languages = filter (\a -> a.isSelected == true) state.data.languageList
-  in  foldl (\acc item -> acc <> [item.text]) [] languages
+  in  foldl (\acc item -> acc <> [item.value]) [] languages
+
+updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBoxOptions 
+updateLanguageList state language = 
+  map (\item -> if (any (_ == item.value)) language
+                  then item{isSelected = true}
+                  else item) (state.data.languageList)

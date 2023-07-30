@@ -258,6 +258,7 @@ type DriverProfileScreenData = {
   driverEditAlternateMobile :: Maybe String,
   otpLimit :: Int,
   otpBackAlternateNumber :: Maybe String,
+  languagesSpoken :: Array String,
   gender :: Maybe String,
   driverGender :: Maybe String,
   languageList :: Array CheckBoxOptions,
