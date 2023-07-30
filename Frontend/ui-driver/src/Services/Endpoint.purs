@@ -75,7 +75,8 @@ registerDriverDL :: String -> String
 registerDriverDL dummyString = (getBaseUrl "") <> "/driver/register/dl"
 
 driverRegistrationStatus :: String -> String
-driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status"
+driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status?multipleRC=true"
+
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
