@@ -107,8 +107,8 @@ verifyDL (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyDL
 verifyRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
 verifyRC (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyRC False Nothing (personId, merchantId)
 
-statusHandler :: (Id DP.Person, Id DM.Merchant) -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes
-statusHandler (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.statusHandler (personId, merchantId)
+statusHandler :: (Id DP.Person, Id DM.Merchant) -> FlowHandler DriverOnboarding.StatusRes
+statusHandler (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId) (Just True)
 
 validateImage :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId)
