@@ -45,7 +45,7 @@ buildInitReq subscriber req = do
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
   fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
-  let maxEstimatedDistance = readMaybe . T.unpack =<< Common.getTag "estimations" "max_estimated_distance" order.fulfillment.tags :: Maybe HighPrecMeters
+  let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
   let initTypeReq = buildInitTypeReq order.fulfillment._type
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $
@@ -85,3 +85,9 @@ mkPaymentMethodInfo Init.Payment {..} =
         paymentType = Common.castPaymentType _type,
         paymentInstrument = Common.castPaymentInstrument instrument'
       }
+
+getMaxEstimateDistance :: Init.TagGroups -> Maybe HighPrecMeters
+getMaxEstimateDistance tagGroups = do
+  tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
+  maxEstimatedDistance <- readMaybe $ T.unpack tagValue
+  Just $ HighPrecMeters maxEstimatedDistance

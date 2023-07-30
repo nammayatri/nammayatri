@@ -101,26 +101,30 @@ mkOrderItem itemId mbBppFullfillmentId =
     }
 
 mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
-mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc maxDistance vehicleVariant =
+mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant =
   Init.FulfillmentInfo
     { id = mbBppFullfillmentId,
       _type = fulfillmentType,
       tags =
-        Init.TG
-          [ Init.TagGroup
-              { display = True,
-                code = "estimations",
-                name = "Estimations",
-                list =
-                  [ Init.Tag
-                      { display = Just True,
-                        code = Just "max_estimated_distance",
-                        name = Just "Max Estimated Distance",
-                        value = Just $ show maxDistance
-                      }
-                  ]
-              }
-          ],
+        if isJust mbMaxDistance
+          then
+            Just $
+              Init.TG
+                [ Init.TagGroup
+                    { display = True,
+                      code = "estimations",
+                      name = "Estimations",
+                      list =
+                        [ Init.Tag
+                            { display = (\_ -> Just True) =<< mbMaxDistance,
+                              code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
+                              name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
+                              value = (\distance -> Just $ show $ distance) =<< mbMaxDistance
+                            }
+                        ]
+                    }
+                ]
+          else Nothing,
       start =
         Init.StartInfo
           { location =
