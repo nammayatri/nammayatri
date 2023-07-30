@@ -44,7 +44,6 @@ type API =
              :> Post '[JSON] DriverOnboarding.DriverRCRes
            :<|> "status"
              :> TokenAuth
-             :> QueryParam "multipleRC" Bool
              :> Get '[JSON] DriverOnboarding.StatusRes
            :<|> "validateImage"
              :> TokenAuth
