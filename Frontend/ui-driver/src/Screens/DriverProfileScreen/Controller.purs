@@ -35,6 +35,13 @@ import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..), MenuOptions(..))
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..))
+import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
+import Services.Backend (dummyVehicleObject)
+import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
+import Screens.DriverProfileScreen.Transformer (getAnalyticsData)
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PrimaryButton as PrimaryButton
@@ -59,16 +66,18 @@ import Effect.Unsafe (unsafePerformEffect)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Data.Lens((^.))
+import Services.Accessor (_languagesSpoken)
+import Data.Array (filter,foldl, any)
 
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_PROFILE_SCREEN)
-    BackPressed flag -> do
+    BackPressed -> do
       trackAppBackPress appId (getScreen DRIVER_PROFILE_SCREEN)
-      if flag then trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "backpress_in_logout_modal"
-        else trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
+      trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
     OptionClick optionIndex -> do
       trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "profile_options_click"
       trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
@@ -122,6 +131,7 @@ instance loggableAction :: Loggable Action where
     PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "primary_button" "go_home_or_submit"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "primary_button" "no_action"
+    DriverSummary resp -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "get_driver_summary_response"
     GetDriverInfoResponse resp -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "get_driver_info_response"
     HideLiveDashboard val -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "hide_live_stats_dashboard"
     DriverGenericHeaderAC act -> case act of
@@ -178,12 +188,14 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | DeletingRc DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
                     | AddingRC DriverProfileScreenState
+                    | UpdateLanguages DriverProfileScreenState (Array String)
 
-data Action = BackPressed Boolean
+data Action = BackPressed
             | NoAction
             | OptionClick Data.MenuOptions
             | BottomNavBarAction BottomNavBar.Action
             | GetDriverInfoResponse SA.GetDriverInfoResp
+            | DriverSummary DriverProfileSummaryRes
             | PopUpModalAction PopUpModal.Action
             | AfterRender
             | HideLiveDashboard String
@@ -232,7 +244,7 @@ eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = 
     Just VEHICLE_NAME -> continue state{props{btnActive = (DS.length val >= 3)}, data{vehicleName = val}}
     _ -> continue state
 
-eval (BackPressed flag) state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
+eval BackPressed state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
                                 else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
@@ -321,6 +333,8 @@ eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
         then continue state {data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : "", vehicleModel : ""}}) (rctransformedData!!0) }} 
         else  
           continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (\rc -> rc.rcStatus/=true) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : "", vehicleModel : ""}}) (activeRcVal!!0)}}
+
+eval (DriverSummary response) state = continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = response^. _languagesSpoken, languageList = updateLanguageList state (response^. _languagesSpoken)}}
 
 eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
 
@@ -412,7 +426,8 @@ eval (LanguageSelection (CheckList.ChangeCheckBoxSate item)) state = do
 
 eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   let languagesSelected = getSelectedLanguages state
-  continue state {props {updateLanguages = false}}
+  exit $ UpdateLanguages state languagesSelected
+
 eval ActivateRc state = continue state{props{activateRcView = true}}
 
 eval CallDriver state = 
@@ -539,11 +554,13 @@ getGenderName gender =
       "PREFER_NOT_TO_SAY" -> Just (getString STR.PREFER_NOT_TO_SAY)
       _ -> Nothing
     Nothing -> Nothing
-getSelectedLanguages :: DriverProfileScreenState -> Array CheckBoxOptions
-getSelectedLanguages state = do
+
+getSelectedLanguages :: DriverProfileScreenState -> Array String
+getSelectedLanguages state = 
   let languages = filter (\a -> a.isSelected == true) state.data.languageList
-  languages
-  
+  in  foldl (\acc item -> acc <> [item.value]) [] languages
+
+
 makeRcsTransformData :: Array SA.GetAllRcDataRecords -> Array VehicleDetails
 makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
   rcStatus : rc.rcActive,
@@ -566,3 +583,9 @@ optionList dummy =
       {menuOptions: ABOUT_APP , icon:"ny_ic_about,https://assets.juspay.in/nammayatri/images/driver/ny_ic_about.png"},
       {menuOptions: DRIVER_LOGOUT , icon:"ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"}
     ]
+
+updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBoxOptions 
+updateLanguageList state language = 
+  map (\item -> if (any (_ == item.value)) language
+                  then item{isSelected = true}
+                  else item) (state.data.languageList)
