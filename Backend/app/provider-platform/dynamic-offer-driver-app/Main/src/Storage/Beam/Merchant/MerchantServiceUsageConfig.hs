@@ -22,6 +22,7 @@ import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
+import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Data.Vector as V
 import qualified Database.Beam as B
@@ -111,8 +112,8 @@ fromFieldWhatsappService f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just _ -> V.toList <$> fromField f mbValue
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [SmsService] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [SmsService] where
+  sqlValueSyntax x = sqlValueSyntax (V.fromList (T.pack . show <$> x))
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [SmsService]
 
@@ -124,8 +125,8 @@ instance FromField WhatsappService where
 instance FromField [WhatsappService] where
   fromField = fromFieldWhatsappService
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [WhatsappService] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [WhatsappService] where
+  sqlValueSyntax x = sqlValueSyntax (V.fromList (T.pack . show <$> x))
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [WhatsappService]
 
