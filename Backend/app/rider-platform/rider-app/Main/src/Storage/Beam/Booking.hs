@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Booking where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -29,7 +27,6 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
@@ -94,26 +91,7 @@ instance B.Table BookingT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta BookingT where
-  modelFieldModification = bookingTMod
-  modelTableName = "booking"
-  modelSchemaName = Just "atlas_app"
-
 type Booking = BookingT Identity
-
-bookingTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BookingT)
-bookingTable =
-  BST.setEntitySchema (Just "atlas_app")
-    <> B.setEntityName "booking"
-    <> B.modifyTableFields bookingTMod
-
-instance FromJSON Booking where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Booking where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Booking
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =
@@ -149,19 +127,6 @@ bookingTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize Booking where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-bookingToHSModifiers :: M.Map Text (A.Value -> A.Value)
-bookingToHSModifiers =
-  M.empty
-
-bookingToPSModifiers :: M.Map Text (A.Value -> A.Value)
-bookingToPSModifiers =
-  M.empty
-
 $(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId]])
+
+$(mkTableInstances ''BookingT "booking" "atlas_app")

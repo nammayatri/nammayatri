@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Payment.PaymentTransaction where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -61,20 +59,7 @@ instance B.Table PaymentTransactionT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta PaymentTransactionT where
-  modelFieldModification = paymentTransactionTMod
-  modelTableName = "payment_transaction"
-  modelSchemaName = Just "atlas_app"
-
 type PaymentTransaction = PaymentTransactionT Identity
-
-instance FromJSON PaymentTransaction where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON PaymentTransaction where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show PaymentTransaction
 
 paymentTransactionTMod :: PaymentTransactionT (B.FieldModification (B.TableField PaymentTransactionT))
 paymentTransactionTMod =
@@ -98,19 +83,6 @@ paymentTransactionTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize PaymentTransaction where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-paymentTransactionToHSModifiers :: M.Map Text (A.Value -> A.Value)
-paymentTransactionToHSModifiers =
-  M.empty
-
-paymentTransactionToPSModifiers :: M.Map Text (A.Value -> A.Value)
-paymentTransactionToPSModifiers =
-  M.empty
-
 $(enableKVPG ''PaymentTransactionT ['id] [])
+
+$(mkTableInstances ''PaymentTransactionT "payment_transaction" "atlas_app")

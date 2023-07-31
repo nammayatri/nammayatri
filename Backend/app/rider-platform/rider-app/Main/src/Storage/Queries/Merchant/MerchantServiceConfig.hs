@@ -77,8 +77,9 @@ findByMerchantIdAndService (Id merchantId) serviceName = findOneWithKV [Se.And [
 upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
-  res <- findOneWithKV [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig
+  -- res <- findOneWithKV [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]
+  res <- findByMerchantIdAndService merchantServiceConfig.merchantId _serviceName
   if isJust res
     then
       updateWithKV

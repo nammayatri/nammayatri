@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.RentalSlab where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -76,20 +74,7 @@ instance B.Table RentalSlabT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RentalSlabT where
-  modelFieldModification = rentalSlabTMod
-  modelTableName = "rental_slab"
-  modelSchemaName = Just "atlas_app"
-
 type RentalSlab = RentalSlabT Identity
-
-instance FromJSON RentalSlab where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON RentalSlab where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show RentalSlab
 
 rentalSlabTMod :: RentalSlabT (B.FieldModification (B.TableField RentalSlabT))
 rentalSlabTMod =
@@ -99,19 +84,6 @@ rentalSlabTMod =
       baseDuration = B.fieldNamed "base_duration"
     }
 
-instance Serialize RentalSlab where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-rentalSlabToHSModifiers :: M.Map Text (A.Value -> A.Value)
-rentalSlabToHSModifiers =
-  M.empty
-
-rentalSlabToPSModifiers :: M.Map Text (A.Value -> A.Value)
-rentalSlabToPSModifiers =
-  M.empty
-
 $(enableKVPG ''RentalSlabT ['id] [])
+
+$(mkTableInstances ''RentalSlabT "rental_slab" "atlas_app")

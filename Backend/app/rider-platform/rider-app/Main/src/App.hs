@@ -20,8 +20,8 @@ import Environment
 import EulerHS.Interpreters (runFlow)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Kernel.Beam.Connection.Flow (prepareConnection)
-import Kernel.Beam.Connection.Types (ConnectionConfig (..))
+import Kernel.Beam.Connection.Flow (prepareConnectionRider)
+import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Exit
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -63,8 +63,8 @@ runRiderApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
-      ( prepareConnection
-          ( ConnectionConfig
+      ( prepareConnectionRider
+          ( ConnectionConfigRider
               { esqDBCfg = appCfg.esqDBCfg,
                 esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
                 hedisClusterCfg = appCfg.hedisClusterCfg

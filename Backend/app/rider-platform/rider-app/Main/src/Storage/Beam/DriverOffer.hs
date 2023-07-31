@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOffer where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -55,20 +53,7 @@ instance B.Table DriverOfferT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverOfferT where
-  modelFieldModification = driverOfferTMod
-  modelTableName = "driver_offer"
-  modelSchemaName = Just "atlas_app"
-
 type DriverOffer = DriverOfferT Identity
-
-instance FromJSON DriverOffer where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverOffer where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverOffer
 
 driverOfferTMod :: DriverOfferT (B.FieldModification (B.TableField DriverOfferT))
 driverOfferTMod =
@@ -86,19 +71,6 @@ driverOfferTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize DriverOffer where
-  put = error "undefined"
-  get = error "undefined"
+$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId]])
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverOfferToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverOfferToHSModifiers =
-  M.empty
-
-driverOfferToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverOfferToPSModifiers =
-  M.empty
-
-$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
+$(mkTableInstances ''DriverOfferT "driver_offer" "atlas_app")

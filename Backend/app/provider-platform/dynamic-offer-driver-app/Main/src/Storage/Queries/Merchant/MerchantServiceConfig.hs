@@ -83,7 +83,8 @@ upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantSe
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig
-  res <- findOneWithKV [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]
+  -- _ <-  T.trace ("upsertMerchantServiceConfig" <> (show merchantServiceConfig.merchantId) <> show _serviceName) $ pure ()
+  res <- findByMerchantIdAndService merchantServiceConfig.merchantId _serviceName
   if isJust res
     then
       updateWithKV

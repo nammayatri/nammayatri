@@ -16,6 +16,9 @@
 module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
+-- import Kernel.Storage.Esqueleto as Esq
+
+import qualified Data.Time as T
 import qualified Database.Beam as B
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
@@ -27,7 +30,6 @@ import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
@@ -490,7 +492,7 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
         Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
         Se.Set BeamP.updatedAt now
       ]
-        <> [Se.Set BeamP.blockedAt (Just now) | isBlocked]
+        <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -647,7 +649,7 @@ instance FromTType' BeamP.Person Person where
             referralCode = referralCode,
             referredAt = referredAt,
             hasTakenValidRide = hasTakenValidRide,
-            blockedAt = blockedAt,
+            blockedAt = T.localTimeToUTC T.utc <$> blockedAt,
             blockedByRuleId = Id <$> blockedByRuleId,
             createdAt = createdAt,
             updatedAt = updatedAt,
@@ -686,7 +688,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.referralCode = referralCode,
         BeamP.referredAt = referredAt,
         BeamP.hasTakenValidRide = hasTakenValidRide,
-        BeamP.blockedAt = blockedAt,
+        BeamP.blockedAt = T.utcToLocalTime T.utc <$> blockedAt,
         BeamP.blockedByRuleId = getId <$> blockedByRuleId,
         BeamP.createdAt = createdAt,
         BeamP.updatedAt = updatedAt,

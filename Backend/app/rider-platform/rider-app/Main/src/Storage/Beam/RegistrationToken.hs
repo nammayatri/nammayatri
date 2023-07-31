@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.RegistrationToken where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -103,20 +101,7 @@ instance B.Table RegistrationTokenT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RegistrationTokenT where
-  modelFieldModification = registrationTokenTMod
-  modelTableName = "registration_token"
-  modelSchemaName = Just "atlas_app"
-
 type RegistrationToken = RegistrationTokenT Identity
-
-instance FromJSON RegistrationToken where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON RegistrationToken where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show RegistrationToken
 
 registrationTokenTMod :: RegistrationTokenT (B.FieldModification (B.TableField RegistrationTokenT))
 registrationTokenTMod =
@@ -138,19 +123,6 @@ registrationTokenTMod =
       info = B.fieldNamed "info"
     }
 
-instance Serialize RegistrationToken where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-registrationTokenToHSModifiers :: M.Map Text (A.Value -> A.Value)
-registrationTokenToHSModifiers =
-  M.empty
-
-registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
-registrationTokenToPSModifiers =
-  M.empty
-
 $(enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])
+
+$(mkTableInstances ''RegistrationTokenT "registration_token" "atlas_app")

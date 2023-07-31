@@ -14,15 +14,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
-import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
+import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Data.Vector as V
 import qualified Database.Beam as B
@@ -107,8 +106,8 @@ instance FromField [WhatsappService] where
 instance FromField WhatsappService where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [WhatsappService] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [WhatsappService] where
+  sqlValueSyntax x = sqlValueSyntax (V.fromList (T.pack . show <$> x))
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [WhatsappService]
 
@@ -120,8 +119,8 @@ instance FromField [SmsService] where
 instance FromField SmsService where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [SmsService] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [SmsService] where
+  sqlValueSyntax x = sqlValueSyntax (V.fromList (T.pack . show <$> x))
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [SmsService]
 
@@ -154,20 +153,7 @@ instance B.Table MerchantServiceUsageConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . merchantId
 
-instance ModelMeta MerchantServiceUsageConfigT where
-  modelFieldModification = merchantServiceUsageConfigTMod
-  modelTableName = "merchant_service_usage_config"
-  modelSchemaName = Just "atlas_app"
-
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
-
-instance FromJSON MerchantServiceUsageConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MerchantServiceUsageConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MerchantServiceUsageConfig
 
 merchantServiceUsageConfigTMod :: MerchantServiceUsageConfigT (B.FieldModification (B.TableField MerchantServiceUsageConfigT))
 merchantServiceUsageConfigTMod =
@@ -191,19 +177,6 @@ merchantServiceUsageConfigTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize MerchantServiceUsageConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-merchantServiceUsageConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantServiceUsageConfigToHSModifiers =
-  M.empty
-
-merchantServiceUsageConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantServiceUsageConfigToPSModifiers =
-  M.empty
-
 $(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])
+
+$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config" "atlas_app")

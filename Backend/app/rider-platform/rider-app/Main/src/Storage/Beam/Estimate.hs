@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Estimate where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Data.Vector as V
@@ -114,20 +112,7 @@ instance B.Table EstimateT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta EstimateT where
-  modelFieldModification = estimateTMod
-  modelTableName = "estimate"
-  modelSchemaName = Just "atlas_app"
-
 type Estimate = EstimateT Identity
-
-instance FromJSON Estimate where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Estimate where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Estimate
 
 estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
 estimateTMod =
@@ -163,19 +148,6 @@ estimateTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize Estimate where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-estimateToHSModifiers :: M.Map Text (A.Value -> A.Value)
-estimateToHSModifiers =
-  M.empty
-
-estimateToPSModifiers :: M.Map Text (A.Value -> A.Value)
-estimateToPSModifiers =
-  M.empty
-
 $(enableKVPG ''EstimateT ['id] [['requestId], ['bppEstimateId]])
+
+$(mkTableInstances ''EstimateT "estimate" "atlas_app")

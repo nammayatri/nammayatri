@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequest where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -64,20 +62,7 @@ instance B.Table SearchRequestT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SearchRequestT where
-  modelFieldModification = searchRequestTMod
-  modelTableName = "search_request"
-  modelSchemaName = Just "atlas_app"
-
 type SearchRequest = SearchRequestT Identity
-
-instance FromJSON SearchRequest where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SearchRequest where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SearchRequest
 
 searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
 searchRequestTMod =
@@ -104,19 +89,6 @@ searchRequestTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize SearchRequest where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-searchRequestToHSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestToHSModifiers =
-  M.empty
-
-searchRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestToPSModifiers =
-  M.empty
-
 $(enableKVPG ''SearchRequestT ['id] [['riderId]])
+
+$(mkTableInstances ''SearchRequestT "search_request" "atlas_app")

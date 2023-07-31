@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Webengage where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -48,20 +46,7 @@ instance B.Table WebengageT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta WebengageT where
-  modelFieldModification = webengageTMod
-  modelTableName = "webengage"
-  modelSchemaName = Just "atlas_app"
-
 type Webengage = WebengageT Identity
-
-instance FromJSON Webengage where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Webengage where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Webengage
 
 webengageTMod :: WebengageT (B.FieldModification (B.TableField WebengageT))
 webengageTMod =
@@ -76,19 +61,6 @@ webengageTMod =
       status = B.fieldNamed "status"
     }
 
-instance Serialize Webengage where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-webengageToHSModifiers :: M.Map Text (A.Value -> A.Value)
-webengageToHSModifiers =
-  M.empty
-
-webengageToPSModifiers :: M.Map Text (A.Value -> A.Value)
-webengageToPSModifiers =
-  M.empty
-
 $(enableKVPG ''WebengageT ['id] [['infoMessageId]])
+
+$(mkTableInstances ''WebengageT "webengage" "atlas_app")

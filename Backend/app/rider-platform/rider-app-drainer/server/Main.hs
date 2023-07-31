@@ -29,8 +29,8 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import qualified Event.Event as Event
-import Kernel.Beam.Connection.Flow (prepareConnection)
-import Kernel.Beam.Connection.Types (ConnectionConfig (..))
+import Kernel.Beam.Connection.Flow (prepareConnectionRider)
+import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import qualified System.Directory as SD
@@ -94,8 +94,8 @@ main = do
           putStrLn @String "Initializing DB and KV Connections..."
           runFlow
             flowRt
-            ( prepareConnection
-                ConnectionConfig
+            ( prepareConnectionRider
+                ConnectionConfigRider
                   { esqDBCfg = appCfg.esqDBCfg,
                     esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
                     hedisClusterCfg = appCfg.hedisClusterCfg

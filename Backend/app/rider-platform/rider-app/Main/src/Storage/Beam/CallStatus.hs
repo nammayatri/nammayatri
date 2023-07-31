@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.CallStatus where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -72,20 +70,7 @@ instance B.Table CallStatusT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta CallStatusT where
-  modelFieldModification = callStatusTMod
-  modelTableName = "call_status"
-  modelSchemaName = Just "atlas_app"
-
 type CallStatus = CallStatusT Identity
-
-instance FromJSON CallStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON CallStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show CallStatus
 
 callStatusTMod :: CallStatusT (B.FieldModification (B.TableField CallStatusT))
 callStatusTMod =
@@ -100,19 +85,6 @@ callStatusTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize CallStatus where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-callStatusToHSModifiers :: M.Map Text (A.Value -> A.Value)
-callStatusToHSModifiers =
-  M.empty
-
-callStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
-callStatusToPSModifiers =
-  M.empty
-
 $(enableKVPG ''CallStatusT ['id] [['callId]])
+
+$(mkTableInstances ''CallStatusT "call_status" "atlas_app")

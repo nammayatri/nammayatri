@@ -14,6 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Maps.DirectionsCache where
@@ -22,8 +23,6 @@ import Data.Aeson
 import qualified Data.Aeson as A
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Lazy.Char8 (toStrict)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
@@ -109,20 +108,7 @@ instance B.Table DirectionsCacheT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DirectionsCacheT where
-  modelFieldModification = directionsCacheTMod
-  modelTableName = "directions_cache"
-  modelSchemaName = Just "atlas_app"
-
 type DirectionsCache = DirectionsCacheT Identity
-
-instance FromJSON DirectionsCache where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DirectionsCache where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DirectionsCache
 
 directionsCacheTMod :: DirectionsCacheT (B.FieldModification (B.TableField DirectionsCacheT))
 directionsCacheTMod =
@@ -135,19 +121,6 @@ directionsCacheTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize DirectionsCache where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-directionsCacheToHSModifiers :: M.Map Text (A.Value -> A.Value)
-directionsCacheToHSModifiers =
-  M.empty
-
-directionsCacheToPSModifiers :: M.Map Text (A.Value -> A.Value)
-directionsCacheToPSModifiers =
-  M.empty
-
 $(enableKVPG ''DirectionsCacheT ['id] [])
+
+$(mkTableInstances ''DirectionsCacheT "directions_cache" "atlas_app")

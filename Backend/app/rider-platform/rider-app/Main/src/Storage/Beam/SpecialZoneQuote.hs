@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SpecialZoneQuote where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -42,20 +40,7 @@ instance B.Table SpecialZoneQuoteT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SpecialZoneQuoteT where
-  modelFieldModification = specialZoneQuoteTMod
-  modelTableName = "special_zone_quote"
-  modelSchemaName = Just "atlas_app"
-
 type SpecialZoneQuote = SpecialZoneQuoteT Identity
-
-instance FromJSON SpecialZoneQuote where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SpecialZoneQuote where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SpecialZoneQuote
 
 specialZoneQuoteTMod :: SpecialZoneQuoteT (B.FieldModification (B.TableField SpecialZoneQuoteT))
 specialZoneQuoteTMod =
@@ -64,19 +49,6 @@ specialZoneQuoteTMod =
       quoteId = B.fieldNamed "quote_id"
     }
 
-instance Serialize SpecialZoneQuote where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-specialZoneQuoteToHSModifiers :: M.Map Text (A.Value -> A.Value)
-specialZoneQuoteToHSModifiers =
-  M.empty
-
-specialZoneQuoteToPSModifiers :: M.Map Text (A.Value -> A.Value)
-specialZoneQuoteToPSModifiers =
-  M.empty
-
 $(enableKVPG ''SpecialZoneQuoteT ['id] [])
+
+$(mkTableInstances ''SpecialZoneQuoteT "special_zone_quote" "atlas_app")

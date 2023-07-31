@@ -40,6 +40,24 @@ let esqLocationDBRepCfg =
       , connectSchemaName = esqLocationDBCfg.connectSchemaName
       }
 
+let locationDbCfg =
+      { connectHost = "localhost"
+      , connectPort = 5454
+      , connectUser = sec.locDBUserId
+      , connectPassword = sec.dbPassword
+      , connectDatabase = "atlas_dev_loc"
+      , connectSchemaName = "atlas_person_location"
+      }
+
+let locationDbReplicaCfg =
+      { connectHost = locationDbCfg.connectHost
+      , connectPort = 5454
+      , connectUser = locationDbCfg.connectUser
+      , connectPassword = locationDbCfg.connectPassword
+      , connectDatabase = locationDbCfg.connectDatabase
+      , connectSchemaName = locationDbCfg.connectSchemaName
+      }
+
 let clickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"
@@ -137,48 +155,8 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
 let tables =
-      { enableKVForWriteAlso =
-            [ "registration_token"
-            , "search_request"
-            , "search_request_for_driver"
-            , "search_try"
-            , "driver_information"
-            , "driver_flow_status"
-            , "business_event"
-            , "booking"
-            , "ride"
-            , "estimate"
-            , "fare_parameters"
-            , "fare_parameters_progressive_details"
-            , "booking_location"
-            , "ride_details"
-            , "rider_details"
-            , "driver_stats"
-            , "driver_quote"
-            , "search_request_location"
-            ]
-          : List Text
-      , enableKVForRead =
-            [ "registration_token"
-            , "search_request"
-            , "search_request_for_driver"
-            , "search_try"
-            , "driver_information"
-            , "driver_flow_status"
-            , "business_event"
-            , "booking"
-            , "ride"
-            , "estimate"
-            , "fare_parameters"
-            , "fare_parameters_progressive_details"
-            , "booking_location"
-            , "ride_details"
-            , "rider_details"
-            , "driver_stats"
-            , "driver_quote"
-            , "search_request_location"
-            ]
-          : List Text
+      { enableKVForWriteAlso = [] : List Text
+      , enableKVForRead = [] : List Text
       , tableAllocation = 50 : Natural
       }
 
@@ -186,6 +164,8 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
     , esqLocationDBRepCfg
+    , locationDbCfg
+    , locationDbReplicaCfg
     , clickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg

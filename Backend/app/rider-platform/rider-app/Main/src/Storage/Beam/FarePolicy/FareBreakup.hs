@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.FareBreakup where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -46,20 +44,7 @@ instance B.Table FareBreakupT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FareBreakupT where
-  modelFieldModification = fareBreakupTMod
-  modelTableName = "fare_breakup"
-  modelSchemaName = Just "atlas_app"
-
 type FareBreakup = FareBreakupT Identity
-
-instance FromJSON FareBreakup where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FareBreakup where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FareBreakup
 
 fareBreakupTMod :: FareBreakupT (B.FieldModification (B.TableField FareBreakupT))
 fareBreakupTMod =
@@ -70,19 +55,6 @@ fareBreakupTMod =
       amount = B.fieldNamed "amount"
     }
 
-instance Serialize FareBreakup where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-fareBreakupToHSModifiers :: M.Map Text (A.Value -> A.Value)
-fareBreakupToHSModifiers =
-  M.empty
-
-fareBreakupToPSModifiers :: M.Map Text (A.Value -> A.Value)
-fareBreakupToPSModifiers =
-  M.empty
-
 $(enableKVPG ''FareBreakupT ['id] [['bookingId]])
+
+$(mkTableInstances ''FareBreakupT "fare_breakup" "atlas_app")

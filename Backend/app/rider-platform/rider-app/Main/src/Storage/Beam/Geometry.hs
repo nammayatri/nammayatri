@@ -14,17 +14,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Geometry where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as B
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -43,20 +40,7 @@ instance B.Table GeometryT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta GeometryT where
-  modelFieldModification = geometryTMod
-  modelTableName = "geometry"
-  modelSchemaName = Just "atlas_app"
-
 type Geometry = GeometryT Identity
-
-instance FromJSON Geometry where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Geometry where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Geometry
 
 geometryTMod :: GeometryT (B.FieldModification (B.TableField GeometryT))
 geometryTMod =
@@ -65,25 +49,6 @@ geometryTMod =
       region = B.fieldNamed "region"
     }
 
-geometryTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity GeometryT)
-geometryTable =
-  B.setEntitySchema (Just "atlas_app")
-    <> B.setEntityName "geometry"
-    <> B.modifyTableFields geometryTMod
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-geometryToHSModifiers :: M.Map Text (A.Value -> A.Value)
-geometryToHSModifiers =
-  M.empty
-
-geometryToPSModifiers :: M.Map Text (A.Value -> A.Value)
-geometryToPSModifiers =
-  M.empty
-
-instance Serialize Geometry where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''GeometryT ['id] [])
+
+$(mkTableInstances ''GeometryT "geometry" "atlas_app")

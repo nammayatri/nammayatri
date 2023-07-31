@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BlackListOrg where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -64,22 +62,9 @@ instance B.Table BlackListOrgT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta BlackListOrgT where
-  modelFieldModification = blackListOrgTMod
-  modelTableName = "black_list_org"
-  modelSchemaName = Just "atlas_app"
-
 type BlackListOrg = BlackListOrgT Identity
 
-instance FromJSON BlackListOrg where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON BlackListOrg where
-  toJSON = A.genericToJSON A.defaultOptions
-
 deriving stock instance Ord Domain.BlackListOrgType
-
-deriving stock instance Show BlackListOrg
 
 blackListOrgTMod :: BlackListOrgT (B.FieldModification (B.TableField BlackListOrgT))
 blackListOrgTMod =
@@ -89,19 +74,6 @@ blackListOrgTMod =
       orgType = B.fieldNamed "type"
     }
 
-instance Serialize BlackListOrg where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-blackListOrgToHSModifiers :: M.Map Text (A.Value -> A.Value)
-blackListOrgToHSModifiers =
-  M.empty
-
-blackListOrgToPSModifiers :: M.Map Text (A.Value -> A.Value)
-blackListOrgToPSModifiers =
-  M.empty
-
 $(enableKVPG ''BlackListOrgT ['id] [['subscriberId]])
+
+$(mkTableInstances ''BlackListOrgT "black_list_org" "atlas_app")

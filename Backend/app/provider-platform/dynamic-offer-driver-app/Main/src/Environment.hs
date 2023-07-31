@@ -56,6 +56,8 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     esqLocationDBCfg :: EsqDBConfig,
     esqLocationDBRepCfg :: EsqDBConfig,
+    locationDbCfg :: EsqDBConfig,
+    locationDbReplicaCfg :: EsqDBConfig,
     hedisMigrationStage :: Bool, -- TODO: remove once data migration is done.
     cutOffHedisCluster :: Bool,
     hedisCfg :: HedisCfg,
