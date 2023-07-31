@@ -246,7 +246,7 @@ rideActionDataView push config =
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width MATCH_PARENT
             , orientation VERTICAL
             ][ rideInfoView push config
             , if config.startRideActive then sourceAndDestinationView push config else destinationView config push

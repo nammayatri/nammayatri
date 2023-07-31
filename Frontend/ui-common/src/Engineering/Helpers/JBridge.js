@@ -564,22 +564,28 @@ export const updateRouteMarker = function (data) {
 export const updateRoute = function (data) {
   return function (destMarker) {
     return function (eta) {
-      return function (specialLocation) {
-        return function () {
-          if (window.JBridge.updateRoute) {
-            var json = JSON.stringify(data);
-            try {
-              console.log("I AM HERE ------------------ IN UPDATE ROUTE");
-              return window.JBridge.updateRoute(json, destMarker, eta, JSON.stringify(specialLocation));
-            } catch (err) {
-              console.log("Catch error" + err);
-              /*
-              * This Function is deprecated on 12 Jan - 2023
-              * Remove this function once it is not begin used.
-              */
-              return window.JBridge.updateRoute(json, destMarker, eta);
+      return function (srcMarker) {
+        return function (specialLocation) {
+          return function () {
+            if (window.JBridge.updateRoute) {
+              var json = JSON.stringify(data);
+              try {
+                console.log("I AM HERE ------------------ IN UPDATE ROUTE");
+                return window.JBridge.updateRoute(json, destMarker, eta, srcMarker, JSON.stringify(specialLocation));
+              } catch (err) {
+                console.log("Catch error" + err);
+                try {
+                  return window.JBridge.updateRoute(json, destMarker, eta, JSON.stringify(specialLocation));
+                } catch (err) {
+                  return window.JBridge.updateRoute(json, destMarker, eta);
+                }
+                /*
+                * This Function is deprecated on 12 Jan - 2023
+                * Remove this function once it is not begin used.
+                */
+              }
             }
-          }
+          };
         };
       };
     };

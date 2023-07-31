@@ -219,6 +219,7 @@ rideListResponseTransformer list categoryAction =
                         )
     , shimmer_visibility : "gone"
     , driverSelectedFare : ride.driverSelectedFare
+    , vehicleType : ride.vehicleVariant
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

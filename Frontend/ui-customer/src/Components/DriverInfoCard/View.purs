@@ -786,7 +786,8 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback "ic_driver_vehicle,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
+              [ imageWithFallback $ if state.data.vehicleVariant == "AUTO_RICKSHAW" then "ic_driver_auto,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
+                                    else "ic_driver_vehicle,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT

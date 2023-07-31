@@ -272,6 +272,10 @@ getDriverInfoFlow = do
       let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
       void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
       setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
+      setValueToLocalNativeStore NEGOTIATION_UNIT if (getMerchant unit == YATRIPARTNER && linkedVehicle.variant == "AUTO_RICKSHAW") then "10" 
+                                                  else if (getMerchant unit == YATRIPARTNER) then "20"
+                                                  else "10"
+
       case getDriverInfoResp.blocked of
         Just value -> void $ pure $ setCleverTapUserProp "Blocked" (show $ value)
         Nothing -> pure unit
@@ -921,7 +925,8 @@ myRidesScreenFlow = do
       destination = selectedCard.destination,
       totalAmount = selectedCard.total_amount,
       distance = selectedCard.rideDistance,
-      status = selectedCard.status
+      status = selectedCard.status,
+      vehicleType = selectedCard.vehicleType
       }})
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow
