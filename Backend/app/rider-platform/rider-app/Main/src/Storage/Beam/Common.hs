@@ -18,7 +18,7 @@ atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { exophone = dExophone,
+      { exophone = exophoneTable,
         geometry = geometryTable,
         booking = bookingTable,
         ride = rideTable,

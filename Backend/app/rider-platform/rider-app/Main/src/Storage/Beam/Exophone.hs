@@ -19,14 +19,10 @@
 
 module Storage.Beam.Exophone where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as B
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -53,12 +49,6 @@ instance B.Table ExophoneT where
 
 type Exophone = ExophoneT Identity
 
-dExophone :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ExophoneT)
-dExophone =
-  B.setEntitySchema (Just "atlas_app")
-    <> B.setEntityName "exophone"
-    <> B.modifyTableFields exophoneTMod
-
 exophoneTMod :: ExophoneT (B.FieldModification (B.TableField ExophoneT))
 exophoneTMod =
   B.tableModification
@@ -70,17 +60,6 @@ exophoneTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-exophoneToHSModifiers :: M.Map Text (A.Value -> A.Value)
-exophoneToHSModifiers =
-  M.empty
-
-exophoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
-exophoneToPSModifiers =
-  M.empty
 
 $(enableKVPG ''ExophoneT ['id] [])
 
