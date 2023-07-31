@@ -578,7 +578,7 @@ findRiderIdByRideId rideId = do
 findAllByRiderIdAndRide :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   let isOnlyActive = Just True == mbOnlyActive
-  let limit' = maybe 0 fromIntegral mbLimit
+  let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
   bookings <-
     findAllWithOptionsKV
