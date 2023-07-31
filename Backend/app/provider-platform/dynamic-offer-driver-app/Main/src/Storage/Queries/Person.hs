@@ -32,6 +32,9 @@ import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.DriverLocation as DriverLocation
+import Domain.Types.DriverOnboarding.DriverLicense
+import Domain.Types.DriverOnboarding.DriverRCAssociation
+import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -547,71 +550,78 @@ fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbD
             Se.Is BeamP.role $ Se.Eq Person.DRIVER,
             Se.Is BeamP.mobileCountryCode $ Se.Eq (snd <$> mbMobileNumberDbHashWithCode),
             Se.Or
-              [ Se.Is BeamP.alternateMobileNumberHash $ Se.Eq (fst <$> mbMobileNumberDbHashWithCode),
-                Se.Is BeamP.mobileNumberHash $ Se.Eq $ fst <$> mbMobileNumberDbHashWithCode
-              ]
+              ( [Se.Is BeamP.alternateMobileNumberHash $ Se.Eq (fst <$> mbMobileNumberDbHashWithCode) | isJust mbMobileNumberDbHashWithCode]
+                  <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq $ fst <$> mbMobileNumberDbHashWithCode | isJust mbMobileNumberDbHashWithCode])
+              )
           ]
       ]
-  driverInfo <- findOneWithKV [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
+  driverInfo :: [DriverInformation] <- findAllWithKV [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
   vehicle <-
-    findOneWithKV
+    findAllWithKV
       [ Se.And
           ( [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
               <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust mbVehicleNumber) | isJust mbVehicleNumber])
           )
       ]
-  driverLicense <-
-    findOneWithKV
+  driverLicense :: [DriverLicense] <-
+    findAllWithKV
       [ Se.And
           ( [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person | isJust mbDlNumberHash]
               <> ([Se.Is BeamDL.licenseNumberHash $ Se.Eq (fromJust mbDlNumberHash) | isJust mbDlNumberHash])
           )
       ]
-  driverRCAssc <-
-    findOneWithKV
+  driverRCAssc :: [DriverRCAssociation] <-
+    findAllWithKV
       [ Se.And
           ( [Se.Is BeamDRCA.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person | isJust mbRcNumberHash]
               <> [Se.Is BeamDRCA.associatedTill $ Se.LessThanOrEq (Just now)]
           )
       ]
-  vehicleRegCert <- findOneWithKV [Se.And ([Se.Is BeamVRC.certificateNumberHash $ Se.Eq (fromJust mbRcNumberHash) | isJust mbRcNumberHash])]
-  let personFilteredByDL = case driverLicense of
-        Just driverLicense' -> filter (\p -> p.id == driverLicense'.driverId) person
-        Nothing -> person
-  let personFilteredByVRCandDRCA = case vehicleRegCert of
-        Just vehicleRegCert' -> case driverRCAssc of
-          Just driverRCAssc' ->
-            if vehicleRegCert'.id == driverRCAssc'.rcId
-              then filter (\p -> p.id == driverRCAssc'.driverId) personFilteredByDL
-              else personFilteredByDL
-          Nothing -> personFilteredByDL
-        Nothing -> personFilteredByDL
-  let personAndDriverInfo = findMatchingDriverInfo personFilteredByVRCandDRCA driverInfo
-  pure (combinePersonDriverVehicle personAndDriverInfo vehicle)
+  vehicleRegCert :: [VehicleRegistrationCertificate] <- findAllWithKV [Se.And ([Se.Is BeamVRC.certificateNumberHash $ Se.Eq (fromJust mbRcNumberHash) | isJust mbRcNumberHash])]
+
+  let personFilteredByDL = getPersonsByDriverLicense person driverLicense
+  let personFilteredByVRCandDRCA = filterPersons vehicleRegCert driverRCAssc personFilteredByDL
+  let personAndDriverInfo = findPersonWithDriverInfo personFilteredByVRCandDRCA driverInfo
+  pure $ matchPersonAndVehicle personAndDriverInfo vehicle
   where
-    combinePersonDriverVehicle :: Maybe (Person, DriverInformation) -> Maybe Vehicle -> Maybe (Person, DriverInformation, Maybe Vehicle)
-    combinePersonDriverVehicle maybePersonAndDriverInfo maybeVehicle =
-      case maybePersonAndDriverInfo of
-        Just (person, driverInfo) ->
-          case maybeVehicle of
-            Just v -> Just (person, driverInfo, Just v)
-            Nothing -> Just (person, driverInfo, Nothing)
-        Nothing -> Nothing
-    findMatchingDriverInfo :: [Person] -> Maybe DriverInformation -> Maybe (Person, DriverInformation)
-    findMatchingDriverInfo persons maybeDriverInfo =
-      foldr
-        ( \person acc ->
-            case acc of
-              Just res -> Just res
-              Nothing -> case maybeDriverInfo of
-                Just driverInfo' ->
-                  if driverInfo'.driverId == person.id
-                    then Just (person, driverInfo')
-                    else Nothing
-                Nothing -> Nothing
-        )
-        Nothing
-        persons
+    getPersonsByDriverLicense :: [Person] -> [DriverLicense] -> [Person]
+    getPersonsByDriverLicense persons =
+      foldr findMatchingPerson []
+      where
+        findMatchingPerson :: DriverLicense -> [Person] -> [Person]
+        findMatchingPerson dl acc =
+          case find (\person -> person.id == dl.driverId) persons of
+            Just person -> person : acc
+            Nothing -> acc
+
+    filterPersons :: [VehicleRegistrationCertificate] -> [DriverRCAssociation] -> [Person] -> [Person]
+    filterPersons vehicleRegCert driverRCAssc persons =
+      foldl' (\acc vrc -> addPersonIfMatches vrc driverRCAssc acc) persons vehicleRegCert
+
+    addPersonIfMatches :: VehicleRegistrationCertificate -> [DriverRCAssociation] -> [Person] -> [Person]
+    addPersonIfMatches vrc driverRCAssc acc =
+      case filter (\dra -> dra.rcId == vrc.id) driverRCAssc of
+        [] -> acc -- No matching DriverRCAssociation, return the accumulator as it is
+        matchingDRAs -> foldl' (\acc' dra -> addPersonIfDriverMatches dra acc') acc matchingDRAs
+
+    addPersonIfDriverMatches :: DriverRCAssociation -> [Person] -> [Person]
+    addPersonIfDriverMatches dra acc =
+      case filter (\p -> dra.driverId == p.id) acc of
+        [] -> acc -- No matching Person, return the accumulator as it is
+        _ -> acc ++ [getPersonById (dra.driverId) acc] -- Add the matching Person to the accumulator
+    getPersonById :: Id Person -> [Person] -> Person
+    getPersonById pid persons = head $ filter (\p -> p.id == pid) persons
+
+    findPersonWithDriverInfo :: [Person] -> [DriverInformation] -> Maybe (Person, DriverInformation)
+    findPersonWithDriverInfo persons driverInfo =
+      listToMaybe [(p, di) | p <- persons, di <- driverInfo, p.id == di.driverId]
+
+    matchPersonAndVehicle :: Maybe (Person, DriverInformation) -> [Vehicle] -> Maybe (Person, DriverInformation, Maybe Vehicle)
+    matchPersonAndVehicle Nothing _ = Nothing
+    matchPersonAndVehicle (Just (person, driverInfo)) vehicles =
+      case filter (\v -> v.driverId == person.id) vehicles of
+        [] -> Just (person, driverInfo, Nothing)
+        (v : _) -> Just (person, driverInfo, Just v)
 
 -- fetchDriverInfo :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
 -- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
