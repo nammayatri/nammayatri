@@ -51,6 +51,7 @@ getVehicleCapacity vehicleType capacity = case vehicleType of
   "HATCHBACK" -> "Easy on wallet, upto " <> (show (fromMaybe 4 capacity)) <> " people"
   "TAXI_PLUS" -> "Comfy, upto " <>  (show (fromMaybe 4 capacity)) <> " people"
   "TAXI" -> "Economical, upto " <> (show (fromMaybe 4 capacity)) <> " people"
+  "AUTO_RICKSHAW" -> "Comfy, upto " <> (show (fromMaybe 3 capacity)) <> " people"
   _ -> "Comfy, upto " <> (show (fromMaybe 4 capacity)) <> " people"
 
 
@@ -62,6 +63,7 @@ getVehicleImage vehicleType = case vehicleType of
   "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
   "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
   "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
+  "AUTO_RICKSHAW" -> "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png"
   _ -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
 
 dummyVehicleP :: VehicleP
