@@ -150,7 +150,7 @@ emergencyHelpLogoContainer state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding $ PaddingVertical 28 32
+    , padding $ Padding 16 28 16 32
     , background Color.blue600
     ][  imageView
         [ height $ V 128
@@ -394,12 +394,9 @@ allContactsView state push =
     , stroke ("1," <> Color.borderColorLight)
     , padding $ Padding 13 11 13 11
     , cornerRadius 8.0
-    , gravity CENTER
     ][  linearLayout
-        [ height $ V 24
-        , width $ V 24
-        , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-        , cornerRadius 12.0
+        [ height WRAP_CONTENT
+        , width  MATCH_PARENT
         , gravity CENTER
         ][  linearLayout
             [ height $ V 24
@@ -408,7 +405,7 @@ allContactsView state push =
             , cornerRadius 12.0
             , gravity CENTER
             ][  textView
-                [text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
+                [ text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
                 , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
                 , textSize FontSize.a_12
                 ]
@@ -445,6 +442,7 @@ allContactsView state push =
             ]
           ]
        ]) state.emergencyContactData)
+
 
 genericHeaderConfig :: EmergencyHelpModelState -> GenericHeaderConfig.Config
 genericHeaderConfig state = let

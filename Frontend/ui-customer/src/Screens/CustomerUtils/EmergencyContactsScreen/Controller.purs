@@ -12,8 +12,8 @@ import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRend
 import Screens (ScreenName(..), getScreen)
 import JBridge (toast)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts, NewContactsProp)
-import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText', toString, setEnabled, setRefreshing)
 import Data.Array (length, sortBy, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last, slice, union)
+import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toString, setEnabled, setRefreshing)
 import Log (printLog)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Language.Strings (getString)
@@ -246,7 +246,7 @@ eval (ContactTextChanged value) state = do
 
 eval (ContactListClearText) state = continueWithCmd state { data { editedText = "" } }
   [do
-    _ <- (setText' (getNewIDWithTag "contactEditText") "")
+    _ <- (pure $ setText (getNewIDWithTag "contactEditText") "")
     pure NoAction
   ]
 

@@ -61,6 +61,7 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , background Color.white900
   , afterRender (\action -> do
         _ <- push action
         _ <- JB.setFCMToken push $ SetToken

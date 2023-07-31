@@ -456,7 +456,6 @@ export const storeOnResumeCallback = function (cb) {
   }
 }
 
-
 export const drawPolygon = function(geoJson) {
   return function (locationName) {
     return function() {

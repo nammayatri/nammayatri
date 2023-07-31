@@ -21,9 +21,11 @@ import Prelude
 import PrestoDOM
 
 import Animation.Config as AnimConfig
-import Components.Banner as Banner
-import Components.SelectListModal as CancelRidePopUpConfig
 import Animation.Config as AnimConfig
+import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..))
+import Components.Banner as Banner
+import Components.ChatView as ChatView
 import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
@@ -33,47 +35,45 @@ import Components.ErrorModal as ErrorModal
 import Components.FareBreakUp as FareBreakUp
 import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
-import Components.RequestInfoCard as RequestInfoCard
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
-import Components.ChatView as ChatView
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Data.String as DS
-import Animation.Config as AnimConfig
+import Components.RequestInfoCard as RequestInfoCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SearchLocationModel as SearchLocationModel
+import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
+import Control.Monad.Except (runExcept)
+import Data.Array ((!!))
 import Data.Array as DA
+import Data.Either (Either(..))
+import Data.Int as INT
 import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Data.String as DS
+import Data.String as DS
+import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Foreign.Class (class Encode)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData , TipViewStage(..) , TipViewProps)
-import Screens.Types as ST
-import Styles.Colors as Color
-import Data.Int as INT
-import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn ,setValueToLocalStore)
-import Control.Monad.Except (runExcept)
-import Foreign.Generic (decodeJSON, encodeJSON)
-import Resources.Constants (getKmMeter)
-import Effect (Effect)
-import Data.Either (Either(..))
-import Foreign.Class (class Encode)
-import Data.Array ((!!))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import MerchantConfig.Utils as MU
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
-import Common.Types.App (LazyCheck(..))
-import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Resources.Constants (getKmMeter)
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
+import Screens.Types as ST
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
+import Styles.Colors as Color
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -180,13 +180,9 @@ skipButtonConfig state =
       config
         { textConfig
           { text = getString DONE
-          , color = state.data.config.ratingConfig.secondaryButtonTextColor
+          , color = state.data.config.primaryTextColor
           }
-        , width = V (EHC.screenWidth unit / 4)
-        , background = Color.white900
-        , isGradient = false
-        , cornerRadius = state.data.config.ratingConfig.buttonCornerRadius
-        , stroke = state.data.config.ratingConfig.secondaryButtonStroke
+        , background = Color.black900
         , margin = MarginTop 22
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
@@ -572,7 +568,7 @@ sourceUnserviceableConfig state =
     config = ErrorModal.config
     errorModalConfig' =
       config
-        { height = MATCH_PARENT
+        { height = if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then MATCH_PARENT else WRAP_CONTENT
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
@@ -612,14 +608,82 @@ rateCardConfig state =
         , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
-        , nightChargesApplicable = not ((MU.getMerchant FunctionCall) == MU.YATRI)
-        , rateCardArray = state.data.rateCard.rateCardArray
-        , title = state.data.rateCard.title
-        , driverAdditionsImage = state.data.rateCard.driverAdditionsImage
-        , driverAdditionsLogic = state.data.rateCard.driverAdditionsLogic
+        , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
+        , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
+        , description = if state.data.rateCard.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
+        , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
+        , driverAdditionsImage = if (MU.getMerchant FunctionCall == MU.YATRI) then "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" 
+                                                                              else "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+        , applicableCharges = if state.data.rateCard.nightCharges then (getString NIGHT_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+        , title = case MU.getMerchant FunctionCall of
+                      MU.NAMMAYATRI -> getString RATE_CARD
+                      MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
+                      _ -> ""
+        , fareList = case MU.getMerchant FunctionCall of
+                      MU.NAMMAYATRI -> nyRateCardList state
+                      MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
+                      _ -> []
+
+        , otherOptions  = [
+          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
+          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
+        
+        , additionalStrings = [
+          {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
+          {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
+          {key : "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", val : (if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) else (getString DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS))},
+          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
+          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+          {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
+          {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))}]
         }
   in
     rateCardConfig'
+
+
+
+yatriRateCardList :: String -> ST.HomeScreenState -> Array FareList
+yatriRateCardList vehicleVariant state = do
+  let lang = getValueToLocalStore LANGUAGE_KEY
+  case vehicleVariant of 
+    "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹140"}
+                   , { key : "5 km - 13 km" , val : "₹18 / km"}
+                   , { key : "13 km - 30 km" , val : "₹25 / km"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN), val : "₹36 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                   , { key : (getString DRIVER_ADDITIONS) , val : "₹0 - ₹60"}]
+
+    "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), val : "₹150"}
+                   , { key : "5 km - 13 km" , val : "₹18 / km"}
+                   , { key : "13 km - 30 km" , val : "₹25 / km"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) ,val : "₹36 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                   , { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
+
+    "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹165"}
+                   , { key : "5 km - 13 km" , val : "₹20 / km"}
+                   , { key : "13 km - 30 km" , val : "₹28 / km"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , val :"₹40 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                   , { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
+    _ -> []
+
+getVehicleTitle :: String -> String 
+getVehicleTitle vehicle = 
+  (case vehicle of 
+    "HATCHBACK" -> (getString HATCHBACK)
+    "SUV" -> (getString SUV)
+    "SEDAN" -> (getString SEDAN)
+    _ -> "") <> " - " <> (getString RATE_CARD)
+
+nyRateCardList :: ST.HomeScreenState -> Array FareList
+nyRateCardList state = 
+  ([{key : ((getString MIN_FARE_UPTO) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.baseFare))},
+    {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.extraFare) <> "/ km")},
+    {key : (getString DRIVER_PICKUP_CHARGES), val : ("₹" <> HU.toString (state.data.rateCard.pickUpCharges))}
+    ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then 
+    [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
 estimateChangedPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 estimateChangedPopupConfig state =
@@ -749,6 +813,7 @@ driverInfoTransformer state =
     , merchantExoPhone : cardState.merchantExoPhone
     , lastMessage : state.data.lastMessage
     , config : state.data.config
+    , vehicleVariant : cardState.vehicleVariant
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -862,6 +927,33 @@ callSupportConfig state = let
     }
   }
   in popUpConfig'
+
+
+zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
+zoneTimerExpiredConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = Corners 16.0 true true true true
+  , margin = Margin 24 32 24 0
+  , primaryText {
+      text = (getString OTP_EXPIRED) -- "OTP Expired"
+    }
+  , secondaryText {
+      text = (getString OTP_EXPIRED_DESCRIPTION)--"Your ride OTP expired. Please book again to get a ride"
+    , margin = Margin 16 4 16 24
+    , color = Color.black700
+    }
+  , option1 {
+      visibility = false
+    }
+  , option2 {
+      text =  getString OK_GOT_IT
+    , margin = (MarginHorizontal 16 16)
+    }
+  }
+  in popUpConfig'
+  
 menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let
     config = MenuButton.config

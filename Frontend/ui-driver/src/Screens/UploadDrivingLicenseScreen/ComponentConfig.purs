@@ -29,11 +29,13 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Prelude
 import PrestoDOM
+import MerchantConfig.Utils (getValueFromConfig)
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    imageUploadCondition = getValueFromConfig "imageUploadOptional" || state.data.imageFront /= ""
     primaryButtonConfig' = config 
       { textConfig{ text = (getString NEXT)}
       , width = MATCH_PARENT
@@ -41,8 +43,16 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , height = (V 60)
-      , isClickable = state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9 && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "")
-      , alpha = if (state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9) && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "") then 1.0 else 0.8
+      , isClickable = state.data.dob /= "" && 
+                      DS.length state.data.driver_license_number >= 9 && 
+                      (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) 
+                      && (state.data.dateOfIssue /= Just "" && 
+                      imageUploadCondition)
+      , alpha = if (state.data.dob /= "" && 
+                    DS.length state.data.driver_license_number >= 9) && 
+                    (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && 
+                    (state.data.dateOfIssue /= Just "" && 
+                    imageUploadCondition) then 1.0 else 0.8
       }
   in primaryButtonConfig'
 

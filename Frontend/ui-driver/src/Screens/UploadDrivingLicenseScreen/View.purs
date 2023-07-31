@@ -41,6 +41,7 @@ import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (getValueFromConfig)
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -220,7 +221,7 @@ frontUploadSection state push =
     , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
   ][
     textView
-    ([ text (getString FRONT_SIDE)
+    ([ text $ (getString FRONT_SIDE) <> if getValueFromConfig "imageUploadOptional" then (getString OPTIONAL) else ""
     , color Color.greyTextColor
     ] <> FontStyle.body3 TypoGraphy)
   , linearLayout

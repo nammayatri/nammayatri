@@ -20,6 +20,7 @@ import Screens.CustomerUtils.AboutUsScreen.ComponentConfig
 
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
+import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Components.ComplaintsModel as ComplaintsModel
 import Components.GenericHeader as GenericHeader
 import Data.Maybe (Maybe(..))

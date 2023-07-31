@@ -29,7 +29,7 @@ import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText')
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -275,7 +275,7 @@ sourceDestinationEditTextView state push =
             , gravity CENTER
             , padding (Padding 0 10 0 5)
             , onClick (\action -> do
-                        _ <- if state.isSource == Just true then setText' (getNewIDWithTag "SourceEditText") "" else pure unit
+                        _ <- if state.isSource == Just true then pure $ setText (getNewIDWithTag "SourceEditText") "" else pure unit
                         _ <- push action
                         pure unit
                       )(const $ SourceClear)
@@ -293,7 +293,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isSrcServiceable then "#FDD836" else Color.textDanger
-        , visibility GONE-- if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -357,7 +357,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isDestServiceable then "#FDD836" else Color.textDanger
-        , visibility GONE--if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     ]

@@ -197,6 +197,8 @@ window.getMerchantConfig = function () {
     "query" : "google.navigation:q=%f,%f"
   , "packageName" : "com.google.android.apps.maps"
 }
+  , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+  , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
   })
 }
 

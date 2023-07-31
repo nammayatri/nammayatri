@@ -245,6 +245,7 @@ mapOptionsView push state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
+      , margin $ MarginVertical 5 5
       ][ supportButton push state
        , locationTrackButton push state
       ]
@@ -264,7 +265,7 @@ supportButton push state =
   , margin $ MarginTop 10
   , cornerRadius 20.0
   ][ imageView
-      [ imageWithFallback "ny_ic_share_icon,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_share_icon.png"
+      [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 4
@@ -503,7 +504,7 @@ waitTimeView push state =
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
   ][ textView (
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ if state.props.currentSearchResultType == QUOTES then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
       , color Color.black700
@@ -751,7 +752,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback $ "ic_driver_vehicle," <> (getAssetStoreLink FunctionCall) <> "ic_driver_vehicle.png"
+              [ imageWithFallback (getVehicleImage state.data.vehicleVariant)
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -1087,3 +1088,12 @@ configurations =
               , letterSpacing : 3.0
               , paddingOTP : Padding 11 0 11 7
               }
+
+getVehicleImage :: String -> String 
+getVehicleImage variant = do
+  let url = getAssetStoreLink FunctionCall
+  case variant of 
+    "TAXI" -> "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
+    "TAXI_PLUS" -> "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
+    "AUTO_RICKSHAW" -> "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
+    _ ->  "ic_white_taxi," <> url <> "ic_white_taxi.png"

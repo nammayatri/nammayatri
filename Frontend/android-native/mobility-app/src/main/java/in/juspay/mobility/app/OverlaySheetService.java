@@ -32,6 +32,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -210,7 +211,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             updateTipView(holder, model);
 
-            if (key != null && key.equals("jatrisaathidriver")) {
+            if (key != null && key.equals("yatrisathiprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
@@ -556,8 +557,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
         TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
-        if (key != null && key.equals("jatrisaathidriver")) {
-            merchantLogo.setText("Jatri Sathi");
+        if (key != null && key.equals("yatrisathiprovider")){
+        merchantLogo.setText("yatri\nsathi");
+            ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
+            LinearLayout.LayoutParams  layoutParams = new LinearLayout.LayoutParams(100,100);
+            layoutParams.rightMargin = 12;
+            merchantLogoIcon.setLayoutParams(layoutParams);
+            merchantLogo.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT , ViewGroup.LayoutParams.WRAP_CONTENT ));
         } else if (key != null && key.equals("yatripartner")) {
             merchantLogo.setText("Yatri Partner");
         } else if (key != null && key.equals("passcultureprovider")) {
@@ -761,7 +767,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         handler.post(() -> {
             if (progressDialog != null) {
                 TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
-                if (key != null && key.equals("jatrisaathidriver")) {
+                if (key != null && key.equals("yatrisathiprovider")) {
                     ImageView loader = progressDialog.findViewById(R.id.image_view_waiting);
                     loader.setImageResource(R.drawable.ic_ride_assigned);
                 }

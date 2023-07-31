@@ -33,7 +33,7 @@ public class BootUpReceiver extends BroadcastReceiver {
             SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
             String key = context.getString(R.string.service);
-            String merchant = key.contains("partner") || key.contains("driver") ? "DRIVER" : "USER";
+            String merchant = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
             if (merchant.equals("DRIVER")) {
                 if (driverStatus.equals("true")) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

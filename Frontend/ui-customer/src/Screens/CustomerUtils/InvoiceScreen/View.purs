@@ -128,7 +128,7 @@ amountBreakupView state =
               ]
               [ textView $
                   [ text case item.fareType of
-                      "BASE_FARE" -> (getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
+                      "BASE_FARE" -> (getString BASE_FARES) <> if state.data.selectedItem.baseDistance == "0 m" then "" else " (" <> state.data.selectedItem.baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getString TOTAL_PAID
@@ -139,8 +139,9 @@ amountBreakupView state =
                       "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
                       "SERVICE_CHARGE" -> getString SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
-                      "WAITING_OR_PICKUP_CHARGES"  -> getString PICKUP_CHARGE
+                      "WAITING_OR_PICKUP_CHARGES"  -> getString MISC_WAITING_CHARGE
                       "PLATFORM_FEE" -> getString PLATFORM_FEE
+                      "SGST" -> getString PLATFORM_GST
                       _ -> "BASE_FARE"
                   , color Color.black800
                   , layoutGravity "bottom"
@@ -152,7 +153,7 @@ amountBreakupView state =
                   , orientation HORIZONTAL
                   ]
                   [ textView $
-                      [ text $ item.price
+                      [ text item.price
                       , alignParentRight "true,-1"
                       , color Color.black800
                       , height WRAP_CONTENT

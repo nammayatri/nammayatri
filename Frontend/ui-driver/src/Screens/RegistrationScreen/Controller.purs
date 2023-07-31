@@ -15,13 +15,14 @@
 
 module Screens.RegistrationScreen.Controller where
 
-import Prelude(class Show, unit, pure, unit, discard)
+import Prelude(class Show, unit, pure, unit, discard, bind, ($))
 import PrestoDOM (Eval, continue, exit)
 import Screens.Types (RegistrationScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButtonController
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import JBridge as JB
 
 instance showAction :: Show Action where
   show _ = ""
@@ -47,7 +48,9 @@ data Action = BackPressed
 
 eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput RegistrationScreenState
 eval AfterRender state = continue state
-eval BackPressed state = continue state
+eval BackPressed state = do
+  _ <- pure $ JB.minimizeApp ""
+  continue state
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = exit (GoToUploadDriverLicense)
 eval _ state = continue state
 
