@@ -1361,6 +1361,7 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false, openReportIssue = false} }})
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data{selectedItem{rideEndTime = state.data.rideRatingState.rideEndTime, rideStartTime = state.data.rideRatingState.rideStartTime}}})
       tripDetailsScreenFlow Home
     _ -> homeScreenFlow
 

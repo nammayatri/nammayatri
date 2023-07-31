@@ -29,7 +29,7 @@ import Data.Ord
 import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
-import Helpers.Utils (parseFloat)
+import Helpers.Utils (parseFloat,withinTimeRange, getMerchant, Merchant(..),isHaveFare)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime)
 import Data.Number (ceil)
 import Language.Strings (getString)
@@ -49,6 +49,7 @@ import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
+import Language.Strings (getEN)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -353,8 +354,12 @@ dummyFareRange = FareRange{
 
 
 getTripDetailsState :: RideBookingRes -> TripDetailsScreenState -> TripDetailsScreenState
-getTripDetailsState (RideBookingRes ride) state = do 
+getTripDetailsState (RideBookingRes ride) state = do
   let (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0))
+      timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
+      nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
+      baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
+      updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
   state {
     data {
       tripId = ride.id,
@@ -374,7 +379,18 @@ getTripDetailsState (RideBookingRes ride) state = do
         source= decodeAddress (Booking ride.fromLocation),
         destination= (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
         rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
-        driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName)
+        driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName),
+        rideStartTime = (convertUTCtoISC (fromMaybe "" rideDetails.rideStartTime ) "h:mm A"),
+        rideEndTime = (convertUTCtoISC (fromMaybe "" rideDetails.rideEndTime) "h:mm A"),
+        vehicleNumber = rideDetails.vehicleNumber,
+        totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
+        shortRideId = rideDetails.shortRideId,
+        baseDistance = baseDistanceVal,
+        referenceString = (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) else "")
+                        <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
+                        <> (if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
+                        <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
+                        <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
       }
     }
   }
