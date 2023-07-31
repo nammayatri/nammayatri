@@ -810,7 +810,7 @@ homeScreenFlow = do
       homeScreenFlow
     CONFIRM_RIDE state -> do
           _ <- pure $ enableMyLocation false
-          let selectedQuote = if state.props.isSpecialZone then state.data.specialZoneSelectedQuote else state.props.selectedQuote
+          let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES then state.data.specialZoneSelectedQuote else state.props.selectedQuote
           _ <- pure $ spy "selected Quote " selectedQuote
           if isJust selectedQuote then do
             updateLocalStage ConfirmingRide

@@ -114,6 +114,7 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.LottieListener;
 import com.facebook.appevents.AppEventsConstants;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.auth.api.credentials.Credentials;
@@ -2226,6 +2227,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     JSONObject jsonObject = new JSONObject(configObj);
                     float minProgress = Float.parseFloat(jsonObject.getString("minProgress"));
                     float maxProgress = Float.parseFloat(jsonObject.getString("maxProgress"));
+                    minProgress = minProgress >= maxProgress ? 0.0f : minProgress;
                     String scaleType = jsonObject.getString("scaleType");
                     boolean repeat = Boolean.parseBoolean(jsonObject.getString("repeat"));
                     int lottieId = Integer.parseInt(jsonObject.getString("lottieId"));
@@ -2233,6 +2235,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     String rawJson = jsonObject.getString("rawJson");
 
                     animationView = activity.findViewById(lottieId);
+                    animationView.addAnimatorListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            super.onAnimationEnd(animation);
+                            animationView.setMinAndMaxProgress(0.0f, 1.0f);
+                        }
+                    });
                     animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
                     animationView.setRepeatCount(repeat ? ValueAnimator.INFINITE : 0);
                     animationView.setSpeed(speed);

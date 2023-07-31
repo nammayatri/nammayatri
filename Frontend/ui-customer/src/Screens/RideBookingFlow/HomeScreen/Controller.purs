@@ -636,11 +636,11 @@ eval OnResumeCallback state =
         true  -> do
           let secondsLeft = findingQuotesSearchExpired false
               findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
-          void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+          if secondsLeft > 0 then
+            void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+          else pure unit
         false -> pure unit
-      case flowWithoutOffers WithoutOffers of
-        true  -> exit $ OnResumeApp state
-        false -> continue state
+      continue state
     "QuoteList" -> do
       let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
       void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
@@ -904,7 +904,7 @@ eval (OnIconClick autoAssign) state = do
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
-eval (RatingCardAC (RatingCard.Rating index)) state = do 
+eval (RatingCardAC (RatingCard.Rating index)) state = do
   let feedbackListArr = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
   continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr}, ratingViewState { selectedRating = index} } }
 
