@@ -32,9 +32,6 @@ import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.DriverLocation as DriverLocation
-import Domain.Types.DriverOnboarding.DriverLicense
-import Domain.Types.DriverOnboarding.DriverRCAssociation
-import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
