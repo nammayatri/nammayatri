@@ -38,6 +38,7 @@ type API =
            :<|> Common.RideStartAPI
            :<|> Common.RideEndAPI
            :<|> Common.MultipleRideEndAPI
+           :<|> Common.CurrentActiveRideAPI
            :<|> Common.RideCancelAPI
            :<|> Common.MultipleRideCancelAPI
            :<|> Common.RideInfoAPI
@@ -52,6 +53,7 @@ handler merchantId =
     :<|> rideStart merchantId
     :<|> rideEnd merchantId
     :<|> multipleRideEnd merchantId
+    :<|> currentActiveRide merchantId
     :<|> rideCancel merchantId
     :<|> multipleRideCancel merchantId
     :<|> rideInfo merchantId
@@ -110,6 +112,9 @@ multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
+
+currentActiveRide :: ShortId DM.Merchant -> Text -> FlowHandler (Id Common.Ride)
+currentActiveRide merchantShortId vehicleNumber = withFlowHandlerAPI $ DRide.currentActiveRide merchantShortId vehicleNumber
 
 rideCancel :: ShortId DM.Merchant -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
 rideCancel merchantShortId reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do

@@ -159,6 +159,13 @@ validateMultipleRideEndReq :: Validate MultipleRideEndReq
 validateMultipleRideEndReq MultipleRideEndReq {..} = do
   validateField "rides" rides $ UniqueField @"rideId"
 
+-- active ride id on the basis of vehcile number ---------------------------------------------
+
+type CurrentActiveRideAPI =
+  Capture "vehicleNumber" Text
+    :> "currentActiveRide"
+    :> Get '[JSON] (Id Ride)
+
 -- ride cancel ------------------------------------------
 
 type RideCancelAPI =

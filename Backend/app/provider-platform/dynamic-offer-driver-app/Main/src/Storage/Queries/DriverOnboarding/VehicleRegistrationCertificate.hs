@@ -18,7 +18,9 @@ import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Types.Id
+import Kernel.Utils.IOLogging (LoggerEnv)
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person ()
 
@@ -51,11 +53,10 @@ findById ::
 findById = Esq.findById
 
 findLastVehicleRC ::
-  (Transactionable m, EncFlow m r) =>
-  Text ->
+  (Transactionable m) =>
+  DbHash ->
   m (Maybe VehicleRegistrationCertificate)
-findLastVehicleRC certNumber = do
-  certNumberHash <- getDbHash certNumber
+findLastVehicleRC certNumberHash = do
   rcs <- findAll $ do
     rc <- from $ table @VehicleRegistrationCertificateT
     where_ $ rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
@@ -86,3 +87,15 @@ findAllById rcIds =
     rc <- from $ table @VehicleRegistrationCertificateT
     where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
     return rc
+
+findLastVehicleRCWrapper ::
+  ( Transactionable m,
+    EncFlow m r,
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    HasField "loggerEnv" r LoggerEnv
+  ) =>
+  Text ->
+  m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCWrapper certNumber = do
+  certNumberHash <- getDbHash certNumber
+  Esq.runInReplica $ findLastVehicleRC certNumberHash
