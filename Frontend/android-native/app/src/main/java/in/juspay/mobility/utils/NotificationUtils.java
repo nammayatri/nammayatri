@@ -109,6 +109,7 @@ public class NotificationUtils {
     private static AudioManager audio;
     public static Bundle lastRideReq = new Bundle();
     public static  String versionName = BuildConfig.VERSION_NAME;
+    public static int chatNotificationId = 18012023;
 
     public interface NotificationCallback{
         public void triggerPop(String id,String type);
@@ -638,7 +639,6 @@ public class NotificationUtils {
     }
 
     public static void createChatNotification(String sentBy, String message, Context context) {
-        final int chatNotificationId = 18012023;
         createChatNotificationChannel(context);
         Intent notificationIntent = new Intent(context, MainActivity.class);
         JSONObject payload = new JSONObject();
@@ -657,6 +657,8 @@ public class NotificationUtils {
                 new NotificationCompat.Builder(context, "MessageUpdates")
                         .setContentTitle(titleBold)
                         .setAutoCancel(true)
+                        .setContentTitle(titleBold)
+                        .setAutoCancel(true)
                         .setColor(rgb(33,148,255))
                         .setContentText(message)
                         .setSmallIcon(R.drawable.ny_ic_launcher)
@@ -665,6 +667,7 @@ public class NotificationUtils {
                         .setContentIntent(pendingIntent)
                         .setLargeIcon(BitmapFactory.decodeResource(context.getResources(),R.drawable.ny_ic_driver_profile))
                         .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                        .setLargeIcon(BitmapFactory.decodeResource(context.getResources(),R.drawable.ny_ic_driver_profile))
                         .addAction(1, "Reply", pendingIntent)
                         .build();
 
