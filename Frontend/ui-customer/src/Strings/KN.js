@@ -15,7 +15,7 @@ const kannadaStrings = {
   "AMOUNT_PAID": "ಪಾವತಿಸಿದ ಮೊತ್ತ",
   "TRIP_DETAILS_": "ಪ್ರವಾಸದ ವಿವರಗಳು",
   "DOWNLOAD_PDF": "PDF ಅನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
-  "GST": "ಜಿಎಸ್ಟಿ",
+  "CGST": "ಸಿಜಿಎಸ್ಟಿಟಿ",
   "INVOICE": "ಸರಕುಪಟ್ಟಿ",
   "TRIP_CHARGES": "ಟ್ರಿಪ್ ಶುಲ್ಕ",
   "PROMOTION": "ಪ್ರಚಾರ",
@@ -372,7 +372,7 @@ const kannadaStrings = {
   "ECONOMICAL": "ಆರ್ಥಿಕ",
   "COMFY": "ಆರಾಮದಾಯಕ",
   "NAVIGATE": "ನ್ಯಾವಿಗೇಟ್",
-  "GOVERNMENT_CHAGRES": "ಸರ್ಕಾರದ ಶುಲ್ಕಗಳು",
+  "GOVERNMENT_CHAGRES": "ರೈಡ್ GST (5%)",
   "SERVICE_CHARGES": "ಸೇವೆಯ ಶುಲ್ಕ",
   "CONFIRM_AND_BOOK": "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಬುಕ್ ಮಾಡಿ",
   "PEOPLE": "ಜನರು",
@@ -564,5 +564,13 @@ const kannadaStrings = {
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "ನೀವು ನಮಗೆ ಹೇಳಲು ಬಯಸುವ ಯಾವುದಾದರೂ? (ಐಚ್ಛಿಕ)",
   "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
   "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
-  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ"
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
+  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
+  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
+  "SGST" : "SGST",
+  "OTP_EXPIRED" : "OTP ಅವಧಿ ಮುಗಿದಿದೆ",
+  "OTP_EXPIRED_DESCRIPTION" : "ನಿಮ್ಮ ಸವಾರಿಯ OTP ಅವಧಿ ಮುಗಿದಿದೆ. ಸವಾರಿ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಬುಕ್ ಮಾಡಿ",
+  "PLATFORM_GST" : "ತೆರಿಗೆಗಳು (GST)",
+  "MISC_WAITING_CHARGE" : "ಇತರ (ವೇಟಿಂಗ್ ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ)"
 }

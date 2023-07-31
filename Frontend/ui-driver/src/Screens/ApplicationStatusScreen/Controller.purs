@@ -14,28 +14,31 @@
 -}
 
 module Screens.ApplicationStatusScreen.Controller where
-import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&),(||),not,(<=),(>=),(/))
-import PrestoDOM (Eval, continue, exit,continueWithCmd,updateAndExit)
-import Screens.Types (ApplicationStatusScreenState)
-import PrestoDOM.Types.Core (class Loggable)
-import JBridge (openWhatsAppSupport, minimizeApp,toast,showDialer, hideKeyboardOnNavigation )
-import Effect.Class (liftEffect)
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent,trackAppTextInput)
-import Screens (ScreenName(..), getScreen)
-import Services.API(DriverRegistrationStatusResp(..))
-import Components.PrimaryButton as PrimaryButtonController
-import Data.Array (any)
+
+import Common.Types.App (LazyCheck(..))
 import Components.PopUpModal.Controller as PopUpModal
-import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
+import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
+import Data.Array (any)
+import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
-import Data.Maybe(Maybe(..))
-import Services.Config (getSupportNumber)
-import Engineering.Helpers.Commons (getNewIDWithTag,getExpiryTime,setText')
-import Storage(KeyStore(..),getValueToLocalStore)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, getExpiryTime, setText)
+import JBridge (hideKeyboardOnNavigation, minimizeApp, openWhatsAppSupport, showDialer, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
+import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
+import Screens (ScreenName(..), getScreen)
+import Screens.Types (ApplicationStatusScreenState)
+import Services.API(DriverRegistrationStatusResp(..))
+import Services.Config (getSupportNumber)
+import Storage (KeyStore(..), getValueToLocalStore)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -114,7 +117,9 @@ eval (ReTry docType) state = case docType of
                                 _ -> continue state
 eval Logout state = exit LogoutAccount
 eval SupportCall  state = continueWithCmd state [do
-  _ <- liftEffect $ openWhatsAppSupport "+918618963188"
+  _ <- liftEffect $ case getMerchant FunctionCall of
+    NAMMAYATRI -> openWhatsAppSupport "+918618963188"
+    _ -> pure $ showDialer (getSupportNumber "") false
   pure Dummy
   ]
 eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state = do
@@ -133,7 +138,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
   if state.props.enterOtp then do
     continueWithCmd state{props{enterOtp = false, buttonVisibilty = true}} [do
-      _ <- setText' (getNewIDWithTag "Referalnumber") state.data.mobileNumber
+      _ <- pure $ setText (getNewIDWithTag "Referalnumber") state.data.mobileNumber
       pure Dummy
     ]
   else continue state{props{enterMobileNumberView=false}}
@@ -141,7 +146,7 @@ eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryButtonA
   if state.props.enterOtp then exit $ AddMobileNumber state
   else do
     continueWithCmd state [do
-      setText' (getNewIDWithTag "Referalnumber") ""
+      _ <- pure $ setText (getNewIDWithTag "Referalnumber") ""
       pure $ ExitGoToEnterOtp
     ]
 

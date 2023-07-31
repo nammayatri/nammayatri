@@ -18,6 +18,7 @@ module Screens.TripDetailsScreen.ScreenData where
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (TripDetailsScreenState, PaymentMode(..), TripDetailsGoBackType(..))
 import MerchantConfig.DefaultConfig as DC
+import Data.Maybe(Maybe(..))
 
 initData :: TripDetailsScreenState
 initData = {
@@ -33,6 +34,7 @@ initData = {
       rating : 0,
       tripId : "",
       selectedItem : dummyIndividualCard,
+      vehicleVariant : Nothing,
       config : DC.config
   },
   props: {

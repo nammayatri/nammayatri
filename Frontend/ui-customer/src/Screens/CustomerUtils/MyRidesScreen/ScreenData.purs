@@ -102,4 +102,5 @@ dummyIndividualCard = {
   , isSpecialZone : false
   , nightCharges : false
   , zoneType : NOZONE
+  , vehicleVariant : Nothing
 }

@@ -63,7 +63,7 @@ screen initialState rideListItem =
       globalOnScroll "RideSelectionScreen"
     , (\ push -> do
                  _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-                   (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED"
+                   (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED" "null"
                    lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
                  pure $ pure unit
       )

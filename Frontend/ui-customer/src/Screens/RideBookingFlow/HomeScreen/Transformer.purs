@@ -35,10 +35,9 @@ import Data.Number (ceil)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getFaresList, getKmMeter)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, TripDetailsScreenState)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getVehicleImage, getFaresList, getKmMeter)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
-import Screens.Types (DriverInfoCard, SearchResultType(..), LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
@@ -49,6 +48,7 @@ import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -143,6 +143,7 @@ getDriverInfo (RideBookingRes resp) isQuote =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : DC.config
+      , vehicleVariant : rideList.vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -297,26 +298,15 @@ getSpecialZoneQuote quote index =
   case quote of
     Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
       in ChooseVehicle.config { 
-        vehicleImage = case quoteEntity.vehicleVariant of 
-          "TAXI" -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac," <> (getAssetStoreLink FunctionCall) <> "ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan," <> (getAssetStoreLink FunctionCall) <> "ic_sedan.png"
-          "SUV" -> "ic_suv," <> (getAssetStoreLink FunctionCall) <> "ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback," <> (getAssetStoreLink FunctionCall) <> "ic_hatchback.png"
-          _ -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "ic_sedan_non_ac.png"
+        vehicleImage = getVehicleImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
-      , price = quoteEntity.estimatedTotalFare
+      , price = getValueFromConfig "currency" <> (show quoteEntity.estimatedTotalFare)
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
-      , capacity = case quoteEntity.vehicleVariant of
-          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
-          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
-          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
-          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
-          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
-          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+      , capacity = getVehicleCapacity quoteEntity.vehicleVariant
+      , showInfo = (getMerchant FunctionCall) == YATRI
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -325,23 +315,21 @@ getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
 getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) quotes
 
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
-        vehicleImage = case estimate.vehicleVariant of 
-          "TAXI" -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac," <> (getAssetStoreLink FunctionCall) <> "ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan," <> (getAssetStoreLink FunctionCall) <> "ic_sedan.png"
-          "SUV" -> "ic_suv," <> (getAssetStoreLink FunctionCall) <> "ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback," <> (getAssetStoreLink FunctionCall) <> "ic_hatchback.png"
-          _ -> "ic_sedan_non_ac," <> (getAssetStoreLink FunctionCall) <> "ic_sedan_non_ac.png"
+getEstimates (EstimateAPIEntity estimate) index = 
+  let currency = getValueFromConfig "currency"
+  in ChooseVehicle.config { 
+        vehicleImage = getVehicleImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
-      , price = estimate.estimatedTotalFare
+      , price = case estimate.totalFareRange of 
+                Nothing -> currency <> (show estimate.estimatedTotalFare)
+                Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
+                                              else (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
-      , capacity = case estimate.vehicleVariant of
-          "SUV" -> "6 " <> (getString SEATS)
-          _ -> "4 " <> (getString SEATS)
-      , maxPrice = (fromMaybe dummyFareRange estimate.totalFareRange)^. _maxFare
+      , capacity = getVehicleCapacity estimate.vehicleVariant
+      , showInfo = (getMerchant FunctionCall) == YATRI
+      , basePrice = estimate.estimatedTotalFare
       }
 
 dummyFareRange :: FareRange

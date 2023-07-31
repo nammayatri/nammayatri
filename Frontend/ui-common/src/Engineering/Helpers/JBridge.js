@@ -505,17 +505,12 @@ export const addMarkerImpl = function (title) {
 
 
 export const removeMarker = function (title) {
-    try{
-      return function () {
-        console.log("I AM HERE to remove marker------------------");
-        window.JBridge.removeMarker(title);
-        return true;
-      };
-  }
-  catch(e)
-  {
+  try {
+    window.JBridge.removeMarker(title);
+    return true;
+  } catch (e) {
     console.log(e);
-    console.log("error in removeMarker----------------------------------");
+    console.log("error in removeMarker----------------------------------", e);
   }
 };
 
@@ -1026,7 +1021,8 @@ export const metaLogEvent = function (event) {
 }
 
 export const hideKeyboardOnNavigation = function (permission) {
-  window.JBridge.hideKeyboardOnNavigation(permission);
+  if (permission)
+    window.JBridge.hideKeyboardOnNavigation(permission);
 };
 
 export const onEvent = function (payload) {
@@ -1709,3 +1705,51 @@ export const getLayoutBounds = function (id) {
     return bounds;
   };
 };
+
+
+
+export const getAllDates = function (noOfDays){
+  let dateArray = [];
+  try {
+    for (var i = 0; i < noOfDays;i++){
+    let currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() - i)
+    var dateObj = {
+      date : currentDate.getDate()
+    , month : currentDate.toLocaleString('default', { month: 'short' })
+    , year : currentDate.getFullYear()
+    }
+  dateArray.push(dateObj);
+  }} catch (err){
+    console.log("error in getPastDays",err);
+  }
+  return dateArray.reverse();
+}
+
+
+export const  horizontalScrollToPos = function (id, childId, focus) {
+  if (window.JBridge.horizontalScrollToPos){
+    window.JBridge.horizontalScrollToPos(id,childId, focus);
+  }
+}
+
+// focus values --
+  // left - 17
+  // right - 66
+  // top - 33
+  // down - 130
+
+  export const withinTimeRange = function (startTime) {
+    return function (endTime) {
+      return function(timeStr){
+        try {
+          return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
+       }catch (err){
+          return false;
+        }
+      }
+    }
+  }
+  function between(x, min, max) {
+    return x >= min && x <= max;
+  }

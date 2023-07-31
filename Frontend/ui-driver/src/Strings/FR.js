@@ -467,5 +467,11 @@ const frenchStrings = {
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL: "Website : <u> https://nammayatriin/ </u>",
   NEW_: "Nouvelle",
   WITH: "avec",
-  CHOOSE_LANGUAGE: "Choisissez la langue"
+  CHOOSE_LANGUAGE: "Choisissez la langue",
+  TODAY : "আজ",
+  AADHAAR_ALREADY_LINKED : "déjà lié",
+  OPTIONAL : " (Facultatif)",
+  DOWNLOAD_STATEMENT : "Télécharger la déclaration",
+  SELECT_A_DATE_RANGE : "Sélectionnez une plage de dates pour télécharger le relevé",
+  FEE_PAYMENT_HISTORY : "Historique de paiement des frais"
 }

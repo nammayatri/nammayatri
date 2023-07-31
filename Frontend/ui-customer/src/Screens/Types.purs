@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList, RateCardType)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -261,7 +261,8 @@ type TripDetailsScreenData =
     rating :: Int,
     selectedItem :: IndividualRideCardState,
     tripId :: String,
-    config :: AppConfig
+    config :: AppConfig,
+    vehicleVariant :: Maybe VehicleVariant
     -- bookingId :: String
   }
 
@@ -358,7 +359,8 @@ type HelpAndSupportScreenData =
     email :: String,
     description :: String,
     accountStatus :: DeleteStatus ,
-    config :: AppConfig
+    config :: AppConfig,
+    vehicleVariant :: Maybe VehicleVariant
   }
 
 type HelpAndSuportScreenProps =
@@ -444,7 +446,15 @@ type IndividualRideCardState =
   , isSpecialZone :: Boolean
   , nightCharges :: Boolean
   , zoneType :: ZoneType
+  , vehicleVariant :: Maybe VehicleVariant
   }
+
+
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS 
+
+derive instance genericVehicleVariant :: Generic VehicleVariant _
+instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
+instance showVehicleVariant :: Show VehicleVariant where show = genericShow
 
 type ItemState =
   {
@@ -644,6 +654,7 @@ type HomeScreenStateProps =
   , routeEndPoints :: Maybe RouteEndPoints
   , findingQuotesProgress :: Number
   , confirmLocationCategory :: String
+  , zoneTimerExpired :: Boolean
   }
 
 type RouteEndPoints = {
@@ -708,21 +719,17 @@ type Contact = {
      phoneNo :: String
 }
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate
-derive instance genericRateCardType :: Generic RateCardType _
-instance eqRateCardType :: Eq RateCardType where eq = genericEq
-
 type RateCard =
   {
+    baseFare :: Int,
+    extraFare :: Int,
+    pickUpCharges :: Int,
     additionalFare :: Int,
     nightShiftMultiplier :: Number,
     nightCharges :: Boolean,
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
-    rateCardArray :: Array RateCardDetails,
-    driverAdditionsImage :: String,
-    driverAdditionsLogic :: String,
-    title :: String
+    vehicleVariant :: String
   }
 
 type RateCardDetails = {
@@ -902,6 +909,7 @@ type DriverInfoCard =
   , createdAt :: String
   , initDistance :: Maybe Int
   , config :: AppConfig
+  , vehicleVariant :: String
   }
 
 type RatingCard =

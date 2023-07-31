@@ -15,14 +15,18 @@
 
 module Services.Backend where
 
-import Services.Config as SC
+import Data.Maybe
+import Services.API
+
+import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
-import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
-import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
+import Data.String as DS
+import Data.Int as INT
+import Debug (spy)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Foreign.Generic (encode)
 import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
@@ -31,21 +35,22 @@ import Types.App (GlobalState, FlowBT, ScreenType(..))
 import Services.API
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Log (printLog)
 import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show)
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse(..))
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
+import Screens.Types (DriverStatus)
+import Services.Config as SC
+import Services.EndPoints as EP
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
+import Storage (getValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
-import Tracker.Types as Tracker
-import Services.EndPoints as EP
-import Engineering.Helpers.Commons (liftFlow, bundleVersion)
-import Data.Maybe
-import Data.String as DS
-import Log (printLog)
-import Effect.Class (liftEffect)
-import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.Types (DriverStatus)
-import Debug (spy)
 import Engineering.Helpers.Utils (toggleLoader)
+import Tracker.Types as Tracker
+import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
+import Helpers.Utils(decodeErrorCode, getTime, toString, decodeErrorMessage)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
@@ -409,17 +414,17 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 
-getRideHistoryReq limit offset onlyActive status = do
+getRideHistoryReq limit offset onlyActive status day = do
         headers <- getHeaders ""
-        withAPIResult (EP.getRideHistory limit offset onlyActive status) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status)
+        withAPIResult (EP.getRideHistory limit offset onlyActive status day) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day)
     where
         unwrapResponse (x) = x
 
 
-getRideHistoryReqBT :: String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
-getRideHistoryReqBT limit offset onlyActive status = do
+getRideHistoryReqBT :: String -> String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
+getRideHistoryReqBT limit offset onlyActive status day= do
         headers <- lift $ lift $ getHeaders ""
-        withAPIResultBT (EP.getRideHistory limit offset onlyActive status) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status))
+        withAPIResultBT (EP.getRideHistory limit offset onlyActive status day) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day))
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
@@ -430,6 +435,7 @@ updateDriverInfoBT payload = do
         withAPIResultBT (EP.updateDriverInfo "") (\x → x) errorHandler (lift $ lift $ callAPI headers (UpdateDriverInfoRequest payload))
     where
         errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
             BackT $ pure GoBack
 
 mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
@@ -520,23 +526,38 @@ walkCoordinates (Snapped points) =
   }
 
 --------------------------------- onBoardingFlow  ---------------------------------------------------------------------------------------------------------------------------------
-getCorrespondingErrorMessage :: String -> String
-getCorrespondingErrorMessage errorCode = case errorCode of
-  "IMAGE_VALIDATION_FAILED" -> (getString IMAGE_VALIDATION_FAILED)
-  "IMAGE_NOT_READABLE" -> (getString IMAGE_NOT_READABLE)
-  "IMAGE_LOW_QUALITY" -> (getString IMAGE_LOW_QUALITY)
-  "IMAGE_INVALID_TYPE" -> (getString IMAGE_INVALID_TYPE)
-  "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> (getString IMAGE_DOCUMENT_NUMBER_MISMATCH)
-  "IMAGE_EXTRACTION_FAILED" -> (getString IMAGE_EXTRACTION_FAILED)
-  "IMAGE_NOT_FOUND" -> (getString IMAGE_NOT_FOUND)
-  "IMAGE_NOT_VALID" -> (getString IMAGE_NOT_VALID)
-  "DRIVER_ALREADY_LINKED" -> (getString DRIVER_ALREADY_LINKED)
-  "DL_ALREADY_UPDATED" -> (getString DL_ALREADY_UPDATED)
-  "DL_ALREADY_LINKED"  -> (getString DL_ALREADY_LINKED)
-  "RC_ALREADY_LINKED" -> (getString RC_ALREADY_LINKED)
-  "RC_ALREADY_UPDATED" -> (getString RC_ALREADY_UPDATED)
-  "UNPROCESSABLE_ENTITY" -> (getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT)
-  _                      -> (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+getCorrespondingErrorMessage :: ErrorResponse -> String
+getCorrespondingErrorMessage errorPayload = do
+    let errorCode = decodeErrorCode errorPayload.response.errorMessage
+    case errorCode of
+        "IMAGE_VALIDATION_FAILED" -> getString IMAGE_VALIDATION_FAILED
+        "IMAGE_NOT_READABLE" -> getString IMAGE_NOT_READABLE
+        "IMAGE_LOW_QUALITY" -> getString IMAGE_LOW_QUALITY
+        "IMAGE_INVALID_TYPE" -> getString IMAGE_INVALID_TYPE
+        "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> getString IMAGE_DOCUMENT_NUMBER_MISMATCH
+        "IMAGE_EXTRACTION_FAILED" -> getString IMAGE_EXTRACTION_FAILED
+        "IMAGE_NOT_FOUND" -> getString IMAGE_NOT_FOUND
+        "IMAGE_NOT_VALID" -> getString IMAGE_NOT_VALID
+        "DRIVER_ALREADY_LINKED" -> getString DRIVER_ALREADY_LINKED
+        "DL_ALREADY_UPDATED" -> getString DL_ALREADY_UPDATED
+        "DL_ALREADY_LINKED"  -> getString DL_ALREADY_LINKED
+        "RC_ALREADY_LINKED" -> getString RC_ALREADY_LINKED
+        "RC_ALREADY_UPDATED" -> getString RC_ALREADY_UPDATED
+        "UNPROCESSABLE_ENTITY" -> getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT
+        "NO_MOBILE_NUMBER_REGISTERED" -> getString NO_MOBILE_NUMBER_REGISTERED
+        "EXCEED_OTP_GENERATION_LIMIT" -> getString EXCEED_OTP_GENERATION_LIMIT
+        "AADHAAR_NUMBER_NOT_EXIST" -> getString AADHAAR_NUMBER_NOT_EXIST
+        "INVALID_OTP" -> getString INVALID_OTP
+        "NO_SHARE_CODE" -> getString NO_SHARE_CODE
+        "WRONG_SHARE_CODE" -> getString WRONG_SHARE_CODE
+        "INVALID_SHARE_CODE" -> getString INVALID_SHARE_CODE
+        "SESSION_EXPIRED" -> getString SESSION_EXPIRED
+        "OTP_ATTEMPT_EXCEEDED" -> getString OTP_ATTEMPT_EXCEEDED
+        "UPSTREAM_INTERNAL_SERVER_ERROR" -> getString UPSTREAM_INTERNAL_SERVER_ERROR
+        "TRANSACTION_ALREADY_COMPLETED" -> getString TRANSACTION_ALREADY_COMPLETED
+        "null" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        _ -> decodeErrorMessage errorPayload.response.errorMessage
 
 registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp
 registerDriverRCBT payload = do
@@ -926,3 +947,65 @@ driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverP
 driverProfileSummary lazy = do
   headers <- getHeaders ""
   withAPIResult (EP.profileSummary lazy) (\x -> x) (callAPI headers DriverProfileSummaryReq)
+
+createPaymentOrder :: String -> Flow GlobalState (Either ErrorResponse CreateOrderRes)
+createPaymentOrder dummy = do
+    headers <- getHeaders ""
+    withAPIResult (EP.createOrder dummy) unwrapResponse $ callAPI headers (CreateOrderReq dummy)
+    where
+        unwrapResponse (x) = x
+
+paymentOrderStatus :: String -> Flow GlobalState (Either ErrorResponse OrderStatusRes)
+paymentOrderStatus orderId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
+    where
+        unwrapResponse (x) = x
+
+    
+getPaymentHistory :: String -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetPaymentHistoryResp)
+getPaymentHistory from to status = do
+      headers <- getHeaders ""
+      withAPIResult (EP.paymentHistory from to status) unwrapResponse (callAPI headers (GetPaymentHistoryReq from to status))
+   where
+        unwrapResponse (x) = x
+
+
+---------------------------------------- triggerAadhaarOtp ---------------------------------------------
+triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)
+triggerAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders ""
+  withAPIResult (EP.triggerAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> GenerateAadhaarOTPReq
+    makeReq number = GenerateAadhaarOTPReq {
+      aadhaarNumber : number,
+      consent : "Y"
+    }
+    unwrapResponse x = x
+
+---------------------------------------- verifyAadhaarOtp ---------------------------------------------
+verifyAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse VerifyAadhaarOTPResp)
+verifyAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders ""
+  withAPIResult (EP.verifyAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> VerifyAadhaarOTPReq
+    makeReq otp = VerifyAadhaarOTPReq {
+      otp : fromMaybe 0 $ INT.fromString otp
+    , shareCode : DS.take 4 otp
+    }
+    unwrapResponse x = x
+
+unVerifiedAadhaarData :: String -> String -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+unVerifiedAadhaarData driverName driverGender driverDob = do
+  headers <- getHeaders ""
+  withAPIResult (EP.unVerifiedAadhaarData "") unwrapResponse $ callAPI headers $ makeReq driverName driverGender driverDob
+  where
+    makeReq :: String -> String -> String -> UnVerifiedDataReq
+    makeReq driverName driverGender driverDob = UnVerifiedDataReq {
+        driverName : driverName ,
+        driverGender : driverGender,
+        driverDob : driverDob
+    }
+    unwrapResponse x = x

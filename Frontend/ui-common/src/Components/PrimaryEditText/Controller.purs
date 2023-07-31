@@ -75,6 +75,8 @@ type EditTextConfig =
   , enabled :: Boolean
   , focused :: Boolean
   , textStyle :: Style
+  , separatorRepeat :: String
+  , separator :: String
   }
 
 type TextConfig =
@@ -117,6 +119,8 @@ config = {
     , capsLock : false
     , enabled : true
     , focused : false
+    , separatorRepeat : ""
+    , separator : ""
     }
   , visibility : VISIBLE
   , background : Color.white900
