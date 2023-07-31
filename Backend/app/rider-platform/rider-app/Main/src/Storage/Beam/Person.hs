@@ -124,7 +124,7 @@ data PersonT f = PersonT
     merchantId :: B.C f Text,
     whatsappNotificationEnrollStatus :: B.C f (Maybe OptApiMethods),
     createdAt :: B.C f Time.UTCTime,
-    blockedAt :: B.C f (Maybe Time.UTCTime),
+    blockedAt :: B.C f (Maybe Time.LocalTime),
     blockedByRuleId :: B.C f (Maybe Text),
     updatedAt :: B.C f Time.UTCTime,
     bundleVersion :: B.C f (Maybe Text),
