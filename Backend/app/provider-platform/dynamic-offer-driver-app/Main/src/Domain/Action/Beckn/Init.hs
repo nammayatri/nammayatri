@@ -227,7 +227,7 @@ handler merchantId req eitherReq = do
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
 findRandomExophone merchantId = do
-  exophones <- CQExophone.findAllByMerchantId merchantId
+  exophones <- CQExophone.findAllCallExophoneByMerchantId merchantId
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantId.getId
     e : es -> pure $ e :| es
