@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _title, _price)
 import Components.ChooseVehicle (Config, config) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
@@ -39,7 +39,7 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponen
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, TripDetailsScreenState)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
 import Screens.Types (DriverInfoCard, SearchResultType(..), LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), EstimateFares (..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -141,6 +141,7 @@ getDriverInfo (RideBookingRes resp) isQuote =
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
+      , vehicleVariant : rideList.vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -315,6 +316,7 @@ getSpecialZoneQuote quote index =
           "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
           "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
           "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+          "AUTO_RICKSHAW" -> "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png"
           _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
@@ -344,6 +346,7 @@ getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
           "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
           "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
           "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+          "AUTO_RICKSHAW" -> "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png"
           _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
       , vehicleVariant = estimate.vehicleVariant
       , price = estimate.estimatedTotalFare
@@ -352,8 +355,10 @@ getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
       , id = trim estimate.id
       , capacity = case estimate.vehicleVariant of
           "SUV" -> "6 " <> (getString SEATS)
+          "AUTO_RICKSHAW" -> "3 " <> (getString SEATS)
           _ -> "4 " <> (getString SEATS)
       , maxPrice = (fromMaybe dummyFareRange estimate.totalFareRange)^. _maxFare
+      , pickUpCharges = getPickupCharge $ spy "fareBreakup" estimate.estimateFareBreakup
       }
 
 dummyFareRange :: FareRange
@@ -362,6 +367,15 @@ dummyFareRange = FareRange{
    minFare : 0
 }
 
+getPickupCharge :: Maybe (Array EstimateFares) -> Int
+getPickupCharge fareBrakeup = do
+  let estimateFareBreakup = case fareBrakeup of
+          Just a -> a
+          Nothing -> []
+      pickUpCharge = case (DA.head (DA.filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)) of
+        Just a -> a^. _price
+        Nothing -> 0
+  pickUpCharge
 
 getTripDetailsState :: RideBookingRes -> TripDetailsScreenState -> TripDetailsScreenState
 getTripDetailsState (RideBookingRes ride) state = do
@@ -400,7 +414,8 @@ getTripDetailsState (RideBookingRes ride) state = do
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
                         <> (if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
-                        <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
+                        <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else ""),
+        vehicleVariant = rideDetails.vehicleVariant
       }
     }
   }

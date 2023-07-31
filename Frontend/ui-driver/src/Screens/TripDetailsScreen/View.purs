@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
 import Language.Types (STR(..))
 import Language.Strings (getString)
-import Prelude (Unit, const, not, show, unit, ($), (*), (/), (<<<), (<>), (==))
+import Prelude (Unit, const, not, show, unit, ($), (*), (/), (<<<), (<>), (==), (&&))
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, alignParentBottom, relativeLayout, afterRender, onBackPressed, imageWithFallback)
 import Screens.Types as ST
@@ -33,6 +33,7 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Common.Types.App
 import Screens.TripDetailsScreen.ComponentConfig
+import Merchant.Utils (getMerchant, Merchant(..))
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -159,7 +160,8 @@ tripDetailsView state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-          [ imageWithFallback "ic_vehicle_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
+          [ imageWithFallback $ if (state.data.vehicleType == "AUTO_RICKSHAW" && (getMerchant unit == YATRIPARTNER)) then  "ny_ic_auto1,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
+                                else "ic_vehicle_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
           , width (V 36)
           , height (V 36)
           ]

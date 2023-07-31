@@ -32,7 +32,8 @@ initData = {
       destination : "",
       totalAmount : 0,
       paymentMode : CASH,
-      status : ""
+      status : "",
+      vehicleType : ""
   },
   props: {
     rating : 4,

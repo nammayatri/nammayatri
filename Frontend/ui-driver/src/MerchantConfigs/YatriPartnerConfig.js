@@ -48,8 +48,8 @@ const yatriPartnerConfigs = {
 }
 
 const malayalamStrings = {
-    WELCOME_TEXT : "Welcome to the Yatri Partner",
-    ABOUT_TEXT : "Yatri partner ഡ്രൈവർമാരെ റൈഡറുകളുമായി ബന്ധിപ്പിക്കുന്നതിനുള്ള ഒരു തുറന്ന പ്ലാറ്റ്ഫോമാണ്. നിർദ്ദേശിച്ച ആവശ്യമുള്ള നിരക്കുകളുള്ള റൈഡർമാരെ കണ്ടെത്താൻ ആപ്പ് ഡ്രൈവർമാർക്ക് സൗകര്യപ്രദമാക്കുന്നു. റൈഡ് അടിസ്ഥാനമാക്കിയുള്ള കമ്മീഷനില്ല, പ്രതിമാസ സബ്‌സ്‌ക്രിപ്‌ഷന്റെ രൂപത്തിൽ ചെറിയ തുക അടച്ചാൽ മതി",
+    WELCOME_TEXT : "Welcome to the Yatri Driver",
+    ABOUT_TEXT : "Yatri Driver ഡ്രൈവർമാരെ റൈഡറുകളുമായി ബന്ധിപ്പിക്കുന്നതിനുള്ള ഒരു തുറന്ന പ്ലാറ്റ്ഫോമാണ്. നിർദ്ദേശിച്ച ആവശ്യമുള്ള നിരക്കുകളുള്ള റൈഡർമാരെ കണ്ടെത്താൻ ആപ്പ് ഡ്രൈവർമാർക്ക് സൗകര്യപ്രദമാക്കുന്നു. റൈഡ് അടിസ്ഥാനമാക്കിയുള്ള കമ്മീഷനില്ല, പ്രതിമാസ സബ്‌സ്‌ക്രിപ്‌ഷന്റെ രൂപത്തിൽ ചെറിയ തുക അടച്ചാൽ മതി",
     NEED_IT_TO_ENABLE_LOCATION : "ആപ്പ് അടച്ചിരിക്കുമ്പോഴും ഉപയോഗത്തിലില്ലെങ്കിലും ഡ്രൈവർ നിലവിലെ ലൊക്കേഷൻ നിരീക്ഷിക്കാൻ നിങ്ങളുടെ ലൊക്കേഷൻ പങ്കിടുന്നത് പ്രവർത്തനക്ഷമമാക്കാൻ യാത്രി പങ്കാളി ലൊക്കേഷൻ ഡാറ്റ ശേഖരിക്കുന്നു.",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "നിലവിൽ കേരളത്തിൽ രജിസ്റ്റർ ചെയ്ത നമ്പർ മാത്രമേ ഞങ്ങൾ അനുവദിക്കൂ",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "നിങ്ങൾ യാത്രി സപ്പോർട്ട് ടീമിലേക്ക് ഒരു കോൾ ചെയ്യാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
@@ -57,9 +57,9 @@ const malayalamStrings = {
 }
 
 const englishStrings = {
-    WELCOME_TEXT : "Welcome to the Yatri Partner",
-    ABOUT_TEXT : "Yatri partner is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",
-    NEED_IT_TO_ENABLE_LOCATION : "Yatri Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
+    WELCOME_TEXT : "Welcome to the Yatri Driver",
+    ABOUT_TEXT : "Yatri Driver is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",
+    NEED_IT_TO_ENABLE_LOCATION : "Yatri Driver collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "Currently,We allow only Kerala registered number",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
     YOUR_LOCATION_HELPS_OUR_SYSTEM : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible."

@@ -3428,7 +3428,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void updateRoute(String json, String dest, String eta, String specialLocation) {
+    public void updateRoute(String json, String dest, String eta, String src, String specialLocation) {
         activity.runOnUiThread(() -> {
             if (googleMap != null) {
                 try {
@@ -3443,7 +3443,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         LatLng tempPoint = new LatLng(lat, lng);
                         path.add(tempPoint);
                     }
-                    Marker currMarker = (Marker) markers.get("ic_vehicle_nav_on_map");
+                    Marker currMarker = (Marker) markers.get(src);
                     Marker destMarker = (Marker) markers.get(dest);
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
@@ -3453,7 +3453,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         polylines.setEndCap(new ButtCap());
                         if (path.size() == 0) {
                             LatLng destination = destMarker.getPosition();
-                            animateMarkerNew(destination, currMarker);
+                            animateMarkerNew(src, destination, currMarker);
                             polylines.remove();
                             polylines = null;
                             currMarker.setAnchor(0.5f, 0);
@@ -3464,7 +3464,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             double sourceLat = path.get(path.size() - 1).latitude;
                             double sourceLong = path.get(path.size() - 1).longitude;
                             LatLng destination = path.get(path.size() - 1);
-                            animateMarkerNew(destination, currMarker);
+                            animateMarkerNew(src, destination, currMarker);
                             PatternItem DASH = new Dash(1);
                             List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
                             polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
@@ -3651,7 +3651,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         return (float) brng;
     }
 
-    private void animateMarkerNew(final LatLng destination, final Marker marker) {
+    private void animateMarkerNew(String src, final LatLng destination, final Marker marker) {
 
         if (marker != null) {
 
@@ -3670,7 +3670,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     if (rotation > 1.0)
                         marker.setRotation(rotation);
                     marker.setPosition(newPosition);
-                    markers.put("ic_vehicle_nav_on_map",marker);
+                    markers.put(src,marker);
                 } catch (Exception ex) {
                 }
             });
@@ -3793,7 +3793,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
                         Integer vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
-                        upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
+                        upsertMarker(sourceMarker, String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
                         animateCamera(lat,lng,20.0f, ZoomType.ZOOM);
                         return;
                     }
@@ -3920,6 +3920,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void removeAllPolylines(String str) {
+        removeMarker("ic_auto_nav_on_map");
         removeMarker("ic_vehicle_nav_on_map");
         removeMarker("ny_ic_src_marker");
         removeMarker("ny_ic_dest_marker");

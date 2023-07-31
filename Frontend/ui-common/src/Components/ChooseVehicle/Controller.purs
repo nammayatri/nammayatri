@@ -4,7 +4,7 @@ data Action
   = NoAction
   | OnSelect Config
   | OnImageClick
-  | ShowRateCard String
+  | ShowRateCard Config
 
 type Config
   = { vehicleImage :: String
@@ -20,6 +20,7 @@ type Config
     , id :: String
     , maxPrice :: Int
     , basePrice :: Int
+    , pickUpCharges :: Int
     }
 
 config :: Config
@@ -37,4 +38,5 @@ config =
   , id: ""
   , maxPrice : 123
   , basePrice : 0 
+  , pickUpCharges : 0
   }

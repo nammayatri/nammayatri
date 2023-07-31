@@ -247,6 +247,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , nightCharges : nightChargesVal
   , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
   , zoneType : specialTags.priorityTag
+  , vehicleVariant : rideDetails.vehicleVariant
 }) (listRes))
 
 

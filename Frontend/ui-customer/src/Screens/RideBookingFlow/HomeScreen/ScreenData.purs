@@ -39,6 +39,7 @@ initData = {
     , destination : ""
     , eta : "2 mins"
     , vehicleDetails : "Bajaj RE Auto"
+    , vehicleVariant : ""
     , registrationNumber : "KA  01  YF  4921"
     , rating : 4.0
     , locationList : []
@@ -90,6 +91,7 @@ initData = {
       , id: ""
       , maxPrice : 0
       , basePrice : 0
+      , pickUpCharges : 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -322,6 +324,7 @@ dummyDriverInfo =
   , merchantExoPhone : ""
   , createdAt : ""
   , initDistance : Nothing
+  , vehicleVariant : ""
   }
 
 dummySettingBar :: SettingSideBarState
