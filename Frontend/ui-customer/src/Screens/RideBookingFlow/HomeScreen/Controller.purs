@@ -2147,7 +2147,7 @@ estimatesFlow estimatedQuotes state = do
                                   , nightCharges: nightCharges
                                   , currentRateCardType: DefaultRateCard
                                   , onFirstPage: false
-                                  , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
+                                  , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare pickUpCharges
                                   , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
                                   , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
                                   },
@@ -2166,7 +2166,7 @@ estimatesFlow estimatedQuotes state = do
                             , nightCharges: nightCharges
                             , currentRateCardType: DefaultRateCard
                             , onFirstPage: false
-                            , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
+                            , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare pickUpCharges
                             , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
                             , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
                             }
@@ -2318,9 +2318,10 @@ getRateCardValue vehicleVariant state = do
                    , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
     _ -> []
 
-getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
-getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }
-                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} ]
+getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Int -> Array {title :: String , description :: String}
+getRateCardArray nightCharges lang baseFare extraFare additionalFare pickUpCharges = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }
+                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"}
+                      , { title : (getString DRIVER_PICKUP_CHARGES), description : "₹" <> toString (pickUpCharges) } ]
                       <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
 findingQuotesSearchExpired :: Boolean -> Int
