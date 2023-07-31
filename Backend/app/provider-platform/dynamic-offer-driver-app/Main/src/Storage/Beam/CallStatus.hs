@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -72,6 +73,12 @@ instance ModelMeta CallStatusT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type CallStatus = CallStatusT Identity
+
+callStatusTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CallStatusT)
+callStatusTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "call_status"
+    <> B.modifyTableFields callStatusTMod
 
 instance FromJSON CallStatus where
   parseJSON = A.genericParseJSON A.defaultOptions

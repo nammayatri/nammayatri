@@ -17,14 +17,16 @@
 module Storage.Queries.QuoteSpecialZone where
 
 import qualified Data.Time as T
+import qualified Database.Beam as B
 import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, getMasterBeamConfig)
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
 
@@ -40,19 +42,16 @@ create :: (L.MonadFlow m, Log m) => QuoteSpecialZone -> m ()
 create = createWithKV
 
 countAllByRequestId :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m Int
-countAllByRequestId searchReqID = findAllWithKV [Se.Is BeamQSZ.searchRequestId $ Se.Eq (getId searchReqID)] <&> length
-
--- countAllByRequestId :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m Int
--- countAllByRequestId searchReqID = do
---   dbConf <- getMasterBeamConfig
---   resp <-
---     L.runDB dbConf $
---       L.findRow $
---         B.select $
---           B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
---             B.filter_' (\(BeamQSZ.QuoteSpecialZoneT {..}) -> searchRequestId B.==?. B.val_ (getId searchReqID)) $
---               B.all_ (meshModelTableEntity @BeamQSZ.QuoteSpecialZoneT @Postgres @(DatabaseWith BeamQSZ.QuoteSpecialZoneT))
---   pure (either (const 0) (fromMaybe 0) resp)
+countAllByRequestId searchReqID = do
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_' (\(BeamQSZ.QuoteSpecialZoneT {..}) -> searchRequestId B.==?. B.val_ (getId searchReqID)) $
+              B.all_ (BeamCommon.quoteSpecialZone BeamCommon.atlasDB)
+  pure (either (const 0) (fromMaybe 0) resp)
 
 findById :: (L.MonadFlow m, Log m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]

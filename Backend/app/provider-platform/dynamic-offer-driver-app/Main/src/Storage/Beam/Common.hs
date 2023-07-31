@@ -13,16 +13,20 @@ import GHC.Generics (Generic)
 -- import Storage.Beam.DriverOnboarding.IdfyVerification
 
 import Storage.Beam.Booking
+import Storage.Beam.CallStatus
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLocation
 import Storage.Beam.DriverOnboarding.DriverLicense
 import Storage.Beam.DriverOnboarding.DriverRCAssociation
 import Storage.Beam.DriverOnboarding.IdfyVerification
+import Storage.Beam.DriverOnboarding.Image
 import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry
+import Storage.Beam.Message.MessageReport
 import Storage.Beam.Person
+import Storage.Beam.QuoteSpecialZone
 import Storage.Beam.Ride.Table
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
@@ -37,17 +41,20 @@ atlasDB =
         geometry = geometryTable,
         vehicle = vehicleTable,
         operatingCity = operatingCityTable,
-        -- image = imageTable,
+        image = imageTable,
         person = personTable,
         driverLicense = driverLicenseTable,
         idfyVerification = idfyVerificationTable,
         driverRCAssociation = driverRCAssociationTable,
         vehicleRegistrationCertificate = vehicleRegistrationCertificateTable,
-        dInformation = dInformationTable,
+        driverInformation = dInformationTable,
         booking = bookingTable,
         ride = rideTable,
         rideDetails = rideDetailsTable,
-        rDetails = rDetailsTable
+        rDetails = rDetailsTable,
+        callStatus = callStatusTable,
+        quoteSpecialZone = quoteSpecialZoneTable,
+        messageReport = messageReportTable
       }
 
 data AtlasDB f = AtlasDB
@@ -56,16 +63,19 @@ data AtlasDB f = AtlasDB
     geometry :: f (B.TableEntity GeometryT),
     vehicle :: f (B.TableEntity VehicleT),
     operatingCity :: f (B.TableEntity OperatingCityT),
-    -- image :: f (B.TableEntity ImageT),
+    image :: f (B.TableEntity ImageT),
     person :: f (B.TableEntity PersonT),
     driverLicense :: f (B.TableEntity DriverLicenseT),
     idfyVerification :: f (B.TableEntity IdfyVerificationT),
     driverRCAssociation :: f (B.TableEntity DriverRCAssociationT),
     vehicleRegistrationCertificate :: f (B.TableEntity VehicleRegistrationCertificateT),
-    dInformation :: f (B.TableEntity DriverInformationT),
+    driverInformation :: f (B.TableEntity DriverInformationT),
     booking :: f (B.TableEntity BookingT),
     ride :: f (B.TableEntity RideT),
     rideDetails :: f (B.TableEntity RideDetailsT),
-    rDetails :: f (B.TableEntity RiderDetailsT)
+    rDetails :: f (B.TableEntity RiderDetailsT),
+    callStatus :: f (B.TableEntity CallStatusT),
+    quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
+    messageReport :: f (B.TableEntity MessageReportT)
   }
   deriving (Generic, B.Database be)

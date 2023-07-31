@@ -46,7 +46,6 @@ import Domain.Types.Ride as Ride
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
@@ -305,8 +304,8 @@ getCountByStatus merchantId = do
         B.aggregate_ (\(ride, _) -> (B.group_ (BeamR.status ride), B.as_ @Int B.countAll_)) $
           B.filter_' (\(_, BeamB.BookingT {..}) -> providerId B.==?. B.val_ (getId merchantId)) $
             do
-              ride <- B.all_ (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT))
-              booking <- B.join_' (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT)) (\booking -> BeamB.id booking B.==?. BeamR.bookingId ride)
+              ride <- B.all_ (BeamCommon.ride BeamCommon.atlasDB)
+              booking <- B.join_' (BeamCommon.booking BeamCommon.atlasDB) (\booking -> BeamB.id booking B.==?. BeamR.bookingId ride)
               pure (ride, booking)
   pure (EulerHS.Prelude.fromRight [] resp)
 
@@ -387,7 +386,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (defaultTo)) mbTo
                     -- B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ ride.fare B.<=. booking.estimatedFare) mbFareDiff)
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ (bookingStatus)) mbBookingStatus
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - (B.just_ booking.estimatedFare)) B.>=. B.val_ (Just fareDiff_)) mbFareDiff
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - (B.just_ booking.estimatedFare)) B.>. B.val_ (Just fareDiff_)) mbFareDiff
               )
               -- B.&&?. B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW) (booking.status B.val_ Common.RCOMPLETED) (B.val_ Common.RCANCELLED)) $
               do
@@ -426,7 +425,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       | ride.status == Ride.NEW && ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.UPCOMING_6HRS
       | ride.status == Ride.INPROGRESS && ((ride.tripStartTime) > (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.CANCELLED
-      | otherwise = Common.COMPLETED
+      | otherwise = Common.ONGOING_6HRS
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) =
       RideItem {..}
 
@@ -560,21 +559,21 @@ data StuckRideItem = StuckRideItem
 findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-  rides <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
-            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
-          ]
-      ]
-  let bookingSeCondition =
+      bookingSeCondition =
         [ Se.And
-            [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
-              Se.Is BeamB.providerId $ Se.Eq merchantId,
+            [ Se.Is BeamB.providerId $ Se.Eq merchantId,
               Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
             ]
         ]
   bookings <- findAllBookingsWithSeConditions bookingSeCondition
+  rides <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore,
+            Se.Is BeamR.bookingId $ Se.In $ getId . DBooking.id <$> bookings
+          ]
+      ]
   driverInfos <- findAllDriverInfromationFromRides rides
   let rideBooking = foldl' (getRideWithBooking bookings) [] rides
   let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking

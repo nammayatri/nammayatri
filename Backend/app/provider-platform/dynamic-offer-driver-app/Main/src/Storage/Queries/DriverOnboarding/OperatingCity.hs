@@ -18,10 +18,8 @@ module Storage.Queries.DriverOnboarding.OperatingCity where
 
 import Data.Text
 import qualified Database.Beam as B
-import Database.Beam.Postgres
 import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Merchant
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -109,19 +107,8 @@ findEnabledCityByMerchantIdAndName (Id mId) city = do
       L.findRows $
         B.select $
           B.filter_' (\BeamOC.OperatingCityT {..} -> (merchantId B.==?. B.val_ mId) B.&&?. (B.lower_ cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
-            B.all_ (meshModelTableEntity @BeamOC.OperatingCityT @Postgres @(Se.DatabaseWith BeamOC.OperatingCityT))
+            B.all_ (BeamCommon.operatingCity BeamCommon.atlasDB)
   either (pure . const []) ((catMaybes <$>) . mapM fromTType') operatingCities
-
-transformBeamOperatingCityToDomain :: BeamOC.OperatingCity -> OperatingCity
-transformBeamOperatingCityToDomain BeamOC.OperatingCityT {..} = do
-  OperatingCity
-    { id = Id id,
-      merchantId = Id merchantId,
-      cityName = cityName,
-      enabled = enabled,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
 
 instance FromTType' BeamOC.OperatingCity OperatingCity where
   fromTType' BeamOC.OperatingCityT {..} = do

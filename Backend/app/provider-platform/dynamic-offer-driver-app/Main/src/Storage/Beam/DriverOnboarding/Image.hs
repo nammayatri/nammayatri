@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.Error as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Domain
@@ -89,6 +90,12 @@ instance ModelMeta ImageT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Image = ImageT Identity
+
+imageTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ImageT)
+imageTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "image"
+    <> B.modifyTableFields imageTMod
 
 instance FromJSON Image where
   parseJSON = A.genericParseJSON A.defaultOptions

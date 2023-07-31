@@ -12,27 +12,23 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use fromRight" #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
+
+{-# HLINT ignore "Use fromRight" #-}
 
 module Storage.Queries.DriverInformation where
 
 -- import Control.Applicative (liftA2)
 import qualified Database.Beam as B
-import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (findById)
-import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
@@ -40,18 +36,14 @@ import qualified Sequelize as Se
 -- import Storage.Tabular.DriverInformation
 -- import Storage.Tabular.Person
 
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverLocation as QDL
+import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Person (findAllPersonWithDriverInfos)
 import qualified Prelude
-
-data DatabaseWith2 table1 table2 f = DatabaseWith2
-  { dwTable1 :: f (B.TableEntity table1),
-    dwTable2 :: f (B.TableEntity table2)
-  }
-  deriving (Generic, B.Database be)
 
 create :: (L.MonadFlow m, Log m) => DriverInfo.DriverInformation -> m ()
 create = createWithKV
@@ -226,7 +218,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
                 )
                 do
                   person' <- B.all_ (SBC.person SBC.atlasDB)
-                  driverInfo' <- B.join_' (SBC.dInformation SBC.atlasDB) (\driverInfo'' -> BeamDI.driverId driverInfo'' B.==?. BeamP.id person')
+                  driverInfo' <- B.join_' (SBC.driverInformation SBC.atlasDB) (\driverInfo'' -> BeamDI.driverId driverInfo'' B.==?. BeamP.id person')
                   pure (person', driverInfo')
   case res of
     Right res' -> do
@@ -237,7 +229,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
       pure $ zip p di
     Left _ -> pure []
 
-getDriversWithOutdatedLocationsToMakeInactive :: (Transactionable m, EsqLocRepDBFlow m r) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: MonadFlow m => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- QDL.getDriverLocations before
   driverInfos <- getDriverInfos driverLocations
@@ -324,8 +316,8 @@ countDrivers merchantID =
           B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
             B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
               do
-                driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
-                person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
+                driverInformation <- B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
+                person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
                 pure (driverInformation, person)
     pure (either (const []) Prelude.id res)
   where
@@ -345,8 +337,8 @@ countDriversInReplica merchantID =
           B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
             B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
               do
-                driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
-                person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
+                driverInformation <- B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
+                person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
                 pure (driverInformation, person)
     pure (either (const []) Prelude.id res)
   where

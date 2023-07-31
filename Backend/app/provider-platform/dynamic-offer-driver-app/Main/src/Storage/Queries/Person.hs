@@ -155,46 +155,42 @@ findAllDriversWithInfoAndVehicle ::
   Maybe DbHash ->
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle (Id merchantId) limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
-  person :: [Person] <-
-    findAllWithKV
-      [ Se.And
-          ( [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.DRIVER]
-              <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
-          )
-      ]
-  driverInfo <-
-    findAllWithKV
-      [ Se.And
-          ( [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
-              <> ([Se.Is BeamDI.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified])
-              <> ([Se.Is BeamDI.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled])
-              <> ([Se.Is BeamDI.blocked $ Se.Eq (fromJust mbBlocked) | isJust mbBlocked])
-              <> ([Se.Is BeamDI.subscribed $ Se.Eq (fromJust mbSubscribed) | isJust mbSubscribed])
-          )
-      ]
-  vehicle <-
-    findAllWithKV
-      [ Se.And
-          ( [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
-              <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust mbVehicleNumberSearchString) | isJust mbVehicleNumberSearchString])
-          )
-      ]
-  let personAndDriverInfo = matchPersonAndDriverInfo person driverInfo
-  let finalResult = matchPersonDriverAndVehicle personAndDriverInfo vehicle
-  pure $ take limitVal (drop offsetVal finalResult)
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+  dbConf <- getMasterBeamConfig
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (fromIntegral limitVal) $
+          B.offset_ (fromIntegral offsetVal) $
+            B.filter_'
+              ( \(person, driverInfo, vehicle) ->
+                  person.merchantId B.==?. B.val_ (getId merchantId)
+                    -- B.&&?. B.sqlBool_ ((\vehicleNumber -> vehicle.registrationNo B.==. B.val_ vehicleNumber) mbVehicleNumberSearchString)
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\subscribed -> driverInfo.subscribed B.==?. B.val_ subscribed) mbSubscribed
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchPhoneDBHash
+              )
+              do
+                person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
+                driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
+                vehicle <- B.leftJoin_' (B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)) (\veh' -> BeamP.id person B.==?. BeamV.driverId veh')
+                pure (person, driverInfo, vehicle)
+  case result of
+    Right x -> do
+      let persons = fmap fst' x
+          driverInfos = fmap snd' x
+          vehicles = fmap thd' x
+      p <- catMaybes <$> mapM fromTType' persons
+      di <- catMaybes <$> mapM fromTType' driverInfos
+      v <- mapM (maybe (pure Nothing) fromTType') vehicles
+      pure $ zip3 p di v
+    Left _ -> pure []
   where
-    matchPersonAndDriverInfo :: [Person] -> [DriverInformation] -> [(Person, DriverInformation)]
-    matchPersonAndDriverInfo persons driverInfo =
-      [(person, driver) | person <- persons, driver <- driverInfo, person.id == driver.driverId]
-    matchPersonDriverAndVehicle :: [(Person, DriverInformation)] -> [Vehicle] -> [(Person, DriverInformation, Maybe Vehicle)]
-    matchPersonDriverAndVehicle personAndDriverInfo vehicles =
-      [(person, driver, findVehicle (person.id)) | (person, driver) <- personAndDriverInfo]
-      where
-        findVehicle :: Id Person -> Maybe Vehicle
-        findVehicle personId = case filter (\v -> v.driverId == personId) vehicles of
-          [] -> Nothing
-          (v : _) -> Just v
+    fst' (x, _, _) = x
+    snd' (_, y, _) = y
+    thd' (_, _, z) = z
 
 getDriversList ::
   (L.MonadFlow m, Log m) =>
