@@ -2325,9 +2325,42 @@ getZoneType tag =
     Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
 
-getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
-getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }
-                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} ]
+getVehicleTitle :: String -> String
+getVehicleTitle vehicle =
+  (case vehicle of
+    "HATCHBACK" -> (getString HATCHBACK)
+    "SUV" -> (getString SUV)
+    "SEDAN" -> (getString SEDAN)
+    _ -> "") <> " - " <> (getString RATE_CARD)
+getRateCardValue :: String -> HomeScreenState -> Array RateCardDetails
+getRateCardValue vehicleVariant state = do
+  let lang = getValueToLocalStore LANGUAGE_KEY
+  case vehicleVariant of
+    "HATCHBACK" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , description : "₹140"}
+                   , { title : "5 km - 13 km" , description : "₹18 / km"}
+                   , { title : "13 km - 30 km" , description : "₹25 / km"}
+                   , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN), description : "₹36 / km"}
+                   , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
+                   , { title : (getString DRIVER_ADDITIONS) , description : "₹0 - ₹60"}]
+
+    "SEDAN"     -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), description : "₹150"}
+                   , { title : "5 km - 13 km" , description : "₹18 / km"}
+                   , { title : "13 km - 30 km" , description : "₹25 / km"}
+                   , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) ,description : "₹36 / km"}
+                   , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
+                   , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
+
+    "SUV"       -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , description : "₹225"}
+                   , { title : "5 km - 30 km" , description : "₹30 / km"}
+                   , { title : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , description :"₹40 / km"}
+                   , { title : (getString PICKUP_CHARGE), description : "₹" <> (show state.data.pickUpCharges) }
+                   , { title : (getString DRIVER_ADDITIONS) ,description : "₹0 - ₹60"}]
+    _ -> []
+
+getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Int -> Array {title :: String , description :: String}
+getRateCardArray nightCharges lang baseFare extraFare additionalFare pickUpCharges = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }
+                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} 
+                      , {title : (getString DRIVER_PICKUP_CHARGES) , description : "₹" <> toString (pickUpCharges)}]
                       <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
 findingQuotesSearchExpired :: Boolean -> Int
