@@ -54,7 +54,7 @@ window.getMerchantConfig = function () {
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
     , "showGenderBanner" : false
-    , "defaultLanguage" : "FR_FR"
+    , "defaultLanguage" : "EN_US"
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
     , "packageName" : "com.google.android.apps.maps"

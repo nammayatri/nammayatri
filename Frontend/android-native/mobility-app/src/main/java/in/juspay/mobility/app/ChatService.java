@@ -94,7 +94,6 @@ public class ChatService extends Service {
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
-        this.startForeground(serviceNotificationID, createNotification());
         firestoreInstance = FirebaseFirestore.getInstance();
         firebaseAuth = FirebaseAuth.getInstance();
         merchant = getApplicationContext().getResources().getString(R.string.service);
@@ -105,6 +104,7 @@ public class ChatService extends Service {
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
             delay = Integer.parseInt(sharedPrefs.getString("MESSAGES_DELAY", "5000"));
         }
+        this.startForeground(serviceNotificationID, createNotification());
         isSessionCreated();
         sendMessageCallBack = this::sendMessages;
         MobilityAppBridge.registerSendMessageCallBack(sendMessageCallBack);
