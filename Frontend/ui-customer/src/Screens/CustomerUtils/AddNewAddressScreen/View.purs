@@ -641,7 +641,6 @@ locationUnserviceableView state push =
   ]
 
 getText ::  ST.AddNewAddressScreenState -> String
-getText state = let language = getKey $ JB.getKeyInSharedPrefKeys "LANGUAGE_KEY"
-              in case language of
-                          EN_US -> ((getString LOCATION_ALREADY_EXISTS_AS) <> " ' " <> state.data.existsAs <> " '")
-                          _     -> ((getString LOCATION_ALREADY) <> " ' " <> state.data.existsAs <> " ' " <>(getString EXISTS_AS) )
+getText state = case (getValueToLocalStore LANGUAGE_KEY) of
+                  "EN_US" -> ((getString LOCATION_ALREADY_EXISTS_AS) <> " ' " <> state.data.existsAs <> " '")
+                  _     -> ((getString LOCATION_ALREADY) <> " ' " <> state.data.existsAs <> " ' " <>(getString EXISTS_AS) )

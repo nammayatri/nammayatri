@@ -1461,7 +1461,7 @@ export const startLottieProcess = function (configObj) {
     if (window.__OS == "IOS") {
       return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType, JSON.stringify(configObj));
     }
-    configObj[rawJson] = lottieName;
+    configObj.rawJson = lottieName;
     return JBridge.startLottieProcess(JSON.stringify(configObj));
   } catch (err) {
     return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType);

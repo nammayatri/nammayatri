@@ -34,10 +34,7 @@
     "in.yatri.consumer": {
       "default": {
         "entry": "becknbase.html",
-        "root": "",
-        "required_apps": [
-          "in.juspay.hyperpay"
-        ]
+        "root": ""
       }
     }
   },

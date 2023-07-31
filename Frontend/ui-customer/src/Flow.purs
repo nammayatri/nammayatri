@@ -1005,7 +1005,6 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
       _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
       _ <- pure $ deleteValueFromLocalStore CUSTOMER_ID
-      _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
       _ <- pure $ deleteValueFromLocalStore CONTACTS
       _ <- pure $ deleteValueFromLocalStore USER_EMAIL
       _ <- pure $ factoryResetApp ""
