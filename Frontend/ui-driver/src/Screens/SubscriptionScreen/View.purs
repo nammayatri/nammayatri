@@ -67,7 +67,130 @@ joinPlanView push state =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  ][]
+  , orientation VERTICAL
+  ][ headerView push state
+    , relativeLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , background Color.blue600
+      ][ imageView
+          [ width $ V 116
+          , height $ V 368
+          , imageWithFallback "ny_ic_ny_driver,"
+          ]
+        , enjoyBenefitsView push state
+        , plansBottomView push state
+      ]
+
+  ]
+
+enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+enjoyBenefitsView push state = 
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , gravity RIGHT
+    , orientation VERTICAL
+    , margin $ Margin 0 30 30 0
+    ][ commonTV push "Enjoy these benefits " Color.black800 (FontStyle.paragraphText TypoGraphy) 0 RIGHT
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , margin $ MarginTop 15
+        ](map
+            (\(item) ->
+                linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , gravity CENTER_VERTICAL
+                  ][ imageView
+                      [ imageWithFallback $ "ny_ic_check_green," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_green.png"
+                      , width $ V 11
+                      , height $ V 8
+                      ]
+                    , textView $
+                      [ margin $ MarginLeft 11
+                      , text item
+                      , color Color.black700
+                      , height WRAP_CONTENT
+                      , width WRAP_CONTENT
+                      ] <> FontStyle.body1 TypoGraphy
+                  ]
+            )
+          ["ZERO commission", "Earn Today, Pay Tomorrow", "Pay only if you take rides"]
+        )
+
+    ]
+
+
+plansBottomView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+plansBottomView push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , alignParentBottom "true,-1"
+  , cornerRadii $ Corners 20.0 true true false false
+  , background Color.white900
+  , padding $ Padding 20 20 20 20
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          ][ commonTV push "Choose your Plan!✨" Color.black800 (FontStyle.body8 TypoGraphy) 0 RIGHT
+          , linearLayout
+            [ weight 1.0
+            , height WRAP_CONTENT
+            , gravity RIGHT
+            ][ imageView
+                [ width $ V 91
+                , height $ V 22
+                , imageWithFallback "ny_ic_upi_autopay,"
+                ]
+            ]
+          ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          ][ commonTV push "No charges till Aug31" Color.black800 (FontStyle.body8 TypoGraphy) 0 LEFT
+            , textView $
+              [ weight 1.0
+              , height WRAP_CONTENT
+              , gravity RIGHT
+              , text "How it works?"
+              , color Color.blue900
+              ] <> FontStyle.body1 TypoGraphy
+          ]
+      ]
+  ]
+
+headerView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+headerView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ][ textView $ 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text "Join Namma Yatri"
+      , padding $ Padding 5 5 0 5
+      , color Color.darkDescriptionText
+      ] <> FontStyle.h3 LanguageStyle
+  ]
+
+commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> PrestoDOM (Effect Unit) w
+commonTV push text' color' fontStyle marginTop gravity' =
+  textView $
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , text text'
+  , color color'
+  , gravity gravity'
+  , margin $ MarginTop marginTop
+  ] <> fontStyle
 
 
 managePlanView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
