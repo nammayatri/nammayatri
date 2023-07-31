@@ -155,9 +155,9 @@ savedLocationsView push state =
           , height WRAP_CONTENT
           ](map (\item -> SavedLocationCard.view (push <<< SavedLocationCardAction)({
                 cardType : Just $ show $ case (DS.toLower item.tag) of
-                              "home" -> ST.HOME_TAG
-                              "work" -> ST.WORK_TAG
-                              _      -> ST.OTHER_TAG
+                              "home" -> HOME_TAG
+                              "work" -> WORK_TAG
+                              _      -> OTHER_TAG
               , tagName : item.tag
               , savedLocation : item.address
               , lat : item.lat
@@ -177,7 +177,7 @@ savedLocationsView push state =
               , isClickable : true
               , alpha : 1.0
               , fullAddress : item.fullAddress
-              , locationItemType : Just ST.SAVED_LOCATION
+              , locationItemType : Just SAVED_LOCATION
               , distance : Nothing
               , showDistance : Just false
             }))state.data.savedLocations)

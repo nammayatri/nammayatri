@@ -44,6 +44,8 @@ import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddress
 import Foreign.Object ( Object(..), empty)
 import Foreign (Foreign)
 
+import Common.Types.App (LocationListItemState)
+
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {

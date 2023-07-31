@@ -74,8 +74,9 @@ initData = {
         messagesSize : "-1",
         suggestionsList : [],
         messageToBeSent : "",
-        logField : empty 
-    },
+        logField : empty,
+        gotoCount : 0
+     },
     props: {
         statusOnline : true,
         driverStatusSet : Online,
@@ -106,6 +107,9 @@ initData = {
         showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,
-        timerRefresh : true
+        gotoVisibility : false,
+        goToInfo : false,
+        timerRefresh : true,
+        enableGotoTimer : false   
     }
 }

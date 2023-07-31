@@ -13,8 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types
-  where
+module Screens.Types where
 
 import Common.Types.App (OptionButtonList,CheckBoxOptions)
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
@@ -728,7 +727,8 @@ type HomeScreenData =  {
   suggestionsList :: Array String,
   messageToBeSent :: String,
   driverAlternateMobile :: Maybe String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  gotoCount :: Int
  }
 
 type CancelRidePopUpData = {
@@ -823,7 +823,10 @@ type HomeScreenProps =  {
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
-  timerRefresh :: Boolean
+  gotoVisibility :: Boolean,
+  goToInfo :: Boolean   ,
+  timerRefresh :: Boolean,
+  enableGotoTimer :: Boolean  
  }
 
 data DriverStatus = Online | Offline | Silent
@@ -1372,3 +1375,37 @@ type RankCardData = {
   , rank :: Int
   , rides :: Int
 }
+
+
+
+type DriverSavedLocationScreenState = {
+  data :: DriverSavedLocationScreenData,
+  props :: DriverSavedLocationScreenProps
+}
+
+type DriverSavedLocationScreenData = {
+  address :: String,
+  lat :: Number,
+  lon :: Number
+}
+
+type DriverSavedLocationScreenProps = {
+  viewType :: SavedLocationScreenType
+}
+
+data SavedLocationScreenType = GO_TO_LIST | ENABLE_GO_TO | ADD_GO_TO_LOCATION | LOCATE_ON_MAP | CONFIRM_LOCATION
+
+derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
+instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where eq = genericEq
+
+
+data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS
+derive instance genericMenuoptions :: Generic MenuOptions _
+instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
+
+type Listtype =
+    { icon :: String,
+      menuOptions :: MenuOptions
+    }
+
+

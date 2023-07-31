@@ -27,6 +27,7 @@ import Components.RideActionModal as RideActionModal
 import Components.ChatView as ChatView
 import Components.StatsModel.Controller as StatsModelController
 import Components.RequestInfoCard as RequestInfoCard
+import Components.SavedLocationCard as SavedLocationCard
 import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
@@ -173,6 +174,7 @@ instance loggableAction :: Loggable Action where
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
     RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
+    _ -> pure unit
     WaitTimerCallback id min sec -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "wait_timer_callBack" 
 
 
@@ -240,9 +242,25 @@ data Action = NoAction
             | RemoveGenderBanner
             | RequestInfoCardAction RequestInfoCard.Action
             | ScrollToBottom
+            | GoToEnable 
+            | FavouriteLocationAC SavedLocationCard.Action
+            | CancelBack
+            | ClickInfo
+            | GotoKnowMoreAction PopUpModal.Action
+            | OnClickChangeAction SavedLocationCard.Action 
             | WaitTimerCallback String String Int
+            | GotoRequestPopupAction PopUpModal.Action
+            | GotoCancellationPreventionAction PopUpModal.Action 
+            | GotoLocInRangeAction PopUpModal.Action
+            | EnableGotoTimer
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
+
+eval GoToEnable state = if state.props.enableGotoTimer == true then continue state { props { gotoVisibility = false, enableGotoTimer=false}} else continue state { props { gotoVisibility = true, enableGotoTimer=false}}
+eval CancelBack state = continue state { props { gotoVisibility = false}}
+eval ClickInfo state = continue state {props {goToInfo = true}}
+
+eval EnableGotoTimer state = if state.data.gotoCount/=0 then continue state {props {enableGotoTimer = true, gotoVisibility = false}} else continue state 
 
 eval AfterRender state = do
   continue state{props{mapRendered= true}}
@@ -258,10 +276,11 @@ eval BackPressed state = do
             _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
             continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
               else if state.props.showBonusInfo then do
-                continue state { props { showBonusInfo = false } }
-                  else do
-                    _ <- pure $ minimizeApp ""
-                    continue state
+                continue state { props { showBonusInfo = false }}
+                  else if  state.props.gotoVisibility then continue state { props { gotoVisibility = false }} 
+                    else do
+                      _ <- pure $ minimizeApp ""
+                      continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
@@ -589,6 +608,12 @@ eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
+
+
+eval (GotoKnowMoreAction PopUpModal.OnButton1Click) state = continue state { props { goToInfo = false } } 
+
+-- eval ()
+
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 

@@ -15,7 +15,7 @@
 
 module Components.LocationTagBar.Controller where
 
-import Screens.Types (CardType, LocationListItemState)
+import Common.Types.App (CardType, LocationListItemState)
 import Data.Maybe (Maybe(..))
 
 data Action = TagClick CardType (Maybe LocationListItemState)

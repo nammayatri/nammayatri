@@ -22,6 +22,7 @@ module Helpers.Utils
 import Accessor (_distance_meters)
 import Accessor (_distance_meters)
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload)
+import Common.Types.App ( LocationListItemState, LocationItemType(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)

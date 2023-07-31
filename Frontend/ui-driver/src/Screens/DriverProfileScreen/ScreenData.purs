@@ -15,8 +15,7 @@
 
 module Screens.DriverProfileScreen.ScreenData where
 
-import Data.Maybe
-
+import Data.Maybe 
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Language.Types (STR(..)) as STR
@@ -24,6 +23,8 @@ import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfile
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Common.Types.App (CheckBoxOptions, LazyCheck(..))
 import Foreign.Object (empty)
+-- import MerchantConfig.Utils (getMerchant, Merchant(..))
+
 
 initData :: DriverProfileScreenState
 initData = {
@@ -111,14 +112,7 @@ initData = {
 }
 
 
-data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD
-derive instance genericMenuoptions :: Generic MenuOptions _
-instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
 
-type Listtype =
-    { icon :: String,
-      menuOptions :: MenuOptions
-    }
 
 
 languagesChoices :: Array CheckBoxOptions

@@ -567,5 +567,6 @@ const englishStrings = {
   ENTER_NAME_OF_VEHICLE : "Enter the name of your vehicle",
   NEW_ : "New",
   WITH : "with",
-  CHOOSE_LANGUAGE : "Choose Language"
+  CHOOSE_LANGUAGE : "Choose Language",
+  GO_TO : "Go-To"
 }

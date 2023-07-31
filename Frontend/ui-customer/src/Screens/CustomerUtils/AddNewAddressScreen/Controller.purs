@@ -48,10 +48,11 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSave
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.HomeScreen.Transformer (checkShowDistance)
-import Screens.Types (AddNewAddressScreenState, CardType(..), Location, LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
+import Screens.Types (AddNewAddressScreenState, Location, DistInfo, LocItemType(..))
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
+import Common.Types.App (CardType(..),LocationListItemState, LocationItemType(..))
 
 instance showAction :: Show Action where
   show _ = ""

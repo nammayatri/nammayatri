@@ -38,7 +38,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), otherwise)
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -273,9 +273,6 @@ silentModeConfig state = let
   in popUpConfig'
 
 
-
-
-
 enterOtpStateConfig :: ST.HomeScreenState -> InAppKeyboardModal.InAppKeyboardModalState
 enterOtpStateConfig state = let
       config' = InAppKeyboardModal.config
@@ -394,3 +391,190 @@ waitTimeInfoCardConfig _ = let
     }
   }
   in requestInfoCardConfig'
+
+
+----------------------------------------------gotoKnowMoreConfig----------------------------------------------------------
+
+-- gotoKnowMoreConfig :: LazyCheck -> RequestInfoCard.Config
+-- gotoKnowMoreConfig _ = let
+--   config = RequestInfoCard.config
+--   gotoKnowMoreConfig' = config{
+--     title {
+--       text = "Know More"
+--     }
+--   , primaryText {
+--       text = " This feature will be applicable if you are at least 3 km away from your current location."
+--     }
+--   , secondaryText {
+--       text = "Location preferences are valid for only 30 minutes upon activation. ",
+--       visibility = VISIBLE
+--     }
+--   , buttonConfig {
+--       text = "Go Back" 
+--     }
+--   }
+--   in gotoKnowMoreConfig'
+
+gotoKnowMoreConfig :: ST.HomeScreenState-> PopUpModal.Config
+gotoKnowMoreConfig state = let
+    config = PopUpModal.config
+    popUpConfig' = config {
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      gravity = CENTER,
+      margin = MarginHorizontal 20 20,
+      cornerRadius = PTD.Corners 15.0 true true true true,
+      primaryText{ text = "Know More"},
+      secondaryText{text = "This feature will be applicable if you are at least 3 km away from your current location.\n\nLocation preferences are valid for only 30 minutes upon activation.",
+      margin = (Margin 0 16 0 20),
+      color = Color.black600},
+      option1 {
+        text = getString GO_BACK,
+        margin = MarginHorizontal 16 16,
+        color = "#339DFF",
+        background = Color.white900,
+        strokeColor = Color.white900,
+        width = MATCH_PARENT
+      },
+      option2 {
+        visibility = false
+      }
+    }
+    in popUpConfig'
+
+-------------------------------------------------DriverRequestPopuop------------------------------------------
+
+gotoRequestPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+gotoRequestPopupConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+      gravity = CENTER,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      margin = MarginHorizontal 20 20, 
+      primaryText {
+        text = strings.primaryText
+      , margin = Margin 16 20 16 10},
+      secondaryText{
+        text = strings.secondaryText
+      , margin = Margin 0 0 0 20 },
+      option1 {
+        text = strings.buttonText
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      },
+      option2 { visibility = false
+      },
+      cornerRadius = PTD.Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = strings.imageURL
+      , visibility = VISIBLE
+      , margin = Margin 16 20 16 24
+      , width = MATCH_PARENT
+      , height = V 270
+      }
+  }
+  in popUpConfig'
+    where (PopupReturn strings) = gotoCounterStrings 4
+
+newtype PopupReturn = PopupReturn {
+  primaryText :: String,
+  secondaryText :: String,
+  imageURL :: String,
+  buttonText :: String
+} 
+
+gotoCounterStrings :: Int -> PopupReturn
+gotoCounterStrings val
+  | val == 1 = PopupReturn { primaryText : "More “Go To” rides coming!"
+                            , secondaryText : "Please stay ONLINE; we are fetching more ride requests towards your “Go To” location"
+                            , imageURL : "ny_ic_goto_more_rides,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , buttonText : "Okay"
+                            }
+  | val == 2 =  PopupReturn { primaryText : "“Go To” reduced to 1"
+                            , secondaryText : "Due to multiple cancellations, the count has been reduced to 1. "
+                            , imageURL : "ny_ic_gotodriver_1,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , buttonText : "Ok, Got it"
+                            }
+  | val == 3 =  PopupReturn { primaryText : "“Go To” reduced to zero"
+                            , secondaryText : "Due to multiple cancellations, the count has been reduced to 0. "
+                            , imageURL : "ny_ic_gotodriver_zero,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , buttonText : "Ok, Got it"
+                            }
+  | otherwise =  PopupReturn { primaryText : "Validity Expired!"
+                            , secondaryText : "Your 30-minute validity has ended. We are unable to fulfill your request at this time."
+                            , imageURL : "ny_ic_validity_expired,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , buttonText : "Go Home"
+                            }   
+
+--------------------------------------------------------------------------gotoCancellationPrevention---------------------------------------------------------
+gotoCancellationPreventionConfig :: ST.HomeScreenState-> PopUpModal.Config
+gotoCancellationPreventionConfig state = let
+    config = PopUpModal.config
+    popUpConfig' = config {
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      gravity = BOTTOM,
+      cornerRadius = PTD.Corners 15.0 true true false false,
+      primaryText{ 
+        text = "“Go To” may be reduced",
+        margin = Margin 0 0 0 0 
+      },
+      secondaryText{text = "Cancelation of a “Go To” ride will \n reduce “Go To” options for you!",
+      margin = (Margin 0 16 0 20),
+      color = Color.black600},
+      option1 {
+        text = "Cancel Anyway",
+        margin = MarginHorizontal 16 16,
+        color = Color.yellow900,
+        background = Color.black900,
+        strokeColor = Color.white900,
+        width = MATCH_PARENT
+      },
+      option2 {
+        text = getString GO_BACK,
+        margin = MarginHorizontal 16 16,
+        color = Color.black650,
+        background = Color.white900,
+        strokeColor = Color.white900,
+        width = MATCH_PARENT
+      },
+      coverImageConfig {
+        imageUrl = "ny_ic_gotodriver_zero,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+      , visibility = VISIBLE
+      , margin = Margin 16 20 16 24
+      , width = MATCH_PARENT
+      , height = V 270
+      }
+    }
+    in popUpConfig'
+------------------------------------------------------------------------------gotoLocInRange------------------------------------------------------------------------------------
+gotoLocInRangeConfig :: ST.HomeScreenState-> PopUpModal.Config
+gotoLocInRangeConfig state = let
+    config = PopUpModal.config
+    popUpConfig' = config {
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      gravity = CENTER,
+      margin = MarginHorizontal 20 20,
+      cornerRadius = PTD.Corners 15.0 true true true true,
+      primaryText{ text = "You are very close to the\n “Go-To” location"},
+      secondaryText{text = " \"Go-To\" is applicable for locations \n which are at least 3km away from \n your current location.",
+      margin = (Margin 0 16 0 20),
+      color = Color.black600},
+      option1 {
+        text = getString GO_BACK,
+        margin = MarginHorizontal 16 16,
+        color = Color.yellow900,
+        background = Color.black900,
+        strokeColor = Color.white900,
+        width = MATCH_PARENT
+      },
+      option2 {
+        visibility = false
+      }
+    }
+    in popUpConfig'

@@ -19,7 +19,7 @@ module Screens.SavedLocationScreen.Controller where
 import Prelude( class Show, pure, unit, bind, map, discard, show, not, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import PrestoDOM (Eval, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
-import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..))
+import Screens.Types(SavedLocationScreenState, SavedLocationData)
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.SavedLocationCard as SavedLocationCardController
 import Components.PrimaryButton as PrimaryButtonController
@@ -40,6 +40,7 @@ import Screens (ScreenName(..), getScreen)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Engineering.Helpers.Utils as EHU
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LocationItemType(..), LocationListItemState)
 
 instance showAction :: Show Action where 
   show _ = ""

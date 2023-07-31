@@ -170,7 +170,8 @@ view push state =
                 , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
                 ]
                 [ linearLayout
-                    [ if state.option2.visibility then width state.option1.width else weight 1.0
+                    [ --if state.option2.visibility then width state.option1.width else weight 1.0
+                      width state.option1.width
                     , background state.option1.background
                     , height $ V 48
                     , cornerRadius 8.0

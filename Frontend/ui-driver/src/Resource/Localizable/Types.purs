@@ -578,6 +578,7 @@ data STR = LETS_GET_STARTED
         | ENTER_NAME_OF_VEHICLE
         | NEW_
         | WITH
+        | GO_TO 
 
 
 getStringFromEnum :: STR -> String
@@ -1145,3 +1146,4 @@ getStringFromEnum key = case key of
     ENTER_NAME_OF_VEHICLE -> "ENTER_NAME_OF_VEHICLE"
     NEW_ -> "NEW_"
     WITH -> "WITH"
+    GO_TO -> "GO_TO"

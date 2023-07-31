@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App as Common 
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -533,21 +533,21 @@ type HomeScreenStateData =
   , vehicleDetails :: String
   , registrationNumber :: String
   , rating :: Number
-  , locationList :: Array LocationListItemState
-  , savedLocations :: Array LocationListItemState
+  , locationList :: Array Common.LocationListItemState
+  , savedLocations :: Array Common.LocationListItemState
   , recentSearchs :: RecentlySearchedObject
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard
   , rideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
-  , sourceAddress :: Address
-  , destinationAddress :: Address
+  , sourceAddress :: Common.Address
+  , destinationAddress :: Common.Address
   , route :: Maybe Route
   , startedAtUTC :: String
   , rateCard :: RateCard
   , speed :: Int
-  , selectedLocationListItem :: Maybe LocationListItemState
+  , selectedLocationListItem :: Maybe Common.LocationListItemState
   , saveFavouriteCard :: SaveFavouriteCardState
   , rideDistance :: String
   , rideDuration :: String
@@ -591,7 +591,7 @@ type HomeScreenStateProps =
   , customerTip :: CustomerTipProps
   , expiredQuotes :: Array String
   , isCancelRide :: Boolean
-  , cancellationReasons :: Array OptionButtonList
+  , cancellationReasons :: Array Common.OptionButtonList
   , cancelRideActiveIndex :: Maybe Int
   , cancelDescription :: String
   , cancelReasonCode :: String
@@ -618,7 +618,7 @@ type HomeScreenStateProps =
   , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
   , waitingTimeTimerIds :: Array String
-  , tagType :: Maybe CardType
+  , tagType :: Maybe Common.CardType
   , isSaveFavourite :: Boolean
   , showShareAppPopUp :: Boolean
   , showMultipleRideInfo :: Boolean
@@ -744,7 +744,7 @@ type EmergencyHelpModelState = {
 
 type RecentlySearchedObject =
   {
-    predictionArray :: Array LocationListItemState
+    predictionArray :: Array Common.LocationListItemState
   }
 
 type ReferralScreenState =
@@ -928,20 +928,6 @@ type RatingCard =
   , appConfig :: AppConfig
   }
 
-type Address =
-  { area :: Maybe String
-  , state :: Maybe String
-  , country :: Maybe String
-  , building  :: Maybe String
-  , door :: Maybe String
-  , street :: Maybe String
-  , city :: Maybe String
-  , areaCode :: Maybe String
-  , ward :: Maybe String
-  , placeId :: Maybe String
-  }
-
-
 type SavedLocationScreenState =
   {
       data :: SavedLocationScreenData
@@ -956,7 +942,7 @@ type SavedLocationScreenProps =
 
 type SavedLocationScreenData =
   {
-    savedLocations :: Array LocationListItemState
+    savedLocations :: Array Common.LocationListItemState
   , deleteTag :: Maybe String
   , config :: AppConfig
   }
@@ -984,14 +970,6 @@ instance encodeCallType :: Encode CallType where encode = defaultEnumEncode
 instance decodeCallType :: Decode CallType where decode = defaultEnumDecode
 
 
-data CardType = HOME_TAG | WORK_TAG | OTHER_TAG
-
-derive instance genericCardType :: Generic CardType _
-instance eqCardType :: Eq CardType where eq = genericEq
-instance showCardType :: Show CardType where show = genericShow
-instance encodeCardType :: Encode CardType where encode = defaultEnumEncode
-instance decodeCardType :: Decode CardType where decode = defaultEnumDecode
-
 type AddNewAddressScreenState =
   {
     data :: AddNewAddressScreenData
@@ -1000,11 +978,11 @@ type AddNewAddressScreenState =
 
 type AddNewAddressScreenData =
   {
-    locationList :: Array LocationListItemState
-  , savedLocations :: Array LocationListItemState
-  , selectedItem :: LocationListItemState
+    locationList :: Array Common.LocationListItemState
+  , savedLocations :: Array Common.LocationListItemState
+  , selectedItem :: Common.LocationListItemState
   , activeIndex :: Maybe Int
-  , selectedTag :: Maybe CardType
+  , selectedTag :: Maybe Common.CardType
   , savedTags :: Array String
   , addressSavedAs :: String
   , placeName :: String
@@ -1069,48 +1047,15 @@ instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
 instance showSearchResultType :: Show SearchResultType where show = genericShow
 
 type LocationTagBarState =
-  { savedLocations :: Array LocationListItemState }
+  { savedLocations :: Array Common.LocationListItemState }
 
-type LocationListItemState = {
-    prefixImageUrl :: String
-  , postfixImageUrl :: String
-  , postfixImageVisibility :: Boolean
-  , title :: String
-  , subTitle :: String
-  , placeId :: Maybe String
-  , lat :: Maybe Number
-  , lon :: Maybe Number
-  , description :: String
-  , tag :: String
-  , tagType :: Maybe String
-  , cardType :: Maybe String
-  , address :: String
-  , tagName :: String
-  , isEditEnabled :: Boolean
-  , savedLocation :: String
-  , placeName :: String
-  , isClickable :: Boolean
-  , alpha :: Number
-  , fullAddress :: Address
-  , locationItemType :: Maybe LocationItemType
-  , distance :: Maybe String
-  , showDistance :: Maybe Boolean
-}
-
-data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
-
-derive instance genericLocationItemType :: Generic LocationItemType _
-instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
-instance showLocationItemType :: Show LocationItemType where show = genericShow
-instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
-instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
 
 type SaveFavouriteCardState =
   {
     address :: String
   , tag :: String
   , tagExists :: Boolean
-  , selectedItem :: LocationListItemState
+  , selectedItem :: Common.LocationListItemState
   , tagData :: Array String
   , isBtnActive :: Boolean
   }
@@ -1149,8 +1094,8 @@ type CurrentLocationDetailsWithDistance =  {
 newtype FlowStatusData = FlowStatusData {
     source :: Location
   , destination :: Location
-  , sourceAddress :: Address
-  , destinationAddress :: Address
+  , sourceAddress :: Common.Address
+  , destinationAddress :: Common.Address
 }
 
 derive instance genericFlowStatusData :: Generic FlowStatusData _

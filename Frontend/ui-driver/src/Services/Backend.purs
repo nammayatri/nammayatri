@@ -926,3 +926,59 @@ driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverP
 driverProfileSummary lazy = do
   headers <- getHeaders ""
   withAPIResult (EP.profileSummary lazy) (\x -> x) (callAPI headers DriverProfileSummaryReq)
+
+---------------------------------------- verifyAadhaarOtp ---------------------------------------------
+
+
+----------------------------------------------autoComplete-------------------------------------------------
+autoCompleteBT :: String -> Number -> Number -> String -> FlowBT String AutoCompleteResp
+autoCompleteBT searchVal lat lon language = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.autoComplete "") (\x → x) errorHandler (lift $ lift $ callAPI headers (makeReq searchVal lat lon language))
+  where
+    makeReq :: String -> Number -> Number -> String -> AutoCompleteReq
+    makeReq searchVal lat lon language= AutoCompleteReq {
+        components : "String",
+        sessionToken : Nothing,
+        location : searchVal,
+        radius : 100,
+        input : "String",
+        language : language,
+        strictbounds : Nothing,
+        origin : LatLong {
+            lat : lat,
+            lon : lon
+        }
+    }
+    errorHandler _ = BackT $ pure GoBack
+
+-------------------------------------------getPlaceName--------------------------------------------------
+placeNameBT :: GetPlaceNameReq -> FlowBT String GetPlaceNameResp
+placeNameBT payload = do
+     headers <- lift $ lift $ getHeaders ""
+     withAPIResultBT (EP.getPlaceName "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+    errorHandler errorPayload = BackT $ pure GoBack
+
+makePlaceNameReq :: Number -> Number -> String -> GetPlaceNameReq
+makePlaceNameReq lat lng language = GetPlaceNameReq
+    {"sessionToken" : Just "",
+      "language" : Just language,
+      "getBy" : GetPlaceNameBy {
+          "tag" : "ByLatLong",
+          "contents" :LatLongType ( LatLonBody {
+              "lat" : lat,
+              "lon" : lng
+          })
+      }
+    }
+
+makePlaceNameReqByPlaceId :: String -> String -> GetPlaceNameReq
+makePlaceNameReqByPlaceId placeId language = GetPlaceNameReq
+    {"sessionToken" : Just "",
+      "language" : Just language,
+      "getBy" : GetPlaceNameBy {
+          "tag" : "ByPlaceId",
+          "contents" : (PlaceId placeId)
+      }
+    }

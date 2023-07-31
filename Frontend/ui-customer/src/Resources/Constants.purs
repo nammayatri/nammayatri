@@ -29,6 +29,7 @@ import Helpers.Utils (toString, parseFloat)
 import Data.Int (toNumber)
 import MerchantConfig.Utils(getValueFromConfig)
 
+import Common.Types.App as Common
 type Language
   = { name :: String
     , value :: String
@@ -73,7 +74,7 @@ decodeAddress addressWithCons =
     else
       ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
 
-encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
+encodeAddress :: String -> Array AddressComponents -> Maybe String -> Common.Address
 encodeAddress fullAddress addressComponents placeId =
   let
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
@@ -128,7 +129,7 @@ getBookingEntity (SavedReqLocationAPIEntity savedLocation) =
     , "placeId": savedLocation.placeId
     }
 
-getAddressFromSaved :: SavedReqLocationAPIEntity -> ST.Address
+getAddressFromSaved :: SavedReqLocationAPIEntity -> Common.Address
 getAddressFromSaved (SavedReqLocationAPIEntity savedLocation) =
   { "area": savedLocation.area
   , "state": savedLocation.state
@@ -142,7 +143,7 @@ getAddressFromSaved (SavedReqLocationAPIEntity savedLocation) =
   , "placeId": savedLocation.placeId
   }
 
-getAddressFromBooking :: BookingLocationAPIEntity -> ST.Address
+getAddressFromBooking :: BookingLocationAPIEntity -> Common.Address
 getAddressFromBooking (BookingLocationAPIEntity address) =
   { "area": address.area
   , "state": address.state

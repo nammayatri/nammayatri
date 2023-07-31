@@ -15,13 +15,23 @@
 
 module Components.SavedLocationCard.Controller where
 
-import Screens.Types(LocationListItemState, CardType(..))
+import Common.Types.App (LocationListItemState, CardType(..))
 import Data.Maybe (Maybe(..))
 
 data Action = EditLocation LocationListItemState
             | DeleteLocation String
             | CardClicked LocationListItemState
-            | NoAction
+            -- | OnClickChange
+            | NoAction 
+
+
+-- type Config = {
+--     isShowImage :: Boolean
+-- }
+-- config :: Config
+-- config = {
+--    isShowImage : false
+--   }
 
 getCardType :: String -> Maybe CardType 
 getCardType cardType = case cardType of 
@@ -29,3 +39,4 @@ getCardType cardType = case cardType of
   "WORK_TAG" -> Just WORK_TAG
   "OTHER_TAG" -> Just OTHER_TAG
   _ -> Nothing
+

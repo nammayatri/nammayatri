@@ -409,7 +409,7 @@ searchResultsView state push =
               )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData state else []) else state.data.locationList ))
   ]
 
-bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
+bottomBtnsData :: ST.AddNewAddressScreenState ->  Array LocationListItemState 
 bottomBtnsData state = 
   [ { prefixImageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP)

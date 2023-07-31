@@ -21,6 +21,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.Types (AddNewAddressScreenState, CardType(..), Location)
 import Services.API (Prediction(..))
 import MerchantConfig.DefaultConfig as DC
+import Common.Types.App (CardType(..))
  
 initData :: AddNewAddressScreenState
 initData = {

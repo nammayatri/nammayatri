@@ -18,7 +18,7 @@ module Screens.DriverProfileScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>), discard,(==))
+import Prelude (Unit, bind, pure, ($), (<$>), discard,(==))
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverProfileScreen.Controller (ScreenOutput(..))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -85,3 +85,5 @@ driverProfileScreen = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
     GoBack -> App.BackT $ pure App.GoBack
+    GoToDriverSavedLocationScreen state -> App.BackT $ App.BackPoint <$> pure SAVED_LOCATIONS_SCREEN
+

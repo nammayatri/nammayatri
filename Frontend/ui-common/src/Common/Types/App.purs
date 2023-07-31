@@ -201,3 +201,61 @@ type LayoutBound =
 -- derive instance newtypeLocationLatLong :: Newtype LocationLatLong _
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
+
+type LocationListItemState = {
+    prefixImageUrl :: String
+  , postfixImageUrl :: String
+  , postfixImageVisibility :: Boolean
+  , title :: String
+  , subTitle :: String
+  , placeId :: Maybe String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , description :: String
+  , tag :: String
+  , tagType :: Maybe String
+  , cardType :: Maybe String
+  , address :: String
+  , tagName :: String
+  , isEditEnabled :: Boolean
+  , savedLocation :: String
+  , placeName :: String
+  , isClickable :: Boolean
+  , alpha :: Number
+  , fullAddress :: Address
+  , locationItemType :: Maybe LocationItemType
+  , distance :: Maybe String
+  , showDistance :: Maybe Boolean
+  , editAcText :: Maybe String
+  , removeAcText :: Maybe String
+  , radioButtonVisibility :: Boolean  
+}
+
+type Address =
+  { area :: Maybe String
+  , state :: Maybe String
+  , country :: Maybe String
+  , building  :: Maybe String
+  , door :: Maybe String
+  , street :: Maybe String
+  , city :: Maybe String
+  , areaCode :: Maybe String
+  , ward :: Maybe String
+  , placeId :: Maybe String
+  }
+
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
+
+derive instance genericLocationItemType :: Generic LocationItemType _
+instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
+instance showLocationItemType :: Show LocationItemType where show = genericShow
+instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
+instance decodeLocationItemType :: Decode LocationItemType where decode = defaultEnumDecode
+
+data CardType = HOME_TAG | WORK_TAG | OTHER_TAG
+
+derive instance genericCardType :: Generic CardType _
+instance eqCardType :: Eq CardType where eq = genericEq
+instance showCardType :: Show CardType where show = genericShow
+instance encodeCardType :: Encode CardType where encode = defaultEnumEncode
+instance decodeCardType :: Decode CardType where decode = defaultEnumDecode

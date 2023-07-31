@@ -172,5 +172,14 @@ leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/week
 currentDateAndTime :: String -> String
 currentDateAndTime _ = "https://tools.aimylogic.com/api/now"
 
+autoComplete :: String -> String
+autoComplete _ = (getBaseUrl "") <> "/maps/autoComplete"
+
+placeDetails :: String -> String
+placeDetails _ =  (getBaseUrl "") <> "/maps/getPlaceDetails"
+
+getPlaceName :: String -> String 
+getPlaceName _ = (getBaseUrl "") <> "/maps/getPlaceName"
+
 profileSummary :: String -> String
 profileSummary _ = getBaseUrl "" <> "/driver/profile/summary"

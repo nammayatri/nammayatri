@@ -17,11 +17,13 @@ module Components.PrimaryButton.Controller where
 
 import Font.Size as FontSize
 import Font.Style (Style(..))
+import Font.Style as FS
 import Prelude ((<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Gradient(..), height, width)
 import MerchantConfig.Utils(getValueFromConfig)
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Styles.Types (FontStyle)
 
 data Action = OnClick | NoAction
 
@@ -57,6 +59,7 @@ type TextConfig =
   , visibility :: Visibility
   , height :: Length
   , width :: Length
+  , fontStyle :: FontStyle
   }
 
 
@@ -80,6 +83,7 @@ config =   {
     , color : Color.yellow900
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
+    , fontStyle : FS.semiBold LanguageStyle
     }
   , width: MATCH_PARENT
   , height: V 50

@@ -23,6 +23,7 @@ import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
+import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
@@ -43,11 +44,11 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Prim.TypeError (class Warn)
 import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..))
+import Storage (KeyStore(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
-import Storage (KeyStore(..))
-import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -603,6 +604,7 @@ driverInfoView push state =
          ]
       ]
   ]
+
 
 cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 cancelRideLayout push state =

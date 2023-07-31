@@ -28,7 +28,6 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), map, (<<<), bind, pure, unit, show, (||), (/=), (-), (/), (*), (+), not)
 import Styles.Colors as Color
-import Screens.Types(LocationListItemState, CardType(..), LocationItemType(..))
 import Language.Strings (getString)
 import Data.Maybe
 import Language.Types (STR(..))

@@ -25,6 +25,8 @@ import Data.Array (head)
 import Prelude(negate)
 import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
+import Styles.Colors as Color
+import Common.Types.App (CardType, LocationListItemState, Address)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 initData :: HomeScreenState
