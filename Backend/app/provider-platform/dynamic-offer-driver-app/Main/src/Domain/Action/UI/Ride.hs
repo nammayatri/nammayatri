@@ -105,7 +105,8 @@ data DriverRideRes = DriverRideRes
     bapLogo :: Maybe BaseUrl,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe Money,
+    requestedVehicleVariant :: DVeh.Variant
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -184,7 +185,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
       customerExtraFee = fareParams.customerExtraFee,
       bapName = bapMetadata <&> (.name),
-      bapLogo = bapMetadata <&> (.logoUrl)
+      bapLogo = bapMetadata <&> (.logoUrl),
+      requestedVehicleVariant = booking.vehicleVariant
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
