@@ -117,7 +117,7 @@ priceDetailsView push config = do
         , width $ V 14
         , height $ V 14
         , margin $ Margin 4 6 0 0
-        , onClick push $ const $ ShowRateCard config.vehicleVariant
+        , onClick push $ const $ ShowRateCard config
         ]
     , relativeLayout
         [ height WRAP_CONTENT

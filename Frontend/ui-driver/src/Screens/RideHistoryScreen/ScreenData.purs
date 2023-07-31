@@ -43,7 +43,8 @@ initData = {
     id : "",
     updatedAt : "",
     source : "",
-    destination : ""
+    destination : "",
+    vehicleType : ""
   },
   offsetValue: 0,
   loaderButtonVisibility: false

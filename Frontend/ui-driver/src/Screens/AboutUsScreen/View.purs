@@ -34,6 +34,7 @@ import Screens.AboutUsScreen.ComponentConfig
 import Merchant.Utils (getValueFromConfig)
 import Components.ComplaintsModel as ComplaintsModel
 import Data.Maybe (Maybe(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -219,10 +220,10 @@ contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state =[
   { title : (getString CORPORATE_ADDRESS)
   , subTitle : (getString CORPORATE_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , addtionalData : Just (getString (if getMerchant unit == YATRIPARTNER then CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL_YATRI else CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL))
   }
 , { title : (getString REGISTERED_ADDRESS)
   , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , addtionalData : Just (getString (if getMerchant unit == YATRIPARTNER then REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL_YATRI else REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL_YATRI))
   }
 ]
