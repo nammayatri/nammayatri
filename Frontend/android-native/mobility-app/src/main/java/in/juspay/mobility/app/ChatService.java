@@ -94,12 +94,12 @@ public class ChatService extends Service {
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
-        this.startForeground(serviceNotificationID, createNotification());
         firestoreInstance = FirebaseFirestore.getInstance();
         firebaseAuth = FirebaseAuth.getInstance();
         merchant = getApplicationContext().getResources().getString(R.string.service);
         merchantType = merchant.contains("partner") || merchant.contains("driver") ? "DRIVER" : "USER";
         sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        this.startForeground(serviceNotificationID, createNotification());
         if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
