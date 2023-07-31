@@ -91,7 +91,7 @@ window.getMerchantConfig = function () {
       "numberPlateBackground" : "#E9BE4D",
       "showCancelPrevention" : true,
       "showNumberPlateSuffix" : false,
-      "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_close_white.png"
+      "showTrackingButton" : true
     },
     "quoteListModel": {
       "backgroundColor": "#2C2F3A",
@@ -107,7 +107,8 @@ window.getMerchantConfig = function () {
       "lottieWidth": 300,
       "topMargin": 100,
       "noQuotesImageHeight": 115,
-      "noQuotesImageWidth": 137
+      "noQuotesImageWidth": 137,
+      "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_close_white.png"
     },
     "profileBackground": "#2C2F3A",
     "profileEditGravity" : "center",

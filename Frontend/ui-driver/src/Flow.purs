@@ -439,7 +439,6 @@ uploadDrivingLicenseFlow = do
     LOGOUT_ACCOUNT -> do
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
       deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore LANGUAGE_KEY
       deleteValueFromLocalStore VERSION_NAME
       deleteValueFromLocalStore BASE_URL
       deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -539,8 +538,7 @@ addVehicleDetailsflow addRcFromProf = do
 
     LOGOUT_USER -> do
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore LANGUAGE_KEY
+      deleteValueFromLocalStore REGISTERATION_TOKEN   
       deleteValueFromLocalStore VERSION_NAME
       deleteValueFromLocalStore BASE_URL
       deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -636,7 +634,6 @@ applicationSubmittedFlow screenType = do
     LOGOUT_ACCOUT -> do
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
       deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore LANGUAGE_KEY
       deleteValueFromLocalStore VERSION_NAME
       deleteValueFromLocalStore BASE_URL
       deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -667,7 +664,6 @@ driverProfileFlow = do
       removeChatService ""
       lift $ lift $ liftFlow $ stopLocationPollingAPI
       deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore LANGUAGE_KEY
       deleteValueFromLocalStore VERSION_NAME
       deleteValueFromLocalStore BASE_URL
       deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION

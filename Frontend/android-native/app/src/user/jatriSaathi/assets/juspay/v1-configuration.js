@@ -3,6 +3,7 @@ window.getMerchantConfig = function () {
     "StringKeys": ["ABOUT_APP_DESCRIPTION",
     "WELCOME_TEXT",
     "REQUEST_AUTO_RIDE",
+    "REQUEST_AUTO_RIDE",
     "CURRENTLY_WE_ARE_LIVE_IN_",
     "DRIVER_PICKUP_CHARGES",
     "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT",
@@ -87,7 +88,8 @@ window.getMerchantConfig = function () {
       "showNumberPlatePrefix": true,
       "showNumberPlateSuffix": false,
       "callHeight": 24,
-      "callWidth": 24
+      "callWidth": 24,
+      "showTrackingButton" : true
     },
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
