@@ -18,6 +18,7 @@ module Storage.CachedQueries.Exophone
     findByPhone,
     findByPrimaryPhone,
     findAllByMerchantId,
+    findAllCallExophoneByMerchantId,
     findAllExophones,
     updateAffectedPhones,
     deleteByMerchantId,
@@ -42,6 +43,9 @@ findAllByMerchantId merchantId =
   Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
     Just a -> return a
     Nothing -> cacheExophones merchantId /=<< Queries.findAllByMerchantId merchantId
+
+findAllCallExophoneByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [Exophone]
+findAllCallExophoneByMerchantId merchantId = filter (\exophone -> exophone.exophoneType == CALL_RIDE) <$> findAllByMerchantId merchantId
 
 findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
 findByPhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == CALL_RIDE) <$> findAllByPhone phone
