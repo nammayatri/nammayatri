@@ -43,9 +43,11 @@ import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption as KE
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.IOLogging (LoggerEnv)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QRB
@@ -123,9 +125,9 @@ initiateCallToCustomer rideId = do
             createdAt = now
           }
 
-getDriverMobileNumber :: (EncFlow m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => (Id Person.Person, Id DM.Merchant) -> Text -> m CallRes
+getDriverMobileNumber :: (EncFlow m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Person.Person, Id DM.Merchant) -> Text -> m CallRes
 getDriverMobileNumber (driverId, merchantId) rcNo = do
-  vehicleRC <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  vehicleRC <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
   callStatusId <- generateGUID
   linkedDriverNumber <- getDecryptedMobileNumberByDriverId rcActiveAssociation.driverId

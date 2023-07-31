@@ -153,7 +153,7 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
             throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
         Nothing -> throwImageError imageId ImageExtractionFailed
 
-  mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
+  mVehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleRegistrationCertNumber
   case mVehicleRC of
     Just vehicleRC -> do
       when (isNothing multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
@@ -252,7 +252,7 @@ compareRegistrationDates actualDate providedDate =
 
 linkRCStatus :: (Id Person.Person, Id DM.Merchant) -> RCStatusReq -> Flow APISuccess
 linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
-  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
 
@@ -329,7 +329,7 @@ deactivateCurrentRC driverId = do
 
 deleteRC :: (Id Person.Person, Id DM.Merchant) -> DeleteRCReq -> Bool -> Flow APISuccess
 deleteRC (driverId, _) DeleteRCReq {..} isOldFlow = do
-  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   mAssoc <- DAQuery.findActiveAssociationByRC rc.id
   case (mAssoc, isOldFlow) of
     (Just assoc, False) -> do

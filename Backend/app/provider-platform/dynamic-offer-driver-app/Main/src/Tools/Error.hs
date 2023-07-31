@@ -247,6 +247,7 @@ data DriverQuoteError
   | NoSearchRequestForDriver
   | QuoteAlreadyRejected
   | UnexpectedResponseValue
+  | NoActiveRidePresent
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -258,6 +259,7 @@ instance IsBaseError DriverQuoteError where
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
+  toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
@@ -267,6 +269,7 @@ instance IsHTTPError DriverQuoteError where
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
     UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
+    NoActiveRidePresent -> "NO_ACTIVE_RIDE_PRESENT"
   toHttpCode = \case
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
@@ -274,6 +277,7 @@ instance IsHTTPError DriverQuoteError where
     NoSearchRequestForDriver -> E400
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400
+    NoActiveRidePresent -> E400
 
 instance IsAPIError DriverQuoteError
 
