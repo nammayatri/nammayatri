@@ -42,7 +42,6 @@ import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSave
 import Services.Backend as Remote
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import Debug(spy)
 import JBridge (fromMetersToKm)
 import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
@@ -316,10 +315,9 @@ getFilteredEstimate :: Array EstimateAPIEntity -> Array EstimateAPIEntity
 getFilteredEstimate quotes = do
   case (getMerchant FunctionCall) of 
     YATRISATHI -> do 
-      let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> ((DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"])) ) quotes
+      let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> (DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"])) quotes
           nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> not (DA.any (_ ==item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"] )) quotes
-          taxiVariant = DA.sortBy (\(EstimateAPIEntity a) (EstimateAPIEntity b) -> compare (a.vehicleVariant) (b.vehicleVariant)) acTaxiVariants
-      void $ pure $ spy "filteredEstimates" ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
+          taxiVariant = DA.sortBy (\(EstimateAPIEntity estimateEntity1) (EstimateAPIEntity estimateEntity2) -> compare (estimateEntity1.vehicleVariant) (estimateEntity2.vehicleVariant)) acTaxiVariants
       ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
     _ -> quotes
 
@@ -341,16 +339,15 @@ getFilteredQuotes quotes =  do
                 not (DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"])
               _ -> false
             ) quotes
-          sortedACTaxiVariants = DA.sortBy (\ a b -> 
-            case a , b of 
+          sortedACTaxiVariants = DA.sortBy (\ quote1 quote2 -> 
+            case quote1 , quote2 of 
               Quotes body , Quotes body2-> do
                 let (QuoteAPIEntity quoteEntity1) = body.onDemandCab
                 let (QuoteAPIEntity quoteEntity2) = body2.onDemandCab
                 compare (quoteEntity1.vehicleVariant) (quoteEntity2.vehicleVariant)
               _ ,_ -> LT
             ) acTaxiVariants
-      void $ pure $ spy "filteredQuotes" ((DA.take 1 sortedACTaxiVariants)<> (nonAcTaxiVariants ))
-      ((DA.take 1 sortedACTaxiVariants)<> (nonAcTaxiVariants ))
+      (DA.take 1 sortedACTaxiVariants) <> (nonAcTaxiVariants)
     _ -> quotes
 
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
