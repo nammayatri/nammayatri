@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.EstimateBreakup where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -47,20 +45,7 @@ instance B.Table EstimateBreakupT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta EstimateBreakupT where
-  modelFieldModification = estimateBreakupTMod
-  modelTableName = "estimate_breakup"
-  modelSchemaName = Just "atlas_app"
-
 type EstimateBreakup = EstimateBreakupT Identity
-
-instance FromJSON EstimateBreakup where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON EstimateBreakup where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show EstimateBreakup
 
 estimateBreakupTMod :: EstimateBreakupT (B.FieldModification (B.TableField EstimateBreakupT))
 estimateBreakupTMod =
@@ -72,19 +57,6 @@ estimateBreakupTMod =
       priceValue = B.fieldNamed "price_value"
     }
 
-instance Serialize EstimateBreakup where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-estimateBreakupToHSModifiers :: M.Map Text (A.Value -> A.Value)
-estimateBreakupToHSModifiers =
-  M.empty
-
-estimateBreakupToPSModifiers :: M.Map Text (A.Value -> A.Value)
-estimateBreakupToPSModifiers =
-  M.empty
-
 $(enableKVPG ''EstimateBreakupT ['id] [['estimateId]])
+
+$(mkTableInstances ''EstimateBreakupT "estimate_breakup" "atlas_app")

@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Sos where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -82,20 +80,7 @@ instance B.Table SosT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SosT where
-  modelFieldModification = sosTMod
-  modelTableName = "sos"
-  modelSchemaName = Just "atlas_app"
-
 type Sos = SosT Identity
-
-instance FromJSON Sos where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Sos where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Sos
 
 sosTMod :: SosT (B.FieldModification (B.TableField SosT))
 sosTMod =
@@ -109,19 +94,6 @@ sosTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize Sos where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-sosToHSModifiers :: M.Map Text (A.Value -> A.Value)
-sosToHSModifiers =
-  M.empty
-
-sosToPSModifiers :: M.Map Text (A.Value -> A.Value)
-sosToPSModifiers =
-  M.empty
-
 $(enableKVPG ''SosT ['id] [])
+
+$(mkTableInstances ''SosT "sos" "atlas_app")

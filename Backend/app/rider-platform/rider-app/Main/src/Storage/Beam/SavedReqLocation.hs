@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SavedReqLocation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -60,20 +58,7 @@ instance B.Table SavedReqLocationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SavedReqLocationT where
-  modelFieldModification = savedReqLocationTMod
-  modelTableName = "saved_location"
-  modelSchemaName = Just "atlas_app"
-
 type SavedReqLocation = SavedReqLocationT Identity
-
-instance FromJSON SavedReqLocation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SavedReqLocation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SavedReqLocation
 
 savedReqLocationTMod :: SavedReqLocationT (B.FieldModification (B.TableField SavedReqLocationT))
 savedReqLocationTMod =
@@ -98,19 +83,6 @@ savedReqLocationTMod =
       isMoved = B.fieldNamed "is_moved"
     }
 
-instance Serialize SavedReqLocation where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-savedReqLocationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-savedReqLocationToHSModifiers =
-  M.empty
-
-savedReqLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-savedReqLocationToPSModifiers =
-  M.empty
-
 $(enableKVPG ''SavedReqLocationT ['id] [['riderId]])
+
+$(mkTableInstances ''SavedReqLocationT "saved_location" "atlas_app")

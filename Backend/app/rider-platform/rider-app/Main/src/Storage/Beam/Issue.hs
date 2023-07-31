@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Issue where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -50,20 +48,7 @@ instance B.Table IssueT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta IssueT where
-  modelFieldModification = issueTMod
-  modelTableName = "issue"
-  modelSchemaName = Just "atlas_app"
-
 type Issue = IssueT Identity
-
-instance FromJSON Issue where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Issue where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Issue
 
 issueTMod :: IssueT (B.FieldModification (B.TableField IssueT))
 issueTMod =
@@ -78,19 +63,6 @@ issueTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize Issue where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-issueToHSModifiers :: M.Map Text (A.Value -> A.Value)
-issueToHSModifiers =
-  M.empty
-
-issueToPSModifiers :: M.Map Text (A.Value -> A.Value)
-issueToPSModifiers =
-  M.empty
-
 $(enableKVPG ''IssueT ['id] [])
+
+$(mkTableInstances ''IssueT "issue" "atlas_app")

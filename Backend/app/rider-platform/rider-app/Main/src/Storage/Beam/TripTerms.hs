@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.TripTerms where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -42,20 +40,7 @@ instance B.Table TripTermsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta TripTermsT where
-  modelFieldModification = tripTermsTMod
-  modelTableName = "trip_terms"
-  modelSchemaName = Just "atlas_app"
-
 type TripTerms = TripTermsT Identity
-
-instance FromJSON TripTerms where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON TripTerms where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show TripTerms
 
 tripTermsTMod :: TripTermsT (B.FieldModification (B.TableField TripTermsT))
 tripTermsTMod =
@@ -64,19 +49,6 @@ tripTermsTMod =
       descriptions = B.fieldNamed "descriptions"
     }
 
-instance Serialize TripTerms where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-tripTermsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-tripTermsToHSModifiers =
-  M.empty
-
-tripTermsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-tripTermsToPSModifiers =
-  M.empty
-
 $(enableKVPG ''TripTermsT ['id] [])
+
+$(mkTableInstances ''TripTermsT "trip_terms" "atlas_app")

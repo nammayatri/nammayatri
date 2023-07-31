@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.CancellationReason where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -47,20 +45,7 @@ instance B.Table CancellationReasonT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . reasonCode
 
-instance ModelMeta CancellationReasonT where
-  modelFieldModification = cancellationReasonTMod
-  modelTableName = "cancellation_reason"
-  modelSchemaName = Just "atlas_app"
-
 type CancellationReason = CancellationReasonT Identity
-
-instance FromJSON CancellationReason where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON CancellationReason where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show CancellationReason
 
 cancellationReasonTMod :: CancellationReasonT (B.FieldModification (B.TableField CancellationReasonT))
 cancellationReasonTMod =
@@ -74,19 +59,6 @@ cancellationReasonTMod =
       priority = B.fieldNamed "priority"
     }
 
-instance Serialize CancellationReason where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-cancellationReasonToHSModifiers :: M.Map Text (A.Value -> A.Value)
-cancellationReasonToHSModifiers =
-  M.empty
-
-cancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
-cancellationReasonToPSModifiers =
-  M.empty
-
 $(enableKVPG ''CancellationReasonT ['reasonCode] [])
+
+$(mkTableInstances ''CancellationReasonT "cancellation_reason" "atlas_app")

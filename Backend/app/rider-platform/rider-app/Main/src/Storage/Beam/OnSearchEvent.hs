@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.OnSearchEvent where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -49,20 +47,7 @@ instance B.Table OnSearchEventT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta OnSearchEventT where
-  modelFieldModification = onSearchEventTMod
-  modelTableName = "on_search_event"
-  modelSchemaName = Just "atlas_app"
-
 type OnSearchEvent = OnSearchEventT Identity
-
-instance FromJSON OnSearchEvent where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON OnSearchEvent where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show OnSearchEvent
 
 onSearchEventTMod :: OnSearchEventT (B.FieldModification (B.TableField OnSearchEventT))
 onSearchEventTMod =
@@ -76,19 +61,6 @@ onSearchEventTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize OnSearchEvent where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-onSearchEventToHSModifiers :: M.Map Text (A.Value -> A.Value)
-onSearchEventToHSModifiers =
-  M.empty
-
-onSearchEventToPSModifiers :: M.Map Text (A.Value -> A.Value)
-onSearchEventToPSModifiers =
-  M.empty
-
 $(enableKVPG ''OnSearchEventT ['id] [])
+
+$(mkTableInstances ''OnSearchEventT "on_search_event" "atlas_app")

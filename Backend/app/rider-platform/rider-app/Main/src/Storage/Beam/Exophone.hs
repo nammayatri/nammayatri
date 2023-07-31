@@ -14,6 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Exophone where
@@ -50,20 +51,7 @@ instance B.Table ExophoneT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta ExophoneT where
-  modelFieldModification = exophoneTMod
-  modelTableName = "exophone"
-  modelSchemaName = Just "atlas_app"
-
 type Exophone = ExophoneT Identity
-
-instance FromJSON Exophone where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Exophone where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Exophone
 
 dExophone :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ExophoneT)
 dExophone =
@@ -94,8 +82,6 @@ exophoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 exophoneToPSModifiers =
   M.empty
 
-instance Serialize Exophone where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''ExophoneT ['id] [])
+
+$(mkTableInstances ''ExophoneT "exophone" "atlas_app")

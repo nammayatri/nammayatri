@@ -14,14 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.MerchantConfig where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -94,20 +93,7 @@ instance B.Table MerchantConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta MerchantConfigT where
-  modelFieldModification = merchantConfigTMod
-  modelTableName = "merchant_config"
-  modelSchemaName = Just "atlas_app"
-
 type MerchantConfig = MerchantConfigT Identity
-
-instance FromJSON MerchantConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MerchantConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MerchantConfig
 
 merchantConfigTMod :: MerchantConfigT (B.FieldModification (B.TableField MerchantConfigT))
 merchantConfigTMod =
@@ -126,19 +112,6 @@ merchantConfigTMod =
       enabled = B.fieldNamed "enabled"
     }
 
-instance Serialize MerchantConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-merchantConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantConfigToHSModifiers =
-  M.empty
-
-merchantConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantConfigToPSModifiers =
-  M.empty
-
 $(enableKVPG ''MerchantConfigT ['id] [['merchantId]])
+
+$(mkTableInstances ''MerchantConfigT "merchant_config" "atlas_app")

@@ -14,14 +14,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Person.PersonFlowStatus where
 
 import Data.Aeson
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -69,20 +67,7 @@ instance B.Table PersonFlowStatusT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . personId
 
-instance ModelMeta PersonFlowStatusT where
-  modelFieldModification = personFlowStatusTMod
-  modelTableName = "person_flow_status"
-  modelSchemaName = Just "atlas_app"
-
 type PersonFlowStatus = PersonFlowStatusT Identity
-
-instance FromJSON PersonFlowStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON PersonFlowStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show PersonFlowStatus
 
 personFlowStatusTMod :: PersonFlowStatusT (B.FieldModification (B.TableField PersonFlowStatusT))
 personFlowStatusTMod =
@@ -92,19 +77,6 @@ personFlowStatusTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize PersonFlowStatus where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-personFlowStatusToHSModifiers :: M.Map Text (A.Value -> A.Value)
-personFlowStatusToHSModifiers =
-  M.empty
-
-personFlowStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
-personFlowStatusToPSModifiers =
-  M.empty
-
 $(enableKVPG ''PersonFlowStatusT ['personId] [])
+
+$(mkTableInstances ''PersonFlowStatusT "person_flow_status" "atlas_app")

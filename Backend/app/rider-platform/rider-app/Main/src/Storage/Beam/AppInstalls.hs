@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.AppInstalls where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -51,20 +49,7 @@ instance B.Table AppInstallsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta AppInstallsT where
-  modelFieldModification = appInstallsTMod
-  modelTableName = "app_installs"
-  modelSchemaName = Just "atlas_app"
-
 type AppInstalls = AppInstallsT Identity
-
-instance FromJSON AppInstalls where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON AppInstalls where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show AppInstalls
 
 appInstallsTMod :: AppInstallsT (B.FieldModification (B.TableField AppInstallsT))
 appInstallsTMod =
@@ -80,19 +65,6 @@ appInstallsTMod =
       platform = B.fieldNamed "platform"
     }
 
-instance Serialize AppInstalls where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-appInstallsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-appInstallsToHSModifiers =
-  M.empty
-
-appInstallsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-appInstallsToPSModifiers =
-  M.empty
-
 $(enableKVPG ''AppInstallsT ['id] [])
+
+$(mkTableInstances ''AppInstallsT "app_installs" "atlas_app")

@@ -15,6 +15,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant where
@@ -22,8 +23,6 @@ module Storage.Beam.Merchant where
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
 import Data.ByteString.Lazy (fromStrict, toStrict)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
@@ -138,37 +137,9 @@ instance B.Table MerchantT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta MerchantT where
-  modelFieldModification = merchantTMod
-  modelTableName = "merchant"
-  modelSchemaName = Just "atlas_app"
-
 type Merchant = MerchantT Identity
 
-instance FromJSON Merchant where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Merchant where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Merchant
-
--- fromFieldSlot ::
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion [Domain.Slot]
--- fromFieldSlot f mbValue = case mbValue of
---   Nothing -> T.trace ("eturned nothing in fromFieldSlot") $ DPSF.returnError DPSF.UnexpectedNull f mempty
---   Just _ -> V.toList <$> fromField f mbValue
-
--- fromFieldEnumDbSlot ::
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion Domain.Slot
--- fromFieldEnumDbSlot = fromFieldJSON
-
 fromFieldJSON' ::
-  -- (Typeable a, FromJSON a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion [Domain.Slot]
@@ -231,19 +202,6 @@ merchantTMod =
       dirCacheSlot = B.fieldNamed "dir_cache_slot"
     }
 
-instance Serialize Merchant where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-merchantToHSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantToHSModifiers =
-  M.empty
-
-merchantToPSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantToPSModifiers =
-  M.empty
-
 $(enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])
+
+$(mkTableInstances ''MerchantT "merchant" "atlas_app")

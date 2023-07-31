@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FeedbackForm where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -79,20 +77,7 @@ instance B.Table FeedbackFormT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FeedbackFormT where
-  modelFieldModification = feedbackFormTMod
-  modelTableName = "feedback_form"
-  modelSchemaName = Just "atlas_app"
-
 type FeedbackForm = FeedbackFormT Identity
-
-instance FromJSON FeedbackForm where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FeedbackForm where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FeedbackForm
 
 feedbackFormTMod :: FeedbackFormT (B.FieldModification (B.TableField FeedbackFormT))
 feedbackFormTMod =
@@ -105,19 +90,6 @@ feedbackFormTMod =
       answerType = B.fieldNamed "answer_type"
     }
 
-instance Serialize FeedbackForm where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-feedbackFormToHSModifiers :: M.Map Text (A.Value -> A.Value)
-feedbackFormToHSModifiers =
-  M.empty
-
-feedbackFormToPSModifiers :: M.Map Text (A.Value -> A.Value)
-feedbackFormToPSModifiers =
-  M.empty
-
 $(enableKVPG ''FeedbackFormT ['id] [])
+
+$(mkTableInstances ''FeedbackFormT "feedback_form" "atlas_app")

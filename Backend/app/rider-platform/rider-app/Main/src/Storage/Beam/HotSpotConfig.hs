@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.HotSpotConfig where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -54,20 +52,7 @@ instance B.Table HotSpotConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta HotSpotConfigT where
-  modelFieldModification = hotSpotConfigTMod
-  modelTableName = "hot_spot_config"
-  modelSchemaName = Just "atlas_app"
-
 type HotSpotConfig = HotSpotConfigT Identity
-
-instance FromJSON HotSpotConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON HotSpotConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show HotSpotConfig
 
 hotSpotConfigTMod :: HotSpotConfigT (B.FieldModification (B.TableField HotSpotConfigT))
 hotSpotConfigTMod =
@@ -107,19 +92,6 @@ defaultHotSpotConfig =
       maxNumHotSpotsToShow = 0
     }
 
-instance Serialize HotSpotConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-hotSpotConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-hotSpotConfigToHSModifiers =
-  M.empty
-
-hotSpotConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-hotSpotConfigToPSModifiers =
-  M.empty
-
 $(enableKVPG ''HotSpotConfigT ['id] [])
+
+$(mkTableInstances ''HotSpotConfigT "hot_spot_config" "atlas_app")
