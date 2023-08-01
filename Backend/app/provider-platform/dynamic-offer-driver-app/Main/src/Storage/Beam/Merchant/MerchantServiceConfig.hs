@@ -108,10 +108,12 @@ getServiceNameConfigJSON = \case
   Domain.SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
     Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
+    Sms.GupShupConfig cfg -> (Domain.SmsService Sms.GupShup, toJSON cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
     Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
+    Verification.FaceVerificationConfig _ -> error "Not implemented"
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of

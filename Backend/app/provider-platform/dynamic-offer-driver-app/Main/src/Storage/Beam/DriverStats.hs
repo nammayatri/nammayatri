@@ -27,6 +27,7 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -35,9 +36,14 @@ data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
     idleSince :: B.C f Time.UTCTime,
     totalRides :: B.C f Int,
+    totalEarnings :: B.C f Money,
+    bonusEarned :: B.C f Money,
+    lateNightTrips :: B.C f Int,
+    earningsMissed :: B.C f Money,
     totalDistance :: B.C f Double,
     ridesCancelled :: B.C f (Maybe Int),
-    totalRidesAssigned :: B.C f (Maybe Int)
+    totalRidesAssigned :: B.C f (Maybe Int),
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -70,7 +76,12 @@ driverStatsTMod =
       totalRides = B.fieldNamed "total_rides",
       totalDistance = B.fieldNamed "total_distance",
       ridesCancelled = B.fieldNamed "rides_cancelled",
-      totalRidesAssigned = B.fieldNamed "total_rides_assigned"
+      totalRidesAssigned = B.fieldNamed "total_rides_assigned",
+      totalEarnings = B.fieldNamed "total_earnings",
+      bonusEarned = B.fieldNamed "bonus_earned",
+      lateNightTrips = B.fieldNamed "late_night_trips",
+      earningsMissed = B.fieldNamed "earnings_missed",
+      updatedAt = B.fieldNamed "updated_at"
     }
 
 psToHs :: HM.HashMap Text Text

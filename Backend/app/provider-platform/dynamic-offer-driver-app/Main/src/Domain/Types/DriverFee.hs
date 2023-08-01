@@ -54,9 +54,6 @@ data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | E
 paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
-paymentProcessingLockKey :: Text -> Text
-paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
-
 instance FromHttpApiData DriverFeeStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece

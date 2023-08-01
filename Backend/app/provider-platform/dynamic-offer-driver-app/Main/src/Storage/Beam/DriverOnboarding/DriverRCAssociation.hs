@@ -38,7 +38,8 @@ data DriverRCAssociationT f = DriverRCAssociationT
     associatedOn :: B.C f Time.UTCTime,
     associatedTill :: B.C f (Maybe Time.UTCTime),
     consent :: B.C f Bool,
-    consentTimestamp :: B.C f Time.UTCTime
+    consentTimestamp :: B.C f Time.UTCTime,
+    isRcActive :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 
@@ -78,7 +79,8 @@ driverRCAssociationTMod =
       associatedOn = B.fieldNamed "associated_on",
       associatedTill = B.fieldNamed "associated_till",
       consent = B.fieldNamed "consent",
-      consentTimestamp = B.fieldNamed "consent_timestamp"
+      consentTimestamp = B.fieldNamed "consent_timestamp",
+      isRcActive = B.fieldNamed "is_rc_active"
     }
 
 psToHs :: HM.HashMap Text Text

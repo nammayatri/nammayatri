@@ -77,7 +77,8 @@ instance FromTType' BeamIV.IdfyVerification IdfyVerification where
             imageExtractionValidation = imageExtractionValidation,
             idfyResponse = idfyResponse,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            multipleRC = multipleRC
           }
 
 instance ToTType' BeamIV.IdfyVerification IdfyVerification where
@@ -97,5 +98,6 @@ instance ToTType' BeamIV.IdfyVerification IdfyVerification where
         BeamIV.imageExtractionValidation = imageExtractionValidation,
         BeamIV.idfyResponse = idfyResponse,
         BeamIV.createdAt = createdAt,
-        BeamIV.updatedAt = updatedAt
+        BeamIV.updatedAt = updatedAt,
+        BeamIV.multipleRC = multipleRC
       }

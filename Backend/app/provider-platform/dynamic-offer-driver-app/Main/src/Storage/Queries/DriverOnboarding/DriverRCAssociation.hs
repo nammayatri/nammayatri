@@ -30,7 +30,7 @@ import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as
 import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 
 create :: (L.MonadFlow m, Log m) => DriverRCAssociation -> m ()
-create driverRCAssociation = createWithKV driverRCAssociation
+create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
 findById (Id drcaId) = findOneWithKV [Se.Is BeamDRCA.id $ Se.Eq drcaId]
@@ -150,7 +150,8 @@ instance FromTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
             associatedOn = associatedOn,
             associatedTill = associatedTill,
             consent = consent,
-            consentTimestamp = consentTimestamp
+            consentTimestamp = consentTimestamp,
+            isRcActive = isRcActive
           }
 
 instance ToTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
@@ -162,7 +163,8 @@ instance ToTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
         BeamDRCA.associatedOn = associatedOn,
         BeamDRCA.associatedTill = associatedTill,
         BeamDRCA.consent = consent,
-        BeamDRCA.consentTimestamp = consentTimestamp
+        BeamDRCA.consentTimestamp = consentTimestamp,
+        BeamDRCA.isRcActive = isRcActive
       }
 
 findActiveAssociationByRC :: (Transactionable m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)

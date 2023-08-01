@@ -246,7 +246,12 @@ instance FromTType' BeamDS.DriverStats DriverStats where
             totalRides = totalRides,
             totalDistance = Meters $ double2Int totalDistance,
             ridesCancelled = ridesCancelled,
-            totalRidesAssigned = totalRidesAssigned
+            totalRidesAssigned = totalRidesAssigned,
+            totalEarnings = totalEarnings,
+            bonusEarned = bonusEarned,
+            lateNightTrips = lateNightTrips,
+            earningsMissed = earningsMissed,
+            updatedAt = updatedAt
           }
 
 instance ToTType' BeamDS.DriverStats DriverStats where
@@ -257,7 +262,12 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.totalRides = totalRides,
         BeamDS.totalDistance = (\(Meters m) -> int2Double m) totalDistance,
         BeamDS.ridesCancelled = ridesCancelled,
-        BeamDS.totalRidesAssigned = totalRidesAssigned
+        BeamDS.totalRidesAssigned = totalRidesAssigned,
+        BeamDS.totalEarnings = totalEarnings,
+        BeamDS.bonusEarned = bonusEarned,
+        BeamDS.lateNightTrips = lateNightTrips,
+        BeamDS.earningsMissed = earningsMissed,
+        BeamDS.updatedAt = updatedAt
       }
 
 incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: Id Driver -> Money -> Money -> Int -> SqlDB ()

@@ -36,6 +36,8 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
             onRide = onRide,
             enabled = enabled,
             blocked = blocked,
+            blockedReason = blockedReason,
+            blockExpiryTime = blockExpiryTime,
             verified = verified,
             subscribed = subscribed,
             paymentPending = paymentPending,
@@ -61,6 +63,8 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.onRide = onRide,
         BeamDI.enabled = enabled,
         BeamDI.blocked = blocked,
+        BeamDI.blockedReason = blockedReason,
+        BeamDI.blockExpiryTime = blockExpiryTime,
         BeamDI.numOfLocks = numOfLocks,
         BeamDI.verified = verified,
         BeamDI.subscribed = subscribed,
@@ -76,27 +80,27 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.updatedAt = updatedAt
       }
 
-transformBeamDriverInformationToDomain :: BeamDI.DriverInformation -> DriverInformation
-transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
-  DriverInformation
-    { driverId = Id driverId,
-      adminId = Id <$> adminId,
-      merchantId = Id <$> merchantId,
-      active = active,
-      onRide = onRide,
-      enabled = enabled,
-      blocked = blocked,
-      verified = verified,
-      subscribed = subscribed,
-      paymentPending = paymentPending,
-      aadhaarVerified = aadhaarVerified,
-      numOfLocks = numOfLocks,
-      referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
-      lastEnabledOn = lastEnabledOn,
-      canDowngradeToSedan = canDowngradeToSedan,
-      canDowngradeToHatchback = canDowngradeToHatchback,
-      canDowngradeToTaxi = canDowngradeToTaxi,
-      mode = mode,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+-- transformBeamDriverInformationToDomain :: BeamDI.DriverInformation -> DriverInformation
+-- transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
+--   DriverInformation
+--     { driverId = Id driverId,
+--       adminId = Id <$> adminId,
+--       merchantId = Id <$> merchantId,
+--       active = active,
+--       onRide = onRide,
+--       enabled = enabled,
+--       blocked = blocked,
+--       verified = verified,
+--       subscribed = subscribed,
+--       paymentPending = paymentPending,
+--       aadhaarVerified = aadhaarVerified,
+--       numOfLocks = numOfLocks,
+--       referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
+--       lastEnabledOn = lastEnabledOn,
+--       canDowngradeToSedan = canDowngradeToSedan,
+--       canDowngradeToHatchback = canDowngradeToHatchback,
+--       canDowngradeToTaxi = canDowngradeToTaxi,
+--       mode = mode,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt
+--     }

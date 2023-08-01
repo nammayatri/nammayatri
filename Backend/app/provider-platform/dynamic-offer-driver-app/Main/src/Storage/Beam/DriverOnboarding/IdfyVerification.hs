@@ -65,6 +65,7 @@ data IdfyVerificationT f = IdfyVerificationT
     documentNumberHash :: B.C f DbHash,
     imageExtractionValidation :: B.C f Domain.ImageExtractionValidation,
     idfyResponse :: B.C f (Maybe Text),
+    multipleRC :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -115,6 +116,7 @@ idfyVerificationTMod =
       documentNumberHash = B.fieldNamed "document_number_hash",
       imageExtractionValidation = B.fieldNamed "image_extraction_validation",
       idfyResponse = B.fieldNamed "idfy_response",
+      multipleRC = B.fieldNamed "multiple_rc",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

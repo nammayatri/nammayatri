@@ -34,8 +34,7 @@ import Lib.UtilsTH
 import Sequelize
 
 data AadhaarVerificationT f = AadhaarVerificationT
-  { id :: B.C f Text,
-    driverId :: B.C f Text,
+  { driverId :: B.C f Text,
     driverName :: B.C f Text,
     driverGender :: B.C f Text,
     aadhaarNumberHash :: B.C f (Maybe DbHash),
@@ -51,7 +50,7 @@ instance B.Table AadhaarVerificationT where
   data PrimaryKey AadhaarVerificationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . id
+  primaryKey = Id . driverId
 
 instance ModelMeta AadhaarVerificationT where
   modelFieldModification = aadhaarVerificationTMod
@@ -71,8 +70,7 @@ deriving stock instance Show AadhaarVerification
 aadhaarVerificationTMod :: AadhaarVerificationT (B.FieldModification (B.TableField AadhaarVerificationT))
 aadhaarVerificationTMod =
   B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
+    { driverId = B.fieldNamed "driver_id",
       driverName = B.fieldNamed "driver_name",
       driverGender = B.fieldNamed "driver_gender",
       aadhaarNumberHash = B.fieldNamed "aadhaar_number_hash",
@@ -98,4 +96,4 @@ aadhaarVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 aadhaarVerificationToPSModifiers =
   M.empty
 
-$(enableKVPG ''AadhaarVerificationT ['id] [])
+$(enableKVPG ''AadhaarVerificationT ['driverId] [])

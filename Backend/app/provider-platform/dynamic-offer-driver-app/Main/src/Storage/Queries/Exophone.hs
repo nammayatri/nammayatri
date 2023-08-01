@@ -188,6 +188,7 @@ instance FromTType' BeamE.Exophone Exophone where
             primaryPhone = primaryPhone,
             backupPhone = backupPhone,
             isPrimaryDown = isPrimaryDown,
+            exophoneType = exophoneType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -200,6 +201,7 @@ instance ToTType' BeamE.Exophone Exophone where
         BeamE.primaryPhone = primaryPhone,
         BeamE.backupPhone = backupPhone,
         BeamE.isPrimaryDown = isPrimaryDown,
+        BeamE.exophoneType = exophoneType,
         BeamE.createdAt = createdAt,
         BeamE.updatedAt = updatedAt
       }
