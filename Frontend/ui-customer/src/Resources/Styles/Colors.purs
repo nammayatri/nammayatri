@@ -492,3 +492,6 @@ pink = "#FEF1E5"
 
 pickledBlue :: Color 
 pickledBlue = "#29334A"
+
+darkGreyishBlue :: Color
+darkGreyishBlue = "#313440"

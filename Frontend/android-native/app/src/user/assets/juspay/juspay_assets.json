@@ -98,6 +98,7 @@
       "ny_ic_close" : true,
       "ny_ic_close_bold" : true,
       "ny_ic_close_filled_round" : true,
+      "ny_ic_close_grey" : true,
       "ny_ic_close_transparent" : true,
       "ny_ic_copy" : true,
       "ny_ic_customer_current_location" : true,
