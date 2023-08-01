@@ -827,7 +827,7 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating}}
+ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating,feedbackList = state.data.rideRatingState.feedbackList}}
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
