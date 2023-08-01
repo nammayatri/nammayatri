@@ -35,7 +35,9 @@ type API =
            :<|> Common.DriverActivityAPI
            :<|> Common.EnableDriverAPI
            :<|> Common.DisableDriverAPI
+           :<|> Common.BlockDriverWithReasonAPI
            :<|> Common.BlockDriverAPI
+           :<|> Common.DriverBlockReasonListAPI
            :<|> Common.DriverCashCollectionAPI
            :<|> Common.UnblockDriverAPI
            :<|> Common.DriverLocationAPI
@@ -49,6 +51,8 @@ type API =
            :<|> Common.UpdateDriverAadhaarAPI
            :<|> Common.AddVehicleAPI
            :<|> Common.UpdateDriverNameAPI
+           :<|> Common.SetRCStatusAPI
+           :<|> Common.DeleteRCAPI
            :<|> Reg.API
            :<|> Common.ClearOnRideStuckDrivers
        )
@@ -63,7 +67,9 @@ handler merchantId =
     :<|> driverActivity merchantId
     :<|> enableDriver merchantId
     :<|> disableDriver merchantId
+    :<|> blockDriverWithReason merchantId
     :<|> blockDriver merchantId
+    :<|> blockReasonList merchantId
     :<|> collectCash merchantId
     :<|> unblockDriver merchantId
     :<|> driverLocation merchantId
@@ -77,6 +83,8 @@ handler merchantId =
     :<|> updateByPhoneNumber merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
+    :<|> setRCStatus merchantId
+    :<|> deleteRC merchantId
     :<|> Reg.handler merchantId
     :<|> clearOnRideStuckDrivers merchantId
 
@@ -106,8 +114,14 @@ enableDriver merchantShortId = withFlowHandlerAPI . DDriver.enableDriver merchan
 disableDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId = withFlowHandlerAPI . DDriver.disableDriver merchantShortId
 
+blockDriverWithReason :: ShortId DM.Merchant -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
+blockDriverWithReason merchantShortId driverId = withFlowHandlerAPI . DDriver.blockDriverWithReason merchantShortId driverId
+
 blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 blockDriver merchantShortId = withFlowHandlerAPI . DDriver.blockDriver merchantShortId
+
+blockReasonList :: ShortId DM.Merchant -> FlowHandler [Common.BlockReason]
+blockReasonList _ = withFlowHandlerAPI DDriver.blockReasonList
 
 collectCash :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 collectCash merchantShortId = withFlowHandlerAPI . DDriver.collectCash merchantShortId
@@ -150,3 +164,9 @@ updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateD
 
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> FlowHandler Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers
+
+setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
+setRCStatus merchantShortId driverId = withFlowHandlerAPI . DDriver.setRCStatus merchantShortId driverId
+
+deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> FlowHandler APISuccess
+deleteRC merchantShortId driverId = withFlowHandlerAPI . DDriver.deleteRC merchantShortId driverId

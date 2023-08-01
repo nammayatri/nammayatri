@@ -18,24 +18,43 @@ module Beckn.Types.Core.Taxi.Common.Payment
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentCollector as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
-import Data.OpenApi (ToSchema)
+import Data.Aeson
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State)
 import Kernel.Utils.JSON
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Payment = Payment
-  { collected_by :: PaymentCollector,
+  { params :: PaymentParams,
     _type :: PaymentType,
-    instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
-    time :: TimeDuration -- FIXME: what is this?
+    uri :: Maybe Text
   }
   deriving (Generic, Show, ToSchema)
 
 instance FromJSON Payment where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 instance ToJSON Payment where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data PaymentParams = PaymentParams
+  { collected_by :: PaymentCollector,
+    currency :: Text,
+    instrument :: Maybe PaymentInstrument,
+    amount :: Maybe DecimalValue
+  }
+  deriving (Generic, Show)
+
+instance ToSchema PaymentParams where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON PaymentParams where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON PaymentParams where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

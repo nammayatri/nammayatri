@@ -17,9 +17,13 @@ module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
 import Prelude(unit, show, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..),Padding(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
+import Language.Strings
+import Common.Types.App (LazyCheck(..))
+import Components.ChatView as ChatView
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
@@ -30,17 +34,20 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
-import Components.InAppKeyboardModal as InAppKeyboardModal
-import Language.Strings
 import Language.Types (STR(..))
+import Prelude ((<>))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
-import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
+import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Font.Style as FontStyle
+import Helpers.Utils (getMerchantVehicleSize)
 
 
 
@@ -68,7 +75,8 @@ rideActionModalConfig state = let
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
-    specialLocationTag = state.data.activeRide.specialLocationTag
+    specialLocationTag = state.data.activeRide.specialLocationTag,
+    waitTime = state.data.activeRide.waitingTime
   }
   in rideActionModalConfig'
 
@@ -165,8 +173,7 @@ cancelConfirmationConfig state = let
     secondaryText {visibility = GONE},
     option1 {
       text = (getString CONTINUE)
-    , fontSize = FontSize.a_16
-    , width = V $ (((EHC.screenWidth unit)-92)/2)
+    , width = V $ (((EHC.screenWidth unit)-92)/2) 
     , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
     , timerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
     , enableTimer = true
@@ -177,7 +184,6 @@ cancelConfirmationConfig state = let
     option2 {
       text = (getString GO_BACK)
     , margin = MarginLeft 12
-    , fontSize = FontSize.a_16
     , width = V $ (((EHC.screenWidth unit)-92)/2)
     , color = Color.yellow900
     , strokeColor = Color.black900
@@ -186,7 +192,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
                   else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -279,8 +285,8 @@ enterOtpStateConfig state = let
       inputTextConfig {
         text = state.props.rideOtp,
         -- pattern = "[0-9]*,4",
-        fontSize = FontSize.a_22,
         focusIndex = state.props.enterOtpFocusIndex
+        , textStyle = FontStyle.Heading1
       },
       headingConfig {
         text = getString (ENTER_OTP)
@@ -291,8 +297,8 @@ enterOtpStateConfig state = let
       },
       subHeadingConfig {
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
-        fontSize = FontSize.a_14,
         visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
+      , textStyle = FontStyle.Body1
       },
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
@@ -328,10 +334,11 @@ getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_DROP" -> ZONE_CANCEL_TEXT_DROP
   _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
 
-specialLocationConfig :: String -> String -> JB.SpecialLocationTag
-specialLocationConfig srcIcon destIcon = {
+mapRouteConfig :: String -> String -> JB.MapRouteConfig
+mapRouteConfig srcIcon destIcon = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
+  , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
 }
 
 requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
@@ -355,6 +362,35 @@ requestInfoCardConfig _ = let
     }
   , buttonConfig {
       text = getString GOT_IT
+    }
+  }
+  in requestInfoCardConfig'
+
+waitTimeInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+waitTimeInfoCardConfig _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString WAIT_TIMER
+    }
+  , primaryText {
+      text = getString HOW_LONG_WAITED_FOR_PICKUP,
+      padding = Padding 16 16 0 0
+    }
+  , secondaryText {
+      text = getString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE,
+      visibility = VISIBLE,
+      padding = PaddingLeft 16
+    }
+  , imageConfig {
+      imageUrl = "ny_ic_waiting_auto,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_ride_completed",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 4 1 0
+    }
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20
     }
   }
   in requestInfoCardConfig'

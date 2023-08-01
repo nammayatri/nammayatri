@@ -53,6 +53,8 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.SessionizerMetrics.Types.Event
+import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)
@@ -71,6 +73,7 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RideDetails as QRideD
 import Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import Tools.Event
 import qualified Tools.Notifications as Notify
 
 data DriverRideRes = DriverRideRes
@@ -219,7 +222,8 @@ otpRideCreate ::
     EncFlow m r,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    EventStreamFlow m r
   ) =>
   DP.Person ->
   Text ->
@@ -230,12 +234,14 @@ otpRideCreate driver otpCode booking = do
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  when (booking.vehicleVariant /= vehicle.variant) $ throwError $ InvalidRequest "Wrong Vehcile Variant"
+  when (isNotAllowedVehicleVariant vehicle.variant booking.vehicleVariant) $ throwError $ InvalidRequest "Wrong Vehcile Variant"
 
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
+  unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
   ride <- buildRide otpCode driver.id (Just transporter.id)
   rideDetails <- buildRideDetails ride
+  triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
   -- Esq.runTransaction $ do
   _ <- QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
   _ <- QRide.create ride
@@ -318,3 +324,6 @@ otpRideCreate driver otpCode booking = do
             vehicleModel = Just vehicle.model,
             vehicleClass = Nothing
           }
+    isNotAllowedVehicleVariant driverVehicle bookingVehicle =
+      (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
+        && driverVehicle == DVeh.TAXI

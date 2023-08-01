@@ -25,11 +25,13 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.DriverProfileScreen.View as DriverProfileScreen
 import Types.App (FlowBT, GlobalState(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 driverProfileScreen :: FlowBT String DRIVER_PROFILE_SCREEN_OUTPUT
 driverProfileScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen
+  logField_ <- lift $ lift $ getLogFields 
+  action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen{data{logField = logField_}}
   case action of
     GoToDriverDetailsScreen updatedState -> do
       modifyScreenState $ DriverDetailsScreenStateType (\driverDetails -> 
@@ -56,12 +58,30 @@ driverProfileScreen = do
     
     GoToAboutUsScreen -> App.BackT $ App.BackPoint <$> pure ABOUT_US_SCREEN
     GoToLogout -> App.BackT $ App.BackPoint <$> pure GO_TO_LOGOUT
-    GoToHelpAndSupportScreen -> App.BackT $ App.BackPoint <$> pure HELP_AND_SUPPORT_SCREEN
+    GoToHelpAndSupportScreen state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure HELP_AND_SUPPORT_SCREEN
     GoToHomeScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_PROFILE
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
-    GoToDriverHistoryScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_DRIVER_HISTORY_SCREEN
-    GoToSelectLanguageScreen -> App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
+    GoToDriverHistoryScreen state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure GO_TO_DRIVER_HISTORY_SCREEN
+    GoToSelectLanguageScreen state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
-    GoToBookingOptions state -> App.BackT $ App.NoBack <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
+    GoToBookingOptions state -> App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
+    VerifyAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP1 state)
+    ResendAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP1 state)
+    ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
+    RemoveAlternateNumber state -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE1 state)
+    UpdateGender state -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER1 state)
+    ActivatingOrDeactivatingRC state -> App.BackT $ App.NoBack <$> pure (GO_TO_ACTIVATE_OR_DEACTIVATE_RC state)
+    DeletingRc state -> App.BackT $ App.NoBack <$> pure (GO_TO_DELETE_RC state)
+    CallingDriver state -> App.BackT $ App.NoBack <$> pure (GO_TO_CALL_DRIVER state)
+    AddingRC state -> App.BackT $ App.BackPoint <$> pure (ADD_RC state)
+    UpdateLanguages updatedState language -> do
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
+      App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
     GoBack -> App.BackT $ pure App.GoBack

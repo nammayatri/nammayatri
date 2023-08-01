@@ -15,31 +15,34 @@
 module Beckn.Types.Core.Taxi.OnSearch.Fulfillment
   ( module Beckn.Types.Core.Taxi.OnSearch.Fulfillment,
     module Reexport,
+    FulfillmentType (..),
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
-import Beckn.Types.Core.Taxi.OnSearch.StartInfo
-import Beckn.Types.Core.Taxi.OnSearch.StopInfo
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
+import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
+import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
+import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
+-- import Data.Aeson (Options (..))
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
+-- import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,
-    end :: Maybe StopInfo,
-    vehicle :: FulfillmentVehicle
+    _type :: FulfillmentType,
+    end :: StopInfo,
+    vehicle :: Vehicle
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
+
+instance FromJSON FulfillmentInfo where
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToJSON FulfillmentInfo where
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
 
 instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype FulfillmentVehicle = FulfillmentVehicle
-  { category :: VehicleVariant
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema FulfillmentVehicle where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

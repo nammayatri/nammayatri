@@ -25,8 +25,8 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Array ((!!), null, filter)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (validateEmail)
-import JBridge (showDialer, hideKeyboardOnNavigation)
+import Helpers.Utils (validateEmail,strLenWithSpecificCharacters)
+import JBridge (showDialer, hideKeyboardOnNavigation,toast)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void, (&&), (>), (||), not)
@@ -45,6 +45,8 @@ import Data.String (length, trim)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App (LazyCheck(..))
 import Screens.HelpAndSupportScreen.ScreenData (initData)
+import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Utils (getValueFromConfig)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -206,17 +208,18 @@ eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
   void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
-eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack
+eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack   
 
 eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoHome
 
-eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && length (trim state.data.description) > 9 && validateEmail a}}
+eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && (strLenWithSpecificCharacters (trim state.data.description) "[a-zA-Z]") > 9 && validateEmail a}}
 
 eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do 
   let email= if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
-  continue state{data {description = a},props{btnActive = length email > 0 && length (trim a) > 9 && validateEmail email}}
+  continue state{data {description = a},props{btnActive = length email > 0 && (strLenWithSpecificCharacters (trim a) "[a-zA-Z]")  > 9 && validateEmail email}}
 
-eval DeleteAccount state = continue state {props {showDeleteAccountView = true}, data{description = "", email = ""}}
+eval DeleteAccount state = do
+ continue state {props {showDeleteAccountView = true}, data{description = "", email = ""}}
 
 eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = continue state {props {showDeleteAccountView = false}}
 
@@ -247,7 +250,7 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
           rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
           driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
-          totalAmount : ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+          totalAmount : ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
           status : (ride.status),
           isNull : false,
           rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
@@ -256,7 +259,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
           tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
           bookingId : ride.id,
-          faresList :  getFaresList ride.fareBreakup baseDistanceVal,
+          faresList : updatedFareList,
+          config : DC.config,
           email : "",
           description : "",
           accountStatus : ACTIVE

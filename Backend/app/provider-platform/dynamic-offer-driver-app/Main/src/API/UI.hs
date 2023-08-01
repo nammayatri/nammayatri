@@ -22,6 +22,7 @@ import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverOnboarding as DriverOnboarding
+import qualified API.UI.DriverProfileSummary as DriverProfileSummary
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
 import qualified API.UI.Frontend as Frontend
@@ -54,6 +55,7 @@ type API =
            :<|> OrgAdmin.API
            :<|> Payment.API
            :<|> Driver.API
+           :<|> DriverProfileSummary.API
            :<|> Vehicle.API
            :<|> Frontend.API
            :<|> Transporter.API
@@ -81,6 +83,7 @@ handler =
     :<|> OrgAdmin.handler
     :<|> Payment.handler
     :<|> Driver.handler
+    :<|> DriverProfileSummary.handler
     :<|> Vehicle.handler
     :<|> Frontend.handler
     :<|> Transporter.handler

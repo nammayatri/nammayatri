@@ -70,6 +70,19 @@ type API =
       :> TokenAuth
       :> ReqBody '[JSON] DriverOnboarding.ReferralReq
       :> Post '[JSON] DriverOnboarding.ReferralRes
+    :<|> "rc"
+      :> ( "setStatus"
+             :> TokenAuth
+             :> ReqBody '[JSON] DriverOnboarding.RCStatusReq
+             :> Post '[JSON] APISuccess
+             :<|> "delete"
+               :> TokenAuth
+               :> ReqBody '[JSON] DriverOnboarding.DeleteRCReq
+               :> Post '[JSON] APISuccess
+             :<|> "all"
+               :> TokenAuth
+               :> Get '[JSON] [DriverOnboarding.LinkedRC]
+         )
 
 handler :: FlowServer API
 handler =
@@ -83,6 +96,9 @@ handler =
       :<|> unVerifiedAadhaarData
   )
     :<|> addReferral
+    :<|> setRCStatus
+    :<|> deleteRC
+    :<|> getAllLinkedRCs
 
 verifyDL :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
 verifyDL (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId)
@@ -91,7 +107,7 @@ verifyRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverRCReq -> Fl
 verifyRC (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyRC False Nothing (personId, merchantId)
 
 statusHandler :: (Id DP.Person, Id DM.Merchant) -> FlowHandler DriverOnboarding.StatusRes
-statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
+statusHandler (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId) (Just True)
 
 validateImage :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId)
@@ -110,3 +126,12 @@ unVerifiedAadhaarData (personId, _) = withFlowHandlerAPI . AV.unVerifiedAadhaarD
 
 addReferral :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId)
+
+setRCStatus :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.RCStatusReq -> FlowHandler APISuccess
+setRCStatus (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId)
+
+deleteRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DeleteRCReq -> FlowHandler APISuccess
+deleteRC (personId, merchantId) req = withFlowHandlerAPI $ DriverOnboarding.deleteRC (personId, merchantId) req False
+
+getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant) -> FlowHandler [DriverOnboarding.LinkedRC]
+getAllLinkedRCs (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId)

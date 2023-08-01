@@ -28,6 +28,7 @@ import Domain.Types.Person (Person)
 import EulerHS.Prelude
 import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
+import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API
@@ -70,10 +71,40 @@ data DriverInformationE e = DriverInformation
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverMode,
     aadhaarVerified :: Bool,
+    blockedReason :: Maybe Text,
+    blockExpiryTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic)
+
+data DriverSummary = DriverSummary
+  { totalEarnings :: Money,
+    bonusEarned :: Money,
+    totalCompletedTrips :: Int,
+    lateNightTrips :: Int,
+    lastRegistered :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data DriverMissedOpp = DriverMissedOpp
+  { cancellationRate :: Int,
+    ridesCancelled :: Int,
+    totalRides :: Int,
+    missedEarnings :: Money
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype DriverBadges = DriverBadges
+  { driverBadges :: [Badges]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data Badges = Badges
+  { badgeName :: Text,
+    badgeCount :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 type DriverInformation = DriverInformationE 'AsEncrypted
 

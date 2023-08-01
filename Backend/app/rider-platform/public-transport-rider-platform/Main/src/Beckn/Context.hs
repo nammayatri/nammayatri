@@ -79,7 +79,8 @@ buildContext' config action txnId bapId bapUri bppId bppUri = do
         bpp_uri = bppUri,
         transaction_id = Just txnId,
         message_id = message_id,
-        timestamp = timestamp
+        timestamp = timestamp,
+        max_callbacks = Nothing
       }
 
 validateContext' :: (MonadThrow m, Log m) => CoreConfig -> Context.Action -> Context.Context -> m ()

@@ -52,3 +52,4 @@ onStatus OnStatusReq {..} = do
     Just rideInfo -> do
       ride <- QRide.findByBPPRideId rideInfo.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId: " <> rideInfo.bppRideId.getId)
       QBooking.updateStatus booking.id bookingStatus >> QRide.updateStatus ride.id rideInfo.rideStatus
+      QRide.updateStatus ride.id rideInfo.rideStatus

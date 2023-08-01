@@ -16,6 +16,7 @@ module Domain.Action.UI.Search.Common
   ( SearchReqLocation (..),
     buildSearchReqLoc,
     buildSearchRequest,
+    makeSearchReqLoc',
   )
 where
 
@@ -99,3 +100,10 @@ buildSearchReqLoc SearchReqLocation {..} = do
         createdAt = now,
         updatedAt = now
       }
+
+makeSearchReqLoc' :: Location.SearchReqLocation -> SearchReqLocation
+makeSearchReqLoc' Location.SearchReqLocation {..} =
+  SearchReqLocation
+    { gps = LatLong lat lon,
+      ..
+    }

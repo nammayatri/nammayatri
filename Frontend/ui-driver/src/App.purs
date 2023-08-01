@@ -50,6 +50,7 @@ import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -88,6 +89,7 @@ newtype GlobalState = GlobalState {
   , notificationScreen :: NotificationsScreenState
   , referralScreen :: ReferralScreenState
   , bookingOptionsScreen :: BookingOptionsScreenState
+  , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
   }
 
 defaultGlobalState :: GlobalState
@@ -125,6 +127,7 @@ defaultGlobalState = GlobalState{
 , notificationScreen : NotificationsScreenData.initData
 , referralScreen : ReferralScreenData.initData
 , bookingOptionsScreen : BookingOptionsScreenData.initData
+, loaderOverlay : LoaderOverlayScreenData.initData
 }
 
 data ScreenType =
@@ -198,6 +201,17 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | NOTIFICATIONS_SCREEN
                                     | GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
                                     | GO_TO_BOOKING_OPTIONS_SCREEN DriverProfileScreenState
+                                    | VERIFY_OTP1 DriverProfileScreenState
+                                    | DRIVER_ALTERNATE_CALL_API1 DriverProfileScreenState
+                                    | RESEND_ALTERNATE_OTP1 DriverProfileScreenState
+                                    | ALTERNATE_NUMBER_REMOVE1 DriverProfileScreenState
+                                    | DRIVER_GENDER1 DriverProfileScreenState
+                                    | GO_TO_ACTIVATE_OR_DEACTIVATE_RC DriverProfileScreenState
+                                    | GO_TO_DELETE_RC DriverProfileScreenState
+                                    | GO_TO_CALL_DRIVER DriverProfileScreenState
+                                    | ADD_RC DriverProfileScreenState
+                                    | UPDATE_LANGUAGES (Array String)
+
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -229,7 +243,7 @@ data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
 data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
-data ADD_VEHICLE_DETAILS_SCREENOUTPUT = GO_TO_APPLICATION_SCREEN AddVehicleDetailsScreenState | VALIDATE_IMAGE_API_CALL AddVehicleDetailsScreenState | REFER_API_CALL AddVehicleDetailsScreenState | APPLICATION_STATUS_SCREEN | LOGOUT_USER | ONBOARDING_FLOW
+data ADD_VEHICLE_DETAILS_SCREENOUTPUT = GO_TO_APPLICATION_SCREEN AddVehicleDetailsScreenState | VALIDATE_IMAGE_API_CALL AddVehicleDetailsScreenState | REFER_API_CALL AddVehicleDetailsScreenState | APPLICATION_STATUS_SCREEN | LOGOUT_USER | ONBOARDING_FLOW | DRIVER_PROFILE_SCREEN
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_HOME_SCREEN | OPEN_HELP_AND_SUPPORT
 

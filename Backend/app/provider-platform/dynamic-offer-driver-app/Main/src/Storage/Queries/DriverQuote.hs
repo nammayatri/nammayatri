@@ -18,9 +18,11 @@ module Storage.Queries.DriverQuote where
 import qualified Data.Time as T
 import Domain.Types.DriverQuote
 import qualified Domain.Types.DriverQuote as Domain
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -65,10 +67,25 @@ findByIdInReplica (Id driverQuoteId) = findOneWithKvInReplica [Se.Is BeamDQ.id $
 setInactiveBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
 
--- setInactiveBySRId :: Id DSR.SearchRequest -> SqlDB ()
--- setInactiveBySRId searchReqId = Esq.update $ \p -> do
---   set p [DriverQuoteStatus =. val Domain.Inactive]
---   where_ $ p ^. DriverQuoteRequestId ==. val (toKey searchReqId)
+findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (Transactionable m) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
+findActiveQuoteByDriverIdAndVehVarAndEstimateId estimateId driverId vehicleVariant now = do
+  buildDType $ do
+    res <- Esq.findOne' $ do
+      (dQuote :& farePars) <-
+        from baseDriverQuoteQuery
+      where_ $
+        dQuote ^. DriverQuoteEstimateId ==. val (toKey estimateId)
+          &&. dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
+          &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
+          &&. dQuote ^. DriverQuoteVehicleVariant ==. val vehicleVariant
+          &&. dQuote ^. DriverQuoteValidTill >=. val now
+      pure (dQuote, farePars)
+    join <$> mapM buildFullDriverQuote res
+
+setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
+setInactiveBySTId searchTryId = Esq.update $ \p -> do
+  set p [DriverQuoteStatus =. val Domain.Inactive]
+  where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
 
 setInactiveBySRId :: (L.MonadFlow m, Log m) => Id DSR.SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
@@ -177,3 +194,16 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.providerId = getId providerId,
         BeamDQ.specialLocationTag = specialLocationTag
       }
+
+setInactiveAllDQByEstId :: Id DEstimate.Estimate -> UTCTime -> SqlDB ()
+setInactiveAllDQByEstId estimateId now = do
+  Esq.update $ \p -> do
+    set
+      p
+      [ DriverQuoteStatus =. val Domain.Inactive,
+        DriverQuoteUpdatedAt =. val now
+      ]
+    where_ $
+      p ^. DriverQuoteEstimateId ==. val (toKey estimateId)
+        &&. p ^. DriverQuoteStatus ==. val Domain.Active
+        &&. p ^. DriverQuoteValidTill >=. val now

@@ -87,7 +87,7 @@ onVerify resp respDump = do
   -- person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   person <- QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   -- running statusHandler to enable Driver
-  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId)
+  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId) verificationReq.multipleRC
 
   return ack_
   where

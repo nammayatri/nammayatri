@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Dashboard.Ride
   ( rideList,
@@ -177,8 +176,8 @@ rideInfo merchantShortId reqRideId = do
       then -- then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
         QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
       else pure Nothing
-  -- driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByRideId rideId
-  driverInitiatedCallCount <- QCallStatus.countCallsByRideId rideId
+  -- driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByEntityId rideId
+  driverInitiatedCallCount <- QCallStatus.countCallsByEntityId rideId
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))

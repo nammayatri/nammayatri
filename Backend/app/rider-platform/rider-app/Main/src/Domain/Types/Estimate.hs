@@ -12,8 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Estimate where
@@ -51,6 +49,7 @@ data Estimate = Estimate
     providerMobileNumber :: Text,
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
+    itemId :: Text,
     tripTerms :: Maybe DTripTerms.TripTerms,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftInfo :: Maybe NightShiftInfo,

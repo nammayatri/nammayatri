@@ -74,6 +74,7 @@ updateVehicleRec vehicle = do
     [ Se.Set BeamV.capacity vehicle.capacity,
       Se.Set BeamV.category vehicle.category,
       Se.Set BeamV.make vehicle.make,
+      Se.Set BeamV.vehicleName vehicle.vehicleName,
       Se.Set BeamV.model vehicle.model,
       Se.Set BeamV.size vehicle.size,
       Se.Set BeamV.variant vehicle.variant,
@@ -84,6 +85,17 @@ updateVehicleRec vehicle = do
       Se.Set BeamV.updatedAt now
     ]
     [Se.Is BeamV.driverId (Se.Eq $ getId vehicle.driverId)]
+
+updateVehicleName :: Maybe Text -> Id Person -> SqlDB ()
+updateVehicleName vehicleName driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ VehicleUpdatedAt =. val now,
+        VehicleVehicleName =. val vehicleName
+      ]
+    where_ $ tbl ^. VehicleTId ==. val (toKey driverId)
 
 deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]

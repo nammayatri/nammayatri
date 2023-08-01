@@ -140,7 +140,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
     driverSelectedFare :: Maybe Money,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe Money,
+    nightShiftCharge :: Maybe Money
   }
 
 calculateFareParameters ::

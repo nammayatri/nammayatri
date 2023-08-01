@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Quote where
 
@@ -41,6 +40,7 @@ data Quote = Quote
     providerUrl :: BaseUrl,
     providerName :: Text,
     providerMobileNumber :: Text,
+    itemId :: Text,
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,

@@ -33,6 +33,10 @@ library
       Storage.Queries.SpecialZone
       Storage.Tabular.EntryExit
       Storage.Tabular.SpecialZone
+      Tabular.DriverBlockReason
+      Tabular.Feedback.Feedback
+      Tabular.Feedback.FeedbackBadge
+      Tabular.Feedback.FeedbackForm
       Tabular.SpecialLocation
       Tabular.TagCategoryMapping
       Tools.Auth
@@ -67,6 +71,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies
@@ -129,6 +134,7 @@ executable special-zone-exe
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies

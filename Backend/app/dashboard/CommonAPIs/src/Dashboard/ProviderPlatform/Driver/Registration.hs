@@ -142,7 +142,8 @@ data RegisterRCReq = RegisterRCReq
   { vehicleRegistrationCertNumber :: Text,
     imageId :: Id Image,
     operatingCity :: Text,
-    dateOfRegistration :: Maybe UTCTime
+    dateOfRegistration :: Maybe UTCTime,
+    multipleRC :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

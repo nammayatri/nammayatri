@@ -127,17 +127,15 @@ enterBeneficiaryNumber state push =
               , color Color.greyTextColor
               , margin (MarginBottom 10)
               ] <> FontStyle.body3 TypoGraphy)
-            , textView -- (Required Field Indication)
+            , textView $ -- (Required Field Indication)
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text "*"
               , color Color.warningRed
-              , textSize FontSize.a_18
-              , fontStyle $ FontStyle.bold LanguageStyle
               , alpha 0.8
               , visibility GONE
               , margin (MarginBottom 10)
-              ]
+              ] <> FontStyle.h2 TypoGraphy
           ]
           , linearLayout
             [ width MATCH_PARENT
@@ -193,17 +191,15 @@ reEnterBeneficiaryNumber state push =
               , color Color.greyTextColor
               , margin (MarginBottom 10)
               ] <> FontStyle.body3 TypoGraphy)
-            , textView -- (Required Field Indication)
+            , textView $ -- (Required Field Indication)
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text "*"
               , color Color.warningRed
-              , textSize FontSize.a_18
-              , fontStyle $ FontStyle.bold LanguageStyle
               , alpha 0.8
               , visibility GONE
               , margin (MarginBottom 10)
-              ]
+              ] <> FontStyle.h2 TypoGraphy
           ]
           , linearLayout
             [ width MATCH_PARENT
@@ -259,17 +255,15 @@ enterIfsc state push =
               , color Color.greyTextColor
               , margin (MarginBottom 10)
               ] <> FontStyle.body3 TypoGraphy)
-            , textView -- (Required Field Indication)
+            , textView $ -- (Required Field Indication)
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text "*"
               , color Color.warningRed
-              , textSize FontSize.a_18
-              , fontStyle $ FontStyle.bold LanguageStyle
               , alpha 0.8
               , visibility GONE
               , margin (MarginBottom 10)
-              ]
+              ] <> FontStyle.h2 TypoGraphy
           ]
             , linearLayout
             [ width MATCH_PARENT

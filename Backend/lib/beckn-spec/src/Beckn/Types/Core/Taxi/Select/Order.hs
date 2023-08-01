@@ -14,26 +14,47 @@
 
 module Beckn.Types.Core.Taxi.Select.Order where
 
-import Beckn.Types.Core.Taxi.Select.Fulfillment
-import Beckn.Types.Core.Taxi.Select.Quote
+-- import Beckn.Types.Core.Taxi.Select.Quote
+
+import Beckn.Types.Core.Taxi.Common.Tags
+import Beckn.Types.Core.Taxi.OnSearch.Fulfillment
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Order = Order
   { items :: [OrderItem],
-    fulfillment :: FulfillmentInfo,
-    quote :: Quote
+    fulfillment :: FulfillmentInfo
+    -- quote :: Quote
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema Order where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype OrderItem = OrderItem
-  { id :: Text
+data OrderItem = OrderItem
+  { id :: Text,
+    price :: Price,
+    tags :: Maybe TagGroups
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderItem where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderItem where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderItem where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data Price = Price
+  { currency :: Text,
+    value :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema OrderItem where
+instance ToSchema Price where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

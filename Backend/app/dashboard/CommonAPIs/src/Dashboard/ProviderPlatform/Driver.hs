@@ -36,6 +36,7 @@ import Servant hiding (Summary, throwError)
 data DriverEndpoint
   = EnableDriverEndpoint
   | DisableDriverEndpoint
+  | BlockDriverWithReasonEndpoint
   | BlockDriverEndpoint
   | UnblockDriverEndpoint
   | DeleteDriverEndpoint
@@ -47,6 +48,8 @@ data DriverEndpoint
   | AddVehicleEndpoint
   | UpdateDriverNameEndpoint
   | CollectCashEndpoint
+  | SetRCStatusEndpoint
+  | DeleteRCEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -302,12 +305,43 @@ type DisableDriverAPI =
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
+-- block driver with reason ----------------------------------------
+
+type BlockDriverWithReasonAPI =
+  Capture "driverId" (Id Driver)
+    :> "blockWithReason"
+    :> ReqBody '[JSON] BlockDriverWithReasonReq
+    :> Post '[JSON] APISuccess
+
+data BlockDriverWithReasonReq = BlockDriverWithReasonReq
+  { reasonCode :: Text,
+    blockReason :: Maybe Text,
+    blockTimeInHours :: Maybe Int
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+----------------------------------------------------------
 -- block driver ----------------------------------------
 
 type BlockDriverAPI =
   Capture "driverId" (Id Driver)
     :> "block"
     :> Post '[JSON] APISuccess
+
+----------------------------------------------------------
+-- block driver reason list ----------------------------------------
+
+type DriverBlockReasonListAPI =
+  "blockReasonList"
+    :> Get '[JSON] [BlockReason]
+
+data BlockReason = BlockReason
+  { reasonCode :: Id BlockReason,
+    blockReason :: Maybe Text,
+    blockTimeInHours :: Maybe Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- unblock driver ---------------------------------------
@@ -410,6 +444,7 @@ data DriverLicenseAPIEntity = DriverLicenseAPIEntity
 data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
   { associatedOn :: UTCTime,
     associatedTill :: Maybe UTCTime,
+    isRcActive :: Bool,
     details :: VehicleRegistrationCertificateAPIEntity
     -- consent :: Bool, -- do we need it?
     -- consentTimestamp :: UTCTime
@@ -442,6 +477,23 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
 data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RCStatusReq = RCStatusReq
+  { rcNo :: Text,
+    isActivate :: Bool
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+instance HideSecrets RCStatusReq where
+  hideSecrets = identity
+
+newtype DeleteRCReq = DeleteRCReq
+  { rcNo :: Text
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+instance HideSecrets DeleteRCReq where
+  hideSecrets = identity
 
 ---------------------------------------------------------
 -- delete driver ----------------------------------------
@@ -481,6 +533,24 @@ type UnlinkAadhaarAPI =
 type EndRCAssociationAPI =
   Capture "driverId" (Id Driver)
     :> "endRCAssociation"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- set rc status -----------------------------------
+
+type SetRCStatusAPI =
+  Capture "driverId" (Id Driver)
+    :> "setRCStatus"
+    :> ReqBody '[JSON] RCStatusReq
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- delete rc -----------------------------------
+
+type DeleteRCAPI =
+  Capture "driverId" (Id Driver)
+    :> "deleteRC"
+    :> ReqBody '[JSON] DeleteRCReq
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

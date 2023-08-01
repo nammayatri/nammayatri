@@ -84,7 +84,8 @@ updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Se.Set BeamCS.conversationDuration conversationDuration,
-      Se.Set BeamCS.recordingUrl $ showBaseUrl <$> recordingUrl,
+      -- Se.Set BeamCS.recordingUrl $ showBaseUrl <$> recordingUrl,
+      Se.Set BeamCS.recordingUrl recordingUrl,
       Se.Set BeamCS.status status
     ]
     [Se.Is BeamCS.callId (Se.Eq callId)]

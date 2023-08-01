@@ -23,7 +23,7 @@ import Kernel.Types.Id
 data CallStatus = CallStatus
   { id :: Id CallStatus,
     callId :: Text,
-    rideId :: Id Ride,
+    entityId :: Text,
     dtmfNumberUsed :: Maybe Text,
     status :: CallTypes.CallStatus,
     recordingUrl :: Maybe Text,
@@ -34,7 +34,7 @@ data CallStatus = CallStatus
 
 data CallStatusAPIEntity = CallStatusAPIEntity
   { callStatusId :: Id CallStatus,
-    rideId :: Id Ride,
+    entityId :: Text,
     status :: CallTypes.CallStatus
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)

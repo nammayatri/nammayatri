@@ -13,8 +13,6 @@
 -}
 {-# LANGUAGE ApplicativeDo #-}
 
--- {-# LANGUAGE UndecidableInstances #-}
-
 module Domain.Types.Person.Type where
 
 import qualified Domain.Types.Role as DRole

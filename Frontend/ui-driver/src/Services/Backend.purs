@@ -20,11 +20,11 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
-import Presto.Core.Types.API (Header(..), Headers(..))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Types.ModifyScreenState(modifyScreenState)
 import Types.App (GlobalState, FlowBT, ScreenType(..))
@@ -45,6 +45,7 @@ import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.Types (DriverStatus)
 import Debug (spy)
+import Engineering.Helpers.Utils (toggleLoader)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
@@ -109,7 +110,6 @@ withAPIResult url f flow = do
             _ <- trackExceptionFlow Tracker.API_CALL Tracker.Sdk DETAILS url (codeMessage)
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
-                _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
                 _ <- pure $ deleteValueFromLocalStore VERSION_NAME
                 _ <- pure $ deleteValueFromLocalStore BASE_URL
                 _ <- pure $ deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -142,7 +142,6 @@ withAPIResultBT url f errorHandler flow = do
             _ <- pure $ printLog "message" userMessage
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore VERSION_NAME
                 deleteValueFromLocalStore BASE_URL
                 deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -180,7 +179,6 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore VERSION_NAME
                 deleteValueFromLocalStore BASE_URL
                 deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -363,6 +361,16 @@ getDriverInfoApi payload = do
     where
         unwrapResponse (x) = x
 
+--------------------------------- getAllRcDataBT ---------------------------------------------------------------------------------------------------------------------------------
+
+getAllRcDataBT :: GetAllRcDataReq -> FlowBT String GetAllRcDataResp
+getAllRcDataBT payload = do 
+    headers <- getHeaders' ""
+    withAPIResultBT ((EP.getAllRcData "")) (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where 
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
 dummyVehicleObject :: Vehicle
 dummyVehicleObject = Vehicle
    {
@@ -425,25 +433,30 @@ updateDriverInfoBT payload = do
             BackT $ pure GoBack
 
 mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
-mkUpdateDriverInfoReq dummy = UpdateDriverInfoReq {
-       "middleName": Nothing,
-       "firstName" : Nothing,
-       "lastName"  : Nothing,
-       "deviceToken" : Nothing,
-       "canDowngradeToSedan" : Nothing,
-       "canDowngradeToHatchback" : Nothing,
-       "canDowngradeToTaxi" : Nothing,
-        "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
-            "EN_US" -> "ENGLISH"
-            "KN_IN" -> "KANNADA"
-            "HI_IN" -> "HINDI"
-            "ML_IN" -> "MALAYALAM"
-            "BN_IN" -> "BENGALI"
-            "TA_IN" -> "TAMIL"
-            _       -> "ENGLISH",
-       "bundleVersion" : Nothing,
-       "clientVersion" : Nothing,
-       "gender"        : Nothing
+mkUpdateDriverInfoReq dummy 
+  = UpdateDriverInfoReq
+    { middleName: Nothing
+    , firstName: Nothing
+    , lastName: Nothing
+    , deviceToken: Nothing
+    , canDowngradeToSedan: Nothing
+    , canDowngradeToHatchback: Nothing
+    , canDowngradeToTaxi: Nothing
+    , language:
+        Just case getValueToLocalNativeStore LANGUAGE_KEY of
+          "EN_US" -> "ENGLISH"
+          "KN_IN" -> "KANNADA"
+          "HI_IN" -> "HINDI"
+          "ML_IN" -> "MALAYALAM"
+          "BN_IN" -> "BENGALI"
+          "TA_IN" -> "TAMIL"
+          _ -> "ENGLISH"
+    , bundleVersion: Nothing
+    , clientVersion: Nothing
+    , gender: Nothing
+    , languagesSpoken: []
+    , hometown: Nothing
+    , vehicleName: Nothing
     }
 
 
@@ -539,13 +552,48 @@ registerDriverRC payload = do
     where
         unwrapResponse (x) = x
 
-makeDriverRCReq :: String -> String -> Maybe String -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration = DriverRCReq
+makeRcActiveOrInactive payload = do
+     headers <- getHeaders ""
+     withAPIResult (EP.makeRcActiveOrInactive "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
+deleteRcBT :: DeleteRcReq -> FlowBT String  DeleteRcResp
+deleteRcBT payload = do
+        headers <- getHeaders' ""
+        withAPIResultBT (EP.deleteRc "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+    errorHandler (ErrorPayload errorPayload) = do
+        BackT $ pure GoBack
+
+deleteRcReq :: String -> DeleteRcReq
+deleteRcReq rcNo = DeleteRcReq 
+    {
+        "rcNo" : rcNo
+    }
+
+makeRcActiveOrInactiveReq :: Boolean -> String -> MakeRcActiveOrInactiveReq
+makeRcActiveOrInactiveReq isActivate rcNo =  MakeRcActiveOrInactiveReq 
+    {
+        "rcNo" : rcNo,
+        "isActivate" : isActivate
+    }
+
+callDriverToDriverBT :: String -> FlowBT String CallDriverToDriverResp
+callDriverToDriverBT rcNo = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.callDriverToDriver rcNo) (\x → x) errorHandler (lift $ lift $ callAPI headers (CallDriverToDriverReq rcNo))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc= DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
       "imageId" : imageId,
-      "dateOfRegistration" : dateOfRegistration
+      "dateOfRegistration" : dateOfRegistration,
+      "multipleRC" : multipleRc
     }
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp
@@ -873,3 +921,8 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
+
+driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverProfileSummaryRes)
+driverProfileSummary lazy = do
+  headers <- getHeaders ""
+  withAPIResult (EP.profileSummary lazy) (\x -> x) (callAPI headers DriverProfileSummaryReq)

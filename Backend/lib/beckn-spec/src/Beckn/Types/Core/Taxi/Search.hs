@@ -18,6 +18,7 @@ module Beckn.Types.Core.Taxi.Search
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Search.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Search.Intent as Reexport
 import Beckn.Types.Core.Taxi.Search.Location as Reexport
@@ -26,33 +27,34 @@ import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
-import Kernel.External.Maps (LatLong)
-import Kernel.Types.Common
+import Kernel.Utils.JSON
 
-data RouteInfo = RouteInfo
-  { duration :: Maybe Seconds,
-    distance :: Maybe Meters,
-    points :: Maybe [LatLong]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+-- import Kernel.Types.Common
 
-data SearchMessage = SearchMessage
-  { intent :: Intent,
-    routeInfo :: Maybe RouteInfo,
-    device :: Maybe Text
+-- data RouteInfo = RouteInfo
+--   { duration :: Maybe Seconds,
+--     distance :: Maybe Meters
+--   }
+--   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype SearchMessage = SearchMessage
+  { intent :: Intent
+  -- routeInfo :: Maybe RouteInfo,
+  -- device :: Maybe Text
   }
   deriving (Generic, Show, ToSchema)
 
 instance ToJSON SearchMessage where
-  toJSON = genericToJSON searchMessageJSONOptions
+  toJSON = genericToJSON removeNullFields
 
 instance FromJSON SearchMessage where
-  parseJSON = genericParseJSON searchMessageJSONOptions
+  parseJSON = genericParseJSON removeNullFields
 
-searchMessageJSONOptions :: Options
-searchMessageJSONOptions =
-  defaultOptions
-    { fieldLabelModifier = \case
-        "routeInfo" -> "./nammayatri/routeInfo"
-        a -> a
-    }
+-- searchMessageJSONOptions :: Options
+-- searchMessageJSONOptions =
+--   defaultOptions
+--     { fieldLabelModifier = \case
+--         "routeInfo" -> "./nammayatri/routeInfo"
+--         a -> a,
+--       omitNothingFields = True
+--     }

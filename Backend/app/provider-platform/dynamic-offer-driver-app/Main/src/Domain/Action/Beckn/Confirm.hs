@@ -30,6 +30,7 @@ import qualified Domain.Types.RideDetails as SRD
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -70,6 +71,8 @@ import qualified Tools.Notifications as Notify
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
+    vehicleVariant :: VehVar.Variant,
+    driverId :: Maybe Text,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DBL.LocationAddress,
@@ -83,7 +86,13 @@ data DConfirmRes = DConfirmRes
     fromLocation :: DBL.BookingLocation,
     toLocation :: DBL.BookingLocation,
     riderDetails :: DRD.RiderDetails,
-    transporter :: DM.Merchant
+    riderMobileCountryCode :: Text,
+    riderPhoneNumber :: Text,
+    riderName :: Maybe Text,
+    vehicleVariant :: VehVar.Variant,
+    transporter :: DM.Merchant,
+    driverId :: Maybe Text,
+    driverName :: Maybe Text
   }
 
 handler ::
@@ -160,9 +169,15 @@ handler transporter req quote = do
               { booking = uBooking,
                 ride = Just ride,
                 riderDetails,
+                riderMobileCountryCode = req.customerMobileCountryCode,
+                riderPhoneNumber = req.customerPhoneNumber,
+                riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = uBooking.toLocation,
+                driverId = Just driver.id.getId,
+                driverName = Just driver.firstName,
+                vehicleVariant = req.vehicleVariant
               }
         Right _ -> throwError AccessDenied
     DRB.SpecialZoneBooking -> do
@@ -185,9 +200,15 @@ handler transporter req quote = do
               { booking = uBooking,
                 ride = Nothing,
                 riderDetails,
+                riderMobileCountryCode = req.customerMobileCountryCode,
+                riderPhoneNumber = req.customerPhoneNumber,
+                riderName = req.mbRiderName,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = uBooking.toLocation,
+                driverId = Nothing,
+                driverName = Nothing,
+                vehicleVariant = req.vehicleVariant
               }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -371,19 +392,20 @@ validateRequest ::
   Subscriber.Subscriber ->
   Id DM.Merchant ->
   DConfirmReq ->
+  UTCTime ->
   m (DM.Merchant, Either (DPerson.Person, DDQ.DriverQuote) DQSZ.QuoteSpecialZone)
-validateRequest subscriber transporterId req = do
+validateRequest subscriber transporterId req now = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   transporter <-
     QM.findById transporterId'
       >>= fromMaybeM (MerchantNotFound transporterId'.getId)
   unless (transporterId' == transporterId) $ throwError AccessDenied
-  now <- getCurrentTime
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   case booking.bookingType of
     DRB.NormalBooking -> do
+      _ <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
       unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do

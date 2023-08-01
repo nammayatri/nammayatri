@@ -12,8 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Action.UI.DriverOnboarding.DriverLicense
   ( DriverDLReq (..),
@@ -180,6 +178,7 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
             docType = Image.DriverLicense,
             status = "pending",
             idfyResponse = Nothing,
+            multipleRC = Nothing, -- added for backward compatibility
             createdAt = now,
             updatedAt = now
           }

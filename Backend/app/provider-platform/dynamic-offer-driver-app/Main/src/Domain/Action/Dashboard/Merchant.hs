@@ -124,6 +124,7 @@ buildExophone merchantId now req = do
         primaryPhone = req.primaryPhone,
         backupPhone = req.backupPhone,
         isPrimaryDown = False,
+        exophoneType = DExophone.CALL_RIDE,
         updatedAt = now,
         createdAt = now
       }

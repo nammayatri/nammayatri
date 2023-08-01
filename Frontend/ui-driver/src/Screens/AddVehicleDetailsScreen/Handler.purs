@@ -34,7 +34,7 @@ addVehicleDetails = do
     GoBack updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> updatedState
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = false}, data {errorMessage = ""}}
-      App.BackT $ App.NoBack <$> (pure $ ONBOARDING_FLOW)
+      App.BackT $ App.NoBack <$> (pure $ if updatedState.props.addRcFromProfile then DRIVER_PROFILE_SCREEN else ONBOARDING_FLOW)
     GoToApplicationSubmitted updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_APPLICATION_SCREEN updatedState)

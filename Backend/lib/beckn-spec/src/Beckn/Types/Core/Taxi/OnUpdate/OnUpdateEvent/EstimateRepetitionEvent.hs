@@ -19,6 +19,7 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
 where
 
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (ESTIMATE_REPETITION))
 import qualified Control.Lens as L
 import Data.Aeson as A
@@ -29,10 +30,9 @@ import Kernel.Utils.Schema
 
 data EstimateRepetitionEvent = EstimateRepetitionEvent
   { id :: Text, -- bppBookingId
-    update_target :: Text,
+  -- update_target :: Text,
     fulfillment :: FulfillmentInfo,
-    item :: Item,
-    cancellation_reason :: CancellationSource
+    item :: Item
   }
   deriving (Generic, Show)
 
@@ -41,21 +41,19 @@ instance ToJSON EstimateRepetitionEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "./komn/update_target" .= update_target
-        <> "./komn/cancellation_reason" .= cancellation_reason
-        <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= ESTIMATE_REPETITION) :: A.Object)))
-        <> "./komn/item" .= item
+        -- <> "update_target" .= update_target
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= ESTIMATE_REPETITION <> "name" .= A.String "Estimate Repetition") :: A.Object) :: A.Object)))
+        <> "item" .= item
 
 instance FromJSON EstimateRepetitionEvent where
   parseJSON = withObject "EstimateRepetitionEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
     unless (update_type == ESTIMATE_REPETITION) $ fail "Wrong update_type."
     EstimateRepetitionEvent
       <$> obj .: "id"
-      <*> obj .: "./komn/update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "fulfillment"
-      <*> obj .: "./komn/item"
-      <*> obj .: "./komn/cancellation_reason"
+      <*> obj .: "item"
 
 instance ToSchema EstimateRepetitionEvent where
   declareNamedSchema _ = do
@@ -82,20 +80,12 @@ instance ToSchema EstimateRepetitionEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("./komn/update_target", txt),
-                ("./komn/cancellation_reason", reallocationSource),
+                -- ("update_target", txt),
+                ("cancellation_reason", reallocationSource),
                 ("fulfillment", Inline fulfillment),
-                ("./komn/item", item)
+                ("item", item)
               ]
-          & required L..~ ["id", "./komn/update_target", "./komn/cancellation_reason", "fulfillment", "./komn/item"]
-
-newtype FulfillmentInfo = FulfillmentInfo
-  { id :: Text -- bppRideId
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+          & required L..~ ["id", "cancellation_reason", "fulfillment", "item"]
 
 newtype Item = Item
   { id :: Text

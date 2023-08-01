@@ -11,6 +11,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectionPoolCount = +25
       }
 
 let esqDBReplicaCfg =
@@ -20,6 +21,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
+      , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
 let esqLocationDBCfg =
@@ -29,6 +31,7 @@ let esqLocationDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev_loc"
       , connectSchemaName = "atlas_person_location"
+      , connectionPoolCount = +25
       }
 
 let esqLocationDBRepCfg =
@@ -38,6 +41,7 @@ let esqLocationDBRepCfg =
       , connectPassword = esqLocationDBCfg.connectPassword
       , connectDatabase = esqLocationDBCfg.connectDatabase
       , connectSchemaName = esqLocationDBCfg.connectSchemaName
+      , connectionPoolCount = esqLocationDBCfg.connectionPoolCount
       }
 
 let clickhouseCfg =
@@ -142,6 +146,16 @@ let tables =
       , tableAllocation = 50 : Natural
       }
 
+let registryMap =
+      [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
+        , mapValue = "http://localhost:8020/"
+        }
+      , { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
+        , mapValue = "http://localhost:8020/"
+        }
+      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -167,7 +181,7 @@ in  { esqDBCfg
           ? "dev/migrations/dynamic-offer-driver-app"
         )
     , autoMigrate = True
-    , coreVersion = "0.9.3"
+    , coreVersion = "0.9.4"
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/dynamic-offer-driver-app.log"
@@ -176,7 +190,7 @@ in  { esqDBCfg
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , graceTerminationPeriod = +90
-    , registryUrl = common.registryUrl
+    , registryMap
     , encTools
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5
@@ -208,4 +222,5 @@ in  { esqDBCfg
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , tables
+    , locationTrackingServiceKey = sec.locationTrackingServiceKey
     }

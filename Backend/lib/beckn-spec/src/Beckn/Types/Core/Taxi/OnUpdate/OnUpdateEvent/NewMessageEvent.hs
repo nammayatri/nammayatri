@@ -14,19 +14,18 @@
 
 module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent where
 
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (NEW_MESSAGE))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
 import EulerHS.Prelude hiding (id)
 import GHC.Exts (fromList)
-import Kernel.Utils.Schema
 
 data NewMessageEvent = NewMessageEvent
   { id :: Text,
-    update_target :: Text,
-    fulfillment :: FulfillmentInfo,
-    message :: Text
+    -- update_target :: Text,
+    fulfillment :: FulfillmentInfo
   }
   deriving (Generic, Show)
 
@@ -35,19 +34,17 @@ instance ToJSON NewMessageEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "./komn/update_target" .= update_target
-        <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= NEW_MESSAGE) :: A.Object)))
-        <> "message" .= message
+        -- <> "update_target" .= update_target
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= NEW_MESSAGE <> "name" .= A.String "New Message") :: A.Object) :: A.Object)))
 
 instance FromJSON NewMessageEvent where
   parseJSON = withObject "NewMessageEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
     unless (update_type == NEW_MESSAGE) $ fail "Wrong update_type."
     NewMessageEvent
       <$> obj .: "id"
-      <*> obj .: "./komn/update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "fulfillment"
-      <*> obj .: "message"
 
 instance ToSchema NewMessageEvent where
   declareNamedSchema _ = do
@@ -58,12 +55,20 @@ instance ToSchema NewMessageEvent where
             & type_ L.?~ OpenApiObject
             & properties
               L..~ fromList
-                [("code", update_type)]
-            & required L..~ ["code"]
+                [("code", update_type), ("name", txt)]
+            & required L..~ ["code", "name"]
+        descriptor =
+          mempty
+            & type_ L.?~ OpenApiObject
+            & properties
+              L..~ fromList
+                [("descriptor", Inline st)]
+            & required L..~ ["descriptor"]
+
         fulfillment =
           toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
             & properties
-              L.<>~ fromList [("state", Inline st)]
+              L.<>~ fromList [("state", Inline descriptor)]
             & required L.<>~ ["state"]
     return $
       NamedSchema (Just "NewMessageEvent") $
@@ -72,16 +77,7 @@ instance ToSchema NewMessageEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("./komn/update_target", txt),
-                ("fulfillment", Inline fulfillment),
-                ("message", txt)
+                -- ("update_target", txt),
+                ("fulfillment", Inline fulfillment)
               ]
-          & required L..~ ["id", "./komn/update_target", "fulfillment", "message"]
-
-newtype FulfillmentInfo = FulfillmentInfo
-  { id :: Text -- bppRideId
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+          & required L..~ ["id", "fulfillment"]

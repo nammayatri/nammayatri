@@ -29,7 +29,7 @@ import JBridge as JB
 import Components.PrimaryButton as PrimaryButton
 import Storage (KeyStore(..), setValueToLocalStore)
 
-data ScreenOutput = Decline | Accept 
+data ScreenOutput = Decline | Accept | DateAndTime
 
 instance showAction :: Show Action where
   show _ = ""
@@ -39,12 +39,17 @@ instance loggableAction :: Loggable Action where
     AfterRender -> trackAppScreenRender appId "screen" (getScreen APP_UPDATE_POPUP_SCREEN)
     OnCloseClick -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_close_click"
     OnAccept -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
+    BackPressed -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
+    DateCallBack -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     PrimaryButtonActionController action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     
 data Action = OnCloseClick
             | OnAccept
             | AfterRender
+            | BackPressed
+            | DateCallBack
             | PrimaryButtonActionController PrimaryButtonController.Action
+
 
 eval :: Action -> AppUpdatePopUpScreenState -> Eval Action ScreenOutput AppUpdatePopUpScreenState
 eval OnCloseClick state = do
@@ -55,6 +60,11 @@ eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   _ <- pure $ JB.launchDateSettings ""
   _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
   continue state
+eval BackPressed state = do 
+  _ <- pure $ JB.minimizeApp ""
+  continue state
+eval DateCallBack state = do
+    exit DateAndTime
 eval _ state = continue state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpScreenState -> Props (Effect Unit)

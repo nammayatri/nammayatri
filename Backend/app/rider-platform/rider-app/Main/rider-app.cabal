@@ -304,6 +304,12 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
+      Storage.Tabular.Booking
+      Storage.Tabular.DriverOffer
+      Storage.Tabular.FeedbackForm
+      Storage.Tabular.HotSpotConfig
+      Storage.Tabular.Quote
+      Storage.Tabular.SavedReqLocation
       Tools.Auth
       Tools.Call
       Tools.Error
@@ -348,6 +354,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies
@@ -446,6 +453,7 @@ executable rider-app-exe
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      StandaloneDeriving
       TupleSections
       TypeApplications
       TypeFamilies

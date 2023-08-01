@@ -26,59 +26,43 @@ import Data.Array ((!!), elemIndex) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 
--- import Math
-import Data.Eq.Generic (genericEq)
+import MerchantConfig.Utils
+
+import Common.Types.App (LazyCheck(..))
 import Control.Monad.Except (runExcept)
+import Data.Array ((!!)) as DA
 import Data.Array.NonEmpty (fromArray)
 import Data.Either (hush)
+import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..))
+import Data.Number (pi, sin, cos, asin, sqrt)
+import Data.Show.Generic (genericShow)
+import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (parseFloat, setText', getCurrentUTC) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>))
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.String (Pattern(..), split)
 import Data.Function.Uncurried (Fn4(..), runFn4)
+import Screens.Types (AllocationData, LeaderBoardWeek, YoutubeData, LeaderBoardDay)
 import Common.Types.App (OptionButtonList)
-
--- import Control.Monad.Except (runExcept)
--- import Data.Array.NonEmpty (fromArray)
--- import Data.DateTime (Date, DateTime)
--- import Data.Either (Either(..))
--- import Data.JSDate (parse, toDateTime)
--- import Data.Maybe (Maybe(..))
--- import Data.Newtype (unwrap, class Newtype)
--- import Data.Traversable (traverse)
--- import Effect (Effect)
--- import Effect.Class (liftEffect)
--- import Foreign.Generic (class Decode, class Encode,decodeJSON, encodeJSON)
--- import Effect.Aff (error, killFiber, launchAff, launchAff_)
--- import Effect.Console (logShow)
--- import Effect.Timer (setTimeout, TimeoutId)
--- import Engineering.Helpers.Commons (flowRunner, liftFlow)
--- import Juspay.OTP.Reader (initiateSMSRetriever)
--- import Juspay.OTP.Reader.Flow as Reader
--- import Juspay.OTP.Reader as Readers
--- import Presto.Core.Flow (Flow)
--- import Types.App (GlobalState)
--- foreign import getTimer :: forall action. String -> String ->String -> (action -> Effect Unit)  -> (String -> action)  -> Effect Unit
--- foreign import get15sTimer :: forall action. (action -> Effect Unit) -> (String -> action)  -> Effect Unit
--- foreign import get5sTimer :: forall action. (action -> Effect Unit) -> (String -> action)  -> Effect Unit
--- foreign import get10sTimer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
--- -- foreign import getCurrentLatLongImpl  :: Effect String
 import Engineering.Helpers.Commons (parseFloat, setText', convertUTCtoISC, getCurrentUTC) as ReExport
-
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -121,6 +105,14 @@ foreign import parseNumber :: Int -> String
 foreign import currentPosition  :: String -> Effect Unit
 foreign import getPastDays :: Int -> Array LeaderBoardDay
 foreign import getPastWeeks :: Int -> Array LeaderBoardWeek
+foreign import getZoneTagConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
+foreign import getPeriod :: String -> Period
+
+type Period
+  = { period :: Int
+    , periodType :: String
+    }
+
 
 otpRule :: Reader.OtpRule
 otpRule = Reader.OtpRule {
@@ -215,15 +207,13 @@ getDowngradeOptions vehicleType = case vehicleType of
 getVehicleType :: String -> String
 getVehicleType vehicleType =
   case vehicleType of
-    "SEDAN" -> "Sedan"
-    "SUV"   -> "Suv"
-    "HATCHBACK" -> "Hatchback"
-    "AUTO_RICKSHAW" -> "Auto Rickshaw"
-    "TAXI" -> "Non AC Taxi"
-    "TAXI_PLUS" -> "AC Taxi"
+    "SEDAN" -> (getString SEDAN )
+    "SUV"   -> (getString SUV)
+    "HATCHBACK" -> (getString HATCHBACK)
+    "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
+    "TAXI" -> (getString TAXI)
+    "TAXI_PLUS" -> (getString TAXI_PLUS)
     _ -> ""
-
-foreign import getZoneTagConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 
 getSpecialZoneConfig :: String -> Maybe String -> String
 getSpecialZoneConfig prop tag = do
@@ -255,3 +245,34 @@ getGenderIndex req arr = do
       reqIndex = DA.elemIndex req reqArray
   reqIndex
 
+getMerchantVehicleSize :: Unit -> Int
+getMerchantVehicleSize unit = 
+  case getMerchant FunctionCall of 
+    _ -> 90
+
+getAssetStoreLink :: LazyCheck -> String
+getAssetStoreLink lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
+  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver/images"
+  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver/images"
+
+getAssetsBaseUrl :: LazyCheck -> String
+getAssetsBaseUrl lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/driver/"
+  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
+  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver"
+
+getCommonAssetStoreLink :: LazyCheck -> String
+getCommonAssetStoreLink lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
+  MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
+  MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"

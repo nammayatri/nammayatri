@@ -14,12 +14,14 @@
 
 module Domain.Action.Dashboard.Volunteer where
 
+import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking.BookingLocation as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Vehicle.Variant as Domain
 import Environment
 import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
@@ -48,8 +50,17 @@ bookingInfo merchantShortId otpCode = do
           estimatedDistance,
           estimatedFare,
           estimatedDuration,
-          riderName
+          riderName,
+          vehicleVariant = convertVehicleVariant vehicleVariant
         }
+
+    convertVehicleVariant Domain.SEDAN = Common.SEDAN
+    convertVehicleVariant Domain.SUV = Common.SUV
+    convertVehicleVariant Domain.HATCHBACK = Common.HATCHBACK
+    convertVehicleVariant Domain.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
+    convertVehicleVariant Domain.TAXI = Common.TAXI
+    convertVehicleVariant Domain.TAXI_PLUS = Common.TAXI_PLUS
+
     buildBookingLocation Domain.BookingLocation {..} =
       Common.BookingLocation
         { address = buildLocationAddress address,

@@ -17,6 +17,7 @@ module Screens.InvoiceScreen.ScreenData where
 
 import Screens.Types (InvoiceScreenState)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import MerchantConfig.DefaultConfig as DC
 
 initData :: InvoiceScreenState
 initData = {
@@ -26,7 +27,8 @@ initData = {
     gst : 0.0,
     totalAmount : "",
     date : "wed,10,45",
-    selectedItem : dummyIndividualCard
+    selectedItem : dummyIndividualCard,
+    config : DC.config
   },
   props: {
     paymentMode : "Cash"

@@ -16,11 +16,12 @@
 module Environment where
 
 import AWS.S3
+import qualified Data.Map as M
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
-import Kernel.Prelude (NominalDiffTime)
+import Kernel.Prelude (NominalDiffTime, (>>>=))
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -67,6 +68,7 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     hostName :: Text,
     nwAddress :: BaseUrl,
+    registryMap :: M.Map Text BaseUrl,
     selfUIUrl :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
@@ -77,7 +79,6 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    registryUrl :: BaseUrl,
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
@@ -110,7 +111,8 @@ data AppCfg = AppCfg
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    tables :: Tables
+    tables :: Tables,
+    locationTrackingServiceKey :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -125,7 +127,7 @@ data AppEnv = AppEnv
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
     graceTerminationPeriod :: Seconds,
-    registryUrl :: BaseUrl,
+    registryMap :: M.Map Text BaseUrl,
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
@@ -177,7 +179,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    locationTrackingServiceKey :: Text
   }
   deriving (Generic)
 
@@ -233,9 +236,11 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance Registry Flow where
-  registryLookup sReq = do
-    registryUrl <- asks (.registryUrl)
-    Registry.withSubscriberCache (Registry.registryLookup registryUrl) sReq
+  registryLookup =
+    Registry.withSubscriberCache $ \sub -> do
+      asks (.registryMap) <&> M.lookup sub.subscriber_id
+        >>>= \registryUrl ->
+          Registry.registryLookup registryUrl sub
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

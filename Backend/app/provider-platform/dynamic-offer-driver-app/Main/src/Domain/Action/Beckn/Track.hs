@@ -19,6 +19,7 @@ module Domain.Action.Beckn.Track
   )
 where
 
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
@@ -32,12 +33,13 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 
 newtype DTrackReq = TrackReq
-  { rideId :: Id DRide.Ride
+  { bookingId :: Id DBooking.Booking
   }
 
 data DTrackRes = TrackRes
   { url :: BaseUrl,
-    transporter :: DM.Merchant
+    transporter :: DM.Merchant,
+    isRideCompleted :: Bool
   }
 
 track ::
@@ -49,10 +51,11 @@ track transporterId req = do
   transporter <-
     QM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
+  ride <- QRide.findOneByBookingId req.bookingId >>= fromMaybeM (RideDoesNotExist req.bookingId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
+  let isRideCompleted = ride.status == DRide.COMPLETED
   return $
     TrackRes
       { url = ride.trackingUrl,

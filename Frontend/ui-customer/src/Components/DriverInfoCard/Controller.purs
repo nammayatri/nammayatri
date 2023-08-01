@@ -17,9 +17,10 @@ module Components.DriverInfoCard.Controller where
 
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..))
+import Screens.Types(Stage, ZoneType(..), SearchResultType)
 import Data.Maybe(Maybe)
 import Components.ChatView as ChatView
+import MerchantConfig.Types
 
 data Action = NoAction
             | Support
@@ -33,6 +34,7 @@ data Action = NoAction
             | ZoneOTPExpiryAction String String Int
             | OnNavigate
             | RemoveNotification
+            | CallDriver
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -42,6 +44,7 @@ type DriverInfoCardState =
 type DriverInfoCardProps =
   {
     currentStage :: Stage,
+    currentSearchResultType :: SearchResultType,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
     showChatNotification :: Boolean,
@@ -83,4 +86,5 @@ type DriverInfoCardData =
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
   , lastMessage :: ChatView.ChatComponent
+  , config :: AppConfig
   }

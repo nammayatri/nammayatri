@@ -45,22 +45,20 @@ type ImageConfig = {
 type TextConfig = {
   text :: String,
   color :: String,
-  fontSize :: Int,
   padding :: Padding,
   margin :: Margin,
   visibility :: Visibility,
-  fontStyle :: String
+  textStyle :: FontStyle.Style
 }
 
 type ButtonConfig = {
   text :: String,
   color :: String,
-  fontSize :: Int,
   visibility :: Visibility,
   margin :: Margin,
   padding :: Padding,
-  fontStyle :: String,
-  gravity :: Gravity
+  gravity :: Gravity,
+  textStyle :: FontStyle.Style
 }
 
 config :: Config
@@ -68,29 +66,26 @@ config = {
     title : {
       text : "",
       color : Color.black800,
-      fontSize : FontSize.a_16,
       padding : Padding 16 24 0 0,
       margin : Margin 0 0 0 0,
       visibility : VISIBLE,
-      fontStyle : FontStyle.semiBold LanguageStyle
+      textStyle : FontStyle.SubHeading1
     }
   , primaryText : {
       text : "",
       color : Color.black700,
-      fontSize : FontSize.a_14,
+      textStyle : FontStyle.ParagraphText,
       padding : Padding 16 16 0 0,
       margin : Margin 0 0 0 0,
-      visibility : VISIBLE,
-      fontStyle : FontStyle.regular LanguageStyle
+      visibility : VISIBLE
     }
   , secondaryText : {
       text : "",
       color : Color.black700,
-      fontSize : FontSize.a_16,
       padding : Padding 16 16 0 0,
       margin : Margin 0 0 0 0,
       visibility : GONE,
-      fontStyle : FontStyle.semiBold LanguageStyle
+      textStyle : FontStyle.SubHeading1
     }
   , imageConfig : {
       visibility : VISIBLE,
@@ -103,11 +98,10 @@ config = {
   , buttonConfig : {
       text : "",
       color : Color.blue800,
-      fontSize : FontSize.a_16,
       visibility : VISIBLE,
       margin : Margin 0 0 0 0,
       padding : PaddingVertical 28 20,
-      fontStyle : FontStyle.semiBold LanguageStyle,
+      textStyle : FontStyle.SubHeading1,
       gravity : CENTER
     }
 }

@@ -134,6 +134,16 @@ instance FromTType' BeamAV.AadhaarVerification AadhaarVerification where
             updatedAt = updatedAt
           }
 
+findByAadhaarNumberHash ::
+  Transactionable m =>
+  DbHash ->
+  m (Maybe AadhaarVerification)
+findByAadhaarNumberHash aadhaarHash = do
+  findOne $ do
+    aadhaar <- from $ table @AadhaarVerificationT
+    where_ $ aadhaar ^. AadhaarVerificationAadhaarNumberHash ==. val (Just aadhaarHash)
+    return aadhaar
+
 instance ToTType' BeamAV.AadhaarVerification AadhaarVerification where
   toTType' AadhaarVerification {..} = do
     BeamAV.AadhaarVerificationT
@@ -148,3 +158,24 @@ instance ToTType' BeamAV.AadhaarVerification AadhaarVerification where
         BeamAV.createdAt = createdAt,
         BeamAV.updatedAt = updatedAt
       }
+
+findByPhoneNumberAndUpdate :: Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> Esq.SqlDB ()
+findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ AadhaarVerificationDriverName =. val name,
+        AadhaarVerificationDriverGender =. val gender,
+        AadhaarVerificationDriverDob =. val dob,
+        AadhaarVerificationAadhaarNumberHash =. val aadhaarNumberHash,
+        AadhaarVerificationIsVerified =. val isVerified,
+        AadhaarVerificationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. AadhaarVerificationDriverId ==. val (toKey personId)
+
+deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete $ do
+    verifications <- from $ table @AadhaarVerificationT
+    where_ $ verifications ^. AadhaarVerificationDriverId ==. val (toKey personId)

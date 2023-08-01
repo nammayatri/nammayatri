@@ -19,6 +19,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
 import Screens.Types (TipViewProps)
+import MerchantConfig.Types (AppConfig)
 
 data Action = GoBack
             | NoAction
@@ -41,4 +42,6 @@ type QuoteListModelState = {
   , showProgress :: Boolean
   , tipViewProps :: TipViewProps
   , findingRidesAgain :: Boolean
+  , progress :: Number
+  , appConfig :: AppConfig
 }

@@ -13,9 +13,10 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types where
+module Screens.Types
+  where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList,CheckBoxOptions)
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
@@ -23,7 +24,7 @@ import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show )
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Visibility, LetterSpacing)
@@ -31,6 +32,9 @@ import Services.API (Route, Status, MediaType)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
+import MerchantConfig.Types (AppConfig)
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 type EditTextInLabelState =
  {
@@ -100,7 +104,7 @@ type ChooseLanguageScreenState = {
 }
 
 type ChooseLanguageScreenData =  {
-  languages :: Array Language,
+  config :: AppConfig,
   isSelected :: Boolean
  }
 
@@ -148,16 +152,11 @@ type AddVehicleDetailsScreenProps =  {
   isValidState :: Boolean,
   limitExceedModal :: Boolean,
   errorVisibility :: Boolean,
-  openRegistrationDateManual :: Boolean
+  openRegistrationDateManual :: Boolean,
+  addRcFromProfile :: Boolean
  }
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
-
-type Language =  {
-  name :: String,
-  value :: String,
-  subtitle :: String
- }
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -253,8 +252,62 @@ type DriverProfileScreenData = {
   capacity :: Int,
   downgradeOptions :: Array String,
   vehicleSelected :: Array VehicleP,
-  driverGender :: Maybe String
+  genderTypeSelect :: Maybe String,
+  alterNumberEditableText :: Boolean,
+  driverEditAlternateMobile :: Maybe String,
+  otpLimit :: Int,
+  otpBackAlternateNumber :: Maybe String,
+  languagesSpoken :: Array String,
+  gender :: Maybe String,
+  driverGender :: Maybe String,
+  languageList :: Array CheckBoxOptions,
+  vehicleAge :: Int,
+  vehicleName :: String,
+  rcDataArray :: Array RcData,
+  inactiveRCArray :: Array RcData,
+  activeRCData :: RcData,
+  rcNumber :: String,
+  isRCActive :: Boolean,
+  openInactiveRCViewOrNotArray :: Array Int,
+  logField :: Object Foreign, 
+  analyticsData :: AnalyticsData
 }
+
+type RcData = {
+  rcStatus  :: Boolean,
+  rcDetails :: RcDetails
+  }
+
+type RcDetails = {
+    certificateNumber :: String,
+    vehicleModel      :: String,
+    vehicleColor      :: String
+    }
+
+type AnalyticsData = {
+    totalEarnings :: String
+  , bonusEarned :: String
+  , totalCompletedTrips :: Int
+  , totalUsersRated :: Int
+  , rating :: Maybe Number
+  , chipRailData :: Array ChipRailData
+  , badges :: Array Badge
+  , missedEarnings :: Int
+  , ridesCancelled :: Int
+  , cancellationRate :: Int
+  , totalRidesAssigned :: Int
+}
+
+type ChipRailData = {
+    mainTxt :: String
+  , subTxt :: String
+}
+
+type Badge =  {
+    badgeImage :: String
+  , primaryText :: String
+  , subText :: String
+  }
 
 type VehicleP = {
   vehicleName :: String,
@@ -263,8 +316,48 @@ type VehicleP = {
 
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
-  showLiveDashboard :: Boolean
+  showLiveDashboard :: Boolean,
+  screenType :: DriverProfileScreenType,
+  openSettings :: Boolean,
+  updateDetails :: Boolean,
+  showGenderView :: Boolean,
+  alternateNumberView :: Boolean,
+  removeAlternateNumber :: Boolean,
+  enterOtpModal :: Boolean,
+  enterOtpFocusIndex :: Int,
+  otpIncorrect :: Boolean,
+  otpAttemptsExceeded :: Boolean,
+  alternateMobileOtp :: String,
+  checkAlternateNumber :: Boolean,
+  isEditAlternateMobile :: Boolean,
+  numberExistError :: Boolean,
+  mNumberEdtFocused :: Boolean,
+  updateLanguages :: Boolean,
+  activateRcView :: Boolean,
+  activateOrDeactivateRcView :: Boolean,
+  activeRcIndex :: Int,
+  deleteRcView :: Boolean,
+  alreadyActive :: Boolean,
+  callDriver :: Boolean,
+  openRcView :: Boolean,
+  detailsUpdationType :: Maybe UpdateType,
+  btnActive :: Boolean
 }
+data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
+
+data DriverProfileScreenType = DRIVER_DETAILS | VEHICLE_DETAILS | SETTINGS
+
+derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
+instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
+instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq 
+
+
+data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME
+
+derive instance genericUpdateType :: Generic UpdateType _
+instance showUpdateType :: Show UpdateType where show = genericShow
+instance eqUpdateType :: Eq UpdateType where eq = genericEq 
+
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
   data :: ApplicationStatusScreenData,
@@ -377,8 +470,21 @@ type RideHistoryScreenState =
     offsetValue :: Int,
     loaderButtonVisibility :: Boolean,
     loadMoreDisabled :: Boolean,
-    recievedResponse :: Boolean
+    recievedResponse :: Boolean,
+    logField :: Object Foreign
   }
+
+data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC 
+
+derive instance genericEditRc :: Generic EditRc _
+instance eqEditRc :: Eq EditRc where eq = genericEq
+
+data CallOptions = CALLING_DRIVER | CALLING_CUSTOMER_SUPPORT
+derive instance genericCallOptions :: Generic CallOptions _
+instance eqCallOptions :: Eq CallOptions where eq = genericEq
+instance showCallOptions :: Show CallOptions where show = genericShow
+instance encodeCallOptions :: Encode CallOptions where encode = defaultEnumEncode
+instance decodeCallOptions :: Decode CallOptions where decode = defaultEnumDecode
 
 type RideSelectionScreenState =
   {
@@ -392,6 +498,13 @@ type RideSelectionScreenState =
     recievedResponse :: Boolean,
     selectedCategory :: CategoryListType
   }
+
+type VehicleDetails = { rcStatus :: Boolean 
+                , rcDetails :: { certificateNumber  :: String
+                , vehicleModel :: String
+                , vehicleColor :: String
+                }}
+
 ------------------------------------------- ReferralScreenState -----------------------------------------
 
 type ReferralScreenState = {
@@ -415,6 +528,7 @@ type ReferralScreenStateData = {
         totalReferredCustomers :: Int
       }
     }
+  , logField :: Object Foreign
 }
 
 type ReferralScreenStateProps = {
@@ -578,9 +692,8 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData = {
-  languages :: Array Language,
   isSelected :: Boolean
-
+, config :: AppConfig
 }
 
 type SelectLanguageScreenProps = {
@@ -614,7 +727,8 @@ type HomeScreenData =  {
   messagesSize :: String,
   suggestionsList :: Array String,
   messageToBeSent :: String,
-  driverAlternateMobile :: Maybe String
+  driverAlternateMobile :: Maybe String,
+  logField :: Object Foreign
  }
 
 type CancelRidePopUpData = {
@@ -673,6 +787,9 @@ type ActiveRide = {
   estimatedFare :: Int,
   isDriverArrived :: Boolean,
   notifiedCustomer :: Boolean,
+  waitingTime :: String,
+  waitTimeInfo :: Boolean,
+  rideCreatedAt :: String,
   specialLocationTag :: Maybe String
 }
 
@@ -705,10 +822,16 @@ type HomeScreenProps =  {
   zoneRideBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
-  showBonusInfo :: Boolean
+  showBonusInfo :: Boolean,
+  timerRefresh :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
+
+data TimerStatus = Triggered | PostTriggered | Stop | NoView
+
+derive instance genericTimerStatus :: Generic TimerStatus _
+instance showTimerStatus :: Show TimerStatus where show = genericShow
 
 type PillButtonState = {
   status :: DriverStatus,
@@ -888,6 +1011,7 @@ type PermissionsScreenState = {
 }
 
 type PermissionsScreenData = {
+  logField :: Object Foreign
 
 }
 

@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Dashboard.Driver
   ( driverDocumentsInfo,
@@ -20,7 +19,9 @@ module Domain.Action.Dashboard.Driver
     driverActivity,
     enableDriver,
     disableDriver,
+    blockDriverWithReason,
     blockDriver,
+    blockReasonList,
     unblockDriver,
     driverLocation,
     driverInfo,
@@ -37,6 +38,8 @@ module Domain.Action.Dashboard.Driver
     collectCash,
     driverAadhaarInfoByPhone,
     updateByPhoneNumber,
+    setRCStatus,
+    deleteRC,
   )
 where
 
@@ -47,6 +50,8 @@ import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverOnboarding.DriverLicense
@@ -65,9 +70,12 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.Scheduler.JobStorageType.DB.Queries
+import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -78,6 +86,7 @@ import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -272,7 +281,12 @@ enableDriver merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+  mVehicle <- QVehicle.findById personId
+  linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
+
+  when (isNothing mVehicle && null linkedRCs) $
+    throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
+
   _ <- CQDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
@@ -296,6 +310,40 @@ disableDriver merchantShortId reqDriverId = do
   pure Success
 
 ---------------------------------------------------------------------
+
+blockDriverWithReason :: ShortId DM.Merchant -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> Flow APISuccess
+blockDriverWithReason merchantShortId reqDriverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <-
+  --   Esq.runInReplica (QPerson.findById personId)
+  --     >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  let merchantId = driver.merchantId
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
+  CQDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
+  maxShards <- asks (.maxShards)
+  case req.blockTimeInHours of
+    Just hrs -> do
+      let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
+      Esq.runNoTransaction $
+        createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+          UnblockDriverRequestJobData
+            { driverId = driverId
+            }
+    Nothing -> return ()
+  logTagInfo "dashboard -> blockDriver : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+--TODO : To Be Deprecated
+
 blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 blockDriver merchantShortId reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
@@ -312,6 +360,23 @@ blockDriver merchantShortId reqDriverId = do
   when (not driverInf.blocked) (void $ CQDriverInfo.updateBlockedState driverId True)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
+
+---------------------------------------------------------------------
+
+blockReasonList :: Flow [Common.BlockReason]
+blockReasonList = do
+  convertToBlockReasonList <$> DBR.findAll
+
+convertToBlockReasonList :: [DBR.DriverBlockReason] -> [Common.BlockReason]
+convertToBlockReasonList = map convertToCommon
+
+convertToCommon :: DBR.DriverBlockReason -> Common.BlockReason
+convertToCommon res =
+  Common.BlockReason
+    { reasonCode = cast res.reasonCode,
+      blockReason = res.blockReason,
+      blockTimeInHours = res.blockTimeInHours
+    }
 
 ---------------------------------------------------------------------
 collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -521,9 +586,8 @@ unlinkVehicle merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  -- Esq.runTransaction $ do
-  _ <- QVehicle.deleteById personId
-  _ <- QRCAssociation.endAssociation personId
+  DomainRC.deactivateCurrentRC personId
+  _ <- Vehicle.deleteById personId
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
@@ -598,6 +662,7 @@ buildVehicle merchantId personId req = do
         variant = castVehicleVariant req.variant,
         model = req.model,
         color = req.colour,
+        vehicleName = Nothing,
         registrationNo = req.registrationNo,
         capacity = req.capacity,
         category = Nothing,
@@ -682,6 +747,7 @@ unlinkAadhaar merchantShortId driverId = do
 ---------------------------------------------------------------------
 endRCAssociation :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 endRCAssociation merchantShortId reqDriverId = do
+  -- API should be deprecated
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -692,11 +758,43 @@ endRCAssociation merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  -- Esq.runTransaction $ do
-  _ <- QRCAssociation.endAssociation personId
-  _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
+  associations <- QRCAssociation.findAllLinkedByDriverId personId
+  mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
+  let mVehicleRC = listToMaybe (catMaybes mVehicleRCs)
+
+  case mVehicleRC of
+    Just vehicleRC -> do
+      rcNo <- decrypt vehicleRC.certificateNumber
+      void $ DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {rcNo}) True
+    Nothing -> throwError (InvalidRequest "No linked RC  to driver")
+
+  CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
+
+setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
+setRCStatus merchantShortId reqDriverId Common.RCStatusReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+
+  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {..})
+
+deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
+deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+
+  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {..}) False
 
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes

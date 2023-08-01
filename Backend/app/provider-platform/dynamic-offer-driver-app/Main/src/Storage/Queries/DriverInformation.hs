@@ -20,6 +20,8 @@
 module Storage.Queries.DriverInformation where
 
 -- import Control.Applicative (liftA2)
+
+import Data.Time.Clock (addUTCTime)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
@@ -129,6 +131,22 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
 --       )
 --     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateDynamicBlockedState :: Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> SqlDB ()
+updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
+  now <- getCurrentTime
+  let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      ( [ DriverInformationBlocked =. val isBlocked,
+          DriverInformationBlockedReason =. val blockedReason,
+          DriverInformationBlockExpiryTime =. val expiryTime,
+          DriverInformationUpdatedAt =. val now
+        ]
+          <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
+      )
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
 updateBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person.Driver -> Bool -> m ()
 updateBlockedState driverId isBlocked = do
   now <- getCurrentTime
@@ -180,6 +198,15 @@ updateOnRide (Id driverId) onRide = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+findByDriverIdActiveRide :: (Transactionable m) => Id Person.Driver -> m (Maybe DriverInformation)
+findByDriverIdActiveRide driverId = do
+  Esq.findOne $ do
+    driverInfo <- from $ table @DriverInformationT
+    where_ $
+      driverInfo ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+        &&. driverInfo ^. DriverInformationOnRide ==. val True
+    return driverInfo
 
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m, Log m) => [Id Person.Driver] -> m ()
 updateNotOnRideMultiple driverIds = do

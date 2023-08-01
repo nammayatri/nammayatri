@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Vehicle (module Domain.Types.Vehicle, module Reexport) where
 
@@ -55,6 +54,7 @@ data Vehicle = Vehicle
     variant :: Reexport.Variant,
     model :: Text,
     color :: Text,
+    vehicleName :: Maybe Text,
     registrationNo :: Text,
     capacity :: Maybe Int,
     category :: Maybe Category,
@@ -73,6 +73,7 @@ data VehicleAPIEntity = VehicleAPIEntity
     variant :: Reexport.Variant,
     model :: Text,
     color :: Text,
+    vehicleName :: Maybe Text,
     registrationNo :: Text,
     category :: Maybe Category,
     capacity :: Maybe Int,

@@ -167,3 +167,10 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.createdAt = createdAt,
         BeamVRC.updatedAt = updatedAt
       }
+
+findAllById :: Transactionable m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+findAllById rcIds =
+  findAll $ do
+    rc <- from $ table @VehicleRegistrationCertificateT
+    where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
+    return rc

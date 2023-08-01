@@ -30,15 +30,13 @@ view push config =
     , gravity CENTER
     , cornerRadii $ Corners 24.0 true true false false
     ]
-    [ textView
+    [ textView (
         [ text (getString CHOOSE_YOUR_RIDE)
-        , textSize FontSize.a_22
         , color Color.black800
         , gravity CENTER_HORIZONTAL
         , height WRAP_CONTENT
         , width MATCH_PARENT
-        , fontStyle $ FontStyle.bold LanguageStyle
-        ]
+        ] <> FontStyle.h1 TypoGraphy)
     , estimatedTimeAndDistanceView push config
     , quoteListView push config
     , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
@@ -95,7 +93,7 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   { textConfig
     { text = (getString CONFIRM_AND_BOOK)
     , color = Color.yellow900
-    , textSize = FontSize.a_16
+
     }
   , background = Color.black900
   , margin = Margin 16 32 16 15

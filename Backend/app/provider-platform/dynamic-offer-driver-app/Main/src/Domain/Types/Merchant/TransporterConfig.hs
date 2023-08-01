@@ -55,7 +55,9 @@ data TransporterConfigD u = TransporterConfig
     subscription :: Bool,
     aadhaarVerificationRequired :: Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    rcLimit :: Int,
+    automaticRCActivationCutOff :: Seconds
   }
   deriving (Generic, Show)
 

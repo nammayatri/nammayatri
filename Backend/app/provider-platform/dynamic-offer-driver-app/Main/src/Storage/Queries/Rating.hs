@@ -73,3 +73,14 @@ instance ToTType' BeamR.Rating Rating where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt
       }
+
+findAllRatingUsersCountByPerson :: Transactionable m => Id Person -> m Int
+findAllRatingUsersCountByPerson driverId =
+  mkCount <$> do
+    findAll $ do
+      rating <- from $ table @RatingT
+      where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0

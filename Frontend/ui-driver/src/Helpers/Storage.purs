@@ -70,6 +70,7 @@ data KeyStore = USER_NAME
                 | TRIGGER_MAPS
                 | DEVICE_DETAILS
                 | HAS_TAKEN_FIRST_RIDE
+                | CURRENCY
                 | IS_BANNER_ACTIVE
                 | IS_DRIVER_AT_PICKUP
                 | RIDE_START_LAT
@@ -81,9 +82,14 @@ data KeyStore = USER_NAME
                 | TOLERANCE_EARTH
                 | RIDE_ID
                 | SUGGESTIONS_ENABLED
+                | IS_VALID_TIME
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY
                 | NEGOTIATION_UNIT
+                | SET_WAITING_TIME
+                | IS_WAIT_TIMER_STOP
+                | VEHICLE_VARIANT
+                | MAX_LIMIT_TO_STORE_LOCATION_PT_NOT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

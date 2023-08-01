@@ -73,8 +73,20 @@ registerDriverRC dummyString = (getBaseUrl "") <> "/driver/register/rc"
 registerDriverDL :: String -> String
 registerDriverDL dummyString = (getBaseUrl "") <> "/driver/register/dl"
 
+getAllRcData :: String -> String
+getAllRcData dummyString = (getBaseUrl "") <> "/rc/all"
+
+makeRcActiveOrInactive :: String -> String
+makeRcActiveOrInactive dummyString = (getBaseUrl "") <> "/rc/setStatus"
+
+deleteRc :: String -> String
+deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
+
+callDriverToDriver :: String -> String
+callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
+
 driverRegistrationStatus :: String -> String
-driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status"
+driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status?multipleRC=true"
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -159,3 +171,6 @@ leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/week
 
 currentDateAndTime :: String -> String
 currentDateAndTime _ = "https://tools.aimylogic.com/api/now"
+
+profileSummary :: String -> String
+profileSummary _ = getBaseUrl "" <> "/driver/profile/summary"

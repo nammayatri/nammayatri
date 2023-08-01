@@ -135,6 +135,20 @@ scaleAnim config =
     , PrestoAnim.interpolator interpolator
     ] config.ifAnim
 
+motionMagnifyAnim :: AnimConfig -> PrestoAnim.Animation
+motionMagnifyAnim config =
+   PrestoAnim.Animation
+    [ PrestoAnim.duration 400
+    , PrestoAnim.fromScaleY config.fromScaleY
+    , PrestoAnim.toScaleY config.toScaleY
+    , PrestoAnim.fromScaleX config.fromScaleX
+    , PrestoAnim.toScaleX config.toScaleX
+    , PrestoAnim.interpolator interpolator
+    , PrestoAnim.fromX config.fromX
+    , PrestoAnim.toX config.toX
+    ] config.ifAnim
+
+
 rotateAnim :: AnimConfig -> PrestoAnim.Animation
 rotateAnim config =
   PrestoAnim.Animation

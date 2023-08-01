@@ -14,8 +14,10 @@
 
 module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 
+import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
@@ -53,36 +55,57 @@ handleError etr action =
       pure Nothing
 
 parseEvent :: (MonadFlow m) => Text -> OnUpdate.OnUpdateEvent -> m DOnUpdate.OnUpdateReq
-parseEvent _ (OnUpdate.RideAssigned taEvent) =
+parseEvent _ (OnUpdate.RideAssigned taEvent) = do
+  vehicle <- fromMaybeM (InvalidRequest "vehicle is not present in RideAssigned Event.") $ taEvent.fulfillment.vehicle
+  agent <- fromMaybeM (InvalidRequest "agent is not present in RideAssigned Event.") $ taEvent.fulfillment.agent
+  agentPhone <- fromMaybeM (InvalidRequest "agent phoneNumber is not present in RideAssigned Event.") $ agent.phone
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideAssigned Event.") agent.tags
+  registeredAt :: UTCTime <-
+    fromMaybeM (InvalidRequest "registered_at is not present.") $
+      readMaybe . T.unpack
+        =<< getTag "driver_details" "registered_at" tagsGroup
+  let rating :: Maybe HighPrecMeters =
+        readMaybe . T.unpack
+          =<< getTag "driver_details" "rating" tagsGroup
+  authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideAssigned Event.") $ taEvent.fulfillment.start.authorization
   return $
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id taEvent.id,
         bppRideId = Id taEvent.fulfillment.id,
-        otp = taEvent.fulfillment.start.authorization.token,
-        driverName = taEvent.fulfillment.agent.name,
-        driverMobileNumber = taEvent.fulfillment.agent.phone,
-        driverMobileCountryCode = taEvent.fulfillment.agent.phoneCountryCode,
-        driverRating = realToFrac <$> taEvent.fulfillment.agent.rating,
-        driverRegisteredAt = taEvent.fulfillment.agent.tags.registered_at,
-        vehicleNumber = taEvent.fulfillment.vehicle.registration,
-        vehicleColor = taEvent.fulfillment.vehicle.color,
-        vehicleModel = taEvent.fulfillment.vehicle.model
+        otp = authorization.token,
+        driverName = agent.name,
+        driverMobileNumber = agentPhone,
+        driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
+        driverRating = realToFrac <$> rating,
+        driverRegisteredAt = registeredAt,
+        vehicleNumber = vehicle.registration,
+        vehicleColor = vehicle.color,
+        vehicleModel = vehicle.model
       }
-parseEvent _ (OnUpdate.RideStarted rsEvent) =
+parseEvent _ (OnUpdate.RideStarted rsEvent) = do
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
         bppRideId = Id rsEvent.fulfillment.id
       }
-parseEvent _ (OnUpdate.RideCompleted rcEvent) =
+parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Event.") rcEvent.fulfillment.tags
+  chargeableDistance :: HighPrecMeters <-
+    fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
+      readMaybe . T.unpack
+        =<< getTag "ride_distance_details" "chargeable_distance" tagsGroup
+  traveledDistance :: HighPrecMeters <-
+    fromMaybeM (InvalidRequest "traveled_distance is not present.") $
+      readMaybe . T.unpack
+        =<< getTag "ride_distance_details" "traveled_distance" tagsGroup
   return $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
         bppRideId = Id rcEvent.fulfillment.id,
         fare = roundToIntegral rcEvent.quote.price.value,
         totalFare = roundToIntegral rcEvent.quote.price.computed_value,
-        chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
-        traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
+        chargeableDistance = chargeableDistance,
+        traveledDistance = traveledDistance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
         paymentUrl = rcEvent.payment >>= (.uri)
       }
@@ -92,41 +115,55 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) =
         { amount = realToFrac breakup.price.value,
           description = breakup.title
         }
-parseEvent _ (OnUpdate.BookingCancelled tcEvent) =
+parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
         cancellationSource = castCancellationSource tcEvent.cancellation_reason
       }
-parseEvent _ (OnUpdate.BookingReallocation rbrEvent) =
+parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
         bppRideId = Id rbrEvent.fulfillment.id,
         reallocationSource = castCancellationSource rbrEvent.reallocation_reason
       }
-parseEvent _ (OnUpdate.DriverArrived daEvent) =
+parseEvent _ (OnUpdate.DriverArrived daEvent) = do
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DriverArrived Event.") daEvent.fulfillment.tags
+  let arrival_time =
+        readMaybe . T.unpack
+          =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
+
   return $
     DOnUpdate.DriverArrivedReq
       { bppBookingId = Id daEvent.id,
         bppRideId = Id daEvent.fulfillment.id,
-        arrivalTime = daEvent.arrival_time
+        arrivalTime = arrival_time
       }
-parseEvent _ (OnUpdate.NewMessage daEvent) =
+parseEvent _ (OnUpdate.NewMessage daEvent) = do
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in NewMessage Event.") daEvent.fulfillment.tags
+  message :: Text <-
+    fromMaybeM (InvalidRequest "message is not present.") $
+      getTag "driver_new_message" "message" tagsGroup
   return $
     DOnUpdate.NewMessageReq
       { bppBookingId = Id daEvent.id,
         bppRideId = Id daEvent.fulfillment.id,
-        message = daEvent.message
+        message = message
       }
 parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in EstimateRepetition Event.") erEvent.fulfillment.tags
+  cancellationReason <-
+    fromMaybeM (InvalidRequest "cancellation_reason is not present.") $
+      readMaybe . T.unpack
+        =<< getTag "previous_cancellation_reasons" "cancellation_reason" tagsGroup
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,
         bppEstimateId = Id erEvent.item.id,
         bppBookingId = Id $ erEvent.id,
         bppRideId = Id erEvent.fulfillment.id,
-        cancellationSource = castCancellationSource erEvent.cancellation_reason
+        cancellationSource = castCancellationSource cancellationReason
       }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource

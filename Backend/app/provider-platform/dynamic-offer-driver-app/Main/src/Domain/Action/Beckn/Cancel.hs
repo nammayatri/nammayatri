@@ -35,6 +35,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
@@ -54,6 +55,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import Tools.Event
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
@@ -78,7 +80,8 @@ cancel ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
-    CoreMetrics m
+    CoreMetrics m,
+    EventStreamFlow m r
   ) =>
   -- Id DM.Merchant ->
   -- SignatureAuthResult ->
@@ -95,6 +98,12 @@ cancel req merchant booking = do
   -- unless (merchantId' == merchantId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
   bookingCR <- buildBookingCancellationReason
+  case mbRide of
+    Just ride -> do
+      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+      triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+    Nothing -> do
+      logDebug "No ride found for the booking."
   -- Esq.runTransaction $ do
   QBCR.upsert bookingCR
   _ <- QRB.updateStatus booking.id SRB.CANCELLED

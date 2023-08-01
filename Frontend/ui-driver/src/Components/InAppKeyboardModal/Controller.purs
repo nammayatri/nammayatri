@@ -19,7 +19,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Prelude ((<>), class Eq)
 import Font.Size as FontSize
-import Font.Style as FontStyle
+import Font.Style (Style (..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
 import Styles.Colors as Color
 import Common.Types.App(LazyCheck(..))
@@ -52,9 +52,7 @@ type InAppKeyboardModalState = {
 
 type TextConfig =
   { text :: String
-    , fontSize :: Int
     , focusIndex :: Int
-    , fontStyle :: String
     , gravity :: Gravity
     , visibility :: Visibility
     , color :: String
@@ -64,6 +62,7 @@ type TextConfig =
     , padding :: Padding
     , margin :: Margin
     , weight :: Number
+    , textStyle :: Style
   }
 
 type ImageConfig =
@@ -79,8 +78,6 @@ type ImageConfig =
 type ButtonConfig =
   { margin :: Margin
   , text :: String
-  , fontStyle :: String
-  , textSize :: Int
   , color :: String
   , width :: Length
   , height :: Length
@@ -88,6 +85,7 @@ type ButtonConfig =
   , stroke :: String
   , background :: String
   , visibility :: Visibility
+  , textStyle :: Style
   }
 
 type Keys = {
@@ -98,9 +96,7 @@ config :: InAppKeyboardModalState
 config = {
     errorConfig : {
       text : ""
-    , fontSize : FontSize.a_14
     , focusIndex : 0
-    , fontStyle : FontStyle.medium LanguageStyle
     , gravity : CENTER
     , visibility : VISIBLE
     , color : Color.red
@@ -110,12 +106,12 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , weight : 0.0
+    , textStyle : Body1
     },
     headingConfig : {
       text : ""
-    , fontSize : FontSize.a_18
     , focusIndex : 0
-    , fontStyle : FontStyle.semiBold LanguageStyle
+    , textStyle : Heading3
     , gravity : CENTER
     , visibility : VISIBLE
     , color : Color.black800
@@ -128,10 +124,9 @@ config = {
     },
     subHeadingConfig : {
       text : ""
-    , fontSize : FontSize.a_16
     , focusIndex : 0
-    , fontStyle : FontStyle.medium LanguageStyle
     , gravity : CENTER
+    , textStyle : Tags
     , visibility : VISIBLE
     , color : Color.black900
     , height : WRAP_CONTENT
@@ -143,9 +138,8 @@ config = {
     },
     inputTextConfig : {
        text : ""
-    , fontSize : FontSize.a_16
     , focusIndex : 1
-    , fontStyle : FontStyle.semiBold LanguageStyle
+    , textStyle : SubHeading1
     , gravity : CENTER
     , visibility : VISIBLE
     , color : Color.black800
@@ -159,8 +153,7 @@ config = {
     buttonConfig : {
       margin : (Margin 0 0 0 0)
     , text : ""
-    , fontStyle : FontStyle.bold LanguageStyle
-    , textSize : FontSize.a_17
+    , textStyle : Heading2
     , color : Color.yellow900
     , width : MATCH_PARENT
     , height : MATCH_PARENT

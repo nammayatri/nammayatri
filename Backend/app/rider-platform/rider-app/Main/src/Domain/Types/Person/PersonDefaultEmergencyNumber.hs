@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Person.PersonDefaultEmergencyNumber where
 

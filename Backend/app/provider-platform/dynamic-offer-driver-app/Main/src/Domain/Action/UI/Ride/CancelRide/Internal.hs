@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
@@ -99,7 +98,7 @@ cancelRideImpl rideId bookingCReason = do
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
 
     when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id}
+      DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = ride.fare}
     Notify.notifyOnCancel merchantId booking driver.id driver.deviceToken bookingCReason.source
 
   fork "cancelRide - Notify BAP" $ do

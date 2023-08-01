@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module ProviderPlatformClient.DynamicOfferDriver
   ( callDriverOfferBPP,
@@ -65,7 +64,9 @@ data DriversAPIs = DriversAPIs
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
     enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     disableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    blockDriverWithReason :: Id Driver.Driver -> Driver.BlockDriverWithReasonReq -> Euler.EulerClient APISuccess,
     blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    blockReasonList :: Euler.EulerClient [Driver.BlockReason],
     collectCash :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unblockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Driver.DriverIds -> Euler.EulerClient Driver.DriverLocationRes,
@@ -88,7 +89,9 @@ data DriversAPIs = DriversAPIs
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
-    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
+    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
+    setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
+    deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -190,7 +193,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverActivity
       :<|> enableDriver
       :<|> disableDriver
+      :<|> blockDriverWithReason
       :<|> blockDriver
+      :<|> blockReasonList
       :<|> collectCash
       :<|> unblockDriver
       :<|> driverLocation
@@ -204,6 +209,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> updateByPhoneNumber
       :<|> addVehicle
       :<|> updateDriverName
+      :<|> setRCStatus
+      :<|> deleteRC
       :<|> ( documentsList
                :<|> getDocument
                :<|> uploadDocument

@@ -9,6 +9,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectionPoolCount = +25
       }
 
 let esqDBReplicaCfg =
@@ -18,6 +19,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
+      , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
 let hedisCfg =
@@ -59,7 +61,7 @@ in  { hedisCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig

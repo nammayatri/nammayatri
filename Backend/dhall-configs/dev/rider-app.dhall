@@ -11,6 +11,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_app"
+      , connectionPoolCount = +25
       }
 
 let esqDBReplicaCfg =
@@ -20,6 +21,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
+      , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
 let rcfg =
@@ -150,7 +152,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , cutOffNonCriticalHedisCluster = False
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
@@ -158,7 +160,7 @@ in  { esqDBCfg
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8013/beckn"
+    , nwAddress = "http://localhost:8013/beckn/cab/v1"
     , selfUIUrl = "http://localhost:8013/v2/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
@@ -166,7 +168,7 @@ in  { esqDBCfg
     , migrationPath = Some
         (env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app")
     , autoMigrate = True
-    , coreVersion = "0.9.3"
+    , coreVersion = "0.9.4"
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/rider-app.log" }
     , googleTranslateUrl = common.googleTranslateUrl

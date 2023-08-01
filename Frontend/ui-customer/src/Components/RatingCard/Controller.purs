@@ -20,6 +20,11 @@ import Components.PrimaryButton as PrimaryButton
 import Components.FareBreakUp as FareBreakUp
 import Components.SourceToDestination as SourceToDestination
 import Data.Maybe
+import Services.API(FeedbackAnswer)
+import Common.Types.App (LazyCheck(..))
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import MerchantConfig.Types
 
 data Action = NoAction
             | BackPressed
@@ -29,6 +34,7 @@ data Action = NoAction
             | SourceToDestinationAC SourceToDestination.Action
             | SkipButtonAC PrimaryButton.Action
             | FeedbackChanged String
+            | SelectPill String String
 
 type RatingCardState = 
   { data :: RatingCardData
@@ -54,4 +60,66 @@ type RatingCardData =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , feedbackList :: Array FeedbackAnswer
+  , appConfig :: AppConfig
   }
+
+type FeedbackItem = { 
+    id :: String
+  , text :: String
+  }
+
+feedbackPillData :: LazyCheck -> Array (Array (Array FeedbackItem)) 
+feedbackPillData lazyCheck = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 Language, feedbackPillDataWithRating4 Language, feedbackPillDataWithRating5 Language]
+
+feedbackPillDataWithRating1 :: LazyCheck -> Array (Array FeedbackItem)
+feedbackPillDataWithRating1 lazycheck = [
+  [{id : "6", text : getString RUDE_DRIVER},
+  {id : "1", text : getString FELT_UNSAFE},
+  {id : "1", text : getString TOO_MANY_CALLS}],
+  [{id : "6", text : getString RECKLESS_DRIVING},
+  {id : "6", text : getString DRIVER_CHARGED_MORE}],
+  [{id : "1", text : getString LATE_DROP_OFF},
+  {id : "1", text : getString LATE_PICK_UP}]
+]
+
+feedbackPillDataWithRating2 :: LazyCheck -> Array (Array FeedbackItem)
+feedbackPillDataWithRating2 lazycheck = [
+  [{id : "7", text : getString RUDE_DRIVER},
+  {id : "2", text : getString FELT_UNSAFE},
+  {id : "2", text : getString TOO_MANY_CALLS}],
+  [{id : "7", text : getString RECKLESS_DRIVING},
+  {id : "7", text : getString DRIVER_CHARGED_MORE}],
+  [{id : "2", text : getString LATE_DROP_OFF},
+  {id : "2", text : getString LATE_PICK_UP}]
+]
+
+feedbackPillDataWithRating3 :: LazyCheck -> Array (Array FeedbackItem)
+feedbackPillDataWithRating3 lazycheck = [
+  [{id : "8", text : getString UNPROFESSIONAL_DRIVER},
+  {id : "8", text : getString RASH_DRIVING}],
+  [{id : "8", text : getString DRIVER_CHARGED_MORE},
+  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  [{id : "3", text : getString TRIP_GOT_DELAYED},
+  {id : "3", text : getString FELT_UNSAFE}]
+]
+
+feedbackPillDataWithRating4 :: LazyCheck -> Array (Array FeedbackItem)
+feedbackPillDataWithRating4 lazycheck = [
+  [{id : "9", text : getString POLITE_DRIVER},
+  {id : "9", text : getString EXPERT_DRIVING}],
+  [{id : "9", text : getString ASKED_FOR_EXTRA_FARE},
+  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  [{id : "4", text : getString TRIP_GOT_DELAYED},
+  {id : "4", text : getString SAFE_RIDE}]
+]
+
+feedbackPillDataWithRating5 :: LazyCheck -> Array (Array FeedbackItem)
+feedbackPillDataWithRating5 lazyCheck = [
+  [{id : "10", text : getString POLITE_DRIVER},
+  {id : "5", text : getString EXPERT_DRIVING}],
+  [{id : "12", text : getString CLEAN_AUTO},
+  {id : "10", text : getString ON_TIME}],
+  [{id : "10", text : getString SKILLED_NAVIGATOR},
+  {id : "5", text : getString SAFE_RIDE}]
+]

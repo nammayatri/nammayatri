@@ -50,6 +50,8 @@ import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.DriverScore as DS
+import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -66,7 +68,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverStats as DriverStats
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
@@ -129,8 +131,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   _ <- QRide.updateAll ride.id ride
   _ <- QRide.updateStatus ride.id Ride.COMPLETED
   _ <- QRB.updateStatus booking.id SRB.COMPLETED
-  DriverStats.updateIdleTime driverId
-  _ <- DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  QDriverStats.updateIdleTime driverId
+  _ <- QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
   _ <- QDI.updateOnRide driverId False
   if driverInfo.active
     then QDFS.updateStatus ride.driverId DDFS.ACTIVE
@@ -146,6 +148,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) $ ride.driverId.getId
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
+  DS.driverScoreEventHandler DST.OnRideCompletion {merchantId = merchantId, driverId = cast driverId, ride = ride}
   SRide.clearCache $ cast driverId
 
 updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()

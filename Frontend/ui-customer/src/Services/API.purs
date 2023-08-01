@@ -27,7 +27,7 @@ import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Prelude (class Show,class Eq, show, ($), (<$>), (>>=))
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
 import Foreign.Index (readProp)
@@ -92,6 +92,48 @@ instance standardEncodeTriggerOTPReq :: StandardEncode TriggerOTPReq where stand
 instance showTriggerOTPReq :: Show TriggerOTPReq where show = genericShow
 instance decodeTriggerOTPReq :: Decode TriggerOTPReq where decode = defaultDecode
 instance encodeTriggerOTPReq :: Encode TriggerOTPReq where encode = defaultEncode
+
+-------------------------------------------------- Trigger Signature OTP API Types --------------------------------------------
+data AuthType = OTP | PASSWORD | DIRECT
+
+newtype TriggerSignatureOTPResp = TriggerSignatureOTPResp {
+    authId :: String
+  , attempts :: Int
+  , authType :: Maybe String
+  , token :: Maybe String
+  , person :: Maybe User
+}
+
+newtype TriggerSignatureOTPReq = TriggerSignatureOTPReq String
+
+instance makeTriggerSignatureOTPReq :: RestEndpoint TriggerSignatureOTPReq TriggerSignatureOTPResp where
+ makeRequest (TriggerSignatureOTPReq reqBody) headers = defaultMakeRequestString POST (EP.triggerSignatureOTP "") headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericTriggerSignatureOTPResp :: Generic TriggerSignatureOTPResp _
+derive instance newtypeTriggerSignatureOTPResp :: Newtype TriggerSignatureOTPResp _
+instance standardEncodeTriggerSignatureOTPResp :: StandardEncode TriggerSignatureOTPResp where standardEncode (TriggerSignatureOTPResp id) = standardEncode id
+instance showTriggerSignatureOTPResp :: Show TriggerSignatureOTPResp where show = genericShow
+instance decodeTriggerSignatureOTPResp :: Decode TriggerSignatureOTPResp where decode = defaultDecode
+instance encodeTriggerSignatureOTPResp :: Encode TriggerSignatureOTPResp where encode = defaultEncode
+
+derive instance genericAuthType :: Generic AuthType _
+instance showAuthType :: Show AuthType where show = genericShow
+instance decodeAuthType :: Decode AuthType where decode = defaultDecode
+instance encodeAuthType :: Encode AuthType where encode = defaultEncode
+instance standardEncodeAuthType :: StandardEncode AuthType 
+  where
+  standardEncode OTP = standardEncode $ show OTP
+  standardEncode PASSWORD = standardEncode $ show PASSWORD
+  standardEncode DIRECT = standardEncode $ show DIRECT
+
+derive instance genericTriggerSignatureOTPReq :: Generic TriggerSignatureOTPReq _
+derive instance newtypeTriggerSignatureOTPReq :: Newtype TriggerSignatureOTPReq _
+instance standardEncodeTriggerSignatureOTPReq :: StandardEncode TriggerSignatureOTPReq where standardEncode (TriggerSignatureOTPReq reqBody) = standardEncode reqBody
+instance showTriggerSignatureOTPReq :: Show TriggerSignatureOTPReq where show = genericShow
+instance decodeTriggerSignatureOTPReq :: Decode TriggerSignatureOTPReq where decode = defaultDecode
+instance encodeTriggerSignatureOTPReq :: Encode TriggerSignatureOTPReq where encode = defaultEncode
 
 -------------------------------------------------- Resend OTP API Types --------------------------------------------
 
@@ -1567,7 +1609,8 @@ newtype SpecialLocation = SpecialLocation
 
 newtype GatesInfo = GatesInfo {
   name :: String,
-  point :: LatLong
+  point :: LatLong,
+  address :: Maybe String
 }
 
 instance makeOriginServiceabilityReq :: RestEndpoint ServiceabilityReq ServiceabilityRes where
@@ -1891,3 +1934,32 @@ instance standardEncodeOnCallRes :: StandardEncode OnCallRes where standardEncod
 instance showOnCallRes :: Show OnCallRes where show = genericShow
 instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
 instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
+
+newtype RideFeedbackReq = RideFeedbackReq
+  { 
+    rideId :: String,
+    feedback :: Array FeedbackAnswer
+  }
+
+type FeedbackAnswer =  {
+    questionId :: String,
+    answer :: Array String
+  }
+
+data RideFeedbackRes = RideFeedbackRes
+
+instance makeRideFeedbackReq :: RestEndpoint RideFeedbackReq RideFeedbackRes where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.bookingFeedback "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericRideFeedbackReq :: Generic RideFeedbackReq _
+instance standardEncodeRideFeedbackReq :: StandardEncode RideFeedbackReq where standardEncode (RideFeedbackReq body) = standardEncode body
+instance showRideFeedbackReq :: Show RideFeedbackReq where show = genericShow
+instance decodeRideFeedbackReq :: Decode RideFeedbackReq where decode = defaultDecode
+instance encodeRideFeedbackReq  :: Encode RideFeedbackReq where encode = defaultEncode
+
+derive instance genericRideFeedbackRes :: Generic RideFeedbackRes _
+instance standardEncodeRideFeedbackRes :: StandardEncode RideFeedbackRes where standardEncode (RideFeedbackRes) = standardEncode {}
+instance decodeRideFeedbackRes :: Decode RideFeedbackRes where decode = defaultDecode
+instance encodeRideFeedbackRes  :: Encode RideFeedbackRes where encode = defaultEncode
