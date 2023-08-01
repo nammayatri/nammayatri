@@ -15,6 +15,7 @@
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -66,6 +67,16 @@ findLastVehicleRC certNumberHash = do
   where
     headMaybe [] = Nothing
     headMaybe (x : _) = Just x
+
+updateVehicleVariant :: Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> SqlDB ()
+updateVehicleVariant id variant = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ VehicleRegistrationCertificateVehicleVariant =. val variant
+      ]
+    where_ $
+      tbl ^. VehicleRegistrationCertificateId ==. val (id.getId)
 
 findByRCAndExpiry ::
   Transactionable m =>
