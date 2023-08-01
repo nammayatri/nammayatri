@@ -36,6 +36,7 @@ module Domain.Action.Dashboard.Driver
     clearOnRideStuckDrivers,
     getDriverDue,
     collectCash,
+    exemptCash,
     driverAadhaarInfoByPhone,
     updateByPhoneNumber,
     setRCStatus,
@@ -377,7 +378,22 @@ convertToCommon res =
 
 ---------------------------------------------------------------------
 collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-collectCash merchantShortId reqDriverId = do
+collectCash = recordPayment False
+
+---------------------------------------------------------------------
+
+exemptCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+exemptCash = recordPayment True
+
+---------------------------------------------------------------------
+
+paymentStatus :: Bool -> DriverFeeStatus
+paymentStatus isExempted
+  | isExempted = EXEMPTED
+  | otherwise = COLLECTED_CASH
+
+recordPayment :: Bool -> ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+recordPayment isExempted merchantShortId reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -396,7 +412,7 @@ collectCash merchantShortId reqDriverId = do
   CDI.updatePendingPayment False driverFee.driverId
   CDI.updateSubscription True driverId
   Esq.runTransaction $ do
-    QDF.updateStatus COLLECTED_CASH driverFee.id now
+    QDF.updateStatus (paymentStatus isExempted) driverFee.id now
     QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
   pure Success
 

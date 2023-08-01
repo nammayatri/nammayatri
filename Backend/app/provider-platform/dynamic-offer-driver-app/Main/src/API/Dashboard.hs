@@ -16,6 +16,7 @@ module API.Dashboard where
 
 import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Driver as Driver
+import qualified API.Dashboard.Driver.Registration as DriverRegistration
 import qualified API.Dashboard.DriverReferral as DriverReferral
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Issue as Issue
@@ -44,6 +45,7 @@ type API' =
            :<|> Merchant.API
            :<|> Message.API
            :<|> DriverReferral.API
+           :<|> DriverRegistration.API
            :<|> Volunteer.API
            :<|> Issue.API
        )
@@ -57,6 +59,7 @@ handler =
         :<|> Merchant.handler merchantId
         :<|> Message.handler merchantId
         :<|> DriverReferral.handler merchantId
+        :<|> DriverRegistration.handler merchantId
         :<|> Volunteer.handler merchantId
         :<|> Issue.handler merchantId
   )

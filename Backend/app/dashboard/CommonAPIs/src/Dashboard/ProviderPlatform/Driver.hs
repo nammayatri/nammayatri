@@ -48,6 +48,7 @@ data DriverEndpoint
   | AddVehicleEndpoint
   | UpdateDriverNameEndpoint
   | CollectCashEndpoint
+  | ExemptCashEndpoint
   | SetRCStatusEndpoint
   | DeleteRCEndpoint
   deriving (Show, Read)
@@ -243,6 +244,15 @@ type DriverOutstandingBalanceAPI =
 type DriverCashCollectionAPI =
   Capture "driverId" (Id Driver)
     :> "collectCash"
+    :> Post '[JSON] APISuccess
+
+-------------------------------------
+
+-- driver cash exemption api ----------------------------------------
+
+type DriverCashExemptionAPI =
+  Capture "driverId" (Id Driver)
+    :> "exemptCash"
     :> Post '[JSON] APISuccess
 
 -------------------------------------
