@@ -362,7 +362,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
   state {
     data {
-      tripId = ride.id,
+      tripId = rideDetails.shortRideId,
       date = (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
       time = (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
       source= decodeAddress (Booking ride.fromLocation),
