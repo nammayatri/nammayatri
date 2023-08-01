@@ -702,10 +702,11 @@ activeRideDetail state (RidesInfo ride) = {
   isDriverArrived : state.data.activeRide.isDriverArrived,
   notifiedCustomer : if (differenceBetweenTwoUTC ride.updatedAt ride.createdAt) == 0 then false else true,
   exoPhone : ride.exoPhone,
-  specialLocationTag : ride.specialLocationTag, -- Just "SureMetro - Pickup"
+  specialLocationTag : ride.specialLocationTag,
   waitingTime : if (getValueToLocalStore IS_WAIT_TIMER_STOP) == "Stop" && state.props.timerRefresh then (getValueToLocalStore SET_WAITING_TIME) else state.data.activeRide.waitingTime,
   rideCreatedAt : ride.createdAt,
-  waitTimeInfo : state.data.activeRide.waitTimeInfo
+  waitTimeInfo : state.data.activeRide.waitTimeInfo,
+  requestedVehicleVariant : ride.requestedVehicleVariant
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList

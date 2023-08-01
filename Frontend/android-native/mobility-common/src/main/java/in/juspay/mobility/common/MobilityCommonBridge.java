@@ -288,6 +288,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             Double lng = location.getLongitude();
                             lastLatitudeValue = lat;
                             lastLongitudeValue = lng;
+                            setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                             setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                             if (callback != null) {
                                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",

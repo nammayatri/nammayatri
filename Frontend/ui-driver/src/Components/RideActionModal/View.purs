@@ -158,6 +158,7 @@ rideActionViewWithZone push config =
       , gravity CENTER
       , stroke $ "1," <> Color.grey800
       ][  rideActionDataView push config
+        , rideTypeView push config
         , linearLayout
           [ width MATCH_PARENT
           , height $ V 1
@@ -166,6 +167,39 @@ rideActionViewWithZone push config =
           ][]
         , if config.startRideActive then startRide push config else endRide push config
         , cancelRide push config
+      ]
+  ]
+
+rideTypeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideTypeView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ PaddingHorizontal 16 16
+  , visibility if (config.startRideActive || config.requestedVehicleVariant == Maybe.Nothing) then GONE else VISIBLE
+  ][ linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.grey800
+      ][]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginTop 16
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString RIDE_TYPE
+          , color Color.black650
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getCategorizedVariant config.requestedVehicleVariant
+          , margin $ MarginLeft 8
+          , color Color.black800
+          ] <> FontStyle.body1 TypoGraphy
       ]
   ]
 
@@ -181,6 +215,7 @@ rideActionView push config =
   , gravity CENTER
   , stroke $ "1," <> Color.grey800
   ][  rideActionDataView push config
+    , rideTypeView push config
     , linearLayout
       [ width MATCH_PARENT
       , height $ V 1
@@ -632,3 +667,21 @@ separatorConfig =
   , layoutWidth : V 14
   , layoutHeight : V 16
   }
+
+getCategorizedVariant :: Maybe.Maybe String -> String
+getCategorizedVariant variant = case variant of
+  Maybe.Just var -> case (getMerchant FunctionCall) of
+    YATRISATHI -> case var of
+      "SEDAN"  -> "AC Taxi"
+      "HATCHBACK"  -> "AC Taxi"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "AC Taxi"
+      _ -> "Non AC"
+    _ -> case var of
+      "SEDAN"  -> "Sedan"
+      "HATCHBACK"  -> "Hatchback"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "Suv"
+      "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      _ -> var
+  Maybe.Nothing -> ""

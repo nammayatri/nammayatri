@@ -91,11 +91,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private WindowManager.LayoutParams params;
     private FirebaseAnalytics mFirebaseAnalytics;
     private Boolean isRideAcceptedOrRejected = false;
-    private TextView indicatorText1, indicatorText2, indicatorText3;
+    private TextView indicatorText1, indicatorText2, indicatorText3, vehicleText1, vehicleText2, vehicleText3;
     private TextView indicatorTip1, indicatorTip2, indicatorTip3;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
-    private ArrayList<TextView> indicatorTextList;
+    private ArrayList<TextView> indicatorTextList, vehicleVariantList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private ArrayList<TextView> tipsList;
@@ -469,6 +469,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String sourcePinCode = rideRequestBundle.getString("sourcePinCode");
                     String destinationPinCode = rideRequestBundle.getString("destinationPinCode");
                     DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
+                    String requestedVehicleVariant = rideRequestBundle.getString("requestedVehicleVariant");
                     df.setMaximumFractionDigits(2);
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -501,7 +502,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             customerExtraFee,
                             specialLocationTag,
                             sourcePinCode,
-                            destinationPinCode);
+                            destinationPinCode,
+                            requestedVehicleVariant);
                     if (floatyView == null) {
                         startTimer();
                         showOverLayPopup();
@@ -816,10 +818,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             indicatorText1 = floatyView.findViewById(R.id.indicatorText1);
             indicatorText2 = floatyView.findViewById(R.id.indicatorText2);
             indicatorText3 = floatyView.findViewById(R.id.indicatorText3);
+            vehicleText1 = floatyView.findViewById(R.id.variant1);
+            vehicleText2 = floatyView.findViewById(R.id.variant2);
+            vehicleText3 = floatyView.findViewById(R.id.variant3);
             progressIndicator1 = floatyView.findViewById(R.id.progress_indicator_1);
             progressIndicator2 = floatyView.findViewById(R.id.progress_indicator_2);
             progressIndicator3 = floatyView.findViewById(R.id.progress_indicator_3);
             indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
+            vehicleVariantList = new ArrayList<>(Arrays.asList(vehicleText1, vehicleText2, vehicleText3));
             progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
             indicatorList = new ArrayList<>(Arrays.asList(
                     floatyView.findViewById(R.id.indicator1),
@@ -844,6 +850,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     shimmerTipList.get(i).startShimmer();
                 }
                 if (i < sheetArrayList.size()) {
+                    vehicleVariantList.get(i).setVisibility(View.VISIBLE);
+                    String variant = sheetArrayList.get(i).getRequestedVehicleVariant();
+                    if (variant == NotificationUtils.NO_VARIANT){
+                        vehicleVariantList.get(i).setVisibility(View.GONE);
+                    }else {
+                        vehicleVariantList.get(i).setText(variant);
+                    }
+                    vehicleVariantList.get(i).setText(variant);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
 
@@ -858,6 +872,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                 } else {
                     indicatorTextList.get(i).setText("--");
+                    vehicleVariantList.get(i).setVisibility(View.GONE);
                     progressIndicatorsList.get(i).setVisibility(View.GONE);
                     tipsList.get(i).setVisibility(View.INVISIBLE);
                 }
