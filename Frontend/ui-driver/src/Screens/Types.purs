@@ -834,7 +834,8 @@ type ActiveRide = {
   waitingTime :: String,
   waitTimeInfo :: Boolean,
   rideCreatedAt :: String,
-  specialLocationTag :: Maybe String
+  specialLocationTag :: Maybe String,
+  requestedVehicleVariant :: Maybe String
 }
 
 type HomeScreenProps =  {

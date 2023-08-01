@@ -66,7 +66,18 @@
                             android:gravity="center"
                             android:orientation="vertical"
                             android:paddingHorizontal="10dp"
-                            android:paddingVertical="10dp">
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="18dp"
+                                android:text=""
+                                android:visibility="gone"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
 
                             <TextView
                                 android:id="@+id/indicatorText1"
@@ -138,7 +149,19 @@
                             android:orientation="vertical"
                             android:gravity="center"
                             android:paddingHorizontal="10dp"
-                            android:paddingVertical="15dp">
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="28dp"
+                                android:text="Ac"
+                                android:visibility="gone"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
 
                             <TextView
                                 android:id="@+id/indicatorText2"
@@ -209,7 +232,19 @@
                             android:gravity="center"
                             android:orientation="vertical"
                             android:paddingHorizontal="10dp"
-                            android:paddingVertical="15dp">
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="28dp"
+                                android:text="Ac"
+                                android:visibility="gone"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
 
                             <TextView
                                 android:id="@+id/indicatorText3"

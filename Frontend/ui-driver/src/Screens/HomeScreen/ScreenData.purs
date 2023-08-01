@@ -48,7 +48,8 @@ initData = {
           specialLocationTag : Nothing,
           waitingTime : "__",
           waitTimeInfo : false,
-          rideCreatedAt : ""
+          rideCreatedAt : "",
+          requestedVehicleVariant : Nothing
         },
         cancelRideModal : {
           selectionOptions : [],
