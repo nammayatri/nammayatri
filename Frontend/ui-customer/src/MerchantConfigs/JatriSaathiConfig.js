@@ -58,7 +58,8 @@ const config = {
   "LOCATION_PERMISSION_SUBTITLE_NEW_USER",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
-  "CALL_NAMMA_YATRI_SUPPORT"],
+  "CALL_NAMMA_YATRI_SUPPORT", 
+  "YOUR_FEEDBACK_HELPS_US"],
 
   "isReferralEnabled" : "false",
   "showBookingPreference" : "false",
@@ -88,6 +89,7 @@ const bengaliStrings = {
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
   "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Jatri Saathi-এ স্বাগতম \nরাইড বুকিং শুরু করতে, অনুগ্রহ করে আমাদের আপনাকে খুঁজে পেতে অনুমতি দিন!",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+  "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের যাত্রী সাথী অভিজ্ঞতা উন্নত করতে সাহায্য করে",
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
   "CALL_NAMMA_YATRI_SUPPORT" : "সহযাত্রী সমর্থন কল করুন"
 }
@@ -106,6 +108,7 @@ const hindiStrings = {
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "आप जात्री साथी सपोर्ट टीम को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
   "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "जात्री साथी में आपका स्वागत है! \nसवारी की बुकिंग शुरू करने के लिए, कृपया हमें आपको ढूंढने की अनुमति दें!",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+  "YOUR_FEEDBACK_HELPS_US" : "आपकी प्रतिक्रिया हमें जात्री साथी अनुभव को बेहतर बनाने में मदद करती है",
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
   "CALL_NAMMA_YATRI_SUPPORT" : "साथी यात्री सहायता को कॉल करें"
 }
@@ -124,6 +127,7 @@ const englishStrings = {
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
   "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Jatri Sathi! \nTo start booking rides, please allow us to find you!",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+  "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
   "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Sathi Support"
 }
