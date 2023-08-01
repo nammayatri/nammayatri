@@ -1045,7 +1045,7 @@ completedRideDetails state push =
       ][  imageView
           [ height $ V 40
           , width $ V 40
-          , imageWithFallback "ic_headphone_white,https://assets.juspay.in/nammayatri/images/user/ic_headphone_white.png"
+          , imageWithFallback "ic_headphone_white,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_headphone_white.png"
           , onClick push $ const Support
           ]
       ]

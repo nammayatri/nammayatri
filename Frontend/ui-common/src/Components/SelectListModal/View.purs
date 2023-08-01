@@ -356,6 +356,7 @@ radioButton config push index item =
           textView
           [ text $ fromMaybe "" item.subtext
           , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
+          , padding $ PaddingBottom 5
           , color Color.black650
           , visibility cancelValues.visibility
           , fontStyle $ FontStyle.regular LanguageStyle
