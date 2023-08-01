@@ -47,6 +47,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     uniqueKeyId :: Text,
     shortId :: ShortId Merchant,
     city :: Context.City,
+    country :: Context.Country,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     gstin :: Maybe Text,

@@ -29,6 +29,7 @@ import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Issue as Issue
 import qualified API.UI.LeaderBoard as LeaderBoard
 import qualified API.UI.Location as Location
+import qualified API.UI.Maps as Maps
 import qualified API.UI.Message as Message
 import qualified API.UI.OnMessage as OnMessage
 import qualified API.UI.OrgAdmin as OrgAdmin
@@ -62,6 +63,7 @@ type API =
            :<|> Transporter.API
            :<|> Location.API
            :<|> Route.API
+           :<|> Maps.API
            :<|> Ride.API
            :<|> Call.API
            :<|> CancellationReason.API
@@ -91,6 +93,7 @@ handler =
     :<|> Transporter.handler
     :<|> Location.handler
     :<|> Route.handler
+    :<|> Maps.handler
     :<|> Ride.handler
     :<|> Call.handler
     :<|> CancellationReason.handler

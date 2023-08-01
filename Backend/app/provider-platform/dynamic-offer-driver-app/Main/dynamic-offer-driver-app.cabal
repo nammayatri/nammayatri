@@ -60,6 +60,7 @@ library
       API.UI.Issue
       API.UI.LeaderBoard
       API.UI.Location
+      API.UI.Maps
       API.UI.Message
       API.UI.OnMessage
       API.UI.OrgAdmin

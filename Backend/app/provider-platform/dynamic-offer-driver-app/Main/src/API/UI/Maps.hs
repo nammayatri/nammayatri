@@ -17,12 +17,9 @@ module API.UI.Maps
     handler,
     DMaps.AutoCompleteReq,
     DMaps.AutoCompleteResp,
-    DMaps.GetPlaceDetailsReq,
-    DMaps.GetPlaceDetailsResp,
     DMaps.GetPlaceNameReq,
     DMaps.GetPlaceNameResp,
     autoComplete,
-    getPlaceDetails,
     getPlaceName,
   )
 where
@@ -44,10 +41,6 @@ type API =
            :> TokenAuth
            :> ReqBody '[JSON] DMaps.AutoCompleteReq
            :> Post '[JSON] DMaps.AutoCompleteResp
-           :<|> "getPlaceDetails"
-             :> TokenAuth
-             :> ReqBody '[JSON] DMaps.GetPlaceDetailsReq
-             :> Post '[JSON] DMaps.GetPlaceDetailsResp
            :<|> "getPlaceName"
              :> TokenAuth
              :> ReqBody '[JSON] DMaps.GetPlaceNameReq
@@ -57,14 +50,10 @@ type API =
 handler :: FlowServer API
 handler =
   autoComplete
-    :<|> getPlaceDetails
     :<|> getPlaceName
 
 autoComplete :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
 autoComplete (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete merchantId
 
-getPlaceDetails :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
-getPlaceDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceDetails (personId, merchantId)
-
 getPlaceName :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-getPlaceName (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName (personId, merchantId)
+getPlaceName (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName merchantId
