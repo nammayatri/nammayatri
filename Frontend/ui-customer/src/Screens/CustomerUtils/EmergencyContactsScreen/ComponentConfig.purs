@@ -86,6 +86,7 @@ removeContactPopUpModelConfig state =
           , color = Color.white900
           , strokeColor = Color.red
           }
+        , backgroundClickable = false
         }
   in
     popUpConfig'
