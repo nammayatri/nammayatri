@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.ProviderPlatform.DynamicOfferDriver.Driver.Registration where
+module API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
+  ( API,
+    handler,
+  )
+where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -29,15 +33,17 @@ import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
-  DocumentsListAPI
-    :<|> GetDocumentAPI
-    :<|> UploadDocumentAPI
-    :<|> RegisterDLAPI
-    :<|> RegisterRCAPI
-    :<|> GenerateAadhaarOtpAPI
-    :<|> VerifyAadhaarOtpAPI
-    :<|> AuthAPI
-    :<|> VerifyAPI
+  "driver"
+    :> ( DocumentsListAPI
+           :<|> GetDocumentAPI
+           :<|> UploadDocumentAPI
+           :<|> RegisterDLAPI
+           :<|> RegisterRCAPI
+           :<|> GenerateAadhaarOtpAPI
+           :<|> VerifyAadhaarOtpAPI
+           :<|> AuthAPI
+           :<|> VerifyAPI
+       )
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -85,13 +91,13 @@ documentsList :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Flow
 documentsList merchantShortId apiTokenInfo driverId =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.documentsList) driverId
+    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.documentsList) driverId
 
 getDocument :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
 getDocument merchantShortId apiTokenInfo imageId =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.getDocument) imageId
+    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.getDocument) imageId
 
 uploadDocument :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
 uploadDocument merchantShortId apiTokenInfo driverId req =
@@ -99,7 +105,7 @@ uploadDocument merchantShortId apiTokenInfo driverId req =
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     transaction <- buildTransaction Common.UploadDocumentEndpoint apiTokenInfo driverId (Just req)
     T.withResponseTransactionStoring transaction $
-      Client.callDriverOfferBPP checkedMerchantId (.drivers.uploadDocument) driverId req
+      Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.uploadDocument) driverId req
 
 registerDL :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
 registerDL merchantShortId apiTokenInfo driverId req =
@@ -107,7 +113,7 @@ registerDL merchantShortId apiTokenInfo driverId req =
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     transaction <- buildTransaction Common.RegisterDLEndpoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $
-      Client.callDriverOfferBPP checkedMerchantId (.drivers.registerDL) driverId req
+      Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.registerDL) driverId req
 
 registerRC :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
 registerRC merchantShortId apiTokenInfo driverId req =
@@ -115,7 +121,7 @@ registerRC merchantShortId apiTokenInfo driverId req =
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     transaction <- buildTransaction Common.RegisterRCEndpoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $
-      Client.callDriverOfferBPP checkedMerchantId (.drivers.registerRC) driverId req
+      Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.registerRC) driverId req
 
 generateAadhaarOtp :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> FlowHandler Common.GenerateAadhaarOtpRes
 generateAadhaarOtp merchantShortId apiTokenInfo driverId req =
@@ -123,7 +129,7 @@ generateAadhaarOtp merchantShortId apiTokenInfo driverId req =
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     transaction <- buildTransaction Common.GenerateAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.GenerateAadhaarOtpReq)
     T.withTransactionStoring transaction $
-      Client.callDriverOfferBPP checkedMerchantId (.drivers.generateAadhaarOtp) driverId req
+      Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.generateAadhaarOtp) driverId req
 
 verifyAadhaarOtp :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
 verifyAadhaarOtp merchantShortId apiTokenInfo driverId req =
@@ -131,16 +137,16 @@ verifyAadhaarOtp merchantShortId apiTokenInfo driverId req =
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     transaction <- buildTransaction Common.VerifyAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
     T.withTransactionStoring transaction $
-      Client.callDriverOfferBPP checkedMerchantId (.drivers.verifyAadhaarOtp) driverId req
+      Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.verifyAadhaarOtp) driverId req
 
 auth :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AuthReq -> FlowHandler Common.AuthRes
 auth merchantShortId apiTokenInfo req =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.auth) req
+    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.auth) req
 
 verify :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
 verify merchantShortId apiTokenInfo authId req =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.verify) authId req
+    Client.callDriverOfferBPP checkedMerchantId (.driverRegistration.verify) authId req
