@@ -593,5 +593,6 @@ const tamilStrings = {
   SELECT_A_DATE_RANGE : "அறிக்கையைப் பதிவிறக்க தேதி வரம்பைத் தேர்ந்தெடுக்கவும்",
   FEE_PAYMENT_HISTORY : "கட்டணம் செலுத்திய வரலாறு",
   LANGUAGES_SPOKEN : "பேசும் மொழிகள்",
-  VIEW_PAYMENT_HISTORY : "கட்டண வரலாற்றைக் காண்க"
+  VIEW_PAYMENT_HISTORY : "கட்டண வரலாற்றைக் காண்க",
+  RIDE_TYPE : "சவாரி வகை"
 }
