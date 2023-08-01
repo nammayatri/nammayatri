@@ -88,3 +88,6 @@ yellow100 = "#FFFDF7"
 
 green100 :: Color
 green100 = "#F8FCF9"
+
+orange900 :: Color
+orange900 = "#FF8533"

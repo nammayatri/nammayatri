@@ -1702,7 +1702,7 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       newState = state{data{specialZoneQuoteList = updatedQuotes}}
-  continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id }}
+  continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
               else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state =
@@ -2054,7 +2054,7 @@ specialZoneFlow estimatedQuotes state = do
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
-    continue state { data {specialZoneQuoteList = quoteList, specialZoneSelectedQuote = Just defaultQuote.id}, props {currentStage = SettingPrice}}
+    continue state { data {specialZoneQuoteList = quoteList, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant}, props {currentStage = SettingPrice}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
@@ -2111,7 +2111,7 @@ normalRideFlow  (RideBookingRes response) state = do
           , isSearchLocation = NoView
           }
         , data
-          { driverInfoCardState = getDriverInfo (RideBookingRes response) state.props.isSpecialZone
+          { driverInfoCardState = getDriverInfo (fromMaybe "TAXI" state.data.specialZoneSelectedVariant )(RideBookingRes response) state.props.isSpecialZone
           }}
   exit $ RideConfirmed newState { props { isInApp = true } }
 
@@ -2125,7 +2125,7 @@ specialZoneRideFlow  (RideBookingRes response) state = do
           , isSearchLocation = NoView
           }
         , data
-          { driverInfoCardState = getDriverInfo (RideBookingRes response) state.props.isSpecialZone
+          { driverInfoCardState = getDriverInfo (fromMaybe "TAXI" state.data.specialZoneSelectedVariant) (RideBookingRes response) state.props.isSpecialZone
           }
         }
   exit $ RideConfirmed newState { props { isInApp = true } }

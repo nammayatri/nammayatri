@@ -273,6 +273,7 @@
       "ny_ic_user" : true,
       "ny_ic_vehicle_nav_on_map" : true,
       "ny_ic_vertical_line" : true,
+      "ny_ic_walk_mode_blue" : true,
       "ny_ic_wallet" : true,
       "ny_ic_wallet_filled" : true,
       "ny_ic_welcome_customer" : true,

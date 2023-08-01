@@ -74,6 +74,7 @@ initData = {
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
+    , specialZoneSelectedVariant : Nothing
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
