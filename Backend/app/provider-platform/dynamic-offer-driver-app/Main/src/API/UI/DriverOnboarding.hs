@@ -104,7 +104,7 @@ verifyDL :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverDLReq -> Fl
 verifyDL (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId)
 
 verifyRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
-verifyRC (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyRC False Nothing (personId, merchantId)
+verifyRC (personId, merchantId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId) req Nothing
 
 statusHandler :: (Id DP.Person, Id DM.Merchant) -> FlowHandler DriverOnboarding.StatusRes
 statusHandler (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId) (Just True)

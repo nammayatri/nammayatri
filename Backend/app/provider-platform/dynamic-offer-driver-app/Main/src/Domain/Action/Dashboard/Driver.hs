@@ -649,13 +649,29 @@ addVehicle merchantShortId reqDriverId req = do
 
   mbLinkedVehicle <- QVehicle.findById personId
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
-  vehicle <- buildVehicle merchantId personId req
+
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
+  Esq.runTransaction $ QPerson.updatePersonRec personId updDriver
+
+  void $ try @_ @SomeException (runVerifyRCFlow personId merchant) -- ignore if throws error
+  vehicle <- buildVehicle merchantId personId req
   Esq.runTransaction $ do
     QVehicle.create vehicle
-    QPerson.updatePersonRec personId updDriver
+
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
+  where
+    runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Flow ()
+    runVerifyRCFlow personId merchant = do
+      let rcReq =
+            DomainRC.DriverRCReq
+              { vehicleRegistrationCertNumber = req.registrationNo,
+                imageId = "",
+                operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
+                dateOfRegistration = Nothing,
+                multipleRC = Nothing
+              }
+      void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id) rcReq (Just $ castVehicleVariant req.variant)
 
 buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
 buildVehicle merchantId personId req = do
@@ -679,14 +695,15 @@ buildVehicle merchantId personId req = do
         createdAt = now,
         updatedAt = now
       }
-  where
-    castVehicleVariant = \case
-      Common.SUV -> DVeh.SUV
-      Common.HATCHBACK -> DVeh.HATCHBACK
-      Common.SEDAN -> DVeh.SEDAN
-      Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
-      Common.TAXI -> DVeh.TAXI
-      Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+
+castVehicleVariant :: Common.Variant -> DVeh.Variant
+castVehicleVariant = \case
+  Common.SUV -> DVeh.SUV
+  Common.HATCHBACK -> DVeh.HATCHBACK
+  Common.SEDAN -> DVeh.SEDAN
+  Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
+  Common.TAXI -> DVeh.TAXI
+  Common.TAXI_PLUS -> DVeh.TAXI_PLUS
 
 ---------------------------------------------------------------------
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
