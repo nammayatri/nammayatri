@@ -105,8 +105,8 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     , appConfig : DC.config
     }
 
-getDriverInfo :: RideBookingRes -> Boolean -> DriverInfoCard
-getDriverInfo (RideBookingRes resp) isSpecialZone =
+getDriverInfo :: String -> RideBookingRes -> Boolean -> DriverInfoCard
+getDriverInfo vehicleVariant (RideBookingRes resp) isSpecialZone =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
         otp : if isSpecialZone then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
@@ -140,7 +140,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : DC.config
-      , vehicleVariant : getMappedVehicleVariant rideList.vehicleVariant
+      , vehicleVariant : getMappedVehicleVariant $ if rideList.vehicleVariant == "" then vehicleVariant else rideList.vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

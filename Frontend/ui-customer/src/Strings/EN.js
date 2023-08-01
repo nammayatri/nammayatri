@@ -376,10 +376,13 @@ const englishStrings = {
   "PERMISSION_DENIED": "Permission Denied",
   "PERCENTAGE_OF_NOMINAL_FARE": "10% of base fare",
   "PAY_VIA_CASH_OR_UPI": "Pay via Cash / UPI",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi zone",
   "REQUEST_CALLBACK": "Request Callback",
   "CHOOSE_YOUR_RIDE": "Choose Your Ride",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi \nzone",
+  "BOARD_THE_FIRST": "Board the first ",
+  "TAXI" : "taxi" ,
+  "AC" : "AC",
+  "NON_AC" : "Non-AC",
+  "TAXI_FROM_ZONE" : "from Yatri Sathi Zone",
   "ECONOMICAL": "Economical",
   "COMFY": "Comfy",
   "NAVIGATE": "Navigate",
@@ -451,7 +454,7 @@ const englishStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS" : "You may see an updated final fare due to any of the below reasons:",
   "REASON_CHANGE_IN_ROUTE_A": "1.Change in Route: ",
   "REASON_CHANGE_IN_ROUTE_B": "Total fare may change due to change in route",
-  "NAVIGATE_TO_PICKUP" : "Navigate to pickup",
+  "GO_TO_ZONE" : "Go to Yatri Sathi Zone",
   "UPDATE_NOW" : "Update Now",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "Request received. We will call you back soon",
   "CONTACT_REMOVED_SUCCESSFULLY" : "Contact Removed Successfully",
@@ -524,5 +527,7 @@ const englishStrings = {
   "OTP_EXPIRED" : "Otp Expired",
   "OTP_EXPIRED_DESCRIPTION" : "Your ride OTP expired. Please book again to get a ride",
   "PLATFORM_GST" : "Taxes (GST)",
-  "MISC_WAITING_CHARGE" : "Misc. (including Waiting Charges)"
+  "MISC_WAITING_CHARGE" : "Misc. (including Waiting Charges)",
+  "AC_TAXI" : "AC Taxi",
+  "NON_AC_TAXI" : "Non AC Taxi"
 }

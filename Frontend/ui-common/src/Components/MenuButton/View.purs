@@ -20,31 +20,33 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Padding(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import Common.Types.App
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-    linearLayout
-        [ height config.height
-        , width config.width
-        , orientation HORIZONTAL
-        , padding config.padding
-        , gravity CENTER_VERTICAL
-        , cornerRadius config.cornerRadius
-        , stroke config.stroke
-        , onClick push  (const (OnClick config))
-        , clickable true
-        ][  if config.leftsidebutton then buttonLayout config else linearLayout[width $ V 0][],
+  linearLayout
+  [ height config.height
+  , width config.width
+  , orientation HORIZONTAL
+  , padding config.padding
+  , stroke config.layoutStroke
+  , background config.layoutBg
+  , cornerRadius config.cornerRadius
+  , onClick push  (const (OnClick config))
+  , gravity CENTER_VERTICAL
+  ][ if config.leftsidebutton then buttonLayout push config else linearLayout[width $ V 0][],
             linearLayout
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
+            , onClick push  (const (OnClick config))
             , orientation VERTICAL
             ][  titleView config
                 ,subTitleView config
               ]
-              , if not config.leftsidebutton then buttonLayout config else linearLayout[width $ V 0][]
+              , if not config.leftsidebutton then buttonLayout push config else linearLayout[width $ V 0][]
             ]
+
 titleView :: forall w . Config -> PrestoDOM (Effect Unit) w
 titleView config = 
   textView $
@@ -73,8 +75,8 @@ subTitleView config =
     , visibility if config.subTitleConfig.text /= "" then VISIBLE else GONE
     ] <> (FontStyle.getFontStyle config.subTitleConfig.selectedTextStyle LanguageStyle)
 
-buttonLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
-buttonLayout config =
+buttonLayout :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+buttonLayout push config =
   linearLayout
     [ height WRAP_CONTENT
     , width if config.leftsidebutton then WRAP_CONTENT  else MATCH_PARENT

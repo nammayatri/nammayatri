@@ -268,14 +268,14 @@ view push state =
                 , clickable true
                 ]
                 [ linearLayout
-                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver, ConfirmingLocation] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []
                 , linearLayout
                     [ width MATCH_PARENT
-                    , height MATCH_PARENT
+                    , height if state.props.currentStage == ConfirmingLocation && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , background Color.transparent
                     , padding (PaddingBottom if os == "IOS" then 20 else 35)
                     , gravity CENTER
@@ -2159,7 +2159,11 @@ nearByPickUpPointsView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding $ Padding 5 20 0 5
-    ](map (\item -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)) state.data.nearByPickUpPoints)
+    ](map (\item -> linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , margin $ MarginBottom 12
+                      ][MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)]) state.data.nearByPickUpPoints)
 
 confirmingLottieView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmingLottieView push state =
