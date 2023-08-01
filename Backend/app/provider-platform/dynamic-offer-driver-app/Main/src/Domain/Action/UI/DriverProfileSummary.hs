@@ -72,7 +72,8 @@ getDriverProfileSummary (driverId, _) = do
     let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
         farePramIds = mapMaybe (.fareParametersId) completedRides
     lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
-    missedEarnings <- Esq.runInReplica BQ.findFareForCancelledBookings
+    cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId (cast person.id)
+    missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
     driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
     customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
     let bonusEarnings = driverSelectedFare + customerExtraFee + Money (length farePramIds * 10)
