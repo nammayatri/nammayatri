@@ -173,12 +173,14 @@ findRidesByBookingId bookingIds = Esq.findAll $ do
     ride ^. RideBookingId `in_` valList (toKey <$> bookingIds)
   return ride
 
-findFareForCancelledBookings :: Transactionable m => m Money
-findFareForCancelledBookings =
+findFareForCancelledBookings :: Transactionable m => [Id Booking] -> m Money
+findFareForCancelledBookings bookingIds =
   mkSum
     <$> Esq.findAll do
       booking <- from $ table @BookingT
-      where_ $ booking ^. BookingStatus ==. val CANCELLED
+      where_ $
+        booking ^. BookingStatus ==. val CANCELLED
+          &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
       pure (sum_ $ booking ^. BookingEstimatedFare :: SqlExpr (Esq.Value (Maybe Money)))
   where
     mkSum [Just value] = value
