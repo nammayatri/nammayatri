@@ -91,6 +91,7 @@ data MerchantT f = MerchantT
     headCount :: B.C f (Maybe Int),
     status :: B.C f Domain.Status,
     city :: B.C f Context.City,
+    country :: B.C f Context.Country,
     verified :: B.C f Bool,
     enabled :: B.C f Bool,
     internalApiKey :: B.C f Text,
@@ -131,6 +132,8 @@ deriving stock instance Eq GeoRestriction
 
 deriving stock instance Ord Context.City
 
+deriving stock instance Ord Context.Country
+
 merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
 merchantTMod =
   B.tableModification
@@ -149,6 +152,7 @@ merchantTMod =
       geoHashPrecisionValue = B.fieldNamed "geo_hash_precision_value",
       status = B.fieldNamed "status",
       city = B.fieldNamed "city",
+      country = B.fieldNamed "country",
       verified = B.fieldNamed "verified",
       enabled = B.fieldNamed "enabled",
       internalApiKey = B.fieldNamed "internal_api_key",
