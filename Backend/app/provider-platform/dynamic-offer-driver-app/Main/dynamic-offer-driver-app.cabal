@@ -437,6 +437,7 @@ library
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
+      Storage.Tabular.DriverBlockReason
       Storage.Tabular.DriverInformation
       Storage.Tabular.DriverOnboarding.AadhaarVerification
       Storage.Tabular.DriverOnboarding.DriverRCAssociation
@@ -444,8 +445,13 @@ library
       Storage.Tabular.DriverQuote
       Storage.Tabular.DriverStats
       Storage.Tabular.Exophone
+      Storage.Tabular.Feedback.Feedback
+      Storage.Tabular.Feedback.FeedbackBadge
+      Storage.Tabular.Feedback.FeedbackForm
       Storage.Tabular.Merchant
       Storage.Tabular.Person
+      Storage.Tabular.SpecialLocation
+      Storage.Tabular.TagCategoryMapping
       Storage.Tabular.Vehicle
       Tools.AadhaarVerification
       Tools.Auth

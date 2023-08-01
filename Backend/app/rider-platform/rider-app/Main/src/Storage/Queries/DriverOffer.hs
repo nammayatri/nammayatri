@@ -34,11 +34,11 @@ findById :: (L.MonadFlow m, Log m) => Id DriverOffer -> m (Maybe DriverOffer)
 findById (Id driverOfferId) = do
   findOneWithKV [Se.Is BeamDO.id $ Se.Eq driverOfferId]
 
-findByBPPQuoteId :: (L.MonadFlow m, Log m) => Id BPPQuote -> m [DriverOffer]
-findByBPPQuoteId (Id bppQuoteId) = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
+findByBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> m [DriverOffer]
+findByBPPQuoteId bppQuoteId = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
 
-findByBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Id BPPQuote -> m [DriverOffer]
-findByBPPQuoteIdInReplica (Id bppQuoteId) = findAllWithKvInReplica [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
+findByBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Text -> m [DriverOffer]
+findByBPPQuoteIdInReplica bppQuoteId = findAllWithKvInReplica [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
 
 -- updateStatus :: Id Estimate -> DriverOfferStatus -> SqlDB ()
 -- updateStatus estimateId status = do
@@ -67,11 +67,12 @@ instance FromTType' BeamDO.DriverOffer DriverOffer where
           { id = Id id,
             estimateId = Id estimateId,
             merchantId = Id <$> merchantId,
+            driverId = driverId,
             driverName = driverName,
             durationToPickup = durationToPickup,
             distanceToPickup = distanceToPickup,
             validTill = validTill,
-            bppQuoteId = Id bppQuoteId,
+            bppQuoteId = bppQuoteId,
             rating = rating,
             status = status,
             updatedAt = updatedAt
@@ -84,10 +85,11 @@ instance ToTType' BeamDO.DriverOffer DriverOffer where
         BeamDO.estimateId = getId estimateId,
         BeamDO.merchantId = getId <$> merchantId,
         BeamDO.driverName = driverName,
+        BeamDO.driverId = driverId,
         BeamDO.durationToPickup = durationToPickup,
         BeamDO.distanceToPickup = distanceToPickup,
         BeamDO.validTill = validTill,
-        BeamDO.bppQuoteId = getId bppQuoteId,
+        BeamDO.bppQuoteId = bppQuoteId,
         BeamDO.rating = rating,
         BeamDO.status = status,
         BeamDO.updatedAt = updatedAt

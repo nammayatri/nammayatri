@@ -304,12 +304,6 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
-      Storage.Tabular.Booking
-      Storage.Tabular.DriverOffer
-      Storage.Tabular.FeedbackForm
-      Storage.Tabular.HotSpotConfig
-      Storage.Tabular.Quote
-      Storage.Tabular.SavedReqLocation
       Tools.Auth
       Tools.Call
       Tools.Error

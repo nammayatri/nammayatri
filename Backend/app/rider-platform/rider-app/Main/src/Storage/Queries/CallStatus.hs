@@ -80,7 +80,7 @@ findByCallSid callSid = do
 --       ]
 --     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
-updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m ()
+updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Se.Set BeamCS.conversationDuration conversationDuration,

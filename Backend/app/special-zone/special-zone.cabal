@@ -27,21 +27,11 @@ library
       Domain.Action.SpecialZone
       Domain.Types.SpecialZone
       Environment
-      Queries.SpecialLocation
-      Queries.TagCategoryMapping
       Storage.Queries.EntryExit
       Storage.Queries.SpecialZone
       Storage.Tabular.EntryExit
       Storage.Tabular.SpecialZone
-      Tabular.DriverBlockReason
-      Tabular.Feedback.Feedback
-      Tabular.Feedback.FeedbackBadge
-      Tabular.Feedback.FeedbackForm
-      Tabular.SpecialLocation
-      Tabular.TagCategoryMapping
       Tools.Auth
-      Types.SpecialLocation
-      Types.TagCategoryMapping
   other-modules:
       Paths_special_zone
   hs-source-dirs:

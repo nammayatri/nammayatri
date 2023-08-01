@@ -15,7 +15,7 @@
 module Beckn.Types.Core.Taxi.Common.Provider where
 
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (State, id, (.=))
+import EulerHS.Prelude hiding (State, id)
 
 newtype Provider = Provider
   { id :: Text

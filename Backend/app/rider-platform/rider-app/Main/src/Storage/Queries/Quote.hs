@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Quote where
 
@@ -132,7 +133,7 @@ findByIdInReplica quoteId = findOneWithKvInReplica [Se.Is BeamQ.id $ Se.Eq (getI
 --     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
 --   join <$> mapM buildFullQuote mbFullQuoteT
 
-findByBppIdAndBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> Id BPPQuote -> m (Maybe Quote)
+findByBppIdAndBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do
   quoteList <- findAllWithKV [Se.Is BeamQ.providerId $ Se.Eq bppId]
   dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
@@ -146,7 +147,7 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = do
       let doffer' = filter (\d -> getId (d.id) == fromJust doId) dOffer
        in res <> (quote <$ doffer')
 
-findByBppIdAndBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Text -> Id BPPQuote -> m (Maybe Quote)
+findByBppIdAndBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteIdInReplica bppId bppQuoteId = do
   quoteList <- findAllWithKvInReplica [Se.Is BeamQ.providerId $ Se.Eq bppId]
   dOffer <- QueryDO.findByBPPQuoteIdInReplica bppQuoteId
@@ -278,6 +279,7 @@ instance FromTType' BeamQ.Quote Quote where
             merchantId = Id merchantId,
             quoteDetails = quoteDetails,
             providerId = providerId,
+            itemId = itemId,
             providerUrl = pUrl,
             providerName = providerName,
             providerMobileNumber = providerMobileNumber,
@@ -315,6 +317,7 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.discount = realToFrac <$> discount,
             BeamQ.estimatedTotalFare = realToFrac estimatedTotalFare,
             BeamQ.providerId = providerId,
+            BeamQ.itemId = itemId,
             BeamQ.providerUrl = showBaseUrl providerUrl,
             BeamQ.providerName = providerName,
             BeamQ.providerMobileNumber = providerMobileNumber,
