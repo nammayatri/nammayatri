@@ -324,7 +324,12 @@ validateRCActivation driverId merchantId rc = do
           if nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff
             then deactivateFunc oldDriverId
             else throwError RCActiveOnOtherAccount
-        Nothing -> return () -- TODO: handle this case too
+        Nothing -> do
+          -- if driver didn't take any ride yet
+          person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
+          if nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff
+            then deactivateFunc oldDriverId
+            else throwError RCActiveOnOtherAccount
 
 checkIfVehicleAlreadyExists :: Id Person.Person -> Domain.VehicleRegistrationCertificate -> Flow ()
 checkIfVehicleAlreadyExists driverId rc = do
