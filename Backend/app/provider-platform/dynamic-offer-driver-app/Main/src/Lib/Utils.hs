@@ -38,7 +38,6 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
 import qualified EulerHS.Language as L
 import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn)
-import Kernel.Beam.Types (PsqlDbCfg (..), PsqlDbCfgR1 (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
@@ -690,7 +689,14 @@ deleteWithKV whereClause = do
 
 getMasterDBConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
 getMasterDBConfig = do
-  dbConf <- L.getOption PsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  case dbConf of
+    Just dbCnf' -> pure dbCnf'
+    Nothing -> L.throwException $ InternalError "DB Config not found"
+
+getLocDbConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
+getLocDbConfig = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCnf' -> pure dbCnf'
     Nothing -> L.throwException $ InternalError "DB Config not found"
@@ -703,11 +709,26 @@ getMasterBeamConfig = do
     Right conn' -> pure conn'
     Left _ -> L.throwException $ InternalError "DB Config not found"
 
+getLocationDbBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
+getLocationDbBeamConfig = do
+  dbConf <- getLocDbConfig
+  conn <- L.getOrInitSqlConn dbConf
+  case conn of
+    Right conn' -> pure conn'
+    Left _ -> L.throwException $ InternalError "DB Config not found"
+
 ----- replica db funcitons---------------
 
 getReplicaDbConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
 getReplicaDbConfig = do
-  dbConf <- L.getOption PsqlDbCfgR1
+  dbConf <- L.getOption KBT.PsqlDbCfgR1
+  case dbConf of
+    Just dbCnf' -> pure dbCnf'
+    Nothing -> L.throwException $ InternalError "DB Config not found"
+
+getReplicaLocationDbConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
+getReplicaLocationDbConfig = do
+  dbConf <- L.getOption KBT.PsqlDbCfgR1
   case dbConf of
     Just dbCnf' -> pure dbCnf'
     Nothing -> L.throwException $ InternalError "DB Config not found"
@@ -715,6 +736,14 @@ getReplicaDbConfig = do
 getReplicaBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
 getReplicaBeamConfig = do
   dbConf <- getReplicaDbConfig
+  conn <- L.getOrInitSqlConn dbConf
+  case conn of
+    Right conn' -> pure conn'
+    Left _ -> L.throwException $ InternalError "DB Config not found"
+
+getReplicaLocationDbBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
+getReplicaLocationDbBeamConfig = do
+  dbConf <- getReplicaLocationDbConfig
   conn <- L.getOrInitSqlConn dbConf
   case conn of
     Right conn' -> pure conn'
