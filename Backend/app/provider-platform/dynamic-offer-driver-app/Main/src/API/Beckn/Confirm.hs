@@ -66,7 +66,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
               driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
               --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
               -- driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-              driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
+              driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
               fork "on_confirm/on_update" $ do
                 handle (errHandler dConfirmRes transporter (Just driver)) $ do
                   onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes

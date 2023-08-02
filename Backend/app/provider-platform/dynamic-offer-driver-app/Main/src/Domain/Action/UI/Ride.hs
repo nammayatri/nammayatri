@@ -54,7 +54,6 @@ import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.SessionizerMetrics.Types.Event
-import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)

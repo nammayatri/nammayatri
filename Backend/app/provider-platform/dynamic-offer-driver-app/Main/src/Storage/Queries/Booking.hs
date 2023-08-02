@@ -194,3 +194,37 @@ instance FromTType' BeamB.Booking Booking where
                 updatedAt = updatedAt
               }
       else pure Nothing
+
+instance ToTType' BeamB.Booking Booking where
+  toTType' Booking {..} =
+    BeamB.BookingT
+      { BeamB.id = getId id,
+        BeamB.transactionId = transactionId,
+        BeamB.quoteId = quoteId,
+        BeamB.status = status,
+        BeamB.bookingType = bookingType,
+        BeamB.specialLocationTag = specialLocationTag,
+        BeamB.specialZoneOtpCode = specialZoneOtpCode,
+        BeamB.area = area,
+        BeamB.providerId = getId providerId,
+        BeamB.primaryExophone = primaryExophone,
+        BeamB.bapId = bapId,
+        BeamB.bapUri = showBaseUrl bapUri,
+        BeamB.startTime = startTime,
+        BeamB.riderId = getId <$> riderId,
+        BeamB.bapCity = bapCity,
+        BeamB.bapCountry = bapCountry,
+        BeamB.fromLocationId = getId fromLocation.id,
+        BeamB.toLocationId = getId toLocation.id,
+        BeamB.vehicleVariant = vehicleVariant,
+        BeamB.estimatedDistance = estimatedDistance,
+        BeamB.maxEstimatedDistance = maxEstimatedDistance,
+        BeamB.estimatedFare = estimatedFare,
+        BeamB.estimatedDuration = estimatedDuration,
+        BeamB.fareParametersId = getId fareParams.id,
+        BeamB.paymentMethodId = getId <$> paymentMethodId,
+        BeamB.paymentUrl = paymentUrl,
+        BeamB.riderName = riderName,
+        BeamB.createdAt = createdAt,
+        BeamB.updatedAt = updatedAt
+      }

@@ -74,5 +74,5 @@ instance ToTType' BeamR.Rating Rating where
         BeamR.updatedAt = updatedAt
       }
 
-findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Ride -> m Int
+findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
 findAllRatingUsersCountByPerson (Id driverId) = findAllWithKV [Se.Is BeamR.id $ Se.Eq driverId] <&> length

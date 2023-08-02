@@ -42,7 +42,7 @@ import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption as KE
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
@@ -140,7 +140,8 @@ getDriverMobileNumber (driverId, merchantId) rcNo = do
           }
   exotelResponse <- initiateCall merchantId callReq
   callStatus <- buildCallStatus callStatusId exotelResponse vehicleRC.id.getId
-  runTransaction $ QCallStatus.create callStatus
+  -- runTransaction $ QCallStatus.create callStatus
+  QCallStatus.create callStatus
   return $ CallRes callStatusId
   where
     buildCallStatus callStatusId exotelResponse rcId' = do
@@ -244,13 +245,13 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
             createdAt = now
           }
 
-getCallStatus :: EsqDBReplicaFlow m r => Id SCS.CallStatus -> m GetCallStatusRes
+getCallStatus :: MonadFlow m => Id SCS.CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
   -- runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
   QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
 
 -- | Get customer's mobile phone
-getCustomerPhone :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SRide.Ride -> m Text
+getCustomerPhone :: (EncFlow m r, MonadFlow m) => SRide.Ride -> m Text
 getCustomerPhone ride = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   riderId <-
@@ -262,7 +263,7 @@ getCustomerPhone ride = do
   return $ riderDetails.mobileCountryCode <> decMobNum
 
 -- | Get driver's mobile phone
-getDriverPhone :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SRide.Ride -> m Text
+getDriverPhone :: (EncFlow m r, MonadFlow m) => SRide.Ride -> m Text
 getDriverPhone ride = do
   -- driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -271,7 +272,7 @@ getDriverPhone ride = do
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")
 
 -- | Returns phones pair or throws an error
-getCustomerAndDriverPhones :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRide.Ride -> m (Text, Text)
+getCustomerAndDriverPhones :: (EncFlow m r, MonadFlow m) => Id SRide.Ride -> m (Text, Text)
 getCustomerAndDriverPhones rideId = do
   ride <-
     QRide.findById rideId

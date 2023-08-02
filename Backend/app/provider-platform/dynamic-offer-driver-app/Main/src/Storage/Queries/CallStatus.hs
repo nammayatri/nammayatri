@@ -51,11 +51,11 @@ findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 --       ]
 --     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
-updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m ()
+updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Set BeamCT.conversationDuration conversationDuration,
-      Set BeamCT.recordingUrl $ showBaseUrl <$> recordingUrl,
+      Set BeamCT.recordingUrl recordingUrl,
       Set BeamCT.status status
     ]
     [Is BeamCT.callId (Se.Eq callId)]

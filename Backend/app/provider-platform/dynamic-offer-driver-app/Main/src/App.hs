@@ -24,8 +24,8 @@ import Environment
 import EulerHS.Interpreters (runFlow)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Kernel.Beam.Connection.Flow (prepareConnection)
-import Kernel.Beam.Connection.Types (ConnectionConfig (..))
+import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
+import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Verification.Interface.Idfy
@@ -71,11 +71,13 @@ runDynamicOfferDriverApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
-      ( prepareConnection
-          ConnectionConfig
+      ( prepareConnectionDriver
+          ConnectionConfigDriver
             { esqDBCfg = appCfg.esqDBCfg,
               esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-              hedisClusterCfg = appCfg.hedisClusterCfg
+              hedisClusterCfg = appCfg.hedisClusterCfg,
+              locationDbCfg = appCfg.esqLocationDBCfg,
+              locationDbReplicaCfg = appCfg.esqLocationDBRepCfg
             }
           appCfg.tables
       )

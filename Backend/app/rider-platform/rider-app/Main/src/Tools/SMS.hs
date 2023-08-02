@@ -33,7 +33,6 @@ import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -84,8 +83,10 @@ sendBookingOTPMessage merchantId personId bookingId = do
   merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   if merchantConfig.enableDashboardSms
     then do
-      customer <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      booking <- Esq.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
+      -- customer <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      customer <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      -- booking <- Esq.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
+      booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
       smsCfg <- asks (.smsCfg)
       mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       let countryCode = fromMaybe "+91" customer.mobileCountryCode

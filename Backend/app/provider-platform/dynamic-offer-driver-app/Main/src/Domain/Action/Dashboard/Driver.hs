@@ -336,11 +336,11 @@ blockDriverWithReason merchantShortId reqDriverId req = do
   case req.blockTimeInHours of
     Just hrs -> do
       let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
-      Esq.runNoTransaction $
-        createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
-          UnblockDriverRequestJobData
-            { driverId = driverId
-            }
+      -- Esq.runNoTransaction $
+      createJobIn' @_ @'UnblockDriver unblockDriverJobTs maxShards $
+        UnblockDriverRequestJobData
+          { driverId = driverId
+          }
     Nothing -> return ()
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
@@ -609,7 +609,7 @@ unlinkVehicle merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC personId
-  _ <- Vehicle.deleteById personId
+  _ <- QVehicle.deleteById personId
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
@@ -815,22 +815,19 @@ endRCAssociation merchantShortId reqDriverId = do
 setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
 setRCStatus merchantShortId reqDriverId Common.RCStatusReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
-
   let personId = cast @Common.Driver @DP.Person reqDriverId
-
-  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-
   DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {..})
 
 deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
 deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
-
   let personId = cast @Common.Driver @DP.Person reqDriverId
-
-  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 

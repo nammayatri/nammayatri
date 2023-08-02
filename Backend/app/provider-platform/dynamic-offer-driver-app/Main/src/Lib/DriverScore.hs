@@ -11,6 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use maybe" #-}
 
 module Lib.DriverScore
   ( driverScoreEventHandler,
@@ -25,7 +28,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (Forkable (fork), Money (Money), fromMaybeM, getCurrentTime, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (Forkable (fork), Money (Money), fromMaybeM, getCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
@@ -84,27 +87,33 @@ eventPayloadHandler DST.OnDriverCancellation {..} = do
       | a <= 0 = 1
       | otherwise = a
 eventPayloadHandler DST.OnRideCompletion {..} = do
-  mbDriverStats <- Esq.runInReplica $ DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
+  -- mbDriverStats <- Esq.runInReplica $ DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
+  mbDriverStats <- DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
   whenJust mbDriverStats $ \driverStats -> do
     (incrementTotaEarningsBy, incrementBonusEarningsBy, incrementLateNightTripsCountBy, overallPickupCharges) <-
       if isNotBackFilled driverStats
         then do
-          allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+          -- allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+          allRides <- RQ.findAllRidesByDriverId driverId
           let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
               farePramIds = mapMaybe (.fareParametersId) completedRides
               totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
-          driverSelectedFareEarnings <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
-          customerExtraFeeEarnings <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
+          -- driverSelectedFareEarnings <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
+          driverSelectedFareEarnings <- FPQ.findDriverSelectedFareEarnings farePramIds
+          -- customerExtraFeeEarnings <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
+          customerExtraFeeEarnings <- FPQ.findCustomerExtraFees farePramIds
           let incrementBonusEarningsBy = driverSelectedFareEarnings + customerExtraFeeEarnings
-          incrementLateNightTripsCountBy <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
+          -- incrementLateNightTripsCountBy <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
+          incrementLateNightTripsCountBy <- FPQ.findAllLateNightRides farePramIds
           pure (totalEarnings, incrementBonusEarningsBy, incrementLateNightTripsCountBy, Money (length farePramIds * 10))
         else do
-          mbBooking <- Esq.runInReplica $ BQ.findById ride.bookingId
-          let incrementBonusEarningsBy = fromMaybe 0 $ (\booking -> Just $ fromMaybe 0 booking.fareParams.driverSelectedFare + fromMaybe 0 booking.fareParams.customerExtraFee) =<< mbBooking
+          -- mbBooking <- Esq.runInReplica $ BQ.findById ride.bookingId
+          mbBooking <- BQ.findById ride.bookingId
+          let incrementBonusEarningsBy = fromMaybe 0 $ (\booking -> Just $ fromMaybe 0 (getMoney <$> booking.fareParams.driverSelectedFare) + fromMaybe 0 (getMoney <$> booking.fareParams.customerExtraFee)) =<< mbBooking
           incrementLateNightTripsCountBy <- isLateNightRide ride
-          pure (fromMaybe 0 ride.fare, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
-    Esq.runNoTransaction $ do
-      DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotaEarningsBy (incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
+          pure (fromMaybe (Money 0) ride.fare, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
+    -- Esq.runNoTransaction $ do
+    DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotaEarningsBy (Money incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
   where
     isNotBackFilled :: DS.DriverStats -> Bool
     isNotBackFilled driverStats = driverStats.totalEarnings == 0 && driverStats.bonusEarned == 0 && driverStats.lateNightTrips == 0 && driverStats.earningsMissed == 0
@@ -113,7 +122,8 @@ eventPayloadHandler DST.OnRideCompletion {..} = do
     isLateNightRide rd = do
       case rd.fareParametersId of
         Just fareParamId -> do
-          mbFareParam <- Esq.runInReplica $ FPQ.findById fareParamId
+          -- mbFareParam <- Esq.runInReplica $ FPQ.findById fareParamId
+          mbFareParam <- FPQ.findById fareParamId
           pure . maybe 0 (const 1) $ (.nightShiftCharge) =<< mbFareParam
         Nothing -> pure 0
 
@@ -126,13 +136,14 @@ createDriverStat driverId = do
       farePramIds = mapMaybe (.fareParametersId) completedRides
   -- cancelledRidesCount <- Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
   -- lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
-  cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId driverId
+  -- cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId driverId
+  cancelledBookingIds <- RQ.findCancelledBookingId driverId
   -- missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
   -- driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
   -- customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
   cancelledRidesCount <- BCRQ.findAllCancelledByDriverId driverId
   lateNightTripsCount <- FPQ.findAllLateNightRides farePramIds
-  missedEarnings <- Q.findFareForCancelledBookings
+  missedEarnings <- BQ.findFareForCancelledBookings cancelledBookingIds
   driverSelectedFare <- FPQ.findDriverSelectedFareEarnings farePramIds
   customerExtraFee <- FPQ.findCustomerExtraFees farePramIds
   let driverStat =
@@ -141,7 +152,7 @@ createDriverStat driverId = do
             idleSince = now,
             totalRides = length completedRides,
             totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides,
-            bonusEarned = driverSelectedFare + customerExtraFee + Money (length farePramIds * 10),
+            bonusEarned = Money (driverSelectedFare + customerExtraFee + length farePramIds * 10),
             lateNightTrips = lateNightTripsCount,
             earningsMissed = missedEarnings,
             totalDistance = highPrecMetersToMeters . sum $ map (.traveledDistance) allRides,
@@ -172,22 +183,27 @@ getDriverStats (Just driverStats) driverId rideFare = do
   updatedTotalRideCount <- getTotalRideCount
   cancelledCount <-
     case driverStats.ridesCancelled of
-      Nothing -> Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
+      -- Nothing -> Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
+      Nothing -> BCRQ.findAllCancelledByDriverId driverId
       Just cancelledCount -> pure $ cancelledCount + 1
   earningMissed <-
     case driverStats.earningsMissed of
       0 -> do
-        cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId driverId
-        Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
+        -- cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId driverId
+        cancelledBookingIds <- RQ.findCancelledBookingId driverId
+        -- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
+        BQ.findFareForCancelledBookings cancelledBookingIds
       _ -> pure $ driverStats.earningsMissed + fromMaybe 0 rideFare
-  Esq.runNoTransaction $ DSQ.setDriverStats (cast driverId) updatedTotalRideCount cancelledCount earningMissed
+  -- Esq.runNoTransaction $ DSQ.setDriverStats (cast driverId) updatedTotalRideCount cancelledCount earningMissed
+  DSQ.setDriverStats (cast driverId) updatedTotalRideCount cancelledCount earningMissed
   pure $ driverStats {DS.ridesCancelled = Just cancelledCount, DS.earningsMissed = earningMissed}
   where
     getTotalRideCount = do
       prevTotal <-
         maybe
           ( do
-              allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+              -- allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+              allRides <- RQ.findAllRidesByDriverId driverId
               pure $ length allRides
           )
           (\_ -> pure 1)

@@ -65,6 +65,7 @@ import Lib.Utils
     findOneWithKvInReplica,
     getMasterBeamConfig,
     updateOneWithKV,
+    updateWithKV,
   )
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
@@ -984,13 +985,24 @@ updateAlternateMobileNumberAndCode person = do
   updateOneWithKV
     [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
       Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
-      Se.Set BeamP.alternateMobileNumberHash person.alternateMobileNumberHash,
+      Se.Set BeamP.alternateMobileNumberHash (person.alternateMobileNumber <&> (.hash)),
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
 findAllPersonWithDriverInfos :: (L.MonadFlow m, Log m) => [DriverInformation] -> Id Merchant -> m [Person]
 findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In (getId . DriverInfo.driverId <$> dInfos), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
+
+-- updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
+-- updateMediaId driverId faceImageId =
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [PersonFaceImageId =. val (toKey <$> faceImageId)]
+--     where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)
+
+updateMediaId :: (MonadFlow m) => Id Person -> Maybe (Id MediaFile) -> m ()
+updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
 
 instance FromTType' BeamP.Person Person where
   fromTType' :: (MonadThrow m, L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
@@ -1028,6 +1040,7 @@ instance FromTType' BeamP.Person Person where
             bundleVersion = bundleVersion',
             clientVersion = clientVersion',
             unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+            faceImageId = Id <$> faceImageId,
             alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
           }
 
@@ -1064,13 +1077,6 @@ instance ToTType' BeamP.Person Person where
         BeamP.clientVersion = versionToText <$> clientVersion,
         BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
         BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+        BeamP.faceImageId = getId <$> faceImageId,
         BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
       }
-
-updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
-updateMediaId driverId faceImageId =
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [PersonFaceImageId =. val (toKey <$> faceImageId)]
-    where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)

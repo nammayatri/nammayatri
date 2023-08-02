@@ -63,7 +63,7 @@ handler merchant sReq estimate = do
   let merchantId = merchant.id
   now <- getCurrentTime
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-  Esq.runNoTransaction $ QDQ.setInactiveAllDQByEstId sReq.estimateId now
+  QDQ.setInactiveAllDQByEstId sReq.estimateId now
   farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
 
   searchTry <- createNewSearchTry farePolicy searchReq

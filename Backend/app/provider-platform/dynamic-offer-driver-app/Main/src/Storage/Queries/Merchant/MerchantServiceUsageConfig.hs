@@ -98,6 +98,7 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
             smsProvidersPriorityList = smsProvidersPriorityList,
             whatsappProvidersPriorityList = whatsappProvidersPriorityList,
             verificationService = verificationService,
+            faceVerificationService = faceVerificationService,
             aadhaarVerificationService = aadhaarVerificationService,
             updatedAt = updatedAt,
             createdAt = createdAt
@@ -121,6 +122,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
         BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
         BeamMSUC.verificationService = verificationService,
+        BeamMSUC.faceVerificationService = faceVerificationService,
         BeamMSUC.aadhaarVerificationService = aadhaarVerificationService,
         BeamMSUC.updatedAt = updatedAt,
         BeamMSUC.createdAt = createdAt

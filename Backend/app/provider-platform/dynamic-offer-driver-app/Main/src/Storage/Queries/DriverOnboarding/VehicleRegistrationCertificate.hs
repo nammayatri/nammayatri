@@ -21,14 +21,13 @@ import Domain.Types.Vehicle as Vehicle
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
-import Kernel.Utils.IOLogging (LoggerEnv)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateOneWithKV)
+-- import Kernel.Types.Logging (Log)
+-- import Kernel.Utils.IOLogging (LoggerEnv)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
-import Storage.Tabular.Person ()
 
 -- create :: VehicleRegistrationCertificate -> SqlDB ()
 -- create = Esq.create
@@ -100,9 +99,13 @@ findById (Id vrcID) = findOneWithKV [Se.Is BeamVRC.id $ Se.Eq vrcID]
 --   where
 --     headMaybe [] = Nothing
 
-findLastVehicleRC :: (L.MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRC :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumberHash = do
   findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
+
+findLastVehicleRCInReplica :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCInReplica certNumberHash = do
+  findAllWithOptionsKvInReplica [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
 -- findByRCAndExpiry ::
 --   Transactionable m =>
@@ -117,20 +120,53 @@ findLastVehicleRC certNumberHash = do
 --         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
 --     return rc
 
-updateVehicleVariant :: Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> SqlDB ()
-updateVehicleVariant id variant = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ VehicleRegistrationCertificateVehicleVariant =. val variant
-      ]
-    where_ $
-      tbl ^. VehicleRegistrationCertificateId ==. val (id.getId)
+-- updateVehicleVariant :: Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> SqlDB ()
+-- updateVehicleVariant id variant = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ VehicleRegistrationCertificateVehicleVariant =. val variant
+--       ]
+--     where_ $
+--       tbl ^. VehicleRegistrationCertificateId ==. val (id.getId)
+
+updateVehicleVariant :: (MonadFlow m) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> m ()
+updateVehicleVariant (Id vehicleRegistrationCertificateId) variant = do
+  updateOneWithKV
+    [Se.Set BeamVRC.vehicleVariant $ variant]
+    [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 
 findByRCAndExpiry :: (L.MonadFlow m, Log m) => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
 findByRCAndExpiry certNumber expiry = do
   let certNumberHash = certNumber & (.hash)
   findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fitnessExpiry $ Se.Eq expiry]]
+
+-- findAllById :: Transactionable m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+-- findAllById rcIds =
+--   findAll $ do
+--     rc <- from $ table @VehicleRegistrationCertificateT
+--     where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
+--     return rc
+
+findAllById :: (L.MonadFlow m, Log m) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
+
+-- findLastVehicleRCWrapper ::
+--   ( Transactionable m,
+--     EncFlow m r,
+--     HasField "esqDBReplicaEnv" r EsqDBEnv,
+--     HasField "loggerEnv" r LoggerEnv
+--   ) =>
+--   Text ->
+--   m (Maybe VehicleRegistrationCertificate)
+-- findLastVehicleRCWrapper certNumber = do
+--   certNumberHash <- getDbHash certNumber
+--   Esq.runInReplica $ findLastVehicleRC certNumberHash
+
+findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCWrapper certNumber = do
+  certNumberHash <- getDbHash certNumber
+  findLastVehicleRCInReplica certNumberHash
 
 instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCertificate where
   fromTType' BeamVRC.VehicleRegistrationCertificateT {..} = do
@@ -180,25 +216,3 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.createdAt = createdAt,
         BeamVRC.updatedAt = updatedAt
       }
-
--- findAllById :: Transactionable m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
--- findAllById rcIds =
---   findAll $ do
---     rc <- from $ table @VehicleRegistrationCertificateT
---     where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
---     return rc
-
-findAllById :: (L.MonadFlow m, Log m) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
-findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
-
-findLastVehicleRCWrapper ::
-  ( Transactionable m,
-    EncFlow m r,
-    HasField "esqDBReplicaEnv" r EsqDBEnv,
-    HasField "loggerEnv" r LoggerEnv
-  ) =>
-  Text ->
-  m (Maybe VehicleRegistrationCertificate)
-findLastVehicleRCWrapper certNumber = do
-  certNumberHash <- getDbHash certNumber
-  Esq.runInReplica $ findLastVehicleRC certNumberHash

@@ -316,8 +316,10 @@ mkMultipleRideData rideId Common.RideSyncRes {..} =
 currentActiveRide :: ShortId DM.Merchant -> Text -> Flow (Id Common.Ride)
 currentActiveRide _ vehicleNumber = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (RCNotFound vehicleNumber)
-  rcActiveAssociation <- runInReplica $ DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
-  activeRide <- runInReplica $ QRide.getActiveByDriverId rcActiveAssociation.driverId >>= fromMaybeM NoActiveRidePresent
+  -- rcActiveAssociation <- runInReplica $ DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
+  rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
+  -- activeRide <- runInReplica $ QRide.getActiveByDriverId rcActiveAssociation.driverId >>= fromMaybeM NoActiveRidePresent
+  activeRide <- QRide.getActiveByDriverId rcActiveAssociation.driverId >>= fromMaybeM NoActiveRidePresent
   let rideId = cast @DRide.Ride @Common.Ride activeRide.id
   pure rideId
 

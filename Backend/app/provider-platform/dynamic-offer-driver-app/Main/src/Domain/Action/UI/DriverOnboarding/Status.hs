@@ -35,7 +35,6 @@ import qualified Domain.Types.Person as SP
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Error
@@ -153,7 +152,7 @@ enableDriver _ Nothing = return ()
 enableDriver personId (Just dl) = do
   DIQuery.verifyAndEnableDriver personId
   case dl.driverName of
-    Just name -> DB.runTransaction $ Person.updateName personId name
+    Just name -> Person.updateName personId name
     Nothing -> return ()
 
 activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Flow ()

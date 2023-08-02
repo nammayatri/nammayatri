@@ -21,7 +21,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
 
@@ -36,6 +36,9 @@ findAllIn mfList = findAllWithKV [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
 
 findAllInInReplica :: (L.MonadFlow m, Log m) => [Id MediaFile] -> m [MediaFile]
 findAllInInReplica mfList = findAllWithKvInReplica [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
+
+deleteById :: (L.MonadFlow m, Log m) => Id MediaFile -> m ()
+deleteById (Id mediaFileId) = deleteWithKV [Se.Is BeamMF.id (Se.Eq mediaFileId)]
 
 instance FromTType' BeamMF.MediaFile MediaFile where
   fromTType' BeamMF.MediaFileT {..} = do
@@ -56,9 +59,3 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.url = url,
         BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
       }
-
-deleteById :: Id MediaFile -> SqlDB ()
-deleteById = Esq.deleteByKey @MediaFileT
-
-deleteById :: Id MediaFile -> SqlDB ()
-deleteById = Esq.deleteByKey @MediaFileT

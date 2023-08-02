@@ -58,7 +58,6 @@ module Domain.Action.UI.Driver
 where
 
 import AWS.S3 as S3
-import qualified Dashboard.Common.Message as M
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
 import Data.OpenApi (ToSchema)
@@ -348,7 +347,7 @@ data DriverStatsRes = DriverStatsRes
 
 data DriverPhotoUploadReq = DriverPhotoUploadReq
   { image :: FilePath,
-    fileType :: M.FileType,
+    fileType :: Common.FileType,
     reqContentType :: Text
   }
   deriving stock (Eq, Show, Generic)
@@ -584,7 +583,8 @@ buildDriverEntityRes (person, driverInfo) = do
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   mediaUrl <- forM person.faceImageId $ \mediaId -> do
-    mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+    -- mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+    mediaEntry <- MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
   return $
     DriverEntityRes
@@ -1100,7 +1100,8 @@ driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId dri
 driverPhotoUpload :: (Id SP.Person, Id DM.Merchant) -> DriverPhotoUploadReq -> Flow APISuccess
 driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
   checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
-  person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
+  -- person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
   encImage <- L.runIO $ base64Encode <$> BS.readFile image
   imageExtension <- validateContentType
   let req = IF.FaceValidationReq {file = encImage}
@@ -1117,9 +1118,9 @@ driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
     Right _ -> do
       case person.faceImageId of
         Just mediaFileId -> do
-          Esq.runTransaction $ do
-            QPerson.updateMediaId driverId Nothing
-            MFQuery.deleteById mediaFileId
+          -- Esq.runTransaction $ do
+          QPerson.updateMediaId driverId Nothing
+          MFQuery.deleteById mediaFileId
         Nothing -> return ()
       createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
@@ -1152,9 +1153,9 @@ createFilePath driverId fileType imageExtension = do
 createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Flow APISuccess
 createMediaEntry driverId Common.AddLinkAsMedia {..} = do
   fileEntity <- mkFile url
-  Esq.runTransaction $ do
-    MFQuery.create fileEntity
-    QPerson.updateMediaId driverId (Just fileEntity.id)
+  -- Esq.runTransaction $ do
+  MFQuery.create fileEntity
+  QPerson.updateMediaId driverId (Just fileEntity.id)
   return Success
   where
     mkFile fileUrl = do

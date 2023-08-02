@@ -106,7 +106,7 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
-  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -128,7 +128,7 @@ callOnConfirm transporter contextFromConfirm content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
-  void $ withShortRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]

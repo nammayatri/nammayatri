@@ -62,28 +62,40 @@ data DriverProfleSummaryRes = DriverProfleSummaryRes
 
 getDriverProfileSummary :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverProfleSummaryRes
 getDriverProfileSummary (driverId, _) = do
-  person <- Esq.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  vehicleMB <- Esq.runInReplica $ QVehicle.findById person.id
+  -- person <- Esq.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- vehicleMB <- Esq.runInReplica $ QVehicle.findById person.id
+  vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
-  driverStats_ <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  -- driverStats_ <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  driverStats_ <- QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   when (driverStats_.totalEarnings == 0 && driverStats_.bonusEarned == 0 && driverStats_.lateNightTrips == 0 && driverStats_.earningsMissed == 0) do
-    allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+    -- allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+    allRides <- RQ.findAllRidesByDriverId driverId
     let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
         farePramIds = mapMaybe (.fareParametersId) completedRides
-    lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
-    cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId (cast person.id)
-    missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
-    driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
-    customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
+    -- lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
+    lateNightTripsCount <- FPQ.findAllLateNightRides farePramIds
+    -- cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId (cast person.id)
+    cancelledBookingIds <- RQ.findCancelledBookingId (cast person.id)
+    -- missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
+    missedEarnings <- BQ.findFareForCancelledBookings cancelledBookingIds
+    -- driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
+    driverSelectedFare <- FPQ.findDriverSelectedFareEarnings farePramIds
+    -- customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
+    customerExtraFee <- FPQ.findCustomerExtraFees farePramIds
     let bonusEarnings = Money (driverSelectedFare + customerExtraFee + length farePramIds * 10)
         totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
-    Esq.runNoTransaction $ do
-      incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
-      setMissedEarnings (cast person.id) missedEarnings
-  driverStats <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  feedbackBadgeList <- Esq.runInReplica $ QFB.findAllFeedbackBadgeForDriver person.id
-  totalUsersRated <- Esq.runInReplica $ QRating.findAllRatingUsersCountByPerson driverId
+    -- Esq.runNoTransaction $ do
+    incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
+    setMissedEarnings (cast person.id) missedEarnings
+  -- driverStats <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  driverStats <- QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  -- feedbackBadgeList <- Esq.runInReplica $ QFB.findAllFeedbackBadgeForDriver person.id
+  feedbackBadgeList <- QFB.findAllFeedbackBadgeForDriver person.id
+  -- totalUsersRated <- Esq.runInReplica $ QRating.findAllRatingUsersCountByPerson driverId
+  totalUsersRated <- QRating.findAllRatingUsersCountByPerson driverId
 
   let driverSummary =
         DriverInfo.DriverSummary
