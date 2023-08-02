@@ -9,3 +9,9 @@ export const getKeyInSharedPrefKeysConfigEff = function (key) {
 export const getValueToLocalNativeStoreConfig = function (key) {
   return JBridge.getFromSharedPrefs(key);
 }
+
+export const setKeyInSharedPrefKeysImpl = function (key) {
+  return function (value) {
+    window.JBridge.setInSharedPrefs(key, value);
+  };
+};
