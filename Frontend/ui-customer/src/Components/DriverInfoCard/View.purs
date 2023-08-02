@@ -39,7 +39,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -53,10 +53,16 @@ view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( 
 view push state =
   linearLayout
   [ height WRAP_CONTENT
-  , width MATCH_PARENT
+  , width $ V (screenWidth unit)
   , background Color.transparent
   , orientation VERTICAL
-  ][  mapOptionsView push state
+  ][ linearLayout[
+       height WRAP_CONTENT
+      , width MATCH_PARENT 
+      , gravity RIGHT
+      , padding $ PaddingHorizontal 16 16
+      ][supportButton push state]  
+    , mapOptionsView push state
     , messageNotificationView push state
     , if state.data.isSpecialZone then driverInfoViewSpecialZone push state else driverInfoView push state
     ]
@@ -115,7 +121,7 @@ titleAndETA push state =
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (spy "estimatedTimeABCD" state.props.estimatedTime == "--"))) then GONE else VISIBLE
-  ][ if state.props.currentStage == RideAccepted then specialZoneHeader state.data.vehicleVariant
+  ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
       else 
       textView $ 
       [ width MATCH_PARENT
@@ -299,10 +305,8 @@ mapOptionsView push state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
-      , gravity RIGHT
       , margin $ MarginVertical 5 5
-      ][  supportButton push state
-        , if state.data.isSpecialZone && state.props.currentStage == RideAccepted then navigateView push state else textView[]
+      ][ if state.data.isSpecialZone && state.props.currentStage == RideAccepted then navigateView push state else textView[]
         , if state.data.isSpecialZone && state.props.currentStage == RideAccepted then dummyView push else locationTrackButton push state
       ]
     ]
@@ -314,7 +318,6 @@ supportButton push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , gravity CENTER
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
@@ -1051,7 +1054,7 @@ headerTextView push state =
       , padding $ PaddingBottom 16
       , ellipsize true
       ] <> FontStyle.body8 TypoGraphy
-      else specialZoneHeader state.data.vehicleVariant
+      else specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
     ,  separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted)
     , if state.props.currentStage == RideStarted then  contactView push state else linearLayout[][]
   ]
