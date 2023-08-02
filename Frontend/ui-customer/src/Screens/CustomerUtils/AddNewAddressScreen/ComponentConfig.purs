@@ -44,7 +44,7 @@ primaryButtonConfigConfirmLoc state = let
     , background = Color.black900
     , margin = (Margin 0 22 0 16)
     , id = "AddNewaddressConfirmLocationButton"
-    , isClickable = state.props.isServiceable
+    -- , isClickable = state.props.isServiceable
     }
   in primaryButtonConfig'
 
