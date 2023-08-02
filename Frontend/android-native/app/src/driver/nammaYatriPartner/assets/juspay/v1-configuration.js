@@ -19,6 +19,7 @@ window.getMerchantConfig = function () {
     "showCorporateAddress" : true,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
+    "clientName" : "Namma Yatri",
     "languageList" : [
       {"name":"English","value":"EN_US", "subtitle": ""}, 
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},

@@ -303,7 +303,7 @@ calendarView push state =
           ][  textView
               $ [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , text $ "View Payment History"
+                , text $ getString VIEW_PAYMENT_HISTORY
                 , color Color.blue900
                 , margin $ MarginRight 5
                 ]

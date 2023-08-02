@@ -19,28 +19,28 @@ import Common.Types.App
 
 import Common.Types.App (LazyCheck(..))
 import Components.RideActionModal.Controller (Action(..), Config)
+import Components.SeparatorView.View as SeparatorView
 import Data.Maybe as Maybe
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth)
+import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown, getSpecialZoneConfig,getRequiredTag,clearTimer,getCurrentUTC, getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (countDown, getSpecialZoneConfig, getRequiredTag, clearTimer, getCurrentUTC, getCommonAssetStoreLink, getAssetStoreLink)
+import JBridge (getVersionCode, waitingCountdownTimer, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
 import Prelude ((<>))
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, fontSize, weight)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Storage (KeyStore(..), getValueToLocalStore,setValueToLocalStore)
-import Styles.Colors as Color 
-import Engineering.Helpers.Commons (screenWidth)
-import Screens.Types (HomeScreenStage(..),TimerStatus(..))
-import JBridge (getVersionCode,waitingCountdownTimer,toast)
-import MerchantConfig.Utils(getMerchant, getValueFromConfig, Merchant(..))
-import Components.SeparatorView.View as SeparatorView
+import Screens.Types (HomeScreenStage(..), TimerStatus(..))
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Styles.Colors as Color
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -246,7 +246,7 @@ rideActionDataView push config =
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width MATCH_PARENT
             , orientation VERTICAL
             ][ rideInfoView push config
             , if config.startRideActive then sourceAndDestinationView push config else destinationView config push
@@ -486,14 +486,13 @@ sourceDestinationImageView  config =
     ][ imageView
         [ height $ V 14
         , width $ V 14
-        , margin $ MarginTop 2
+        , margin $ MarginTop 4
         , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
         ]
       , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 14
         , width $ V 14
-        , margin $ MarginTop 4
         , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"        
         ]
       ]
@@ -627,7 +626,7 @@ separatorConfig :: SeparatorView.Config
 separatorConfig = 
   {
     orientation : VERTICAL
-  , count : 4
+  , count : 6
   , height : V 4
   , width : V 2
   , layoutWidth : V 14

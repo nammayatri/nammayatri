@@ -14,61 +14,61 @@
 -}
 module Screens.DriverProfileScreen.Controller where
 
+import Common.Types.App (CheckBoxOptions)
+import Common.Types.App (LazyCheck(..))
 import Components.BottomNavBar.Controller as BottomNavBar
+import Components.CheckListView as CheckList
+import Components.GenericHeader.Controller as GenericHeaderController
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal.Controller as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryButton as PrimaryButtonController
+import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Data.Array ((!!), union, drop, filter, elem, length)
+import Data.Array (filter, foldl, any)
+import Data.Int (fromString)
+import Data.Lens ((^.))
+import Data.Lens.Getter ((^.))
 import Data.Maybe (fromMaybe, Maybe(..), isJust)
+import Data.String as DS
+import Data.String.CodeUnits (charAt)
+import Debug (spy)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.LogEvent (logEvent)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC)
 import Helpers.Utils (launchAppSettings)
 import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer)
+import JBridge (hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=))
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
-import PrestoDOM.Utils (updateWithCmdAndExit)
-import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Prelude ((>), (-), (+), (<>), (<=), (||), not)
+import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=))
+import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM.Types.Core (class Loggable, toPropValue)
+import PrestoDOM.Utils (updateWithCmdAndExit)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
-import Services.API as SA
-import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..), EditRc(..))
-import Services.Backend (dummyVehicleObject)
-import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
-import Engineering.Helpers.Commons (getNewIDWithTag)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..), MenuOptions(..))
-import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..))
-import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
-import Services.Backend (dummyVehicleObject)
-import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
-import Engineering.Helpers.Commons (getNewIDWithTag)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..), MenuOptions(..))
 import Screens.DriverProfileScreen.Transformer (getAnalyticsData)
-import Components.GenericHeader.Controller as GenericHeaderController
-import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Components.PrimaryButton as PrimaryButton
-import Components.PrimaryEditText as PrimaryEditText
-import Components.InAppKeyboardModal as InAppKeyboardModal
-import JBridge (hideKeyboardOnNavigation)
-import Prelude ((>), (-), (+), (<>), (<=), (||), not)
-import Data.String as DS
-import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC)
-import Data.String.CodeUnits (charAt)
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..))
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..), EditRc(..))
 import Screens.Types as ST
-import Components.CheckListView as CheckList
-import Common.Types.App (CheckBoxOptions)
-import Data.Int (fromString)
-import Data.Array ((!!),union, drop, filter, elem, length)
-import Data.Lens.Getter ((^.))
+import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
+import Services.API as SA
 import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
-import Components.PrimaryButton as PrimaryButtonController
+import Services.Backend (dummyVehicleObject)
+import Services.Backend (dummyVehicleObject)
 import Services.Config (getSupportNumber)
-import Engineering.Helpers.LogEvent (logEvent)
-import Effect.Unsafe (unsafePerformEffect)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Data.Lens((^.))
-import Services.Accessor (_languagesSpoken)
-import Data.Array (filter,foldl, any)
+import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
+import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -231,7 +231,7 @@ data Action = BackPressed
             | CallDriver
             | CallCustomerSupport
             | OpenRcView Int
-            | PrimaryButtonActionController2 PrimaryButtonController.Action
+            | AddRcButtonAC PrimaryButtonController.Action
             | SkipActiveRc
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
@@ -261,6 +261,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
                                 else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
                                 else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
+                                else if state.props.openSettings then continue state{props{openSettings = false}}
                                 else exit GoBack
 
 
@@ -334,7 +335,9 @@ eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
         else  
           continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (\rc -> rc.rcStatus/=true) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : "", vehicleModel : ""}}) (activeRcVal!!0)}}
 
-eval (DriverSummary response) state = continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = response^. _languagesSpoken, languageList = updateLanguageList state (response^. _languagesSpoken)}}
+eval (DriverSummary response) state = do
+  let (DriverProfileSummaryRes resp) = response
+  continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = resp.languagesSpoken, languageList = updateLanguageList state (resp.languagesSpoken)}}
 
 eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
 
@@ -470,7 +473,7 @@ eval (CallDriverPopUpModalAction (PopUpModal.OnButton2Click)) state = continue s
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { screenType = VEHICLE_DETAILS }}
 
-eval (PrimaryButtonActionController2 PrimaryButtonController.OnClick) state = do
+eval (AddRcButtonAC PrimaryButtonController.OnClick) state = do
   exit $ AddingRC state
 
 eval SkipActiveRc state = continue state { props {alreadyActive = false}}

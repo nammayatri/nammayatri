@@ -17,6 +17,7 @@ window.getMerchantConfig = function () {
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
     "imageUploadOptional" : false,
+    "clientName" : "Pass Culture",
     "languageList": [{
       "name": "Français",
       "value": "FR_FR",
