@@ -179,6 +179,7 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
             status = "pending",
             idfyResponse = Nothing,
             multipleRC = Nothing, -- added for backward compatibility
+            dashboardPassedVehicleVariant = Nothing,
             createdAt = now,
             updatedAt = now
           }

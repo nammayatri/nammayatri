@@ -22,6 +22,7 @@ import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person
+import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
@@ -57,6 +58,7 @@ data IdfyVerificationE e = IdfyVerification
     imageExtractionValidation :: ImageExtractionValidation,
     idfyResponse :: Maybe Text,
     multipleRC :: Maybe Bool,
+    dashboardPassedVehicleVariant :: Maybe Vehicle.Variant,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

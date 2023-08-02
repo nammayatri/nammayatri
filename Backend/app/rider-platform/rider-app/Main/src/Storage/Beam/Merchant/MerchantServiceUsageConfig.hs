@@ -142,6 +142,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     useFraudDetection :: B.C f Bool,
     smsProvidersPriorityList :: B.C f [SmsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
+    enableDashboardSms :: B.C f Bool,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }
@@ -173,6 +174,7 @@ merchantServiceUsageConfigTMod =
       useFraudDetection = B.fieldNamed "use_fraud_detection",
       smsProvidersPriorityList = B.fieldNamed "sms_providers_priority_list",
       whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
+      enableDashboardSms = B.fieldNamed "enable_dashboard_sms",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }

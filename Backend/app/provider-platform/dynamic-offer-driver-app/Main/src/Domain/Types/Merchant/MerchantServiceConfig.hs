@@ -136,7 +136,7 @@ getServiceName osc = case osc.serviceConfig of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
   VerificationServiceConfig verifictaionCfg -> case verifictaionCfg of
     Verification.IdfyConfig _ -> VerificationService Verification.Idfy
-    Verification.FaceVerificationConfig _ -> error "Not Implemented!"
+    Verification.FaceVerificationConfig _ -> VerificationService Verification.InternalScripts
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
     AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of

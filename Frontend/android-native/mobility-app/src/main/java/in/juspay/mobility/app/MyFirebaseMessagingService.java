@@ -29,6 +29,8 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -166,7 +168,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     String notificationType = (String) payload.get("notification_type");
                     stopChatService(notificationType, sharedPref);
                     String key = getString(R.string.service);
-                    String merchantType = key.contains("partner") || key.contains("driver") ? "DRIVER" : "USER";
+                    String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
                     switch (notificationType) {
                         case NotificationTypes.DRIVER_NOTIFY:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
@@ -315,6 +317,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 e.printStackTrace();
                             }
                             break;
+
+                        case NotificationTypes.PAYMENT_OVERDUE:
+
+                        case NotificationTypes.PAYMENT_PENDING:
+                            showOverlayMessage(constructOverlayMessage(notification_payload));
+                            break;
+
                         default:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -346,7 +355,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String baseUrl = sharedPref.getString("BASE_URL", "null");
         String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         String key = getString(R.string.service);
-        String merchantType = key.contains("partner") || key.contains("driver") ? "DRIVER" : "USER";
+        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
         executor.execute(() -> {
@@ -409,7 +418,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
         String key = getString(R.string.service);
-        String merchantType = key.contains("partner") || key.contains("driver") ? "DRIVER" : "USER";
+        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
         if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(getApplicationContext()) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
             widgetService.putExtra("payload", payload != null ? payload.toString() : null);
@@ -425,7 +434,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void startMainActivity() {
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String key = getString(R.string.service);
-        String merchantType = key.contains("partner") || key.contains("driver") ? "DRIVER" : "USER";
+        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
         if (merchantType.equals("DRIVER") && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -460,6 +469,25 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
+    private JSONObject constructOverlayMessage (JSONObject notification_payload) throws JSONException {
+        JSONObject ob = new JSONObject();
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.put("OPEN_APP");
+        ob.put("title", notification_payload.get("title"))
+                .put("description", notification_payload.get("body"))
+                .put("cancelButtonText", "Not now")
+                .put("okButtonText", "Go To Yatri Sathi")
+                .put("imageUrl", "https://firebasestorage.googleapis.com/v0/b/my-re-cycler.appspot.com/o/ic_bill_generated(1).png?alt=media&token=9d9e7a0c-3805-4436-aa0f-95e2461cb787")
+                .put("titleVisibility", true)
+                .put("descriptionVisibility", true)
+                .put("buttonOkVisibility", true)
+                .put("buttonCancelVisibility", true)
+                .put("imageVisibility", true)
+                .putOpt("actions", jsonArray)
+                .put("buttonLayoutVisibility", true);
+        return ob;
+    }
+
     private static class NotificationTypes {
         private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
@@ -478,5 +506,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
         private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
         private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
+        private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
+        private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
     }
 }

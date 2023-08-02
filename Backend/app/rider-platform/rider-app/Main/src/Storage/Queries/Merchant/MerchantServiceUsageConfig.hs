@@ -96,6 +96,7 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
             smsProvidersPriorityList = smsProvidersPriorityList,
             whatsappProvidersPriorityList = whatsappProvidersPriorityList,
             useFraudDetection = useFraudDetection,
+            enableDashboardSms = enableDashboardSms,
             updatedAt = updatedAt,
             createdAt = createdAt
           }
@@ -118,6 +119,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
         BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
         BeamMSUC.useFraudDetection = useFraudDetection,
+        BeamMSUC.enableDashboardSms = enableDashboardSms,
         BeamMSUC.updatedAt = updatedAt,
         BeamMSUC.createdAt = createdAt
       }

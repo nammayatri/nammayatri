@@ -33,6 +33,7 @@ import Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.DriverQuote as DriverQuote
+import Domain.Types.MediaFile
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
@@ -983,6 +984,7 @@ updateAlternateMobileNumberAndCode person = do
   updateOneWithKV
     [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
       Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
+      Se.Set BeamP.alternateMobileNumberHash person.alternateMobileNumberHash,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
@@ -1064,3 +1066,11 @@ instance ToTType' BeamP.Person Person where
         BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
         BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
       }
+
+updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
+updateMediaId driverId faceImageId =
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [PersonFaceImageId =. val (toKey <$> faceImageId)]
+    where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)

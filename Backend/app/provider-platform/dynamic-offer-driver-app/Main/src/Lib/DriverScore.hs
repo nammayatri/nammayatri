@@ -126,7 +126,8 @@ createDriverStat driverId = do
       farePramIds = mapMaybe (.fareParametersId) completedRides
   -- cancelledRidesCount <- Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
   -- lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
-  -- missedEarnings <- Esq.runInReplica BQ.findFareForCancelledBookings
+  cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId driverId
+  -- missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
   -- driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
   -- customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
   cancelledRidesCount <- BCRQ.findAllCancelledByDriverId driverId
@@ -175,7 +176,9 @@ getDriverStats (Just driverStats) driverId rideFare = do
       Just cancelledCount -> pure $ cancelledCount + 1
   earningMissed <-
     case driverStats.earningsMissed of
-      0 -> Esq.runInReplica BQ.findFareForCancelledBookings
+      0 -> do
+        cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId driverId
+        Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
       _ -> pure $ driverStats.earningsMissed + fromMaybe 0 rideFare
   Esq.runNoTransaction $ DSQ.setDriverStats (cast driverId) updatedTotalRideCount cancelledCount earningMissed
   pure $ driverStats {DS.ridesCancelled = Just cancelledCount, DS.earningsMissed = earningMissed}

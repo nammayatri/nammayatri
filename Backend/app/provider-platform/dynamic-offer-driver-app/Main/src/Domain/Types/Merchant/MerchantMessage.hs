@@ -25,6 +25,10 @@ data MessageKey
   | WELCOME_TO_PLATFORM
   | ALTERNATE_NUMBER_OTP
   | ONBOARD_SUPPORT_SMS_TEMPLATE
+  | END_RIDE_MESSAGE
+  | ONBOARDING_YATRI_MESSAGE
+  | BOOKING_MESSAGE
+  | CASH_COLLECTED_MESSAGE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage

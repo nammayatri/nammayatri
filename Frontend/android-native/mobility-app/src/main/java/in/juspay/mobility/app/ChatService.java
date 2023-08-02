@@ -68,7 +68,7 @@ public class ChatService extends Service {
     private String merchant = null;
     private String baseUrl;
     static Random random = new Random();
-    String merchantType;
+    String merchantType = "";
     private int delay = 5000;
     MobilityAppBridge.SendMessageCallBack sendMessageCallBack;
     MessageOverlayService.SendMessageCallBack sendMessageCallBackOverlay;
@@ -94,12 +94,12 @@ public class ChatService extends Service {
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
-        this.startForeground(serviceNotificationID, createNotification());
         firestoreInstance = FirebaseFirestore.getInstance();
         firebaseAuth = FirebaseAuth.getInstance();
         merchant = getApplicationContext().getResources().getString(R.string.service);
-        merchantType = merchant.contains("partner") || merchant.contains("driver") ? "DRIVER" : "USER";
+        merchantType = merchant.contains("partner") || merchant.contains("driver") || merchant.contains("provider") ? "DRIVER" : "USER";
         sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        this.startForeground(serviceNotificationID, createNotification());
         if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
@@ -277,15 +277,15 @@ public class ChatService extends Service {
             if (_sentBy.equals("Driver")) {
                 if (appName.equals("Yatri Partner"))
                     sentBy = "yatripartner";
-                else if (appName.equals("Jatri Sathi Driver"))
-                    sentBy = "jatrisaathidriver";
+                else if(appName.equals("Yatri Sathi Driver"))
+                    sentBy = "yatrisathiprovider";
                 else
                     sentBy = "nammayatriprovider";
             } else {
                 if (appName.equals("Yatri"))
                     sentBy = "yatri";
-                else if (appName.equals("Jatri Sathi"))
-                    sentBy = "jatrisaathi";
+                else if(appName.equals("Yatri Sathi"))
+                    sentBy = "yatrisathiconsumer";
                 else
                     sentBy = "nammayatri";
             }
@@ -345,7 +345,7 @@ public class ChatService extends Service {
                 new NotificationCompat.Builder(this, "Message")
                         .setContentTitle(getString(R.string.chatting_is_enabled))
                         .setContentText(contentText)
-                        .setSmallIcon(Utils.getResIdentifier(context,"ic_launcher", "drawable"))
+                        .setSmallIcon(Utils.getResIdentifier(context,"ic_launcher", "mipmap"))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);

@@ -1,5 +1,9 @@
 package in.juspay.mobility.customer;
 
+import static android.Manifest.permission.CAMERA;
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -856,7 +860,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void generatePDF(String str, String format) throws JSONException {
         invoice = str;
-        downloadPDF(str, bridgeComponents.getContext());
+        if (checkAndAskStoragePermission()){
+            downloadPDF(str, bridgeComponents.getContext());
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -881,8 +887,8 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 JuspayLogger.d(OTHERS, "PDF Document canvas drawn");
                 String fileNameformat;
                 String serviceName = context.getResources().getString(R.string.service);
-                if (serviceName.equals("jatrisaathi")) {
-                    fileNameformat = "JS_RIDE_";
+                if (serviceName.equals("yatrisathiconsumer")) {
+                    fileNameformat = "YS_RIDE_";
                 } else if (serviceName.equals("nammayatri")) {
                     fileNameformat = "NY_RIDE_";
                 } else {
@@ -1054,7 +1060,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         switch (requestCode) {
             case REQUEST_CALL:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showDialer(phoneNumber);
+                    showDialer(phoneNumber, false);
                 } else {
                     toast("Permission Denied");
                 }

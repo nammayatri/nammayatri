@@ -101,10 +101,12 @@ registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
     True
     (Just merchant)
     (cast driverId_, cast merchant.id)
-    DriverRCReq
-      { imageId = cast imageId,
-        ..
-      }
+    ( DriverRCReq
+        { imageId = cast imageId,
+          ..
+        }
+    )
+    Nothing
 
 generateAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
 generateAadhaarOtp merchantShortId driverId_ req = do

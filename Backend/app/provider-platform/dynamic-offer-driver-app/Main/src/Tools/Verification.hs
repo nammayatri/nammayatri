@@ -19,21 +19,25 @@ module Tools.Verification
     validateImage,
     extractRCImage,
     extractDLImage,
-    -- getTask,
+    validateFaceImage,
   )
 where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+-- getTask,
+
+import Domain.Types.Merchant.MerchantServiceUsageConfig
 import Kernel.External.Verification as Reexport hiding
   ( extractDLImage,
-    -- getTask,
     extractRCImage,
+    validateFaceImage,
     validateImage,
     verifyDLAsync,
     verifyRCAsync,
   )
 import qualified Kernel.External.Verification as Verification
+import Kernel.External.Verification.Interface.InternalScripts
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -52,7 +56,7 @@ verifyDLAsync ::
   Id DM.Merchant ->
   VerifyDLAsyncReq ->
   m VerifyDLAsyncResp
-verifyDLAsync = runWithServiceConfig Verification.verifyDLAsync
+verifyDLAsync = runWithServiceConfig Verification.verifyDLAsync (.verificationService)
 
 verifyRCAsync ::
   ( EncFlow m r,
@@ -63,7 +67,7 @@ verifyRCAsync ::
   Id DM.Merchant ->
   VerifyRCAsyncReq ->
   m VerifyRCAsyncResp
-verifyRCAsync = runWithServiceConfig Verification.verifyRCAsync
+verifyRCAsync = runWithServiceConfig Verification.verifyRCAsync (.verificationService)
 
 validateImage ::
   ( EncFlow m r,
@@ -74,7 +78,21 @@ validateImage ::
   Id DM.Merchant ->
   ValidateImageReq ->
   m ValidateImageResp
-validateImage = runWithServiceConfig Verification.validateImage
+validateImage = runWithServiceConfig Verification.validateImage (.verificationService)
+
+validateFaceImage ::
+  ( MonadThrow m,
+    CoreMetrics m,
+    MonadIO m,
+    MonadFlow m,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DM.Merchant ->
+  FaceValidationReq ->
+  m FaceValidationRes
+validateFaceImage = runWithServiceConfig Verification.validateFaceImage (.faceVerificationService)
 
 extractRCImage ::
   ( EncFlow m r,
@@ -85,7 +103,7 @@ extractRCImage ::
   Id DM.Merchant ->
   ExtractRCImageReq ->
   m ExtractRCImageResp
-extractRCImage = runWithServiceConfig Verification.extractRCImage
+extractRCImage = runWithServiceConfig Verification.extractRCImage (.verificationService)
 
 extractDLImage ::
   ( EncFlow m r,
@@ -96,7 +114,7 @@ extractDLImage ::
   Id DM.Merchant ->
   ExtractDLImageReq ->
   m ExtractDLImageResp
-extractDLImage = runWithServiceConfig Verification.extractDLImage
+extractDLImage = runWithServiceConfig Verification.extractDLImage (.verificationService)
 
 -- getTask ::
 --   ( EncFlow m r,
@@ -112,15 +130,16 @@ extractDLImage = runWithServiceConfig Verification.extractDLImage
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
   (VerificationServiceConfig -> req -> m resp) ->
+  (MerchantServiceUsageConfig -> VerificationService) ->
   Id DM.Merchant ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
+runWithServiceConfig func getCfg merchantId req = do
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantId merchantId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
+    CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService $ getCfg merchantServiceUsageConfig)
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> func vsc req

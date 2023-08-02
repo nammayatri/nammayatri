@@ -265,6 +265,8 @@
                 android:layout_width="35dp"
                 android:layout_height="35dp"
                 android:layout_marginRight="12dp"
+                android:id="@+id/merchantLogoIcon"
+                android:layout_gravity="bottom"
                 android:src="@drawable/ic_launcher" />
 
             <TextView
@@ -272,6 +274,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:fontFamily="@font/plus_jakartasans_medium"
+                android:gravity="center"
+                android:lineHeight="17dp"
                 android:text="namma yatri"
                 android:textColor="#FFFFFF"
                 android:textFontWeight="800"

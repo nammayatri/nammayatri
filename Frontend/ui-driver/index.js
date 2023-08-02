@@ -1,5 +1,4 @@
 require("regenerator-runtime/runtime");
-
 // This will make sure init() is called. It will make available JBridge and Android variables
 require("presto-ui");
 require('core-js');
@@ -76,7 +75,7 @@ function guid() {
 }
 
 window.__FN_INDEX = 0;
-window.__PROXY_FN = top.__PROXY_FN || {};
+window.__PROXY_FN = {};
 
 if (!window.__OS) {
   var getOS = function () { //taken from getOS() in presto-ui
@@ -97,18 +96,11 @@ window.onMerchantEvent = function (event, payload) {
   var clientPaylod = JSON.parse(payload);
   var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
-    let payload = {
-      event: "initiate_result"
-      , service: "in.juspay.becknui"
-      , payload: { status: "SUCCESS" }
-      , error: false
-      , errorMessage: ""
-      , errorCode: ""
-    }
+    var isInit = "in.juspay.hyperpay" in top.window.mapps;
     if (clientId == "open-kochi") {
       window.merchantID = "YATRI"
-    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver"){
-      window.merchantID = "JATRISAATHI"
+    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
+      window.merchantID = "YATRISATHI"
     }else if (clientId.includes("provider")){
       var merchant = clientId.replace("mobility","")
       merchant = merchant.replace("provider","");
@@ -117,7 +109,9 @@ window.onMerchantEvent = function (event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
-    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+    if (!isInit) {
+      callInitiateResult();
+    }
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
@@ -242,6 +236,25 @@ window["onEvent'"] = function (event, args) {
     }
   }  
 }
+window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
+  console.log("onEvent Payload", jsonPayload);
+  if ((JSON.parse(jsonPayload)).event == "initiate_result"){
+    callInitiateResult();
+    
+  }
+}
+
+function callInitiateResult () {
+  let payload = {
+    event: "initiate_result"
+    , service: "in.juspay.becknui"
+    , payload: { status: "SUCCESS" }
+    , error: false
+    , errorMessage: ""
+    , errorCode: ""
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+}
 
 function refreshFlow(){
   let currentDate = new Date();
@@ -262,6 +275,7 @@ function disableConsoleLogs() {
 
 if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent'")();
+  window.JOS.addEventListener("onEvent")(); // adding onEvent listener for hyperPay
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
@@ -290,7 +304,8 @@ function loadConfig() {
   const newScript = document.createElement("script");
   newScript.type = "text/javascript";
   newScript.id = "ny-driver-configuration";
-  newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
+  var config = window.JBridge.loadFileInDUI("v1-configuration.jsa");
+  newScript.innerHTML = config == "" ? window.JBridge.loadFileInDUI("v1-configuration.js") : config;
   headID.appendChild(newScript);
   try {
       const merchantConfig = (

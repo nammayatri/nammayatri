@@ -18,7 +18,6 @@ module API.ProviderPlatform.DynamicOfferDriver.Driver
   )
 where
 
-import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as Reg
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -49,6 +48,7 @@ type API =
            :<|> BlockDriverAPI
            :<|> BlockReasonListAPI
            :<|> DriverCashCollectionAPI
+           :<|> DriverCashExemptionAPI
            :<|> UnblockDriverAPI
            :<|> DriverLocationAPI
            :<|> DriverInfoAPI
@@ -63,7 +63,6 @@ type API =
            :<|> UpdateDriverNameAPI
            :<|> SetRCStatusAPI
            :<|> DeleteRCAPI
-           :<|> Reg.API
            :<|> ClearOnRideStuckDrivers
            --
        )
@@ -91,6 +90,10 @@ type DriverOutstandingBalanceAPI =
 type DriverCashCollectionAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'COLLECT_CASH
     :> Common.DriverCashCollectionAPI
+
+type DriverCashExemptionAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'EXEMPT_CASH
+    :> Common.DriverCashExemptionAPI
 
 type DriverActivityAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ACTIVITY
@@ -190,6 +193,7 @@ handler merchantId =
     :<|> blockDriver merchantId
     :<|> blockReasonList merchantId
     :<|> collectCash merchantId
+    :<|> exemptCash merchantId
     :<|> unblockDriver merchantId
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
@@ -204,7 +208,6 @@ handler merchantId =
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
-    :<|> Reg.handler merchantId
     :<|> clearOnRideStuckDrivers merchantId
 
 buildTransaction ::
@@ -255,6 +258,13 @@ collectCash merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.CollectCashEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.collectCash) driverId
+
+exemptCash :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+exemptCash merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.ExemptCashEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.exemptCash) driverId
 
 enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do

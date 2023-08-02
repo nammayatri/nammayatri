@@ -237,7 +237,8 @@ makePerson req mbBundleVersion mbClientVersion merchantId isDashboard = do
         clientVersion = mbClientVersion,
         whatsappNotificationEnrollStatus = Nothing,
         unencryptedAlternateMobileNumber = Nothing,
-        alternateMobileNumber = Nothing
+        alternateMobileNumber = Nothing,
+        faceImageId = Nothing
       }
 
 makeSession ::

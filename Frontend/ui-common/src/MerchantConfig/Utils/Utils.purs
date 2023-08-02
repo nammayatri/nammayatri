@@ -33,7 +33,7 @@ foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Eff
 
 data Merchant
   = NAMMAYATRI
-  | JATRISAATHI
+  | YATRISATHI
   | YATRI
   | MOBILITY_PM
   | PASSCULTURE

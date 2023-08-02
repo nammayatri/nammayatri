@@ -12,7 +12,7 @@ type Config
     , vehicleVariant :: String
     , vehicleType :: String
     , capacity :: String
-    , price :: Int
+    , price :: String
     , isCheckBox :: Boolean
     , isEnabled :: Boolean
     , index :: Int
@@ -20,16 +20,17 @@ type Config
     , id :: String
     , maxPrice :: Int
     , basePrice :: Int
+    , showInfo :: Boolean
     }
 
 config :: Config
 config =
   { vehicleImage: ""
   , isSelected: false
-  , vehicleVariant: "Non AC Taxi"
-  , vehicleType: "Economical"
-  , capacity: "4 people"
-  , price: 246
+  , vehicleVariant: ""
+  , vehicleType: ""
+  , capacity: ""
+  , price: ""
   , isCheckBox: false
   , isEnabled: true
   , activeIndex: 0
@@ -37,4 +38,5 @@ config =
   , id: ""
   , maxPrice : 123
   , basePrice : 0 
+  , showInfo : false
   }

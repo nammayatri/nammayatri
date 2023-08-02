@@ -36,6 +36,7 @@ module Domain.Action.Dashboard.Driver
     clearOnRideStuckDrivers,
     getDriverDue,
     collectCash,
+    exemptCash,
     driverAadhaarInfoByPhone,
     updateByPhoneNumber,
     setRCStatus,
@@ -92,6 +93,7 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
+import qualified Tools.SMS as Sms
 
 -- FIXME: not tested yet because of no onboarding test data
 driverDocumentsInfo :: ShortId DM.Merchant -> Flow Common.DriverDocumentsInfoRes
@@ -289,6 +291,8 @@ enableDriver merchantShortId reqDriverId = do
 
   _ <- CQDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
+  fork "sending dashboard sms - onboarding" $ do
+    Sms.sendDashboardSms merchant.id Sms.ONBOARDING Nothing personId Nothing 0
   pure Success
 
 ---------------------------------------------------------------------
@@ -380,7 +384,22 @@ convertToCommon res =
 
 ---------------------------------------------------------------------
 collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-collectCash merchantShortId reqDriverId = do
+collectCash = recordPayment False
+
+---------------------------------------------------------------------
+
+exemptCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+exemptCash = recordPayment True
+
+---------------------------------------------------------------------
+
+paymentStatus :: Bool -> DriverFeeStatus
+paymentStatus isExempted
+  | isExempted = EXEMPTED
+  | otherwise = COLLECTED_CASH
+
+recordPayment :: Bool -> ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+recordPayment isExempted merchantShortId reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -398,8 +417,11 @@ collectCash merchantShortId reqDriverId = do
   CDI.updatePendingPayment False driverFee.driverId
   CDI.updateSubscription True driverId
   -- Esq.runTransaction $ do
-  _ <- QDF.updateStatus COLLECTED_CASH driverFee.id now
+  _ <- QDF.updateStatus (paymentStatus isExempted) driverFee.id now
   _ <- QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
+  fork "sending dashboard sms - collected cash" $ do
+    let totalDriverFee = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
+    Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalDriverFee
   pure Success
 
 ---------------------------------------------------------------------
@@ -644,13 +666,30 @@ addVehicle merchantShortId reqDriverId req = do
 
   mbLinkedVehicle <- QVehicle.findById personId
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
-  vehicle <- buildVehicle merchantId personId req
+
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
+  -- Esq.runTransaction $ QPerson.updatePersonRec personId updDriver
+  _ <- QPerson.updatePersonRec personId updDriver
+
+  void $ try @_ @SomeException (runVerifyRCFlow personId merchant) -- ignore if throws error
+  vehicle <- buildVehicle merchantId personId req
   -- Esq.runTransaction $ do
   _ <- QVehicle.create vehicle
-  _ <- QPerson.updatePersonRec personId updDriver
+
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
+  where
+    runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Flow ()
+    runVerifyRCFlow personId merchant = do
+      let rcReq =
+            DomainRC.DriverRCReq
+              { vehicleRegistrationCertNumber = req.registrationNo,
+                imageId = "",
+                operatingCity = "Bangalore", -- TODO: this needs to be fixed properly
+                dateOfRegistration = Nothing,
+                multipleRC = Nothing
+              }
+      void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id) rcReq (Just $ castVehicleVariant req.variant)
 
 buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
 buildVehicle merchantId personId req = do
@@ -674,14 +713,15 @@ buildVehicle merchantId personId req = do
         createdAt = now,
         updatedAt = now
       }
-  where
-    castVehicleVariant = \case
-      Common.SUV -> DVeh.SUV
-      Common.HATCHBACK -> DVeh.HATCHBACK
-      Common.SEDAN -> DVeh.SEDAN
-      Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
-      Common.TAXI -> DVeh.TAXI
-      Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+
+castVehicleVariant :: Common.Variant -> DVeh.Variant
+castVehicleVariant = \case
+  Common.SUV -> DVeh.SUV
+  Common.HATCHBACK -> DVeh.HATCHBACK
+  Common.SEDAN -> DVeh.SEDAN
+  Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
+  Common.TAXI -> DVeh.TAXI
+  Common.TAXI_PLUS -> DVeh.TAXI_PLUS
 
 ---------------------------------------------------------------------
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess

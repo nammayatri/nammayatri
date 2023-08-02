@@ -52,7 +52,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, saveRecents, seperateByWhiteSpaces, setText', showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange)
+import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, saveRecents, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, hideLoader, emitJOSEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -175,20 +175,20 @@ type IosVersion = {
   enableForceUpdateIOS :: Boolean
 }
 
-getIosVersion :: Merchant -> IosVersion
+getIosVersion :: MU.Merchant -> IosVersion
 getIosVersion merchant =
   case merchant of
-    NAMMAYATRI -> { majorUpdateIndex : 1,
+    MU.NAMMAYATRI -> { majorUpdateIndex : 1,
                     minorUpdateIndex : 2,
                     patchUpdateIndex : 4,
                     enableForceUpdateIOS : false
                   }
-    YATRI -> { majorUpdateIndex : 1,
+    MU.YATRI -> { majorUpdateIndex : 1,
                minorUpdateIndex : 1,
                patchUpdateIndex : 0,
                enableForceUpdateIOS : true
               }
-    JATRISAATHI -> { majorUpdateIndex : 0,
+    MU.YATRISATHI -> { majorUpdateIndex : 0,
                      minorUpdateIndex : 1,
                      patchUpdateIndex : 0,
                      enableForceUpdateIOS : false
@@ -232,7 +232,7 @@ getLatestAndroidVersion merchant =
   case merchant of 
     NAMMAYATRI -> 31
     YATRI -> 49
-    JATRISAATHI -> 2
+    YATRISATHI -> 2
     _ -> 1
 
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
@@ -545,7 +545,7 @@ enterMobileNumberScreenFlow = do
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     currentFlowStatus
               Left err -> do
-                _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EnterOTPNumberEditText") "" )
+                pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
                 let errResp = err.response
                     codeMessage = decodeError errResp.errorMessage "errorCode"
                 if ( err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
@@ -696,7 +696,7 @@ homeScreenFlow = do
             _ , _ -> pure unit
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress}, props{customerTip{enableTips = tipEnabled}}})
           _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
-          if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000) then do
+          if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000) then do
             updateLocalStage DistanceOutsideLimits
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0}})
             homeScreenFlow
@@ -989,6 +989,9 @@ homeScreenFlow = do
                                       lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}, driverInfoCardState{initDistance = Nothing}},props { isBanner = state.props.isBanner, showChatNotification = false}})
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
+                                      permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+                                      permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
+                                      when (not (permissionConditionA && permissionConditionB)) $ permissionScreenFlow "LOCATION_DISABLED"
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
                                         _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
@@ -1005,7 +1008,6 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
       _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
       _ <- pure $ deleteValueFromLocalStore CUSTOMER_ID
-      _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
       _ <- pure $ deleteValueFromLocalStore CONTACTS
       _ <- pure $ deleteValueFromLocalStore USER_EMAIL
       _ <- pure $ factoryResetApp ""
@@ -1427,7 +1429,7 @@ rideSearchFlow flowType = do
                     _ , _ -> pure unit
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}, defaultPickUpPoint = "", confirmLocationCategory = ""}})
                   _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
-                  if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000 )then do
+                  if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000 )then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
                     void $ lift $ lift $ toggleLoader false
@@ -1492,7 +1494,7 @@ tripDetailsScreenFlow fromMyRides = do
       resp <- Remote.callDriverBT updatedState.data.selectedItem.rideId
       void $ lift $ lift $ toggleLoader false
       pure $ toast (getString REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON)
-      _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  (Just "nammayatri.support@juspay.in") (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" )
+      _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  (Just (MU.getValueFromConfig "SUPPORT_EMAIL")) (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" )
       tripDetailsScreenFlow updatedState.props.fromMyRides
 
 
@@ -1529,7 +1531,7 @@ helpAndSupportScreenFlow = do
       modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen {data{bookingId = bookingId'}})
       contactUsScreenFlow
     GO_TO_TRIP_DETAILS state -> do
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, selectedItem {faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating},date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, vehicleVariant = state.data.vehicleVariant, selectedItem {faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating},date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
       tripDetailsScreenFlow HelpAndSupport
     VIEW_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen { data{offsetValue = 0}})
@@ -1550,6 +1552,7 @@ myRidesScreenFlow fromNavBar = do
   case flow of
     REFRESH state -> myRidesScreenFlow state.props.fromNavBar
     TRIP_DETAILS state -> do
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetails -> tripDetails{data{vehicleVariant = state.data.selectedItem.vehicleVariant}})
       tripDetailsScreenFlow MyRides
     LOADER_OUTPUT state -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> state{data{offsetValue = state.data.offsetValue + 8}})
@@ -1704,7 +1707,7 @@ myProfileScreenFlow = do
           let codeMessage = decodeError errResponse.errorMessage "errorCode"
           case codeMessage of
             "PERSON_EMAIL_ALREADY_EXISTS" -> do
-              _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EmailEditText") "" )
+              pure $ setText (getNewIDWithTag "EmailEditText") ""
               modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{props{isEmailValid = false, updateProfile = true}, data{emailErrorMessage = Just EMAIL_EXISTS, name = state.data.name, editedName = state.data.editedName, emailId = state.data.emailId, gender = state.data.gender, editedGender = state.data.editedGender}})
             _ -> pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           myProfileScreenFlow
@@ -1923,7 +1926,7 @@ addNewAddressScreenFlow input = do
                   }
                 } )
           _    ,  _     -> do
-            _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "SavedLocationEditText") item.description )
+            pure $ setText (getNewIDWithTag "SavedLocationEditText") item.description
             _ <- pure $ hideKeyboardOnNavigation true
             modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen ->
               addNewAddressScreen

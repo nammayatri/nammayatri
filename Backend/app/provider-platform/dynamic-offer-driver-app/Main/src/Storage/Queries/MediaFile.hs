@@ -56,3 +56,9 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.url = url,
         BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
       }
+
+deleteById :: Id MediaFile -> SqlDB ()
+deleteById = Esq.deleteByKey @MediaFileT
+
+deleteById :: Id MediaFile -> SqlDB ()
+deleteById = Esq.deleteByKey @MediaFileT

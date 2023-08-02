@@ -379,10 +379,10 @@ editTextView state push =
               , margin $ MarginTop 5
               , visibility if ((HU.strLenWithSpecificCharacters state.data.description  "[a-zA-Z]") < 10) then VISIBLE else GONE
               ][  imageView $
-                  [ width $ V 16
-                  , height $ V 16
+                  [ width $ V 24
+                  , height $ V 24
                   , padding $ PaddingVertical 5 3
-                  , margin $ MarginRight 5
+                  , margin $ MarginRight 3
                   , imageWithFallback "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" 
                   ]
                 , textView $

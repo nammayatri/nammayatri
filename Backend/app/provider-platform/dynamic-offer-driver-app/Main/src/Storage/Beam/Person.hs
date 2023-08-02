@@ -133,7 +133,8 @@ data PersonT f = PersonT
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
     bundleVersion :: B.C f (Maybe Text),
-    clientVersion :: B.C f (Maybe Text)
+    clientVersion :: B.C f (Maybe Text),
+    faceImageId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -207,7 +208,8 @@ personTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
       bundleVersion = B.fieldNamed "bundle_version",
-      clientVersion = B.fieldNamed "client_version"
+      clientVersion = B.fieldNamed "client_version",
+      faceImageId = B.fieldNamed "face_image_id"
     }
 
 psToHs :: HM.HashMap Text Text

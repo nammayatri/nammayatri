@@ -15,31 +15,34 @@
 
 module Screens.AddVehicleDetailsScreen.Controller where
 
-import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=),(>), (<>), (<), show, (+))
-import Effect (Effect)
-import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit)
-import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..))
--- import Tracker (trackAction)
-import PrestoDOM.Types.Core (class Loggable)
-import Components.PrimarySelectItem.Controller as PrimarySelectItem
-import Engineering.Helpers.Commons (getNewIDWithTag)
-import JBridge (disableActionEditText, uploadFile, hideKeyboardOnNavigation, openWhatsAppSupport)
-import Effect.Class (liftEffect)
-import Components.SelectVehicleTypeModal.Controller as SelectVehicleTypeModal
-import Components.PrimaryButton.Controller as PrimaryButtonController
-import Components.RegistrationModal.Controller as RegistrationModalController
-import Components.OnboardingHeader.Controller as OnboardingHeaderController
-import Components.TutorialModal.Controller as TutorialModalController
-import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
-import Components.GenericMessageModal.Controller as GenericMessageModalController
-import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Data.String.CodeUnits (charAt)
-import Data.String (length)
-import Screens (ScreenName(..), getScreen)
 import Data.Maybe
+
+import Common.Types.App (LazyCheck(..))
+import Components.GenericMessageModal.Controller as GenericMessageModalController
+import Components.OnboardingHeader.Controller as OnboardingHeaderController
+import Components.PrimaryButton.Controller as PrimaryButtonController
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Components.PrimarySelectItem.Controller as PrimarySelectItem
+import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
+import Components.RegistrationModal.Controller as RegistrationModalController
+import Components.SelectVehicleTypeModal.Controller as SelectVehicleTypeModal
+import Components.TutorialModal.Controller as TutorialModalController
+import Data.String (length)
+import Data.String (length)
+import Data.String.CodeUnits (charAt)
 import Debug (spy)
-import Data.String(length)
+import Effect (Effect)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, showDialer, uploadFile)
+import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
+import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
+import Screens (ScreenName(..), getScreen)
+import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..))
+import Services.Config (getSupportNumber)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -215,8 +218,10 @@ eval (TutorialModal manual) state = do
     _ -> continue state
 eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = continue state{props{openRCManual = false, openRegistrationDateManual = false}}
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
-  _ <- liftEffect $ openWhatsAppSupport "+918618963188"
-  pure WhatsAppSupport
+  _ <- liftEffect $ case getMerchant FunctionCall of
+    NAMMAYATRI -> openWhatsAppSupport "+918618963188"
+    _ -> pure $ showDialer (getSupportNumber "") false
+  pure NoAction
   ]
 eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
 eval ReferralMobileNumber state = do

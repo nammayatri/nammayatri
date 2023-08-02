@@ -113,8 +113,9 @@ verifyRC ::
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant) ->
   DriverRCReq ->
+  Maybe Vehicle.Variant -> -- in case hardcoded variant passed from dashboard, then ignore variant coming from IDFY
   Flow DriverRCRes
-verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
+verifyRC isDashboard mbMerchant (personId, merchantId) req@DriverRCReq {..} mbVariant = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
   runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefix) req
@@ -151,23 +152,25 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
             throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
         Nothing -> throwImageError imageId ImageExtractionFailed
 
-  mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
+  mVehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleRegistrationCertNumber
   case mVehicleRC of
     Just vehicleRC -> do
+      when (isJust mbVariant) $
+        runTransaction $ RCQuery.updateVehicleVariant vehicleRC.id mbVariant -- update vehicleVariant of RC is passed hardcoded from dashboard
       when (isNothing multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
       mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id person.id
       case mRCAssociation of
         Just assoc -> do
           now <- getCurrentTime
           when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
-            createRCAssociation person.id vehicleRC.id
+            createRCAssociation person.id vehicleRC
         Nothing -> do
           -- if no association to driver, create one. No need to verify RC as already verified except in fallback case
           if isNothing dateOfRegistration
-            then createRCAssociation person.id vehicleRC.id
-            else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC
+            then createRCAssociation person.id vehicleRC
+            else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
     Nothing ->
-      verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC
+      verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
 
   return Success
   where
@@ -180,12 +183,20 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
         throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-    createRCAssociation driverId rcId = do
-      driverRCAssoc <- Domain.makeRCAssociation driverId rcId (convertTextToUTC (Just "2099-12-12"))
+    createRCAssociation driverId rc = do
+      driverRCAssoc <- Domain.makeRCAssociation driverId rc.id (convertTextToUTC (Just "2099-12-12"))
       Esq.runNoTransaction $ DAQuery.create driverRCAssoc
+      when (isNothing multipleRC) $ do
+        rcNumber <- decrypt rc.certificateNumber
+        let rcStatusReq =
+              RCStatusReq
+                { rcNo = rcNumber,
+                  isActivate = True
+                }
+        void $ linkRCStatus (driverId, merchantId) rcStatusReq
 
-verifyRCFlow :: Person.Person -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Flow ()
-verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration multipleRC = do
+verifyRCFlow :: Person.Person -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Variant -> Flow ()
+verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVariant = do
   now <- getCurrentTime
   encryptedRC <- encrypt rcNumber
   let imageExtractionValidation =
@@ -215,6 +226,7 @@ verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration multiple
             status = "pending",
             idfyResponse = Nothing,
             multipleRC,
+            dashboardPassedVehicleVariant = mbVariant,
             createdAt = now,
             updatedAt = now
           }
@@ -232,7 +244,7 @@ onVerifyRC verificationReq output = do
       rCInsuranceConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RCInsurance >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RCInsurance))
       mEncryptedRC <- encrypt `mapM` output.registration_number
       let mbFitnessEpiry = convertTextToUTC output.fitness_upto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
-      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
+      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant <$> mEncryptedRC <*> mbFitnessEpiry
       case mVehicleRC of
         Just vehicleRC -> do
           RCQuery.upsert vehicleRC
@@ -251,7 +263,7 @@ compareRegistrationDates actualDate providedDate =
 
 linkRCStatus :: (Id Person.Person, Id DM.Merchant) -> RCStatusReq -> Flow APISuccess
 linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
-  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
 
@@ -260,42 +272,63 @@ linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
       validateRCActivation driverId merchantId rc
       activateRC driverId merchantId now rc
     else do
-      deactivateRC driverId rc
+      deactivateRC rc driverId
   return Success
 
-deactivateRC :: Id Person.Person -> Domain.VehicleRegistrationCertificate -> Flow ()
-deactivateRC driverId rc = do
+deactivateRC :: Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
+deactivateRC rc driverId = do
   activeAssociation <- DAQuery.findActiveAssociationByRC rc.id >>= fromMaybeM ActiveRCNotFound
 
   unless (activeAssociation.driverId == driverId) $ throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
 
-  isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
-  when (isJust isOnRide) $ throwError RCVehicleOnRide
+  removeVehicle driverId
 
   Esq.runNoTransaction $ DAQuery.deactivateRCForDriver driverId rc.id
-  Esq.runNoTransaction $ VQuery.deleteById driverId -- delete the vehicle entry too for the driver
+
   return ()
+
+removeVehicle :: Id Person.Person -> Flow ()
+removeVehicle driverId = do
+  isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
+  when (isJust isOnRide) $ throwError RCVehicleOnRide
+  Esq.runNoTransaction $ VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
 validateRCActivation :: Id Person.Person -> Id DM.Merchant -> Domain.VehicleRegistrationCertificate -> Flow ()
 validateRCActivation driverId merchantId rc = do
   now <- getCurrentTime
   _ <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now >>= fromMaybeM (InvalidRequest "RC not linked to driver. Please link.")
 
+  -- check if rc is already active to other driver
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id
   case mActiveAssociation of
     Just activeAssociation -> do
       when (activeAssociation.driverId == driverId) $ throwError (InvalidRequest "RC already active with driver requested")
-
+      deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC rc)
+    Nothing -> do
+      -- check if vehicle of that rc number is already with other driver
+      mVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
+      case mVehicle of
+        Just vehicle -> do
+          if vehicle.driverId /= driverId
+            then deactivateIfWeCanDeactivate vehicle.driverId now removeVehicle
+            else removeVehicle driverId
+        Nothing -> return ()
+  where
+    deactivateIfWeCanDeactivate :: Id Person.Person -> UTCTime -> (Id Person.Person -> Flow ()) -> Flow ()
+    deactivateIfWeCanDeactivate oldDriverId now deactivateFunc = do
       transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-      mLastRideAssigned <- RQuery.findLastRideAssigned activeAssociation.driverId
+      mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
       case mLastRideAssigned of
         Just lastRide -> do
           if nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff
-            then deactivateRC activeAssociation.driverId rc
+            then deactivateFunc oldDriverId
             else throwError RCActiveOnOtherAccount
-        Nothing -> return () -- TODO: handle this case too
-    Nothing -> return ()
-  checkIfVehicleAlreadyExists driverId rc -- checking for manually entry created for vehicle during manual onboarding
+        Nothing -> do
+          -- if driver didn't take any ride yet
+          person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
+          if nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff
+            then deactivateFunc oldDriverId
+            else throwError RCActiveOnOtherAccount
 
 checkIfVehicleAlreadyExists :: Id Person.Person -> Domain.VehicleRegistrationCertificate -> Flow ()
 checkIfVehicleAlreadyExists driverId rc = do
@@ -323,17 +356,17 @@ deactivateCurrentRC driverId = do
   case mActiveAssociation of
     Just association -> do
       rc <- RCQuery.findById association.rcId >>= fromMaybeM (RCNotFound "")
-      deactivateRC driverId rc -- call deativate RC flow
+      deactivateRC rc driverId -- call deativate RC flow
     Nothing -> return () -- Do nothing if no active association to driver
 
 deleteRC :: (Id Person.Person, Id DM.Merchant) -> DeleteRCReq -> Bool -> Flow APISuccess
 deleteRC (driverId, _) DeleteRCReq {..} isOldFlow = do
-  rc <- RCQuery.findLastVehicleRC rcNo >>= fromMaybeM (RCNotFound rcNo)
+  rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   mAssoc <- DAQuery.findActiveAssociationByRC rc.id
   case (mAssoc, isOldFlow) of
     (Just assoc, False) -> do
       when (assoc.driverId == driverId) $ throwError (InvalidRequest "Deactivate RC first to delete!")
-    (Just _, True) -> deactivateRC driverId rc
+    (Just _, True) -> deactivateRC rc driverId
     (_, _) -> return ()
   Esq.runNoTransaction $ DAQuery.endAssociationForRC driverId rc.id
   return Success
@@ -360,14 +393,15 @@ createRC ::
   Id Domain.VehicleRegistrationCertificate ->
   Id Image.Image ->
   UTCTime ->
+  Maybe Vehicle.Variant ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.VehicleRegistrationCertificate
-createRC rcconfigs rcInsurenceConfigs output id imageId now edl expiry = do
+createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
   let vehicleCapacity = (readMaybe . T.unpack) =<< output.seating_capacity
-  let (verificationStatus, variant) = validateRCStatus rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity
+  let (verificationStatus, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
@@ -389,16 +423,19 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now edl expiry = do
       updatedAt = now
     }
 
-validateRCStatus :: ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
-validateRCStatus rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity = do
-  case rcconfigs.supportedVehicleClasses of
-    ODC.RCValidClasses [] -> (Domain.INVALID, Nothing)
-    ODC.RCValidClasses vehicleClassVariantMap -> do
-      let validCOVsCheck = rcconfigs.vehicleClassCheckType
-      let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC capacity vehicleClassVariantMap validCOVsCheck) cov
-      let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
-      if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Domain.VALID, variant) else (Domain.INVALID, variant)
-    _ -> (Domain.INVALID, Nothing)
+validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
+validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity = do
+  case mbVariant of
+    Just variant -> (Domain.VALID, Just variant)
+    Nothing -> do
+      case rcconfigs.supportedVehicleClasses of
+        ODC.RCValidClasses [] -> (Domain.INVALID, Nothing)
+        ODC.RCValidClasses vehicleClassVariantMap -> do
+          let validCOVsCheck = rcconfigs.vehicleClassCheckType
+          let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC capacity vehicleClassVariantMap validCOVsCheck) cov
+          let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
+          if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Domain.VALID, variant) else (Domain.INVALID, variant)
+        _ -> (Domain.INVALID, Nothing)
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do

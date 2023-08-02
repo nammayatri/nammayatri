@@ -55,6 +55,7 @@ oldIdfyWebhookHandler secret val = do
       case vsc of
         Verification.IdfyConfig idfyCfg -> do
           Idfy.webhookHandler idfyCfg onVerify secret val
+        Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -76,6 +77,7 @@ idfyWebhookHandler merchantShortId secret val = do
       case vsc of
         Verification.IdfyConfig idfyCfg -> do
           Idfy.webhookHandler idfyCfg onVerify secret val
+        Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse

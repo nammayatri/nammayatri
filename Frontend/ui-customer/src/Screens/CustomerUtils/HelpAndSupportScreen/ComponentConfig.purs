@@ -220,7 +220,7 @@ primaryEditTextConfigDescription state = let
         { text = getString REASON_FOR_DELETING_ACCOUNT
         , color = Color.black900
         }  
-      , margin = Margin 10 32 10 100
+      , margin = Margin 10 32 10 0
       , showErrorLabel = DS.length state.data.description >= 300
       , errorLabel
         { text = getString MAX_CHAR_LIMIT_REACHED <> " 300 " <> getString OF <> " 300"

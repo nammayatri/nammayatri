@@ -32,6 +32,7 @@ import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
@@ -66,6 +67,7 @@ data IdfyVerificationT f = IdfyVerificationT
     imageExtractionValidation :: B.C f Domain.ImageExtractionValidation,
     idfyResponse :: B.C f (Maybe Text),
     multipleRC :: B.C f (Maybe Bool),
+    dashboardPassedVehicleVariant :: B.C f (Maybe Vehicle.Variant),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -117,6 +119,7 @@ idfyVerificationTMod =
       imageExtractionValidation = B.fieldNamed "image_extraction_validation",
       idfyResponse = B.fieldNamed "idfy_response",
       multipleRC = B.fieldNamed "multiple_rc",
+      dashboardPassedVehicleVariant = B.fieldNamed "dashboard_passed_vehicle_variant",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

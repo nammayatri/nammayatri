@@ -91,12 +91,13 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverMaxExtraFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
-    keepHiddenForSeconds :: Seconds
+    keepHiddenForSeconds :: Seconds,
+    requestedVehicleVariant :: Variant.Variant
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -120,5 +121,6 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
       rideRequestPopupDelayDuration = delayDuration,
       specialLocationTag = searchRequest.specialLocationTag,
-      keepHiddenForSeconds = keepHiddenForSeconds
+      keepHiddenForSeconds = keepHiddenForSeconds,
+      ..
     }

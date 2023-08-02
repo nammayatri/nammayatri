@@ -151,6 +151,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     smsProvidersPriorityList :: B.C f [SmsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     verificationService :: B.C f VerificationService,
+    faceVerificationService :: B.C f VerificationService,
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
@@ -196,6 +197,7 @@ merchantServiceUsageConfigTMod =
       smsProvidersPriorityList = B.fieldNamed "sms_providers_priority_list",
       whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
       verificationService = B.fieldNamed "verification_service",
+      faceVerificationService = B.fieldNamed "face_verification_service",
       aadhaarVerificationService = B.fieldNamed "aadhaar_verification_service",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
