@@ -131,21 +131,39 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
 --       )
 --     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateDynamicBlockedState :: Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> SqlDB ()
+-- updateDynamicBlockedState :: Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> SqlDB ()
+-- updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
+--   now <- getCurrentTime
+--   let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       ( [ DriverInformationBlocked =. val isBlocked,
+--           DriverInformationBlockedReason =. val blockedReason,
+--           DriverInformationBlockExpiryTime =. val expiryTime,
+--           DriverInformationUpdatedAt =. val now
+--         ]
+--           <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
+--       )
+--     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+updateDynamicBlockedState :: (MonadFlow m) => Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> m ()
 updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
   now <- getCurrentTime
+  driverInfo <- findById driverId
   let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      ( [ DriverInformationBlocked =. val isBlocked,
-          DriverInformationBlockedReason =. val blockedReason,
-          DriverInformationBlockExpiryTime =. val expiryTime,
-          DriverInformationUpdatedAt =. val now
-        ]
-          <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
-      )
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+  let numOfLocks' = case driverInfo of
+        Just driverInfoResult -> driverInfoResult.numOfLocks
+        Nothing -> 0
+  updateOneWithKV
+    ( [ Se.Set BeamDI.blocked isBlocked,
+        Se.Set BeamDI.blockedReason blockedReason,
+        Se.Set BeamDI.blockExpiryTime expiryTime,
+        Se.Set BeamDI.updatedAt now
+      ]
+        <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
+    )
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
 updateBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person.Driver -> Bool -> m ()
 updateBlockedState driverId isBlocked = do

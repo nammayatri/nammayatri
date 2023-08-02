@@ -150,15 +150,6 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
 findOneByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findOneByBookingId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findOneByBookingId bookingId = Esq.findOne $ do
-  ride <- from $ table @RideT
-  where_ $
-    ride ^. Ride.RideBookingId ==. val (toKey bookingId)
-  orderBy [desc $ ride ^. RideCreatedAt]
-  limit 1
-  pure ride
-
 findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
   let limitVal = maybe 10 fromInteger mbLimit
@@ -598,14 +589,17 @@ findStuckRideItems (Id merchantId) bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-findLastRideAssigned :: Transactionable m => Id Person -> m (Maybe Ride)
-findLastRideAssigned driverId = do
-  Esq.findOne $ do
-    lastRide <- from $ table @RideT
-    where_ $ lastRide ^. RideDriverId ==. val (toKey driverId)
-    orderBy [desc $ lastRide ^. RideCreatedAt]
-    limit 1
-    return lastRide
+-- findLastRideAssigned :: Transactionable m => Id Person -> m (Maybe Ride)
+-- findLastRideAssigned driverId = do
+--   Esq.findOne $ do
+--     lastRide <- from $ table @RideT
+--     where_ $ lastRide ^. RideDriverId ==. val (toKey driverId)
+--     orderBy [desc $ lastRide ^. RideCreatedAt]
+--     limit 1
+--     return lastRide
+
+findLastRideAssigned :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
+findLastRideAssigned (Id driverId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq driverId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 -- findRideBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m (HashMap.HashMap (Id Booking) (Booking, Maybe DRide.Ride))
 -- findRideBookingsById merchantId bookingIds = do

@@ -34,7 +34,6 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
-import Storage.Tabular.Ride as Ride
 
 createBooking :: (L.MonadFlow m, Log m) => Booking -> m ()
 createBooking = createWithKV
