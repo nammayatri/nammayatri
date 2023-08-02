@@ -28,7 +28,6 @@ import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QR
 import Tools.Error

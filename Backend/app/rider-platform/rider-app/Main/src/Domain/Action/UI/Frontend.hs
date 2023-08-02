@@ -37,12 +37,10 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
@@ -100,7 +98,6 @@ handleRideTracking ::
     EncFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    CoreMetrics m,
     HasField "rideCfg" r RideConfig
   ) =>
   Id DP.Person ->

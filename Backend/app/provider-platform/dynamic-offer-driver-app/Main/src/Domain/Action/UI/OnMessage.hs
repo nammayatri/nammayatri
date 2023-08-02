@@ -29,11 +29,9 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Metrics (CoreMetrics)
 
 data FCMReq = FCMReq
   { rideId :: Id Ride.Ride,
@@ -41,7 +39,7 @@ data FCMReq = FCMReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c) => (Id Person.Person, Id DM.Merchant) -> FCMReq -> m APISuccess.APISuccess
+sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c) => (Id Person.Person, Id DM.Merchant) -> FCMReq -> m APISuccess.APISuccess
 sendMessageFCM (_personId, _) FCMReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."

@@ -10,12 +10,10 @@ import qualified Domain.Types.Person as SP
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverReferral as QRD
 import Tools.Error
@@ -27,9 +25,7 @@ data ReferralLinkReq = ReferralLinkReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createDriverReferral ::
-  ( HasCacheConfig r,
-    Redis.HedisFlow m r,
-    MonadFlow m,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     MonadTime m

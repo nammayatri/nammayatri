@@ -49,7 +49,6 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -61,7 +60,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Call
 import Tools.Error
-import Tools.Metrics
 
 newtype CallRes = CallRes
   { callId :: Id SCS.CallStatus
@@ -90,7 +88,6 @@ initiateCallToCustomer ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Id SRide.Ride ->
@@ -126,7 +123,7 @@ initiateCallToCustomer rideId = do
             createdAt = now
           }
 
-getDriverMobileNumber :: (EncFlow m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Person.Person, Id DM.Merchant) -> Text -> m CallRes
+getDriverMobileNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Person.Person, Id DM.Merchant) -> Text -> m CallRes
 getDriverMobileNumber (driverId, merchantId) rcNo = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
@@ -158,7 +155,7 @@ getDriverMobileNumber (driverId, merchantId) rcNo = do
             createdAt = now
           }
 
-getDecryptedMobileNumberByDriverId :: (EncFlow m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m Text
+getDecryptedMobileNumberByDriverId :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m Text
 getDecryptedMobileNumberByDriverId driverId = do
   driver <- PSQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let encMobNum = driver.mobileNumber

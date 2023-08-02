@@ -24,7 +24,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.Issue.IssueOption as Queries
 
 findAllByCategoryAndLanguage :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]

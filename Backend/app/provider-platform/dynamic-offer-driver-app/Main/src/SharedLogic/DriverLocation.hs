@@ -27,7 +27,6 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.Queries.DriverLocation as DLQueries
 

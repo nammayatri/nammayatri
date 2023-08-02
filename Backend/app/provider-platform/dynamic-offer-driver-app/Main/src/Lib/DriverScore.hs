@@ -27,12 +27,10 @@ import qualified Domain.Types.SearchRequestForDriver as SRD
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (Forkable (fork), Money (Money), fromMaybeM, getCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (CacheFlow, Forkable (fork), Money (Money), fromMaybeM, getCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
 import qualified Storage.Queries.Booking as BQ
@@ -42,12 +40,12 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.Ride as RQ
 import Tools.Error
 
-driverScoreEventHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DST.DriverRideRequest -> m ()
 driverScoreEventHandler payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   logDebug $ "driverScoreEventHandler with payload: " <> show payload
   eventPayloadHandler payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DST.DriverRideRequest -> m ()
 eventPayloadHandler DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchTryId
   case response of

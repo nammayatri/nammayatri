@@ -50,8 +50,7 @@ sendStatus ::
   ( HasFlowEnv m r '["webengageCfg" ::: IT.WebengageConfig],
     EncFlow m r,
     EsqDBFlow m r,
-    CoreMetrics m,
-    Log m
+    CoreMetrics m
   ) =>
   StatusRes ->
   m APISuccess

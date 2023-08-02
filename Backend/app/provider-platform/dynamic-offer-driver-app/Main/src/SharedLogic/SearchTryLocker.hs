@@ -21,35 +21,26 @@ where
 
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import Kernel.Utils.Common (CacheFlow)
 
 isSearchTryCancelled ::
-  ( HasCacheConfig r,
-    HedisFlow m r
-  ) =>
+  CacheFlow m r =>
   Id SearchTry ->
   m Bool
 isSearchTryCancelled searchTryId = do
   fromMaybe False <$> Hedis.get (mkCancelledKey searchTryId)
 
 isSearchTryAssigned ::
-  ( HasCacheConfig r,
-    HedisFlow m r
-  ) =>
+  CacheFlow m r =>
   Id SearchTry ->
   m Bool
 isSearchTryAssigned searchTryId = do
   fromMaybe False <$> Hedis.get (mkAssignedKey searchTryId)
 
 whenSearchTryCancellable ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    CoreMetrics m
-  ) =>
+  CacheFlow m r =>
   Id SearchTry ->
   m () ->
   m ()
@@ -61,10 +52,7 @@ whenSearchTryCancellable searchTryId actions = do
     actions
 
 markSearchTryAsAssigned ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    CoreMetrics m
-  ) =>
+  CacheFlow m r =>
   Id SearchTry ->
   m ()
 markSearchTryAsAssigned searchTryId = do

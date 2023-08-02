@@ -18,7 +18,6 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FareProduct as FareProduct
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import Tools.Error
@@ -31,7 +30,7 @@ data FarePoliciesProduct = FarePoliciesProduct
     specialLocationTag :: Maybe Text
   }
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
 getFarePolicy merchantId vehVariant Nothing = do
   fareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
   farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
@@ -47,7 +46,7 @@ getFarePolicy merchantId vehVariant (Just area) = do
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
 
-getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FarePoliciesProduct
+getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FarePoliciesProduct
 getAllFarePoliciesProduct merchantId fromlocaton toLocation = do
   allFareProducts <- FareProduct.getAllFareProducts merchantId fromlocaton toLocation
   farePolicies <-

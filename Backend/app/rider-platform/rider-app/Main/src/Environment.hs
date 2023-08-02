@@ -46,6 +46,7 @@ import Kernel.Types.Id (ShortId (..))
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
+import Kernel.Utils.Common (CacheConfig)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -54,7 +55,6 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
-import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 import Tools.Streaming.Kafka
 

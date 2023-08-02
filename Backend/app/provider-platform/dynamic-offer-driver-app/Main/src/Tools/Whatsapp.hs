@@ -20,6 +20,7 @@ where
 
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Whatsapp.Interface as Reexport hiding
   ( whatsAppOptApi,
   )
@@ -29,12 +30,10 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import Tools.Metrics (CoreMetrics)
 
-whatsAppOptAPI :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GupShup.OptApiReq -> m APISuccess
+whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> GupShup.OptApiReq -> m APISuccess
 whatsAppOptAPI merchantId req = do
   void $ GupShup.whatsAppOptApi handler req
   return Success

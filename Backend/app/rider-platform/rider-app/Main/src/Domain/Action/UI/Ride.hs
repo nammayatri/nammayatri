@@ -36,13 +36,11 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch
-import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
 data GetDriverLocResp = GetDriverLocResp
@@ -62,12 +60,10 @@ data GetRideStatusResp = GetRideStatusResp
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 getDriverLoc ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
     HasField "rideCfg" r RideConfig
   ) =>
   Id SRide.Ride ->
@@ -109,11 +105,9 @@ getDriverLoc rideId personId = do
     driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
 
 getRideStatus ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
     HasField "rideCfg" r RideConfig
   ) =>
   Id SRide.Ride ->

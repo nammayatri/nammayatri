@@ -42,7 +42,6 @@ import qualified Kernel.Utils.Schema as S
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CDMPM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate

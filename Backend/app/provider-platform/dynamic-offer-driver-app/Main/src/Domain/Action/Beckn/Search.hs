@@ -46,6 +46,7 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (Alternative (empty), whenJustM)
 import Kernel.External.Maps.Google.PolyLinePoints
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -58,7 +59,6 @@ import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
@@ -70,7 +70,6 @@ import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpeci
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
-import Tools.Metrics
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
 data DSearchReq = DSearchReq
@@ -347,10 +346,7 @@ buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation
       }
 
 buildSpecialZoneQuote ::
-  ( MonadGuid m,
-    MonadTime m,
-    MonadReader r m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   DSRSZ.SearchRequestSpecialZone ->
@@ -399,9 +395,7 @@ validateRequest merchantId sReq = do
   return merchant
   where
     rideServiceable' ::
-      ( -- EsqDBFlow m r,
-        L.MonadFlow m
-      ) =>
+      L.MonadFlow m =>
       GeofencingConfig ->
       (LatLong -> [Text] -> m Bool) ->
       LatLong ->
@@ -419,7 +413,7 @@ validateRequest merchantId sReq = do
             maybe (pure True) (`someGeometriesContain` regions) mbDestination
       pure $ originServiceable && destinationServiceable
 
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
+buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   updAddress <- case address of
     Just loc
@@ -455,7 +449,7 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
         ..
       }
 
-getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
+getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId sessionToken latLong = do
   pickupRes <-
     DMaps.getPlaceName merchantId $
@@ -464,7 +458,7 @@ getAddressByGetPlaceName merchantId sessionToken latLong = do
           sessionToken = Just sessionToken,
           language = Nothing
         }
-  mkLocation pickupRes
+  pure $ mkLocation pickupRes
 
 decodeAddress :: BA.Address -> Maybe Text
 decodeAddress BA.Address {..} = do

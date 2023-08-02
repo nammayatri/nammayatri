@@ -8,8 +8,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
 import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
-import Storage.CachedQueries.CacheConfig (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, fromMaybeM)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
 

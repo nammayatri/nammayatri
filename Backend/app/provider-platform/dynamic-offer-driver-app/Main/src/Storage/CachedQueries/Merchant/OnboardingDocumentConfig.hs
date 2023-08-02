@@ -30,7 +30,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
 
 create :: (L.MonadFlow m, Log m) => OnboardingDocumentConfig -> m ()

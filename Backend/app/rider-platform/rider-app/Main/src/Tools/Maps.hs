@@ -40,20 +40,16 @@ import Kernel.External.Maps as Reexport hiding
     snapToRoad,
   )
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error
-import Tools.Metrics
 
 getDistance ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
+  ( ServiceFlow m r,
     HasCoordinates a,
     HasCoordinates b
   ) =>
@@ -63,10 +59,7 @@ getDistance ::
 getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
 
 getDistanceForCancelRide ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    CoreMetrics m,
+  ( ServiceFlow m r,
     HasCoordinates a,
     HasCoordinates b
   ) =>
@@ -76,10 +69,7 @@ getDistanceForCancelRide ::
 getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
 
 getDistances ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
+  ( ServiceFlow m r,
     HasCoordinates a,
     HasCoordinates b
   ) =>
@@ -88,20 +78,17 @@ getDistances ::
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 
-getRoutes :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)
 
-getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes = runWithServiceConfig Maps.getRoutes (.getPickupRoutes)
 
-getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getTripRoutes = runWithServiceConfig Maps.getRoutes (.getTripRoutes)
 
 snapToRoad ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
+  ( ServiceFlow m r,
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
   ) =>
   Id Merchant ->
@@ -109,17 +96,17 @@ snapToRoad ::
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
-autoComplete :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete :: ServiceFlow m r => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
 
-getPlaceName :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName :: ServiceFlow m r => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
 getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
-getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails :: ServiceFlow m r => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 
 runWithServiceConfig ::
-  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) =>
+  ServiceFlow m r =>
   (MapsServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> MapsService) ->
   Id Merchant ->

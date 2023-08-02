@@ -25,18 +25,15 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import Storage.CachedQueries.Maps.LocationMapCache
 import Tools.Auth
 import qualified Tools.Maps as Maps
-import Tools.Metrics
 
 type API = "getHotSpot" :> TokenAuth :> ReqBody '[JSON] Maps.LatLong :> Get '[JSON] HotSpotResponse
 
@@ -59,9 +56,7 @@ filterAccordingMaxFrequency threshold =
     )
 
 getHotspot ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    CoreMetrics m,
+  ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Maps.LatLong ->

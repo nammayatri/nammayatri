@@ -24,7 +24,6 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Person as SP
-import qualified Storage.CachedQueries.CacheConfig as SCC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Person.PersonStats as QPS
@@ -72,7 +71,7 @@ data FrequencyCategory = HIGH | MID | LOW | ZERO
 data UserCategory = POWER | REGULAR | IRREGULAR | RARE
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonStats :: (EsqDBReplicaFlow m r, EncFlow m r, SCC.CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> m PersonStatsRes
+getPersonStats :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> m PersonStatsRes
 getPersonStats (personId, merchantId) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personStats_ <- runInReplica $ QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)

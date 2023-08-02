@@ -48,7 +48,6 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
@@ -57,7 +56,6 @@ import Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Call as Call
 import Tools.Error
-import Tools.Metrics
 
 newtype CallRes = CallRes
   { callId :: Id DCS.CallStatus
@@ -83,7 +81,6 @@ initiateCallToDriver ::
   ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Id SRide.Ride ->

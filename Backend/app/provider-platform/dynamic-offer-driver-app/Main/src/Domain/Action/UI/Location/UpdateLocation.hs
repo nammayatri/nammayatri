@@ -54,14 +54,12 @@ import SharedLogic.DriverFee (mergeDriverFee)
 import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
 import qualified Storage.Queries.Person as QP
-import Tools.Metrics (CoreMetrics)
 
 type UpdateLocationReq = NonEmpty Waypoint
 
@@ -161,10 +159,7 @@ handleDriverPayments driverId diffUtc = do
       updateSubscription False (cast driverId)
 
 updateLocationHandler ::
-  ( Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m,
-    HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
+  ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
     MonadTime m,
@@ -225,10 +220,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m,
-    HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
-    MonadTime m
+    HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions]
   ) =>
   Id Person.Person ->
   m ()

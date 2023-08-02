@@ -33,14 +33,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 
 isSearchTryValid ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>
@@ -52,8 +50,7 @@ isSearchTryValid searchTryId = do
   pure $ status == DST.ACTIVE && validTill > now
 
 isReceivedMaxDriverQuotes ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>
@@ -65,8 +62,7 @@ isReceivedMaxDriverQuotes driverPoolCfg searchTryId = do
   pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>
@@ -91,7 +87,7 @@ setBatchDurationLock searchRequestId singleBatchProcessTime = do
     else return Nothing
 
 createRescheduleTime ::
-  MonadReader r m =>
+  Monad m =>
   Seconds ->
   UTCTime ->
   m UTCTime

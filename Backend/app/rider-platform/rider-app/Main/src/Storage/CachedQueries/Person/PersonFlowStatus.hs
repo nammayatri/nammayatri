@@ -24,7 +24,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Kernel.Types.Time
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.Person.PersonFlowStatus as Queries
 
 create :: (L.MonadFlow m, Log m) => PersonFlowStatus -> m ()

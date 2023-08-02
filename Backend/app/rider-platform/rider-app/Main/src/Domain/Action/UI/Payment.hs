@@ -43,12 +43,10 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Metrics
 import qualified Tools.Payment as Payment
 
 -- create order -----------------------------------------------------
@@ -95,8 +93,7 @@ getStatus ::
     EsqDBReplicaFlow m r,
     L.MonadFlow m,
     EsqDBFlow m r,
-    EncFlow m r,
-    CoreMetrics m
+    EncFlow m r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
@@ -110,8 +107,7 @@ getOrder ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r,
-    CoreMetrics m
+    EncFlow m r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->

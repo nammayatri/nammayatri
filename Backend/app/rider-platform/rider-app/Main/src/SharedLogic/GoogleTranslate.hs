@@ -27,8 +27,7 @@ import Kernel.External.GoogleTranslate.Types
 import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
 import Kernel.Prelude (HasField (..))
 import Kernel.Storage.Hedis as Hedis
-import Kernel.Tools.Metrics.CoreMetrics.Types
-import Kernel.Utils.Common (BaseUrl, MonadFlow, Seconds, logDebug)
+import Kernel.Utils.Common (BaseUrl, Seconds, logDebug)
 import Kernel.Utils.Dhall
 import Servant
 import qualified Tools.Maps as Maps
@@ -40,7 +39,7 @@ newtype CacheTranslationConfig = CacheTranslationConfig
 
 type HasCacheTranslationConfig r = HasField "cacheTranslationConfig" r CacheTranslationConfig
 
-type TranslateFlow m r = (HasCacheTranslationConfig r, HedisFlow m r, EncFlow m r, MonadFlow m, GoogleTranslate.HasGoogleTranslate m r, CoreMetrics m)
+type TranslateFlow m r = (HasCacheTranslationConfig r, HedisFlow m r, EncFlow m r, GoogleTranslate.HasGoogleTranslate m r)
 
 translate :: TranslateFlow m r => Maps.Language -> Maps.Language -> Text -> m GoogleTranslate.TranslateResp
 translate source target q = do

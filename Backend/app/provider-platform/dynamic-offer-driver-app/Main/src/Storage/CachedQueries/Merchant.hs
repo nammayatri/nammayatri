@@ -33,7 +33,6 @@ import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
 findById :: (CacheFlow m r, L.MonadFlow m) => Id Merchant -> m (Maybe Merchant)
@@ -72,7 +71,7 @@ clearCache merchant = do
     Hedis.del (makeShortIdKey merchant.shortId)
     Hedis.del (makeSubscriberIdKey merchant.subscriberId)
 
-cacheMerchant :: (HasCacheConfig r, HedisFlow m r) => Merchant -> m ()
+cacheMerchant :: CacheFlow m r => Merchant -> m ()
 cacheMerchant merchant = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey merchant.id

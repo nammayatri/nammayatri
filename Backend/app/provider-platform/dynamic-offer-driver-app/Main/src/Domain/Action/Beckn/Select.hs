@@ -28,7 +28,6 @@ import qualified Domain.Types.SearchTry as DST
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug, throwError)
@@ -129,9 +128,6 @@ buildSearchTry ::
   ( MonadTime m,
     MonadGuid m,
     MonadReader r m,
-    MonadFlow m,
-    MonadReader r m,
-    HasEsqEnv m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->

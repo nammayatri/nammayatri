@@ -19,22 +19,20 @@ import Data.Time as DT
 import Domain.Types.Maps.DirectionsCache as DC
 import Domain.Types.Merchant (Slot)
 import qualified Domain.Types.Merchant as Merchant
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Types.Error (MerchantError (MerchantNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import Storage.CachedQueries.Maps.DirectionsCache as DCC
 import qualified Storage.CachedQueries.Maps.DirectionsCache as DQ
 import Storage.CachedQueries.Merchant as M
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Tools.Error (GenericError (..))
 import qualified Tools.Maps as Maps
-import Tools.Metrics (CoreMetrics)
 
-getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasField "esqDBReplicaEnv" r EsqDBEnv) => Id Merchant.Merchant -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes merchantId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let origin = NE.head req.waypoints
@@ -52,7 +50,7 @@ getRoutes merchantId req = do
     Nothing ->
       Maps.getRoutes merchantId req
 
-callDirectionsApi :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant.Merchant -> Maps.GetRoutesReq -> Text -> Text -> Int -> m Maps.GetRoutesResp
+callDirectionsApi :: ServiceFlow m r => Id Merchant.Merchant -> Maps.GetRoutesReq -> Text -> Text -> Int -> m Maps.GetRoutesResp
 callDirectionsApi merchantId req originGeoHash destGeoHash timeSlot = do
   resp <- Maps.getRoutes merchantId req
   if null resp
@@ -60,12 +58,11 @@ callDirectionsApi merchantId req originGeoHash destGeoHash timeSlot = do
     else do
       let (cachedResp : _) = resp
       directionsCache <- convertToDirCache originGeoHash destGeoHash timeSlot cachedResp
-      -- Esq.runTransaction $ DQ.create directionsCache
       DQ.create directionsCache
       DCC.cacheDirectionsResponse directionsCache
       return resp
 
-getSlot :: (MonadIO m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant.Merchant -> m (Maybe Int)
+getSlot :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant.Merchant -> m (Maybe Int)
 getSlot merchantId = do
   utcTime <- getLocalCurrentTime 19800
   let istTime = utcToLocalTime (TimeZone 0 False "") utcTime

@@ -20,7 +20,7 @@ import Domain.Types.DriverBlockReason
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.DriverBlockReason as Queries
 
 findAll :: (CacheFlow m r, Esq.EsqDBFlow m r) => m [DriverBlockReason]

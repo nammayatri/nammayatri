@@ -26,7 +26,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.DriverInformation as Queries
 import qualified Storage.Queries.Person as QueriesPerson
 

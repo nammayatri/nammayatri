@@ -24,7 +24,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FeedbackForm as CQFF
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Booking as QBooking

@@ -29,7 +29,6 @@ import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.AppInstalls as QAppInstalls
 

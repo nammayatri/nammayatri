@@ -21,12 +21,12 @@ import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Streaming.Kafka.Producer.Types as KT
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.CacheFlow as CC
 import Kernel.Types.Common (Tables)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Utils.Common (CacheConfig)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
@@ -91,7 +91,7 @@ data AppCfg = AppCfg
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
-    cacheConfig :: CC.CacheConfig,
+    cacheConfig :: CacheConfig,
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -118,7 +118,7 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
-    cacheConfig :: CC.CacheConfig,
+    cacheConfig :: CacheConfig,
     coreMetrics :: Metrics.CoreMetricsContainer,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,

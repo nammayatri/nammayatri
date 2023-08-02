@@ -31,7 +31,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.DriverPoolConfig as Queries
 
 create :: (L.MonadFlow m, Log m) => DriverPoolConfig -> m ()

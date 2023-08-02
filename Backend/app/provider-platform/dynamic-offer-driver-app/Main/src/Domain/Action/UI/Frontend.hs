@@ -25,7 +25,6 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverMode as DMode
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Tools.Error
