@@ -138,8 +138,36 @@ let hccfg =
       }
 
 let tables =
-      { enableKVForWriteAlso = [] : List Text
-      , enableKVForRead = [] : List Text
+      { enableKVForWriteAlso =
+            [ "search_request_location"
+            , "registration_token"
+            , "search_request"
+            , "person_flow_status"
+            , "estimate_breakup"
+            , "estimate"
+            , "on_search_event"
+            , "driver_offer"
+            , "quote"
+            , "booking_location"
+            , "ride"
+            , "fare_breakup"
+            ]
+          : List Text
+      , enableKVForRead =
+            [ "search_request_location"
+            , "registration_token"
+            , "search_request"
+            , "person_flow_status"
+            , "estimate_breakup"
+            , "estimate"
+            , "on_search_event"
+            , "driver_offer"
+            , "quote"
+            , "booking_location"
+            , "ride"
+            , "fare_breakup"
+            ]
+          : List Text
       , tableAllocation = 50 : Natural
       }
 

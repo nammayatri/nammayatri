@@ -1,37 +1,40 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use camelCase" #-}
 
 module Utils.Event where
 
 import Data.Text
 import Euler.Events.MetricApi.MetricApi
 
-euler_peek_db_command_error :: PromRep 'Counter "euler_peek_db_command_error" '[]
-euler_peek_db_command_error =
-  counter #euler_peek_db_command_error
+peek_db_command_error :: PromRep 'Counter "peek_db_command_error" '[]
+peek_db_command_error =
+  counter #peek_db_command_error
     .& build
 
-euler_drop_db_command_error :: PromRep 'Counter "euler_drop_db_command_error" '[]
-euler_drop_db_command_error =
-  counter #euler_drop_db_command_error
+drop_db_command_error :: PromRep 'Counter "drop_db_command_error" '[]
+drop_db_command_error =
+  counter #drop_db_command_error
     .& build
 
-euler_parse_db_command_error :: PromRep 'Counter "euler_parse_db_command_error" '[ '("action", Text), '("model_object", Text)]
-euler_parse_db_command_error =
-  counter #euler_parse_db_command_error
+parse_db_command_error :: PromRep 'Counter "parse_db_command_error" '[ '("action", Text), '("model_object", Text)]
+parse_db_command_error =
+  counter #parse_db_command_error
     .& lbl @"action" @Text
     .& lbl @"model_object" @Text
     .& build
 
-euler_query_execution_failure_error :: PromRep 'Counter "euler_query_execution_failure_error" '[ '("action", Text), '("model", Text)]
-euler_query_execution_failure_error =
-  counter #euler_query_execution_failure_error
+query_execution_failure_error :: PromRep 'Counter "query_execution_failure_error" '[ '("action", Text), '("model", Text)]
+query_execution_failure_error =
+  counter #query_execution_failure_error
     .& lbl @"action" @Text
     .& lbl @"model" @Text
     .& build
 
-euler_duplicate_entry_create :: PromRep 'Counter "euler_duplicate_entry_create" '[ '("model", Text)]
-euler_duplicate_entry_create =
-  counter #euler_duplicate_entry_create
+duplicate_entry_create :: PromRep 'Counter "duplicate_entry_create" '[ '("model", Text)]
+duplicate_entry_create =
+  counter #duplicate_entry_create
     .& lbl @"model" @Text
     .& build
 
@@ -57,13 +60,13 @@ euler_query_batch_size =
   gauge #euler_query_batch_size
     .& build
 
-euler_drainer_query_executes :: PromRep 'Counter "euler_drainer_query_executes" '[ '("action", Text)]
-euler_drainer_query_executes =
-  counter #euler_drainer_query_executes
+drainer_query_executes :: PromRep 'Counter "drainer_query_executes" '[ '("action", Text)]
+drainer_query_executes =
+  counter #drainer_query_executes
     .& lbl @"action" @Text
     .& build
 
-euler_drainer_stop_status :: PromRep 'Gauge "euler_drainer_stop_status" '[]
-euler_drainer_stop_status =
-  gauge #euler_drainer_stop_status
+drainer_stop_status :: PromRep 'Gauge "drainer_stop_status" '[]
+drainer_stop_status =
+  gauge #drainer_stop_status
     .& build

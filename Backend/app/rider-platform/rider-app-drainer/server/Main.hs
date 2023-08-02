@@ -1,4 +1,5 @@
--- {-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 -- {-# OPTIONS_GHC -Wno-unused-matches     #-}
 
 module Main where
