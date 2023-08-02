@@ -6,9 +6,10 @@ import Components.ChooseVehicle.Controller (Action(..), Config)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender)
 import Common.Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Engineering.Helpers.Commons as EHC
 import Debug
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -18,6 +19,7 @@ view push config =
   , height WRAP_CONTENT
   , background if config.index == config.activeIndex && (not config.isCheckBox) then Color.blue600 else Color.white900
   , cornerRadius 6.0
+  , id $ EHC.getNewIDWithTag config.id
   , stroke $ case config.isCheckBox of
           false -> if config.index == config.activeIndex then "1," <> Color.blue800 else "1," <> Color.white900
           true -> "1," <> Color.grey900
@@ -25,6 +27,7 @@ view push config =
   , padding $ Padding 8 16 12 16
   , clickable config.isEnabled
   , onClick push $ const $ OnSelect config
+  , afterRender push (const NoAction)
   ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT

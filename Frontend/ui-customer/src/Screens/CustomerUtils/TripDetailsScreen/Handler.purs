@@ -31,7 +31,8 @@ tripDetailsScreen = do
     (GlobalState state) <- getState
     act <- lift $ lift $ runScreen $ TripDetailsScreen.screen state.tripDetailsScreen
     case act of
-        GoBack fromMyRides -> do 
+        GoBack fromMyRides -> do
+          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false}})
           case fromMyRides of 
             Home -> App.BackT $ pure App.GoBack
             MyRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDES)
@@ -39,6 +40,6 @@ tripDetailsScreen = do
         OnSubmit state -> App.BackT $ App.NoBack <$> (pure $ ON_SUBMIT state)
         GoToInvoice updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_INVOICE updatedState )
         GoHome updatedState-> do
-            modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false}})
+            modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> updatedState {props{issueReported = false}})
             App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME updatedState)
         ConnectWithDriver updatedState -> App.BackT $ App.NoBack <$> (pure $ CONNECT_WITH_DRIVER updatedState)
