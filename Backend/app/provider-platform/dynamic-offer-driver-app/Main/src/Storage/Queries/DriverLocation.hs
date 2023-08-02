@@ -34,7 +34,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), buildRadiusWithin'', getMasterBeamConfig, getReplicaBeamConfig)
+import Lib.Utils (FromTType' (fromTType'), buildRadiusWithin'', getLocationDbBeamConfig, getReplicaLocationDbBeamConfig)
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverLocation as BeamDL
 
@@ -62,12 +62,12 @@ import qualified Storage.Beam.DriverLocation as BeamDL
 create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 create drLocationId latLong updateTime merchantId = do
   now <- getCurrentTime
-  dbConf <- getMasterBeamConfig
+  dbConf <- getLocationDbBeamConfig
   void $ L.runDB dbConf $ L.insertRows $ B.insert (BeamCommon.driverLocation BeamCommon.atlasDB) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getLocationDbBeamConfig
   geoms <-
     L.runDB dbConf $
       L.findRow $
@@ -84,6 +84,23 @@ findById (Id driverLocationId) = do
 --   Id Person ->
 --   m (Maybe DriverLocation)
 -- findByIdInReplica id = Esq.runInLocReplica $ Esq.findById id
+
+findByIdInReplica ::
+  (L.MonadFlow m, Log m) =>
+  Id Person ->
+  m (Maybe DriverLocation)
+findByIdInReplica (Id driverLocationId) = do
+  dbConf <- getReplicaLocationDbBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.limit_ 1 $
+            B.filter_' (\BeamDL.DriverLocationT {..} -> driverId B.==?. B.val_ driverLocationId) $
+              B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
+  case geoms of
+    Right (Just geom) -> fromTType' geom
+    _ -> return Nothing
 
 upsertGpsCoord :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
@@ -106,7 +123,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   where
     updateRecords :: L.MonadFlow m => Text -> LatLong -> UTCTime -> UTCTime -> m ()
     updateRecords drLocationId' latLong' calculationTime' now' = do
-      dbConf <- getMasterBeamConfig
+      dbConf <- getLocationDbBeamConfig
       void $
         L.runDB dbConf $
           L.updateRows $
@@ -123,7 +140,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id driverId') = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getLocationDbBeamConfig
   void $
     L.runDB dbConf $
       L.deleteRows
@@ -142,7 +159,7 @@ getDriverLocsFromMerchId ::
 getDriverLocsFromMerchId mbDriverPositionInfoExpiry gps radiusMeters merchantId' = do
   let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
   now <- getCurrentTime
-  dbConf <- getMasterBeamConfig
+  dbConf <- getLocationDbBeamConfig
   dlocs <-
     L.runDB dbConf $
       L.findRows $
@@ -167,7 +184,7 @@ getDriverLocsFromMerchIdInReplica ::
 getDriverLocsFromMerchIdInReplica mbDriverPositionInfoExpiry gps radiusMeters merchantId' = do
   let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
   now <- getCurrentTime
-  dbConf <- getReplicaBeamConfig
+  dbConf <- getReplicaLocationDbBeamConfig
   dlocs <-
     L.runDB dbConf $
       L.findRows $
@@ -193,7 +210,7 @@ findAllDriverLocations ::
   m [DriverLocation]
 findAllDriverLocations driverIds mbDriverPositionInfoExpiry now = do
   let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
-  dbConf <- getMasterBeamConfig
+  dbConf <- getLocationDbBeamConfig
   geoms <-
     L.runDB dbConf $
       L.findRows $
@@ -210,7 +227,7 @@ getDriverLocations ::
   UTCTime ->
   m [DriverLocation]
 getDriverLocations before = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getLocationDbBeamConfig
   geoms <-
     L.runDB dbConf $
       L.findRows $
@@ -228,7 +245,7 @@ getDriverLocs ::
   Id Merchant ->
   m [DriverLocation]
 getDriverLocs driverIds (Id merchId) = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getLocationDbBeamConfig
   geoms <-
     L.runDB dbConf $
       L.findRows $

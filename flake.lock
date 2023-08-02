@@ -44,11 +44,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1689148695,
-        "narHash": "sha256-y6D8Hwh+QIC6DrgKdM2q+68Bb92uPVC/Fk0g4xSqr+Y=",
+        "lastModified": 1690904712,
+        "narHash": "sha256-zwhRQVcRq1yRxJsPIsnVnu8NgVNQD36e6iUy8z7cZno=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "5e18399176fe1914069c2a43bd3bb14b2d7e7e56",
+        "rev": "a13f0a006a90409985fd40e5c82480537204c794",
         "type": "github"
       },
       "original": {

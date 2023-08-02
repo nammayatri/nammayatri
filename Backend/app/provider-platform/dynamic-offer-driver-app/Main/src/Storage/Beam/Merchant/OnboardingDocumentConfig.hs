@@ -24,44 +24,31 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
+-- import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+-- import Database.Beam.Postgres
+--   ( Postgres,
+--   )
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+-- import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
-instance FromField Domain.DocumentType where
-  fromField = fromFieldEnum
+-- instance FromField Domain.VehicleClassCheckType where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DocumentType where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VehicleClassCheckType where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DocumentType
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VehicleClassCheckType
 
-instance FromBackendRow Postgres Domain.DocumentType
-
-instance IsString Domain.DocumentType where
-  fromString = show
-
-instance FromField Domain.VehicleClassCheckType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VehicleClassCheckType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VehicleClassCheckType
-
-instance FromBackendRow Postgres Domain.VehicleClassCheckType
+-- instance FromBackendRow Postgres Domain.VehicleClassCheckType
 
 instance IsString Domain.VehicleClassCheckType where
   fromString = show
@@ -81,9 +68,9 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
 
 instance B.Table OnboardingDocumentConfigT where
   data PrimaryKey OnboardingDocumentConfigT f
-    = Id (B.C f Text)
+    = Id (B.C f Text) (B.C f Domain.DocumentType)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id <$> merchantId <*> documentType
 
 instance ModelMeta OnboardingDocumentConfigT where
   modelFieldModification = onboardingDocumentConfigTMod
@@ -134,4 +121,4 @@ onboardingDocumentConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 onboardingDocumentConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''OnboardingDocumentConfigT ['documentType] [])
+$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [])

@@ -73,6 +73,6 @@ driverOfferTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId]])
+$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
 
 $(mkTableInstances ''DriverOfferT "driver_offer" "atlas_app")

@@ -35,6 +35,15 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()
 
+-- instance FromField Domain.VerificationStatus where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VerificationStatus where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
+
+-- instance FromBackendRow Postgres Domain.VerificationStatus
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
     driverId :: B.C f Text,

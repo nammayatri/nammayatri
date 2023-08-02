@@ -115,4 +115,4 @@ farePolicySlabsDetailsSlabToPSModifiers :: M.Map Text (A.Value -> A.Value)
 farePolicySlabsDetailsSlabToPSModifiers =
   M.empty
 
-$(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [])
+$(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [['farePolicyId]])

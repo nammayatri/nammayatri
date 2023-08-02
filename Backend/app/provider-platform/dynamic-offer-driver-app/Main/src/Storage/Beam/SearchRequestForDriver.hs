@@ -40,16 +40,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
-instance FromField D.DriverMode where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be D.DriverMode where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be D.DriverMode
-
-instance FromBackendRow Postgres D.DriverMode
-
 instance FromField Domain.DriverSearchRequestStatus where
   fromField = fromFieldEnum
 

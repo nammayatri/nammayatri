@@ -22,10 +22,8 @@ import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
-import qualified Storage.Beam.BapMetadata as BeamBM
+-- import qualified Storage.Beam.BapMetadata as BeamBM
 import qualified Storage.Beam.BapMetadata as BeamBMD
-
--- import Storage.Tabular.BapMetadata ()
 
 -- findById :: Transactionable m => Id BapMetadata -> m (Maybe BapMetadata)
 -- findById = Esq.findById
@@ -33,8 +31,8 @@ import qualified Storage.Beam.BapMetadata as BeamBMD
 findById :: (L.MonadFlow m, Log m) => Id BapMetadata -> m (Maybe BapMetadata)
 findById (Id metaDataId) = findOneWithKV [Se.Is BeamBMD.id $ Se.Eq metaDataId]
 
-instance FromTType' BeamBM.BapMetadata BapMetadata where
-  fromTType' BeamBM.BapMetadataT {..} = do
+instance FromTType' BeamBMD.BapMetadata BapMetadata where
+  fromTType' BeamBMD.BapMetadataT {..} = do
     logoUrl_ <- parseBaseUrl logoUrl
     pure $
       Just
@@ -44,10 +42,10 @@ instance FromTType' BeamBM.BapMetadata BapMetadata where
             logoUrl = logoUrl_
           }
 
-instance ToTType' BeamBM.BapMetadata BapMetadata where
+instance ToTType' BeamBMD.BapMetadata BapMetadata where
   toTType' BapMetadata {..} = do
-    BeamBM.BapMetadataT
-      { BeamBM.id = getId id,
-        BeamBM.name = name,
-        BeamBM.logoUrl = showBaseUrl logoUrl
+    BeamBMD.BapMetadataT
+      { BeamBMD.id = getId id,
+        BeamBMD.name = name,
+        BeamBMD.logoUrl = showBaseUrl logoUrl
       }

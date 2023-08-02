@@ -125,9 +125,16 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   maxShards <- asks (.maxShards)
   let rideDate = getCurrentDate nowUtc
   -- Esq.runTransaction $ do
+  _ <- QDI.updateOnRide driverId False
+  _ <- DLoc.updateOnRide driverId False merchantId
+  if driverInfo.active
+    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+    else QDFS.updateStatus ride.driverId DDFS.IDLE
+  DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
+  SRide.clearCache $ cast driverId
+  whenJust mbFareParams QFare.create
   whenJust mbRiderDetails $ \riderDetails ->
     when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
-  whenJust mbFareParams QFare.create
   _ <- QRide.updateAll ride.id ride
   _ <- QRide.updateStatus ride.id Ride.COMPLETED
   _ <- QRB.updateStatus booking.id SRB.COMPLETED

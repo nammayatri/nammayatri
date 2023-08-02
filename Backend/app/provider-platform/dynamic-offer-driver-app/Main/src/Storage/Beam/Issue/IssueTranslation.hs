@@ -87,4 +87,4 @@ issueTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueTranslationToPSModifiers =
   M.empty
 
-$(enableKVPG ''IssueTranslationT ['id] [])
+$(enableKVPG ''IssueTranslationT ['id] [['language]])

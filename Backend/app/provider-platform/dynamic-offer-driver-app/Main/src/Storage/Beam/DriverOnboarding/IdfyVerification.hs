@@ -41,6 +41,17 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
+import Storage.Beam.DriverOnboarding.Image ()
+
+-- instance FromField Image.ImageType where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
+
+-- instance FromBackendRow Postgres Image.ImageType
 
 instance FromField Domain.ImageExtractionValidation where
   fromField = fromFieldEnum
@@ -134,9 +145,6 @@ idfyVerificationToHSModifiers =
 idfyVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 idfyVerificationToPSModifiers =
   M.empty
-
-instance IsString Image.ImageType where
-  fromString = show
 
 instance IsString Domain.ImageExtractionValidation where
   fromString = show

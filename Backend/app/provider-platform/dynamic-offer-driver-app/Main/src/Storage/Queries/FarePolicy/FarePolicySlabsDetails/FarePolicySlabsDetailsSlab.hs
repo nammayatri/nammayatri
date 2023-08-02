@@ -31,8 +31,6 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 
--- import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-
 findAll' ::
   (L.MonadFlow m, Log m) =>
   Id DFP.FarePolicy ->

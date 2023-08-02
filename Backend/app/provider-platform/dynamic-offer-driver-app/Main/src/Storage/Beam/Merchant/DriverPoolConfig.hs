@@ -160,4 +160,4 @@ driverPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverPoolConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverPoolConfigT ['tripDistance] [])
+$(enableKVPG ''DriverPoolConfigT ['merchantId] [])

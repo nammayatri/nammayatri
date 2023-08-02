@@ -26,15 +26,18 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 -- import Kernel.Storage.Esqueleto.Types
 
 import Domain.Types.DriverFee
+import qualified Domain.Types.DriverInformation as DomainDI
+-- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
+-- import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.FarePolicy as DomainFP
 import qualified Domain.Types.FareProduct as FareProductD
+import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DomainODC
 import Domain.Types.Vehicle.Variant (Variant (..))
 import EulerHS.CachedSqlDBQuery (SqlReturning)
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
 import qualified EulerHS.Language as L
 import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn)
-import Kernel.Beam.Types (PsqlDbCfg (..), PsqlDbCfgR1 (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
@@ -290,6 +293,67 @@ instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DomainFP.NightShiftCh
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.NightShiftCharge
 
 instance FromBackendRow Postgres DomainFP.NightShiftCharge
+
+instance FromField DomainDI.DriverMode where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainDI.DriverMode where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainDI.DriverMode
+
+instance FromBackendRow Postgres DomainDI.DriverMode
+
+-- instance FromField DomainIdfy.VerificationStatus where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainIdfy.VerificationStatus where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainIdfy.VerificationStatus
+
+-- instance FromBackendRow Postgres DomainIdfy.VerificationStatus
+
+-- instance IsString DomainIdfy.VerificationStatus where
+--   fromString = show
+
+-- instance FromField Image.ImageType where
+--   fromField = fromFieldEnum
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
+
+-- instance FromBackendRow Postgres Image.ImageType
+
+-- -- deriving stock instance Ord Image.ImageType
+
+-- instance IsString Image.ImageType where
+--   fromString = show
+
+instance FromField DomainODC.DocumentType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainODC.DocumentType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainODC.DocumentType
+
+instance FromBackendRow Postgres DomainODC.DocumentType
+
+instance FromField DomainODC.VehicleClassCheckType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainODC.VehicleClassCheckType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainODC.VehicleClassCheckType
+
+instance FromBackendRow Postgres DomainODC.VehicleClassCheckType
+
+-- instance IsString DomainODC.DocumentType where
+--   fromString = show
 
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Language where
 --   sqlValueSyntax = autoSqlValueSyntax
@@ -625,7 +689,14 @@ deleteWithKV whereClause = do
 
 getMasterDBConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
 getMasterDBConfig = do
-  dbConf <- L.getOption PsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  case dbConf of
+    Just dbCnf' -> pure dbCnf'
+    Nothing -> L.throwException $ InternalError "DB Config not found"
+
+getLocDbConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
+getLocDbConfig = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCnf' -> pure dbCnf'
     Nothing -> L.throwException $ InternalError "DB Config not found"
@@ -638,11 +709,26 @@ getMasterBeamConfig = do
     Right conn' -> pure conn'
     Left _ -> L.throwException $ InternalError "DB Config not found"
 
+getLocationDbBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
+getLocationDbBeamConfig = do
+  dbConf <- getLocDbConfig
+  conn <- L.getOrInitSqlConn dbConf
+  case conn of
+    Right conn' -> pure conn'
+    Left _ -> L.throwException $ InternalError "DB Config not found"
+
 ----- replica db funcitons---------------
 
 getReplicaDbConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
 getReplicaDbConfig = do
-  dbConf <- L.getOption PsqlDbCfgR1
+  dbConf <- L.getOption KBT.PsqlDbCfgR1
+  case dbConf of
+    Just dbCnf' -> pure dbCnf'
+    Nothing -> L.throwException $ InternalError "DB Config not found"
+
+getReplicaLocationDbConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
+getReplicaLocationDbConfig = do
+  dbConf <- L.getOption KBT.PsqlDbCfgR1
   case dbConf of
     Just dbCnf' -> pure dbCnf'
     Nothing -> L.throwException $ InternalError "DB Config not found"
@@ -650,6 +736,14 @@ getReplicaDbConfig = do
 getReplicaBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
 getReplicaBeamConfig = do
   dbConf <- getReplicaDbConfig
+  conn <- L.getOrInitSqlConn dbConf
+  case conn of
+    Right conn' -> pure conn'
+    Left _ -> L.throwException $ InternalError "DB Config not found"
+
+getReplicaLocationDbBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
+getReplicaLocationDbBeamConfig = do
+  dbConf <- getReplicaLocationDbConfig
   conn <- L.getOrInitSqlConn dbConf
   case conn of
     Right conn' -> pure conn'

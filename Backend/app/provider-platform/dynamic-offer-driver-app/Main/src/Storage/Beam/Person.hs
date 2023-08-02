@@ -227,4 +227,4 @@ instance Serialize Person where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''PersonT ['id] [['merchantId]]) -- check the secondary key here
+$(enableKVPG ''PersonT ['id] [['merchantId]]) -- DON'T Enable for KV

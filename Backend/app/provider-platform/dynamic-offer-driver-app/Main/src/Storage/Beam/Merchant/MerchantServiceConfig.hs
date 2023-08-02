@@ -70,9 +70,9 @@ data MerchantServiceConfigT f = MerchantServiceConfigT
 
 instance B.Table MerchantServiceConfigT where
   data PrimaryKey MerchantServiceConfigT f
-    = Id (B.C f Domain.ServiceName)
+    = Id (B.C f Domain.ServiceName) (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . serviceName
+  primaryKey = Id <$> serviceName <*> merchantId
 
 instance ModelMeta MerchantServiceConfigT where
   modelFieldModification = merchantServiceConfigTMod

@@ -1,8 +1,10 @@
 packages:
+  app/provider-platform/dynamic-offer-driver-drainer
   app/beckn-cli
   app/provider-platform/driver-tracking-health-check
   app/provider-platform/dynamic-offer-driver-app/Main
   app/provider-platform/dynamic-offer-driver-app/Allocator
+  app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/search-result-aggregator
   app/mocks/sms

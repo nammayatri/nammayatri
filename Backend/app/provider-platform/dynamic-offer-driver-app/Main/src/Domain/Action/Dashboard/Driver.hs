@@ -838,7 +838,7 @@ clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDr
 clearOnRideStuckDrivers merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
   -- driverInfos <- Esq.runInReplica QPerson.getOnRideStuckDriverIds
-  driverInfos <- QPerson.getOnRideStuckDriverIds
+  driverInfos <- QPerson.getOnRideStuckDriverIdsInReplica
   driverIds <-
     mapM
       ( \driverInf -> do

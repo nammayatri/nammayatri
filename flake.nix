@@ -5,6 +5,7 @@
     # Backend inputs
     shared-kernel.url = "github:nammayatri/shared-kernel/updatedEulerHS";
     beckn-gateway.url = "github:nammayatri/beckn-gateway/updatedEulerHS";
+    # euler-webservices.url = "git+ssh://git@ssh.bitbucket.juspay.net/jbiz/euler-webservice";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
     beckn-gateway.inputs.flake-parts.follows = "common/flake-parts";

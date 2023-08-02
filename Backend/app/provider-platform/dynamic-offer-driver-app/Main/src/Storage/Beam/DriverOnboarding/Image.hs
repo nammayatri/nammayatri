@@ -135,4 +135,4 @@ imageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 imageToPSModifiers =
   M.empty
 
-$(enableKVPG ''ImageT ['id] [['personId], ['merchantId]])
+$(enableKVPG ''ImageT ['id] [['personId], ['merchantId]]) -- DON'T Enable for KV

@@ -92,6 +92,6 @@ quoteTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-$(enableKVPG ''QuoteT ['id] [['providerId], ['requestId]])
+$(enableKVPG ''QuoteT ['id] [['providerId], ['requestId], ['driverOfferId]])
 
 $(mkTableInstances ''QuoteT "quote" "atlas_app")

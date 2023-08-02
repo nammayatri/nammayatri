@@ -96,4 +96,4 @@ aadhaarVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 aadhaarVerificationToPSModifiers =
   M.empty
 
-$(enableKVPG ''AadhaarVerificationT ['driverId] [])
+$(enableKVPG ''AadhaarVerificationT ['driverId] [['aadhaarNumberHash]])

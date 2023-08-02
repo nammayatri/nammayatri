@@ -937,8 +937,6 @@ respondQuote ::
   DriverRespondReq ->
   m APISuccess
 respondQuote (driverId, _) req = do
-  logDebug $ "[Apoorv] SearchRequestId: " <> show req.searchRequestId
-  logDebug $ "[Apoorv] SearchTryId: " <> show req.searchTryId
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)

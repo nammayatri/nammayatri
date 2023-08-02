@@ -139,4 +139,4 @@ merchantPaymentMethodToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantPaymentMethodToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantPaymentMethodT ['id] [])
+$(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantId]])

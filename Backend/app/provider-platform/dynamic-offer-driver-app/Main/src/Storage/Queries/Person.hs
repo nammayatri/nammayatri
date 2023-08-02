@@ -255,6 +255,11 @@ getOnRideStuckDriverIds = do
   rideIds <- findAllWithKV [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
   findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> rideIds)]]
 
+getOnRideStuckDriverIdsInReplica :: (L.MonadFlow m, Log m) => m [DriverInformation]
+getOnRideStuckDriverIdsInReplica = do
+  rideIds <- findAllWithKvInReplica [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
+  findAllWithKvInReplica [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> rideIds)]]
+
 getVehicles ::
   (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
@@ -286,18 +291,6 @@ getDriversInReplica ::
 getDriversInReplica vehicles = findAllWithKvInReplica [Se.Is BeamP.id $ Se.In personKeys]
   where
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
-
-getDriversWithMerchID ::
-  (L.MonadFlow m, Log m) =>
-  Id Merchant ->
-  m [Person]
-getDriversWithMerchID (Id merchantId) =
-  findAllWithKV
-    [ Se.And
-        ( [Se.Is BeamP.merchantId $ Se.Eq merchantId]
-            <> [Se.Is BeamP.role $ Se.Eq Person.DRIVER]
-        )
-    ]
 
 getDriverQuote ::
   (L.MonadFlow m, Log m) =>

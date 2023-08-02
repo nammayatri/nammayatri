@@ -174,4 +174,4 @@ instance Serialize Merchant where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''MerchantT ['id] [])
+$(enableKVPG ''MerchantT ['id] [['subscriberId], ['shortId], ['status]])

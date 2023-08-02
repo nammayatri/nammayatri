@@ -105,4 +105,4 @@ instance Serialize FareProduct where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''FareProductT ['id] [])
+$(enableKVPG ''FareProductT ['id] [['merchantId]])
