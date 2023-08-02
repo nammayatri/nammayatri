@@ -61,6 +61,15 @@ updateFeedbackBadge feedbackBadge newBadgeCount = do
     ]
     [Se.And [Se.Is BFFB.id $ Se.Eq $ getId feedbackBadge.id, Se.Is BFFB.driverId $ Se.Eq $ getId feedbackBadge.driverId]]
 
+-- findAllFeedbackBadgeForDriver :: Transactionable m => Id Person -> m [FeedbackBadge]
+-- findAllFeedbackBadgeForDriver driverId = findAll $ do
+--   feedbackBadges <- from $ table @FeedbackBadgeT
+--   where_ $ feedbackBadges ^. FeedbackBadgeDriverId ==. val (toKey driverId)
+--   pure feedbackBadges
+
+findAllFeedbackBadgeForDriver :: (L.MonadFlow m, Log m) => Id Person -> m [FeedbackBadge]
+findAllFeedbackBadgeForDriver (Id driverId) = findAllWithKV [Se.Is BFFB.driverId $ Se.Eq driverId]
+
 instance FromTType' BFFB.FeedbackBadge FeedbackBadge where
   fromTType' BFFB.FeedbackBadgeT {..} = do
     pure $

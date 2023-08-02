@@ -107,6 +107,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+      _ -> error "FaceVerificationConfig is not Impletemented"
     pure $
       Just
         MerchantServiceConfig
@@ -140,11 +141,12 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
         Domain.SmsServiceConfig smsCfg -> case smsCfg of
           Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
           Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
+          Sms.GupShupConfig cfg -> (Domain.SmsService Sms.GupShup, toJSON cfg)
         Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
           Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
         Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
           Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
-          Verification.FaceVerificationConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
+          Verification.FaceVerificationConfig _ -> error "FaceVerificationConfig is not supported"
         Domain.CallServiceConfig callCfg -> case callCfg of
           Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
         Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of

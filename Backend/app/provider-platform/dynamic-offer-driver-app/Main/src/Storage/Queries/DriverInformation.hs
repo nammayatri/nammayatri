@@ -217,14 +217,17 @@ updateOnRide (Id driverId) onRide = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-findByDriverIdActiveRide :: (Transactionable m) => Id Person.Driver -> m (Maybe DriverInformation)
-findByDriverIdActiveRide driverId = do
-  Esq.findOne $ do
-    driverInfo <- from $ table @DriverInformationT
-    where_ $
-      driverInfo ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
-        &&. driverInfo ^. DriverInformationOnRide ==. val True
-    return driverInfo
+-- findByDriverIdActiveRide :: (Transactionable m) => Id Person.Driver -> m (Maybe DriverInformation)
+-- findByDriverIdActiveRide driverId = do
+--   Esq.findOne $ do
+--     driverInfo <- from $ table @DriverInformationT
+--     where_ $
+--       driverInfo ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+--         &&. driverInfo ^. DriverInformationOnRide ==. val True
+--     return driverInfo
+
+findByDriverIdActiveRide :: (MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
+findByDriverIdActiveRide (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDI.driverId $ Se.Eq driverId, Se.Is BeamDI.onRide $ Se.Eq True]]
 
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m, Log m) => [Id Person.Driver] -> m ()
 updateNotOnRideMultiple driverIds = do

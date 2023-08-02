@@ -88,6 +88,7 @@ data BookingT f = BookingT
     estimatedDuration :: B.C f Seconds,
     fareParametersId :: B.C f Text,
     riderName :: B.C f (Maybe Text),
+    paymentUrl :: B.C f (Maybe Text),
     paymentMethodId :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
@@ -165,6 +166,7 @@ bookingTMod =
       estimatedDuration = B.fieldNamed "estimated_duration",
       fareParametersId = B.fieldNamed "fare_parameters_id",
       riderName = B.fieldNamed "rider_name",
+      paymentUrl = B.fieldNamed "payment_url",
       createdAt = B.fieldNamed "created_at",
       paymentMethodId = B.fieldNamed "payment_method_id",
       updatedAt = B.fieldNamed "updated_at"
