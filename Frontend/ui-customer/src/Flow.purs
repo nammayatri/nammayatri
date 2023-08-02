@@ -197,7 +197,7 @@ getIosVersion merchant =
             minorUpdateIndex : 1,
             patchUpdateIndex : 0,
             enableForceUpdateIOS : false
-          }               
+          }
 
 
 checkVersion :: Int -> String -> FlowBT String Unit
@@ -227,9 +227,9 @@ checkVersion versioncodeAndroid versionName= do
       else pure unit
 
 
-getLatestAndroidVersion :: Merchant -> Int 
-getLatestAndroidVersion merchant = 
-  case merchant of 
+getLatestAndroidVersion :: Merchant -> Int
+getLatestAndroidVersion merchant =
+  case merchant of
     NAMMAYATRI -> 31
     YATRI -> 49
     YATRISATHI -> 2
@@ -252,7 +252,7 @@ currentRideFlow rideAssigned = do
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
       if not (null listResp.list) then do
-        when (not rideAssigned) $ lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state" 
+        when (not rideAssigned) $ lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
             rideStatus = if status == "NEW" then RideAccepted else RideStarted
@@ -833,12 +833,12 @@ homeScreenFlow = do
                       lon = savedLocation.lon,
                       locationItemType = Just SAVED_LOCATION,
                       postfixImageUrl = "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" }
-                    else 
+                    else
                       item {
                         lat = item.lat,
                         lon = item.lon,
                         locationItemType = item.locationItemType,
-                        postfixImageUrl = "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } 
+                        postfixImageUrl = "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" }
             ) ((filteredRecentsList) <> filteredPredictionList) }})
       homeScreenFlow
     GET_QUOTES state -> do
@@ -870,7 +870,7 @@ homeScreenFlow = do
       homeScreenFlow
     CONFIRM_RIDE state -> do
           _ <- pure $ enableMyLocation false
-          let selectedQuote = if state.props.isSpecialZone then state.data.specialZoneSelectedQuote else state.props.selectedQuote
+          let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES then state.data.specialZoneSelectedQuote else state.props.selectedQuote
           _ <- pure $ spy "selected Quote " selectedQuote
           if isJust selectedQuote then do
             updateLocalStage ConfirmingRide
@@ -911,7 +911,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})
             homeScreenFlow
           else do
-            lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage 
+            lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
             homeScreenFlow
     CANCEL_RIDE_REQUEST state -> do
       _ <- pure $ currentPosition ""
@@ -919,7 +919,7 @@ homeScreenFlow = do
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
-      liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user" 
+      liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user"
       liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
       removeChatService ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
@@ -938,7 +938,7 @@ homeScreenFlow = do
           pure unit
           else do
             _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
-            pure unit                     
+            pure unit
         case notification of
             "TRIP_STARTED"        -> do -- OTP ENTERED
                                       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_started"
@@ -995,7 +995,7 @@ homeScreenFlow = do
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
                                         _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
-                                        _ <- liftFlowBT $ logEvent logField_ "ny_fs_driver_assignment"  
+                                        _ <- liftFlowBT $ logEvent logField_ "ny_fs_driver_assignment"
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                         currentRideFlow true
                                         homeScreenFlow
@@ -1030,10 +1030,10 @@ homeScreenFlow = do
                                         , screen : Just $ getScreenFromStage state.props.currentStage
                                         , exit_app : false
                                         }
-                                        }                                    
+                                        }
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props {isBanner=state.props.isBanner}})
-      if state.props.currentStage == RideCompleted then 
-        if (getSearchType unit) == "direct_search" then do 
+      if state.props.currentStage == RideCompleted then
+        if (getSearchType unit) == "direct_search" then do
           _ <- updateLocalStage SearchLocationModel
           checkAndUpdateLocations
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = SearchLocationModel}})
@@ -1126,7 +1126,7 @@ homeScreenFlow = do
       if (fromMaybe "" sourceServiceabilityResp.geoJson) /= "" && (fromMaybe "" sourceServiceabilityResp.geoJson) /= state.data.polygonCoordinates && pickUpPoints /= state.data.nearByPickUpPoints then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place, confirmLocationCategory = srcSpecialLocation.category}})
         _ <- pure $ removeAllPolylines ""
-        _ <- pure $ runEffectFn5 locateOnMap false lat lon (fromMaybe "" sourceServiceabilityResp.geoJson) pickUpPoints
+        liftFlowBT $ runEffectFn5 locateOnMap false lat lon (fromMaybe "" sourceServiceabilityResp.geoJson) pickUpPoints
         homeScreenFlow
       else do
         PlaceName placeDetails <- getPlaceName lat lon gateAddress
@@ -1167,9 +1167,9 @@ homeScreenFlow = do
                                             }) srcSpecialLocation.gates
       let gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == state.props.defaultPickUpPoint)) pickUpPoints) !! 0))
       if (fromMaybe "" sourceServiceabilityResp.geoJson) /= "" && (fromMaybe "" sourceServiceabilityResp.geoJson) /= state.data.polygonCoordinates && pickUpPoints /= state.data.nearByPickUpPoints then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place, confirmLocationCategory = srcSpecialLocation.category}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (pickUpPoints!!0)).place, confirmLocationCategory = srcSpecialLocation.category}})
         _ <- pure $ removeAllPolylines ""
-        _ <- pure $ runEffectFn5 locateOnMap false lat lon (fromMaybe "" sourceServiceabilityResp.geoJson) pickUpPoints
+        liftFlowBT $ runEffectFn5 locateOnMap false lat lon (fromMaybe "" sourceServiceabilityResp.geoJson) pickUpPoints
         homeScreenFlow
       else do
         PlaceName address <- getPlaceName lat lon gateAddress
@@ -1226,7 +1226,7 @@ homeScreenFlow = do
           let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"|| (listItem.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"))) (AddNewAddress.getSavedLocations listResp.list))
               recents = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
               savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || listItem.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png")) (AddNewAddress.getSavedLocations listResp.list))
-              updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" 
+              updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
                                                                         else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" }) (recents))
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen
                                                                     { data
@@ -1881,7 +1881,7 @@ addNewAddressScreenFlow input = do
                                                                                                              }
                                                                                                       })
         _ <- pure $ removeAllPolylines ""
-        _ <- pure $ runEffectFn5 locateOnMap false lat lon (fromMaybe "" sourceServiceabilityResp.geoJson) pickUpPoints
+        liftFlowBT $ runEffectFn5 locateOnMap false lat lon (fromMaybe "" sourceServiceabilityResp.geoJson) pickUpPoints
         addNewAddressScreenFlow ""
       else do
         PlaceName address <- getPlaceName lat lon gateAddress
@@ -1975,7 +1975,7 @@ addNewAddressScreenFlow input = do
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
-  config <- getAppConfig 
+  config <- getAppConfig
   modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { config = config })
   flow <- UI.referralScreen
   case flow of
@@ -2021,9 +2021,9 @@ checkAndUpdateSavedLocations state = do
   if (getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)
     then do
       recentPredictionsObject <- lift $ lift $ getObjFromLocal state
-      (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""   
-      case savedLocationResp of 
-        Right (SavedLocationsListRes listResp) -> do 
+      (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
+      case savedLocationResp of
+        Right (SavedLocationsListRes listResp) -> do
           let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == ("ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png") || (listItem.prefixImageUrl == ("ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png")))) (AddNewAddress.getSavedLocations listResp.list))
           let recent = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
           let twoElements = catMaybes ([] <> [recent!!0] <> [recent!!1])
@@ -2035,11 +2035,11 @@ checkAndUpdateSavedLocations state = do
                 {
                   data
                   { recentSearchs
-                    { predictionArray =  
-                        map 
+                    { predictionArray =
+                        map
                           (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } ) twoElements},
-                      savedLocations = (AddNewAddress.getSavedLocations listResp.list), 
-                      locationList =  map 
+                      savedLocations = (AddNewAddress.getSavedLocations listResp.list),
+                      locationList =  map
                           (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" else "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png" } ) recent
                     }
                   }
@@ -2245,8 +2245,8 @@ checkAndUpdateLocations = do
       _ <- pure $ spy "inside right" payload'
       let (Payload innerPayload) = payload'.payload
       case isNothing innerPayload.search_type of
-        true -> pure unit 
-        false -> do 
+        true -> pure unit
+        false -> do
           let searchType = fromMaybe "normal_search" $ innerPayload.search_type
           if searchType /= "normal_search" then do
             let (LocationData source) = fromMaybe dummyLocationData innerPayload.source
@@ -2258,10 +2258,10 @@ checkAndUpdateLocations = do
               , sourceAddress = encodeAddress (fromMaybe "" source.name) [] Nothing
               , destinationAddress = encodeAddress (fromMaybe "" destination.name) [] Nothing
               }, props {
-                  sourceLat = source.lat 
-                , sourceLong = source.lon 
-                , destinationLat = destination.lat 
-                , destinationLong = destination.lon 
+                  sourceLat = source.lat
+                , sourceLong = source.lon
+                , destinationLat = destination.lat
+                , destinationLong = destination.lon
                 , isSource = Just false
                 , isSearchLocation = SearchLocation
               }

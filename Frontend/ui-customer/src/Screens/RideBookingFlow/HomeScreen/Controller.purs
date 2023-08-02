@@ -629,7 +629,7 @@ eval SearchForSelectedLocation state = do
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
-eval TerminateApp state = do 
+eval TerminateApp state = do
   pure $ terminateApp state.props.currentStage true
   continue state
 
@@ -656,7 +656,9 @@ eval OnResumeCallback state =
         true  -> do
           let secondsLeft = findingQuotesSearchExpired false
               findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
-          void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+          if secondsLeft > 0 then
+            void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+          else pure unit
         false -> pure unit
       case flowWithoutOffers WithoutOffers of
         true  -> exit $ OnResumeApp state
@@ -727,10 +729,10 @@ eval(ChatViewActionController (ChatView.Call)) state = do
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
-  then do 
+  then do
     pure $ sendMessage state.data.messageToBeSent
     pure $ setText (getNewIDWithTag "ChatInputEditText") ""
-    continue state{data{messageToBeSent = ""},props {sendMessageActive = false}} 
+    continue state{data{messageToBeSent = ""},props {sendMessageActive = false}}
   else
     continue state
 
@@ -786,12 +788,12 @@ eval BackPressed state = do
     SearchLocationModel -> do
                             if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
                               else do
-                                if state.props.isSearchLocation == LocateOnMap then do 
+                                if state.props.isSearchLocation == LocateOnMap then do
                                     _ <- pure $ exitLocateOnMap ""
                                     _ <- pure $ hideKeyboardOnNavigation true
                                     continue state{props{isSearchLocation = SearchLocation}}
                                   else do
-                                    if (getSearchType unit) == "direct_search" then 
+                                    if (getSearchType unit) == "direct_search" then
                                       pure $ terminateApp state.props.currentStage false
                                       else pure unit
                                     exit $ GoToHome
@@ -863,7 +865,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else if state.data.ratingViewState.openReportIssue then continue state {data {ratingViewState {openReportIssue = false}}}
-                          else do 
+                          else do
                               pure $ terminateApp state.props.currentStage false
                               continue state
 
@@ -937,7 +939,7 @@ eval (OnIconClick autoAssign) state = do
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
-eval (RatingCardAC (RatingCard.Rating index)) state = do 
+eval (RatingCardAC (RatingCard.Rating index)) state = do
   let feedbackListArr = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
   continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr}, ratingViewState { selectedRating = index} } }
 
@@ -1639,7 +1641,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
             let
               updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
             updateAndExit updatedState $ GetQuotes updatedState
-    
+
 
 eval (GetQuotesList (SelectListRes resp)) state = do
   case flowWithoutOffers WithoutOffers of
@@ -1809,8 +1811,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   continue $ if state.data.currentSearchResultType == QUOTES then newState{data{specialZoneSelectedQuote = Just config.id }}
               else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleVariant))) state = 
-  continue state{ props { showRateCard = true } 
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleVariant))) state =
+  continue state{ props { showRateCard = true }
                 , data {  rateCard {  onFirstPage = false
                                     , vehicleVariant = vehicleVariant
                                     , currentRateCardType = DefaultRateCard
@@ -1992,7 +1994,7 @@ dummyRideRatingState = {
   distanceDifference  : 0,
   feedback            : "",
   feedbackList        : [],
-  appConfig : DC.config 
+  appConfig : DC.config
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {
