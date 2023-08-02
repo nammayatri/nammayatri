@@ -679,7 +679,7 @@ export const saveSuggestionDefs = function(key){
 export const getSuggestionsfromLocal = function(key) {
     try {
       if(!window.suggestions) {
-        window.suggestions = JSON.parse(JBridge.getKeysInSharedPrefs("SUGGESTIONS"));
+        window.suggestions = JSON.parse(getKeyInSharedPrefKeys("SUGGESTIONS"));
       }
       let suggestions = window.suggestions;
       let keys = suggestions[key];
@@ -697,7 +697,7 @@ export const getSuggestionfromKey = function (key) {
   return function (language) {
     try {
       if (!window.suggestionsDefs) {
-        window.suggestionsDefs = JSON.parse(JBridge.getKeysInSharedPrefs("SUGGESTIONS_DEFINITIONS"));
+        window.suggestionsDefs = JSON.parse(JBridge.getFromSharedPrefs("SUGGESTIONS_DEFINITIONS"));
       }
       let suggestionsDefs = window.suggestionDefs;
       let val = suggestionsDefs[key];
@@ -1015,32 +1015,22 @@ export const _onEventWithCB = function (payload) {
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
 export const getKeyInSharedPrefKeys = function (key) {
-  if (JBridge.getKeysInSharedPref){
-    return JBridge.getKeysInSharedPref(key);
-  }
-  return JBridge.getKeysInSharedPrefs(key);
+    return JBridge.getFromSharedPrefs(key);
 };
 
 export const getKeyInNativeSharedPrefKeys = function (key) {
-  if (JBridge.getKeysInSharedPref) {
-    return JBridge.getKeysInSharedPref(key);
-  }
-  if (window.__OS == "IOS") {
-    return JBridge.getKeysInSharedPrefs(key);
-  } else { 
-    return JBridge.getKeyInNativeSharedPrefKeys(key);
-  }
+    return JBridge.getFromSharedPrefs(key);
 };
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
-    window.JBridge.setKeysInSharedPrefs(key, value);
+    return JBridge.setInSharedPrefs(key, value);
   };
 };
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
-      JBridge.setKeysInSharedPrefs(key, value);
+    return JBridge.setInSharedPrefs(key, value);
   };
 };
 
@@ -1051,11 +1041,11 @@ export const setEnvInNativeSharedPrefKeysImpl = function (key) {
 // };
 
 export const removeKeysInSharedPrefs = function (key) {
-    return JBridge.removeFromSharedPrefs(key);
+    return JBridge.removeDataFromSharedPrefs(key);
 };
 
 export const removeKeysInNativeSharedPrefs = function (key) {
-    JBridge.removeFromSharedPrefs(key);
+  return JBridge.removeDataFromSharedPrefs(key);
 };
 
 export const toggleLoaderImpl = function (showLoader) {
