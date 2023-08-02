@@ -26,8 +26,8 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width)
+import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=),(&&))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..),PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility)
 import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -53,6 +53,7 @@ view triggertype push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , clickable true
+  , visibility if (EHC.os == "IOS" && triggertype == "LOCATION_DISABLED") then GONE else VISIBLE
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT

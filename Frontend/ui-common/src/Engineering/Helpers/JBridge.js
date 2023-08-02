@@ -1729,6 +1729,7 @@ export const getLayoutBounds = function (id) {
     var bounds = JSON.parse(JBridge.getLayoutBounds(id));
     return bounds;
   };
+  return {"height" : 0, "width" : 0}
 };
 
 
