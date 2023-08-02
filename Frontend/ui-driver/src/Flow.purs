@@ -839,6 +839,9 @@ driverProfileFlow = do
       driverProfileFlow
     ADD_RC state -> do 
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
+      let (GlobalState defaultEpassState) = defaultGlobalState
+      pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
       addVehicleDetailsflow true
     GO_TO_CALL_DRIVER state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})

@@ -591,5 +591,7 @@ const tamilStrings = {
   OPTIONAL : " (விருப்பமானது)",
   DOWNLOAD_STATEMENT : "அறிக்கையைப் பதிவிறக்கு",
   SELECT_A_DATE_RANGE : "அறிக்கையைப் பதிவிறக்க தேதி வரம்பைத் தேர்ந்தெடுக்கவும்",
-  FEE_PAYMENT_HISTORY : "கட்டணம் செலுத்திய வரலாறு"
+  FEE_PAYMENT_HISTORY : "கட்டணம் செலுத்திய வரலாறு",
+  LANGUAGES_SPOKEN : "பேசும் மொழிகள்",
+  VIEW_PAYMENT_HISTORY : "கட்டண வரலாற்றைக் காண்க"
 }

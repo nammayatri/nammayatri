@@ -77,6 +77,7 @@ initData = {
       , ridesCancelled : 0
       , cancellationRate : 0
       , totalRidesAssigned : 0
+      , totalDistanceTravelled : ""
       }
     },
   props: {

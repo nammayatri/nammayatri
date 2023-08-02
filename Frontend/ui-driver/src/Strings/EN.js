@@ -555,7 +555,7 @@ const englishStrings = {
   EARNINGS_MISSED : "Earnings Missed",
   SUMMARY : "Summary",
   NAMMA_BONUS  : "Namma Bonus",
-  TRIPS_COMPLETED : "Trip Completed",
+  TRIPS_COMPLETED : "Trips Completed",
   LATE_NIGHT_TRIPS  : "Late night trips",
   ABOUT_ME  : "About me",
   ABOUT_VEHICLE : "About vehicle",
@@ -624,5 +624,7 @@ const englishStrings = {
   OPTIONAL : " (Optional)",
   DOWNLOAD_STATEMENT : "Download statement",
   SELECT_A_DATE_RANGE : "Select a date range to download the statement",
-  FEE_PAYMENT_HISTORY : "Fee payment history"
+  FEE_PAYMENT_HISTORY : "Fee payment history",
+  LANGUAGES_SPOKEN : "Languages spoken",
+  VIEW_PAYMENT_HISTORY : "View payment history"
 }

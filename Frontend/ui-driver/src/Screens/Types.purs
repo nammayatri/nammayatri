@@ -299,6 +299,7 @@ type AnalyticsData = {
   , ridesCancelled :: Int
   , cancellationRate :: Int
   , totalRidesAssigned :: Int
+  , totalDistanceTravelled :: String
 }
 
 type ChipRailData = {

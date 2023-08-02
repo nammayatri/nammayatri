@@ -13,7 +13,9 @@ window.getMerchantConfig = function () {
     "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
     "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
     "CALL_NAMMA_YATRI_SUPPORT",
-    "YOUR_FEEDBACK_HELPS_US"],
+    "YOUR_FEEDBACK_HELPS_US",
+    "YOUR_FEEDBACK_HELPS_US"
+    ],
     "isReferralEnabled": "false",
     "showBookingPreference": "false",
     "showRateCard": "false",

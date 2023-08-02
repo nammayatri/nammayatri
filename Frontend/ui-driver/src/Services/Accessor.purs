@@ -73,6 +73,3 @@ _lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) {lon = n
 
 _certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b 
 _certificateNumber = lens (unwrap >>> _.certificateNumber) (\oldRec newVal -> wrap (unwrap oldRec) {certificateNumber = newVal})
-
-_languagesSpoken :: forall a b c. Newtype a { languagesSpoken :: b | c} => Lens' a b 
-_languagesSpoken = lens (unwrap >>> _.languagesSpoken) (\oldRec newVal -> wrap ((unwrap oldRec) {languagesSpoken = newVal}))
