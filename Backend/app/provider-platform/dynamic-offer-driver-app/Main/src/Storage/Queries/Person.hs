@@ -46,7 +46,6 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -86,6 +85,7 @@ import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 import Storage.Queries.DriverQuote ()
 import Storage.Queries.Instances.DriverInformation ()
+import Storage.Queries.Ride ()
 import Storage.Queries.Vehicle ()
 
 create :: (L.MonadFlow m, Log m) => Person.Person -> m ()
@@ -196,7 +196,7 @@ getDriversWithOutdatedLocationsToMakeInactive' before = do
   return drivers
 
 findAllDriversByIdsFirstNameAsc ::
-  (Transactionable m, Functor m, L.MonadFlow m, EsqLocRepDBFlow m r, EsqDBReplicaFlow m r) =>
+  (Functor m, MonadFlow m) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
@@ -251,7 +251,9 @@ getDriverInfos driverLocs = do
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
 
 getOnRideStuckDriverIds :: (L.MonadFlow m, Log m) => m [DriverInformation]
-getOnRideStuckDriverIds = error ""
+getOnRideStuckDriverIds = do
+  rideIds <- findAllWithKV [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
+  findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> rideIds)]]
 
 getVehicles ::
   (L.MonadFlow m, Log m) =>
@@ -702,7 +704,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (Transactionable m, MonadTime m, L.MonadFlow m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
+  (MonadTime m, L.MonadFlow m, Log m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -759,7 +761,7 @@ buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} 
     else Nothing
 
 getDriverLocsWithCond ::
-  (L.MonadFlow m, MonadTime m, EsqLocRepDBFlow m r) =>
+  (MonadFlow m, MonadTime m) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
@@ -844,7 +846,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (Transactionable m, MonadTime m, L.MonadFlow m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
+  (MonadTime m, L.MonadFlow m, Log m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -883,7 +885,7 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
         getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
 getNearestDriversCurrentlyOnRideInReplica ::
-  (Transactionable m, MonadTime m, L.MonadFlow m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
+  (MonadTime m, MonadFlow m) =>
   Maybe Variant ->
   LatLong ->
   Int ->

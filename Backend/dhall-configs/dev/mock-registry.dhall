@@ -9,6 +9,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_registry"
+      , connectionPoolCount = +25
       }
 
 in  { port = +8020

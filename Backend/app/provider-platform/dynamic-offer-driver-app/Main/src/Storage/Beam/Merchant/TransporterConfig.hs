@@ -131,7 +131,9 @@ transporterConfigTMod =
       aadhaarVerificationRequired = B.fieldNamed "aadhaar_verification_required",
       enableDashboardSms = B.fieldNamed "enable_dashboard_sms",
       createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
+      updatedAt = B.fieldNamed "updated_at",
+      rcLimit = B.fieldNamed "rc_limit",
+      automaticRCActivationCutOff = B.fieldNamed "automatic_r_c_activation_cut_off"
     }
 
 instance Serialize TransporterConfig where

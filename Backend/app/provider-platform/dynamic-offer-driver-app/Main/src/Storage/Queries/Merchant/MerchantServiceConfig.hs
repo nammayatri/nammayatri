@@ -102,12 +102,14 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
       Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> valueToMaybe configJSON
       Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> valueToMaybe configJSON
+      Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> valueToMaybe configJSON
       Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
       Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> valueToMaybe configJSON
+      Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> valueToMaybe configJSON
       Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-      _ -> error "FaceVerificationConfig is not Impletemented"
+
     pure $
       Just
         MerchantServiceConfig
@@ -146,7 +148,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
         Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
           Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
-          Verification.FaceVerificationConfig _ -> error "FaceVerificationConfig is not supported"
+          Verification.FaceVerificationConfig cfg -> (Domain.VerificationService Verification.InternalScripts, toJSON cfg)
         Domain.CallServiceConfig callCfg -> case callCfg of
           Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
         Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
