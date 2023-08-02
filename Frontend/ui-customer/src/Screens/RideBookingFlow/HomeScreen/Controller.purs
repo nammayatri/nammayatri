@@ -1702,8 +1702,10 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       newState = state{data{specialZoneQuoteList = updatedQuotes}}
-  continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
-              else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
+  if state.props.isSpecialZone then do 
+              _ <- pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
+              continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+              else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state =
   if state.props.isSpecialZone then do
@@ -2054,6 +2056,7 @@ specialZoneFlow estimatedQuotes state = do
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
+    _ <- pure $ setValueToLocalStore SELECTED_VARIANT (defaultQuote.vehicleVariant)
     continue state { data {specialZoneQuoteList = quoteList, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant}, props {currentStage = SettingPrice}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
