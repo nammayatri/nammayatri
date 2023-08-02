@@ -63,7 +63,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
 import Tools.Maps (LatLong)
-import Tools.Metrics (CoreMetrics)
+import Tools.Metrics (CoreMetrics, HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 
 -- import qualified Beckn.ACL.Update as ACL -- uncomment for update api test
@@ -249,6 +249,7 @@ onUpdate ::
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HedisFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>
   ValidatedOnUpdateReq ->
@@ -256,6 +257,7 @@ onUpdate ::
 onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
+  incrementRideCreatedRequestCount booking.merchantId.getId
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
