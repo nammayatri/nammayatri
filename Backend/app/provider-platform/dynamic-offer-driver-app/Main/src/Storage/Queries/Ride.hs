@@ -430,12 +430,3 @@ findLastRideAssigned driverId = do
     orderBy [desc $ lastRide ^. RideCreatedAt]
     limit 1
     return lastRide
-
-findCancelledBookingId :: Transactionable m => Id Person -> m [Id Booking]
-findCancelledBookingId driverId = do
-  Esq.findAll $ do
-    rides <- from $ table @RideT
-    where_ $
-      rides ^. RideDriverId ==. val (toKey driverId)
-        &&. rides ^. RideStatus ==. val Ride.CANCELLED
-    return (rides ^. RideBookingId)

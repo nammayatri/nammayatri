@@ -29,6 +29,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as BQ
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import Storage.Queries.DriverStats
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as FPQ
@@ -67,21 +68,24 @@ getDriverProfileSummary (driverId, _) = do
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   driverStats_ <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  when (driverStats_.totalEarnings == 0 && driverStats_.bonusEarned == 0 && driverStats_.lateNightTrips == 0 && driverStats_.earningsMissed == 0) do
-    allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
-    let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
-        farePramIds = mapMaybe (.fareParametersId) completedRides
-    lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
-    cancelledBookingIds <- Esq.runInReplica $ RQ.findCancelledBookingId (cast person.id)
-    missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIds
-    driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
-    customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
-    let bonusEarnings = driverSelectedFare + customerExtraFee + Money (length farePramIds * 10)
-        totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
-    Esq.runNoTransaction $ do
-      incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
-      setMissedEarnings (cast person.id) missedEarnings
-  driverStats <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  driverStats <-
+    if driverStats_.totalEarnings == 0 && driverStats_.bonusEarned == 0 && driverStats_.lateNightTrips == 0 && driverStats_.earningsMissed == 0
+      then do
+        allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+        let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
+            farePramIds = mapMaybe (.fareParametersId) completedRides
+        lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
+        cancelledBookingIdsByDriver <- Esq.runInReplica $ QBCR.findAllBookingIdsCancelledByDriverId (cast person.id)
+        missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIdsByDriver
+        driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
+        customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
+        let bonusEarnings = driverSelectedFare + customerExtraFee + Money (length farePramIds * 10)
+            totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
+        Esq.runNoTransaction $ do
+          incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
+          setMissedEarnings (cast person.id) missedEarnings
+        QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+      else Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   feedbackBadgeList <- Esq.runInReplica $ QFB.findAllFeedbackBadgeForDriver person.id
   totalUsersRated <- Esq.runInReplica $ QRating.findAllRatingUsersCountByPerson driverId
 
