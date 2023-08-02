@@ -83,12 +83,14 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         vehicleModel = vehicle.model
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
+  logDebug $ "Shreyash " <> show rsEvent
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
         bppRideId = Id rsEvent.fulfillment.id
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
+  logDebug $ "Complete111" <> show rcEvent
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Event.") rcEvent.fulfillment.tags
   chargeableDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "chargeable_distance is not present.") $

@@ -82,7 +82,7 @@ buildSearchReq ::
   m (BecknReq Search.SearchMessage)
 buildSearchReq origin destination searchId _ distance duration customerLanguage merchant mbPoints = do
   let transactionId = getId searchId
-      messageId = transactionId
+  messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
   let intent = mkIntent origin destination customerLanguage distance duration mbPoints

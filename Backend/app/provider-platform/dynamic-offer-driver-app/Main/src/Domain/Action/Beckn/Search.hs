@@ -154,7 +154,7 @@ handler merchant sReq = do
     case allFarePoliciesProduct.flow of
       DFareProduct.RIDE_OTP -> do
         whenJustM
-          (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
+          (QSearchRequestSpecialZone.findByTxnIdAndBapIdAndBppId sReq.transactionId sReq.bapId merchantId)
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
         triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}

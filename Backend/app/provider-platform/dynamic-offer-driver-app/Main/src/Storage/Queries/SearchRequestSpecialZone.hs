@@ -63,8 +63,8 @@ findByTransactionId tId = do
       searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
     return $ searchT ^. SearchRequestSpecialZoneTId
 
-findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
-findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
+findByTxnIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByTxnIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
   mbFullSearchReqT <- Esq.findOne' $ do
     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
