@@ -24,13 +24,20 @@ import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
+import Kernel.External.Maps.Types (LatLong (LatLong), lat, lon)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (Money, logTagInfo, withFlowHandlerAPI)
+import Kernel.Utils.Common (Money, logDebug, logTagInfo)
+import Kernel.Utils.Error
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 
 type API =
   "ride"
@@ -94,6 +101,17 @@ rideEnd merchantShortId reqRideId Common.EndRideReq {point} = withFlowHandlerAPI
   shandle <- EHandler.buildEndRideHandle merchantId
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
+getPointByTryingToRemoveNull :: EsqDBReplicaFlow m r => Maybe LatLong -> Id Common.Ride -> m (Maybe LatLong)
+getPointByTryingToRemoveNull (Just pt) _ = pure $ Just pt
+getPointByTryingToRemoveNull Nothing rideId = do
+  ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- bookingLocation <- runInReplica $ QBookingLocation.findById booking.toLocation >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  logDebug $ "Booking " <> show booking
+  let bookingLocation = booking.toLocation
+  logDebug $ "Booking Location " <> show bookingLocation
+  pure $ Just LatLong {lat = bookingLocation.lat, lon = bookingLocation.lon}
+
 multipleRideEnd :: ShortId DM.Merchant -> Common.MultipleRideEndReq -> FlowHandler Common.MultipleRideEndResp
 multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideEndReq req
@@ -103,9 +121,10 @@ multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let rideId = cast @Common.Ride @DRide.Ride reqItem.rideId
+      pt <- getPointByTryingToRemoveNull reqItem.point reqItem.rideId
       let dashboardReq =
             EHandler.DashboardEndRideReq
-              { point = reqItem.point,
+              { point = pt,
                 merchantId = merchant.id
               }
       Success <- EHandler.dashboardEndRide shandle rideId dashboardReq
