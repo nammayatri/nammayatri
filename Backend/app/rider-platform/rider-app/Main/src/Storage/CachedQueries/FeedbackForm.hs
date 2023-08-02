@@ -18,7 +18,7 @@ import Domain.Types.FeedbackForm
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import Storage.Queries.FeedbackForm as Queries
 
 findAllFeedback :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => m [FeedbackFormRes]

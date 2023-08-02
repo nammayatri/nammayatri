@@ -9,7 +9,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common
 import qualified Storage.Queries.Plan as Queries
 
 findByIdAndPaymentMode :: (CacheFlow m r, L.MonadFlow m) => Id Plan -> PaymentMode -> m (Maybe Plan)

@@ -137,7 +137,6 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
@@ -430,13 +429,11 @@ data MetaDataReq = MetaDataReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 createDriver ::
-  ( HasCacheConfig r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     EncFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m
+    CacheFlow m r
   ) =>
   SP.Person ->
   OnboardDriverReq ->
@@ -536,8 +533,7 @@ createDriverDetails personId adminId merchantId = do
     driverId = cast personId
 
 getInformation ::
-  ( HasCacheConfig r,
-    Redis.HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r
@@ -626,9 +622,7 @@ buildDriverEntityRes (person, driverInfo) = do
 
 changeDriverEnableState ::
   ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    HasCacheConfig r
+    CacheFlow m r
   ) =>
   SP.Person ->
   Id SP.Person ->
@@ -669,8 +663,7 @@ deleteDriver admin driverId = do
   return Success
 
 updateDriver ::
-  ( HasCacheConfig r,
-    Redis.HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r
@@ -751,8 +744,7 @@ updateMetaData (personId, _) req = do
 
 sendInviteSms ::
   ( MonadFlow m,
-    CoreMetrics m,
-    MonadReader r m
+    CoreMetrics m
   ) =>
   SmsConfig ->
   Text ->
@@ -861,8 +853,7 @@ makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats =
 getNearbySearchRequests ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    HasCacheConfig r
+    CacheFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   m GetNearbySearchRequestsRes
@@ -892,10 +883,9 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 
 -- DEPRECATED
 offerQuote ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
@@ -904,7 +894,6 @@ offerQuote ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    CoreMetrics m,
     HasPrettyLogger m r,
     EventStreamFlow m r
   ) =>
@@ -916,10 +905,9 @@ offerQuote (driverId, merchantId) DriverOfferReq {..} = do
   respondQuote (driverId, merchantId) DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
 respondQuote ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
@@ -928,7 +916,6 @@ respondQuote ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    CoreMetrics m,
     HasPrettyLogger m r,
     L.MonadFlow m,
     EventStreamFlow m r
@@ -1204,9 +1191,7 @@ validate ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Redis.HedisFlow m r,
-    HasCacheConfig r,
-    CoreMetrics m,
+    CacheFlow m r,
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig]
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
@@ -1295,9 +1280,7 @@ resendOtp ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
-    Redis.HedisFlow m r
+    CacheFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverAlternateNumberReq ->
@@ -1340,9 +1323,7 @@ remove ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Redis.HedisFlow m r,
-    HasCacheConfig r,
-    CoreMetrics m
+    CacheFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   m APISuccess

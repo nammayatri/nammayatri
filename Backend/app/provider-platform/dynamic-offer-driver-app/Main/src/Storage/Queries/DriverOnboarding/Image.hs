@@ -28,10 +28,10 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error.Throwing
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
 

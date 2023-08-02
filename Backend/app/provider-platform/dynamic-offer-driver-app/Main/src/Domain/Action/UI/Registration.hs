@@ -52,7 +52,6 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -62,7 +61,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
-import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
@@ -115,13 +113,11 @@ authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsC
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    HasCacheConfig r,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    Redis.HedisFlow m r,
-    EncFlow m r,
-    CoreMetrics m
+    EncFlow m r
   ) =>
   Bool ->
   AuthReq ->
@@ -300,9 +296,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboa
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
     EncFlow m r,
-    CoreMetrics m,
     CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->
@@ -340,7 +334,6 @@ verify tokenId req = do
 
 callWhatsappOptApi ::
   ( EsqDBFlow m r,
-    CoreMetrics m,
     EncFlow m r,
     CacheFlow m r
   ) =>
@@ -366,8 +359,7 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r,
-    CoreMetrics m
+    CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes

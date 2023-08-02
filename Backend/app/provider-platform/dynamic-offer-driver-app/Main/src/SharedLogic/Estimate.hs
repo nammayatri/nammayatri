@@ -26,15 +26,13 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
-import Storage.CachedQueries.CacheConfig
 
 buildEstimate ::
-  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
+  (EsqDBFlow m r, CacheFlow m r) =>
   Id DSR.SearchRequest ->
   UTCTime ->
   Meters ->

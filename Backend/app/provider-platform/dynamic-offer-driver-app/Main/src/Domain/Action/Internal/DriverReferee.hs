@@ -26,7 +26,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.RiderDetails as QRD
@@ -42,8 +41,7 @@ linkReferee ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r,
-    MonadReader r m
+    EncFlow m r
   ) =>
   Id Merchant ->
   Maybe Text ->

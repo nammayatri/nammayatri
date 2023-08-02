@@ -27,8 +27,7 @@ import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, getCurrentTime)
-import qualified Storage.CachedQueries.CacheConfig as SCC
+import Kernel.Utils.Common (CacheFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -36,7 +35,7 @@ import qualified Storage.Queries.Person.PersonStats as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (CoreMetrics)
 
-backfillPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Id Merchant.Merchant -> m ()
+backfillPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id DP.Person -> Id Merchant.Merchant -> m ()
 backfillPersonStats personId merchantId = do
   cancelledBookingIds <- runInReplica $ QBooking.findAllCancelledBookingIdsByRider personId
   userCancelledRides <- runInReplica $ QBCR.countCancelledBookingsByBookingIds cancelledBookingIds DBCR.ByUser

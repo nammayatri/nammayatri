@@ -26,13 +26,11 @@ import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Hedis
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
 import Tools.Error
@@ -47,9 +45,8 @@ data ServiceabilityRes = ServiceabilityRes
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 checkServiceability ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
-    HedisFlow m r,
     EsqDBFlow m r
   ) =>
   (GeofencingConfig -> GeoRestriction) ->

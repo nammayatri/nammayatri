@@ -37,7 +37,6 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.CallbackRequest as QCallback
 import qualified Storage.Queries.Issues as Queries
 import qualified Storage.Queries.Person as QP

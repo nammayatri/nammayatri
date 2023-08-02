@@ -357,7 +357,6 @@ library
       Storage.Beam.SearchTry
       Storage.Beam.Vehicle
       Storage.CachedQueries.BapMetadata
-      Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone

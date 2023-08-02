@@ -35,7 +35,6 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM

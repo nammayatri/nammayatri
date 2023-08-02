@@ -124,8 +124,10 @@ buildEndRideHandle merchantId = do
         sendDashboardSms = Sms.sendDashboardSms
       }
 
+type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool)
+
 driverEndRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  EndRideFlow m r =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -136,7 +138,7 @@ driverEndRide handle rideId req = do
     $ DriverReq req
 
 callBasedEndRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  EndRideFlow m r =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -144,7 +146,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  EndRideFlow m r =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -155,7 +157,7 @@ dashboardEndRide handle rideId req =
     $ DashboardReq req
 
 endRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  EndRideFlow m r =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->

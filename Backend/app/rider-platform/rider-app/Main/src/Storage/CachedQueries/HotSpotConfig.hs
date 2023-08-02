@@ -19,7 +19,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import Storage.Queries.HotSpotConfig as Queries
 
 findConfigByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe HotSpotConfig)

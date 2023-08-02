@@ -38,7 +38,6 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.GoogleTranslate
-import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
 import Tools.Metrics
 

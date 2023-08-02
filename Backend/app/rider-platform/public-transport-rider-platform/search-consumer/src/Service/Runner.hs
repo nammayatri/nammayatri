@@ -36,8 +36,7 @@ run ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     MonadConsumer PublicTransportSearch m,
-    EsqDBFlow m r,
-    MonadFlow m
+    EsqDBFlow m r
   ) =>
   m ()
 run = withLogTag "Service" $

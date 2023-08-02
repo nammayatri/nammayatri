@@ -26,39 +26,30 @@ import Kernel.External.AadhaarVerification as Reexport hiding
     verifyAadhaarOtp,
   )
 import qualified Kernel.External.AadhaarVerification as Verification
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
-import Tools.Metrics
 
 generateAadhaarOtp ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    CoreMetrics m
-  ) =>
+  ServiceFlow m r =>
   Id DM.Merchant ->
   AadhaarOtpReq ->
   m AadhaarVerificationResp
 generateAadhaarOtp = runWithServiceConfig Verification.generateAadhaarOtp
 
 verifyAadhaarOtp ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    CoreMetrics m
-  ) =>
+  ServiceFlow m r =>
   Id DM.Merchant ->
   AadhaarOtpVerifyReq ->
   m AadhaarOtpVerifyRes
 verifyAadhaarOtp = runWithServiceConfig Verification.verifyAadhaarOtp
 
 runWithServiceConfig ::
-  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
+  ServiceFlow m r =>
   (AadhaarVerificationServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
   req ->

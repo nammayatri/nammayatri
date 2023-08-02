@@ -33,7 +33,6 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
 loadAllBaps :: (L.MonadFlow m, Log m) => m [Merchant]

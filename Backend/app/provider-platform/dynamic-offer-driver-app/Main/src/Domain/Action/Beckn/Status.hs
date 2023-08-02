@@ -28,7 +28,6 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide

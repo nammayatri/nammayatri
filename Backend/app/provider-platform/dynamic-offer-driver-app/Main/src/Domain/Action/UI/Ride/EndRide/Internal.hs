@@ -57,7 +57,6 @@ import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator
 import qualified SharedLogic.Ride as SRide
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
@@ -78,9 +77,7 @@ import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
 
 endRideTransaction ::
-  ( Metrics.CoreMetrics m,
-    CacheFlow m r,
-    Hedis.HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -155,7 +152,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   DS.driverScoreEventHandler DST.OnRideCompletion {merchantId = merchantId, driverId = cast driverId, ride = ride}
   SRide.clearCache $ cast driverId
 
-updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
+updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
 updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId = do
   mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantId
   whenJust mbdDailyLeaderBoardConfig $ \dailyLeaderBoardConfig -> do
@@ -175,7 +172,7 @@ updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId
       driversListWithScores' <- Hedis.zrevrangeWithscores (makeDailyDriverLeaderBoardKey merchantId rideDate) 0 (limit -1)
       Hedis.setExp (makeCachedDailyDriverLeaderBoardKey merchantId rideDate) driversListWithScores' (dailyLeaderBoardConfig.leaderBoardExpiry.getSeconds * dailyLeaderBoardConfig.numberOfSets)
 
-updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
+updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
 updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId = do
   mbWeeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantId
   whenJust mbWeeklyLeaderBoardConfig $ \weeklyLeaderBoardConfig -> do
@@ -229,8 +226,7 @@ putDiffMetric merchantId money mtrs = do
 getDistanceBetweenPoints ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r,
-    Metrics.CoreMetrics m
+    EsqDBFlow m r
   ) =>
   Id Merchant ->
   LatLong ->

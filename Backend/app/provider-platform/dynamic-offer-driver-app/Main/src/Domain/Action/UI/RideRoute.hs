@@ -19,12 +19,11 @@ import Domain.Types.Ride
 import Domain.Types.RideRoute
 import Kernel.Prelude
 import Kernel.Storage.Hedis
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-rideRoute :: (EncFlow m r, CoreMetrics m, HedisFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant) -> m RouteInfo
+rideRoute :: (EncFlow m r, HedisFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant) -> m RouteInfo
 rideRoute rideId (_, _) = do
   let key = searchRequestKey (getId rideId)
   safeGet key >>= fromMaybeM (RideDoesNotExist $ getId rideId)

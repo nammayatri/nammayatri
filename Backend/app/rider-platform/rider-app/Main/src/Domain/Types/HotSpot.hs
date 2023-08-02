@@ -26,9 +26,8 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig (CacheFlow)
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
-import Tools.Metrics
 
 data HotSpot = HotSpot
   { _geoHash :: Text,
@@ -100,7 +99,6 @@ data HotSpotResponse = HotSpotResponse
 
 convertToHotSpot ::
   ( EsqDBFlow m r,
-    CoreMetrics m,
     CacheFlow m r
   ) =>
   LatLong ->

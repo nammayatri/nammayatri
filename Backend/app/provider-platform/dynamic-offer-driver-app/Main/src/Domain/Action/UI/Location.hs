@@ -30,7 +30,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified SharedLogic.DriverLocation as DrLoc
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 

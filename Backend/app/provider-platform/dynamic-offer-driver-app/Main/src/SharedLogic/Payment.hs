@@ -29,7 +29,6 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
 import Tools.Error

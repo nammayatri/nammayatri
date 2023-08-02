@@ -24,16 +24,13 @@ import Kernel.Prelude
 import Kernel.Storage.Hedis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import Storage.CachedQueries.Maps.LocationMapCache
-import Tools.Metrics
 
 frequencyUpdator ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
-    CoreMetrics m,
-    HedisFlow m r
+  ( CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   Id Merchant ->
   LatLong ->

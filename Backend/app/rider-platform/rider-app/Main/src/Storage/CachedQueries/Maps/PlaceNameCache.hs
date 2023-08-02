@@ -24,7 +24,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Logging (Log)
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.Maps.PlaceNameCache as Queries
 
 findPlaceByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]

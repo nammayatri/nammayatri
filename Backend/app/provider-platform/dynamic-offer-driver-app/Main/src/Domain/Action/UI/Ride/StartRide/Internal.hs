@@ -23,9 +23,9 @@ import EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Ride as CQRide
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as DrLoc

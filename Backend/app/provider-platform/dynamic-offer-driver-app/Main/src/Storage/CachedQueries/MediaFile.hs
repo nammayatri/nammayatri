@@ -23,7 +23,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.MediaFile as Queries
 
 findById :: (CacheFlow m r, L.MonadFlow m) => Id MediaFile -> m (Maybe MediaFile)

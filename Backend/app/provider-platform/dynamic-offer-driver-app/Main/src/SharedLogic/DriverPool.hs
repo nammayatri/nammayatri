@@ -69,12 +69,10 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
-import Tools.Metrics
 
 data PoolCalculationStage = Estimate | DriverSelection
 
@@ -193,18 +191,14 @@ addSearchRequestInfoToCache searchReqId merchantId driverId valueToPut singleBat
   Redis.withCrossAppRedis $ Redis.hSetExp (mkParallelSearchRequestKey merchantId driverId) searchReqId.getId valueToPut singleBatchProcessTime
 
 getSearchRequestInfoMap ::
-  ( Redis.HedisFlow m r,
-    MonadReader r m
-  ) =>
+  Redis.HedisFlow m r =>
   Id DM.Merchant ->
   Id DP.Driver ->
   m [(Text, (UTCTime, Bool))]
 getSearchRequestInfoMap mId dId = Redis.withCrossAppRedis $ Redis.hGetAll $ mkParallelSearchRequestKey mId dId
 
 getValidSearchRequestCount ::
-  ( Redis.HedisFlow m r,
-    MonadReader r m
-  ) =>
+  Redis.HedisFlow m r =>
   Id DM.Merchant ->
   Id DP.Driver ->
   UTCTime ->
@@ -436,7 +430,6 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
     L.MonadFlow m,
     HasCoordinates a
   ) =>
@@ -489,7 +482,6 @@ calculateDriverPoolWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -520,7 +512,6 @@ calculateDriverPoolCurrentlyOnRide ::
     EsqDBFlow m r,
     EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    CoreMetrics m,
     L.MonadFlow m,
     HasCoordinates a
   ) =>
@@ -573,7 +564,6 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -637,8 +627,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
         }
 
 computeActualDistanceOneToOne ::
-  ( CoreMetrics m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     HasCoordinates a
@@ -652,8 +641,7 @@ computeActualDistanceOneToOne merchantId pickup driverPoolResult = do
   pure ele
 
 computeActualDistance ::
-  ( CoreMetrics m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     HasCoordinates a

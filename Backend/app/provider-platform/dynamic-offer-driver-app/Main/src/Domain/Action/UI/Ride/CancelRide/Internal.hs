@@ -44,7 +44,6 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.Ride as SRide
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
@@ -74,7 +73,7 @@ cancelRideImpl ::
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
-    HasCacheConfig r,
+    CacheFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EventStreamFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
@@ -212,8 +211,7 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
   where
     buildSearchTry ::
       ( MonadTime m,
-        MonadGuid m,
-        MonadReader r m
+        MonadGuid m
       ) =>
       DST.SearchTry ->
       m DST.SearchTry

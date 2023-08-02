@@ -10,7 +10,7 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common
 import qualified Storage.Queries.PlanTranslation as Queries
 
 findByPlanIdAndLanguage :: (CacheFlow m r, L.MonadFlow m) => Id Plan -> Language -> m (Maybe PlanTranslation)

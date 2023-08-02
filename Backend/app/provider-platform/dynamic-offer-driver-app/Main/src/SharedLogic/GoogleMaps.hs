@@ -20,8 +20,6 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.Text as T hiding (dropWhile, foldl, head, init, length, map, zip)
 import Kernel.External.Maps.Interface.Types
 import Kernel.Prelude hiding (const, error, getField, setField)
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.App (MonadFlow)
 
 data Address = Address
   { street :: Maybe Text,
@@ -36,22 +34,21 @@ data Address = Address
   }
   deriving (Show, Generic)
 
-mkLocation :: (MonadFlow m, CoreMetrics m) => GetPlaceNameResp -> m Address
+mkLocation :: GetPlaceNameResp -> Address
 mkLocation placeNameResp = do
   let resultsResp = head placeNameResp
   let hashMap = iterateAddrResp resultsResp.addressComponents
-  pure
-    Address
-      { areaCode = getField ["postal_code"] hashMap,
-        street = getField ["route", "street_address"] hashMap,
-        door = Nothing,
-        city = getField ["locality"] hashMap,
-        state = getField ["administrative_area_level_1"] hashMap,
-        country = getField ["country"] hashMap,
-        building = getField ["premise", "sub_premise"] hashMap,
-        area = getField ["sublocality_level_5", "sublocality_level_4", "sublocality_level_3", "sublocality_level_2", "sublocality_level_1"] hashMap <|> getField ["sublocality"] hashMap,
-        full_address = resultsResp.formattedAddress
-      }
+  Address
+    { areaCode = getField ["postal_code"] hashMap,
+      street = getField ["route", "street_address"] hashMap,
+      door = Nothing,
+      city = getField ["locality"] hashMap,
+      state = getField ["administrative_area_level_1"] hashMap,
+      country = getField ["country"] hashMap,
+      building = getField ["premise", "sub_premise"] hashMap,
+      area = getField ["sublocality_level_5", "sublocality_level_4", "sublocality_level_3", "sublocality_level_2", "sublocality_level_1"] hashMap <|> getField ["sublocality"] hashMap,
+      full_address = resultsResp.formattedAddress
+    }
 
 iterateAddrResp :: [AddressResp] -> HashMap Text Text
 iterateAddrResp = foldl iterateAddrTypes initial

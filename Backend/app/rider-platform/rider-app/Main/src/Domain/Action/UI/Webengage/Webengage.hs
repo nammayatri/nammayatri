@@ -71,8 +71,7 @@ callInfobip ::
   ( HasFlowEnv m r '["infoBIPCfg" ::: EIF.InfoBIPConfig],
     EncFlow m r,
     EsqDBFlow m r,
-    CoreMetrics m,
-    Log m
+    CoreMetrics m
   ) =>
   WebengageReq ->
   m WebengageRes

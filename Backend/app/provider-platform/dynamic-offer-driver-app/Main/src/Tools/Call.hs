@@ -24,20 +24,16 @@ import Kernel.External.Call as Reexport hiding
   ( initiateCall,
   )
 import qualified Kernel.External.Call as Call
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error
-import Tools.Metrics
 
 initiateCall ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
+  ( ServiceFlow m r,
     ToJSON a
   ) =>
   Id Merchant ->
@@ -46,7 +42,7 @@ initiateCall ::
 initiateCall = runWithServiceConfig Call.initiateCall (.initiateCall)
 
 runWithServiceConfig ::
-  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) =>
+  ServiceFlow m r =>
   (CallServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> CallService) ->
   Id Merchant ->

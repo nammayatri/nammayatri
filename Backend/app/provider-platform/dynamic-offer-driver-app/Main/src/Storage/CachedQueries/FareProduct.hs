@@ -23,7 +23,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.FareProduct as Queries
 
 findAllFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Merchant -> Area -> m [FareProduct]
