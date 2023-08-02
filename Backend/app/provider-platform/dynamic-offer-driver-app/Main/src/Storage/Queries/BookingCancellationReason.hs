@@ -67,3 +67,15 @@ upsert cancellationReason =
       BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
     ]
+
+findAllBookingIdsCancelledByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m [Id Booking]
+findAllBookingIdsCancelledByDriverId driverId = do
+  Esq.findAll $ do
+    rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+    where_ $
+      rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+        &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+    return (rideBookingCancellationReason ^. BookingCancellationReasonBookingId)
