@@ -211,38 +211,3 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt
       }
-
-findRideBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m (HashMap.HashMap (Id Booking) (Booking, Maybe DRide.Ride))
-findRideBookingsById merchantId bookingIds = do
-  bookings <- findBookingsById merchantId bookingIds
-  rides <- findRidesByBookingId (bookings <&> (.id))
-  let tuple = map (\booking -> (booking.id, (booking, find (\ride -> ride.bookingId == booking.id) rides))) bookings
-  pure $ HashMap.fromList tuple
-
-findBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m [Booking]
-findBookingsById merchantId bookingIds = Esq.buildDType $ do
-  bookingTs <- Esq.findAll' $ do
-    booking <- from $ table @BookingT
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-    return booking
-  catMaybes <$> forM bookingTs buildFullBooking
-
-findRidesByBookingId :: Transactionable m => [Id Booking] -> m [DRide.Ride]
-findRidesByBookingId bookingIds = Esq.findAll $ do
-  ride <- from $ table @Ride.RideT
-  where_ $
-    ride ^. RideBookingId `in_` valList (toKey <$> bookingIds)
-  return ride
-
-findFareForCancelledBookings :: Transactionable m => m Money
-findFareForCancelledBookings =
-  mkSum
-    <$> Esq.findAll do
-      booking <- from $ table @BookingT
-      where_ $ booking ^. BookingStatus ==. val CANCELLED
-      pure (sum_ $ booking ^. BookingEstimatedFare :: SqlExpr (Esq.Value (Maybe Money)))
-  where
-    mkSum [Just value] = value
-    mkSum _ = 0

@@ -36,6 +36,7 @@ import Lib.Utils
     getMasterBeamConfig,
     getReplicaBeamConfig,
     updateOneWithKV,
+    updateWithKV,
   )
 import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
@@ -86,16 +87,23 @@ updateVehicleRec vehicle = do
     ]
     [Se.Is BeamV.driverId (Se.Eq $ getId vehicle.driverId)]
 
-updateVehicleName :: Maybe Text -> Id Person -> SqlDB ()
-updateVehicleName vehicleName driverId = do
+-- updateVehicleName :: Maybe Text -> Id Person -> SqlDB ()
+-- updateVehicleName vehicleName driverId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ VehicleUpdatedAt =. val now,
+--         VehicleVehicleName =. val vehicleName
+--       ]
+--     where_ $ tbl ^. VehicleTId ==. val (toKey driverId)
+
+updateVehicleName :: (MonadFlow m) => Maybe Text -> Id Person -> m ()
+updateVehicleName vehicleName (Id driverId) = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ VehicleUpdatedAt =. val now,
-        VehicleVehicleName =. val vehicleName
-      ]
-    where_ $ tbl ^. VehicleTId ==. val (toKey driverId)
+  updateWithKV
+    [Se.Set BeamV.updatedAt now, Se.Set BeamV.vehicleName vehicleName]
+    [Se.Is BeamV.driverId (Se.Eq driverId)]
 
 deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]

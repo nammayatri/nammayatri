@@ -144,6 +144,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
         Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
           Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
+          Verification.FaceVerificationConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
         Domain.CallServiceConfig callCfg -> case callCfg of
           Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
         Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of

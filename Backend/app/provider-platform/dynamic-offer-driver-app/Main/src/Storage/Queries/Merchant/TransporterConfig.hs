@@ -158,6 +158,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             minLocationAccuracy = minLocationAccuracy,
             aadhaarVerificationRequired = aadhaarVerificationRequired,
             createdAt = createdAt,
+            rcLimit = rcLimit,
+            automaticRCActivationCutOff = automaticRCActivationCutOff,
             updatedAt = updatedAt
           }
 
@@ -197,5 +199,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.minLocationAccuracy = minLocationAccuracy,
         BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
         BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt
+        BeamTC.updatedAt = updatedAt,
+        BeamTC.rcLimit = rcLimit,
+        BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff
       }

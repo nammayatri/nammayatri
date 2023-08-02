@@ -107,15 +107,3 @@ instance ToTType' BeamAOV.AadhaarOtpVerify AadhaarOtpVerify where
         BeamAOV.requestMessage = requestMessage,
         BeamAOV.createdAt = createdAt
       }
-
-deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
-deleteByPersonIdForGenerate personId =
-  Esq.delete $ do
-    verifications <- from $ table @AadhaarOtpReqT
-    where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
-
-deleteByPersonIdForVerify :: Id Person -> SqlDB ()
-deleteByPersonIdForVerify personId =
-  Esq.delete $ do
-    verifications <- from $ table @AadhaarOtpVerifyT
-    where_ $ verifications ^. AadhaarOtpVerifyDriverId ==. val (toKey personId)

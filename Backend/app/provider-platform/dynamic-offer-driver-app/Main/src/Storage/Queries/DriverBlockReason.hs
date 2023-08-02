@@ -11,14 +11,43 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverBlockReason where
 
 import Data.Function
 import Domain.Types.DriverBlockReason
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.DriverBlockReason
+import qualified EulerHS.Language as L
+import Kernel.Prelude
+-- import Kernel.Storage.Esqueleto as Esq
 
-findAll :: Transactionable m => m [DriverBlockReason]
-findAll =
-  Esq.findAll $ from $ table @DriverBlockReasonT
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Lib.Utils
+import Sequelize as Se
+import qualified Storage.Beam.DriverBlockReason as BeamDBR
+
+-- findAll :: Transactionable m => m [DriverBlockReason]
+-- findAll =
+--   Esq.findAll $ from $ table @DriverBlockReasonT
+
+findAll :: (L.MonadFlow m, Log m) => m [DriverBlockReason]
+findAll = findAllWithKV [Se.Is BeamDBR.reasonCode $ Se.Not $ Se.Eq ""]
+
+instance FromTType' BeamDBR.DriverBlockReason DriverBlockReason where
+  fromTType' BeamDBR.DriverBlockReasonT {..} = do
+    pure $
+      Just
+        DriverBlockReason
+          { reasonCode = Id reasonCode,
+            blockReason = blockReason,
+            blockTimeInHours = blockTimeInHours
+          }
+
+instance ToTType' BeamDBR.DriverBlockReason DriverBlockReason where
+  toTType' DriverBlockReason {..} = do
+    BeamDBR.DriverBlockReasonT
+      { BeamDBR.reasonCode = getId reasonCode,
+        BeamDBR.blockReason = blockReason,
+        BeamDBR.blockTimeInHours = blockTimeInHours
+      }

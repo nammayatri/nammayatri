@@ -167,78 +167,92 @@ instance ToTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
         BeamDRCA.isRcActive = isRcActive
       }
 
-findActiveAssociationByRC :: (Transactionable m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
-findActiveAssociationByRC rcId =
-  Esq.findOne $ do
-    rcAssoc <- from $ table @DriverRCAssociationT
-    where_ $
-      rcAssoc ^. DriverRCAssociationRcId ==. val (toKey rcId)
-        &&. rcAssoc ^. DriverRCAssociationIsRcActive ==. val True
-    return rcAssoc
+findActiveAssociationByRC :: (L.MonadFlow m, Log m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
+findActiveAssociationByRC (Id rcId) = findOneWithKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.isRcActive $ Se.Eq True]]
 
-findActiveAssociationByDriver ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe DriverRCAssociation)
-findActiveAssociationByDriver driverId = do
-  findOne $ do
-    association <- from $ table @DriverRCAssociationT
-    where_ $
-      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. association ^. DriverRCAssociationIsRcActive ==. val True
-    return association
+-- findActiveAssociationByDriver ::
+--   Transactionable m =>
+--   Id Person ->
+--   m (Maybe DriverRCAssociation)
+-- findActiveAssociationByDriver driverId = do
+--   findOne $ do
+--     association <- from $ table @DriverRCAssociationT
+--     where_ $
+--       association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--         &&. association ^. DriverRCAssociationIsRcActive ==. val True
+--     return association
 
-deactivateRCForDriver :: Id Person -> Id VehicleRegistrationCertificate -> SqlDB ()
-deactivateRCForDriver driverId rcId = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverRCAssociationIsRcActive =. val False
-      ]
-    where_ $
-      tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
+-- findActiveAssociationByDriver ::
+--   (L.MonadFlow m) =>
+--   Id Person ->
+--   m (Maybe DriverRCAssociation)
+-- findActiveAssociationByDriver (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.isRcActive $ Se.Eq True]]
+--   findOne $ do
+--     association <- from $ table @DriverRCAssociationT
+--     where_ $
+--       association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--         &&. association ^. DriverRCAssociationIsRcActive ==. val True
+--     return association
 
-activateRCForDriver :: Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> SqlDB ()
-activateRCForDriver driverId rcId now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverRCAssociationIsRcActive =. val True
-      ]
-    where_ $
-      tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
-        &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
+findActiveAssociationByDriver :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverRCAssociation)
+findActiveAssociationByDriver (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.isRcActive $ Se.Eq True]]
 
-findLinkedByRCIdAndDriverId :: Transactionable m => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
-findLinkedByRCIdAndDriverId driverId rcId now = do
-  Esq.findOne $ do
-    res <- from $ table @DriverRCAssociationT
-    where_ $
-      res ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. res ^. DriverRCAssociationRcId ==. val (toKey rcId)
-        &&. res ^. DriverRCAssociationAssociatedTill >. val (Just now)
-    return res
+-- deactivateRCForDriver :: Id Person -> Id VehicleRegistrationCertificate -> SqlDB ()
+-- deactivateRCForDriver driverId rcId = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverRCAssociationIsRcActive =. val False
+--       ]
+--     where_ $
+--       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--         &&. tbl ^. DriverRCAssociationRcId ==. val (toKey rcId)
 
-findLatestByRCIdAndDriverId :: Transactionable m => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
-findLatestByRCIdAndDriverId rcId driverId =
-  Esq.findOne $ do
-    rcAssoc <- from $ table @DriverRCAssociationT
-    where_ $
-      rcAssoc ^. DriverRCAssociationRcId ==. val (toKey rcId)
-        &&. rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-    orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedTill]
-    limit 1
-    return rcAssoc
+deactivateRCForDriver :: (L.MonadFlow m, Log m) => Id Person -> Id VehicleRegistrationCertificate -> m ()
+deactivateRCForDriver (Id driverId) (Id rcId) = updateWithKV [Se.Set BeamDRCA.isRcActive False] [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId]]
 
-findAllLinkedByDriverId :: (Transactionable m, MonadFlow m) => Id Person -> m [DriverRCAssociation]
-findAllLinkedByDriverId driverId = do
+activateRCForDriver :: (L.MonadFlow m, Log m) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m ()
+activateRCForDriver (Id driverId) (Id rcId) now = updateWithKV [Se.Set BeamDRCA.isRcActive True] [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
+
+-- findLinkedByRCIdAndDriverId :: Transactionable m => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
+-- findLinkedByRCIdAndDriverId driverId rcId now = do
+--   Esq.findOne $ do
+--     res <- from $ table @DriverRCAssociationT
+--     where_ $
+--       res ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--         &&. res ^. DriverRCAssociationRcId ==. val (toKey rcId)
+--         &&. res ^. DriverRCAssociationAssociatedTill >. val (Just now)
+--     return res
+
+-- findLatestByRCIdAndDriverId :: Transactionable m => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
+-- findLatestByRCIdAndDriverId rcId driverId =
+--   Esq.findOne $ do
+--     rcAssoc <- from $ table @DriverRCAssociationT
+--     where_ $
+--       rcAssoc ^. DriverRCAssociationRcId ==. val (toKey rcId)
+--         &&. rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedTill]
+--     limit 1
+--     return rcAssoc
+
+-- findAllLinkedByDriverId :: (Transactionable m, MonadFlow m) => Id Person -> m [DriverRCAssociation]
+-- findAllLinkedByDriverId driverId = do
+--   now <- getCurrentTime
+--   Esq.findAll $ do
+--     association <- from $ table @DriverRCAssociationT
+--     where_ $
+--       association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--         &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
+--     orderBy [desc $ association ^. DriverRCAssociationAssociatedOn]
+--     return association
+findLinkedByRCIdAndDriverId :: (L.MonadFlow m, Log m) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
+findLinkedByRCIdAndDriverId (Id driverId) (Id rcId) now = findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
+
+findLatestByRCIdAndDriverId :: (L.MonadFlow m, Log m) => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
+findLatestByRCIdAndDriverId (Id rcId) (Id driverId) =
+  findAllWithOptionsKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.driverId $ Se.Eq driverId]] (Se.Desc BeamDRCA.associatedTill) (Just 1) Nothing <&> listToMaybe
+
+findAllLinkedByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> m [DriverRCAssociation]
+findAllLinkedByDriverId (Id driverId) = do
   now <- getCurrentTime
-  Esq.findAll $ do
-    association <- from $ table @DriverRCAssociationT
-    where_ $
-      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
-    orderBy [desc $ association ^. DriverRCAssociationAssociatedOn]
-    return association
+  findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing

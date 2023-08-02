@@ -22,7 +22,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 
@@ -168,9 +168,12 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.updatedAt = updatedAt
       }
 
-findAllById :: Transactionable m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
-findAllById rcIds =
-  findAll $ do
-    rc <- from $ table @VehicleRegistrationCertificateT
-    where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
-    return rc
+-- findAllById :: Transactionable m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+-- findAllById rcIds =
+--   findAll $ do
+--     rc <- from $ table @VehicleRegistrationCertificateT
+--     where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
+--     return rc
+
+findAllById :: (L.MonadFlow m, Log m) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]

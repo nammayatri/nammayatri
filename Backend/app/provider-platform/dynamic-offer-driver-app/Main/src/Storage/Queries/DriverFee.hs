@@ -170,20 +170,6 @@ findWindowsWithStatusInReplica (Id driverId) startTime endTime mbStatus limitVal
 findOngoingAfterEndTime :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findOngoingAfterEndTime (Id driverId) now = findOneWithKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
 
-findWindowsWithStatus :: Transactionable m => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
-findWindowsWithStatus driverId startTime endTime mbStatus limitVal offsetVal = do
-  findAll $ do
-    driverFee <- from $ table @DriverFeeT
-    where_ $
-      driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
-        &&. driverFee ^. DriverFeeStartTime >=. val startTime
-        &&. driverFee ^. DriverFeeEndTime <=. val endTime
-        &&. whenJust_ mbStatus (\status -> driverFee ^. DriverFeeStatus ==. val status)
-    orderBy [desc $ driverFee ^. DriverFeeCreatedAt]
-    limit $ fromIntegral limitVal
-    offset $ fromIntegral offsetVal
-    return driverFee
-
 findOngoingAfterEndTimeInReplica :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findOngoingAfterEndTimeInReplica (Id driverId) now = findOneWithKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
 

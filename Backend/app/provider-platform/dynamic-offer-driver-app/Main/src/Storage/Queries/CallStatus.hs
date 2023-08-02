@@ -40,16 +40,16 @@ findByIdInReplica (Id callStatusId) = findOneWithKvInReplica [Se.Is BeamCT.id $ 
 findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 
-updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> SqlDB ()
-updateCallStatus callId status conversationDuration mbrecordingUrl = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ CallStatusStatus =. val status,
-        CallStatusConversationDuration =. val conversationDuration,
-        CallStatusRecordingUrl =. val mbrecordingUrl
-      ]
-    where_ $ tbl ^. CallStatusId ==. val (getId callId)
+-- updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> SqlDB ()
+-- updateCallStatus callId status conversationDuration mbrecordingUrl = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ CallStatusStatus =. val status,
+--         CallStatusConversationDuration =. val conversationDuration,
+--         CallStatusRecordingUrl =. val mbrecordingUrl
+--       ]
+--     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
 updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
@@ -60,36 +60,48 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
     ]
     [Is BeamCT.callId (Se.Eq callId)]
 
--- countCallsByRideId :: Transactionable m => Id Ride -> m Int
--- countCallsByRideId rideId = (fromMaybe 0 <$>) $
+-- countCallsByEntityId :: Transactionable m => Id Ride -> m Int
+-- countCallsByEntityId entityId = (fromMaybe 0 <$>) $
 --   Esq.findOne $ do
 --     callStatus <- from $ table @CallStatusT
---     where_ $ callStatus ^. CallStatusRideId ==. val (toKey rideId)
---     groupBy $ callStatus ^. CallStatusRideId
+--     where_ $ callStatus ^. CallStatusEntityId ==. val (toKey entityId)
+--     groupBy $ callStatus ^. CallStatusEntityId
 --     pure $ count @Int $ callStatus ^. CallStatusTId
 
 -- to be discussed if it should be a beam query or not
-countCallsByRideId :: L.MonadFlow m => Id Ride -> m Int
-countCallsByRideId rideID = do
-  dbConf <- getMasterBeamConfig
-  resp <-
-    L.runDB dbConf $
-      L.findRow $
-        B.select $
-          B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
-            B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
-              B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
-  pure $ either (const 0) (maybe 0 snd) resp
+-- countCallsByEntityId :: L.MonadFlow m => Id Ride -> m Int
+-- countCallsByEntityId entityID = do
+--   dbConf <- getMasterBeamConfig
+--   resp <-
+--     L.runDB dbConf $
+--       L.findRow $
+--         B.select $
+--           B.aggregate_ (\ride -> (B.group_ (BeamCT.entityId ride), B.as_ @Int B.countAll_)) $
+--             B.filter_' (\(BeamCT.CallStatusT {..}) -> entityId B.==?. B.val_ (getId entityID)) $
+--               B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
+--   pure $ either (const 0) (maybe 0 snd) resp
 
-countCallsByRideIdInReplica :: L.MonadFlow m => Id Ride -> m Int
-countCallsByRideIdInReplica rideID = do
+countCallsByEntityIdInReplica :: L.MonadFlow m => Id Ride -> m Int
+countCallsByEntityIdInReplica entityID = do
   dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRow $
         B.select $
-          B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
-            B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
+          B.aggregate_ (\ride -> (B.group_ (BeamCT.entityId ride), B.as_ @Int B.countAll_)) $
+            B.filter_' (\(BeamCT.CallStatusT {..}) -> entityId B.==?. B.val_ (getId entityID)) $
+              B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
+  pure $ either (const 0) (maybe 0 snd) resp
+
+countCallsByEntityId :: (L.MonadFlow m) => Id Ride -> m Int
+countCallsByEntityId entityID = do
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\ride -> (B.group_ (BeamCT.entityId ride), B.as_ @Int B.countAll_)) $
+            B.filter_' (\(BeamCT.CallStatusT {..}) -> entityId B.==?. B.val_ (getId entityID)) $
               B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
   pure $ either (const 0) (maybe 0 snd) resp
 
@@ -100,7 +112,7 @@ instance FromTType' BeamCT.CallStatus CallStatus where
         CallStatus
           { id = Id id,
             callId = callId,
-            rideId = Id rideId,
+            entityId = entityId,
             dtmfNumberUsed = dtmfNumberUsed,
             status = status,
             recordingUrl = recordingUrl,
@@ -108,20 +120,20 @@ instance FromTType' BeamCT.CallStatus CallStatus where
             createdAt = createdAt
           }
 
-countCallsByEntityId :: Transactionable m => Id Ride -> m Int
-countCallsByEntityId entityId = (fromMaybe 0 <$>) $
-  Esq.findOne $ do
-    callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusEntityId ==. val (entityId.getId)
-    groupBy $ callStatus ^. CallStatusEntityId
-    pure $ count @Int $ callStatus ^. CallStatusTId
+-- countCallsByEntityId :: Transactionable m => Id Ride -> m Int
+-- countCallsByEntityId entityId = (fromMaybe 0 <$>) $
+--   Esq.findOne $ do
+--     callStatus <- from $ table @CallStatusT
+--     where_ $ callStatus ^. CallStatusEntityId ==. val (entityId.getId)
+--     groupBy $ callStatus ^. CallStatusEntityId
+--     pure $ count @Int $ callStatus ^. CallStatusTId
 
 instance ToTType' BeamCT.CallStatus CallStatus where
   toTType' CallStatus {..} = do
     BeamCT.CallStatusT
       { BeamCT.id = getId id,
         BeamCT.callId = callId,
-        BeamCT.rideId = getId rideId,
+        BeamCT.entityId = entityId,
         BeamCT.dtmfNumberUsed = dtmfNumberUsed,
         BeamCT.status = status,
         BeamCT.recordingUrl = recordingUrl,

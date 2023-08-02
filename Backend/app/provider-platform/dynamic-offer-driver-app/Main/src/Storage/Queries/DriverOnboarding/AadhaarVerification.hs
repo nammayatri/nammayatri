@@ -39,8 +39,8 @@ create = createWithKV
 --   m (Maybe AadhaarVerification)
 -- findById = Esq.findById
 
-findById :: (L.MonadFlow m, Log m) => Id AadhaarVerification -> m (Maybe AadhaarVerification)
-findById (Id aadhaarVerification) = findOneWithKV [Se.Is BeamAV.id $ Se.Eq aadhaarVerification]
+-- findById :: (L.MonadFlow m, Log m) => Id AadhaarVerification -> m (Maybe AadhaarVerification)
+-- findById (Id aadhaarVerification) = findOneWithKV [Se.Is BeamAV.id $ Se.Eq aadhaarVerification]
 
 -- findByDriverId ::
 --   Transactionable m =>

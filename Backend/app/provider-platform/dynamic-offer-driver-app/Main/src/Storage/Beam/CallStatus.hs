@@ -52,7 +52,7 @@ instance FromBackendRow Postgres Call.CallStatus
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,
     callId :: B.C f Text,
-    rideId :: B.C f Text,
+    entityId :: B.C f Text,
     dtmfNumberUsed :: B.C f (Maybe Text),
     status :: B.C f Call.CallStatus,
     recordingUrl :: B.C f (Maybe Text),
@@ -95,7 +95,7 @@ callStatusTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       callId = B.fieldNamed "call_id",
-      rideId = B.fieldNamed "ride_id",
+      entityId = B.fieldNamed "entity_id",
       dtmfNumberUsed = B.fieldNamed "dtmf_number_used",
       status = B.fieldNamed "status",
       recordingUrl = B.fieldNamed "recording_url",
