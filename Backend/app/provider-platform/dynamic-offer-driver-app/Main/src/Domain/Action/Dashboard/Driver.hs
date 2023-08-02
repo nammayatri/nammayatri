@@ -660,9 +660,11 @@ addVehicle merchantShortId reqDriverId req = do
   Esq.runTransaction $ QPerson.updatePersonRec personId updDriver
 
   void $ try @_ @SomeException (runVerifyRCFlow personId merchant) -- ignore if throws error
-  vehicle <- buildVehicle merchantId personId req
-  Esq.runTransaction $ do
-    QVehicle.create vehicle
+  checkIfVehicleCreatedInRC <- QVehicle.findById personId
+  unless (isJust checkIfVehicleCreatedInRC) $ do
+    vehicle <- buildVehicle merchantId personId req
+    Esq.runTransaction $ do
+      QVehicle.create vehicle
 
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
