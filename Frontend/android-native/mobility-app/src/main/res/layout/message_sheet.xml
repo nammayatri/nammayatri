@@ -36,7 +36,7 @@
                         android:layout_height="32dp"
                         android:layout_marginRight="12dp"
                         android:layout_gravity="center_vertical"
-                        android:src="@drawable/ny_ic_launcher">
+                        android:src="@drawable/ic_floating_widget">
                     </ImageView>
                     <TextView
                         android:id="@+id/HeaderTextView"

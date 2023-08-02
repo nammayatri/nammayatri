@@ -12,7 +12,7 @@ export const getNewTrackingId = function (unit) {
 };
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-    return (JBridge.getKeysInSharedPref ? JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key));
+    return JBridge.getFromSharedPrefs(key);
   };
 
 export const validateInputPattern = function (input, pattern){
@@ -310,7 +310,7 @@ export const fetchFromLocalStoreImpl = function(key) {
     return function (just) {
         return function (nothing) {
           return function () {
-            var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
+            var state = JBridge.getFromSharedPrefs(key);
             if (state != "__failed" && state != "(null)") {
               return just(state);
             }
@@ -324,7 +324,7 @@ export const fetchFromLocalStoreTempImpl = function(key) {
   return function (just) {
       return function (nothing) {
         return function () {
-          var state = window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key);
+          var state = JBridge.getFromSharedPrefs(key);
           var newState = JSON.parse(state);
           var predictionArray = newState.predictionArray;
           try {
