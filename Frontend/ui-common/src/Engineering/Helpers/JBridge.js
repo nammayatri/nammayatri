@@ -1058,32 +1058,22 @@ export const _onEventWithCB = function (payload) {
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
 export const getKeyInSharedPrefKeys = function (key) {
-  if (JBridge.getKeysInSharedPref){
-    return JBridge.getKeysInSharedPref(key);
-  }
-  return JBridge.getKeysInSharedPrefs(key);
+    return JBridge.getFromSharedPrefs(key);
 };
 
 export const getKeyInNativeSharedPrefKeys = function (key) {
-  if (JBridge.getKeysInSharedPref) {
-    return JBridge.getKeysInSharedPref(key);
-  }
-  if (window.__OS == "IOS") {
-    return JBridge.getKeysInSharedPrefs(key);
-  } else { 
-    return JBridge.getKeyInNativeSharedPrefKeys(key);
-  }
+    return JBridge.getFromSharedPrefs(key);
 };
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
-    window.JBridge.setKeysInSharedPrefs(key, value);
+    return JBridge.setInSharedPrefs(key, value);
   };
 };
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
-      JBridge.setKeysInSharedPrefs(key, value);
+    return JBridge.setInSharedPrefs(key, value);
   };
 };
 
@@ -1094,11 +1084,11 @@ export const setEnvInNativeSharedPrefKeysImpl = function (key) {
 // };
 
 export const removeKeysInSharedPrefs = function (key) {
-    return JBridge.removeFromSharedPrefs(key);
+    return JBridge.removeDataFromSharedPrefs(key);
 };
 
 export const removeKeysInNativeSharedPrefs = function (key) {
-    JBridge.removeFromSharedPrefs(key);
+  return JBridge.removeDataFromSharedPrefs(key);
 };
 
 export const toggleLoaderImpl = function (showLoader) {

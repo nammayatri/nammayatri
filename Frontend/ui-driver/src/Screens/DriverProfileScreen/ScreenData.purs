@@ -40,7 +40,7 @@ initData = {
     driverAlternateNumber : Nothing,
     driverGender : Nothing,
     logField : empty ,
-
+    fromHomeScreen : false,
     capacity : 0,
     vehicleSelected: [],
     downgradeOptions : [],
@@ -104,7 +104,7 @@ initData = {
     activeRcIndex : 0,
     deleteRcView : false,
     alreadyActive : false,
-    callDriver : false,
+    callDriver : true,
     openRcView : false,
     detailsUpdationType : Nothing,
     btnActive : false
@@ -126,7 +126,7 @@ languagesChoices :: Array CheckBoxOptions
 languagesChoices =
   [ { value : "EN_US"
     , text : "English"
-    , subText : "ಆಂಗ್ಲ"
+    , subText : ""
     , isSelected : false
     }
   , { value: "KN_IN"

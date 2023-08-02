@@ -108,21 +108,24 @@ screen initialState =
   , view
   , name : "DriverProfileScreen"
   , globalEvents : [(\push -> do
-      void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-        getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
-        lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse getAllRcsDataResp
-      void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-        void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-        EHU.toggleLoader true
-        summaryResponse <- Remote.driverProfileSummary ""
-        profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq { })
-        case summaryResponse, profileResponse of
-          Right summaryResp , Right profileResp -> do 
-            liftFlow $ push $ DriverSummary summaryResp
-            liftFlow $ push $ GetDriverInfoResponse profileResp
-          _ , _ -> liftFlow $ push $ BackPressed
-        EHU.toggleLoader false
-        pure unit
+      if initialState.props.openSettings then
+      pure unit
+      else do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+          getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
+          lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse getAllRcsDataResp
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+          void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+          EHU.toggleLoader true
+          summaryResponse <- Remote.driverProfileSummary ""
+          profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq { })
+          case summaryResponse, profileResponse of
+            Right summaryResp , Right profileResp -> do 
+              liftFlow $ push $ DriverSummary summaryResp
+              liftFlow $ push $ GetDriverInfoResponse profileResp
+            _ , _ -> liftFlow $ push $ BackPressed
+          EHU.toggleLoader false
+          pure unit
       pure $ pure unit
     )]
   , eval : \state  action -> do
@@ -136,7 +139,6 @@ view push state =
   frameLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    , padding $ PaddingBottom $ if state.props.callDriver then 0 else 24
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -251,7 +253,7 @@ headerView state push =
     , linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
-      , gravity BOTTOM
+      , gravity CENTER
       , onClick push $ const OpenSettings
       ][  imageView
           [ height $ V 20
@@ -944,7 +946,7 @@ profileOptionsLayout state push =
     , padding $ Padding 0 10 0 5
     ] (mapWithIndex
         (\index optionItem ->
-            (addAnimation state) $ linearLayout
+            linearLayout
             ([ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
@@ -1063,7 +1065,7 @@ getRcDetails state = do
   let config = state.data.activeRCData
   [{ key : "RC Status" , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
   , { key : "Reg. Number" , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }
-  , { key : "Type" , value : Just "Auto Rickshaw" , action : NoAction , isEditable : false }
+  , { key : "Type" , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }
   , { key : "Model Name" , value : Just config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
   , { key : "Colour" , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ] <> 
     if not null state.data.rcDataArray then 
@@ -1299,6 +1301,8 @@ infoCard state push config =
 
 
 ------------------------------------------ ANIMATION -----------------------------------------------------
+
+addAnimation :: forall w. ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
 addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
 
 scaleUpConfig :: Boolean -> AnimConfig.AnimConfig

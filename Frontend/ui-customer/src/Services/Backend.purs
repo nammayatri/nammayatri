@@ -34,7 +34,7 @@ import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 -- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
@@ -52,41 +52,27 @@ import Engineering.Helpers.Utils as EHU
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-                        then pure $ (Headers [  Header "Content-Type" "application/json",
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ]
-                                    )
-                        else pure $ (Headers [  Header "Content-Type" "application/json",
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN) ,
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ]
-                                    )
+    regToken <- loadS $ show REGISTERATION_TOKEN
+    pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
 
 getHeaders' :: String -> FlowBT String Headers
 getHeaders' _ = do
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-            then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                                ]
-                                        )
-            else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                                ]
-                                        )
+    regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
+    lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
 
 
 

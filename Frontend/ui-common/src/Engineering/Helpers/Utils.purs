@@ -41,7 +41,7 @@ loaderText mainTxt subTxt = do
       pure unit
 
 getSeparatorFactor :: Int
-getSeparatorFactor = if os == "IOS" then 8 else 25
+getSeparatorFactor = 8
 
 defaultSeparatorCount :: Int
 defaultSeparatorCount = 4

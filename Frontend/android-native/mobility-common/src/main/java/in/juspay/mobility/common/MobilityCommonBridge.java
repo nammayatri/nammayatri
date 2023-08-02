@@ -49,6 +49,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -1292,9 +1293,14 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         }
         JSONObject bounds = new JSONObject();
-        bounds.put("height", height);
-        bounds.put("width", width);
+        bounds.put("height", pxToDp(height));
+        bounds.put("width", pxToDp(width));
         return bounds.toString();
+    }
+
+    private int pxToDp(int px) {
+        DisplayMetrics displayMetrics = bridgeComponents.getContext().getResources().getDisplayMetrics();
+        return Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
     }
     //endregion
 

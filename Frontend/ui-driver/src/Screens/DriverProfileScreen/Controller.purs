@@ -248,7 +248,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
                                 else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
-                                else if state.props.alternateNumberView then continue $ state { props{ alternateNumberView = false}}
+                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit GoBack else continue $ state { props{ alternateNumberView = false}}
                                 else if state.props.alreadyActive then continue $ state {props { alreadyActive = false}}
                                 else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
                                 else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}      
@@ -348,7 +348,7 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
   else continue state{ props { openSettings = false }}
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = continue state {props{showGenderView=false, alternateNumberView=false}}
+eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit GoBack else continue state {props{showGenderView=false, alternateNumberView=false}}
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
@@ -437,7 +437,7 @@ eval CallDriver state =
   continue state{props{callDriver = true}}
 
 eval CallCustomerSupport state = do 
-  void $ pure $ showDialer $ getSupportNumber ""
+  void $ pure $ showDialer (getSupportNumber "") false
   continue state
 
 eval (DeactivateRc rcType) state = do
