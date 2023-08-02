@@ -89,16 +89,7 @@ upsert cancellationReason = do
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
 
--- findAllBookingIdsCancelledByDriverId :: Transactionable m => Id Person -> m [Id Booking]
--- findAllBookingIdsCancelledByDriverId driverId = do
---   Esq.findAll $ do
---     rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
---     where_ $
---       rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
---         &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
---     return (rideBookingCancellationReason ^. BookingCancellationReasonBookingId)
-
-findAllBookingIdsCancelledByDriverId :: MonadFlow m => Id Person -> m [Id Booking]
+findAllBookingIdsCancelledByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [Id Booking]
 findAllBookingIdsCancelledByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
 
 instance FromTType' (BeamBCR.BookingCancellationReasonT Identity) BookingCancellationReason where

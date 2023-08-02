@@ -638,18 +638,6 @@ findBookingsById (Id merchantId) bookingIds = findAllWithKV [Se.And [Se.Is BeamB
 findRidesByBookingId :: (L.MonadFlow m, Log m) => [Id Booking] -> m [DRide.Ride]
 findRidesByBookingId bookingIds = findAllWithKV [Se.Is BeamR.bookingId $ Se.In $ getId <$> bookingIds]
 
--- findCancelledBookingId :: Transactionable m => Id Person -> m [Id Booking]
--- findCancelledBookingId driverId = do
---   Esq.findAll $ do
---     rides <- from $ table @RideT
---     where_ $
---       rides ^. RideDriverId ==. val (toKey driverId)
---         &&. rides ^. RideStatus ==. val Ride.CANCELLED
---     return (rides ^. RideBookingId)
-
-findCancelledBookingId :: MonadFlow m => Id Person -> m [Id Booking]
-findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]] <&> (Ride.bookingId <$>)
-
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     tUrl <- parseBaseUrl trackingUrl
