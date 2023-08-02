@@ -1411,7 +1411,7 @@ rcEditPopUpView push state =
     , width MATCH_PARENT
     , background Color.black9000
     , alignParentBottom "true,-1"
-    , disableClickFeedback true
+    , clickable true
     ]
     ([ linearLayout
         [ height WRAP_CONTENT
@@ -1548,7 +1548,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
     , width MATCH_PARENT
     , background Color.black9000
     , alignParentBottom "true,-1"
-    , disableClickFeedback true
+    , clickable true
     ]
     ([ linearLayout
         [ height WRAP_CONTENT

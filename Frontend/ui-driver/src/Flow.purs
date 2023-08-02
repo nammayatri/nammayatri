@@ -600,7 +600,12 @@ addVehicleDetailsflow addRcFromProf = do
             Right (DriverRCResp resp) -> do
               void $ lift $ lift $ toggleLoader false
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
-              applicationSubmittedFlow "StatusScreen"
+              (GlobalState state') <- getState
+              let profileState = state'.driverProfileScreen
+              if (null profileState.data.rcDataArray) then applicationSubmittedFlow "StatusScreen" 
+              else do 
+                modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
+                driverProfileFlow
             Left errorPayload -> do
               void $ lift $ lift $ toggleLoader false
               modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}}
@@ -820,7 +825,12 @@ driverProfileFlow = do
           modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false,screenType = ST.VEHICLE_DETAILS}})
           driverProfileFlow
         Left errorPayload -> do 
-          modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = true, screenType = ST.VEHICLE_DETAILS}})
+          let codeMessage = decodeErrorCode errorPayload.response.errorMessage
+          if codeMessage == "RC_ACTIVE_ON_OTHER_ACCOUNT" || codeMessage == "RC_Vehicle_ON_RIDE" then do
+            modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = true, screenType = ST.VEHICLE_DETAILS}})
+          else do
+             modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS}})
+             pure $ toast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           driverProfileFlow
     GO_TO_DELETE_RC state -> do 
       _ <- Remote.deleteRcBT (Remote.deleteRcReq state.data.rcNumber)
