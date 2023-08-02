@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.place_name_cache ALTER COLUMN place_id type text;
