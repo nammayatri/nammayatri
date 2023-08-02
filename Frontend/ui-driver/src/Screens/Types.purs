@@ -273,7 +273,8 @@ type DriverProfileScreenData = {
   isRCActive :: Boolean,
   openInactiveRCViewOrNotArray :: Array Int,
   logField :: Object Foreign, 
-  analyticsData :: AnalyticsData
+  analyticsData :: AnalyticsData,
+  fromHomeScreen :: Boolean
 }
 
 type RcData = {
