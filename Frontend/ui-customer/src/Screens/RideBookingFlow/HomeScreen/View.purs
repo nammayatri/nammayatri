@@ -57,6 +57,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth)
+import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -247,7 +248,10 @@ view push state =
             ( \action -> do
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
-                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen else pure unit
+                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then do 
+                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState else pure unit
+                  push OpenChatScreen 
+                else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
                   _ -> pure unit
@@ -267,14 +271,14 @@ view push state =
                 , clickable true
                 ]
                 [ linearLayout
-                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver, ConfirmingLocation] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []
                 , linearLayout
                     [ width MATCH_PARENT
-                    , height if state.props.currentStage == ConfirmingLocation && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                    , height MATCH_PARENT
                     , background Color.transparent
                     , padding (PaddingBottom if os == "IOS" then 20 else if showLabel then 70 else 34)
                     , gravity CENTER

@@ -380,14 +380,16 @@ eval (MakePaymentModalAC (MakePaymentModal.Info)) state = continue state{data { 
 eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}}}
 
 eval (OpenChatScreen) state = do
-  continueWithCmd state{props{openChatScreen = false}} [do
-    pure $ (RideActionModalAction (RideActionModal.MessageCustomer))
-  ]
+  if not state.props.chatcallbackInitiated then continue state else do
+    continueWithCmd state{props{openChatScreen = false}} [do
+      pure $ (RideActionModalAction (RideActionModal.MessageCustomer))
+    ]
 
 eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
-  _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
-  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
-  continue state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false}}
+  if not state.props.chatcallbackInitiated then continue state else do
+    _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
+    continue state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false, isChatOpened = true}}
 
 eval (RideActionModalAction (RideActionModal.LocationTracking)) state = do
   let newState = state {props {showDottedRoute = not state.props.showDottedRoute} }
@@ -502,16 +504,17 @@ eval RemoveChat state = do
   ]
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
-  case (Array.last messages) of
-    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
-                    if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
-                    else do
-                      let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                      let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                      let suggestions = getSuggestionsfromKey message
-                      updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestions, messagesSize = size}, props {unReadMessages = unReadMessages}}
-    Nothing -> continue state
+  if not state.props.chatcallbackInitiated then continue state else do
+    let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
+    case (Array.last messages) of
+      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
+                      if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
+                      else do
+                        let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
+                        let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
+                        let suggestions = getSuggestionsfromKey message
+                        updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestions, messagesSize = size}, props {unReadMessages = unReadMessages}}
+      Nothing -> continue state
 
 eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
