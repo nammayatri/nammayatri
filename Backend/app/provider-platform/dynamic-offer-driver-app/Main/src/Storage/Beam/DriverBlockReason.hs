@@ -59,7 +59,7 @@ instance B.Table DriverBlockReasonT where
 instance ModelMeta DriverBlockReasonT where
   modelFieldModification = driverBlockReasonTMod
   modelTableName = "driver_block_reason"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverBlockReason = DriverBlockReasonT Identity
 

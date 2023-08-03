@@ -50,7 +50,7 @@ instance B.Table FeedbackT where
 instance ModelMeta FeedbackT where
   modelFieldModification = feedbackTMod
   modelTableName = "feedback"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Feedback = FeedbackT Identity
 

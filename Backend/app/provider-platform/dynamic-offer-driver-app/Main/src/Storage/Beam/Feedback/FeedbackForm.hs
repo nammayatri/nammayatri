@@ -82,7 +82,7 @@ instance B.Table FeedbackFormT where
 instance ModelMeta FeedbackFormT where
   modelFieldModification = feedbackFormTMod
   modelTableName = "feedback_form"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FeedbackForm = FeedbackFormT Identity
 

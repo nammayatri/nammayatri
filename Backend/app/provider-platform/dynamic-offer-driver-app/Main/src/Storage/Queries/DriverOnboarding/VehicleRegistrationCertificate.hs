@@ -15,7 +15,6 @@
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
-import qualified Data.Text as T
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Vehicle as Vehicle
 import qualified EulerHS.Language as L
@@ -65,7 +64,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.vehicleClass vehicleClass,
           Se.Set BeamVRC.vehicleVariant vehicleVariant,
           Se.Set BeamVRC.vehicleManufacturer vehicleManufacturer,
-          Se.Set BeamVRC.vehicleCapacity $ show <$> vehicleCapacity,
+          Se.Set BeamVRC.vehicleCapacity vehicleCapacity,
           Se.Set BeamVRC.vehicleModel vehicleModel,
           Se.Set BeamVRC.vehicleColor vehicleColor,
           Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
@@ -133,7 +132,7 @@ findLastVehicleRCInReplica certNumberHash = do
 updateVehicleVariant :: (MonadFlow m) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> m ()
 updateVehicleVariant (Id vehicleRegistrationCertificateId) variant = do
   updateOneWithKV
-    [Se.Set BeamVRC.vehicleVariant $ variant]
+    [Se.Set BeamVRC.vehicleVariant variant]
     [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 
 findByRCAndExpiry :: (L.MonadFlow m, Log m) => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
@@ -184,7 +183,7 @@ instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCe
             vehicleVariant = vehicleVariant,
             failedRules = failedRules,
             vehicleManufacturer = vehicleManufacturer,
-            vehicleCapacity = (readMaybe . T.unpack) =<< vehicleCapacity,
+            vehicleCapacity = vehicleCapacity,
             vehicleModel = vehicleModel,
             vehicleColor = vehicleColor,
             vehicleEnergyType = vehicleEnergyType,
@@ -208,7 +207,7 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.vehicleVariant = vehicleVariant,
         BeamVRC.failedRules = failedRules,
         BeamVRC.vehicleManufacturer = vehicleManufacturer,
-        BeamVRC.vehicleCapacity = show <$> vehicleCapacity,
+        BeamVRC.vehicleCapacity = vehicleCapacity,
         BeamVRC.vehicleModel = vehicleModel,
         BeamVRC.vehicleColor = vehicleColor,
         BeamVRC.vehicleEnergyType = vehicleEnergyType,

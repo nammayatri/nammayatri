@@ -61,7 +61,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleClass :: B.C f (Maybe Text),
     vehicleVariant :: B.C f (Maybe Variant),
     vehicleManufacturer :: B.C f (Maybe Text),
-    vehicleCapacity :: B.C f (Maybe Text),
+    vehicleCapacity :: B.C f (Maybe Int),
     vehicleModel :: B.C f (Maybe Text),
     vehicleColor :: B.C f (Maybe Text),
     vehicleEnergyType :: B.C f (Maybe Text),
