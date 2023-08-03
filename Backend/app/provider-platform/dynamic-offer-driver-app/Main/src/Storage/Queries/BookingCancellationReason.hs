@@ -16,19 +16,22 @@
 
 module Storage.Queries.BookingCancellationReason where
 
+import qualified Data.List
+import qualified Database.Beam as B
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified EulerHS.Language as L
-import EulerHS.Prelude as P hiding ((^.))
+import EulerHS.Prelude as P hiding (null, (^.))
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
+import qualified Storage.Beam.Common as BeamCommon
 
 create :: (L.MonadFlow m, Log m) => DBCR.BookingCancellationReason -> m ()
 create = createWithKV
@@ -49,7 +52,20 @@ create = createWithKV
 --     mkCount [counter] = counter
 
 findAllCancelledByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m Int
-findAllCancelledByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> length
+findAllCancelledByDriverId driverId = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            ( \bcr ->
+                B.sqlBool_ (bcr.source B.==. B.val_ ByDriver)
+                  B.&&?. (bcr.driverId B.==?. B.val_ (Just $ getId driverId))
+            )
+            do
+              B.all_ (BeamCommon.bookingCancellationReason BeamCommon.atlasDB)
+  pure $ either (const 0) (\r -> if Data.List.null r then 0 else Data.List.head r) res
 
 findByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
 findByBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]

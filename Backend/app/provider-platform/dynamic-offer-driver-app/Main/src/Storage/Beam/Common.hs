@@ -13,6 +13,7 @@ import GHC.Generics (Generic)
 -- import Storage.Beam.DriverOnboarding.IdfyVerification
 
 import Storage.Beam.Booking
+import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLocation
@@ -56,6 +57,7 @@ atlasDB =
         callStatus = callStatusTable,
         quoteSpecialZone = quoteSpecialZoneTable,
         messageReport = messageReportTable,
+        bookingCancellationReason = bookingCancellationReasonTable,
         rating = ratingTable
       }
 
@@ -79,6 +81,7 @@ data AtlasDB f = AtlasDB
     callStatus :: f (B.TableEntity CallStatusT),
     quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
     messageReport :: f (B.TableEntity MessageReportT),
+    bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),
     rating :: f (B.TableEntity RatingT)
   }
   deriving (Generic, B.Database be)
