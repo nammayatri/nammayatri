@@ -539,13 +539,13 @@ const hindiStrings = {
   ACTIVE_RC : "सक्रिय",
   INACTIVE_RC : "निष्क्रिय",
   CONFIRMATION_FOR_DELETING_RC : "क्या आप वाकई अपनी आरसी हटाना चाहते हैं?",
-  CONFIRMATION_FOR_DEACTIVATING_RC : "क्या आप वाकई अपनी आरसी को निष्क्रिय करना चाहते हैं?- ",
-  CONFIRMATION_FOR_ACTIVATING_RC : "क्या आप वाकई आरसी को सक्रिय करना चाहते हैं?- ",
+  CONFIRMATION_FOR_DEACTIVATING_RC : "क्या आप वाकई अपनी आरसी को निष्क्रिय करना चाहते हैं?",
+  CONFIRMATION_FOR_ACTIVATING_RC : "क्या आप वाकई आरसी को सक्रिय करना चाहते हैं?",
   YES_DELETE : "हाँ, हटाएँ",
   ADD_NEW_RC : "आरसी जोड़ें",
   CONNECT_CALL_ANONYMOUSLY: "हम आपको गुमनाम रूप से ड्राइवर से जोड़ने का प्रयास करेंगे, कृपया आरसी को निष्क्रिय करने का अनुरोध करने से पहले अपना परिचय दें.",
   YES_ACTIVATE : "हाँ, सक्रिय करें",
-  YES_DEACTIVATE : "Yहाँ, निष्क्रिय करें",
+  YES_DEACTIVATE : "हाँ, निष्क्रिय करें",
   THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC : "यह आपकी वर्तमान में सक्रिय आरसी को निष्क्रिय कर देगा.",
   PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER : "कृपया प्रतीक्षा करें जब तक हम आपको ड्राइवर से कनेक्ट कर रहे हैं",
   REMOVED : "निकाला गया",
@@ -621,5 +621,7 @@ const hindiStrings = {
   OPTIONAL : " (वैकल्पिक)",
   DOWNLOAD_STATEMENT : "स्टेटमेंट डाउनलोड करें",
   SELECT_A_DATE_RANGE : "विवरण डाउनलोड करने के लिए एक तिथि सीमा चुनें",
-  FEE_PAYMENT_HISTORY : "शुल्क भुगतान इतिहास"
+  FEE_PAYMENT_HISTORY : "शुल्क भुगतान इतिहास",
+  LANGUAGES_स्पोकन : "बोली जाने वाली भाषाएँ",
+  VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें"
 }

@@ -473,5 +473,7 @@ const frenchStrings = {
   OPTIONAL : " (Facultatif)",
   DOWNLOAD_STATEMENT : "Télécharger la déclaration",
   SELECT_A_DATE_RANGE : "Sélectionnez une plage de dates pour télécharger le relevé",
-  FEE_PAYMENT_HISTORY : "Historique de paiement des frais"
+  FEE_PAYMENT_HISTORY : "Historique de paiement des frais",
+  LANGUAGES_SPOKEN : "Langues parlées",
+  VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements"
 }

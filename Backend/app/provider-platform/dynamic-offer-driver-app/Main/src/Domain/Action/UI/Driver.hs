@@ -192,8 +192,7 @@ data DriverInformationRes = DriverInformationRes
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
-    mediaUrl :: Maybe Text,
-    aadhaarVerified :: Bool -- TODO: Need to remove this flag, added for backward compatibility and google app review
+    mediaUrl :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -850,7 +849,6 @@ makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats =
     { organization = DM.makeMerchantAPIEntity org,
       referralCode = referralCode <&> (.getId),
       numberOfRides = driverStats.totalRides,
-      aadhaarVerified = True, -- TODO: Need to remove this flag, added for backward compatibility and google app review
       ..
     }
 

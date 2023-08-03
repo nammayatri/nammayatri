@@ -102,7 +102,7 @@ export const storeCallBackLocateOnMap = function (cb) {
           window.y = action;
           timerIdDebounce = setTimeout(() => {
             cb(action (key) (lat) (lon))();
-          }, 300); 
+          }, 300);
         });
           console.log("In storeCallBackLocateOnMap ---------- + " + action);
           window.JBridge.storeCallBackLocateOnMap(callback);
@@ -442,11 +442,11 @@ export const storeOnResumeCallback = function (cb) {
   return function (action) {
     return function () {
       try {
-        var callback = callbackMapper.map(function () {
+        var callback = function () {
           cb(action)();
-        });
-        if (window.JBridge.storeOnResumeCallback){
-          window.JBridge.storeOnResumeCallback(callback);
+        }
+        if (window.onResumeListeners){
+        window.onResumeListeners.push(callback);
         }
       }
       catch (error) {

@@ -594,5 +594,7 @@ const kannadaStrings = {
   OPTIONAL : " (ಐಚ್ಛಿಕ)",
   DOWNLOAD_STATEMENT : "ಡೌನ್‌ಲೋಡ್ ಹೇಳಿಕೆ",
   SELECT_A_DATE_RANGE : "ಹೇಳಿಕೆಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ದಿನಾಂಕ ಶ್ರೇಣಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
-  FEE_PAYMENT_HISTORY : "ಶುಲ್ಕ ಪಾವತಿ ಇತಿಹಾಸ"
+  FEE_PAYMENT_HISTORY : "ಶುಲ್ಕ ಪಾವತಿ ಇತಿಹಾಸ",
+  LANGUAGES_SPOKEN : "ಮಾತನಾಡುವ ಭಾಷೆಗಳು",
+  VIEW_PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸವನ್ನು ವೀಕ್ಷಿಸಿ"
 }

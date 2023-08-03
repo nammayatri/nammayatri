@@ -630,5 +630,7 @@ const bengaliStrings = {
 	OPTIONAL : " (ঐচ্ছিক)",
 	DOWNLOAD_STATEMENT : "বিবৃতি ডাউনলোড করুন",
 	SELECT_A_DATE_RANGE : "বিবৃতিটি ডাউনলোড করতে একটি তারিখের সীমা নির্বাচন করুন",
-	FEE_PAYMENT_HISTORY : "ফি প্রদানের ইতিহাস"
+	FEE_PAYMENT_HISTORY : "ফি প্রদানের ইতিহাস",
+	LANGUAGES_SPOKEN : "কথিত ভাষা",
+  	VIEW_PAYMENT_HISTORY : "পেমেন্ট ইতিহাস দেখুন"
 	}

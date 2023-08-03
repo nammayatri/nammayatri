@@ -21,24 +21,40 @@ import Screens.DriverProfileScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
+import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..))
 import Components.BottomNavBar.Controller (navData)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.CheckListView.View as CheckListView
+import Components.CheckListView.View as CheckListView
+import Components.GenericHeader.View as GenericHeader
 import Components.GenericHeader.View as GenericHeader
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
+import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
+import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.PopUpModal as PopUpModal
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryEditText.View as PrimaryEditText
+import Components.PrimaryEditText.View as PrimaryEditText
+import Control.Applicative (unless)
 import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!), take)
+import Data.Either (Either(..))
+import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), isJust)
 import Data.Maybe (fromMaybe)
+import Debug (spy)
+import Debug (spy)
 import Debug (spy)
 import Debug (spy)
 import Effect (Effect)
@@ -46,61 +62,45 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, liftFlow)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getVehicleType)
 import Helpers.Utils (getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens as ScreenNames
+import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
+import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
+import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
-import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
-import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
-import Styles.Colors as Color
-import Screens as ScreenNames
-import Helpers.Utils (getVehicleType)
-import Debug(spy)
-import PrestoDOM.Animation as PrestoAnim
-import Animation.Config as AnimConfig
-import Data.Maybe (Maybe(..), isJust)
-import Components.GenericHeader.View as GenericHeader
-import Components.PrimaryEditText.View as PrimaryEditText
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Properties (cornerRadii)
-import Components.PrimaryButton as PrimaryButton
-import Components.PrimaryEditText as PrimaryEditText
-import Components.InAppKeyboardModal.View as InAppKeyboardModal
-import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import Components.CheckListView.View as CheckListView
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Components.PopUpModal as PopUpModal
-import Storage (isLocalStageOn)
-import Debug (spy)
-import Control.Applicative (unless)
-import Data.List (elem)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
-import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens as ScreenNames
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
+import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
+import Services.Backend as Remote
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (isLocalStageOn)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
+import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Data.Either (Either (..))
-import Engineering.Helpers.Utils as EHU
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -394,7 +394,7 @@ missedOpportunityView state push  =
   , margin $ Margin 0 40 0 0
   ][  textView  
       [ text (getString MISSED_OPPORTUNITY)
-      , margin $ Margin 0 0 16 12
+      , margin $ Margin 0 0 16 4
       , textSize FontSize.a_16
       , color Color.black 
       , fontStyle $ FontStyle.medium LanguageStyle
@@ -409,7 +409,7 @@ missedOpportunityView state push  =
 missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
 missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> " %"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
   {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-    {key : (getString EARNINGS_MISSED), value : show analyticsData.missedEarnings , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+    {key : (getString EARNINGS_MISSED), value : "₹" <>  show analyticsData.missedEarnings , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push = 
@@ -468,7 +468,7 @@ addRcView state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , alignParentBottom "true,-1"
-      ][ PrimaryButton.view (push <<< PrimaryButtonActionController2) (addRCButtonConfig state)]
+      ][ PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state)]
 
 additionalRcsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { key :: String , idx :: Int, value ::  String , action :: Action, model :: String, color :: String} -> PrestoDOM (Effect Unit) w
 additionalRcsView state push config = 
@@ -748,7 +748,7 @@ vehicleAnalyticsView push state =
       [height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ](map (\item -> infoCard state push item) (vehicleSummaryArray ""))
+      ](map (\item -> infoCard state push item) (vehicleSummaryArray state))
   ]
 
 --------------------------------------- ADDITIONAL DETAILS VIEW ------------------------------------------------------------
@@ -1055,17 +1055,20 @@ infoView state push =
                               backgroundColor : Color.white900 
                             , separatorColor : Color.grey700 
                             , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then (driverDetailsArray state) 
-                                           else (getRcDetails state.data.activeRCData)
+                                           else (getRcDetails state)
                             }
     ]
-getRcDetails :: ST.RcData -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
-getRcDetails config = do 
+getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
+getRcDetails state = do 
+  let config = state.data.activeRCData
   [{ key : "RC Status" , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
   , { key : "Reg. Number" , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }
   , { key : "Type" , value : Just "Auto Rickshaw" , action : NoAction , isEditable : false }
   , { key : "Model Name" , value : Just config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
-  , { key : "Colour" , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } 
-  , { key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false } ]
+  , { key : "Colour" , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ] <> 
+    if not null state.data.rcDataArray then 
+      [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }] 
+    else []
 
 
 ----------------------------------------------- INFO TILE VIEW COMPONENT -------------------------------------------------------
@@ -1106,9 +1109,9 @@ infoTileView state config =
                     ][imageView
                         [ height $ V 13
                         , width $ V 13
-                        , imageWithFallback if item <= 5 then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                        , imageWithFallback if item <= (fromMaybe 0.0 state.data.analyticsData.rating) then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                         ]
-                    ]) [1,2,3,4,5]) -- TODO replace with proper api response and handle stars after Unification PR got merged
+                    ]) [1.0,2.0,3.0,4.0,5.0])
           ]
       , textView 
         ([ width WRAP_CONTENT
@@ -1239,6 +1242,7 @@ infoCard state push config =
     height WRAP_CONTENT
   , width MATCH_PARENT
   , padding $ Padding 16 16 16 16 
+  , margin $ MarginTop 8
   , cornerRadius 10.0
   , background Color.blue600
   ][
@@ -1354,8 +1358,8 @@ genderOptionsArray _ =
   , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
   ]
 
-vehicleSummaryArray :: String -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
-vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : "10,254km", value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+vehicleSummaryArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
+vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 
 vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
 vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , action : UpdateValue ST.VEHICLE_AGE , isEditable : true }
@@ -1383,7 +1387,7 @@ getLangFromVal value =
       "TE_IN" -> "Telugu"
       "BN_IN" -> "Bengali"
       "ML_IN" -> "Malayalam"
-      _ -> ""
+      _ -> value
 --------------------------------------------------------------- SEPARATOR --------------------------------------------------------
 horizontalLineView :: Int -> Number -> Int -> Int -> Int -> forall w . PrestoDOM (Effect Unit) w
 horizontalLineView heightOfLine lineAlpha marginLeft marginTop marginRight =
@@ -1411,7 +1415,7 @@ rcEditPopUpView push state =
     , width MATCH_PARENT
     , background Color.black9000
     , alignParentBottom "true,-1"
-    , disableClickFeedback true
+    , clickable true
     ]
     ([ linearLayout
         [ height WRAP_CONTENT
@@ -1548,7 +1552,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
     , width MATCH_PARENT
     , background Color.black9000
     , alignParentBottom "true,-1"
-    , disableClickFeedback true
+    , clickable true
     ]
     ([ linearLayout
         [ height WRAP_CONTENT

@@ -24,7 +24,7 @@ import Domain.Types.Ride
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding ((^.))
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
-import Kernel.Types.Common (Log)
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
   ( FromTType' (fromTType'),
@@ -81,12 +81,25 @@ upsert cancellationReason = do
   if isJust res
     then
       updateOneWithKV
-        [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
+        [ Se.Set BeamBCR.bookingId (getId cancellationReason.bookingId),
+          Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
           Se.Set BeamBCR.reasonCode ((\(CancellationReasonCode x) -> x) <$> cancellationReason.reasonCode),
           Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo
         ]
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
+
+-- findAllBookingIdsCancelledByDriverId :: Transactionable m => Id Person -> m [Id Booking]
+-- findAllBookingIdsCancelledByDriverId driverId = do
+--   Esq.findAll $ do
+--     rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+--     where_ $
+--       rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+--         &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+--     return (rideBookingCancellationReason ^. BookingCancellationReasonBookingId)
+
+findAllBookingIdsCancelledByDriverId :: MonadFlow m => Id Person -> m [Id Booking]
+findAllBookingIdsCancelledByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
 
 instance FromTType' (BeamBCR.BookingCancellationReasonT Identity) BookingCancellationReason where
   fromTType' BeamBCR.BookingCancellationReasonT {..} = do

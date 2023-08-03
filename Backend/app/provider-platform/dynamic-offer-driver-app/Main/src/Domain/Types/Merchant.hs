@@ -77,8 +77,7 @@ data MerchantAPIEntity = MerchantAPIEntity
     description :: Maybe Text,
     contactNumber :: Text,
     status :: Status,
-    enabled :: Bool,
-    aadhaarVerificationRequired :: Bool -- TODO: Need to remove this flag, added for backward compatibility and google app review
+    enabled :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -86,6 +85,5 @@ makeMerchantAPIEntity :: Merchant -> MerchantAPIEntity
 makeMerchantAPIEntity Merchant {..} =
   MerchantAPIEntity
     { contactNumber = fromMaybe "Unknown" $ mobileCountryCode <> mobileNumber,
-      aadhaarVerificationRequired = False, -- TODO: Need to remove this flag, added for backward compatibility and google app review
       ..
     }

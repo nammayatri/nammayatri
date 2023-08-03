@@ -590,5 +590,7 @@ const mlStrings = {
   OPTIONAL : " (ഓപ്ഷണൽ)",
   DOWNLOAD_STATEMENT : "പ്രസ്താവന ഡൗൺലോഡ് ചെയ്യുക",
   SELECT_A_DATE_RANGE : "പ്രസ്താവന ഡൗൺലോഡ് ചെയ്യുന്നതിന് ഒരു തീയതി ശ്രേണി തിരഞ്ഞെടുക്കുക",
-  FEE_PAYMENT_HISTORY : "ഫീസ് പേയ്‌മെന്റ് ചരിത്രം"
+  FEE_PAYMENT_HISTORY : "ഫീസ് പേയ്‌മെന്റ് ചരിത്രം",
+  LANGUAGES_SPOKEN : "സംസാരിക്കുന്ന ഭാഷകൾ",
+  VIEW_PAYMENT_HISTORY : "പേയ്മെന്റ് ചരിത്രം കാണുക"
 }

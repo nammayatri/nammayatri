@@ -6,6 +6,8 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.content.Context.MODE_PRIVATE;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -108,6 +110,7 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.airbnb.lottie.LottieListener;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -1469,21 +1472,38 @@ public class MobilityCommonBridge extends HyperBridge {
         if (bridgeComponents.getActivity() != null) {
             ExecutorManager.runOnMainThread(() -> {
                 try {
-                    // Config Parameter
-                    JSONObject params = new JSONObject(configObj);
-                    float minProgress = Float.parseFloat(params.getString("minProgress"));
-                    float maxProgress = Float.parseFloat(params.getString("maxProgress"));
-                    String scaleType = params.getString("scaleType");
-                    boolean repeat = Boolean.parseBoolean(params.getString("repeat"));
-                    int lottieId = Integer.parseInt(params.getString("lottieId"));
-                    float speed = Float.parseFloat(params.getString("speed"));
-                    String rawJson = params.getString("rawJson");
+                    JSONObject jsonObject = new JSONObject(configObj);
+                    float minProgress = Float.parseFloat(jsonObject.getString("minProgress"));
+                    float maxProgress = Float.parseFloat(jsonObject.getString("maxProgress"));
+                    minProgress = minProgress >= maxProgress ? 0.0f : minProgress;
+                    String scaleType = jsonObject.getString("scaleType");
+                    boolean repeat = Boolean.parseBoolean(jsonObject.getString("repeat"));
+                    int lottieId = Integer.parseInt(jsonObject.getString("lottieId"));
+                    float speed = Float.parseFloat(jsonObject.getString("speed"));
+                    String rawJson = jsonObject.getString("rawJson");
 
                     animationView = bridgeComponents.getActivity().findViewById(lottieId);
-                    if (rawJson.contains("https") || rawJson.contains("http")) {
-                        animationView.setAnimationFromUrl(rawJson);
-                    } else {
-                        animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
+                    animationView.addAnimatorListener(new Animator.AnimatorListener() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            if (repeat) {
+                                animationView.setMinAndMaxProgress(0.0f, 1.0f);
+                            }
+                        }
+                        @Override
+                        public void onAnimationStart(@NonNull Animator animator) {
+                        }
+                        @Override
+                        public void onAnimationCancel(@NonNull Animator animator) {
+                        }
+                        @Override
+                        public void onAnimationRepeat(@NonNull Animator animator) {
+                        }
+                    });
+                    if ( rawJson.contains("https") || rawJson.contains("http")) {
+                            animationView.setAnimationFromUrl(rawJson);
+                    }else {
+                            animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
                     }
                     animationView.setRepeatCount(repeat ? ValueAnimator.INFINITE : 0);
                     animationView.setSpeed(speed);
@@ -1491,7 +1511,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     animationView.setScaleType(getScaleTypes(scaleType));
                     animationView.playAnimation();
                 } catch (Exception e) {
-                    Log.d(UTILS, "exception in startLottieAnimation", e);
+                    Log.d(UTILS, "exception in startLottieProcess", e);
                 }
             });
         }
@@ -1838,7 +1858,7 @@ public class MobilityCommonBridge extends HyperBridge {
         configuration.setLocale(locale);
         context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
     }
-        
+
     @JavascriptInterface
     public void horizontalScrollToPos(final String id, final String childId, final int focus) {
         if (bridgeComponents.getActivity() != null) {
