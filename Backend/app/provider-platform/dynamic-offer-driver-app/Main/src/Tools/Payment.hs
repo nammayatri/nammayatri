@@ -16,6 +16,9 @@ module Tools.Payment
   ( module Reexport,
     createOrder,
     orderStatus,
+    offerList,
+    offerApply,
+    offerNotify,
   )
 where
 
@@ -23,6 +26,9 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.Payment.Interface as Reexport hiding
   ( createOrder,
+    offerApply,
+    offerList,
+    offerNotify,
     orderStatus,
   )
 import qualified Kernel.External.Payment.Interface as Payment
@@ -39,6 +45,15 @@ createOrder = runWithServiceConfig Payment.createOrder
 
 orderStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfig Payment.orderStatus
+
+offerList :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
+offerList = runWithServiceConfig Payment.offerList
+
+offerApply :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
+offerApply = runWithServiceConfig Payment.offerApply
+
+offerNotify :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OfferNotifyReq -> m Payment.OfferNotifyResp
+offerNotify = runWithServiceConfig Payment.offerNotify
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
