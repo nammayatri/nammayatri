@@ -40,6 +40,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
+import JBridge as JB
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state =
@@ -410,36 +411,33 @@ allContactsView state push =
                 , textSize FontSize.a_12
                 ]
               ]
+          , textView
+            [ text item.name
+            , color Color.black800
+            , textSize FontSize.a_16
+            , width $ V (JB.getWidthFromPercent 40)
+            , lineHeight "20"
+            , ellipsize true
+            , singleLine true
+            , padding $ PaddingLeft 8
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            ]
           , linearLayout
-            [ height WRAP_CONTENT
+            [ height  WRAP_CONTENT
             , weight 1.0
-            , padding (PaddingLeft 8)
+            , gravity RIGHT
+            , onClick push $ const $ CallContactPopUp item
             ][  textView
-                [ text (item.name)
-                , color Color.black800
-                , textSize FontSize.a_16
-                , lineHeight "20"
-                , fontStyle $ FontStyle.semiBold LanguageStyle
+                [ text $ getString CALL
+                , color Color.green900
+                , width WRAP_CONTENT
+                , textSize FontSize.a_14
+                , lineHeight "18"
+                , fontStyle $ FontStyle.regular LanguageStyle
+                , margin $ MarginLeft 5
+                , padding $ Padding 20 10 20 10
                 ]
-            ]
-          , linearLayout
-            [ height WRAP_CONTENT
-            , width $ V 50
-            , gravity CENTER
-            ][  linearLayout
-                [ height  WRAP_CONTENT
-                , width  WRAP_CONTENT
-                , onClick push $ const $ CallContactPopUp item
-                ][ textView
-                    [ text $ (getString CALL)
-                    , color Color.green900
-                    , textSize FontSize.a_14
-                    , lineHeight "18"
-                    , fontStyle $ FontStyle.regular LanguageStyle
-                    , margin $ MarginHorizontal 10 10
-                    ]
-                ]
-            ]
+              ]
           ]
        ]) state.emergencyContactData)
 
