@@ -135,8 +135,8 @@ findByIdInReplica quoteId = findOneWithKvInReplica [Se.Is BeamQ.id $ Se.Eq (getI
 
 findByBppIdAndBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do
-  quoteList <- findAllWithKV [Se.Is BeamQ.providerId $ Se.Eq bppId]
   dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
+  quoteList <- findAllWithKV [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]]
   let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
   pure $ listToMaybe quoteWithDoOfferId
   where
