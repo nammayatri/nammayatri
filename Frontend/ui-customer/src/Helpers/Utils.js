@@ -89,29 +89,6 @@ export const requestKeyboardShow = function(id) {
     }
   }
 
-export const storeCallBackLocateOnMap = function (cb) {
-  try {
-  return function (action) {
-      return function () {
-        var callback = callbackMapper.map(function (key, lat, lon) {
-          console.log("in show storeCallBackLocateOnMap",action);
-          if(timerIdDebounce){
-            clearTimeout(timerIdDebounce);
-          }
-          window.x = cb;
-          window.y = action;
-          timerIdDebounce = setTimeout(() => {
-            cb(action (key) (lat) (lon))();
-          }, 300); 
-        });
-          console.log("In storeCallBackLocateOnMap ---------- + " + action);
-          window.JBridge.storeCallBackLocateOnMap(callback);
-      }
-  }}
-  catch (error){
-      console.log("Error occurred in storeCallBackLocateOnMap ------", error);
-  }
-}
 
 export const storeCallBackCustomer = function (cb) {
     try {

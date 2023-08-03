@@ -33,9 +33,8 @@ import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safe
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion, getSearchType)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
+import Helpers.Utils (debounceFunction, getPreviousVersion, getSearchType,getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent, getLocationName)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -44,7 +43,8 @@ import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.Types (SearchLocationModelType(..), LocationListItemState)
+import Common.Types.App (LocationListItemState,LocationItemType(..))
+import Screens.Types (SearchLocationModelType(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.String as DS

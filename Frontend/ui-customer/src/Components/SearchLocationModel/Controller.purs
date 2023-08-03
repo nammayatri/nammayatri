@@ -21,13 +21,14 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
 import Prelude (show)
 import PrestoDOM (Visibility(..))
-import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Common.Types.App (LocationListItemState, LocItemType(..))
+import Screens.Types (SearchLocationModelType)
 
 data Action = GoBack
             | NoAction

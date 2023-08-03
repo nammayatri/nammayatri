@@ -15,7 +15,7 @@
 
 module Screens.MyRidesScreen.Controller where
 
-import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode)
+import Accessor (_amount, _computedPrice, _contents, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
@@ -28,7 +28,7 @@ import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
 import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare, withinTimeRange, getAssetStoreLink, getCommonAssetStoreLink)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import JBridge (firebaseLogEvent)
+import JBridge (firebaseLogEvent , _description)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not)
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)

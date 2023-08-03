@@ -24,7 +24,7 @@ import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfile
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Common.Types.App (CheckBoxOptions, LazyCheck(..))
 import Foreign.Object (empty)
-
+import Components.LocationListItem.Controller as LocationListItem
 initData :: DriverProfileScreenState
 initData = {
   data:  {
@@ -53,6 +53,17 @@ initData = {
     gender : Nothing,
     rcNumber : "",
     isRCActive : false,
+    locationList : [LocationListItem.dummyLocationListState],
+    source : {
+      name : "Bengaluru",
+      lat : 0.0,
+      lon : 0.0
+    },
+    homeTownData : {
+      name : "",
+      lat : 0.0,
+      lon : 0.0
+    },
     rcDataArray : [],
     inactiveRCArray : [],
     activeRCData : { rcStatus  : true
@@ -107,7 +118,9 @@ initData = {
     callDriver : false,
     openRcView : false,
     detailsUpdationType : Nothing,
-    btnActive : false
+    btnActive : false,
+    addHomeTown :false,
+    locateOnMap : false
    }
 }
 

@@ -475,5 +475,10 @@ const frenchStrings = {
   SELECT_A_DATE_RANGE : "Sélectionnez une plage de dates pour télécharger le relevé",
   FEE_PAYMENT_HISTORY : "Historique de paiement des frais",
   LANGUAGES_SPOKEN : "Langues parlées",
-  VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements"
+  VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements",
+  CONFIRM_LOCATION : "Confirmer l'emplacement",
+  SET_HOMETOWN : "Définir la ville de résidence",
+  ENTER_HOMETOWN_CITY : "Entrez le nom de la ville, de la ville ou du village",
+  ENTER_YOUR_HOMETOWN : "Entrez votre ville natale",
+  CONFIRM_HOMETOWN : "Confirmer la ville natale"
 }

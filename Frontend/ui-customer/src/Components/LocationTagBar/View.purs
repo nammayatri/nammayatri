@@ -23,7 +23,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Prelude (Unit, const, unit, ($), (<>), (==), (/), (-))
 import Styles.Colors as Color
-import Screens.Types (LocationTagBarState, CardType(..), LocationListItemState)
+import Common.Types.App (LocationListItemState)
+import Screens.Types (LocationTagBarState, CardType(..))
 import Language.Strings (getString)
 import Data.Maybe (Maybe(..))
 import Language.Types (STR(..))

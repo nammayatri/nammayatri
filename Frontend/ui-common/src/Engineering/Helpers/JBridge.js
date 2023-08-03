@@ -1753,3 +1753,44 @@ export const  horizontalScrollToPos = function (id, childId, focus) {
   function between(x, min, max) {
     return x >= min && x <= max;
   }
+export const getLocationName = function(cb){
+  return function (lat) {
+      return function (lng){
+          return function (defaultText) {
+              return function (action) {
+                  return function(){
+                      var callback = callbackMapper.map(function (lat,lon,result){
+                          var decodedString = decodeURIComponent(result).replace(/\+/g, ' ');
+                          cb(action(parseFloat(lat))(parseFloat(lon))(decodedString))();
+                      });
+                      return window.JBridge.getLocationName(lat, lng, defaultText, callback);
+                  }
+              }
+          }
+      }
+  }
+}
+
+export const storeCallBackLocateOnMap = function (cb) {
+  try {
+  return function (action) {
+      return function () {
+        var callback = callbackMapper.map(function (key, lat, lon) {
+          console.log("in show storeCallBackLocateOnMap",action);
+          if(timerIdDebounce){
+            clearTimeout(timerIdDebounce);
+          }
+          window.x = cb;
+          window.y = action;
+          timerIdDebounce = setTimeout(() => {
+            cb(action (key) (lat) (lon))();
+          }, 300); 
+        });
+          console.log("In storeCallBackLocateOnMap ---------- + " + action);
+          window.JBridge.storeCallBackLocateOnMap(callback);
+      }
+  }}
+  catch (error){
+      console.log("Error occurred in storeCallBackLocateOnMap ------", error);
+  }
+}

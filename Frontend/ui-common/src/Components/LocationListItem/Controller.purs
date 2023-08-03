@@ -16,7 +16,7 @@
 module Components.LocationListItem.Controller where
 
 import Data.Maybe (Maybe(..))
-import Screens.Types (LocationListItemState, Address)
+import Common.Types.App (LocationListItemState, Address)
 
 data Action = OnClick LocationListItemState
             | SelectedCurrentLocation Number Number String

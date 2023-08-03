@@ -593,5 +593,10 @@ const tamilStrings = {
   SELECT_A_DATE_RANGE : "அறிக்கையைப் பதிவிறக்க தேதி வரம்பைத் தேர்ந்தெடுக்கவும்",
   FEE_PAYMENT_HISTORY : "கட்டணம் செலுத்திய வரலாறு",
   LANGUAGES_SPOKEN : "பேசும் மொழிகள்",
-  VIEW_PAYMENT_HISTORY : "கட்டண வரலாற்றைக் காண்க"
+  VIEW_PAYMENT_HISTORY : "கட்டண வரலாற்றைக் காண்க",
+  CONFIRM_LOCATION : "இருப்பிடத்தை உறுதிப்படுத்தவும்",
+  SET_HOMETOWN : "சொந்த ஊரை அமைக்கவும்",
+  ENTER_HOMETOWN_CITY : "நகரம், நகரம் அல்லது கிராமத்தின் பெயரை உள்ளிடவும்",
+  ENTER_YOUR_HOMETOWN : "உங்கள் சொந்த ஊரை உள்ளிடவும்",
+  CONFIRM_HOMETOWN : "சொந்த ஊரை உறுதிப்படுத்தவும்"
 }

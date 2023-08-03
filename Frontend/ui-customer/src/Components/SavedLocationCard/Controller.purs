@@ -15,7 +15,8 @@
 
 module Components.SavedLocationCard.Controller where
 
-import Screens.Types(LocationListItemState, CardType(..))
+import Screens.Types( CardType(..))
+import Common.Types.App (LocationListItemState)
 import Data.Maybe (Maybe(..))
 
 data Action = EditLocation LocationListItemState

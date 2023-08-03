@@ -19,7 +19,6 @@ import Data.Maybe (Maybe(..))
 import PrestoDOM (Visibility(..))
 import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.Types (AddNewAddressScreenState, CardType(..), Location)
-import Services.API (Prediction(..))
 import MerchantConfig.DefaultConfig as DC
  
 initData :: AddNewAddressScreenState

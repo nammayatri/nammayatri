@@ -58,7 +58,7 @@ screen initialState =
                       if initialState.props.isLocateOnMap then do
                         pure (pure unit)
                       else do
-                        _ <- HU.storeCallBackLocateOnMap push UpdateLocation
+                        _ <- JB.storeCallBackLocateOnMap push UpdateLocation
                         pure (pure unit))]
   , eval : \action state -> do
         let _ = spy "AddNewAddressScreenState action " action
@@ -226,7 +226,7 @@ bottomBtnsView state push =
               , padding (Padding 10 16 16 16)
               , onClick (\action -> if item.tag == "CURRENT_LOCATION" then do
                                 _ <- push action
-                                HU.getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
+                                JB.getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
                                 else do
                                   _ <- push action
                                   pure unit) (const item.action)
@@ -409,7 +409,7 @@ searchResultsView state push =
               )  (if (DA.null state.data.locationList) then (if state.props.selectFromCurrentOrMap then bottomBtnsData state else []) else state.data.locationList ))
   ]
 
-bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
+bottomBtnsData :: ST.AddNewAddressScreenState ->  Array LocationListItemState 
 bottomBtnsData state = 
   [ { prefixImageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP)
@@ -421,7 +421,7 @@ bottomBtnsData state =
     , tag : "Choose_On_Map"
     , postfixImageUrl : ""
     , postfixImageVisibility : false
-    , tagType : Just $ show ST.LOCATE_ON_MAP
+    , tagType : Just $ show LOCATE_ON_MAP
     , cardType : Nothing
     , address : ""
     , tagName : ""
@@ -445,7 +445,7 @@ bottomBtnsData state =
     , tag : "Current_Location"
     , postfixImageUrl : ""
     , postfixImageVisibility : false
-    , tagType : Just $ show ST.CURR_LOC
+    , tagType : Just $ show CURR_LOC
     , cardType : Nothing
     , address : ""
     , tagName : ""

@@ -228,6 +228,8 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_CALL_DRIVER DriverProfileScreenState
                                     | ADD_RC DriverProfileScreenState
                                     | UPDATE_LANGUAGES (Array String)
+                                    | AUTO_COMPLETE String DriverProfileScreenState
+                                    | UPDATE_LOCATION_NAME_ADDRESS DriverProfileScreenState Number Number
 
 
 

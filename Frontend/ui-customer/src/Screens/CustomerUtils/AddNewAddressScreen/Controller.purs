@@ -16,12 +16,12 @@
 module Screens.AddNewAddressScreen.Controller where
 
 import Prelude
-import Accessor (_description, _place_id, _distance)
 import Common.Types.App (LazyCheck (..))
 import Components.GenericHeader as GenericHeader
 import Components.LocationListItem as LocationListItemController
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Common.Types.App ( LocationListItemState, LocationItemType(..),Prediction, LocItemType(..) )
 import Data.Array ((!!), length, filter, any, sortBy, null) as DA
 import Data.Lens ((^.))
 import Data.Ord
@@ -35,9 +35,9 @@ import Effect (Effect)
 import Effect.Uncurried (runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
-import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent)
+import Data.Number (fromString) as Number
+import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates,getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent, getLocationName,_description,_place_id,_distance,checkShowDistance)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -47,9 +47,8 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSaved, getValueByComponent, getWard)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.ScreenData (dummyAddress)
-import Screens.HomeScreen.Transformer (checkShowDistance)
-import Screens.Types (AddNewAddressScreenState, CardType(..), Location, LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
-import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
+import Screens.Types (AddNewAddressScreenState, CardType(..), Location, DistInfo)
+import Services.API (AddressComponents, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
 

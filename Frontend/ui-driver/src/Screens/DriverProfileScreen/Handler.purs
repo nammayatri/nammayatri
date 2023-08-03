@@ -84,4 +84,8 @@ driverProfileScreen = do
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
+    LocationAutoComplete value state ->  App.BackT $ App.NoBack <$> pure (AUTO_COMPLETE value state)
+    UpdateLocationName state lat lon -> do
+       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+       App.BackT $ App.BackPoint <$> pure (UPDATE_LOCATION_NAME_ADDRESS state lat lon)
     GoBack -> App.BackT $ pure App.GoBack

@@ -46,6 +46,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Utils(loaderText, toggleLoader)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText,convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime,getLocationList,sortPredctionByDistance)
+import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Foreign.Class (class Encode, encode, decode)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount)
@@ -63,6 +65,7 @@ import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import Screens.Handlers as UI
+import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail)
 import Screens.HomeScreen.View (rideRequestPollingData)
@@ -76,7 +79,7 @@ import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..), DriverStatus(..), AadhaarStage(..), UpdatePopupType(..))
 import Screens.Types as ST
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), OnCallRes(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), CreateOrderRes(..), PaymentPagePayload(..), PayPayload(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), OrderStatusRes(..), GenerateAadhaarOTPResp(..), VerifyAadhaarOTPResp(..), OrganizationInfo(..), CurrentDateAndTimeRes(..), MakeRcActiveOrInactiveResp(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), OnCallRes(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), CreateOrderRes(..), PaymentPagePayload(..), PayPayload(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), OrderStatusRes(..), GenerateAadhaarOTPResp(..), VerifyAadhaarOTPResp(..), OrganizationInfo(..), CurrentDateAndTimeRes(..), MakeRcActiveOrInactiveResp(..),AutoCompleteResp(..),PlaceName(..),GetPlaceNameResp(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
@@ -1034,6 +1037,36 @@ driverProfileFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {updateLanguages = false}})
       driverProfileFlow
 
+    AUTO_COMPLETE searchVal updatedState -> do
+      (AutoCompleteResp autoCompleteResp) <- Remote.autoCompleteBT searchVal updatedState.data.source.lat updatedState.data.source.lon (case (getValueToLocalStore LANGUAGE_KEY) of
+                                                                                                                                                                                    "HI_IN" -> "HINDI"
+                                                                                                                                                                                    "KN_IN" -> "KANNADA"
+                                                                                                                                                                                    "BN_IN" -> "BENGALI"
+                                                                                                                                                                                    "ML_IN" -> "MALAYALAM"
+                                                                                                                                                                                    _      -> "ENGLISH")                                             
+          
+
+      let sortedByDistanceList = sortPredctionByDistance autoCompleteResp.predictions
+          predictionList = getLocationList sortedByDistanceList
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> updatedState {data{locationList =
+        map
+        (\item -> do    item {
+                        lat = item.lat,
+                        lon = item.lon,
+                        locationItemType = item.locationItemType,
+                        postfixImageUrl = "" }
+                         ) (predictionList) }, props {addHomeTown = true}})
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> updatedState {props {addHomeTown = true}})
+      driverProfileFlow
+
+    UPDATE_LOCATION_NAME_ADDRESS state lat lon -> do
+        PlaceName address <- getPlaceName lat lon 
+        modifyScreenState $  DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{  data  { source {name = address.formattedAddress
+                                                                                                              , lat = lat
+                                                                                                              , lon = lon
+                                                                                                              } }
+                                                                                                      } )
+        driverProfileFlow 
 
 driverDetailsFlow :: FlowBT String Unit
 driverDetailsFlow = do
@@ -2104,4 +2137,16 @@ setDriverStatusInLocal status mode = do
                                     setValueToLocalNativeStore DRIVER_STATUS status
                                     setValueToLocalStore DRIVER_STATUS_N mode
                                     setValueToLocalNativeStore DRIVER_STATUS_N mode
+
+getPlaceName :: Number -> Number -> FlowBT String PlaceName
+getPlaceName lat long  = do
+      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long (case (getValueToLocalStore LANGUAGE_KEY) of
+                                                                                                                                "HI_IN" -> "HINDI"
+                                                                                                                                "KN_IN" -> "KANNADA"
+                                                                                                                                "BN_IN" -> "BENGALI"
+                                                                                                                                "ML_IN" -> "MALAYALAM"
+                                                                                                                                _      -> "ENGLISH"))
+
+      let (PlaceName address) = (fromMaybe Remote.dummyLocationName (locationName !! 0))
+      pure (PlaceName address)
 

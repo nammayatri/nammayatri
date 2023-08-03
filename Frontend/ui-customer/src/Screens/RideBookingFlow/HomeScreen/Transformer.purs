@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare)
+import Accessor (_contents, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _maxFare)
 import Components.ChooseVehicle (Config, config) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState, config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
@@ -37,8 +37,10 @@ import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getVehicleImage, getFaresList, getKmMeter)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
+import JBridge (_description, _place_id,_distance,checkShowDistance)
+import Common.Types.App (LocationListItemState,LocationItemType(..),Prediction, LocItemType(..))
+import Screens.Types (DriverInfoCard, NewContacts, Contact, TripDetailsScreenState,SearchResultType(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..),  QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -50,9 +52,6 @@ import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 
-
-getLocationList :: Array Prediction -> Array LocationListItemState
-getLocationList prediction = map (\x -> getLocation x) prediction
 
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
@@ -80,9 +79,6 @@ getLocation prediction = {
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^._distance)))
   , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^._distance))
 }
-
-checkShowDistance :: Int ->  Boolean
-checkShowDistance distance = (distance > 0 && distance <= 50000)
 
 getQuoteList :: Array QuoteAPIEntity -> Array QLI.QuoteListItemState
 getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)

@@ -30,9 +30,13 @@ import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
+import Common.Types.App (Prediction(..))
+import Foreign.Index (readProp)
+import Control.Monad.Except (runExcept)
+import Data.Either as Either
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -2235,3 +2239,136 @@ instance standardEncodeUnVerifiedDataReq :: StandardEncode UnVerifiedDataReq whe
 instance showUnVerifiedDataReq :: Show UnVerifiedDataReq where show = genericShow
 instance decodeUnVerifiedDataReq :: Decode UnVerifiedDataReq  where decode = defaultDecode
 instance encodeUnVerifiedDataReq :: Encode UnVerifiedDataReq where encode = defaultEncode
+
+------------------------------------------------ Map Auto Complete Api -------------------------------------------------
+
+newtype AutoCompleteReq = AutoCompleteReq {
+  components :: String,
+  sessionToken :: Maybe String,
+  location :: String,
+  radius :: Int,
+  input :: String,
+  language :: String,
+  strictbounds :: Maybe Boolean,
+  origin :: LatLong
+}
+
+newtype AutoCompleteResp = AutoCompleteResp {
+ predictions:: Array Prediction
+}
+
+
+instance makeAutoCompleteReq :: RestEndpoint AutoCompleteReq AutoCompleteResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.autoComplete "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericAutoCompleteReq :: Generic AutoCompleteReq _
+derive instance newtypeAutoCompleteReq :: Newtype AutoCompleteReq _
+instance standardEncodeAutoCompleteReq :: StandardEncode AutoCompleteReq where standardEncode (AutoCompleteReq payload) = standardEncode payload
+instance showAutoCompleteReq :: Show AutoCompleteReq where show = genericShow
+instance decodeAutoCompleteReq :: Decode AutoCompleteReq where decode = defaultDecode
+instance encodeAutoCompleteReq :: Encode AutoCompleteReq where encode = defaultEncode
+
+derive instance genericAutoCompleteResp :: Generic AutoCompleteResp _
+derive instance newtypeAutoCompleteResp :: Newtype AutoCompleteResp _
+instance standardEncodeAutoCompleteResp :: StandardEncode AutoCompleteResp where standardEncode (AutoCompleteResp id) = standardEncode id
+instance showAutoCompleteResp :: Show AutoCompleteResp where show = genericShow
+instance decodeAutoCompleteResp :: Decode AutoCompleteResp where decode = defaultDecode
+instance encodeAutoCompleteResp :: Encode AutoCompleteResp where encode = defaultEncode
+
+
+-------------------------------------------------- getPlaceNameApi ---------------------------------------------
+
+newtype PlaceName = PlaceName {
+ formattedAddress :: String,
+ location :: LatLong,
+ plusCode :: Maybe String,
+ addressComponents :: Array AddressComponents
+}
+
+newtype AddressComponents =  AddressComponents {
+  longName :: String ,
+  shortName :: String,
+  types :: Array String
+}
+
+derive instance genericAddressComponents :: Generic AddressComponents _
+derive instance newtypeAddressComponents :: Newtype AddressComponents _
+instance standardEncodeAddressComponents :: StandardEncode AddressComponents where standardEncode (AddressComponents payload) = standardEncode payload
+instance showAddressComponents :: Show AddressComponents where show = genericShow
+instance decodeAddressComponents :: Decode AddressComponents where decode = defaultDecode
+instance encodeAddressComponents :: Encode AddressComponents where encode = defaultEncode
+
+newtype GetPlaceNameReq = GetPlaceNameReq {
+  sessionToken :: Maybe String,
+  language :: Maybe String,
+  getBy :: GetPlaceNameBy
+}
+
+
+newtype GetPlaceNameBy = GetPlaceNameBy {
+  tag :: String,
+  contents :: Contents
+}
+
+data Contents = PlaceId String | LatLongType LatLonBody
+
+derive instance genericContents :: Generic Contents _
+instance showContents :: Show Contents where show = genericShow
+instance decodeContents :: Decode Contents where decode = defaultDecode
+instance encodeContents :: Encode Contents where encode = defaultEncode
+instance standardEncodeContents :: StandardEncode Contents
+  where
+    standardEncode (LatLongType body) = standardEncode body
+    standardEncode (PlaceId param) = standardEncode param
+
+type PlaceId = String
+
+newtype LatLonBody = LatLonBody
+  { lat :: Number
+  , lon :: Number
+  }
+
+
+derive instance genericLatLonBody :: Generic LatLonBody _
+derive instance newtypeLatLonBody :: Newtype LatLonBody _
+instance standardEncodeLatLonBody :: StandardEncode LatLonBody where standardEncode (LatLonBody payload) = standardEncode payload
+instance showLatLonBody :: Show LatLonBody where show = genericShow
+instance decodeLatLonBody :: Decode LatLonBody where decode = defaultDecode
+instance encodeLatLonBody :: Encode LatLonBody where encode = defaultEncode
+
+newtype GetPlaceNameResp = GetPlaceNameResp (Array PlaceName)
+
+instance makeGetPlaceNameReq :: RestEndpoint GetPlaceNameReq GetPlaceNameResp where
+ makeRequest reqBody@(GetPlaceNameReq payload) headers = defaultMakeRequest POST (EP.getPlaceName "") headers reqBody
+ decodeResponse body = defaultDecodeResponse body
+ encodeRequest req = standardEncode req
+
+derive instance genericGetPlaceNameReq :: Generic GetPlaceNameReq _
+derive instance newtypeGetPlaceNameReq :: Newtype GetPlaceNameReq _
+instance standardEncodeGetPlaceNameReq :: StandardEncode GetPlaceNameReq where standardEncode (GetPlaceNameReq payload) = standardEncode payload
+instance showGetPlaceNameReq :: Show GetPlaceNameReq where show = genericShow
+instance decodeGetPlaceNameReq :: Decode GetPlaceNameReq where decode = defaultDecode
+instance encodeGetPlaceNameReq :: Encode GetPlaceNameReq where encode = defaultEncode
+
+derive instance genericGetPlaceNameBy :: Generic GetPlaceNameBy _
+derive instance newtypeGetPlaceNameBy :: Newtype GetPlaceNameBy _
+instance standardEncodeGetPlaceNameBy :: StandardEncode GetPlaceNameBy where standardEncode (GetPlaceNameBy body) = standardEncode body
+instance showGetPlaceNameBy :: Show GetPlaceNameBy where show = genericShow
+instance decodeGetPlaceNameBy :: Decode GetPlaceNameBy where decode = defaultDecode
+instance encodeGetPlaceNameBy :: Encode GetPlaceNameBy where encode = defaultEncode
+
+derive instance genericGetPlaceNameResp :: Generic GetPlaceNameResp _
+derive instance newtypeGetPlaceNameResp :: Newtype GetPlaceNameResp _
+instance standardEncodeGetPlaceNameResp :: StandardEncode GetPlaceNameResp where standardEncode (GetPlaceNameResp body) = standardEncode body
+instance showGetPlaceNameResp :: Show GetPlaceNameResp where show = genericShow
+instance decodeGetPlaceNameResp :: Decode GetPlaceNameResp where decode = defaultDecode
+instance encodeGetPlaceNameResp :: Encode GetPlaceNameResp where encode = defaultEncode
+
+derive instance genericPlaceName :: Generic PlaceName _
+derive instance newtypePlaceName :: Newtype PlaceName _
+instance standardEncodePlaceName :: StandardEncode PlaceName where standardEncode (PlaceName body) = standardEncode body
+instance showPlaceName :: Show PlaceName where show = genericShow
+instance decodePlaceName :: Decode PlaceName where decode = defaultDecode
+instance encodePlaceName :: Encode PlaceName where encode = defaultEncode

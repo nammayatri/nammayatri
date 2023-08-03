@@ -195,3 +195,8 @@ verifyAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/verifyAadhaarOtp"
 
 unVerifiedAadhaarData :: String -> String
 unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"
+autoComplete :: String -> String
+autoComplete _ = (getBaseUrl "") <> "/maps/autoComplete"
+
+getPlaceName :: String -> String 
+getPlaceName dummyString = (getBaseUrl "") <> "/maps/getPlaceName"

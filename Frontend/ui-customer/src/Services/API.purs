@@ -17,7 +17,7 @@ module Services.API where
 
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
-import Common.Types.App (Version(..))
+import Common.Types.App (Version(..),Prediction(..))
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -266,11 +266,6 @@ newtype SearchLocationResp = SearchLocationResp {
  predictions:: Array Prediction
 }
 
-newtype Prediction = Prediction {
- description :: String,
- placeId :: Maybe String,
- distance :: Maybe Int
-}
 
 instance makeSearchLocationReq :: RestEndpoint SearchLocationReq SearchLocationResp where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.autoComplete "") headers reqBody
@@ -291,12 +286,6 @@ instance showSearchLocationResp :: Show SearchLocationResp where show = genericS
 instance decodeSearchLocationResp :: Decode SearchLocationResp where decode = defaultDecode
 instance encodeSearchLocationResp :: Encode SearchLocationResp where encode = defaultEncode
 
-derive instance genericPrediction :: Generic Prediction _
-derive instance newtypePrediction :: Newtype Prediction _
-instance standardEncodePrediction :: StandardEncode Prediction where standardEncode (Prediction id) = standardEncode id
-instance showPrediction :: Show Prediction where show = genericShow
-instance decodePrediction :: Decode Prediction where decode = defaultDecode
-instance encodePrediction :: Encode Prediction where encode = defaultEncode
 
 -------------------------------------------------- Place Details, Get Cooridnates and Place Name API Types --------------------------------------------
 

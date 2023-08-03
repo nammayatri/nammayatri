@@ -623,5 +623,10 @@ const hindiStrings = {
   SELECT_A_DATE_RANGE : "विवरण डाउनलोड करने के लिए एक तिथि सीमा चुनें",
   FEE_PAYMENT_HISTORY : "शुल्क भुगतान इतिहास",
   LANGUAGES_स्पोकन : "बोली जाने वाली भाषाएँ",
-  VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें"
+  VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें",
+  CONFIRM_LOCATION : "स्थान की पुष्टि करें",
+  SET_HOMETOWN : "होमटाउन सेट करें",
+  ENTER_HOMETOWN_CITY : "शहर, कस्बे या गाँव का नाम दर्ज करें",
+  ENTER_YOUR_HOMETOWN : "अपना गृहनगर दर्ज करेंn",
+  CONFIRM_HOMETOWN : "गृहनगर की पुष्टि करें"
 }

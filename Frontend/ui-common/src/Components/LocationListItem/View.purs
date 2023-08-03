@@ -22,13 +22,12 @@ import Effect (Effect)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName)
 import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback)
-import Screens.Types (LocationListItemState)
+import Common.Types.App (LocationListItemState)
+import JBridge as JB
+import Helpers.Utils (getAssetStoreLink)
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
 
 view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push config =
@@ -47,7 +46,7 @@ view push config =
         , disableClickFeedback true
         , onClick ( \action -> if config.tag == "Current_Location" then do
                             _ <- push action
-                            getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
+                            JB.getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
                             else do
                               _ <- push action
                               pure unit) (const $ OnClick config)

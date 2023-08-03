@@ -592,5 +592,10 @@ const mlStrings = {
   SELECT_A_DATE_RANGE : "പ്രസ്താവന ഡൗൺലോഡ് ചെയ്യുന്നതിന് ഒരു തീയതി ശ്രേണി തിരഞ്ഞെടുക്കുക",
   FEE_PAYMENT_HISTORY : "ഫീസ് പേയ്‌മെന്റ് ചരിത്രം",
   LANGUAGES_SPOKEN : "സംസാരിക്കുന്ന ഭാഷകൾ",
-  VIEW_PAYMENT_HISTORY : "പേയ്മെന്റ് ചരിത്രം കാണുക"
+  VIEW_PAYMENT_HISTORY : "പേയ്മെന്റ് ചരിത്രം കാണുക",
+  CONFIRM_LOCATION : "ലൊക്കേഷൻ സ്ഥിരീകരിക്കുക",
+  SET_HOMETOWN : "ഹോംടൗൺ സജ്ജമാക്കുക",
+  ENTER_HOMETOWN_CITY : "നഗരം, പട്ടണം അല്ലെങ്കിൽ ഗ്രാമത്തിന്റെ പേര് നൽകുക",
+  ENTER_YOUR_HOMETOWN : "നിങ്ങളുടെ ജന്മദേശം നൽകുക",
+  CONFIRM_HOMETOWN : "സ്വദേശം സ്ഥിരീകരിക്കുക"
 }

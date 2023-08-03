@@ -33,6 +33,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Services.API (Route, Status, MediaType, PaymentBreakUp)
 import Styles.Types (FontSize)
+import Common.Types.App (LocationListItemState)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import MerchantConfig.Types (AppConfig)
@@ -273,7 +274,10 @@ type DriverProfileScreenData = {
   isRCActive :: Boolean,
   openInactiveRCViewOrNotArray :: Array Int,
   logField :: Object Foreign, 
-  analyticsData :: AnalyticsData
+  analyticsData :: AnalyticsData,
+  locationList :: Array LocationListItemState,
+  source :: LocationData,
+  homeTownData :: LocationData
 }
 
 type RcData = {
@@ -313,6 +317,11 @@ type Badge =  {
   , subText :: String
   }
 
+type LocationData = {
+  name ::  String,
+  lat :: Number,
+  lon :: Number
+}
 type VehicleP = {
   vehicleName :: String,
   isSelected :: Boolean
@@ -345,7 +354,9 @@ type DriverProfileScreenProps = {
   callDriver :: Boolean,
   openRcView :: Boolean,
   detailsUpdationType :: Maybe UpdateType,
-  btnActive :: Boolean
+  btnActive :: Boolean,
+  addHomeTown :: Boolean,
+  locateOnMap :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 

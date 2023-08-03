@@ -626,5 +626,10 @@ const englishStrings = {
   SELECT_A_DATE_RANGE : "Select a date range to download the statement",
   FEE_PAYMENT_HISTORY : "Fee payment history",
   LANGUAGES_SPOKEN : "Languages spoken",
-  VIEW_PAYMENT_HISTORY : "View payment history"
+  VIEW_PAYMENT_HISTORY : "View payment history",
+  CONFIRM_LOCATION : "Confirm Location",
+  SET_HOMETOWN : "Set HomeTown",
+  ENTER_HOMETOWN_CITY : "Enter City, Town or Village Name",
+  ENTER_YOUR_HOMETOWN : "Enter Your Hometown",
+  CONFIRM_HOMETOWN : "Confirm Hometown"
 }

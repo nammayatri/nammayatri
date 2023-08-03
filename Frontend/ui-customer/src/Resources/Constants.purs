@@ -15,12 +15,11 @@
 
 module Resources.Constants where
 
-import Accessor (_description, _amount)
-import Common.Types.App (LazyCheck(..))
+import Accessor (_amount)
+import Common.Types.App (LazyCheck(..),Address)
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Helpers.Utils (getAssetStoreLink, parseFloat, toString)
 import Language.Strings (getString, getEN)
@@ -30,6 +29,8 @@ import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Screens.Types as ST
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import JBridge (_description)
 
 type Language
   = { name :: String
@@ -75,7 +76,7 @@ decodeAddress addressWithCons =
     else
       ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
 
-encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
+encodeAddress :: String -> Array AddressComponents -> Maybe String -> Address
 encodeAddress fullAddress addressComponents placeId =
   let
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
@@ -130,7 +131,7 @@ getBookingEntity (SavedReqLocationAPIEntity savedLocation) =
     , "placeId": savedLocation.placeId
     }
 
-getAddressFromSaved :: SavedReqLocationAPIEntity -> ST.Address
+getAddressFromSaved :: SavedReqLocationAPIEntity -> Address
 getAddressFromSaved (SavedReqLocationAPIEntity savedLocation) =
   { "area": savedLocation.area
   , "state": savedLocation.state
@@ -144,7 +145,7 @@ getAddressFromSaved (SavedReqLocationAPIEntity savedLocation) =
   , "placeId": savedLocation.placeId
   }
 
-getAddressFromBooking :: BookingLocationAPIEntity -> ST.Address
+getAddressFromBooking :: BookingLocationAPIEntity -> Address
 getAddressFromBooking (BookingLocationAPIEntity address) =
   { "area": address.area
   , "state": address.state

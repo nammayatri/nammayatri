@@ -19,9 +19,7 @@ module Helpers.Utils
     )
     where
 
-import Accessor (_distance_meters)
-import Accessor (_distance_meters)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload)
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload ,LocationListItemState,LocationItemType(..),Prediction)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
@@ -57,7 +55,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
-import JBridge (emitJOSEvent)
+import JBridge (emitJOSEvent,_distance_meters)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -67,14 +65,14 @@ import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
-import Services.API (Prediction)
-import Services.API (Prediction)
 import Types.App (GlobalState(..))
-import Types.App (GlobalState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, PreviousCurrentLocations(..), CurrentLocationDetails, NewContacts, Contacts, FareComponent, CarouselModel,Stage(..))
+import Data.Array (sortBy)
+import Data.Ord (comparing)
+import Data.Lens ((^.))
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -104,11 +102,7 @@ foreign import withinTimeRange :: String -> String -> String -> Boolean
 
 foreign import getNewTrackingId :: Unit -> String
 
-foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
-
 foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-
-foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
@@ -374,8 +368,6 @@ rotateArray arr times =
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
-sortPredctionByDistance :: Array Prediction -> Array Prediction
-sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 
 getAssetStoreLink :: LazyCheck -> String
 getAssetStoreLink lazy = case (getMerchant lazy) of

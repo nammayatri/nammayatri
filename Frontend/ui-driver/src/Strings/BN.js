@@ -632,5 +632,14 @@ const bengaliStrings = {
 	SELECT_A_DATE_RANGE : "বিবৃতিটি ডাউনলোড করতে একটি তারিখের সীমা নির্বাচন করুন",
 	FEE_PAYMENT_HISTORY : "ফি প্রদানের ইতিহাস",
 	LANGUAGES_SPOKEN : "কথিত ভাষা",
-  	VIEW_PAYMENT_HISTORY : "পেমেন্ট ইতিহাস দেখুন"
-	}
+  	VIEW_PAYMENT_HISTORY : "পেমেন্ট ইতিহাস দেখুন",
+    MISSED_OPPORTUNITY : "সুযোগ মিস করেছে",
+    HOW_OLD_IS_YOUR_VEHICLE : "আপনার গাড়ির বয়স কত (বছরে)?",
+    ENTER_NAME_OF_VEHICLE : "আপনার গাড়ির নাম লিখুন",
+    NEW_ : "নতুন",
+    CONFIRM_LOCATION : "অবস্থান নিশ্চিত করুন",
+    SET_HOMETOWN : "হোমটাউন সেট করুন",
+    ENTER_HOMETOWN_CITY : "শহর, শহর বা গ্রামের নাম লিখুন",
+    ENTER_YOUR_HOMETOWN : "আপনার হোমটাউন লিখুন",
+    CONFIRM_HOMETOWN : "হোমটাউন নিশ্চিত করুন"
+}

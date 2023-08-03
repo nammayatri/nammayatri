@@ -41,11 +41,14 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC)
 import Helpers.Utils (launchAppSettings)
-import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer)
-import JBridge (hideKeyboardOnNavigation)
+import JBridge (firebaseLogEvent, goBackPrevWebPage, toast,locateOnMap,currentPosition,removeAllPolylines,toggleBtnLoader,showDialer,hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
+import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=),show)
+import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM.Utils (updateWithCmdAndExit)
+import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude ((>), (-), (+), (<>), (<=), (||), not)
@@ -63,12 +66,26 @@ import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenTyp
 import Screens.Types as ST
 import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
 import Services.API as SA
+import Components.CheckListView as CheckList
+import Common.Types.App (CheckBoxOptions)
+import Data.Int (fromString)
+import Data.Number (fromString) as Number
+import Data.Array ((!!),union, drop, filter, elem, length) 
+import Data.Lens.Getter ((^.))
 import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Services.Backend (dummyVehicleObject)
 import Services.Backend (dummyVehicleObject)
 import Services.Config (getSupportNumber)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
-import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
+import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe (unsafePerformEffect)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Data.Lens((^.))
+import Data.Array (filter,foldl, any)
+import Effect.Uncurried (runEffectFn5)
+import Components.LocationListItem as LocationListItem
 
 instance showAction :: Show Action where
   show _ = ""
@@ -189,6 +206,8 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
                     | AddingRC DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
+                    | LocationAutoComplete String DriverProfileScreenState
+                    | UpdateLocationName DriverProfileScreenState Number Number
 
 data Action = BackPressed
             | NoAction
@@ -206,6 +225,8 @@ data Action = BackPressed
             | DriverGenericHeaderAC GenericHeaderController.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | PrimaryEditTextActionController PrimaryEditText.Action 
+            | SetHomeTownPrimaryEditTextActionController PrimaryEditText.Action
+            | PrimarButtonLocateViewController PrimaryButton.Action
             | InAppKeyboardModalOtp InAppKeyboardModal.Action
             | UpdateValueAC PrimaryButton.Action 
             | OpenSettings 
@@ -233,6 +254,10 @@ data Action = BackPressed
             | OpenRcView Int
             | AddRcButtonAC PrimaryButtonController.Action
             | SkipActiveRc
+            | LocateMap String String String
+            | SetLocationOnMap 
+            | LocationListItemActionController LocationListItem.Action
+            | UpdateLocation String String String
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -262,6 +287,8 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
                                 else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
+                                else if state.props.locateOnMap then continue state{props {locateOnMap =false,addHomeTown =true}}
+                                else if state.props.addHomeTown then continue state{props {addHomeTown =false}}
                                 else exit GoBack
 
 
@@ -283,6 +310,7 @@ eval (UpdateValue value) state = do
     LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}}
     VEHICLE_AGE -> continue state {props{ detailsUpdationType = Just VEHICLE_AGE}}
     VEHICLE_NAME -> continue state{props {detailsUpdationType = Just VEHICLE_NAME}}
+    HOME_TOWN -> continue state  {props {addHomeTown = true}}
     _ -> continue state
 
 eval (OptionClick optionIndex) state = do
@@ -348,7 +376,7 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
   else continue state{ props { openSettings = false }}
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = continue state {props{showGenderView=false, alternateNumberView=false}}
+eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = continue state {props{showGenderView=false, alternateNumberView=false,addHomeTown = false}}
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
@@ -487,7 +515,38 @@ eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
   if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
     else if (state.props.detailsUpdationType == Just VEHICLE_NAME) then continue state{props{detailsUpdationType = Nothing}} -- update name 
     else continue state
+eval (PrimarButtonLocateViewController (PrimaryButton.OnClick)) state = 
+  continue state {data {homeTownData {name = state.data.source.name, lat = state.data.source.lat , lon = state.data.source.lon}} ,props{ locateOnMap =false }}
 
+eval (LocateMap key lattitude longitude) state = do
+ continue state 
+
+eval (SetHomeTownPrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = do
+ if ((DS.length (DS.trim (value)))>2) then
+   exit (LocationAutoComplete value state )
+ else
+   continue state
+
+eval (LocationListItemActionController (LocationListItem.OnClick item))  state = do
+     _  <- pure $ hideKeyboardOnNavigation true
+     continueWithCmd state{props{addHomeTown = false}} [pure $ SetLocationOnMap]
+           
+
+eval SetLocationOnMap state = do 
+  _ <- pure $ currentPosition ""
+  _ <- pure $ removeAllPolylines ""
+  _ <- pure $ hideKeyboardOnNavigation true
+  _ <- pure $ toggleBtnLoader "" false
+  _ <- pure $ runEffectFn5 locateOnMap true 0.0 0.0 "" []
+  let newState = state{props{locateOnMap = true}}
+  continue newState
+
+eval (UpdateLocation key lat lon) state = do
+  case key of
+    "LatLon" -> do
+      exit $ UpdateLocationName state (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
+    _ ->  continue state
+         
 eval _ state = continue state
 
 getTitle :: Data.MenuOptions -> String

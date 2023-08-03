@@ -73,7 +73,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width,ellipsize,singleLine)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM.Animation as PrestoAnim
@@ -101,6 +101,7 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Components.LocationListItem.View as LocationListItem
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -108,6 +109,7 @@ screen initialState =
   , view
   , name : "DriverProfileScreen"
   , globalEvents : [(\push -> do
+      _ <- JB.storeCallBackLocateOnMap push UpdateLocation
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         getAllRcsDataResp <- Remote.getAllRcDataBT (GetAllRcDataReq)
         lift $ lift $ doAff do liftEffect $ push $ GetRcsDataResponse getAllRcsDataResp
@@ -159,7 +161,9 @@ view push state =
         , if state.props.updateLanguages then updateLanguageView state push else dummyTextView
         , if  any (_ == state.props.detailsUpdationType) [Just ST.VEHICLE_AGE , Just ST.VEHICLE_NAME] then updateDetailsView state push else dummyTextView
         , if state.props.activateRcView then rcEditPopUpView push state else dummyTextView
-        , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView]
+        , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView
+        , if state.props.locateOnMap then locateOnMapView state push else dummyTextView
+        , if state.props.addHomeTown then addLocationView state push else dummyTextView ]
 
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
@@ -403,7 +407,7 @@ missedOpportunityView state push  =
       [height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ](map (\item -> infoCard state push item) (missedOppArray state.data.analyticsData))
+      ][]--(map (\item -> infoCard state push item) (missedOppArray state.data.analyticsData))
   ]
 
 missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
@@ -1297,7 +1301,6 @@ infoCard state push config =
 
   ]
 
-
 ------------------------------------------ ANIMATION -----------------------------------------------------
 addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
 
@@ -1367,7 +1370,7 @@ vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , 
 
 driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
 driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true }
-  -- , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }
+       , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }
   ]
 
 
@@ -1697,3 +1700,190 @@ type MissedOpportunity
     , action :: Action
     , valueColor :: String
     }
+addLocationView :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+addLocationView state push=
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility VISIBLE
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  , background Color.white900
+  , clickable true
+  ][
+    GenericHeader.view (push <<< DriverGenericHeaderAC) (driverGenericHeaderConfig state)
+  , linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    , margin $ MarginTop 2
+    ][]
+  , textView[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text (getString ENTER_YOUR_HOMETOWN)
+    , margin $ Margin 10 15 0 0
+    , color Color.black800
+    , textSize FontSize.a_16 
+    ]
+  , setHomeTownLayoutView state push
+  , searchResultsView state push 
+  , linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , margin $ MarginBottom 10
+    , gravity BOTTOM
+    , orientation VERTICAL
+    ]
+    [
+      linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.grey900
+      , margin $ MarginBottom 16
+      ][]
+    ]
+    ]
+
+locateOnMapView :: forall w. ST.DriverProfileScreenState ->  (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+locateOnMapView state push = 
+  frameLayout 
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  ][ linearLayout
+     [ height MATCH_PARENT
+     , width MATCH_PARENT
+     , margin (Margin 0 EHC.safeMarginTop 0 0)
+     , id (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap")
+      , afterRender
+        (\action -> do
+              _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push LocateMap)
+              pure unit
+              ) (const AfterRender)
+     ][]
+   , linearLayout
+     [ height $ V 40
+     , width $ V 40
+     , background Color.white900
+     , gravity CENTER
+     , margin $ Margin 10 20 0 0 
+     , cornerRadius 32.0  
+     ][ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ] [ imageView 
+            [ height $ V 40 
+            , width $ V 40
+            , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+            , onClick push $ const (BackPressed)
+            ]
+          ]
+      ]
+   , linearLayout
+     [ height MATCH_PARENT
+     , width MATCH_PARENT
+     , gravity BOTTOM
+     , weight 1.0
+     ][ linearLayout
+        [ width MATCH_PARENT
+        , orientation VERTICAL
+        , gravity BOTTOM
+        , weight 1.0
+        , background Color.white900
+        , cornerRadius 12.0 
+        ][ textView 
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , fontStyle $ FontStyle.bold LanguageStyle
+          , margin $ Margin 17 20 17 20
+          , text (getString CONFIRM_HOMETOWN)
+          , textSize FontSize.a_20
+          , color Color.black900
+          , gravity CENTER   
+          ]
+          , currentLocationView push state 
+         , PrimaryButton.view (push <<< PrimarButtonLocateViewController) (primaryButtonLocateViewConfig state)
+          ]
+
+      ]
+  ]
+
+
+setHomeTownLayoutView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+setHomeTownLayoutView state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ][ 
+        PrimaryEditText.view (push <<< SetHomeTownPrimaryEditTextActionController) (addHomePrimaryEditTextConfig state)
+      ,linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.black900
+  ][
+    
+  ]
+  ]
+ 
+
+searchResultsView :: forall w. ST.DriverProfileScreenState-> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+searchResultsView state push =
+  scrollView
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , cornerRadius 8.0
+  , padding (PaddingVertical 0 3)
+  , stroke "1,#E5E7EB"
+  , scrollBarY false
+  ][ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , cornerRadius 20.0
+        , orientation VERTICAL
+        , padding (PaddingBottom 10)
+        ](mapWithIndex (\index item ->
+              linearLayout[
+                width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              ][  (LocationListItem.view (push <<< LocationListItemActionController ) item )
+                , linearLayout
+                    [ height $ V 1
+                    , width MATCH_PARENT
+                    , background Color.lightGreyShade
+                    ][]
+              ]
+              )  (state.data.locationList)) 
+  ]
+
+currentLocationView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+currentLocationView push state =
+  linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , margin $ Margin 10 5 10 40
+            , padding $ PaddingHorizontal 15 15
+            , stroke $ "1," <> Color.grey900
+            , gravity CENTER_VERTICAL
+            , cornerRadius 5.0
+            ]
+            [ imageView
+                [ imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+                , height $ V 20
+                , width $ V 20
+                , gravity CENTER_VERTICAL
+                ]
+            , textView
+                $
+                  [ text state.data.source.name
+                  , ellipsize true
+                  , singleLine true
+                  , gravity CENTER
+                  , padding (Padding 10 16 10 16)
+                  , color Color.black800
+                  , textSize FontSize.a_16 
+                  ]
+                <> FontStyle.subHeading1 TypoGraphy
+            ]

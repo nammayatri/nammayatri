@@ -17,7 +17,7 @@ module Screens.DriverProfileScreen.ComponentConfig where
 
 import Components.PopUpModal as PopUpModal
 import Components.GenericHeader as GenericHeader
-import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryEditText.Controller as PrimaryEditText
 import Components.CheckListView as CheckListView
 import Screens.DriverProfileScreen.Controller
 import Language.Strings
@@ -35,7 +35,6 @@ import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe(fromMaybe, Maybe(..), isJust)
 import Components.PrimaryButton as PrimaryButton
-import Components.PrimaryEditText as PrimaryEditText
 import Prelude ((<>), (||),(&&),(==),(<), not, (>))
 import Engineering.Helpers.Commons as EHC
 import Data.String as DS
@@ -125,7 +124,7 @@ driverGenericHeaderConfig state = let
       } 
     , padding = PaddingVertical 5 5
     , textConfig {
-        text = if state.props.showGenderView then getString GENDER else getString ALTERNATE_NUMBER
+        text = if state.props.showGenderView then getString GENDER else if state.props.addHomeTown then getString SET_HOMETOWN else getString ALTERNATE_NUMBER  
       , color = Color.black900
       }
     }
@@ -400,3 +399,36 @@ deleteRcPopUpConfig state =
         }
   in
     popUpConfig'
+primaryButtonLocateViewConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
+primaryButtonLocateViewConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = getString CONFIRM_LOCATION 
+     
+      }
+      , margin = (Margin 10 0 10 20)
+      , cornerRadius = 10.0
+      , background = Color.black900
+      , height = (V 48)
+      , alpha = 1.0
+      }
+      
+  in primaryButtonConfig'
+
+addHomePrimaryEditTextConfig :: ST.DriverProfileScreenState -> PrimaryEditText.Config
+addHomePrimaryEditTextConfig state = let 
+  config = PrimaryEditText.config
+  primaryEditTextConfig' = config
+    { editText
+      { 
+         text = ""
+        , placeholder = getString ENTER_HOMETOWN_CITY
+      }
+    , topLabel
+      {
+       text = ""
+      , color = Color.greyTextColor
+      }
+    }
+  in primaryEditTextConfig'

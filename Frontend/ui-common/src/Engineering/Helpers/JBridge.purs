@@ -24,13 +24,17 @@ import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
 import Common.Types.App (EventPayload(..),DateObj, LayoutBound)
+import Data.Lens (Lens', lens,(^.))
+import Data.Ord (comparing)
+import Data.Maybe (fromMaybe)
+-- import Common.Types.App (Place)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
 import Effect.Uncurried (EffectFn3)
 -- import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype,unwrap,wrap)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
@@ -53,6 +57,9 @@ import Data.Either (Either(..), hush)
 import Effect.Uncurried (EffectFn3, EffectFn2)
 import Data.Function.Uncurried (Fn3, runFn3, Fn1)
 import Foreign.Class (encode)
+import Common.Types.App (Prediction,LocationListItemState,Address,LocationItemType(..),LocItemType(..),EventPayload(..), LayoutBound)
+import Data.Array ((!!),sortBy) as DA
+import Data.String (Pattern(..),split,drop,indexOf)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -222,6 +229,8 @@ foreign import getLayoutBounds :: Fn1 String LayoutBound
 foreign import getAllDates :: Fn1 Int (Array DateObj)
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
+
+foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 
 type LottieAnimationConfig = {
     rawJson :: String
@@ -437,3 +446,67 @@ fromMetersToKm distanceInMeters
 
 getArray :: Int ->Array Int
 getArray count = if count == 0 then [count] else [count] <> (getArray (count - 1))
+
+sortPredctionByDistance :: Array Prediction -> Array Prediction
+sortPredctionByDistance arr = DA.sortBy (comparing (_^._distance_meters)) arr
+
+_distance_meters :: forall a b c. Newtype a { distance :: b | c} => Lens' a b
+_distance_meters = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))
+
+_description :: forall a b c. Newtype a {description :: c | b} => Lens' a c
+_description = lens (unwrap >>> _.description) (\oldRec newVal -> wrap ((unwrap oldRec) {description = newVal}))
+
+_place_id :: forall a b c. Newtype a {placeId :: c | b} => Lens' a c
+_place_id = lens (unwrap >>> _.placeId) (\oldRec newVal -> wrap ((unwrap oldRec) {placeId = newVal}))
+
+_distance :: forall a b c. Newtype a {distance :: c | b} => Lens' a c
+_distance = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))
+
+checkShowDistance :: Int ->  Boolean
+checkShowDistance distance = (distance > 0 && distance <= 50000)
+
+getLocation :: Prediction -> LocationListItemState
+getLocation prediction = {
+    postfixImageUrl : " "
+  , prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
+  , postfixImageVisibility : false
+  , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
+  , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
+  , placeId : prediction ^._place_id
+  , lat : Nothing
+  , lon : Nothing
+  , description : prediction ^. _description
+  , tag : ""
+  , tagType : Just $ show LOC_LIST
+  , cardType : Nothing
+  , address : ""
+  , tagName : ""
+  , isEditEnabled : true
+  , savedLocation : ""
+  , placeName : ""
+  , isClickable : true
+  , alpha : 1.0
+  , fullAddress : dummyAddress
+  , locationItemType : Just PREDICTION
+  , distance : Nothing --Just (fromMetersToKm (fromMaybe 0 (prediction ^. _distance)))
+  , showDistance : Nothing --Just $ checkShowDistance (fromMaybe 0 (prediction ^. _distance))
+}
+
+dummyAddress :: Address
+dummyAddress = {
+              "area" : Nothing
+            , "state" : Nothing
+            , "country" : Nothing
+            , "building" : Nothing
+            , "door" : Nothing
+            , "street" : Nothing
+            , "city" : Nothing
+            , "areaCode" : Nothing
+            , "ward" : Nothing
+            , "placeId" : Nothing
+            }
+
+getLocationList :: Array Prediction -> Array LocationListItemState
+getLocationList prediction = map (\x -> getLocation x) prediction
+
+foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit

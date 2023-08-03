@@ -16,7 +16,8 @@
 module Components.SavedLocationCard.View where
 
 import Components.SavedLocationCard.Controller( Action(..), getCardType)
-import Screens.Types (LocationListItemState, CardType(..))
+import Screens.Types ( CardType(..))
+import Common.Types.App (LocationListItemState)
 import Effect (Effect)
 import Prelude (Unit, ($), const, unit, not,(<>),(/),(-), (==))
 import Font.Size as FontSize

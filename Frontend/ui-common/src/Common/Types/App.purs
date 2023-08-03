@@ -243,3 +243,73 @@ type DateObj = {
 , month :: String
 , year :: Int
 }
+
+
+type LocationListItemState = {
+    prefixImageUrl :: String
+  , postfixImageUrl :: String
+  , postfixImageVisibility :: Boolean
+  , title :: String
+  , subTitle :: String
+  , placeId :: Maybe String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , description :: String
+  , tag :: String
+  , tagType :: Maybe String
+  , cardType :: Maybe String
+  , address :: String
+  , tagName :: String
+  , isEditEnabled :: Boolean
+  , savedLocation :: String
+  , placeName :: String
+  , isClickable :: Boolean
+  , alpha :: Number
+  , fullAddress :: Address
+  , locationItemType :: Maybe LocationItemType
+  , distance :: Maybe String
+  , showDistance :: Maybe Boolean
+}
+
+type Address =
+  { area :: Maybe String
+  , state :: Maybe String
+  , country :: Maybe String
+  , building  :: Maybe String
+  , door :: Maybe String
+  , street :: Maybe String
+  , city :: Maybe String
+  , areaCode :: Maybe String
+  , ward :: Maybe String
+  , placeId :: Maybe String
+  }
+
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
+
+derive instance genericLocationItemType :: Generic LocationItemType _
+instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
+instance showLocationItemType :: Show LocationItemType where show = genericShow
+instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
+instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
+
+data LocItemType = LOC_LIST | CURR_LOC | LOCATE_ON_MAP
+
+derive instance genericLocItemType :: Generic LocItemType _
+instance eqLocItemType :: Eq LocItemType where eq = genericEq
+instance showLocItemType :: Show LocItemType where show = genericShow
+instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
+instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
+
+newtype Prediction = Prediction {
+ description :: String,
+ placeId :: Maybe String,
+ distance :: Maybe Int
+}
+
+derive instance genericPrediction :: Generic Prediction _
+derive instance newtypePrediction :: Newtype Prediction _
+instance standardEncodePrediction :: StandardEncode Prediction where standardEncode (Prediction id) = standardEncode id
+instance showPrediction :: Show Prediction where show = genericShow
+instance decodePrediction :: Decode Prediction where decode = defaultDecode
+instance encodePrediction :: Encode Prediction where encode = defaultEncode
+

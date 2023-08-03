@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList, RateCardType)
+import Common.Types.App (OptionButtonList,LocationItemType,LocationListItemState,Address,RateCardType)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -936,20 +936,6 @@ type RatingCard =
   , appConfig :: AppConfig
   }
 
-type Address =
-  { area :: Maybe String
-  , state :: Maybe String
-  , country :: Maybe String
-  , building  :: Maybe String
-  , door :: Maybe String
-  , street :: Maybe String
-  , city :: Maybe String
-  , areaCode :: Maybe String
-  , ward :: Maybe String
-  , placeId :: Maybe String
-  }
-
-
 type SavedLocationScreenState =
   {
       data :: SavedLocationScreenData
@@ -1062,13 +1048,6 @@ data NotifyFlowEventType = RATE_DRIVER_SKIPPED | SEARCH_CANCELLED
 
 derive instance genericNotifyFlowEventType :: Generic NotifyFlowEventType _
 instance showNotifyFlowEventType :: Show NotifyFlowEventType where show = genericShow
-data LocItemType = LOC_LIST | CURR_LOC | LOCATE_ON_MAP
-
-derive instance genericLocItemType :: Generic LocItemType _
-instance eqLocItemType :: Eq LocItemType where eq = genericEq
-instance showLocItemType :: Show LocItemType where show = genericShow
-instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
-instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
 data SearchResultType = QUOTES | ESTIMATES
 
@@ -1078,40 +1057,6 @@ instance showSearchResultType :: Show SearchResultType where show = genericShow
 
 type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }
-
-type LocationListItemState = {
-    prefixImageUrl :: String
-  , postfixImageUrl :: String
-  , postfixImageVisibility :: Boolean
-  , title :: String
-  , subTitle :: String
-  , placeId :: Maybe String
-  , lat :: Maybe Number
-  , lon :: Maybe Number
-  , description :: String
-  , tag :: String
-  , tagType :: Maybe String
-  , cardType :: Maybe String
-  , address :: String
-  , tagName :: String
-  , isEditEnabled :: Boolean
-  , savedLocation :: String
-  , placeName :: String
-  , isClickable :: Boolean
-  , alpha :: Number
-  , fullAddress :: Address
-  , locationItemType :: Maybe LocationItemType
-  , distance :: Maybe String
-  , showDistance :: Maybe Boolean
-}
-
-data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
-
-derive instance genericLocationItemType :: Generic LocationItemType _
-instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
-instance showLocationItemType :: Show LocationItemType where show = genericShow
-instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
-instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
 
 type SaveFavouriteCardState =
   {

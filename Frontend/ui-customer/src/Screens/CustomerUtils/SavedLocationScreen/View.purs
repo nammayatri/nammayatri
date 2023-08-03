@@ -177,7 +177,7 @@ savedLocationsView push state =
               , isClickable : true
               , alpha : 1.0
               , fullAddress : item.fullAddress
-              , locationItemType : Just ST.SAVED_LOCATION
+              , locationItemType : Just SAVED_LOCATION
               , distance : Nothing
               , showDistance : Just false
             }))state.data.savedLocations)

@@ -596,5 +596,10 @@ const kannadaStrings = {
   SELECT_A_DATE_RANGE : "ಹೇಳಿಕೆಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ದಿನಾಂಕ ಶ್ರೇಣಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
   FEE_PAYMENT_HISTORY : "ಶುಲ್ಕ ಪಾವತಿ ಇತಿಹಾಸ",
   LANGUAGES_SPOKEN : "ಮಾತನಾಡುವ ಭಾಷೆಗಳು",
-  VIEW_PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸವನ್ನು ವೀಕ್ಷಿಸಿ"
+  VIEW_PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸವನ್ನು ವೀಕ್ಷಿಸಿ",
+  CONFIRM_LOCATION : "ಸ್ಥಳವನ್ನು ದೃಢೀಕರಿಸಿ",
+  SET_HOMETOWN : "ಹೋಮ್‌ಟೌನ್ ಅನ್ನು ಹೊಂದಿಸಿ",
+  ENTER_HOMETOWN_CITY : "ನಗರ, ಪಟ್ಟಣ ಅಥವಾ ಗ್ರಾಮದ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
+  ENTER_YOUR_HOMETOWN : "ನಿಮ್ಮ ಊರನ್ನು ನಮೂದಿಸಿ",
+  CONFIRM_HOMETOWN : "ಹುಟ್ಟೂರು ದೃಢೀಕರಿಸಿ"
 }
