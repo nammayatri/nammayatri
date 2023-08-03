@@ -12,6 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use tuple-section" #-}
 
 module Storage.Queries.FarePolicy
   {-# WARNING
@@ -46,12 +49,19 @@ findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId
 update :: (L.MonadFlow m, MonadTime m, Log m) => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
-      Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
-      Se.Set BeamFP.updatedAt now
-    ]
-    [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
+  void $
+    updateOneWithKV
+      [ Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
+        Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
+        Se.Set BeamFP.updatedAt now
+      ]
+      [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
+
+  QueriesDEFB.deleteAll' farePolicy.id
+  case farePolicy.driverExtraFeeBounds of
+    Just driverExtraFeeBounds -> mapM_ (\defb -> QueriesDEFB.create (farePolicy.id, defb)) (toList driverExtraFeeBounds)
+    Nothing -> pure ()
+
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
       updateOneWithKV

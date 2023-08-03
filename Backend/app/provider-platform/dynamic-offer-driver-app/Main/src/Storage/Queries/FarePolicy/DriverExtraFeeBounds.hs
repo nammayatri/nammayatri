@@ -72,6 +72,15 @@ findAll' ::
   m [DFP.FullDriverExtraFeeBounds]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
 
+deleteAll' ::
+  ( L.MonadFlow m,
+    MonadThrow m,
+    Log m
+  ) =>
+  Id DFP.FarePolicy ->
+  m ()
+deleteAll' farePolicyId = deleteWithKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)]
+
 instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where
   fromTType' BeamDEFB.DriverExtraFeeBoundsT {..} = do
     pure $
