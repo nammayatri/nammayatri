@@ -55,7 +55,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
       Set BeamCT.recordingUrl recordingUrl,
       Set BeamCT.status status
     ]
-    [Is BeamCT.callId (Se.Eq callId)]
+    [Is BeamCT.id (Se.Eq callId)]
 
 -- countCallsByEntityId :: Transactionable m => Id Ride -> m Int
 -- countCallsByEntityId entityId = (fromMaybe 0 <$>) $
