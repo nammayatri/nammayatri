@@ -29,10 +29,13 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
-import Kernel.Prelude
 -- import qualified Kernel.Storage.Esqueleto as DB
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+
+import Kernel.Beam.Functions
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -218,5 +221,6 @@ validateRequest DOnSelectReq {..} = do
     duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      -- isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
-      isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_
+      isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
+
+-- isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_

@@ -18,11 +18,11 @@ module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 
@@ -57,9 +57,6 @@ replaceAll (Id personId) pdenList = do
 
 findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
 findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
-
-findAllByPersonIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
-findAllByPersonIdInReplica (Id personId) = findAllWithKvInReplica [Se.Is BeamPDEN.personId $ Se.Eq personId]
 
 instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
   fromTType' BeamPDEN.PersonDefaultEmergencyNumberT {..} = do

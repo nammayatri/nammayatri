@@ -18,11 +18,11 @@ module Storage.Queries.SavedReqLocation where
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SavedReqLocation as BeamSRL
 
@@ -40,9 +40,6 @@ create = createWithKV
 
 findAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId = findAllWithOptionsKV [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)] (Se.Desc BeamSRL.updatedAt) Nothing Nothing
-
-findAllByRiderIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m [SavedReqLocation]
-findAllByRiderIdInReplica perId = findAllWithOptionsKvInReplica [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)] (Se.Desc BeamSRL.updatedAt) Nothing Nothing
 
 -- deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
 -- deleteByRiderIdAndTag perId addressTag = do

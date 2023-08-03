@@ -19,20 +19,15 @@ module Storage.Queries.Estimate where
 import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id, getId))
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
 -- import Storage.Queries.FullEntityBuilders (buildFullEstimate)
 import qualified Storage.Queries.TripTerms as QTT
-
--- import qualified Kernel.Beam.Types as KBT
--- import qualified Sequelize as Se
--- import EulerHS.KVConnector.Types
--- import Lib.Utils (setMeshConfig)
 
 createEstimate :: (L.MonadFlow m, Log m) => Estimate -> m ()
 createEstimate = createWithKV
@@ -87,9 +82,6 @@ createMany = traverse_ create
 findById :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
 
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
-findByIdInReplica (Id estimateId) = findOneWithKvInReplica [Se.Is BeamE.id $ Se.Eq estimateId]
-
 -- findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
 -- findAllBySRId searchRequestId = Esq.buildDType $ do
 --   fullEstimateTs <- Esq.findAll' $ do
@@ -100,9 +92,6 @@ findByIdInReplica (Id estimateId) = findOneWithKvInReplica [Se.Is BeamE.id $ Se.
 
 findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Estimate]
 findAllBySRId (Id searchRequestId) = findAllWithKV [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
-
-findAllBySRIdInReplica :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Estimate]
-findAllBySRIdInReplica (Id searchRequestId) = findAllWithKvInReplica [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
 
 -- findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
 -- findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do

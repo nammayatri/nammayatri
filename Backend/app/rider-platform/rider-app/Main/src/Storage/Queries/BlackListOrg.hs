@@ -22,11 +22,11 @@ where
 
 import Domain.Types.BlackListOrg
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Kernel.Types.Registry.Subscriber (Subscriber)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.BlackListOrg as BeamBLO
 

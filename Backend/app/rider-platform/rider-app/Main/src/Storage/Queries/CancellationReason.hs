@@ -18,9 +18,9 @@ module Storage.Queries.CancellationReason where
 import Domain.Types.CancellationReason
 import qualified Domain.Types.CancellationReason as Domain
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
@@ -44,14 +44,6 @@ findAll cancStage = do
     OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
     OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
   findAllWithOptionsKV [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
-
-findAllInReplica :: (L.MonadFlow m, Log m) => CancellationStage -> m [CancellationReason]
-findAllInReplica cancStage = do
-  seCaseCondition <- case cancStage of
-    OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True
-    OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
-    OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
-  findAllWithOptionsKvInReplica [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
 
 instance FromTType' BeamCR.CancellationReason CancellationReason where
   fromTType' BeamCR.CancellationReasonT {..} = do

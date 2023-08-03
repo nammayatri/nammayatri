@@ -36,6 +36,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude (Alternative ((<|>)))
+import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Exotel.Types as Call
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as Call
@@ -158,15 +159,15 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   exophone <- CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
   mobileNumberHash <- getDbHash callFrom
   (dtmfNumberUsed, booking) <-
-    -- runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
-    (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
+    runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
+      -- (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
       Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
       Just person ->
         (QRB.findAssignedByRiderId person.id) >>= \case
           Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
           Just activeBooking -> return (Nothing, activeBooking)
-  -- ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
-  ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
+  ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
+  -- ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
   callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
   -- runTransaction $ QCallStatus.create callStatusObj
@@ -193,10 +194,10 @@ getDtmfFlow dtmfNumber_ merchantId = do
   number <- fromMaybeM (InvalidRequest "DTMF Number Not Found") dtmfNumber_
   let dtmfNumber = dropFirstZero $ removeQuotes number
   dtmfMobileHash <- getDbHash dtmfNumber
-  -- person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
-  person <- Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
-  -- booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
-  booking <- QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+  person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
+  -- person <- Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
+  booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+  -- booking <- QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
   return (Just dtmfNumber, booking)
   where
     dropFirstZero = T.dropWhile (== '0')
@@ -204,8 +205,9 @@ getDtmfFlow dtmfNumber_ merchantId = do
 
 getCallStatus :: EsqDBReplicaFlow m r => Id CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
-  -- runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
-  QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
+  runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
+
+-- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
 
 getPerson :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do

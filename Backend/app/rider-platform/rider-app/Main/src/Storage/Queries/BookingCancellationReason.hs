@@ -18,11 +18,11 @@ module Storage.Queries.BookingCancellationReason where
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 
@@ -42,9 +42,6 @@ create bookingCancellationReason = do
 
 findByRideBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
 findByRideBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
-
-findByRideBookingIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
-findByRideBookingIdInReplica (Id bookingId) = findOneWithKvInReplica [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
 -- upsert :: BookingCancellationReason -> SqlDB ()
 -- upsert cancellationReason =

@@ -19,10 +19,10 @@ import Domain.Types.OnSearchEvent
 -- import Kernel.Storage.Esqueleto as Esq
 
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV)
 import qualified Storage.Beam.OnSearchEvent as BeamOSE
 
 create :: (L.MonadFlow m, Log m) => OnSearchEvent -> m ()

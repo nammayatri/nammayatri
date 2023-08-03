@@ -26,13 +26,14 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
+
+import Kernel.Beam.Functions
+import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.DriverOffer as BeamDO
@@ -187,16 +188,6 @@ findLatestByRiderIdAndStatus (Id riderId) bookingStatusList =
     <&> listToMaybe
     <&> (Domain.status <$>)
 
-findLatestByRiderIdAndStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatusInReplica (Id riderId) bookingStatusList =
-  do
-    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.In bookingStatusList]]
-        sortBy = Se.Desc BeamB.createdAt
-        limit' = Just 1
-    findAllWithOptionsKvInReplica options sortBy limit' Nothing
-    <&> listToMaybe
-    <&> (Domain.status <$>)
-
 -- findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 -- findById bookingId = Esq.buildDType $ do
 --   mbFullBookingT <- Esq.findOne' $ do
@@ -208,9 +199,6 @@ findLatestByRiderIdAndStatusInReplica (Id riderId) bookingStatusList =
 findById :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
-findByIdInReplica (Id bookingId) = findOneWithKvInReplica [Se.Is BeamB.id $ Se.Eq bookingId]
-
 -- findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
 -- findByBPPBookingId bppRbId = Esq.buildDType $ do
 --   mbFullBookingT <- Esq.findOne' $ do
@@ -221,9 +209,6 @@ findByIdInReplica (Id bookingId) = findOneWithKvInReplica [Se.Is BeamB.id $ Se.E
 
 findByBPPBookingId :: (L.MonadFlow m, Log m) => Id BPPBooking -> m (Maybe Booking)
 findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
-
-findByBPPBookingIdInReplica :: (L.MonadFlow m, Log m) => Id BPPBooking -> m (Maybe Booking)
-findByBPPBookingIdInReplica (Id bppRbId) = findOneWithKvInReplica [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
 
 -- findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
 -- findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
@@ -237,9 +222,6 @@ findByBPPBookingIdInReplica (Id bppRbId) = findOneWithKvInReplica [Se.Is BeamB.b
 
 findByIdAndMerchantId :: (L.MonadFlow m, Log m) => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
-
-findByIdAndMerchantIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> Id Merchant -> m (Maybe Booking)
-findByIdAndMerchantIdInReplica (Id bookingId) (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
 -- findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 -- findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
@@ -277,9 +259,6 @@ findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
 findCountByRideIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
 findCountByRideIdAndStatus (Id personId) status = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
 
-findCountByRideIdAndStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
-findCountByRideIdAndStatusInReplica (Id personId) status = findAllWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
-
 -- findCountByRideIdStatusAndTime :: Transactionable m => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 -- findCountByRideIdStatusAndTime personId status startTime endTime = do
 --   mkCount <$> do
@@ -297,9 +276,6 @@ findCountByRideIdAndStatusInReplica (Id personId) status = findAllWithKvInReplic
 findCountByRideIdStatusAndTime :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 findCountByRideIdStatusAndTime (Id personId) status startTime endTime = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startTime, Se.Is BeamB.createdAt $ Se.LessThan endTime]] <&> length
 
-findCountByRideIdStatusAndTimeInReplica :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
-findCountByRideIdStatusAndTimeInReplica (Id personId) status startTime endTime = findAllWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startTime, Se.Is BeamB.createdAt $ Se.LessThan endTime]] <&> length
-
 -- findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
 -- findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
 --   fullBookingsT <- Esq.findAll' $ do
@@ -313,9 +289,6 @@ findCountByRideIdStatusAndTimeInReplica (Id personId) status startTime endTime =
 findByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
 
-findByRiderIdAndStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m [Booking]
-findByRiderIdAndStatusInReplica (Id personId) statusList = findAllWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
-
 -- findAssignedByRiderId :: Transactionable m => Id Person -> m (Maybe Booking)
 -- findAssignedByRiderId personId = Esq.buildDType $ do
 --   fullBookingsT <- Esq.findOne' $ do
@@ -328,9 +301,6 @@ findByRiderIdAndStatusInReplica (Id personId) statusList = findAllWithKvInReplic
 
 findAssignedByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
-
-findAssignedByRiderIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Booking)
-findAssignedByRiderIdInReplica (Id personId) = findOneWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
 -- findBookingIdAssignedByEstimateId :: Transactionable m => Id Estimate -> m (Maybe (Id Booking))
 -- findBookingIdAssignedByEstimateId estimateId =
@@ -449,12 +419,6 @@ findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
       offset' = fmap fromIntegral $ moffset <|> Just 0
   findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
 
-findAllByPersonIdLimitOffsetInReplica :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
-findAllByPersonIdLimitOffsetInReplica (Id personId) mlimit moffset = do
-  let limit' = fmap fromIntegral $ mlimit <|> Just 100
-      offset' = fmap fromIntegral $ moffset <|> Just 0
-  findAllWithOptionsKvInReplica [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
-
 -- findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 -- findStuckBookings merchantId bookingIds now = do
 --   Esq.findAll $ do
@@ -472,20 +436,6 @@ findStuckBookings (Id merchantId) bookingIds now =
   do
     let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
     findAllWithKV
-      [ Se.And
-          [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
-            Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
-            Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
-            Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
-          ]
-      ]
-    <&> (Domain.id <$>)
-
-findStuckBookingsInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookingsInReplica (Id merchantId) bookingIds now =
-  do
-    let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-    findAllWithKvInReplica
       [ Se.And
           [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),

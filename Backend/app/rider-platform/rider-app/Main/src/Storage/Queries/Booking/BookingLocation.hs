@@ -19,10 +19,10 @@ module Storage.Queries.Booking.BookingLocation where
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.LocationAddress
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 

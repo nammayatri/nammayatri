@@ -5,10 +5,10 @@ module Storage.Queries.Sos where
 import Domain.Types.Person as Person ()
 import Domain.Types.Sos as Sos
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as BeamS
 
@@ -40,9 +40,6 @@ updateStatus sosId status = do
 
 findById :: (L.MonadFlow m, Log m) => Id Sos.Sos -> m (Maybe Sos)
 findById sosId = findOneWithKV [Se.Is BeamS.id $ Se.Eq (getId sosId)]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id Sos.Sos -> m (Maybe Sos)
-findByIdInReplica sosId = findOneWithKvInReplica [Se.Is BeamS.id $ Se.Eq (getId sosId)]
 
 instance FromTType' BeamS.Sos Sos where
   fromTType' BeamS.SosT {..} = do

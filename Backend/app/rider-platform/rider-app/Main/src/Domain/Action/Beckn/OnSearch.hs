@@ -43,10 +43,11 @@ import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
+-- import qualified Kernel.Storage.Esqueleto as DB
+
+import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as DB
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -154,8 +155,8 @@ data RentalQuoteDetails = RentalQuoteDetails
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
 validateRequest DOnSearchReq {..} = do
-  -- _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
-  _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  -- _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   return $ ValidatedOnSearchReq {..}
 

@@ -4,12 +4,12 @@ module Storage.Queries.AppInstalls where
 
 import Domain.Types.AppInstalls as AppInstalls
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
 import Kernel.Types.Version
 import Kernel.Utils.Version
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.AppInstalls as BeamAI
 

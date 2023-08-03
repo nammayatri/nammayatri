@@ -31,6 +31,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.Person as Person
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Storage.Hedis as Redis
@@ -98,8 +99,8 @@ getTotalRidesCount riderId = Redis.withNonCriticalCrossAppRedis $ do
   case mbTotalCount of
     Just totalCount -> pure totalCount
     Nothing -> do
-      -- totalCount <- runInReplica $ QB.findCountByRideIdAndStatus riderId BT.COMPLETED
-      totalCount <- QB.findCountByRideIdAndStatus riderId BT.COMPLETED
+      totalCount <- B.runInReplica $ QB.findCountByRideIdAndStatus riderId BT.COMPLETED
+      -- totalCount <- QB.findCountByRideIdAndStatus riderId BT.COMPLETED
       Redis.setExp key totalCount 14400
       pure totalCount
 
@@ -114,8 +115,9 @@ getRidesCountInWindow riderId start window currTime =
   Redis.withNonCriticalCrossAppRedis $ do
     let startTime = addUTCTime (fromIntegral (- start)) currTime
         endTime = addUTCTime (fromIntegral window) startTime
-    -- runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
-    QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
+    B.runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
+
+-- QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
 
 anyFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, L.MonadFlow m) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
 anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]

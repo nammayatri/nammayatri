@@ -41,6 +41,7 @@ import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as Language
@@ -273,8 +274,8 @@ buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.Hedis
 buildPerson req mobileNumber notificationToken bundleVersion clientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
-  -- personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
-  personWithSameDeviceToken <- listToMaybe <$> (Person.findBlockedByDeviceToken req.deviceToken)
+  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
+  -- personWithSameDeviceToken <- listToMaybe <$> (Person.findBlockedByDeviceToken req.deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
@@ -396,8 +397,8 @@ verify tokenId req = do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   let deviceToken = Just req.deviceToken
-  -- personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken deviceToken)
-  personWithSameDeviceToken <- listToMaybe <$> Person.findBlockedByDeviceToken deviceToken
+  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
+  -- personWithSameDeviceToken <- listToMaybe <$> Person.findBlockedByDeviceToken deviceToken
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do

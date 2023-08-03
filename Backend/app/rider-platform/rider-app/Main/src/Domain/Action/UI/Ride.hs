@@ -26,6 +26,7 @@ import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import Environment
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (HasField)
@@ -73,14 +74,14 @@ getDriverLoc ::
   Id SPerson.Person ->
   m GetDriverLocResp
 getDriverLoc rideId personId = do
-  -- ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
   res <- CallBPP.callGetDriverLocation ride.trackingUrl
-  -- booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = Maps.getCoordinates booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
@@ -121,16 +122,16 @@ getRideStatus ::
   Id SPerson.Person ->
   m GetRideStatusResp
 getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
-  -- ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
       else Just <$> CallBPP.callGetDriverLocation ride.trackingUrl
-  -- booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  -- rider <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  rider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  rider <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  -- rider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt rider
   return $
     GetRideStatusResp

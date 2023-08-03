@@ -31,8 +31,9 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
+import Kernel.Beam.Functions
 import qualified Kernel.External.Notification as Notification
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto hiding (runInReplica)
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -556,8 +557,8 @@ notifyOnNewMessage ::
   T.Text ->
   m ()
 notifyOnNewMessage booking message = do
-  -- person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  -- person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,

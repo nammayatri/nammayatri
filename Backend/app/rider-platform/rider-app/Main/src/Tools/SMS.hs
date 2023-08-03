@@ -25,6 +25,7 @@ import Domain.Types.Booking.Type (BookingDetails (OneWaySpecialZoneDetails))
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
@@ -83,10 +84,10 @@ sendBookingOTPMessage merchantId personId bookingId = do
   merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   if merchantConfig.enableDashboardSms
     then do
-      -- customer <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      customer <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      -- booking <- Esq.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
-      booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
+      customer <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      -- customer <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
+      -- booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
       smsCfg <- asks (.smsCfg)
       mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       let countryCode = fromMaybe "+91" customer.mobileCountryCode

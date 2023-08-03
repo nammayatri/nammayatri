@@ -18,10 +18,10 @@ module Storage.Queries.FareBreakup where
 import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 
@@ -43,9 +43,6 @@ createMany = traverse_ create
 
 findAllByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
 findAllByBookingId bookingId = findAllWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
-
-findAllByBookingIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
-findAllByBookingIdInReplica bookingId = findAllWithKvInReplica [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
 
 instance FromTType' BeamFB.FareBreakup FareBreakup where
   fromTType' BeamFB.FareBreakupT {..} = do

@@ -21,9 +21,11 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Environment
+-- import Kernel.Storage.Esqueleto hiding (count)
+
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto hiding (count)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -64,25 +66,25 @@ mobileIndianCode = "+91"
 getIssueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow IssueListRes
 getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do
   now <- getCurrentTime
-  -- merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  -- merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let toDate = fromMaybe now mbTo
   let fromDate = fromMaybe (addUTCTime (negate nominalDay) now) mbFrom
   case mbMobileNumber of
     Just mobileNumber -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
-      -- customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
-      customer <- QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
-      -- issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
-      issues <- QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
+      -- customer <- QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
+      issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      -- issues <- QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
       return $ IssueListRes {list = issueList, summary = summary}
     Nothing -> do
-      -- issues <- runInReplica $ QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
-      issues <- QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
+      issues <- runInReplica $ QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
+      -- issues <- QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}

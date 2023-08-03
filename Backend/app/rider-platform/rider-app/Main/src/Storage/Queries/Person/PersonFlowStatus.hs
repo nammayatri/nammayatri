@@ -24,10 +24,10 @@ import Domain.Types.Person
 import Domain.Types.Person.PersonFlowStatus
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 

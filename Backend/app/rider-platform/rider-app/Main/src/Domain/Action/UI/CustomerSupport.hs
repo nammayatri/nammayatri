@@ -31,6 +31,7 @@ import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -135,8 +136,8 @@ createSupportRegToken entityId merchantId = do
 
 listOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = do
-  -- supportP <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  supportP <- B.runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
   OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
@@ -149,23 +150,23 @@ listOrder personId mRequestId mMobile mlimit moffset = do
       let limit_ = maybe 10 (`min` 10) mlimit
       mobileNumberHash <- getDbHash number
       person <-
-        -- runInReplica $
-        Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER mobileNumberHash merchantId
-          >>= fromMaybeM (PersonDoesNotExist number)
+        B.runInReplica $
+          Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER mobileNumberHash merchantId
+            >>= fromMaybeM (PersonDoesNotExist number)
       bookings <-
-        -- runInReplica $ QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
-        QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
+        B.runInReplica $ QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
+      -- QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
       return $ OrderInfo person bookings
     getByRequestId bookingId merchantId = do
       (booking :: DRB.Booking) <-
-        -- runInReplica $
-        QRB.findByIdAndMerchantId (Id bookingId) merchantId
-          >>= fromMaybeM (BookingDoesNotExist bookingId)
+        B.runInReplica $
+          QRB.findByIdAndMerchantId (Id bookingId) merchantId
+            >>= fromMaybeM (BookingDoesNotExist bookingId)
       let requestorId = booking.riderId
       person <-
-        -- runInReplica $
-        Person.findById requestorId
-          >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
+        B.runInReplica $
+          Person.findById requestorId
+            >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ OrderInfo person [booking]
 
 buildBookingToOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp

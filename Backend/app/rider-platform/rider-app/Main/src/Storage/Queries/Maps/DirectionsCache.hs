@@ -22,10 +22,10 @@ where
 
 import Domain.Types.Maps.DirectionsCache
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Maps.DirectionsCache as BeamDC
 

@@ -27,6 +27,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -89,8 +90,8 @@ notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
     SEARCH_CANCELLED -> do
-      -- activeBooking <- Esq.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
-      activeBooking <- QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
+      activeBooking <- B.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
+      -- activeBooking <- QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
       whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
       QPFS.updateStatus personId DPFS.IDLE
   QPFS.clearCache personId
@@ -174,7 +175,7 @@ getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id SRide.Ride -> Maybe
 getTrackUrl rideId mTrackUrl = do
   case mTrackUrl of
     Nothing -> do
-      -- ride <- Esq.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-      ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
       return ride.trackingUrl
     a -> return a

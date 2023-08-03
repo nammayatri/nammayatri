@@ -19,10 +19,10 @@ import Database.Beam.MySQL ()
 import Domain.Types.DriverOffer
 import Domain.Types.Estimate
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 
@@ -36,9 +36,6 @@ findById (Id driverOfferId) = do
 
 findByBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> m [DriverOffer]
 findByBPPQuoteId bppQuoteId = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
-
-findByBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Text -> m [DriverOffer]
-findByBPPQuoteIdInReplica bppQuoteId = findAllWithKvInReplica [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
 
 -- updateStatus :: Id Estimate -> DriverOfferStatus -> SqlDB ()
 -- updateStatus estimateId status = do

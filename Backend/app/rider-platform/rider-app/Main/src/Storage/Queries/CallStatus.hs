@@ -17,10 +17,10 @@ module Storage.Queries.CallStatus where
 
 import Domain.Types.CallStatus
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
 -- import Storage.Tabular.CallStatus ()
@@ -31,7 +31,6 @@ import qualified Tools.Call as Call
 -- import qualified Kernel.Beam.Types as KBT
 -- import qualified Sequelize as Se
 -- import EulerHS.KVConnector.Types
--- import Lib.Utils (setMeshConfig)
 
 -- Need to update this according to createUnique
 -- create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
@@ -54,9 +53,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCS.id $ Se.Eq callStatusId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
-findByIdInReplica (Id callStatusId) = findOneWithKvInReplica [Se.Is BeamCS.id $ Se.Eq callStatusId]
 
 -- findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
 -- findByCallSid callSid =

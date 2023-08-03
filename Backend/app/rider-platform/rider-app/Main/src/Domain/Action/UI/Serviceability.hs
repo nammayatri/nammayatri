@@ -22,6 +22,7 @@ import API.UI.HotSpot
 import qualified Domain.Types.HotSpot as DHotSpot
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
+import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -66,8 +67,8 @@ checkServiceability settingAccessor (_, merchantId) location = do
       specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
       pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
     Regions regions -> do
-      -- serviceable <- runInReplica $ someGeometriesContain location regions
-      serviceable <- someGeometriesContain location regions
+      serviceable <- runInReplica $ someGeometriesContain location regions
+      -- serviceable <- someGeometriesContain location regions
       if serviceable
         then do
           specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location

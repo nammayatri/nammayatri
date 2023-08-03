@@ -23,10 +23,10 @@ where
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceUsageConfig
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 

@@ -21,6 +21,7 @@ where
 
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -49,6 +50,6 @@ onConfirm ValidatedOnConfirmReq {..} = do
 
 validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
 validateRequest OnConfirmReq {..} = do
-  -- booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
   return $ ValidatedOnConfirmReq {..}

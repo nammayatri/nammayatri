@@ -24,6 +24,7 @@ where
 import Data.Text (pack)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -68,8 +69,8 @@ createSavedReqLocation riderId sreq = do
 
 getSavedReqLocations :: EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
-  -- savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
-  savedLocations <- QSavedReqLocation.findAllByRiderId riderId
+  savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
+  -- savedLocations <- QSavedReqLocation.findAllByRiderId riderId
   return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations
 
 deleteSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> Text -> m APISuccess.APISuccess

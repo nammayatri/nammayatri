@@ -20,11 +20,11 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Version
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -83,9 +83,6 @@ create dsReq = do
 
 findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
-findByIdInReplica (Id searchRequestId) = findOneWithKvInReplica [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
 -- findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 -- findByPersonId personId searchRequestId = Esq.buildDType $ do

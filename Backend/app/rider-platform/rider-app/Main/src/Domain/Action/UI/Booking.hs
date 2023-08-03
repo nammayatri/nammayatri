@@ -25,6 +25,8 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id)
 -- import Kernel.Storage.Esqueleto (runInReplica)
+
+import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -40,8 +42,8 @@ newtype BookingListRes = BookingListRes
 
 bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m SRB.BookingAPIEntity
 bookingStatus bookingId (personId, _) = do
-  -- booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  -- booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
   logInfo $ "booking: test " <> show booking
   SRB.buildBookingAPIEntity booking
@@ -49,6 +51,6 @@ bookingStatus bookingId (personId, _) = do
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   -- rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
-  rbList <- QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   logInfo $ "rbList: test " <> show rbList
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

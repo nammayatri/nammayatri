@@ -32,6 +32,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -88,8 +89,8 @@ cancel bookingId _ req = do
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-  -- mRide <- Esq.runInReplica $ QR.findActiveByRBId booking.id
-  mRide <- QR.findActiveByRBId booking.id
+  mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
+  -- mRide <- QR.findActiveByRBId booking.id
   cancellationReason <-
     case mRide of
       Just ride -> do
@@ -150,8 +151,8 @@ mkDomainCancelSearch personId estimateId = do
   where
     buildCancelReq estId sendToBpp estStatus = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      -- person <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      -- person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       let searchRequestId = estimate.requestId
       pure
