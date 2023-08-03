@@ -543,7 +543,6 @@ const bengaliStrings = {
   "REPORT_ISSUE_" : "রিপোর্ট সমস্যা",
   "DONE" : "সম্পন্ন",
   "PLEASE_TELL_US_WHAT_WENT_WRONG" : "কি ভুল হয়েছে আমাদের বলুন",
-  "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের নম্মা যাত্রী অভিজ্ঞতা উন্নত করতে সাহায্য করে",
   "DID_YOU_FACE_ANY_ISSUE" : "আপনি কোন সমস্যা সম্মুখীন?",
   "WE_NOTICED_YOUR_RIDE_ENDED_AWAY" : "আমরা লক্ষ্য করেছি যে আপনার রাইড আপনার আসল গন্তব্য থেকে দূরে শেষ হয়েছে৷",
   "GET_CALLBACK_FROM_US" : "আমাদের কাছ থেকে একটি কলব্যাক পান",
