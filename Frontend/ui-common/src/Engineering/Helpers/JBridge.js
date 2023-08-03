@@ -1631,6 +1631,16 @@ export const cleverTapSetLocation = function () {
     }
 }
 
+export const cleverTapEvent = function(event){
+  return function (param){
+    return function () {
+      if (window.JBridge.cleverTapEvent){
+        window.JBridge.cleverTapEvent(event, JSON.stringify(param));
+      }
+    }
+  }
+}
+
 export const launchDateSettings = function (res) {
   if(JBridge.launchDateSettings){
     return JBridge.launchDateSettings();

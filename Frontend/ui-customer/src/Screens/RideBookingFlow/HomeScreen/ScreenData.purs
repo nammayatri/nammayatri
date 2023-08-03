@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Styles.Colors as Color
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -435,4 +435,10 @@ dummyRideBookingDetails = RideBookingDetails {
   toLocation : dummyBookingDetails,
   estimatedDistance : Nothing,
   otpCode : Nothing
+}
+
+dummyFareBreakUp :: FareBreakupAPIEntity
+dummyFareBreakUp = FareBreakupAPIEntity{
+  amount : 0,
+  description : "fare"
 }

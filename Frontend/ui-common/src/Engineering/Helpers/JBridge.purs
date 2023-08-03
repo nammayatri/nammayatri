@@ -201,6 +201,7 @@ foreign import setCleverTapUserProp :: String -> String -> Unit
 foreign import cleverTapCustomEvent :: String -> Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
+foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Effect Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
 foreign import launchDateSettings :: String -> Unit
@@ -425,5 +426,9 @@ fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
 
+type ClevertapEventParams = {
+  key :: String ,
+  value :: String
+}
 
 

@@ -39,7 +39,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime,stringToVersion, convertUTCtoISC, getCurrentUTC)
 import Foreign.Class (class Encode, encode)
 import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange, decodeError)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs)
+import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, cleverTapCustomEvent, cleverTapEvent)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -476,6 +476,7 @@ enterMobileNumberScreenFlow = do
             case resp of
               Right resp -> do
                     _ <- pure $ firebaseLogEvent "ny_user_verify_otp"
+                    _ <- pure $ cleverTapCustomEvent "ny_user_verify_otp"
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false}})
                     let (VerifyTokenResp response) = resp
                         customerId = ((response.person)^. _id)
@@ -561,6 +562,7 @@ accountSetUpScreenFlow = do
             Nothing    -> pure unit
           _ <- pure $ firebaseLogEvent "ny_user_onboarded"
           _ <- pure $ metaLogEvent "ny_user_onboarded"
+          _ <- pure $ cleverTapCustomEvent "ny_user_onboarded"
           pure unit
         Left err -> do
           _ <- pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
@@ -786,6 +788,10 @@ homeScreenFlow = do
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           _ <- pure $ firebaseLogEvent "ny_user_request_quotes"
+          _ <- lift $ lift $ liftFlow $ cleverTapEvent "ny_user_request_quotes" $ [ {key : "Request Type",value : if getValueToLocalStore FLOW_WITHOUT_OFFERS == "true" then "Auto Assign" else "Manual Assign"},
+                                                                                    {key : "Estimate Fare", value : "₹" <> (show $ state.data.suggestedAmount) <> "-" <> "₹" <> (show $ state.data.suggestedAmount + state.data.rateCard.additionalFare)},
+                                                                                    {key : "Estimated Ride Distance" ,value : state.data.rideDistance},
+                                                                                    {key : "Night Ride",value : (show $ state.data.rateCard.nightCharges)}]
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
             _ <- pure $ firebaseLogEvent "ny_user_auto_confirm"
             pure unit
@@ -879,6 +885,7 @@ homeScreenFlow = do
         case notification of
             "TRIP_STARTED"        -> do -- OTP ENTERED
                                       _ <- pure $ firebaseLogEvent "ny_user_ride_started"
+                                      _ <- pure $ cleverTapCustomEvent "ny_user_ride_started"
                                       let shareAppCount = getValueToLocalStore SHARE_APP_COUNT
                                       if shareAppCount == "__failed" then do
                                         setValueToLocalStore SHARE_APP_COUNT "1"
@@ -895,6 +902,7 @@ homeScreenFlow = do
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
                                         pure $ firebaseLogEvent "ny_user_first_ride_completed"
                                         _ <- pure $ metaLogEvent "ny_user_first_ride_completed"
+                                        _ <- pure $ cleverTapCustomEvent "ny_user_first_ride_completed"
                                         (GetProfileRes response) <- Remote.getProfileBT ""
                                         setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
                                         else pure unit
@@ -910,7 +918,17 @@ homeScreenFlow = do
                                         let (RideBookingDetails contents) = bookingDetails.contents
                                         let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
                                         let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
+                                        let timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
+                                        let nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
                                         let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
+                                        _ <- lift $ lift $ liftFlow $ cleverTapEvent "ny_user_ride_completed" $ [ {key : "Estimate ride distance", value : (show $ fromMaybe 0 contents.estimatedDistance/1000) <> " km"},
+                                                                                                                  {key : "Actual ride distance", value : (show $ (fromMaybe 0 ride.chargeableRideDistance)/1000) <> " km"},
+                                                                                                                  {key : "Difference between estimated and actual ride distance" , value : (show $ differenceOfDistance/1000) <> " km"},
+                                                                                                                  {key : "Total Estimated fare",value : "₹" <> (show $ resp.estimatedFare)},
+                                                                                                                  {key : "Total Actual fare",value : "₹" <> (show $ finalAmount)},
+                                                                                                                  {key : "Difference between estimated and actual fares",value : "₹" <> (show $ resp.estimatedFare - finalAmount)},
+                                                                                                                  {key : "Driver pickup charges",value : "₹ 10"},
+                                                                                                                  {key : "Night ride",value : show $ nightChargesVal}]
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, rideRatingState {distanceDifference = differenceOfDistance} , ratingViewState { rideBookingRes = (RideBookingRes resp)}, driverInfoCardState {initDistance = Nothing}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
                                         homeScreenFlow
                                         else homeScreenFlow
