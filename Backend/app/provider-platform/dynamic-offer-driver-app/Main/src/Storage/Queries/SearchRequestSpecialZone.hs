@@ -37,7 +37,7 @@ createSearchRequestSpecialZone :: (L.MonadFlow m, Log m) => SearchRequestSpecial
 createSearchRequestSpecialZone = createWithKV
 
 create :: (L.MonadFlow m, Log m) => SearchRequestSpecialZone -> m ()
-create srsz = createSearchRequestSpecialZone srsz >> QSRL.create srsz.fromLocation >> QSRL.create srsz.toLocation
+create srsz = QSRL.create srsz.fromLocation >> QSRL.create srsz.toLocation >> createSearchRequestSpecialZone srsz
 
 -- findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 -- findById searchRequestSpecialZoneId = buildDType $

@@ -29,6 +29,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
+import qualified Storage.Queries.FareParameters as SQFP
 
 -- create :: QuoteSpecialZone -> SqlDB ()
 -- create quote = Esq.runTransaction $
@@ -39,7 +40,7 @@ import Storage.Queries.FareParameters as BeamQFP
 --     Esq.create' quoteT
 
 create :: (L.MonadFlow m, Log m) => QuoteSpecialZone -> m ()
-create = createWithKV
+create quote = SQFP.create quote.fareParams >> createWithKV quote
 
 countAllByRequestId :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m Int
 countAllByRequestId searchReqID = do

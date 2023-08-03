@@ -38,7 +38,7 @@ findAllActiveBySTId :: (L.MonadFlow m, Log m) => Id SearchTry -> m [SearchReques
 findAllActiveBySTId (Id searchTryId) =
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamSRFD.id $ Se.Eq searchTryId,
+        [ Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId,
           Se.Is BeamSRFD.status $ Se.Eq Domain.Active
         ]
     ]

@@ -36,13 +36,13 @@ findLastByRequestId ::
   (L.MonadFlow m, Log m) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.id $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
+findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 findActiveTryByRequestId ::
   (L.MonadFlow m, Log m) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findActiveTryByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.And [Se.Is BeamST.id $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
+findActiveTryByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.And [Se.Is BeamST.requestId $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 cancelActiveTriesByRequestId ::
   (L.MonadFlow m, MonadTime m, Log m) =>
