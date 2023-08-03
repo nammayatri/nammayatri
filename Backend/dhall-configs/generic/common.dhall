@@ -7,6 +7,8 @@ let PeriodType = < Minutes | Hours | Days | Months | Years >
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
 
+let KafkaCompression = < NO_COMPRESSION | GZIP | SNAPPY | LZ4 >
+
 let S3AwsConfig =
       { accessKeyId : Text
       , secretAccessKey : Text
@@ -73,6 +75,7 @@ in  { smsSessionConfig
     , S3Config
     , periodType = PeriodType
     , consumerType = ConsumerType
+    , kafkaCompression = KafkaCompression
     , kafkaConfig
     , streamConfig
     , eventStreamNameType

@@ -26,6 +26,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
             globalCommon.loggerConfig
         //  { logToFile = True, logRawSql = True, prettyPrinting = True }
     , LogLevel = globalCommon.LogLevel
+    , kafkaCompression = globalCommon.kafkaCompression
     , s3Config = sec.s3Config
     , s3PublicConfig = sec.s3PublicConfig
     , slackToken = sec.slackToken
