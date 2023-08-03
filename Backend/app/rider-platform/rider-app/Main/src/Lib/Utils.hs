@@ -391,7 +391,11 @@ updateWithKV setClause whereClause = do
   dbConf <- getMasterDBConfig
   res <- KV.updateAllWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
-    Right _ -> pure ()
+    Right res' -> do
+      if updatedMeshConfig.meshEnabled && not updatedMeshConfig.kvHardKilled
+        then logDebug $ "Updated in KV: " <> show res'
+        else logDebug $ "Updated in DB: " <> show res'
+      pure ()
     Left err -> throwError $ InternalError $ show err
 
 updateOneWithKV ::
@@ -454,7 +458,11 @@ createWithKV a = do
   dbConf' <- getMasterDBConfig
   result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
   case result of
-    Right _ -> pure ()
+    Right _ -> do
+      if updatedMeshConfig.meshEnabled && not updatedMeshConfig.kvHardKilled
+        then logDebug $ "Created in KV: " <> show tType
+        else logDebug $ "Created in DB: " <> show tType
+      pure ()
     Left err -> throwError $ InternalError $ show err
 
 deleteWithKV ::
@@ -484,7 +492,11 @@ deleteWithKV whereClause = do
   dbConf <- getMasterDBConfig
   res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
   case res of
-    Right _ -> pure ()
+    Right res' -> do
+      if updatedMeshConfig.meshEnabled && not updatedMeshConfig.kvHardKilled
+        then logDebug $ "Deleted in KV: " <> show res'
+        else logDebug $ "Deleted in DB: " <> show res'
+      pure ()
     Left err -> throwError $ InternalError $ show err
 
 getMasterDBConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
@@ -638,7 +650,11 @@ updateWithKvInReplica setClause whereClause = do
   dbConf <- getReplicaDbConfig
   res <- KV.updateAllWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
-    Right _ -> pure ()
+    Right res' -> do
+      if updatedMeshConfig.meshEnabled && not updatedMeshConfig.kvHardKilled
+        then logDebug $ "Updated in KVReplica: " <> show res'
+        else logDebug $ "Updated in DB: " <> show res'
+      pure ()
     Left err -> throwError $ InternalError $ show err
 
 createWithKvInReplica ::
@@ -668,7 +684,11 @@ createWithKvInReplica a = do
   dbConf' <- getReplicaDbConfig
   result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
   case result of
-    Right _ -> pure ()
+    Right _ -> do
+      if updatedMeshConfig.meshEnabled && not updatedMeshConfig.kvHardKilled
+        then logDebug $ "Created in KVReplica: " <> show tType
+        else logDebug $ "Created in DB: " <> show tType
+      pure ()
     Left err -> throwError $ InternalError $ show err
 
 deleteWithKvInReplica ::
@@ -698,5 +718,9 @@ deleteWithKvInReplica whereClause = do
   dbConf <- getReplicaDbConfig
   res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
   case res of
-    Right _ -> pure ()
+    Right res' -> do
+      if updatedMeshConfig.meshEnabled && not updatedMeshConfig.kvHardKilled
+        then logDebug $ "Deleted in KVReplica: " <> show res'
+        else logDebug $ "Deleted in DB: " <> show res'
+      pure ()
     Left err -> throwError $ InternalError $ show err
