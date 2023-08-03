@@ -198,6 +198,7 @@ const kannadaStrings = {
   "ASKED_FOR_MORE_MONEY": "ಹೆಚ್ಚಿನ ಹಣ ಕೇಳಿದರು",
   "START_": "ಪ್ರಾರಂಭಿಸಿ",
   "RIDE_NOT_SERVICEABLE": "ರೈಡ್ ಸರ್ವಿಸಬಲ್ ಅಲ್ಲ",
+  "APP_NOT_SERVICEABLE": "ಅಪ್ಲಿಕೇಶನ್ ಸೇವೆ ಸಲ್ಲಿಸುವುದಿಲ್ಲ",
   "CONFIRM_FOR": "ಗಾಗಿ ದೃಢೀಕರಿಸಿ",
   "ETA_WAS_TOO_SHORT": "ETA ತುಂಬಾ ಚಿಕ್ಕದಾಗಿದೆ.",
   "DRIVER_REQUESTED_TO_CANCEL": "ರದ್ದುಗೊಳಿಸಲು ಚಾಲಕ ನನ್ನನ್ನು ವಿನಂತಿಸಿದನು",

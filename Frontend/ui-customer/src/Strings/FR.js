@@ -205,6 +205,7 @@ export function getStringValue(key) {
     "START_" : "Commencer",
     "LIMIT_REACHED" : "Limite atteint. Essayez après un certain temps",
     "RIDE_NOT_SERVICEABLE" : "Service de transport non disponible",
+    "APP_NOT_SERVICEABLE": "Non réparable",
     "CONFIRM_FOR" : "Confirmer pour",
     "ETA_WAS_TOO_SHORT" : "Eta était trop courte.",
     "DRIVER_REQUESTED_TO_CANCEL" : "Le chauffeur m'a demandé d'annuler",

@@ -194,6 +194,7 @@ const bengaliStrings = {
   "ASKED_FOR_MORE_MONEY": "আরও টাকা চেয়েছিলেন",
   "START_": "শুরু করুন",
   "RIDE_NOT_SERVICEABLE": "রাইড সেবাযোগ্য নয়",
+  "APP_NOT_SERVICEABLE": "সেবাযোগ্য নয়",
   "CONFIRM_FOR": "জন্য নিশ্চিত করুন",
   "ETA_WAS_TOO_SHORT": "ইটিএ খুব ছোট ছিল।",
   "DRIVER_REQUESTED_TO_CANCEL": "ড্রাইভার আমাকে বাতিল করার জন্য অনুরোধ করেছিল",

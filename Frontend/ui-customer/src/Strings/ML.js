@@ -192,6 +192,7 @@ const malayalamStrings = {
   "ASKED_FOR_MORE_MONEY": "കൂടുതൽ പണം ആവശ്യപ്പെട്ടു",
   "START_": "ആരംഭം",
   "RIDE_NOT_SERVICEABLE": "റൈഡ് സേവനയോഗ്യമല്ല",
+  "APP_NOT_SERVICEABLE": "ആപ്പ് സേവനയോഗ്യമല്ല",
   "CONFIRM_FOR": "സ്ഥിരീകരിക്കുക",
   "ETA_WAS_TOO_SHORT": "ETA വളരെ ചെറുതായിരുന്നു.",
   "DRIVER_REQUESTED_TO_CANCEL": "റദ്ദാക്കാൻ ഡ്രൈവർ എന്നോട് അഭ്യർത്ഥിച്ചു",

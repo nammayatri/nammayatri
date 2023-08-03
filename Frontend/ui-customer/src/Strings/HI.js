@@ -198,6 +198,7 @@ const hindiStrings = {
   "ASKED_FOR_MORE_MONEY": "और पैसे मांगे",
   "START_": "प्रारंभ",
   "RIDE_NOT_SERVICEABLE": "सवारी सेवा योग्य नहीं",
+  "APP_NOT_SERVICEABLE": "ऐप सेवा योग्य नहीं है",
   "CONFIRM_FOR": "के लिए पुष्टि करें",
   "ETA_WAS_TOO_SHORT": "ईटीए बहुत छोटा था।",
   "DRIVER_REQUESTED_TO_CANCEL": "ड्राइवर ने मुझे रद्द करने का अनुरोध किया",

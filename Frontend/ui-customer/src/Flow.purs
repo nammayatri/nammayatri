@@ -643,6 +643,7 @@ homeScreenFlow = do
 
   -- TODO: HANDLE LOCATION LIST INITIALLY
   _ <- pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
+  setValueToLocalStore IS_SERVICEABLE (show currentState.homeScreen.props.isSrcServiceable)
   void $ lift $ lift $ toggleLoader false
   config <- getAppConfig
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }, data {config = config}})
