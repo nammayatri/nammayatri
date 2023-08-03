@@ -188,13 +188,14 @@ initData = {
     , isBanner : true
     , callSupportPopUp : false
     , isMockLocation: false
-    , isSpecialZone : true
+    , isSpecialZone : false
     , defaultPickUpPoint : ""
     , showChatNotification : false
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
+    , isChatOpened : false
     , tipViewProps : {
         stage : DEFAULT
       , isVisible : false
