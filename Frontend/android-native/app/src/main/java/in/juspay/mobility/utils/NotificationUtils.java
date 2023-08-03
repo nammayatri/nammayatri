@@ -73,6 +73,7 @@ import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.clevertap.android.sdk.CleverTapAPI;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -81,6 +82,7 @@ public class NotificationUtils {
 
     private static final String LOG_TAG = "LocationServices";
     private static final String TAG = "NotificationUtils";
+    private static Context context;
 
     public static String CHANNEL_ID = "General";
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
@@ -110,6 +112,7 @@ public class NotificationUtils {
     public static Bundle lastRideReq = new Bundle();
     public static  String versionName = BuildConfig.VERSION_NAME;
     public static int chatNotificationId = 18012023;
+    public static CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
 
     public interface NotificationCallback{
         public void triggerPop(String id,String type);
@@ -468,16 +471,20 @@ public class NotificationUtils {
             if (TRIP_CHANNEL_ID.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_started",params);
+                if (key.equals("USER")){
+                    mFirebaseAnalytics.logEvent("ny_user_ride_started", params);
+                    cleverTapCustomEvent ("ny_user_ride_started_fcm");
+                }
                 else
                     mFirebaseAnalytics.logEvent("ride_started",params);
             }
             if (TRIP_FINISHED.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
+                if (key.equals("USER")) {
+                    mFirebaseAnalytics.logEvent("ny_user_ride_completed", params);
+                    cleverTapCustomEvent("ny_user_ride_completed_fcm");
+                }
                 else
                     mFirebaseAnalytics.logEvent("ride_completed",params);
             }
@@ -485,8 +492,10 @@ public class NotificationUtils {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                 if (key.equals("USER"))
-                    if (CANCELLED_PRODUCT.equals(notificationType))
-                        mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
+                    if (CANCELLED_PRODUCT.equals(notificationType)) {
+                        mFirebaseAnalytics.logEvent("ny_user_ride_cancelled", params);
+                        cleverTapCustomEvent ("ny_user_ride_cancelled_fcm");
+                    }
                     else
                         mFirebaseAnalytics.logEvent("ny_user_ride_reallocation",params);
                 else
@@ -500,8 +509,10 @@ public class NotificationUtils {
             if (DRIVER_ASSIGNMENT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_assigned",params);
+                if (key.equals("USER")) {
+                    mFirebaseAnalytics.logEvent("ny_user_ride_assigned", params);
+                    cleverTapCustomEvent ("ny_user_ride_assigned_fcm");
+                }
                 else
                     mFirebaseAnalytics.logEvent("driver_assigned",params);
                 if (key.equals("DRIVER")) {
@@ -519,6 +530,11 @@ public class NotificationUtils {
                     notificationCallback.get(i).callFlowCustomer(notificationType);
                 }
             }
+    }
+    
+    public static void cleverTapCustomEvent(String event){
+        if (clevertapDefaultInstance!=null)
+            clevertapDefaultInstance.pushEvent(event);
     }
 
     private static Bitmap getBitmapfromUrl(String imageUrl) {

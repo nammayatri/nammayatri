@@ -17,7 +17,7 @@ module Screens.PermissionScreen.Controller where
 
 import Components.ErrorModal.Controller as ErrorModalController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import JBridge (isInternetAvailable, requestLocation, firebaseLogEvent)
+import JBridge (isInternetAvailable, requestLocation, firebaseLogEvent, cleverTapCustomEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, bind, pure, unit, (==), discard, ($))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
@@ -83,6 +83,7 @@ eval (InternetCallBackCustomer isInternetAvailable) state = do
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = continueWithCmd state [ do 
   _ <- pure $ firebaseLogEvent "ny_user_grant_location_permission"
+  _ <- pure $ cleverTapCustomEvent "ny_user_grant_location_permission"
   _ <- requestLocation unit
   pure NoAction
   ]

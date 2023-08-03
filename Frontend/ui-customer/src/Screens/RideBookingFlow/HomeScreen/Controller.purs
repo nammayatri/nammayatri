@@ -62,7 +62,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, getSuggestionfromKey, scrollToEnd, startLottieProcess, lottieAnimationConfig, methodArgumentCount)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, getSuggestionfromKey, scrollToEnd, startLottieProcess, lottieAnimationConfig, methodArgumentCount, cleverTapCustomEvent)
 import Helpers.Utils (Merchant(..), addToRecentSearches, clearCountDownTimer, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback, toString)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -994,6 +994,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ firebaseLogEvent "ny_user_where_to_btn"
+        _ <- pure $ cleverTapCustomEvent "ny_user_where_to_btn"
         exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}, data{source="Current Location"}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
@@ -2137,6 +2138,7 @@ estimatesFlow estimatedQuotes state = do
       zoneType = getSpecialTag $ if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _specialLocationTag else Nothing
   if not (null estimatedVarient) then do
     _ <- pure $ firebaseLogEvent "ny_user_estimate"
+    _ <- pure $ cleverTapCustomEvent "ny_user_estimate"
     let lang = getValueToLocalStore LANGUAGE_KEY
     exit
       $ SelectEstimate
