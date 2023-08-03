@@ -46,6 +46,7 @@ let consumerProperties =
       { groupId = "broadcast-messages-compute"
       , brockers = [ "localhost:29092" ]
       , autoCommit = None Integer
+      , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let kafkaConsumerCfg =

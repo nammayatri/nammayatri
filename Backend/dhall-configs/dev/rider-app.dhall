@@ -111,7 +111,10 @@ let slackCfg =
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
 
 let rideConfig =
       { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }
