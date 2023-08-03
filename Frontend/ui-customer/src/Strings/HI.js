@@ -528,7 +528,6 @@ const hindiStrings = {
   "REPORT_ISSUE_" : "मुद्दा प्रतिवेदन",
   "DONE" : "पूर्ण",
   "PLEASE_TELL_US_WHAT_WENT_WRONG" : "कृपया हमें बताएं कि क्या गलत हुआ",
-  "YOUR_FEEDBACK_HELPS_US" : "आपकी प्रतिक्रिया हमें नम्मा यात्री अनुभव को बेहतर बनाने में मदद करती है",
   "DID_YOU_FACE_ANY_ISSUE" : "क्या आपको किसी समस्या का सामना करना पड़ा?",
   "WE_NOTICED_YOUR_RIDE_ENDED_AWAY" : "हमने देखा है कि आपकी राइड आपके मूल गंतव्य से दूर जाकर समाप्त हुई",
   "GET_CALLBACK_FROM_US" : "हमसे कॉलबैक प्राप्त करें",

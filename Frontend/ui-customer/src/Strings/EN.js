@@ -528,7 +528,6 @@ const englishStrings = {
   "REPORT_ISSUE_" : "Report Issue",
   "DONE" : "Done",
   "PLEASE_TELL_US_WHAT_WENT_WRONG" : "Please tell us what went wrong",
-  "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Namma Yatri experience",
   "DID_YOU_FACE_ANY_ISSUE" : "Did you face any issue?",
   "WE_NOTICED_YOUR_RIDE_ENDED_AWAY" : "We noticed  that your ride ended away from your original destination.",
   "GET_CALLBACK_FROM_US" : "Get a callback from us",
