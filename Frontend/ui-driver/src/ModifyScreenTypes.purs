@@ -23,7 +23,7 @@ import Prelude (Unit, ($), show, discard, unit, pure, bind)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.Types (HomeScreenStage(..))
 import Storage (KeyStore(..), setValueToLocalStore, updateLocalStage)
-import Types.App (FlowBT, GlobalState(..), ScreenType(..), ScreenStage(..))
+import Types.App (FlowBT, GlobalState(..), ScreenStage(..), ScreenType(..))
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
@@ -62,6 +62,7 @@ modifyScreenState st =
     AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
     AcknowledgementScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { acknowledgementScreen = a state.acknowledgementScreen })
     AadhaarVerificationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { aadhaarVerificationScreen = a state.aadhaarVerificationScreen })
+    MultipleRCUploadScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { multipleRCUploadScreen = a state.multipleRCUploadScreen })
     GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state { globalProps = a state.globalProps })
 
 updateStage :: ScreenStage -> FlowBT String Unit

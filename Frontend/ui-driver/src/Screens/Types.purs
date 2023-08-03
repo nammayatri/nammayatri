@@ -386,6 +386,23 @@ type ApplicationStatusScreenProps =  {
   isAlternateMobileNumberExists :: Boolean
 }
 
+-----------------------------------------------MultipleRCUploadScreen ---------------------------------------
+type MultipleRCUploadScreenState = {
+  data :: MultipleRCUploadScreenData,
+  props :: MultipleRCUploadScreenProps
+}
+
+type MultipleRCUploadScreenData =  {
+  rcVerificationStatus :: String,
+  vehicleRegistrationNumber :: String,
+  reEnterVehicleRegistrationNumber :: String
+}
+
+type MultipleRCUploadScreenProps =  {
+  isVerificationFailed :: Boolean,
+  isButtonEnabled :: Boolean
+}
+
 --------------------------------------------------------------- EnterMobileNumberScreenState -----------------------------------------------------------------------------
 type EnterMobileNumberScreenState = {
   data :: EnterMobileNumberScreenStateData,

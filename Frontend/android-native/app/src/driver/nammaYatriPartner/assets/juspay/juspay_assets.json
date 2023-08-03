@@ -199,6 +199,7 @@
       "ny_ic_dismiss" : true,
       "ny_ic_dl_blue" : true,
       "ny_ic_dl_demo" : true,
+      "ny_ic_document_review" : true,
       "ny_ic_download_button" : true,
       "ny_ic_driver_gender_banner" : true,
       "ny_ic_driver_license_card" : true,

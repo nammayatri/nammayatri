@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..))
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, MultipleRCUploadScreenState, UpdatePopupType(..))
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
@@ -53,6 +53,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
+import Screens.MultipleRCUploadScreen.ScreenData as MultipleRCUploadScreenData
 import Screens.Types (HomeScreenStage(..), GlobalProps)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -94,6 +95,7 @@ newtype GlobalState = GlobalState {
   , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
   , acknowledgementScreen :: AcknowledgementScreenState
   , aadhaarVerificationScreen :: AadhaarVerificationScreenState
+  , multipleRCUploadScreen :: MultipleRCUploadScreenState
   , globalProps :: GlobalProps
   }
 
@@ -135,6 +137,7 @@ defaultGlobalState = GlobalState{
 , loaderOverlay : LoaderOverlayScreenData.initData
 , acknowledgementScreen : AcknowledgementScreenData.initData
 , aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData
+, multipleRCUploadScreen : MultipleRCUploadScreenData.initData
 , globalProps : defaultGlobalProps
 }
 
@@ -178,6 +181,7 @@ data ScreenType =
   | AppUpdatePopUpScreenType (AppUpdatePopUpScreenState -> AppUpdatePopUpScreenState)
   | AcknowledgementScreenType (AcknowledgementScreenState -> AcknowledgementScreenState)
   | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
+  | MultipleRCUploadScreenType (MultipleRCUploadScreenState -> MultipleRCUploadScreenState)
   | GlobalPropsType (GlobalProps -> GlobalProps)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
@@ -193,6 +197,9 @@ data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
                             | NOTIFICATION_FLOW
                             | SELECTED_TAB RideHistoryScreenState
                             | OPEN_PAYMENT_HISTORY RideHistoryScreenState
+
+data MULTIPL_RC_UPLOAD_SCREEN_OUTPUT = SUCCESS_SCREEN MultipleRCUploadScreenState
+                                     | GO_TO_VEHICLE_DETAILS MultipleRCUploadScreenState
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
