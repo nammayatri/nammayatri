@@ -141,49 +141,9 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
 let tables =
-      { enableKVForWriteAlso =
-            [ "registration_token"
-            , "search_request"
-            , "search_request_for_driver"
-            , "search_try"
-            , "driver_information"
-            , "driver_flow_status"
-            , "business_event"
-            , "booking"
-            , "ride"
-            , "estimate"
-            , "fare_parameters"
-            , "fare_parameters_progressive_details"
-            , "booking_location"
-            , "ride_details"
-            , "rider_details"
-            , "driver_stats"
-            , "driver_quote"
-            , "search_request_location"
-            ]
-          : List Text
-      , enableKVForRead =
-            [ "registration_token"
-            , "search_request"
-            , "search_request_for_driver"
-            , "search_try"
-            , "driver_information"
-            , "driver_flow_status"
-            , "business_event"
-            , "booking"
-            , "ride"
-            , "estimate"
-            , "fare_parameters"
-            , "fare_parameters_progressive_details"
-            , "booking_location"
-            , "ride_details"
-            , "rider_details"
-            , "driver_stats"
-            , "driver_quote"
-            , "search_request_location"
-            ]
-          : List Text
-      , tableAllocation = 50 : Natural
+      { enableKVForWriteAlso = [] : List Text
+      , enableKVForRead = [] : List Text
+      , tableAllocation = 0 : Natural
       }
 
 let registryMap =
