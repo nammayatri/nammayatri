@@ -268,14 +268,14 @@ view push state =
                 , clickable true
                 ]
                 [ linearLayout
-                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver, ConfirmingLocation] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                    [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []
                 , linearLayout
                     [ width MATCH_PARENT
-                    , height if state.props.currentStage == ConfirmingLocation && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                    , height MATCH_PARENT
                     , background Color.transparent
                     , padding (PaddingBottom if os == "IOS" then 20 else 35)
                     , gravity CENTER
