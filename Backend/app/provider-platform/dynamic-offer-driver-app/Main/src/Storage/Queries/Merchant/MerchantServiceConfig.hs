@@ -68,7 +68,7 @@ findByMerchantIdAndService (Id merchantId) serviceName = findOneWithKV [Se.And [
 --     return merchantServiceConfig
 
 findOne :: (L.MonadFlow m, Log m) => ServiceName -> m (Maybe MerchantServiceConfig)
-findOne serviceName = findOneWithKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName]
+findOne serviceName = findAllWithOptionsKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName] (Se.Desc BeamMSC.createdAt) (Just 1) Nothing <&> listToMaybe
 
 -- upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
 -- upsertMerchantServiceConfig merchantServiceConfig = do
