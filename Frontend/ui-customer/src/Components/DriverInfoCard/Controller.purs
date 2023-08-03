@@ -51,7 +51,8 @@ type DriverInfoCardProps =
     showCallPopUp :: Boolean,
     isSpecialZone :: Boolean,
     estimatedTime :: String,
-    zoneType :: ZoneType
+    zoneType :: ZoneType,
+    isChatOpened :: Boolean
   }
 
 type DriverInfoCardData =

@@ -45,6 +45,7 @@ type Config = {
   unReadMessages :: Boolean,
   specialLocationTag :: Mb.Maybe String,
   waitTime :: String,
+  isChatOpened :: Boolean,
   requestedVehicleVariant :: Mb.Maybe String
   }
 
@@ -75,5 +76,6 @@ config = {
   currentStage : RideAccepted,
   unReadMessages : false,
   specialLocationTag : Mb.Nothing,
+  isChatOpened : false,
   requestedVehicleVariant : Mb.Nothing
 }

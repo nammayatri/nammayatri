@@ -256,6 +256,12 @@ function refreshFlow(){
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
   let token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
   if ((diff > refreshThreshold) && (token != "__failed")){
+    if(JBridge.removeChatMessageCallback){
+      JBridge.removeChatMessageCallback();
+    }
+    if(JBridge.removeCallBackOpenChatScreen) {
+      JBridge.removeCallBackOpenChatScreen();
+    }
     purescript.onConnectivityEvent("REFRESH")();
   }
 }
