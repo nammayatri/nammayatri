@@ -27,7 +27,7 @@ import Helpers.Utils (getMerchant, Merchant(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Merchant.Utils (getValueFromConfig)
-import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=))
+import Prelude (Unit, const, unit, not, ($), (*), (/), (<>), (==), (||), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -85,34 +85,34 @@ settingsView state push =
   , padding (Padding 18 24 18 8)
   , orientation VERTICAL
   ][
-     settingsMenuView {imageUrl : "ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
-    , settingsMenuView {imageUrl : "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
+     settingsMenuView {imageUrl : "ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} state push
+    , settingsMenuView {imageUrl : "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} state push
     , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then emptyLayout
-      else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
-    , settingsMenuView {imageUrl : "ic_help,https://assets.juspay.in/nammayatri/images/user/ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
-    , settingsMenuView {imageUrl : "ic_change_language,https://assets.juspay.in/nammayatri/images/user/ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
+      else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} state push
+    , settingsMenuView {imageUrl : "ic_help,https://assets.juspay.in/nammayatri/images/user/ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} state push
+    , settingsMenuView {imageUrl : "ic_change_language,https://assets.juspay.in/nammayatri/images/user/ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} state push
     , linearLayout
       [ width MATCH_PARENT
       , height (V 1)
       , background Color.grey900
       , margin ( MarginVertical 8 8 )
       ][]
-    , settingsMenuView {imageUrl : "ic_share,https://assets.juspay.in/nammayatri/images/user/ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
-    , if ((getValueFromConfig "showDashboard") == "false") || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then emptyLayout 
-      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} push
-    , settingsMenuView {imageUrl : "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
+    , settingsMenuView {imageUrl : "ic_share,https://assets.juspay.in/nammayatri/images/user/ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} state push
+    , if ((getValueFromConfig "showDashboard") == "false") || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then emptyLayout
+      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} state push
+    , settingsMenuView {imageUrl : "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} state push
     , logoutView state push
   ]
-  
-getPreviousVersion :: String -> String 
-getPreviousVersion _ = 
-  if os == "IOS" then 
-    case getMerchant FunctionCall of 
+
+getPreviousVersion :: String -> String
+getPreviousVersion _ =
+  if os == "IOS" then
+    case getMerchant FunctionCall of
       NAMMAYATRI -> "1.2.5"
       JATRISAATHI -> "0.0.0"
       _ -> "1.0.0"
-    else do 
-      case getMerchant FunctionCall of 
+    else do
+      case getMerchant FunctionCall of
         JATRISAATHI -> "0.0.0"
         _ -> "1.2.1"
 
@@ -136,7 +136,7 @@ logoutView state push =
       , background Color.grey900
       , margin ( MarginVertical 8 8 )
       ][]
-  , settingsMenuView {imageUrl : "ic_logout,https://assets.juspay.in/nammayatri/images/user/ic_logout.png", text : (getString LOGOUT_), tag : SETTINGS_LOGOUT, iconUrl : ""} push
+  , settingsMenuView {imageUrl : "ic_logout,https://assets.juspay.in/nammayatri/images/user/ic_logout.png", text : (getString LOGOUT_), tag : SETTINGS_LOGOUT, iconUrl : ""} state push
     ]
 
 ------------------------------ profileView --------------------------------
@@ -230,14 +230,15 @@ profileView state push =
       ]]
 
 ------------------------------ settingsMenuView --------------------------------
-settingsMenuView :: forall w. Item -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-settingsMenuView item push  =
+settingsMenuView :: forall w. Item -> SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+settingsMenuView item state push  =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
   , padding (Padding 0 16 16 16 )
+  , visibility if not state.showFavourite && item.tag == SETTINGS_FAVOURITES then GONE else VISIBLE
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
                               SETTINGS_FAVOURITES     -> GoToFavourites

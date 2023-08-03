@@ -330,6 +330,7 @@ dummySettingBar = {
   , opened : CLOSED
   , email : Nothing
   , gender : Nothing
+  , showFavourite : true
   }
 
 dummyAddress :: Address

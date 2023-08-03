@@ -791,7 +791,7 @@ settingSideBarView push state =
     , height MATCH_PARENT
     , width MATCH_PARENT
     ]
-    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar) ]
+    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{ showFavourite = not $ any (_ == state.props.currentStage) [RideAccepted, RideStarted]}) ]
 
 ------------------------------- homeScreenView --------------------------
 homeScreenView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

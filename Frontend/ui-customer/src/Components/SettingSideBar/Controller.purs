@@ -51,6 +51,7 @@ type SettingSideBarState =
   , number :: String
   , email :: Maybe String
   , gender :: Maybe String
+  , showFavourite :: Boolean
   }
 
 type Item =
