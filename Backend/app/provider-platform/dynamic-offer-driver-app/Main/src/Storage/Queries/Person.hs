@@ -30,7 +30,6 @@ import qualified Database.Beam.Query ()
 import qualified Domain.Types.Booking as Booking
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
-import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.MediaFile
@@ -454,18 +453,28 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id mercha
 
 findAllDriverIdExceptProvided :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
-  let personSeCondition = [Se.Is BeamP.merchantId $ Se.Eq merchantId]
-  person <- findAllPersonWithSeConditions personSeCondition
-  let diSeCondition =
-        [ Se.And
-            ( [Se.Is BeamDI.driverId $ Se.Not $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
-                <> [Se.Is BeamDI.verified $ Se.Eq True]
-                <> [Se.Is BeamDI.enabled $ Se.Eq True]
-                <> [Se.Is BeamDI.driverId $ Se.Not $ Se.In $ getId <$> driverIdsToBeExcluded]
-            )
-        ]
-  infoList <- findAllDriverInformationWithSeConditions diSeCondition
-  pure (map (personIdToDrivrId . DDI.driverId) infoList)
+  dbConf <- getMasterBeamConfig
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \(person, driverInfo) ->
+              person.merchantId B.==?. B.val_ merchantId
+                B.&&?. driverInfo.verified B.==?. B.val_ True
+                B.&&?. driverInfo.enabled B.==?. B.val_ True
+                B.&&?. driverInfo.blocked B.==?. B.val_ False
+                B.&&?. B.sqlBool_ (B.not_ (driverInfo.driverId `B.in_` (B.val_ . getId <$> driverIdsToBeExcluded)))
+          )
+          do
+            person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
+            driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
+            pure (person, driverInfo)
+  case result of
+    Right x -> do
+      let persons = fmap fst x
+      p <- catMaybes <$> mapM fromTType' persons
+      pure (personIdToDrivrId . (Person.id :: PersonE e -> Id Person) <$> p)
+    Left _ -> pure []
   where
     personIdToDrivrId :: Id Person -> Id Driver
     personIdToDrivrId = cast
