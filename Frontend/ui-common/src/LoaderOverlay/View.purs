@@ -21,7 +21,7 @@ import Font.Style as FontStyle
 import LoaderOverlay.Controller (Action, ScreenOutput, eval)
 import LoaderOverlay.ScreenData (LoaderOverlayState)
 import Prelude (Unit, ($), (<>), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width, color)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width, color, clickable)
 import Styles.Colors as Color
 import MerchantConfig.Utils(getValueFromConfig)
 
@@ -43,6 +43,7 @@ view _ state =
     , orientation VERTICAL
     , background Color.black9000
     , gravity CENTER
+    , clickable true
     ][ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
