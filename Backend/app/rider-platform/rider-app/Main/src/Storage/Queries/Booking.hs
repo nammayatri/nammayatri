@@ -18,6 +18,11 @@ module Storage.Queries.Booking where
 
 import Control.Applicative
 import Data.Time (addUTCTime)
+-- import Kernel.Storage.Esqueleto as Esq
+
+-- import Storage.Queries.FullEntityBuilders (buildFullBooking)
+
+import qualified Database.Beam as B
 import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
@@ -26,8 +31,6 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
--- import Kernel.Storage.Esqueleto as Esq
-
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -36,11 +39,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverOffer ()
--- import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import qualified Storage.Queries.Quote ()
 import Storage.Queries.RentalSlab as QueryRS
 import qualified Storage.Queries.TripTerms as QTT
@@ -256,8 +259,22 @@ findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
+-- findCountByRideIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
+-- findCountByRideIdAndStatus (Id personId) status = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
+
 findCountByRideIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
-findCountByRideIdAndStatus (Id personId) status = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
+findCountByRideIdAndStatus (Id personId) status = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            (\booking' -> (BeamB.riderId booking' B.==?. B.val_ personId) B.&&?. BeamB.status booking' B.==?. B.val_ status)
+            do
+              B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
 -- findCountByRideIdStatusAndTime :: Transactionable m => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 -- findCountByRideIdStatusAndTime personId status startTime endTime = do
@@ -273,8 +290,22 @@ findCountByRideIdAndStatus (Id personId) status = findAllWithKV [Se.And [Se.Is B
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
+-- findCountByRideIdStatusAndTime :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
+-- findCountByRideIdStatusAndTime (Id personId) status startTime endTime = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startTime, Se.Is BeamB.createdAt $ Se.LessThan endTime]] <&> length
+
 findCountByRideIdStatusAndTime :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
-findCountByRideIdStatusAndTime (Id personId) status startTime endTime = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startTime, Se.Is BeamB.createdAt $ Se.LessThan endTime]] <&> length
+findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            (\booking' -> (BeamB.riderId booking' B.==?. B.val_ personId) B.&&?. BeamB.status booking' B.==?. B.val_ status B.&&?. B.sqlBool_ (BeamB.createdAt booking' B.>=. B.val_ startTime) B.&&?. B.sqlBool_ (BeamB.createdAt booking' B.<. B.val_ endTime))
+            do
+              B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
 -- findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
 -- findByRiderIdAndStatus personId statusList = Esq.buildDType $ do

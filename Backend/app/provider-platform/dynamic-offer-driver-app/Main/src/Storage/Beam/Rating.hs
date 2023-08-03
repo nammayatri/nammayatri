@@ -24,6 +24,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -53,6 +54,12 @@ instance ModelMeta RatingT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Rating = RatingT Identity
+
+ratingTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RatingT)
+ratingTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "rating"
+    <> B.modifyTableFields ratingTMod
 
 instance FromJSON Rating where
   parseJSON = A.genericParseJSON A.defaultOptions

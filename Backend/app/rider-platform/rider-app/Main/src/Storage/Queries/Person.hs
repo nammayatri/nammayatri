@@ -533,8 +533,21 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
+-- countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
+-- countCustomers merchantId = findAllWithKV [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
+
 countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
-countCustomers merchantId = findAllWithKV [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
+countCustomers (Id merchantId) = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            (\person -> (BeamP.merchantId person B.==?. B.val_ merchantId) B.&&?. BeamP.role person B.==?. B.val_ USER)
+            do
+              B.all_ (BeamCommon.person BeamCommon.atlasDB)
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
 -- fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
 -- fetchRidesCount personId = do

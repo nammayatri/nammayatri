@@ -27,6 +27,7 @@ import Storage.Beam.Geometry
 import Storage.Beam.Message.MessageReport
 import Storage.Beam.Person
 import Storage.Beam.QuoteSpecialZone
+import Storage.Beam.Rating (RatingT, ratingTable)
 import Storage.Beam.Ride.Table
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
@@ -54,7 +55,8 @@ atlasDB =
         rDetails = rDetailsTable,
         callStatus = callStatusTable,
         quoteSpecialZone = quoteSpecialZoneTable,
-        messageReport = messageReportTable
+        messageReport = messageReportTable,
+        rating = ratingTable
       }
 
 data AtlasDB f = AtlasDB
@@ -76,6 +78,7 @@ data AtlasDB f = AtlasDB
     rDetails :: f (B.TableEntity RiderDetailsT),
     callStatus :: f (B.TableEntity CallStatusT),
     quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
-    messageReport :: f (B.TableEntity MessageReportT)
+    messageReport :: f (B.TableEntity MessageReportT),
+    rating :: f (B.TableEntity RatingT)
   }
   deriving (Generic, B.Database be)

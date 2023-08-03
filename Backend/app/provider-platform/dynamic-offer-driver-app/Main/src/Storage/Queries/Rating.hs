@@ -15,6 +15,7 @@
 
 module Storage.Queries.Rating where
 
+import qualified Database.Beam as B
 import Domain.Types.Person
 import Domain.Types.Rating as DR
 import Domain.Types.Ride
@@ -24,6 +25,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Rating as BeamR
 
 create :: (L.MonadFlow m, Log m) => DR.Rating -> m ()
@@ -43,10 +45,23 @@ findAllRatingsForPerson :: (L.MonadFlow m, Log m) => Id Person -> m [Rating]
 findAllRatingsForPerson driverId = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
 
 findRatingForRide :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
-findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
+findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]
+
+-- findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
+-- findAllRatingUsersCountByPerson (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId] <&> length
 
 findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
-findAllRatingUsersCountByPerson (Id driverId) = findAllWithKV [Se.Is BeamR.id $ Se.Eq driverId] <&> length
+findAllRatingUsersCountByPerson (Id driverId) = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            (\rating' -> BeamR.driverId rating' B.==?. B.val_ driverId)
+            do
+              B.all_ (BeamCommon.rating BeamCommon.atlasDB)
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
 instance FromTType' BeamR.Rating Rating where
   fromTType' BeamR.RatingT {..} = do
