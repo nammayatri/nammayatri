@@ -437,7 +437,7 @@ eval CallDriver state =
   continue state{props{callDriver = true}}
 
 eval CallCustomerSupport state = do 
-  void $ pure $ showDialer $ getSupportNumber ""
+  void $ pure $ showDialer (getSupportNumber "") false
   continue state
 
 eval (DeactivateRc rcType) state = do

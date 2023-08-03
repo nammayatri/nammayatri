@@ -126,7 +126,7 @@ languagesChoices :: Array CheckBoxOptions
 languagesChoices =
   [ { value : "EN_US"
     , text : "English"
-    , subText : "ಆಂಗ್ಲ"
+    , subText : ""
     , isSelected : false
     }
   , { value: "KN_IN"
