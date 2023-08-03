@@ -32,7 +32,10 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
-let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
 
 let rccfg =
       { connectHost = "localhost"

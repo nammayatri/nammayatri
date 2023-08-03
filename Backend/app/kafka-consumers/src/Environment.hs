@@ -19,6 +19,7 @@ import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
+import qualified Kernel.Streaming.Kafka.Producer.Types as KT
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
@@ -48,12 +49,14 @@ instance FromDhall ConsumerConfig where
         record $
           let cgId = field "groupId" strictText
               bs = field "brockers" (map BrokerAddress <$> list strictText)
+              kc = field "kafkaCompression" (KT.castCompression <$> auto)
               isAutoCommitM = shouldAutoCommit <$> field "autoCommit" (maybe integer)
-           in (\a b c -> a <> logLevel KafkaLogInfo <> b <> c)
+           in (\a b c d -> a <> logLevel KafkaLogInfo <> b <> c <> compression d)
                 . (groupId . ConsumerGroupId)
                 <$> cgId
                 <*> isAutoCommitM
                 <*> (brokersList <$> bs)
+                <*> kc
 
       shouldAutoCommit = \case
         Nothing -> noAutoCommit
