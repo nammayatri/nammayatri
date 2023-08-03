@@ -268,13 +268,6 @@ data StuckRideItem = StuckRideItem
 findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-  rides <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
-            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
-          ]
-      ]
   bookings <-
     findAllWithKV
       [ Se.And
@@ -282,31 +275,12 @@ findStuckRideItems (Id merchantId) bookingIds now = do
             Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
           ]
       ]
-
-  let rideBooking = foldl' (getRideWithBooking bookings) [] rides
-  pure $ mkStuckRideItem <$> rideBooking
-  where
-    getRideWithBooking bookings acc ride' =
-      let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
-       in acc <> ((\x -> (ride'.id, x.id, x.riderId)) <$> bookings')
-
-    mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
-
-findStuckRideItemsInReplica :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItemsInReplica (Id merchantId) bookingIds now = do
-  let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   rides <-
-    findAllWithKvInReplica
+    findAllWithKV
       [ Se.And
           [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
-            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
-          ]
-      ]
-  bookings <-
-    findAllWithKvInReplica
-      [ Se.And
-          [ Se.Is BeamB.providerId $ Se.Eq merchantId,
-            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore,
+            Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings
           ]
       ]
 
