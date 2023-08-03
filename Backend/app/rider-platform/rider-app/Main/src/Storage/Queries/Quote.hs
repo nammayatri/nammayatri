@@ -144,22 +144,14 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = do
       let doId = case quote.quoteDetails of
             DQ.DriverOfferDetails driverOffer -> Just $ getId driverOffer.id
             _ -> Nothing
-      let doffer' = filter (\d -> getId (d.id) == fromJust doId) dOffer
-       in res <> (quote <$ doffer')
-
-findByBppIdAndBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Text -> Text -> m (Maybe Quote)
-findByBppIdAndBPPQuoteIdInReplica bppId bppQuoteId = do
-  quoteList <- findAllWithKvInReplica [Se.Is BeamQ.providerId $ Se.Eq bppId]
-  dOffer <- QueryDO.findByBPPQuoteIdInReplica bppQuoteId
-  let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
-  pure $ listToMaybe quoteWithDoOfferId
-  where
-    getQuoteWithDOffer dOffer res quote = do
-      let doId = case quote.quoteDetails of
-            DQ.DriverOfferDetails driverOffer -> Just $ getId driverOffer.id
-            _ -> Nothing
-      let doffer' = filter (\d -> getId (d.id) == fromJust doId) dOffer
-       in res <> (quote <$ doffer')
+      ( if isJust doId
+          then
+            ( do
+                let doffer' = filter (\d -> getId (d.id) == fromJust doId) dOffer
+                 in res <> (quote <$ doffer')
+            )
+          else res
+        )
 
 -- lets check this query as bppquoteId is needed to find driver offer in domain
 
