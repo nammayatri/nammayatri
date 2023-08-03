@@ -16,12 +16,12 @@ module Mobility.AppBackend.Queries where
 
 import qualified "rider-app" Domain.Types.Merchant as DM
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Geofencing (GeoRestriction (Regions))
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as K
 import Kernel.Types.Logging (Log)
-import "rider-app" Lib.Utils
 import Sequelize as Se
 import "rider-app" Storage.Beam.Merchant as BeamM
 

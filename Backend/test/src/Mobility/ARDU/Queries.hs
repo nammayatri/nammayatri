@@ -16,11 +16,11 @@ module Mobility.ARDU.Queries where
 
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as DBooking
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as K
 import Kernel.Types.Logging (Log)
-import "dynamic-offer-driver-app" Lib.Utils
 import Sequelize as Se
 import qualified Servant.Client as Servant
 import "dynamic-offer-driver-app" Storage.Beam.Booking as BeamB
