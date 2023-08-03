@@ -745,3 +745,4 @@ const kannadaStrings = {
 	NEED_HELP_JOINING_THE_PLAN : "ಪ್ಲಾನ್ ಗೆ ಸೇರಲು ಸಹಾಯ ಬೇಕೇ? ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ",
   NEED_HELP_CALL_SUPPORT : "ಸಹಾಯ ಬೇಕೇ? <span style='color:#2194FF'>ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ</span>"
 }
+ 

@@ -273,8 +273,15 @@ view push state =
                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
+                    , visibility if state.props.isSrcServiceable then VISIBLE else GONE
                     ]
                     []
+                , imageView
+                    [ width  MATCH_PARENT
+                    , height  MATCH_PARENT
+                    , imageWithFallback $ "ny_ic_map_blur," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_map_blur.png"
+                    , visibility if state.props.isSrcServiceable then GONE else VISIBLE
+                    ]
                 , linearLayout
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
@@ -657,6 +664,7 @@ sourceUnserviceableView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , cornerRadii $ Corners 24.0 true true false false
         , alignParentBottom "true,-1"
         , gravity BOTTOM
         ]
@@ -900,7 +908,7 @@ homeScreenTopIconView push state =
                 , height $ V 16
                 , width $ V 16
                 , margin (Margin 5 5 5 5)
-                , onClick push (const $ OpenSearchLocation)
+                , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
                 , gravity BOTTOM
                 ]
             , linearLayout
@@ -908,7 +916,7 @@ homeScreenTopIconView push state =
                 , width MATCH_PARENT
                 , height WRAP_CONTENT
                 , disableClickFeedback true
-                , onClick push (const $ OpenSearchLocation)
+                , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
                 ]
                 [ textView
                     $ [ height WRAP_CONTENT
@@ -922,10 +930,13 @@ homeScreenTopIconView push state =
                 , textView
                     $ [ height WRAP_CONTENT
                       , width MATCH_PARENT
-                      , text if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION)
+                      , text if state.props.isSrcServiceable then
+                              (if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION))
+                             else
+                               getString APP_NOT_SERVICEABLE
                       , maxLines 1
                       , ellipsize true
-                      , color Color.black800
+                      , color if state.props.isSrcServiceable then Color.black800 else Color.greyDark
                       , gravity LEFT
                       , lineHeight "23"
                       ]

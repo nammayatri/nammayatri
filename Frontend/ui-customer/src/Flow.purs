@@ -1569,7 +1569,8 @@ helpAndSupportScreenFlow = do
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit
 myRidesScreenFlow fromNavBar = do
   config <- getAppConfig Constants.appConfig
-  modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}, data{config = config}})
+  (GlobalState globalState) <- getState
+  modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}, data{config = config, isSrcServiceable = globalState.homeScreen.props.isSrcServiceable}})
   flow <- UI.myRidesScreen
   case flow of
     REFRESH state -> myRidesScreenFlow state.props.fromNavBar
