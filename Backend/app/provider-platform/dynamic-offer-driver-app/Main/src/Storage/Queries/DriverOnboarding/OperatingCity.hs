@@ -21,10 +21,10 @@ import qualified Database.Beam as B
 import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Merchant
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, getMasterBeamConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC

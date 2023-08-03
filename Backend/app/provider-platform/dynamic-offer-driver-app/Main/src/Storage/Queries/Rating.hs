@@ -19,10 +19,10 @@ import Domain.Types.Person
 import Domain.Types.Rating as DR
 import Domain.Types.Ride
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 
@@ -45,8 +45,8 @@ findAllRatingsForPerson driverId = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq $
 findRatingForRide :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 
-findRatingForRideInReplica :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
-findRatingForRideInReplica (Id rideId) = findOneWithKvInReplica [Se.Is BeamR.id $ Se.Eq rideId]
+findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
+findAllRatingUsersCountByPerson (Id driverId) = findAllWithKV [Se.Is BeamR.id $ Se.Eq driverId] <&> length
 
 instance FromTType' BeamR.Rating Rating where
   fromTType' BeamR.RatingT {..} = do
@@ -73,6 +73,3 @@ instance ToTType' BeamR.Rating Rating where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt
       }
-
-findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
-findAllRatingUsersCountByPerson (Id driverId) = findAllWithKV [Se.Is BeamR.id $ Se.Eq driverId] <&> length

@@ -27,11 +27,12 @@ import Data.Either
 import qualified Database.Beam as B
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
-import Lib.Utils
+import Lib.Utils (containsPoint')
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 

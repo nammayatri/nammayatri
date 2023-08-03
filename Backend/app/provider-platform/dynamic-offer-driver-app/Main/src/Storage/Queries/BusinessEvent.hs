@@ -21,10 +21,10 @@ import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV)
 import qualified Storage.Beam.BusinessEvent as BeamBE
 
 logBusinessEvent ::

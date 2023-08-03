@@ -33,15 +33,18 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+-- import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
--- import qualified Kernel.Storage.Esqueleto as DB
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
--- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -255,8 +258,8 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
-  -- altNumAttempts <- Esq.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
-  altNumAttempts <- QR.getAlternateNumberAttempts (Id entityId)
+  altNumAttempts <- B.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
+  -- altNumAttempts <- QR.getAlternateNumberAttempts (Id entityId)
   now <- getCurrentTime
   return $
     SR.RegistrationToken

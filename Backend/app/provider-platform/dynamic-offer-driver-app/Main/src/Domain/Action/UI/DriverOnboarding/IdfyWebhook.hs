@@ -26,10 +26,12 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
+-- import Kernel.Storage.Esqueleto hiding (Value, val)
+
+import Kernel.Beam.Functions
 import qualified Kernel.External.Verification.Idfy.WebhookHandler as Idfy
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto hiding (Value, val)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -86,8 +88,8 @@ onVerify resp respDump = do
   _ <- IVQuery.updateResponse resp.request_id resp.status respDump
 
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
-  -- person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-  person <- QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+  person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+  -- person <- QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   -- running statusHandler to enable Driver
   _ <- Status.statusHandler (verificationReq.driverId, person.merchantId) verificationReq.multipleRC
 

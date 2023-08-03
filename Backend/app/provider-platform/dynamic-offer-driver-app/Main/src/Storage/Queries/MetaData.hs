@@ -18,10 +18,10 @@ module Storage.Queries.MetaData where
 import Domain.Types.MetaData
 import Domain.Types.Person
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MetaData as BeamMD
 

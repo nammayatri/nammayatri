@@ -17,11 +17,12 @@ module Storage.Queries.SearchRequest where
 
 import Domain.Types.SearchRequest as Domain
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
+
+import Kernel.Beam.Functions
+import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -34,9 +35,6 @@ create dsReq = createDSReq dsReq >> QSRL.create dsReq.fromLocation >> QSRL.creat
 
 findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
-findByIdInReplica (Id searchRequestId) = findOneWithKvInReplica [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
 getRequestIdfromTransactionId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe (Id SearchRequest))
 getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSR.transactionId $ Se.Eq tId] <&> fmap Domain.id
@@ -105,14 +103,3 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.specialLocationTag = specialLocationTag
       }
-
--- updateAutoAssign ::
---   Id SearchRequest ->
---   Bool ->
---   SqlDB ()
--- updateAutoAssign searchRequestId autoAssignedEnabled = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled)
---       ]

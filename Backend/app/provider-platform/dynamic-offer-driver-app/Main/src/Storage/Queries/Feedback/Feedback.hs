@@ -21,9 +21,9 @@ import Data.Function hiding (id)
 import Data.Maybe
 import Domain.Types.Feedback.Feedback
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Storage.Beam.Feedback.Feedback as BeamF
 
 create :: (L.MonadFlow m, Log m) => Feedback -> m ()

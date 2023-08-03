@@ -23,11 +23,11 @@ where
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 

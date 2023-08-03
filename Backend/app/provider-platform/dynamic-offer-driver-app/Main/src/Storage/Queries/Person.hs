@@ -39,33 +39,19 @@ import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps as Maps
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
-import Lib.Utils
-  ( FromTType' (fromTType'),
-    ToTType' (toTType'),
-    createWithKV,
-    deleteWithKV,
-    findAllWithKV,
-    findAllWithKvInReplica,
-    findAllWithOptionsKV,
-    findOneWithKV,
-    findOneWithKvInReplica,
-    getMasterBeamConfig,
-    updateOneWithKV,
-    updateWithKV,
-  )
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
@@ -93,9 +79,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m, EsqDBReplicaFlow m r) => Id Person -> m (Maybe Person)
-findByIdInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamP.id $ Se.Eq personId]
 
 data FullDriver = FullDriver
   { person :: Person,
@@ -255,24 +238,11 @@ getOnRideStuckDriverIds = do
   rideIds <- findAllWithKV [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
   findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> rideIds)]]
 
-getOnRideStuckDriverIdsInReplica :: (L.MonadFlow m, Log m) => m [DriverInformation]
-getOnRideStuckDriverIdsInReplica = do
-  rideIds <- findAllWithKvInReplica [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
-  findAllWithKvInReplica [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> rideIds)]]
-
 getVehicles ::
   (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
   m [Vehicle]
 getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
-  where
-    personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
-
-getVehiclesInReplica ::
-  (L.MonadFlow m, Log m) =>
-  [DriverInformation] ->
-  m [Vehicle]
-getVehiclesInReplica driverInfo = findAllWithKvInReplica [Se.Is BeamV.driverId $ Se.In personKeys]
   where
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
@@ -284,31 +254,12 @@ getDrivers vehicles = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
   where
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
-getDriversInReplica ::
-  (L.MonadFlow m, Log m) =>
-  [Vehicle] ->
-  m [Person]
-getDriversInReplica vehicles = findAllWithKvInReplica [Se.Is BeamP.id $ Se.In personKeys]
-  where
-    personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
-
 getDriverQuote ::
   (L.MonadFlow m, Log m) =>
   [Person] ->
   m [DriverQuote]
 getDriverQuote persons =
   findAllWithKV
-    [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
-    ]
-  where
-    personKeys = getId <$> fetchDriverIDsFromPersons persons
-
-getDriverQuoteInReplica ::
-  (L.MonadFlow m, Log m) =>
-  [Person] ->
-  m [DriverQuote]
-getDriverQuoteInReplica persons =
-  findAllWithKvInReplica
     [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
     ]
   where
@@ -325,30 +276,11 @@ getBookingInfo driverQuote =
   where
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
 
-getBookingInfoInReplica ::
-  (L.MonadFlow m, Log m) =>
-  [DriverQuote] ->
-  m [Booking.Booking]
-getBookingInfoInReplica driverQuote =
-  findAllWithKvInReplica
-    [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
-    ]
-  where
-    personsKeys = fetchDriverIDsTextFromQuote driverQuote
-
 getBookingLocs ::
   (L.MonadFlow m, Log m) =>
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs bookings = findAllWithKV [Se.Is BeamBL.id $ Se.In bookingKeys]
-  where
-    bookingKeys = getId <$> fetchToLocationIDFromBooking bookings
-
-getBookingLocsInReplica ::
-  (L.MonadFlow m, Log m) =>
-  [Booking.Booking] ->
-  m [BookingLocation]
-getBookingLocsInReplica bookings = findAllWithKvInReplica [Se.Is BeamBL.id $ Se.In bookingKeys]
   where
     bookingKeys = getId <$> fetchToLocationIDFromBooking bookings
 
@@ -379,9 +311,6 @@ fetchDriverIDsTextFromQuote = map (.driverId.getId)
 findAllDriverInformationWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
 findAllDriverInformationWithSeConditions = findAllWithKV
 
-findAllDriverInformationWithSeConditionsInReplica :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
-findAllDriverInformationWithSeConditionsInReplica = findAllWithKvInReplica
-
 findAllVehiclesWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamV.VehicleT] -> m [Vehicle]
 findAllVehiclesWithSeConditions = findAllWithKV
 
@@ -396,9 +325,6 @@ findAllPersonWithSeConditionsNameAsc conditions = findAllWithOptionsKV condition
 
 findAllPersonWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
 findAllPersonWithSeConditions = findAllWithKV
-
-findAllPersonWithSeConditionsInReplica :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
-findAllPersonWithSeConditionsInReplica = findAllWithKvInReplica
 
 data DriverWithRidesCount = DriverWithRidesCount
   { person :: Person,
@@ -482,25 +408,12 @@ findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = findOneWithKV [Se.
 findAllByMerchantId :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
 findAllByMerchantId roles (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
 
-findAllByMerchantIdInReplica :: (L.MonadFlow m, Log m, EsqDBReplicaFlow m r) => [Person.Role] -> Id Merchant -> m [Person]
-findAllByMerchantIdInReplica roles (Id merchantId) = findAllWithKvInReplica [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
-
 findAdminsByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
 findAdminsByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
 findByMobileNumberAndMerchant :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
   findOneWithKV
-    [ Se.And
-        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
-          Se.Is BeamP.merchantId $ Se.Eq merchantId,
-          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
-        ]
-    ]
-
-findByMobileNumberAndMerchantInReplica :: (L.MonadFlow m, Log m, EsqDBReplicaFlow m r) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchantInReplica countryCode mobileNumberHash (Id merchantId) =
-  findOneWithKvInReplica
     [ Se.And
         [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
           Se.Is BeamP.merchantId $ Se.Eq merchantId,
@@ -552,24 +465,6 @@ findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
             )
         ]
   infoList <- findAllDriverInformationWithSeConditions diSeCondition
-  pure (map (personIdToDrivrId . DDI.driverId) infoList)
-  where
-    personIdToDrivrId :: Id Person -> Id Driver
-    personIdToDrivrId = cast
-
-findAllDriverIdExceptProvidedInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
-findAllDriverIdExceptProvidedInReplica (Id merchantId) driverIdsToBeExcluded = do
-  let personSeCondition = [Se.Is BeamP.merchantId $ Se.Eq merchantId]
-  person <- findAllPersonWithSeConditionsInReplica personSeCondition
-  let diSeCondition =
-        [ Se.And
-            ( [Se.Is BeamDI.driverId $ Se.Not $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
-                <> [Se.Is BeamDI.verified $ Se.Eq True]
-                <> [Se.Is BeamDI.enabled $ Se.Eq True]
-                <> [Se.Is BeamDI.driverId $ Se.Not $ Se.In $ getId <$> driverIdsToBeExcluded]
-            )
-        ]
-  infoList <- findAllDriverInformationWithSeConditionsInReplica diSeCondition
   pure (map (personIdToDrivrId . DDI.driverId) infoList)
   where
     personIdToDrivrId :: Id Person -> Id Driver
@@ -788,32 +683,6 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
   where
     personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
 
-getDriverInfosWithCondInReplica :: (L.MonadFlow m, Log m) => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
-getDriverInfosWithCondInReplica driverLocs onlyNotOnRide onlyOnRide =
-  findAllWithKvInReplica
-    [ Se.And
-        ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
-            Se.Or
-              [ Se.And
-                  [ Se.Is BeamDI.mode $ Se.Eq Nothing,
-                    Se.Is BeamDI.active $ Se.Eq True
-                  ],
-                Se.And
-                  [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
-                    Se.Or
-                      [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
-                        Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
-                      ]
-                  ]
-              ],
-            Se.Is BeamDI.blocked $ Se.Eq False
-          ]
-            <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
-        )
-    ]
-  where
-    personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
-
 getVehiclesWithCond ::
   (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
@@ -857,45 +726,6 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
     driverQuote <- getDriverQuote drivers
     bookingInfo <- getBookingInfo driverQuote
     bookingLocation <- getBookingLocs bookingInfo
-
-    return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
-
-  return (makeNearestDriversResult =<< res)
-  where
-    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
-      case mbVariant of
-        Nothing -> do
-          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
-              suvResult = getResult SUV $ variant == SUV
-              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
-              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
-              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
-          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
-        Just poolVariant -> getResult poolVariant True
-      where
-        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
-
-getNearestDriversCurrentlyOnRideInReplica ::
-  (MonadTime m, MonadFlow m) =>
-  Maybe Variant ->
-  LatLong ->
-  Int ->
-  Id Merchant ->
-  Maybe Seconds ->
-  Int ->
-  m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRideInReplica mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
-  let onRideRadius = fromIntegral (radiusMeters - reduceRadiusValue) :: Double
-  res <- do
-    driverLocs <- QueriesDL.getDriverLocsFromMerchIdInReplica mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
-    driverInfos <- getDriverInfosWithCondInReplica driverLocs False True
-    vehicles <- getVehiclesInReplica driverInfos
-    drivers <- getDriversInReplica vehicles
-    driverQuote <- getDriverQuoteInReplica drivers
-    bookingInfo <- getBookingInfoInReplica driverQuote
-    bookingLocation <- getBookingLocsInReplica bookingInfo
 
     return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
 

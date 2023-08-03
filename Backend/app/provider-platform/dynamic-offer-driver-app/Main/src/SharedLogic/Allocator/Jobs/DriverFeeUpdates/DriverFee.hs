@@ -23,6 +23,7 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
+import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -71,8 +72,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
-      -- overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
-      overdueFee <- findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
+      overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
+      -- overdueFee <- findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
       Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
         case overdueFee of
           Nothing -> do
@@ -84,8 +85,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   case listToMaybe feeZipDriver of
     Nothing -> return Complete
     Just (driverFee, _) -> do
-      -- driver <- Esq.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-      driver <- QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      driver <- B.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      -- driver <- QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
       transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
       ReSchedule <$> getRescheduledTime transporterConfig
 
@@ -127,8 +128,8 @@ calcDriverFeeAttr :: (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => D
 calcDriverFeeAttr driverFeeStatus startTime endTime = do
   driverFees <- findFeesInRangeWithStatus startTime endTime driverFeeStatus
   let relevantDriverIds = (.driverId) <$> driverFees
-  -- relevantDrivers <- mapM (Esq.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
-  relevantDrivers <- mapM QPerson.findById (cast <$> relevantDriverIds)
+  relevantDrivers <- mapM (B.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
+  -- relevantDrivers <- mapM QPerson.findById (cast <$> relevantDriverIds)
   return $ zip driverFees relevantDrivers
 
 getRescheduledTime :: (MonadFlow m) => TransporterConfig -> m UTCTime

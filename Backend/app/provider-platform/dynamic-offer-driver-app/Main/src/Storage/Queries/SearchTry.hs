@@ -19,10 +19,10 @@ import qualified Database.Beam.Query ()
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 
@@ -31,9 +31,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTry]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id SearchTry -> m (Maybe SearchTry)
-findByIdInReplica (Id searchTry) = findOneWithKvInReplica [Se.Is BeamST.id $ Se.Eq searchTry]
 
 findLastByRequestId ::
   (L.MonadFlow m, Log m) =>

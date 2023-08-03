@@ -19,10 +19,10 @@ import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.FarePolicy as Domain
 import Domain.Types.FarePolicy.Common as Common
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV)
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP

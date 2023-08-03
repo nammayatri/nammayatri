@@ -19,11 +19,11 @@ module Storage.Queries.DriverOnboarding.AadhaarVerification where
 import Domain.Types.DriverOnboarding.AadhaarVerification
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
 
@@ -54,9 +54,6 @@ create = createWithKV
 
 findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe AadhaarVerification)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamAV.driverId $ Se.Eq driverId]
-
-findByDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe AadhaarVerification)
-findByDriverIdInReplica (Id driverId) = findOneWithKvInReplica [Se.Is BeamAV.driverId $ Se.Eq driverId]
 
 -- deleteByDriverId :: Id Person -> SqlDB ()
 -- deleteByDriverId driverId =

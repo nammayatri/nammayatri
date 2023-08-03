@@ -23,20 +23,10 @@ import Domain.Types.Person
 import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils
-  ( FromTType' (fromTType'),
-    ToTType' (toTType'),
-    createWithKV,
-    deleteWithKV,
-    findOneWithKV,
-    findOneWithKvInReplica,
-    getMasterBeamConfig,
-    updateOneWithKV,
-    updateWithKV,
-  )
 import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Vehicle as BeamV
@@ -110,19 +100,6 @@ deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
 findByAnyOf :: (L.MonadFlow m, Log m) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =
   findOneWithKV
-    [ Se.And
-        ( []
-            <> if isJust vehicleIdM
-              then [Se.Is BeamV.driverId $ Se.Eq (getId (fromJust vehicleIdM))]
-              else
-                []
-                  <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust registrationNoM) | isJust registrationNoM])
-        )
-    ]
-
-findByAnyOfInReplica :: (L.MonadFlow m, Log m) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
-findByAnyOfInReplica registrationNoM vehicleIdM =
-  findOneWithKvInReplica
     [ Se.And
         ( []
             <> if isJust vehicleIdM

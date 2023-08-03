@@ -20,11 +20,11 @@ import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RiderDetails as DRDD
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as BeamRD
 
@@ -33,9 +33,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id RiderDetails -> m (Maybe RiderDetails)
 findById (Id riderDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id RiderDetails -> m (Maybe RiderDetails)
-findByIdInReplica (Id riderDetailsId) = findOneWithKvInReplica [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
 
 findByMobileNumberAndMerchant :: (L.MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberAndMerchant mobileNumber_ (Id merchantId) = do

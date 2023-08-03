@@ -29,10 +29,10 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import qualified EulerHS.Prelude as Prelude
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common (Log)
 import Kernel.Types.Id
-import Lib.Utils
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL

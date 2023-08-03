@@ -21,13 +21,14 @@ import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.CachedQueries.CacheConfig
@@ -70,13 +71,6 @@ findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
         [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
     ]
 
-findImagesByPersonAndTypeInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person -> ImageType -> m [Image]
-findImagesByPersonAndTypeInReplica (Id merchantId) (Id personId) imgType =
-  findAllWithKvInReplica
-    [ Se.And
-        [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
-    ]
-
 -- findRecentByPersonIdAndImageType ::
 --   ( Transactionable m,
 --     MonadFlow m,
@@ -106,7 +100,7 @@ findImagesByPersonAndTypeInReplica (Id merchantId) (Id personId) imgType =
 
 findRecentByPersonIdAndImageType :: (L.MonadFlow m, Log m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
 findRecentByPersonIdAndImageType personId imgtype = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
       onBoardingRetryTimeInHours' = intToNominalDiffTime onboardingRetryTimeInHours

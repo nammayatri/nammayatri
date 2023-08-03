@@ -27,8 +27,10 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude (whenNothing_)
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+
+import Kernel.Beam.Functions
+import Kernel.Prelude
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBAP as CallBAP
@@ -68,13 +70,13 @@ syncCancelledRide mbCancellationSource mbRide booking merchant = do
 
 findCancellationSource :: Maybe DRide.Ride -> Flow DBCR.CancellationSource
 findCancellationSource (Just ride) = do
-  -- mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
-  mbBookingCReason <- QBCReason.findByRideId ride.id
+  mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
+  -- mbBookingCReason <- QBCReason.findByRideId ride.id
   case mbBookingCReason of
     Just bookingCReason -> pure bookingCReason.source
     Nothing -> do
-      -- mbBookingCReason' <- runInReplica $ QBCReason.findByBookingId ride.bookingId
-      mbBookingCReason' <- QBCReason.findByBookingId ride.bookingId
+      mbBookingCReason' <- runInReplica $ QBCReason.findByBookingId ride.bookingId
+      -- mbBookingCReason' <- QBCReason.findByBookingId ride.bookingId
       case mbBookingCReason' of
         Just bookingCReason' -> pure bookingCReason'.source
         Nothing -> do
@@ -93,8 +95,8 @@ syncCompletedRide ride booking = do
     -- only for old rides
     logWarning "No fare params linked to ride. Using fare params linked to booking, they may be not actual"
   let fareParametersId = fromMaybe booking.fareParams.id ride.fareParametersId
-  -- fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
-  fareParameters <- QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+  fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+  -- fareParameters <- QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantId paymentMethodId booking.providerId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)

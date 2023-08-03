@@ -48,23 +48,13 @@ import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Prelude hiding (foldl', map)
 import Kernel.Types.Common ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils
-  ( FromTType' (fromTType'),
-    ToTType' (toTType'),
-    createWithKV,
-    findAllWithKV,
-    findAllWithOptionsKV,
-    findOneWithKV,
-    getMasterBeamConfig,
-    updateOneWithKV,
-    updateWithKV,
-  )
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
@@ -428,126 +418,6 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       | otherwise = Common.ONGOING_6HRS
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) =
       RideItem {..}
-
--- findAllRideItems'' ::
---   (L.MonadFlow m, Log m) =>
---   Id Merchant ->
---   Int ->
---   Int ->
---   Maybe Common.BookingStatus ->
---   Maybe (ShortId Ride) ->
---   Maybe DbHash ->
---   Maybe DbHash ->
---   Maybe Money ->
---   UTCTime ->
---   Maybe UTCTime ->
---   Maybe UTCTime ->
---   m [RideItem]
--- findAllRideItems'' merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbFrom mbTo = do
---   dbConf <- getMasterBeamConfig
---   res <- L.runDB dbConf $
---     L.findRows $
---       B.select $
---           B.limit_ (fromIntegral limitVal) $
---           B.offset_ (fromIntegral offsetVal) $
---           B.filter_' (\(booking, ride) ->
---                                           booking.providerId B.==?. B.val_ (getId merchantId))
---                                           -- B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
---                                           -- -- B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> person.mobileNumberHash B.==?. B.val_ (Just hash)) mbCustomerPhoneDBHash
---                                           -- B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ (hash)) mbCustomerPhoneDBHash
---                                           -- B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
---                                           -- -- B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ (driverMobileNumber)) mbDriverPhone)
---                                           -- B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (defaultFrom)) mbFrom)
---                                           -- B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (defaultTo)) mbTo)
---                                           -- -- B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ ride.fare B.<=. booking.estimatedFare) mbFareDiff)
---                                           -- B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ (bookingStatus)) mbBookingStatus)
---                                           -- B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - (B.just_ booking.estimatedFare)) B.>=. (B.val_ $ Just fareDiff_)) ) mbFareDiff)
-
---                                           -- B.&&?. B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW) (booking.status B.val_ Common.RCOMPLETED) (B.val_ Common.RCANCELLED)) $
---             do
---               booking' <- B.all_ (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamB.BookingT BeamR.RideT))
---               ride' <- B.join_' (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamB.BookingT BeamR.RideT)) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
---               pure (booking', ride')
---   pure []
--- res' <- case res of
---               Right x -> do
---                 let bookings = fst' <$> x
---                     rides = snd' <$> x
---                     rideDetails = thd' <$> x
---                     riderDetails = fth' <$> x
---                 b <- catMaybes <$> (mapM fromTType' (bookings))
---                 r <- catMaybes <$> (mapM fromTType' (rides))
---                 rd <- catMaybes <$> (mapM fromTType' (rideDetails))
---                 rdr <- catMaybes <$> (mapM fromTType' (riderDetails))
---                 pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr (DBooking.riderName <$> b) (liftA2 (-) (DR.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
---               Left _ -> pure []
--- pure $ mkRideItem <$> res'
--- where
---   mkBookingStatusVal ride = (B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
---                               B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. (B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.UPCOMING) $
---                               B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. (B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.UPCOMING_6HRS) $
---                               B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. (B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.ONGOING) $
---                               B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS))
---   fst' (x, _, _, _) = x
---   snd' (_, y, _, _) = y
---   thd' (_, _, z, _) = z
---   fth' (_, _, _, r) = r
---   mkBookingStatus now' ride
---                     | ride.status == Ride.COMPLETED = Common.COMPLETED
---                     | ride.status == Ride.NEW && not (ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.UPCOMING
---                     | ride.status == Ride.NEW && (ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.UPCOMING_6HRS
---                     | ride.status == Ride.INPROGRESS && not (ride.tripStartTime <= (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
---                     | ride.status == Ride.CANCELLED = Common.CANCELLED
---                     | otherwise = Common.COMPLETED
---   mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) = do
---     RideItem {..}
--- where condition implementation remaining
--- findAllRideItems' ::( MonadFlow m, MonadTime m) => Id Merchant -> Int -> Int -> Maybe Common.BookingStatus -> Maybe (ShortId Ride) -> Maybe DbHash -> Maybe DbHash -> Maybe Money -> UTCTime -> m [RideItem]
--- findAllRideItems' (Id merchantId) limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
--- let modelName = Se.modelTableName @BeamR.RideT
--- updatedMeshConfig <- setMeshConfig modelName
---   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
---   case dbConf of
---     Just dbCOnf' -> do
---       rides <- do
---         ride' <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig ([] <> ([Se.Is BeamR.shortId $ Se.Eq $ maybe "" getShortId mbRideShortId | isJust mbRideShortId]))
---         case ride' of
---           Left _ -> pure []
---           Right x -> traverse transformBeamRideToDomain x
-
---       bookings <- do
---         booking' <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
---           Se.Is BeamB.providerId $ Se.Eq merchantId ]]
---         case booking' of
---           Left _ -> pure []
---           Right x -> traverse QB.transformBeamBookingToDomain x
-
---       rideDetails <- either (pure []) (QRD.transformBeamRideDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And ([Se.Is BeamRD.id $ Se.In $ getId . DR.id <$> rides]
---         <> ([Se.Is BeamRD.driverNumberHash $ Se.Eq mbDriverPhoneDBHash | isJust mbDriverPhoneDBHash]))]
-
---       riderDetails <- either (pure []) (QRRD.transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And ([Se.Is BeamRRD.id $ Se.In $ maybe "" getId . DB.riderId <$> bookings]
---         <> ([Se.Is BeamRRD.mobileNumberHash $ Se.Eq (fromJust mbCustomerPhoneDBHash) | isJust mbCustomerPhoneDBHash]))]
-
---       let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
---       -- let filteredRideWithBooking = if isJust mbFareDiff then filter (\(ride, booking) -> ((\fareDiff_ -> (((-) <$> (ride.fare) <*> Just (booking.estimatedFare)) > fareDiff_ || ((Just booking.estimatedFare -) <*> ride.fare) > fareDiff_) mbFareDiff)) rideWithBooking else rideWithBooking
---       let filteredRideWithBooking = if isJust mbFareDiff then filter (\(ride, booking) -> ( ( (fromJust ride.fare) - booking.estimatedFare) > fromJust mbFareDiff) || ((booking.estimatedFare - (fromJust ride.fare)) > fromJust mbFareDiff) ) rideWithBooking else rideWithBooking
---       let filterRideBookingStatus = if isJust mbBookingStatus then filter (\(ride, booking) ->
---               booking.status == fromJust mbBookingStatus) filteredRideWithBooking else filteredRideWithBooking
-
---       pure []
-
---     Nothing -> pure []
-
---   where
---   getRideWithBooking bookings acc ride =
---       let bookings' = filter (\b -> b.id == ride.bookingId) bookings
---        in acc <> ((\b -> (ride, b)) <$> bookings')
---   getStatus ride bookingStatus = case ride.status of
---     Ride.NEW -> if ride.tripStartTime < Just now6HrBefore then Common.UPCOMING_6HRS else Common.UPCOMING
---     Ride.INPROGRESS -> Common.ONGOING
---     Ride.COMPLETED -> Common.COMPLETED
---     Ride.CANCELLED -> Common.CANCELLED
 
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,

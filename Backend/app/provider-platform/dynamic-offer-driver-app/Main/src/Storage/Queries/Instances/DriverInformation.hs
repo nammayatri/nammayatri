@@ -18,10 +18,10 @@ module Storage.Queries.Instances.DriverInformation where
 import qualified Data.ByteString as BS
 import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'))
 import qualified Storage.Beam.DriverInformation as BeamDI
 
 instance FromTType' BeamDI.DriverInformation DriverInformation where

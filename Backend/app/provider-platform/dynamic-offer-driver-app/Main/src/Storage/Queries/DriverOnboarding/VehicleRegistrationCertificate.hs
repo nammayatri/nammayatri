@@ -18,13 +18,13 @@ module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Vehicle as Vehicle
 import qualified EulerHS.Language as L
+-- import Kernel.Types.Logging (Log)
+-- import Kernel.Utils.IOLogging (LoggerEnv)
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
--- import Kernel.Types.Logging (Log)
--- import Kernel.Utils.IOLogging (LoggerEnv)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 
@@ -102,10 +102,6 @@ findLastVehicleRC :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCert
 findLastVehicleRC certNumberHash = do
   findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
-findLastVehicleRCInReplica :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
-findLastVehicleRCInReplica certNumberHash = do
-  findAllWithOptionsKvInReplica [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
-
 -- findByRCAndExpiry ::
 --   Transactionable m =>
 --   EncryptedHashedField 'AsEncrypted Text ->
@@ -165,7 +161,7 @@ findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
   certNumberHash <- getDbHash certNumber
-  findLastVehicleRCInReplica certNumberHash
+  runInReplica $ findLastVehicleRC certNumberHash
 
 instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCertificate where
   fromTType' BeamVRC.VehicleRegistrationCertificateT {..} = do

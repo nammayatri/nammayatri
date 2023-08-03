@@ -18,10 +18,10 @@ module Storage.Queries.SearchRequestSpecialZone where
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL

@@ -18,10 +18,10 @@ module Storage.Queries.MediaFile where
 import qualified Data.Time as T
 import Domain.Types.MediaFile as DMF
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
 
@@ -33,9 +33,6 @@ findById (Id mediaFileId) = findOneWithKV [Se.Is BeamMF.id $ Se.Eq mediaFileId]
 
 findAllIn :: (L.MonadFlow m, Log m) => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList = findAllWithKV [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
-
-findAllInInReplica :: (L.MonadFlow m, Log m) => [Id MediaFile] -> m [MediaFile]
-findAllInInReplica mfList = findAllWithKvInReplica [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
 
 deleteById :: (L.MonadFlow m, Log m) => Id MediaFile -> m ()
 deleteById (Id mediaFileId) = deleteWithKV [Se.Is BeamMF.id (Se.Eq mediaFileId)]

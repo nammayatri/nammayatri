@@ -29,11 +29,11 @@ import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils
 import qualified Sequelize as Se
 -- import Storage.Tabular.DriverInformation
 -- import Storage.Tabular.Person
@@ -358,27 +358,6 @@ countDrivers :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
   getResults <$> do
     dbConf <- getMasterBeamConfig
-    res <- L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
-            B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
-              do
-                driverInformation <- B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
-                person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
-                pure (driverInformation, person)
-    pure (either (const []) Prelude.id res)
-  where
-    getResults :: [(Bool, Int)] -> (Int, Int)
-    getResults = foldl func (0, 0)
-
-    func (active, inactive) (activity, counter) =
-      if activity then (active + counter, inactive) else (active, inactive + counter)
-
-countDriversInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
-countDriversInReplica merchantID =
-  getResults <$> do
-    dbConf <- getReplicaBeamConfig
     res <- L.runDB dbConf $
       L.findRows $
         B.select $

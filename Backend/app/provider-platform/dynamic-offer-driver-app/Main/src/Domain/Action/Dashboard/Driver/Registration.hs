@@ -36,9 +36,11 @@ import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+
+import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -48,10 +50,10 @@ import qualified Tools.AadhaarVerification as AadhaarVerification
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  -- licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
-  licImgs <- map (.id.getId) <$> (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
-  -- vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
-  vehRegImgs <- map (.id.getId) <$> (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
+  licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
+  -- licImgs <- map (.id.getId) <$> (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
+  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
+  -- vehRegImgs <- map (.id.getId) <$> (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
   pure
     Common.DocumentsListResponse
       { driverLicense = licImgs,

@@ -35,9 +35,9 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -129,8 +129,8 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
   requestor <- findPerson requestorId
   now <- getCurrentTime
   let rideOtp = req.specialZoneOtpCode
-  -- booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
-  booking <- QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  -- booking <- QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   shandle <- RideStart.buildStartRideHandle merchantId

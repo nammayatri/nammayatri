@@ -18,10 +18,10 @@ module Storage.Queries.RegistrationToken where
 import Domain.Types.Person
 import Domain.Types.RegistrationToken as DRT
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
@@ -63,9 +63,6 @@ findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getI
 
 getAlternateNumberAttempts :: (L.MonadFlow m, Log m) => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
-
-getAlternateNumberAttemptsInReplica :: (L.MonadFlow m, Log m) => Id Person -> m Int
-getAlternateNumberAttemptsInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
 
 instance FromTType' BeamRT.RegistrationToken RegistrationToken where
   fromTType' BeamRT.RegistrationTokenT {..} = do

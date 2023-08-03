@@ -23,16 +23,16 @@ where
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import qualified EulerHS.Language as L
-import Kernel.Prelude hiding (toList)
-import Kernel.Types.Id as KTI
-import Kernel.Utils.Common
-import Lib.Utils
+import Kernel.Beam.Functions
   ( FromTType' (fromTType'),
     ToTType' (toTType'),
     createWithKV,
     findOneWithKV,
     updateOneWithKV,
   )
+import Kernel.Prelude hiding (toList)
+import Kernel.Types.Id as KTI
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD

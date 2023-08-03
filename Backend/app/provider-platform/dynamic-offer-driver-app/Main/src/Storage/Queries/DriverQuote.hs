@@ -24,11 +24,11 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
@@ -60,9 +60,6 @@ create dQuote = SQFP.create dQuote.fareParams >> createWithKV dQuote
 
 findById :: (L.MonadFlow m, Log m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = findOneWithKV [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
-findByIdInReplica (Id driverQuoteId) = findOneWithKvInReplica [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
 
 setInactiveBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
@@ -110,9 +107,6 @@ findAllBySTId (Id searchTryId) = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId
 
 countAllBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m Int
 countAllBySTId searchTId = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]] <&> length
-
-countAllBySTIdInReplica :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m Int
-countAllBySTIdInReplica searchTId = findAllWithKvInReplica [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]] <&> length
 
 setInactiveAllDQByEstId :: (MonadFlow m) => Id DEstimate.Estimate -> UTCTime -> m ()
 setInactiveAllDQByEstId (Id estimateId) now = updateWithKV [Se.Set BeamDQ.status Domain.Inactive, Se.Set BeamDQ.updatedAt (T.utcToLocalTime T.utc now)] [Se.And [Se.Is BeamDQ.estimateId $ Se.Eq estimateId, Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]

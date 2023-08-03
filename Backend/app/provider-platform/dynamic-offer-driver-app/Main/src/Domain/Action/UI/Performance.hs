@@ -3,6 +3,7 @@ module Domain.Action.UI.Performance where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Domain.Types.RiderDetails ()
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
 import Kernel.Types.Error (PersonError (PersonNotFound))
@@ -25,8 +26,8 @@ newtype PerformanceRes = PerformanceRes
 
 getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant) -> m PerformanceRes
 getDriverPerformance (driverId, _) = do
-  -- _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   allRefferedCustomers <- QRD.findAllReferredByDriverId driverId
   let ridesTakenList = filter (.hasTakenValidRide) allRefferedCustomers
   pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList))

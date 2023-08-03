@@ -127,9 +127,6 @@ addReferralCode personId code = do
 countDrivers :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
 countDrivers = Queries.countDrivers
 
-countDriversInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
-countDriversInReplica = Queries.countDriversInReplica
-
 updateDowngradingOptions :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> Bool -> Bool -> m ()
 updateDowngradingOptions = Queries.updateDowngradingOptions
 

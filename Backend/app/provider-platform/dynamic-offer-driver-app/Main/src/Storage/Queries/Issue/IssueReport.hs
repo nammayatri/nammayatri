@@ -8,11 +8,11 @@ import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueReport as IssueReport
 import qualified Domain.Types.Person as SP
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueReport as BeamIR
 
@@ -52,21 +52,6 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
             ]
       ]
 
-findAllWithOptionsInReplica :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
-findAllWithOptionsInReplica mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
-  findAllWithOptionsKvInReplica conditions (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
-  where
-    limitVal = min (fromMaybe 10 mbLimit) 10
-    offsetVal = fromMaybe 0 mbOffset
-    conditions =
-      [ Se.And $
-          catMaybes
-            [ fmap (Se.Is BeamIR.status . Se.Eq) mbStatus,
-              fmap (Se.Is BeamIR.assignee . Se.Eq . Just) mbAssignee,
-              fmap (Se.Is BeamIR.categoryId . Se.Eq . getId) mbCategoryId
-            ]
-      ]
-
 -- findById :: Transactionable m => Id IssueReport -> m (Maybe IssueReport)
 -- findById issueReportId = Esq.findOne $ do
 --   issueReport <- from $ table @IssueReportT
@@ -77,9 +62,6 @@ findAllWithOptionsInReplica mbLimit mbOffset mbStatus mbCategoryId mbAssignee = 
 
 findById :: (L.MonadFlow m, Log m) => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.deleted $ Se.Eq False]]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id IssueReport -> m (Maybe IssueReport)
-findByIdInReplica (Id issueReportId) = findOneWithKvInReplica [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
 -- findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]
 -- findAllByDriver driverId = Esq.findAll $ do
@@ -104,9 +86,6 @@ findAllByDriver (Id driverId) = findAllWithKV [Se.And [Se.Is BeamIR.driverId $ S
 safeToDelete :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id driverId) = findOneWithKV [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
-safeToDeleteInReplica :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
-safeToDeleteInReplica (Id issueReportId) (Id driverId) = findOneWithKvInReplica [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
-
 -- isSafeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m Bool
 -- isSafeToDelete issueReportId driverId = do
 --   findSafeToDelete <- safeToDelete issueReportId driverId
@@ -115,11 +94,6 @@ safeToDeleteInReplica (Id issueReportId) (Id driverId) = findOneWithKvInReplica 
 isSafeToDelete :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m Bool
 isSafeToDelete issueReportId driverId = do
   findSafeToDelete <- safeToDelete issueReportId driverId
-  return $ isJust findSafeToDelete
-
-isSafeToDeleteInReplica :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m Bool
-isSafeToDeleteInReplica issueReportId driverId = do
-  findSafeToDelete <- safeToDeleteInReplica issueReportId driverId
   return $ isJust findSafeToDelete
 
 -- deleteByPersonId :: Id SP.Person -> SqlDB ()

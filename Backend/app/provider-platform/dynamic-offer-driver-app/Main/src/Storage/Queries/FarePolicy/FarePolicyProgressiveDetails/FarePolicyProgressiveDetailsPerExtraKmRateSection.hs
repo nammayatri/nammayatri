@@ -18,10 +18,10 @@ module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 -- import Data.Text (pack)
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), deleteWithKV, findAllWithOptionsKV, findOneWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 

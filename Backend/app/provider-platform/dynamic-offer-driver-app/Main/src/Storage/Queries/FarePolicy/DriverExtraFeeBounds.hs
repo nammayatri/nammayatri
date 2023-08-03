@@ -22,10 +22,10 @@ module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 

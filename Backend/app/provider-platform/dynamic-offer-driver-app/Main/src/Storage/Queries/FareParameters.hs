@@ -17,11 +17,11 @@ module Storage.Queries.FareParameters where
 
 import Domain.Types.FareParameters as DFP
 import qualified EulerHS.Language as L
+-- import Kernel.Types.Logging (Log)
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
--- import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
 import Storage.Queries.FareParameters.FareParametersProgressiveDetails as QFPPD
@@ -39,14 +39,8 @@ create fareParameters = do
 findById :: (L.MonadFlow m, Log m) => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id FareParameters -> m (Maybe FareParameters)
-findByIdInReplica (Id fareParametersId) = findOneWithKvInReplica [Se.Is BeamFP.id $ Se.Eq fareParametersId]
-
 findAllIn :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
-
-findAllInInReplica :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m [FareParameters]
-findAllInInReplica fareParametersIds = findAllWithKvInReplica [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 
 -- findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]
 -- findAllIn fareParamIds =
@@ -111,7 +105,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
 --     mkCount _ = 0
 
 findAllLateNightRides :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m Int
-findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds, Se.Is BeamFP.nightShiftCharge $ Se.Not $ Se.Eq Nothing] >>= pure . length
+findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds, Se.Is BeamFP.nightShiftCharge $ Se.Not $ Se.Eq Nothing] <&> length
 
 -- findDriverSelectedFareEarnings :: Transactionable m => [Id FareParameters] -> m Money
 -- findDriverSelectedFareEarnings fareParamIds =
@@ -138,9 +132,9 @@ findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In
 findDriverSelectedFareEarnings :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m Int
 findDriverSelectedFareEarnings fareParamIds = do
   dsEarnings <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (driverSelectedFare <$>)
-  pure $ sum $ (getMoney <$> (catMaybes dsEarnings))
+  pure $ sum (getMoney <$> catMaybes dsEarnings)
 
 findCustomerExtraFees :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m Int
 findCustomerExtraFees fareParamIds = do
   csFees <- findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParamIds] <&> (customerExtraFee <$>)
-  pure $ sum $ (getMoney <$> (catMaybes csFees))
+  pure $ sum (getMoney <$> catMaybes csFees)

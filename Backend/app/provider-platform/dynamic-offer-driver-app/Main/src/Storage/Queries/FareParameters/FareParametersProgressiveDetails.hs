@@ -17,10 +17,10 @@ module Storage.Queries.FareParameters.FareParametersProgressiveDetails where
 
 import qualified Domain.Types.FareParameters as Domain
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 

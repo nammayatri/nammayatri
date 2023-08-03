@@ -64,6 +64,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -102,8 +103,8 @@ driverDocumentsInfo merchantShortId = do
   now <- getCurrentTime
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
-  -- drivers <- Esq.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
-  drivers <- QDocStatus.fetchDriverDocsInfo merchant.id Nothing
+  drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
+  -- drivers <- QDocStatus.fetchDriverDocsInfo merchant.id Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
   where
     oneMonth :: NominalDiffTime
@@ -177,8 +178,8 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSu
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
-  -- driversWithInfo <- Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
-  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
+  driversWithInfo <- B.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
+  -- driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
@@ -216,8 +217,8 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
   let mobileCountryCode = fromMaybe "+91" mbMobileCountryCode
   merchant <- findMerchantByShortId merchantShortId
   mobileNumber <- getDbHash phone
-  -- driver <- Esq.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
-  driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  -- driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   driverFee <- findPendingFeesByDriverId (cast driver.id)
   return $ map mkPaymentDueResp (catMaybes [driverFee])
   where
@@ -266,8 +267,9 @@ driverAadhaarInfo merchantShortId driverId = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  --Common.mkDriverActivityRes <$> Esq.runInReplica (CQDriverInfo.countDrivers merchant.id)
-  Common.mkDriverActivityRes <$> (CQDriverInfo.countDrivers merchant.id)
+  Common.mkDriverActivityRes <$> B.runInReplica (CQDriverInfo.countDrivers merchant.id)
+
+-- Common.mkDriverActivityRes <$> (CQDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -321,10 +323,10 @@ blockDriverWithReason merchantShortId reqDriverId req = do
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- driver <-
-  --   Esq.runInReplica (QPerson.findById personId)
-  --     >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <-
+    B.runInReplica (QPerson.findById personId)
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -354,8 +356,8 @@ blockDriver merchantShortId reqDriverId = do
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- Esq.runInReplica (QPerson.findById personId)
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- B.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -404,8 +406,8 @@ recordPayment isExempted merchantShortId reqDriverId = do
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  -- driver <- Esq.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -431,7 +433,7 @@ unblockDriver merchantShortId reqDriverId = do
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- Esq.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
@@ -486,37 +488,37 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
     (Just mobileNumber, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
-      -- Esq.runInReplica $
-      --   QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
-      --     >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-      QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
-        >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+      B.runInReplica $
+        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+          >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+    -- QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+    --   >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber, Nothing, Nothing) -> do
-      -- Esq.runInReplica $
-      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
-      --     >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
-      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
-        >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      B.runInReplica $
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
+          >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+    -- QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
+    --   >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     (Nothing, Nothing, Just driverLicenseNumber, Nothing) -> do
       dlNumberHash <- getDbHash driverLicenseNumber
-      -- Esq.runInReplica $
-      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
-      --     >>= fromMaybeM (InvalidRequest "License does not exist.")
-      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
-        >>= fromMaybeM (InvalidRequest "License does not exist.")
+      B.runInReplica $
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
+          >>= fromMaybeM (InvalidRequest "License does not exist.")
+    -- QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
+    --   >>= fromMaybeM (InvalidRequest "License does not exist.")
     (Nothing, Nothing, Nothing, Just rcNumber) -> do
       rcNumberHash <- getDbHash rcNumber
-      -- Esq.runInReplica $
-      --   QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
-      --     >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
-      QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
-        >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
+      B.runInReplica $
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
+          >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
+    -- QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
+    --   >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
   let driverId = driverWithRidesCount.person.id
-  -- mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
-  mbDriverLicense <- QDriverLicense.findByDriverId driverId
-  -- rcAssociationHistory <- Esq.runInReplica $ QRCAssociation.findAllByDriverId driverId
-  rcAssociationHistory <- QRCAssociation.findAllByDriverId driverId
+  mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
+  -- mbDriverLicense <- QDriverLicense.findByDriverId driverId
+  rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
+  -- rcAssociationHistory <- QRCAssociation.findAllByDriverId driverId
   buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
 
 buildDriverInfoRes ::
@@ -732,7 +734,7 @@ updateDriverName merchantShortId reqDriverId req = do
   merchant <- findMerchantByShortId merchantShortId
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- Esq.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
@@ -757,8 +759,8 @@ unlinkDL merchantShortId driverId = do
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
-  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
@@ -776,8 +778,8 @@ unlinkAadhaar merchantShortId driverId = do
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
-  -- _ <- Esq.runInReplica $ AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
-  _ <- AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
+  _ <- B.runInReplica $ AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
+  -- _ <- AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
   -- Esq.runTransaction $ do
   AV.deleteByDriverId personId
@@ -795,8 +797,8 @@ endRCAssociation merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
-  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
@@ -818,8 +820,8 @@ setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> 
 setRCStatus merchantShortId reqDriverId Common.RCStatusReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {..})
@@ -828,8 +830,8 @@ deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> Flo
 deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  -- driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
@@ -839,8 +841,8 @@ deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  -- driverInfos <- Esq.runInReplica QPerson.getOnRideStuckDriverIds
-  driverInfos <- QPerson.getOnRideStuckDriverIdsInReplica
+  driverInfos <- B.runInReplica QPerson.getOnRideStuckDriverIds
+  -- driverInfos <- runInReplica QPerson.getOnRideStuckDriverIds
   driverIds <-
     mapM
       ( \driverInf -> do

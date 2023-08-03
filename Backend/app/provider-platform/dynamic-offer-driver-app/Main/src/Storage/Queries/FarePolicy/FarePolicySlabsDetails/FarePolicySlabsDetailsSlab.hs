@@ -17,17 +17,17 @@ module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsS
 
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Language as L
-import Kernel.Prelude
-import Kernel.Types.Id
-import qualified Kernel.Types.Id as KTI
-import Kernel.Types.Logging (Log)
-import Lib.Utils
+import Kernel.Beam.Functions
   ( FromTType' (fromTType'),
     ToTType' (toTType'),
     deleteWithKV,
     findAllWithOptionsKV,
     findOneWithKV,
   )
+import Kernel.Prelude
+import Kernel.Types.Id
+import qualified Kernel.Types.Id as KTI
+import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 

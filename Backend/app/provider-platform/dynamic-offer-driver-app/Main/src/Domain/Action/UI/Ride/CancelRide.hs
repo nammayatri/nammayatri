@@ -31,9 +31,11 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -65,8 +67,7 @@ cancelRideHandle =
       findById = QPerson.findById,
       cancelRide = CInternal.cancelRideImpl,
       findDriverLocationId = QDrLoc.findById,
-      -- findBookingByIdInReplica = Esq.runInReplica . QRB.findById,
-      findBookingByIdInReplica = QRB.findById,
+      findBookingByIdInReplica = B.runInReplica . QRB.findById,
       pickUpDistance = driverDistanceToPickup
     }
 

@@ -19,11 +19,11 @@ import Domain.Types.DriverOnboarding.IdfyVerification as DDIV
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
 

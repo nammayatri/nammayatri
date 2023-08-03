@@ -17,10 +17,10 @@ module Storage.Queries.BapMetadata where
 
 import Domain.Types.BapMetadata
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 -- import qualified Storage.Beam.BapMetadata as BeamBM
 import qualified Storage.Beam.BapMetadata as BeamBMD

@@ -23,10 +23,10 @@ where
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantPaymentMethod
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
 

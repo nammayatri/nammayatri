@@ -56,6 +56,7 @@ import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
@@ -537,14 +538,14 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPoolCurrentlyOnRide" $
-      -- Esq.runInReplica $
-      QP.getNearestDriversCurrentlyOnRide
-        mbVariant
-        coord
-        radius
-        merchantId
-        driverPoolCfg.driverPositionInfoExpiry
-        reduceRadiusValue
+      B.runInReplica $
+        QP.getNearestDriversCurrentlyOnRide
+          mbVariant
+          coord
+          radius
+          merchantId
+          driverPoolCfg.driverPositionInfoExpiry
+          reduceRadiusValue
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts

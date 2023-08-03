@@ -18,12 +18,12 @@ module Storage.Queries.DriverBlockReason where
 import Data.Function
 import Domain.Types.DriverBlockReason
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
 
+import Kernel.Beam.Functions
+import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils
 import Sequelize as Se
 import qualified Storage.Beam.DriverBlockReason as BeamDBR
 

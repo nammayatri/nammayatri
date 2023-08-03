@@ -25,6 +25,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
@@ -88,8 +89,8 @@ sendDashboardSms merchantId messageType mbRide driverId mbBooking amount = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   if transporterConfig.enableDashboardSms
     then do
-      -- driver <- Esq.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      -- driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       smsCfg <- asks (.smsCfg)
       mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       let countryCode = fromMaybe "+91" driver.mobileCountryCode

@@ -24,15 +24,7 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
-let esqLocationDBCfg =
-      { connectHost = "localhost"
-      , connectPort = 5454
-      , connectUser = sec.locDBUserId
-      , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_dev_loc"
-      , connectSchemaName = "atlas_person_location"
-      , connectionPoolCount = +25
-      }
+let esqLocationDBCfg = esqDBCfg
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost

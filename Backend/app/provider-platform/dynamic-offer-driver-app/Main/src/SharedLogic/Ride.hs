@@ -16,6 +16,7 @@ module SharedLogic.Ride where
 
 import Domain.Types.Person (Person)
 import Domain.Types.Ride
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -39,5 +40,6 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId =
   Hedis.get (makeAssignedRideIdAndStatusKey driverId) >>= \case
     Just a ->
       return $ Just a
-    -- Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< Esq.runInReplica (RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId)
-    Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId
+    Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< B.runInReplica (RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId)
+
+-- Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId

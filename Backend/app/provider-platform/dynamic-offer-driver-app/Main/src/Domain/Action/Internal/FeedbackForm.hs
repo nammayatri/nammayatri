@@ -22,6 +22,7 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -33,8 +34,8 @@ import qualified Storage.Queries.Ride as QRide
 saveFeedbackFormResult :: FeedbackFormReq -> Flow APISuccess
 saveFeedbackFormResult feedbackFormReq = do
   let rideId = feedbackFormReq.rideId
-  -- ride <- Esq.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   feedbackChipsList <- getFeedbackAnswers feedbackFormReq
   addFeedback feedbackChipsList rideId ride.driverId
   updateFeedbackBadge feedbackChipsList ride.driverId

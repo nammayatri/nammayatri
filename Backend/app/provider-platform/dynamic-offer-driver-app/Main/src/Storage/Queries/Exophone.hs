@@ -24,10 +24,10 @@ import qualified Database.Beam as B
 import Domain.Types.Exophone as DE (Exophone (..))
 import qualified Domain.Types.Merchant as DM
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, getMasterBeamConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE

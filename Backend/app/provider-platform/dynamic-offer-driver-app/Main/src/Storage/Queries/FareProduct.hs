@@ -25,10 +25,10 @@ import qualified Domain.Types.FareProduct as Domain
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle.Variant (Variant (..))
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as BeamFP
 

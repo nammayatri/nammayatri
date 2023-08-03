@@ -28,6 +28,8 @@ import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified EulerHS.Language as L
 -- import qualified EulerHS.Prelude as EHP
+
+import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -40,7 +42,6 @@ import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Tools.Error

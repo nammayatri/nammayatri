@@ -19,8 +19,8 @@ import Control.Applicative
 import Data.Function hiding (id)
 import Data.Maybe
 import Domain.Types.Issue.IssueTranslation
+import Kernel.Beam.Functions
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'))
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 
 instance FromTType' BeamIT.IssueTranslation IssueTranslation where

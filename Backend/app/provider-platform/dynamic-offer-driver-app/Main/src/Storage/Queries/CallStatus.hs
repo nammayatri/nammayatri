@@ -19,11 +19,11 @@ import qualified Database.Beam as B
 import Domain.Types.CallStatus
 import Domain.Types.Ride
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica, getMasterBeamConfig, getReplicaBeamConfig, updateWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 import qualified Storage.Beam.Common as BeamCommon
@@ -33,9 +33,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCT.id $ Se.Eq callStatusId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
-findByIdInReplica (Id callStatusId) = findOneWithKvInReplica [Se.Is BeamCT.id $ Se.Eq callStatusId]
 
 findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
@@ -80,18 +77,6 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
 --             B.filter_' (\(BeamCT.CallStatusT {..}) -> entityId B.==?. B.val_ (getId entityID)) $
 --               B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
 --   pure $ either (const 0) (maybe 0 snd) resp
-
-countCallsByEntityIdInReplica :: L.MonadFlow m => Id Ride -> m Int
-countCallsByEntityIdInReplica entityID = do
-  dbConf <- getReplicaBeamConfig
-  resp <-
-    L.runDB dbConf $
-      L.findRow $
-        B.select $
-          B.aggregate_ (\ride -> (B.group_ (BeamCT.entityId ride), B.as_ @Int B.countAll_)) $
-            B.filter_' (\(BeamCT.CallStatusT {..}) -> entityId B.==?. B.val_ (getId entityID)) $
-              B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
-  pure $ either (const 0) (maybe 0 snd) resp
 
 countCallsByEntityId :: (L.MonadFlow m) => Id Ride -> m Int
 countCallsByEntityId entityID = do

@@ -23,11 +23,11 @@ where
 import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 

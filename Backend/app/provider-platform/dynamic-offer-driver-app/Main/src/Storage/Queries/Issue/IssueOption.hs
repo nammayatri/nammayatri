@@ -7,11 +7,11 @@ import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption as DomainIO
 import Domain.Types.Issue.IssueTranslation
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueOption as BeamIO
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT

@@ -18,10 +18,10 @@ module Storage.Queries.LeaderBoardConfig where
 import Domain.Types.LeaderBoardConfig
 import Domain.Types.Merchant
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Logging
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LeaderBoardConfig as BeamLBC
 

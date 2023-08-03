@@ -37,13 +37,16 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+
+import Kernel.Beam.Functions
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis as Redis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess
@@ -130,13 +133,13 @@ listDriverRides ::
   Maybe Day ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
-  -- rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
-  rides <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
+  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
+  -- rides <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
   driverRideLis <- forM rides $ \(ride, booking) -> do
-    -- rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
-    rideDetail <- QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
-    -- rideRating <- runInReplica $ QR.findRatingForRide ride.id
-    rideRating <- QR.findRatingForRide ride.id
+    rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    -- rideDetail <- QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    rideRating <- runInReplica $ QR.findRatingForRide ride.id
+    -- rideRating <- QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
@@ -193,11 +196,11 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
-  -- ride <- (runInReplica $ QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
-  -- booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
   driverReachedDistance <- asks (.driverReachedDistance)
@@ -251,8 +254,8 @@ otpRideCreate driver otpCode booking = do
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
   _ <- QDI.updateOnRide (cast driver.id) True
   _ <- DLoc.updateOnRideCache (cast driver.id)
-  -- uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+  uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+  -- uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
   void $ BP.sendRideAssignedUpdateToBAP uBooking ride
   DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}

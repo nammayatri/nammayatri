@@ -28,6 +28,8 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
 -- import qualified EulerHS.Language as L
+
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface (TransactionStatus)
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
@@ -62,12 +64,12 @@ createOrder ::
   Id DriverFee ->
   Flow Payment.CreateOrderResp
 createOrder (driverId, merchantId) driverFeeId = do
-  -- driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
+  driverFee <- B.runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
+  -- driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
   when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
   when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse $ getId driverFeeId)
-  -- driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
-  driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
+  driver <- B.runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
+  -- driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
   unless (driver.id == driverId) $ throwError NotAnExecutor
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let driverEmail = fromMaybe "test@juspay.in" driver.email
@@ -102,8 +104,8 @@ getOrder ::
   Id DOrder.PaymentOrder ->
   m DOrder.PaymentOrderAPIEntity
 getOrder (personId, _) orderId = do
-  -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
-  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  order <- B.runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  -- order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 

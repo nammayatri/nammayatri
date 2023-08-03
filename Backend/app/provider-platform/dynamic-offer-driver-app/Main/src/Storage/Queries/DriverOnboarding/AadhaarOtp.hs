@@ -18,10 +18,10 @@ module Storage.Queries.DriverOnboarding.AadhaarOtp where
 import Domain.Types.DriverOnboarding.AadhaarOtp
 import Domain.Types.Person
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV

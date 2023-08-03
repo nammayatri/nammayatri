@@ -8,11 +8,11 @@ import Domain.Types.Issue.IssueCategory
 import qualified Domain.Types.Issue.IssueCategory as DomainIC
 import Domain.Types.Issue.IssueTranslation as DomainIT
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT

@@ -18,10 +18,10 @@ module Storage.Queries.SearchRequest.SearchReqLocation where
 
 import Domain.Types.SearchRequest.SearchReqLocation
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 

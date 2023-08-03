@@ -33,10 +33,11 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import GHC.Records.Extra
+import Kernel.Beam.Functions
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -104,8 +105,7 @@ buildUpdateLocationHandle ::
   Id Person.Person ->
   Flow (UpdateLocationHandle Flow)
 buildUpdateLocationHandle driverId = do
-  driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  -- runInReplica $
+  driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
   pure $
     UpdateLocationHandle
@@ -142,10 +142,10 @@ streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy stat
 handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Seconds -> m ()
 handleDriverPayments driverId diffUtc = do
   now <- getLocalCurrentTime diffUtc
-  -- ongoingAfterEndTime <- Esq.runInReplica $ findOngoingAfterEndTime driverId now
-  ongoingAfterEndTime <- findOngoingAfterEndTime driverId now
-  -- overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
-  overdueFee <- findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
+  ongoingAfterEndTime <- B.runInReplica $ findOngoingAfterEndTime driverId now
+  -- ongoingAfterEndTime <- findOngoingAfterEndTime driverId now
+  overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
+  -- overdueFee <- findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
 
   case (ongoingAfterEndTime, overdueFee) of
     (Nothing, _) -> pure ()

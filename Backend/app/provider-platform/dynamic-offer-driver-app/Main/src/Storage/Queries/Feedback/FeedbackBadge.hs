@@ -19,10 +19,10 @@ import Data.Text
 import Domain.Types.Feedback.Feedback
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Logging (Log)
-import Lib.Utils
 import Sequelize as Se
 import qualified Storage.Beam.Feedback.FeedbackBadge as BFFB
 import Prelude hiding (id)

@@ -19,6 +19,7 @@ import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -48,8 +49,8 @@ getLanguage driverId mbLanguage = do
     if isJust mbLanguage
       then return mbLanguage
       else runMaybeT $ do
-        -- driverDetail <- MaybeT . Esq.runInReplica $ QP.findById driverId
-        driverDetail <- MaybeT $ QP.findById driverId
+        driverDetail <- MaybeT . B.runInReplica $ QP.findById driverId
+        -- driverDetail <- MaybeT $ QP.findById driverId
         MaybeT $ pure driverDetail.language
   return $ fromMaybe ENGLISH extractLanguage
 
@@ -166,8 +167,8 @@ createIssueReport (driverId, _) Common.IssueReportReq {..} = do
   whenJust optionId $ \justOptionId ->
     void $ CQIO.findByIdAndCategoryId (cast justOptionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
   whenJust rideId $ \justRideId ->
-    -- void $ Esq.runInReplica (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
-    void $ QRide.findById (cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
+    void $ B.runInReplica (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
+  -- void $ QRide.findById (cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
   forM_ mediaFiles $ \mediaFile ->
     void $ CQMF.findById (cast mediaFile) >>= fromMaybeM (FileDoNotExist mediaFile.getId)
   issueReport <- mkIssueReport
@@ -239,8 +240,8 @@ updateIssueOption issueReportId (driverId, _) Common.IssueUpdateReq {..} = do
 
 deleteIssue :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 deleteIssue issueReportId (driverId, _) = do
-  -- unlessM (Esq.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
-  unlessM (QIR.isSafeToDelete issueReportId driverId) $
+  unlessM (B.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
+    -- unlessM (QIR.isSafeToDelete issueReportId driverId) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this driver.")
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   _ <- QIR.updateAsDeleted issueReportId

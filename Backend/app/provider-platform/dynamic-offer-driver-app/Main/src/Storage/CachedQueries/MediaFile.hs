@@ -38,12 +38,6 @@ findAllInForIssueReportId mediaFileIds issueReportId =
     Just a -> pure a
     Nothing -> cacheMediaFileByIssueReportId issueReportId /=<< Queries.findAllIn mediaFileIds
 
-findAllInForIssueReportIdInReplica :: (CacheFlow m r, Esq.EsqDBFlow m r) => [Id MediaFile] -> Id IssueReport -> m [MediaFile]
-findAllInForIssueReportIdInReplica mediaFileIds issueReportId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMediaFileByIssueReportIdKey issueReportId) >>= \case
-    Just a -> pure a
-    Nothing -> cacheMediaFileByIssueReportId issueReportId /=<< Queries.findAllInInReplica mediaFileIds
-
 --------- Caching logic for media file by id -------------------
 
 clearMediaFileByIdCache :: (CacheFlow m r) => Id MediaFile -> m ()

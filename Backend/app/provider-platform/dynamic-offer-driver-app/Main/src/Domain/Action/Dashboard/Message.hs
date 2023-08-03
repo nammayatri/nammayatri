@@ -33,9 +33,11 @@ import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
@@ -193,16 +195,16 @@ instance FromNamedRecord CSVRow where
 sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISuccess
 sendMessage merchantShortId Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
-  -- message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
-  message <- MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  -- message <- MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   allDriverIds <- case _type of
-    -- AllEnabled -> Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
-    AllEnabled -> QP.findAllDriverIdExceptProvided (merchant.id) []
+    AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    -- AllEnabled -> QP.findAllDriverIdExceptProvided (merchant.id) []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
-      -- Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
-      QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+      B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+  -- QP.findAllDriverIdExceptProvided (merchant.id) driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
   fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
   return Success
@@ -226,8 +228,8 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
 
     createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
     createMessageLanguageDict message = do
-      -- translations <- Esq.runInReplica $ MTQuery.findByMessageId message.id
-      translations <- MTQuery.findByMessageId message.id
+      translations <- B.runInReplica $ MTQuery.findByMessageId message.id
+      -- translations <- MTQuery.findByMessageId message.id
       pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
 
     addTranslation Domain.RawMessage {..} trans =
@@ -282,24 +284,24 @@ messageInfo merchantShortId messageId = do
 messageDeliveryInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse
 messageDeliveryInfo merchantShortId messageId = do
   _ <- findMerchantByShortId merchantShortId
-  --success <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
-  success <- MRQuery.getMessageCountByStatus messageId Domain.Success
-  --failed <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
-  failed <- MRQuery.getMessageCountByStatus messageId Domain.Failed
-  --queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
-  queued <- MRQuery.getMessageCountByStatus messageId Domain.Queued
-  --sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
-  sending <- MRQuery.getMessageCountByStatus messageId Domain.Sending
-  --seen <- Esq.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
-  seen <- MRQuery.getMessageCountByReadStatus messageId
+  success <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
+  -- success <- MRQuery.getMessageCountByStatus messageId Domain.Success
+  failed <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
+  -- failed <- MRQuery.getMessageCountByStatus messageId Domain.Failed
+  queued <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
+  -- queued <- MRQuery.getMessageCountByStatus messageId Domain.Queued
+  sending <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
+  -- sending <- MRQuery.getMessageCountByStatus messageId Domain.Sending
+  seen <- B.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
+  -- seen <- MRQuery.getMessageCountByReadStatus messageId
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
   return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount, viewed = message.viewCount}
 
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
-  -- encMesageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
-  encMesageReports <- MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  encMesageReports <- B.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  -- encMesageReports <- MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
   messageReports <- mapM (secondM decrypt) encMesageReports
   let count = length messageReports
   let summary = Common.Summary {totalCount = count, count}

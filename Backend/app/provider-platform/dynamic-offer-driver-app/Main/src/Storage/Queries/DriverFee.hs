@@ -19,12 +19,13 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Person
 import qualified EulerHS.Language as L
-import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
+
+import Kernel.Beam.Functions
+import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 
@@ -39,9 +40,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
-
-findByIdInReplica :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
-findByIdInReplica (Id driverFeeId) = findOneWithKvInReplica [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 
 findByIdBeam :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
 findByIdBeam (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
@@ -111,9 +109,6 @@ findLatestFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.Is BeamDF.drive
 findOldestFeeByStatus :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
 findOldestFeeByStatus (Id driverId) status = findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findOldestFeeByStatusInReplica :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
-findOldestFeeByStatusInReplica (Id driverId) status = findAllWithOptionsKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
-
 -- findFeesInRangeWithStatus :: Transactionable m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
 -- findFeesInRangeWithStatus startTime endTime status = do
 --   findAll $ do
@@ -148,14 +143,6 @@ findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVa
     (Just limitVal)
     (Just offsetVal)
 
-findWindowsWithStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
-findWindowsWithStatusInReplica (Id driverId) startTime endTime mbStatus limitVal offsetVal =
-  findAllWithOptionsKvInReplica
-    [Se.And $ [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime] <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]]
-    (Se.Desc BeamDF.createdAt)
-    (Just limitVal)
-    (Just offsetVal)
-
 -- findOngoingAfterEndTime :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
 -- findOngoingAfterEndTime driverId now = do
 --   findOne $ do
@@ -169,9 +156,6 @@ findWindowsWithStatusInReplica (Id driverId) startTime endTime mbStatus limitVal
 
 findOngoingAfterEndTime :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findOngoingAfterEndTime (Id driverId) now = findOneWithKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
-
-findOngoingAfterEndTimeInReplica :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
-findOngoingAfterEndTimeInReplica (Id driverId) now = findOneWithKvInReplica [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
 
 findUnpaidAfterPayBy :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findUnpaidAfterPayBy (Id driverId) now =
