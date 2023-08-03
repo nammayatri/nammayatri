@@ -56,12 +56,12 @@ vehicleDetailsView push config =
           , text
               $ case config.vehicleVariant of
                   "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                  "TAXI" -> "Non AC Taxi"
-                  "TAXI_PLUS" -> "Sedan AC"
+                  "TAXI" -> "Non-AC Taxi"
+                  "TAXI_PLUS" -> "AC Taxi"
                   "SEDAN" -> "Sedan"
                   "SUV" -> "SUV"
                   "HATCHBACK" -> "Hatchback"
-                  _ -> "Non AC Taxi"
+                  _ -> "Non-AC Taxi"
           , color Color.black800
           ]
         <> FontStyle.subHeading1 TypoGraphy
