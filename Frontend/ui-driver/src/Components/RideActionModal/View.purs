@@ -34,13 +34,15 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
 import Prelude ((<>))
-import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
+import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..))
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
+import Engineering.Helpers.Utils (showAndHideLoader)
+import Types.App (defaultGlobalState)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -75,7 +77,11 @@ messageButton push config =
   , background Color.white900
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
-  , onClick push (const $ MessageCustomer)
+  , onClick (\action -> do
+                  if not config.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                  else pure unit
+                  push action
+            ) (const MessageCustomer)
   ][  imageView
       [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat.png"
       , height $ V 20
@@ -158,6 +164,7 @@ rideActionViewWithZone push config =
       , gravity CENTER
       , stroke $ "1," <> Color.grey800
       ][  rideActionDataView push config
+        , rideTypeView push config
         , linearLayout
           [ width MATCH_PARENT
           , height $ V 1
@@ -166,6 +173,39 @@ rideActionViewWithZone push config =
           ][]
         , if config.startRideActive then startRide push config else endRide push config
         , cancelRide push config
+      ]
+  ]
+
+rideTypeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideTypeView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ PaddingHorizontal 16 16
+  , visibility if (config.startRideActive || config.requestedVehicleVariant == Maybe.Nothing) then GONE else VISIBLE
+  ][ linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.grey800
+      ][]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginTop 16
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString RIDE_TYPE
+          , color Color.black650
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getCategorizedVariant config.requestedVehicleVariant
+          , margin $ MarginLeft 8
+          , color Color.black800
+          ] <> FontStyle.body1 TypoGraphy
       ]
   ]
 
@@ -181,6 +221,7 @@ rideActionView push config =
   , gravity CENTER
   , stroke $ "1," <> Color.grey800
   ][  rideActionDataView push config
+    , rideTypeView push config
     , linearLayout
       [ width MATCH_PARENT
       , height $ V 1
@@ -632,3 +673,21 @@ separatorConfig =
   , layoutWidth : V 14
   , layoutHeight : V 16
   }
+
+getCategorizedVariant :: Maybe.Maybe String -> String
+getCategorizedVariant variant = case variant of
+  Maybe.Just var -> case (getMerchant FunctionCall) of
+    YATRISATHI -> case var of
+      "SEDAN"  -> "AC Taxi"
+      "HATCHBACK"  -> "AC Taxi"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "AC Taxi"
+      _ -> "Non AC"
+    _ -> case var of
+      "SEDAN"  -> "Sedan"
+      "HATCHBACK"  -> "Hatchback"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "Suv"
+      "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      _ -> var
+  Maybe.Nothing -> ""

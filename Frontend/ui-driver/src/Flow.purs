@@ -1882,8 +1882,8 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_NOTIFICATIONS -> notificationFlow
     ADD_ALTERNATE_HOME -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data { driverAlternateMobile = Nothing }, props  { isEditAlternateMobile = false, keyboardModalType = MOBILE__NUMBER}})
-      driverDetailsFlow
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
+      driverProfileFlow
     ON_CALL state -> do
       (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id)
       homeScreenFlow

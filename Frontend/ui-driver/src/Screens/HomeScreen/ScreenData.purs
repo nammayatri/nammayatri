@@ -48,7 +48,8 @@ initData = {
           specialLocationTag : Nothing,
           waitingTime : "__",
           waitTimeInfo : false,
-          rideCreatedAt : ""
+          rideCreatedAt : "",
+          requestedVehicleVariant : Nothing
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -130,6 +131,7 @@ initData = {
         notRemoveBanner : true,
         showBonusInfo : false,
         timerRefresh : true,
-        showlinkAadhaarPopup : false
+        showlinkAadhaarPopup : false,
+        isChatOpened : false
     }
 }

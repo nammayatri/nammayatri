@@ -17,15 +17,16 @@ module Screens.DriverProfileScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
+import Data.Maybe (Maybe(..), fromMaybe)
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>), discard,(==))
+import Prelude (bind, pure, ($), (<$>), discard, (==))
+import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverProfileScreen.Controller (ScreenOutput(..))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverProfileScreen.View as DriverProfileScreen
 import Types.App (FlowBT, GlobalState(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-import Presto.Core.Types.Language.Flow (getLogFields)
 
 driverProfileScreen :: FlowBT String DRIVER_PROFILE_SCREEN_OUTPUT
 driverProfileScreen = do
@@ -84,4 +85,6 @@ driverProfileScreen = do
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
-    GoBack -> App.BackT $ pure App.GoBack
+    GoBack -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> DriverProfileScreenData.initData)
+      App.BackT $ pure App.GoBack

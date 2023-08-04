@@ -57,6 +57,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth)
+import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -139,6 +140,9 @@ screen initialState =
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
+              SettingPrice -> do 
+                _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                pure unit
               RideAccepted -> do
                 _ <- pure $ enableMyLocation true
                 if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction else pure unit
@@ -244,7 +248,10 @@ view push state =
             ( \action -> do
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
-                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen else pure unit
+                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then do 
+                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState else pure unit
+                  push OpenChatScreen 
+                else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
                   _ -> pure unit
@@ -306,7 +313,7 @@ view push state =
                             false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dest_marker.png"
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
-                    ]
+                    ] 
                 ]
             , homeScreenView push state
             , buttonLayoutParentView push state
@@ -2370,7 +2377,11 @@ nearByPickUpPointsView state push =
     , orientation VERTICAL
     , padding $ Padding 5 20 0 5
     , visibility if state.props.defaultPickUpPoint /= "" then VISIBLE else GONE
-    ](map (\item -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)) state.data.nearByPickUpPoints)
+    ](map (\item -> linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , margin $ MarginBottom 12
+                      ][MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)]) state.data.nearByPickUpPoints)
 
 confirmingLottieView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmingLottieView push state =

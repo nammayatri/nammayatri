@@ -256,10 +256,10 @@ currentRideFlow rideAssigned = do
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
             rideStatus = if status == "NEW" then RideAccepted else RideStarted
-            newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp) ((length resp.rideList) == 0 )
-                 , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)
-                 , currentSearchResultType = if (length resp.rideList) == 0 then QUOTES else ESTIMATES}
-                , props{currentStage = rideStatus
+            newState = state{data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) ((length resp.rideList) == 0 )
+                , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)
+                , currentSearchResultType = if (length resp.rideList) == 0 then QUOTES else ESTIMATES},
+                  props{currentStage = rideStatus
                   , rideRequestFlow = true
                   , bookingId = resp.id
                   , isPopUp = NoPopUp

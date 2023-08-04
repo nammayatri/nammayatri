@@ -114,7 +114,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getInt("customerTip"),
                     rideRequestBundle.getString("specialLocationTag"),
                     rideRequestBundle.getString("sourcePinCode"),
-                    rideRequestBundle.getString("destinationPinCode"));
+                    rideRequestBundle.getString("destinationPinCode"),
+                    rideRequestBundle.getString("requestedVehicleVariant"));
 
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -375,7 +376,10 @@ public class RideRequestActivity extends AppCompatActivity {
                     progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
                 }
                 if (i < sheetArrayList.size()) {
-                    indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                    indicatorTextList.get(i).setText(
+                            sheetArrayList.get(i).getRequestedVehicleVariant() + "\n" +
+                            sharedPref.getString("CURRENCY", "₹") +
+                            (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
                 } else {
                     indicatorTextList.get(i).setText("--");

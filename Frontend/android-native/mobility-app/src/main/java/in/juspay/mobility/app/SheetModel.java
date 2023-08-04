@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private final String pickUpDistance, distanceToBeCovered, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode;
+    private final String pickUpDistance, distanceToBeCovered, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant;
     private String requestId;
     private int startTime;
     private double updatedAmount;
@@ -42,7 +42,8 @@ public class SheetModel {
                       int customerExtraFee,
                       String specialLocationTag,
                       String sourcePinCode,
-                      String destinationPinCode){
+                      String destinationPinCode,
+                      String requestedVehicleVariant){
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
         this.sourceArea = sourceArea;
@@ -68,6 +69,11 @@ public class SheetModel {
         this.customerExtraFee = customerExtraFee;
         this.sourcePinCode = sourcePinCode;
         this.destinationPinCode = destinationPinCode;
+        this.requestedVehicleVariant = requestedVehicleVariant;
+    }
+
+    public String getRequestedVehicleVariant() {
+        return requestedVehicleVariant;
     }
 
     public double getOfferedPrice() {

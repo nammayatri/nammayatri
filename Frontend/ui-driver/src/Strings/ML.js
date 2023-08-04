@@ -592,5 +592,6 @@ const mlStrings = {
   SELECT_A_DATE_RANGE : "പ്രസ്താവന ഡൗൺലോഡ് ചെയ്യുന്നതിന് ഒരു തീയതി ശ്രേണി തിരഞ്ഞെടുക്കുക",
   FEE_PAYMENT_HISTORY : "ഫീസ് പേയ്‌മെന്റ് ചരിത്രം",
   LANGUAGES_SPOKEN : "സംസാരിക്കുന്ന ഭാഷകൾ",
-  VIEW_PAYMENT_HISTORY : "പേയ്മെന്റ് ചരിത്രം കാണുക"
+  VIEW_PAYMENT_HISTORY : "പേയ്മെന്റ് ചരിത്രം കാണുക",
+  RIDE_TYPE : "റൈഡ് തരം"
 }
