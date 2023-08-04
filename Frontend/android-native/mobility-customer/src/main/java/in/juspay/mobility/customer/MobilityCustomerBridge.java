@@ -646,7 +646,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     private Boolean isServiceable(Double lat, Double lng) {
         StringBuilder result = new StringBuilder();
-        regToken = getKeyInNativeSharedPrefKeys(bridgeComponents.getContext().getResources().getString(R.string.REGISTERATION_TOKEN));
+        regToken = getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN");
         baseUrl = getKeyInNativeSharedPrefKeys("BASE_URL");
         String version = getKeyInNativeSharedPrefKeys("VERSION_NAME");
         String deviceDetails = getKeyInNativeSharedPrefKeys("DEVICE_DETAILS");
