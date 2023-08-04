@@ -76,7 +76,6 @@ data KeyStore
   | MESSAGES_DELAY
   | DEVICE_UUID
   | LAST_LOGIN
-  | IS_SERVICEABLE
   | SELECTED_VARIANT
 
 derive instance genericKeyStore :: Generic KeyStore _
