@@ -585,6 +585,7 @@ export const storeCallBackMessageUpdated = function (cb) {
                   }
                   cb(action (message) (sentBy) (timeStamp) (messagesSize))();
                 });
+                window.storeCallBackMessageUpdated = callback;
                 if(JBridge.storeCallBackMessageUpdated) {
                   JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
                 }
