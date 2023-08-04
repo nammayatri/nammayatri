@@ -27,6 +27,7 @@ import qualified EulerHS.Language as L
 
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
@@ -126,46 +127,43 @@ findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.sta
 
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
-    fl <- QBBL.findById (Id fromLocationId)
-    tl <- QBBL.findById (Id toLocationId)
-    fp <- QueriesFP.findById (Id fareParametersId)
+    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "FromLocation not found")
+    tl <- QBBL.findById (Id toLocationId) >>= fromMaybeM (InternalError "ToLocation not found")
+    fp <- QueriesFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError "FareParameters not found")
     pUrl <- parseBaseUrl bapUri
-    if isJust fl && isJust tl && isJust fp
-      then
-        pure $
-          Just
-            Booking
-              { id = Id id,
-                transactionId = transactionId,
-                quoteId = quoteId,
-                status = status,
-                bookingType = bookingType,
-                specialLocationTag = specialLocationTag,
-                specialZoneOtpCode = specialZoneOtpCode,
-                area = area,
-                providerId = Id providerId,
-                primaryExophone = primaryExophone,
-                bapId = bapId,
-                bapUri = pUrl,
-                bapCity = bapCity,
-                bapCountry = bapCountry,
-                startTime = startTime,
-                riderId = Id <$> riderId,
-                fromLocation = fromJust fl,
-                toLocation = fromJust tl,
-                vehicleVariant = vehicleVariant,
-                estimatedDistance = estimatedDistance,
-                maxEstimatedDistance = maxEstimatedDistance,
-                estimatedFare = estimatedFare,
-                estimatedDuration = estimatedDuration,
-                fareParams = fromJust fp,
-                paymentMethodId = Id <$> paymentMethodId,
-                riderName = riderName,
-                paymentUrl = paymentUrl,
-                createdAt = createdAt,
-                updatedAt = updatedAt
-              }
-      else pure Nothing
+    pure $
+      Just
+        Booking
+          { id = Id id,
+            transactionId = transactionId,
+            quoteId = quoteId,
+            status = status,
+            bookingType = bookingType,
+            specialLocationTag = specialLocationTag,
+            specialZoneOtpCode = specialZoneOtpCode,
+            area = area,
+            providerId = Id providerId,
+            primaryExophone = primaryExophone,
+            bapId = bapId,
+            bapUri = pUrl,
+            bapCity = bapCity,
+            bapCountry = bapCountry,
+            startTime = startTime,
+            riderId = Id <$> riderId,
+            fromLocation = fl,
+            toLocation = tl,
+            vehicleVariant = vehicleVariant,
+            estimatedDistance = estimatedDistance,
+            maxEstimatedDistance = maxEstimatedDistance,
+            estimatedFare = estimatedFare,
+            estimatedDuration = estimatedDuration,
+            fareParams = fp,
+            paymentMethodId = Id <$> paymentMethodId,
+            riderName = riderName,
+            paymentUrl = paymentUrl,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
 instance ToTType' BeamB.Booking Booking where
   toTType' Booking {..} =

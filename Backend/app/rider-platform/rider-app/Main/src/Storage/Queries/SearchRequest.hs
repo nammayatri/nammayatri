@@ -23,7 +23,9 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
@@ -169,35 +171,32 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion
-    fl <- QSRL.findById (Id fromLocationId)
-    tl <- QSRL.findById (Id (fromJust toLocationId))
-    if isJust fl && isJust tl
-      then
-        pure $
-          Just
-            SearchRequest
-              { id = Id id,
-                startTime = startTime,
-                validTill = validTill,
-                riderId = Id riderId,
-                fromLocation = fromJust fl,
-                toLocation = tl,
-                distance = HighPrecMeters <$> distance,
-                maxDistance = HighPrecMeters <$> maxDistance,
-                estimatedRideDuration = estimatedRideDuration,
-                device = device,
-                merchantId = Id merchantId,
-                bundleVersion = bundleVersion',
-                clientVersion = clientVersion',
-                language = language,
-                customerExtraFee = customerExtraFee,
-                autoAssignEnabled = autoAssignEnabled,
-                autoAssignEnabledV2 = autoAssignEnabledV2,
-                availablePaymentMethods = Id <$> availablePaymentMethods,
-                selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
-                createdAt = createdAt
-              }
-      else pure Nothing
+    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "ToLocation not found")
+    tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
+    pure $
+      Just
+        SearchRequest
+          { id = Id id,
+            startTime = startTime,
+            validTill = validTill,
+            riderId = Id riderId,
+            fromLocation = fl,
+            toLocation = tl,
+            distance = HighPrecMeters <$> distance,
+            maxDistance = HighPrecMeters <$> maxDistance,
+            estimatedRideDuration = estimatedRideDuration,
+            device = device,
+            merchantId = Id merchantId,
+            bundleVersion = bundleVersion',
+            clientVersion = clientVersion',
+            language = language,
+            customerExtraFee = customerExtraFee,
+            autoAssignEnabled = autoAssignEnabled,
+            autoAssignEnabledV2 = autoAssignEnabledV2,
+            availablePaymentMethods = Id <$> availablePaymentMethods,
+            selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
+            createdAt = createdAt
+          }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do

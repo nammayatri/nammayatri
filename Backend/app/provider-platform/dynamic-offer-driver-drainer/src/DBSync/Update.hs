@@ -8,7 +8,6 @@ import Data.Either.Extra (mapLeft)
 
 -- import System.CPUTime
 
-import Data.Maybe (fromJust)
 import Data.Text as T
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -18,6 +17,8 @@ import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types as ET
 import qualified Kernel.Beam.Types as KBT
+import Kernel.Types.Error
+import Kernel.Utils.Common (fromMaybeM)
 import Sequelize (Model, Set, Where)
 import Types.DBSync
 import Types.Event as Event
@@ -60,7 +61,7 @@ updateDB dbConf _ setClause whereClause bts = do
 
 runUpdateCommands :: (UpdateDBCommand, ByteString) -> Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
 runUpdateCommands (cmd, val) = do
-  let dbConf = fromJust <$> EL.getOption KBT.PsqlDbCfg
+  let dbConf = EL.getOption KBT.PsqlDbCfg >>= maybeM (EL.throwError $ InternalError "DB config not found")
   case cmd of
     -- UpdateDBCommand id _ _ _ _ (TxnOfferInfoOptions                  _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("TxnOfferInfo"                  :: Text) =<< Config.getEulerDbConf
     -- UpdateDBCommand id _ _ _ _ (JuspayEventOptions                   _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("JuspayEvent"                   :: Text) =<< Config.getEulerDbConf

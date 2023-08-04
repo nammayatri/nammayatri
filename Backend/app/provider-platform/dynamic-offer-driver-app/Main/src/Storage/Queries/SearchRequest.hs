@@ -21,8 +21,9 @@ import qualified EulerHS.Language as L
 
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -54,33 +55,30 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    fl <- QSRL.findById (Id fromLocationId)
-    tl <- QSRL.findById (Id toLocationId)
+    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "FromLocation not found in SearchRequest")
+    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError "ToLocation not found in SearchRequest")
     pUrl <- parseBaseUrl bapUri
-    if isJust fl && isJust tl
-      then
-        pure $
-          Just
-            SearchRequest
-              { id = Id id,
-                transactionId = transactionId,
-                providerId = Id providerId,
-                fromLocation = fromJust fl,
-                toLocation = fromJust tl,
-                area = area,
-                bapId = bapId,
-                bapUri = pUrl,
-                bapCity = bapCity,
-                bapCountry = bapCountry,
-                estimatedDistance = estimatedDistance,
-                estimatedDuration = estimatedDuration,
-                customerLanguage = customerLanguage,
-                device = device,
-                createdAt = createdAt,
-                specialLocationTag = specialLocationTag,
-                autoAssignEnabled = autoAssignEnabled
-              }
-      else pure Nothing
+    pure $
+      Just
+        SearchRequest
+          { id = Id id,
+            transactionId = transactionId,
+            providerId = Id providerId,
+            fromLocation = fl,
+            toLocation = tl,
+            area = area,
+            bapId = bapId,
+            bapUri = pUrl,
+            bapCity = bapCity,
+            bapCountry = bapCountry,
+            estimatedDistance = estimatedDistance,
+            estimatedDuration = estimatedDuration,
+            customerLanguage = customerLanguage,
+            device = device,
+            createdAt = createdAt,
+            specialLocationTag = specialLocationTag,
+            autoAssignEnabled = autoAssignEnabled
+          }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do

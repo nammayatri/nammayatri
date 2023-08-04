@@ -496,7 +496,7 @@ cancelBookings bookingIds now =
 
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
-    fl <- QBBL.findById (Id fromLocationId)
+    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "fromLocation is null for booking")
     tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
     bookingDetails <- case fareProductType of
@@ -508,41 +508,38 @@ instance FromTType' BeamB.Booking Booking where
           Just a -> pure a
       DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
       DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
-    if isJust fl
-      then
-        pure $
-          Just
-            Booking
-              { id = Id id,
-                transactionId = transactionId,
-                bppBookingId = Id <$> bppBookingId,
-                quoteId = Id <$> quoteId,
-                paymentMethodId = Id <$> paymentMethodId,
-                paymentUrl = paymentUrl,
-                status = status,
-                providerId = providerId,
-                providerUrl = pUrl,
-                providerName = providerName,
-                fulfillmentId = fulfillmentId,
-                driverId = driverId,
-                itemId = itemId,
-                providerMobileNumber = providerMobileNumber,
-                primaryExophone = primaryExophone,
-                startTime = startTime,
-                riderId = Id riderId,
-                fromLocation = fromJust fl,
-                estimatedFare = roundToIntegral estimatedFare,
-                discount = roundToIntegral <$> discount,
-                estimatedTotalFare = roundToIntegral estimatedTotalFare,
-                vehicleVariant = vehicleVariant,
-                bookingDetails = bookingDetails,
-                tripTerms = tt,
-                merchantId = Id merchantId,
-                specialLocationTag = specialLocationTag,
-                createdAt = createdAt,
-                updatedAt = updatedAt
-              }
-      else pure Nothing
+    pure $
+      Just
+        Booking
+          { id = Id id,
+            transactionId = transactionId,
+            bppBookingId = Id <$> bppBookingId,
+            quoteId = Id <$> quoteId,
+            paymentMethodId = Id <$> paymentMethodId,
+            paymentUrl = paymentUrl,
+            status = status,
+            providerId = providerId,
+            providerUrl = pUrl,
+            providerName = providerName,
+            fulfillmentId = fulfillmentId,
+            driverId = driverId,
+            itemId = itemId,
+            providerMobileNumber = providerMobileNumber,
+            primaryExophone = primaryExophone,
+            startTime = startTime,
+            riderId = Id riderId,
+            fromLocation = fl,
+            estimatedFare = roundToIntegral estimatedFare,
+            discount = roundToIntegral <$> discount,
+            estimatedTotalFare = roundToIntegral estimatedTotalFare,
+            vehicleVariant = vehicleVariant,
+            bookingDetails = bookingDetails,
+            tripTerms = tt,
+            merchantId = Id merchantId,
+            specialLocationTag = specialLocationTag,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
     where
       buildOneWayDetails _ = do
         toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")

@@ -23,9 +23,12 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Types.Common (Log (..), MonadTime (getCurrentTime))
+import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Logging
 import Kernel.Types.MonadGuid
+import Kernel.Utils.Error
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.DB.Table
 import qualified Lib.Scheduler.JobStorageType.DB.TableB as BeamSJ
@@ -59,11 +62,11 @@ createJobIn' inTime maxShards jobData = do
           maxErrors = 5
         }
 
-create'' :: L.MonadFlow m => AnyJob t -> m ()
+create'' :: (L.MonadFlow m, Log m) => AnyJob t -> m ()
 create'' (ST.AnyJob ST.Job {..}) = do
   let storedJobInfo = ST.storeJobInfo jobInfo
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  dbConf <- L.getOption KBT.PsqlDbCfg >>= fromMaybeM (InternalError "distance is null for one way booking")
+  conn <- L.getOrInitSqlConn dbConf
   case conn of
     Right c -> do
       void $

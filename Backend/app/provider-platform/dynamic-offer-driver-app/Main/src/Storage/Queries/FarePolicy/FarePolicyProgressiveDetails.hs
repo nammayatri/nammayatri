@@ -21,8 +21,10 @@ import Domain.Types.FarePolicy.Common as Common
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import qualified Kernel.Types.Id as KTI
 import Kernel.Types.Logging (Log)
+import Kernel.Utils.Common (fromMaybeM)
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
@@ -33,14 +35,16 @@ findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ 
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' BeamFPPD.FarePolicyProgressiveDetailsT {..} = do
     fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyId)
-    let fPPDP = snd <$> fullFPPDP
+    -- mfPPDP <- fromMaybeM (InternalError "FarePolicyProgressiveDetailsPerExtraKmRateSection not found") (pure $ nonEmpty fullFPPDP)
+    -- fPPDP <- maybe (InternalError "FarePolicyProgressiveDetailsPerExtraKmRateSection not found") (pure . id) (nonEmpty fullFPPDP)
+    fPPDP <- fromMaybeM (InternalError "FromLocation not found") (nonEmpty fullFPPDP)
     pure $
       Just
         ( KTI.Id farePolicyId,
           Domain.FPProgressiveDetails
             { baseDistance = baseDistance,
               baseFare = baseFare,
-              perExtraKmRateSections = fromJust $ nonEmpty fPPDP,
+              perExtraKmRateSections = snd <$> fPPDP,
               deadKmFare = deadKmFare,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->

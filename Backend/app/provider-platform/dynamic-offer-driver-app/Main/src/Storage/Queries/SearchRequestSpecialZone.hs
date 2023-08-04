@@ -20,8 +20,10 @@ import Domain.Types.SearchRequestSpecialZone as Domain
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
+import Kernel.Utils.Error
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -124,31 +126,28 @@ getValidTill (Id searchRequestId) = do
 
 instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
   fromTType' BeamSRSZ.SearchRequestSpecialZoneT {..} = do
-    fl <- QSRL.findById (Id fromLocationId)
-    tl <- QSRL.findById (Id toLocationId)
+    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "FromLocation not found")
+    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError "ToLocation not found")
     pUrl <- parseBaseUrl bapUri
-    if isJust fl && isJust tl
-      then
-        pure $
-          Just
-            SearchRequestSpecialZone
-              { id = Id id,
-                transactionId = transactionId,
-                messageId = messageId,
-                startTime = startTime,
-                validTill = validTill,
-                providerId = Id providerId,
-                fromLocation = fromJust fl,
-                toLocation = fromJust tl,
-                area = area,
-                bapId = bapId,
-                bapUri = pUrl,
-                estimatedDistance = estimatedDistance,
-                estimatedDuration = estimatedDuration,
-                createdAt = createdAt,
-                updatedAt = updatedAt
-              }
-      else pure Nothing
+    pure $
+      Just
+        SearchRequestSpecialZone
+          { id = Id id,
+            transactionId = transactionId,
+            messageId = messageId,
+            startTime = startTime,
+            validTill = validTill,
+            providerId = Id providerId,
+            fromLocation = fl,
+            toLocation = tl,
+            area = area,
+            bapId = bapId,
+            bapUri = pUrl,
+            estimatedDistance = estimatedDistance,
+            estimatedDuration = estimatedDuration,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
 instance ToTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
   toTType' SearchRequestSpecialZone {..} = do
