@@ -24,6 +24,7 @@ data Action = BackPressed
             | BottomNavBarAction BottomNavBar.Action
             | ClearDue PrimaryButton.Action
             | SwitchPlan PrimaryButton.Action
+            | JoinPlanAC PrimaryButton.Action
             | ToggleDueDetails
             | NoAction
 
@@ -32,6 +33,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
                     | Contest SubscriptionScreenState
                     | Alerts SubscriptionScreenState
+                    | JoinPlanExit SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = do 
@@ -39,6 +41,12 @@ eval BackPressed state = do
     continue state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
+
+eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state
+
+eval (ClearDue PrimaryButton.OnClick) state = continue state
+
+eval (SwitchPlan PrimaryButton.OnClick) state = continue state
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of

@@ -1483,6 +1483,8 @@ type GlobalProps = {
   aadhaarVerificationRequired :: Boolean
 }
 
+--------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
+
 type SubscriptionScreenState = {
   data :: SubscriptionScreenData,
   props :: SubscriptionScreenProps

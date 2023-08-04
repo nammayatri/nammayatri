@@ -13,12 +13,13 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
 import Prelude (Unit, const, map, ($), (<<<), (<>), (-), (>), (&&), unit)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
-import Screens.SubscriptionScreen.ComponentConfig (clearDueButtonConfig, switchPlanButtonConfig)
+import Screens.SubscriptionScreen.ComponentConfig (clearDueButtonConfig, joinPlanButtonConfig, switchPlanButtonConfig)
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import Screens.Types (SubscriptionScreenState, SubscriptionSubview(..), PromoConfig, PlanCardConfig)
 import Styles.Colors as Color
 
@@ -68,7 +69,7 @@ joinPlanView push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
-  ][ headerView push state
+  ][ headerView push "Join Namma Yatri" "" true
     , relativeLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -92,37 +93,40 @@ enjoyBenefitsView push state =
     , gravity RIGHT
     , orientation VERTICAL
     , margin $ Margin 0 30 30 0
-    ][ commonTV push "Enjoy these benefits " Color.black800 (FontStyle.paragraphText TypoGraphy) 0 RIGHT
-      , linearLayout
+    ][  linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , orientation VERTICAL
         , margin $ MarginTop 15
-        ](map
-            (\(item) ->
-                linearLayout
-                  [ width MATCH_PARENT
-                  , height WRAP_CONTENT
-                  , gravity CENTER_VERTICAL
-                  ][ imageView
-                      [ imageWithFallback $ "ny_ic_check_green," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_green.png"
-                      , width $ V 11
-                      , height $ V 8
-                      ]
-                    , textView $
-                      [ margin $ MarginLeft 11
-                      , text item
-                      , color Color.black700
+        , orientation VERTICAL
+        ][ commonTV push "Enjoy these benefits " Color.black800 (FontStyle.subHeading2 TypoGraphy) 0 LEFT
+          , linearLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            ](map
+                (\(item) ->
+                    linearLayout
+                      [ width MATCH_PARENT
                       , height WRAP_CONTENT
-                      , width WRAP_CONTENT
-                      ] <> FontStyle.body1 TypoGraphy
-                  ]
+                      , gravity CENTER_VERTICAL
+                      ][ imageView
+                          [ imageWithFallback $ "ny_ic_check_green," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_green.png"
+                          , width $ V 11
+                          , height $ V 8
+                          ]
+                        , textView $
+                          [ margin $ MarginLeft 11
+                          , text item
+                          , color Color.black700
+                          , height WRAP_CONTENT
+                          , width WRAP_CONTENT
+                          ] <> FontStyle.body1 TypoGraphy
+                      ]
+                )
+              ["ZERO commission", "Earn Today, Pay Tomorrow", "Pay only if you take rides"]
             )
-          ["ZERO commission", "Earn Today, Pay Tomorrow", "Pay only if you take rides"]
-        )
-
+        ]
     ]
-
 
 plansBottomView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 plansBottomView push state =
@@ -132,7 +136,7 @@ plansBottomView push state =
   , alignParentBottom "true,-1"
   , cornerRadii $ Corners 20.0 true true false false
   , background Color.white900
-  , padding $ Padding 20 20 20 20
+  , padding $ Padding 20 20 20 0
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -164,21 +168,20 @@ plansBottomView push state =
               , color Color.blue900
               ] <> FontStyle.body1 TypoGraphy
           ]
+        , scrollView
+          [ width MATCH_PARENT
+          , weight 1.0
+          , margin $ MarginTop 10
+          ][ linearLayout
+              [ weight 1.0
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              ](map (\item -> 
+                  planCardView push dummyPlanConfig false
+                  ) [1,2])
+          ]
+        , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
       ]
-  ]
-
-headerView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
-headerView push state = 
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  ][ textView $ 
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text "Join Namma Yatri"
-      , padding $ Padding 5 5 0 5
-      , color Color.darkDescriptionText
-      ] <> FontStyle.h3 LanguageStyle
   ]
 
 commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> PrestoDOM (Effect Unit) w
@@ -721,7 +724,7 @@ managePlanBodyView push state =
         , color Color.black700
         , margin $ MarginBottom 12
         ]
-      -- , planCardView push state.data.managePlanData true
+      , planCardView push dummyPlanConfig true
       , textView
         [ text "ALTERNATE PLAN"
         , textSize FontSize.a_12
@@ -729,7 +732,7 @@ managePlanBodyView push state =
         , color Color.black700
         , margin $ MarginVertical 32 12 
         ]
-      -- , planCardView push state false
+      , planCardView push dummyPlanConfig false
       , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
      ]
    ]

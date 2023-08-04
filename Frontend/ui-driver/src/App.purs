@@ -331,6 +331,7 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
 
 data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | NAV NAVIGATION_ACTIONS
+                                  | MAKE_PAYMENT SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | RideHistoryNav

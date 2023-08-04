@@ -46,3 +46,16 @@ switchPlanButtonConfig state = let
       , margin = (Margin 0 16 0 16)
       }
   in primaryButtonConfig'
+
+joinPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
+joinPlanButtonConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig{ text = "Join Plan" }
+      , isClickable = true
+      , alpha = if true then 1.0 else 0.6
+      , height = (V 48)
+      , cornerRadius = 8.0
+      , margin = (Margin 0 16 0 16)
+      }
+  in primaryButtonConfig'

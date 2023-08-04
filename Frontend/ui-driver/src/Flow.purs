@@ -1896,6 +1896,36 @@ homeScreenFlow = do
   pure unit
 
 
+dummyPayload :: PaymentPagePayload
+dummyPayload = PaymentPagePayload {
+    requestId: Just "b3c52430d89546cc8a381277abd39e3c",
+    service: Just "in.juspay.hyperpay",
+    payload : PayPayload {
+        clientId: Just "yatrisathi",
+        amount:  "10.0",
+        merchantId: Just "yatrisathi",
+        clientAuthToken:  "tkn_d08af270bb23447bbde86201b7b4a933",
+        clientAuthTokenExpiry:  "2023-07-04T07:31:07Z",
+        environment: Just "production",
+        lastName: Just "wick",
+        action: Just "paymentPage",
+        customerId: Just "107006461",
+        currency: "INR",
+        firstName: Just "john",
+        customerPhone: Just "9876543201",
+        customerEmail: Just "test@mail.com",
+        orderId: Just "test1",
+        description: Just "Order Description",
+        options_getUpiDeepLinks  : Nothing,
+        returnUrl  : Just ""
+    }
+}
+
+nyPaymentFlow :: FlowBT String Unit
+nyPaymentFlow = do
+  paymentPageOutput <- paymentPageUI dummyPayload
+  homeScreenFlow
+
 paymentFlow :: FlowBT String Unit
 paymentFlow = do
   (GlobalState state) <- getState
@@ -1993,6 +2023,7 @@ subScriptionFlow = do
     NAV ContestNav -> referralScreenFlow
     NAV AlertsNav -> notificationFlow
     GOTO_HOMESCREEN -> homeScreenFlow
+    MAKE_PAYMENT state -> nyPaymentFlow
     _ -> subScriptionFlow
 
 constructLatLong :: String -> String -> Location

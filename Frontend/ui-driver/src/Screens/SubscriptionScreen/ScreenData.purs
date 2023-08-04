@@ -1,10 +1,10 @@
 module Screens.SubscriptionScreen.ScreenData where
 
-import Screens.Types (SubscriptionScreenState, SubscriptionSubview(..))
+import Screens.Types (PlanCardConfig, SubscriptionScreenState, SubscriptionSubview(..))
 
 initData :: SubscriptionScreenState
 initData = {
-    data : {
+    data: {
         myPlanData : {
             dueItems : [{tripDate : "6 Sept, 2023", amount : "₹25"}, {tripDate : "5 Sept, 2023", amount : "₹3.5"}, {tripDate : "4 Sept, 2023", amount : "₹3.5"}, {tripDate : "3 Sept, 2023", amount : "₹3.5"}, {tripDate : "2 Sept, 2023", amount : "₹3.5"}],
             offers : [
@@ -61,10 +61,30 @@ initData = {
         }
     },
     props : {
-        subView : ManagePlan,
+        subView : JoinPlan,
         myPlanProps : {
             isDuesExpanded : false
         },
         managePlanProps : {}
     }
+}
+
+
+
+
+dummyPlanConfig :: PlanCardConfig
+dummyPlanConfig = {
+    title : "title"
+  , description : "description"
+  , isSelected : false
+  , offers : [{
+            title : "offerTitle"
+        , isGradient : false
+        , gradient : [""]
+        , hasImage : true
+        , imageURL : ""
+        }
+  ]
+  , offerDescription : "offerDescription"
+  , planPrice : 3.5
 }
