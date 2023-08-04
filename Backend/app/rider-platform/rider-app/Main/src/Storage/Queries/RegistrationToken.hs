@@ -42,8 +42,7 @@ findById (Id registrationTokenId) = findOneWithKV [Se.Is BeamRT.id $ Se.Eq regis
 --     return registrationToken
 
 findByToken :: (L.MonadFlow m, Log m) => RegToken -> m (Maybe RegistrationToken)
-findByToken token = do
-  findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
+findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 
 -- setVerified :: Id RegistrationToken -> SqlDB ()
 -- setVerified rtId = do
@@ -137,8 +136,7 @@ deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is
 --     return registrationToken
 
 findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [RegistrationToken]
-findAllByPersonId personId = do
-  findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
+findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
 
 instance FromTType' BeamRT.RegistrationToken RegistrationToken where
   fromTType' BeamRT.RegistrationTokenT {..} = do

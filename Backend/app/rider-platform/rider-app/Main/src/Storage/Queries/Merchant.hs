@@ -35,8 +35,7 @@ import qualified Storage.Beam.Merchant as BeamM
 -- findById = Esq.findById
 
 findById :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe Merchant)
-findById (Id merchantId) = do
-  findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
+findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
 -- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
 -- findByShortId shortId_ = do
