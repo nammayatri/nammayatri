@@ -43,6 +43,10 @@ import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
+import Data.Time.Duration (Milliseconds(..))
+import Presto.Core.Types.Language.Flow (delay)
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons (flowRunner)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -431,4 +435,12 @@ type ClevertapEventParams = {
   value :: String
 }
 
-
+showAndHideLoader :: Number -> String -> String -> GlobalState -> Effect Unit
+showAndHideLoader delayInMs title description state = do
+  _ <- launchAff $ flowRunner state $ do
+    _ <- loaderText title description
+    _ <- toggleLoader true
+    _ <- delay $ Milliseconds delayInMs
+    _ <- toggleLoader false
+    pure unit
+  pure unit

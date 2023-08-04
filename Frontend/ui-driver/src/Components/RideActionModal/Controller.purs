@@ -44,7 +44,8 @@ type Config = {
   currentStage :: HomeScreenStage,
   unReadMessages :: Boolean,
   specialLocationTag :: Mb.Maybe String,
-  waitTime :: String
+  waitTime :: String,
+  isChatOpened :: Boolean
   }
 
 type AddressConfig = {
@@ -73,5 +74,6 @@ config = {
   id : "buttonTimer",
   currentStage : RideAccepted,
   unReadMessages : false,
-  specialLocationTag : Mb.Nothing
+  specialLocationTag : Mb.Nothing,
+  isChatOpened : false
 }

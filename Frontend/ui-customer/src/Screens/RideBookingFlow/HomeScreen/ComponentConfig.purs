@@ -702,6 +702,7 @@ driverInfoCardViewState state = { props:
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
+                                  , isChatOpened : state.props.isChatOpened
                                   }
                               , data: driverInfoTransformer state
                             }

@@ -679,21 +679,23 @@ eval Support state = continue state {props {callSupportPopUp = true}}
 eval RideDetails state = exit $ RideDetailsScreen state -- TODO needs to fill the data
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
-  case (last messages) of
-    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
-                    if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
-                    else do
-                      let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                      let unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
-                      let suggestions = getSuggestionsfromKey message
-                      updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages && (state.data.messagesSize == (show $ (length state.data.messages) - 1) || state.data.messagesSize == "-1")}}
-    Nothing -> continue state
+  if not state.props.chatcallbackInitiated then continue state else do
+    let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
+    case (last messages) of
+      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
+                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
+                      else do
+                        let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
+                        let unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
+                        let suggestions = getSuggestionsfromKey message
+                        updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages && (size == (show $ (length messages) - 1) || state.data.messagesSize == "-1")}}
+      Nothing -> continue state
 
 eval (OpenChatScreen) state = do
-  continueWithCmd state{props{openChatScreen = false}} [do
-    pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
-  ]
+  if not state.props.chatcallbackInitiated then continue state else do
+    continueWithCmd state{props{openChatScreen = false}} [do
+      pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
+    ]
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
   let sendMessageActive = if (STR.length (STR.trim value)) >= 1 then
@@ -746,10 +748,11 @@ eval RemoveChat state = do
   ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
-  _ <- pure $ performHapticFeedback unit
-  _ <- pure $ updateLocalStage ChatWithDriver
-  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
-  continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false }}
+  if not state.props.chatcallbackInitiated then continue state else do
+    _ <- pure $ performHapticFeedback unit
+    _ <- pure $ updateLocalStage ChatWithDriver
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
+    continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatOpened = true }}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.RemoveNotification)) state = do
   continue state {props { showChatNotification = false}}

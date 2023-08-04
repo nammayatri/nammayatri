@@ -179,6 +179,7 @@ initData = {
     , zoneType : dummyZoneType
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
+    , isChatOpened : false
     , tipViewProps : {
         stage : DEFAULT
       , isVisible : false

@@ -709,7 +709,8 @@ type HomeScreenProps =  {
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
-  timerRefresh :: Boolean
+  timerRefresh :: Boolean,
+  isChatOpened :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
