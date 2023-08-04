@@ -634,6 +634,7 @@ type HomeScreenStateProps =
   , routeEndPoints :: Maybe RouteEndPoints
   , findingQuotesProgress :: Number
   , confirmLocationCategory :: String
+  , isChatOpened :: Boolean
   }
 
 type RouteEndPoints = {

@@ -16,7 +16,6 @@
 module Components.DriverInfoCard.View where
 
 import Common.Types.App
-
 import Animation (fadeIn)
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
@@ -46,6 +45,8 @@ import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Storage (KeyStore(..))
+import JBridge as JB
+import Types.App (defaultGlobalState)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -364,7 +365,11 @@ messageNotificationView push state =
       , padding $ PaddingHorizontal 12 16
       , orientation HORIZONTAL
       , clickable true
-      , onClick push $ const $ MessageDriver
+      , onClick (\action -> do
+                  if not state.props.isChatOpened then JB.showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS) defaultGlobalState
+                  else pure unit
+                  push action
+                ) (const MessageDriver)
       , gravity CENTER_VERTICAL
       ][ linearLayout
          [ height MATCH_PARENT
@@ -703,7 +708,11 @@ contactView push state =
           , gravity CENTER
           , cornerRadius 20.0
           , background Color.green200
-          , onClick push (const MessageDriver)
+          , onClick (\action -> do
+                        if not state.props.isChatOpened then JB.showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS) defaultGlobalState
+                        else pure unit
+                        push action
+                    )(const MessageDriver)
           ][ imageView
               [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green,https://assets.juspay.in/nammayatri/images/user/ic_chat_badge_green.png" else "ic_call_msg,https://assets.juspay.in/nammayatri/images/user/ic_call_msg.png"
               , height $ V 24

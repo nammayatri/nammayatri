@@ -104,6 +104,7 @@ initData = {
         showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,
-        timerRefresh : true
+        timerRefresh : true,
+        isChatOpened : false
     }
 }

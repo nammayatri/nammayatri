@@ -71,7 +71,8 @@ rideActionModalConfig state = let
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
     specialLocationTag = state.data.activeRide.specialLocationTag,
-    waitTime = state.data.activeRide.waitingTime
+    waitTime = state.data.activeRide.waitingTime,
+    isChatOpened = state.props.isChatOpened
   }
   in rideActionModalConfig'
 
