@@ -701,6 +701,8 @@ driverInfoCardViewState state = { props:
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
+                                  , isChatOpened : state.props.isChatOpened
+                                  , chatcallbackInitiated : state.props.chatcallbackInitiated
                                   }
                               , data: driverInfoTransformer state
                             }

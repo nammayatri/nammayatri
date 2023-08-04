@@ -3957,10 +3957,20 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         ChatService.chatUserId = uuid;
     }
 
+    @JavascriptInterface
+    public void removeChatMessageCallback() {
+        ChatService.storeCallBackMessage = null;
+    }
+
     public static String storeCallBackOpenChatScreen = null;
     @JavascriptInterface
     public void storeCallBackOpenChatScreen(final String callback){
         storeCallBackOpenChatScreen = callback;
+    }
+
+    @JavascriptInterface
+    public void removeCallBackOpenChatScreen() {
+        storeCallBackOpenChatScreen = null;
     }
 
     @JavascriptInterface
