@@ -248,8 +248,9 @@ view push state =
             ( \action -> do
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
-                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then do 
-                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState else pure unit
+                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then do
+                  let delay = if os == "IOS" then 2000.0 else 5000.0 
+                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState else pure unit
                   push OpenChatScreen 
                 else pure unit
                 case state.props.currentStage of
@@ -723,8 +724,8 @@ recentSearchesAndFavourites state push =
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
   ]([ savedLocationsView state push
-   , recentSearchesView state push]
-   <> if(state.props.isBanner) then [genderBannerView state push] else [])
+   , recentSearchesView state push])
+  --  <> if(state.props.isBanner) then [genderBannerView state push] else [])
 
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
