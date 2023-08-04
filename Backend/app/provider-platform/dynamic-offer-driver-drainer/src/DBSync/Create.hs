@@ -4,24 +4,23 @@ module DBSync.Create where
 import Config.Env
 -- import Utils.Logging
 
+-- import Storage.Beam.RegistrationToken as BeamRT
+-- import System.CPUTime
+
+import Data.Maybe
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types as ET
 import qualified Kernel.Beam.Types as KBT
--- import Storage.Beam.RegistrationToken as BeamRT
--- import System.CPUTime
-
-import Kernel.Types.Error
-import Kernel.Utils.Common (fromMaybeM)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
 
 runCreateCommands :: Show b => [(CreateDBCommand, b)] -> ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
 runCreateCommands cmds = do
-  dbConf <- L.getOption KBT.PsqlDbCfg >>= maybeM (L.throwError $ InternalError "DB config not found")
+  dbConf <- fromJust <$> L.getOption KBT.PsqlDbCfg
   runCreate dbConf ("RegistrationToken" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
     |::| runCreate dbConf ("Booking" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingObject obj), val) <- cmds]
     |::| runCreate dbConf ("BookingLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingLocationObject obj), val) <- cmds]

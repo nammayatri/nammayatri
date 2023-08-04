@@ -6,21 +6,20 @@ import Data.Either.Extra (mapLeft)
 -- import           Utils.Logging
 -- import System.CPUTime
 
+import Data.Maybe (fromJust)
 import Data.Text as T
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Types as KBT
-import Kernel.Types.Error
-import Kernel.Utils.Common (fromMaybeM)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
 
 runDeleteCommands :: (DeleteDBCommand, ByteString) -> Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
 runDeleteCommands (cmd, val) = do
-  let dbConf = EL.getOption KBT.PsqlDbCfg >>= fromMaybeM EL.throwError (InternalError "DB config not found")
+  let dbConf = fromJust <$> EL.getOption KBT.PsqlDbCfg
   case cmd of
     DeleteDBCommand id _ _ _ _ (AppInstallsDeleteOptions _ whereClause) -> runDelete id val whereClause ("AppInstalls" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (BlackListOrgDeleteOptions _ whereClause) -> runDelete id val whereClause ("BlackListOrg" :: Text) =<< dbConf

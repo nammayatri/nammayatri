@@ -8,6 +8,7 @@ import Data.Either.Extra (mapLeft)
 
 -- import System.CPUTime
 
+import Data.Maybe (fromJust)
 import Data.Text as T
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -59,7 +60,7 @@ updateDB dbConf _ setClause whereClause bts = do
 
 runUpdateCommands :: (UpdateDBCommand, ByteString) -> Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
 runUpdateCommands (cmd, val) = do
-  let dbConf = EL.getOption KBT.PsqlDbCfg >>= fromMaybeM EL.throwError (InternalError "DB config not found")
+  let dbConf = fromJust <$> EL.getOption KBT.PsqlDbCfg
   case cmd of
     -- UpdateDBCommand id _ _ _ _ (TxnOfferInfoOptions                  _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("TxnOfferInfo"                  :: Text) =<< Config.getEulerDbConf
     -- UpdateDBCommand id _ _ _ _ (JuspayEventOptions                   _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("JuspayEvent"                   :: Text) =<< Config.getEulerDbConf
