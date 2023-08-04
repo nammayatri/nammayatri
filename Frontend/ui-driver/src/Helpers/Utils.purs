@@ -116,7 +116,7 @@ foreign import getPastDays :: Int -> Array LeaderBoardDay
 foreign import getPastWeeks :: Int -> Array LeaderBoardWeek
 foreign import getZoneTagConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 foreign import getPeriod :: String -> Period
-
+foreign import clampNumber :: Number -> Number -> Int -> Int
 type Period
   = { period :: Int
     , periodType :: String

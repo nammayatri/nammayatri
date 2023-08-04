@@ -205,6 +205,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
+                    | SubscriptionScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -329,6 +330,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    "Join" -> exit $ SubscriptionScreen state
     _ -> continue state
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do

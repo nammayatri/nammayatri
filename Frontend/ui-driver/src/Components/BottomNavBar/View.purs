@@ -76,6 +76,7 @@ view push state =
                       "Rankings"      -> getString RANKINGS
                       "Profile"       -> getString PROFILE
                       "Alert"         -> getString MESSAGES
+                      "Join"          -> "Join"
                       _               -> ""
              ] <> FontStyle.tags TypoGraphy)
            ]

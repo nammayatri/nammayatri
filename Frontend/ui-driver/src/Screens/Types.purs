@@ -1419,6 +1419,7 @@ type RankCardData = {
   , rank :: Int
   , rides :: Int
 }
+
 type AcknowledgementScreenState = {
   data :: AcknowledgementScreenData,
   props :: AcknowledgementScreenProps
@@ -1481,3 +1482,65 @@ instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
 type GlobalProps = {
   aadhaarVerificationRequired :: Boolean
 }
+
+type SubscriptionScreenState = {
+  data :: SubscriptionScreenData,
+  props :: SubscriptionScreenProps
+}
+
+type SubscriptionScreenData = {
+  myPlanData :: MyPlanData,
+  managePlanData :: ManagePlanData
+}
+
+type SubscriptionScreenProps = {
+  subView :: SubscriptionSubview,
+  myPlanProps :: MyPlanProps,
+  managePlanProps :: ManagePlanProps
+}
+
+type ManagePlanData = {
+  allPlans :: Array PlanCardConfig
+}
+
+type ManagePlanProps = {
+}
+
+type MyPlanData = {
+  dueItems :: Array DueItem,
+  offers :: Array PromoConfig
+}
+
+type MyPlanProps = {
+  isDuesExpanded :: Boolean
+}
+
+type DueItem = {
+  tripDate :: String,
+  amount :: String
+}
+
+type PlanCardConfig = {
+    title :: String
+  , description :: String
+  , isSelected :: Boolean
+  , offers :: Array PromoConfig
+  , offerDescription :: String
+  , planPrice :: Number
+}
+
+type PromoConfig = {
+    title :: String
+  , isGradient :: Boolean
+  , gradient :: Array String
+  , hasImage :: Boolean
+  , imageURL :: String
+}
+
+data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan
+
+derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
+instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow
+instance eqSubscriptionSubview :: Eq SubscriptionSubview where eq = genericEq
+instance decodeSubscriptionSubview :: Decode SubscriptionSubview where decode = defaultEnumDecode
+instance encodeSubscriptionSubview :: Encode SubscriptionSubview where encode = defaultEnumEncode
