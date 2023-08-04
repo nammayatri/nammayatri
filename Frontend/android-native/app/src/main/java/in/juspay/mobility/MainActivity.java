@@ -409,7 +409,6 @@ public class MainActivity extends AppCompatActivity {
             json.put("betaAssets", false);
             payload.put("clientId", getResources().getString(R.string.client_id));
             payload.put("action", "initiate");
-            payload.put("service", getService());
             payload.put("merchantId", getResources().getString(R.string.merchant_id));
             payload.put(PaymentConstants.ENV, "prod");
             json.put(PaymentConstants.PAYLOAD, payload);
