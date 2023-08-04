@@ -115,9 +115,9 @@ public class LocationUpdateService extends Service {
     private Context context;
     private int delayForG = 500000, delayForT = 20000;
     private int delayForGNew = 500000, delayForTNew = 20000;
-    private int maximumLimit = 30;
+    private int maximumLimit = 60;
     private int pointsToRemove = 1;
-    private int maximumLimitNotOnRide = 5;
+    private int maximumLimitNotOnRide = 3;
     private float minDispDistanceNew = 25.0f, minDispDistance = 25.0f;
     private TimerTask timerTask;
 
@@ -233,8 +233,8 @@ public class LocationUpdateService extends Service {
             sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
 
-            maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "30"));
-            maximumLimitNotOnRide = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT_NOT, "5"));
+            maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "60"));
+            maximumLimitNotOnRide = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT_NOT, "3"));
             // UPDATE FOR GOOGLE CALLBACK FREQUENCY
             locationGFrequency = sharedPrefs.getString("RIDE_G_FREQUENCY", null);
             delayForGNew = locationGFrequency != null ? Integer.parseInt(locationGFrequency) : 50000;
@@ -589,9 +589,9 @@ public class LocationUpdateService extends Service {
                 try { locationPayload = new JSONArray(bufferedLocationObjects);
                     String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
 
-                    if(rideStatus!=null && rideStatus.equals("false")) maximumLimit = maximumLimitNotOnRide;
+                    maximumLimit = rideStatus!=null && rideStatus.equals("false") ? maximumLimitNotOnRide : maximumLimit;
 
-                    if (locationPayload.length() >= maximumLimit ) {
+                    while (locationPayload.length() >= maximumLimit ) {
                         int index = (pointsToRemove++) % (locationPayload.length()-1);
                         if (index!=0) locationPayload.remove(index);
                         if (pointsToRemove > 1000000) pointsToRemove = 1;
