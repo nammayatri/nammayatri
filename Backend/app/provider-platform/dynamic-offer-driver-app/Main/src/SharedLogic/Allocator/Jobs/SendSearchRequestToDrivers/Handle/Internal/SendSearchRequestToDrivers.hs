@@ -19,6 +19,7 @@ where
 
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.SearchRequest as DSR
@@ -39,6 +40,7 @@ import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
@@ -64,7 +66,6 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   validTill <- getSearchRequestValidTill
-  batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   DS.driverScoreEventHandler
     DST.OnNewSearchRequestForDrivers
@@ -90,6 +91,26 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
 
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
+    processDriverPool ::
+      ( MonadFlow m,
+        Redis.HedisFlow m r,
+        EsqDBFlow m r,
+        MonadReader r m
+      ) =>
+      UTCTime ->
+      m [(DriverPoolWithActualDistResult, SearchRequestForDriver)]
+    processDriverPool validTill = do
+      batchNumber <- getPoolBatchNum searchTry.id
+      sequenceA $ do
+        driverPoolResult <- driverPool
+        return $ do
+          mbActiveDGR <- QDGR.findActive driverPoolResult.driverPoolResult.driverId
+          mbDGRWithinRangeId <- flip (maybe (return Nothing)) mbActiveDGR $ \activeDGR -> do
+            isWithinRange <- QDGR.isWithinRange activeDGR.id (getCoordinates driverPoolResult) driverPoolConfig.goHomeToLocationRadius
+            return $ bool Nothing (Just activeDGR.id) isWithinRange
+          searchReqForDriver <- buildSearchRequestForDriver batchNumber validTill driverPoolResult mbDGRWithinRangeId
+          return (driverPoolResult, searchReqForDriver)
+
     getSearchRequestValidTill = do
       now <- getCurrentTime
       let singleBatchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
@@ -102,8 +123,9 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       Int ->
       UTCTime ->
       DriverPoolWithActualDistResult ->
+      Maybe (Id DDGR.DriverGoHomeRequest) ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver batchNumber validTill dpwRes = do
+    buildSearchRequestForDriver batchNumber validTill dpwRes mbDGRWithinRangeId = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -136,6 +158,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 driverSpeed = dpwRes.intelligentScores.driverSpeed,
                 keepHiddenForSeconds = dpwRes.keepHiddenForSeconds,
                 mode = dpRes.mode,
+                goHomeRequestId = mbDGRWithinRangeId,
                 ..
               }
       pure searchRequestForDriver

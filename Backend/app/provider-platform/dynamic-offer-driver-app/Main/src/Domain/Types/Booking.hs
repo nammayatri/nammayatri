@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Booking.BookingLocation as DLoc
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
@@ -77,6 +78,7 @@ data Booking = Booking
     fareParams :: FareParameters,
     riderName :: Maybe Text,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    goHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     paymentUrl :: Maybe Text

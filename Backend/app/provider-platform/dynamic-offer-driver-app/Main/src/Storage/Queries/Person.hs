@@ -17,7 +17,11 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
-module Storage.Queries.Person where
+module Storage.Queries.Person
+  ( module Storage.Queries.Person,
+    module Reexport,
+  )
+where
 
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
@@ -40,14 +44,11 @@ import Domain.Types.Vehicle as DV
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Maps as Maps
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
@@ -78,16 +79,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
-
-data FullDriver = FullDriver
-  { person :: Person,
-    location :: DriverLocation,
-    info :: DriverInformation,
-    vehicle :: Vehicle
-  }
-
-mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriver
-mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDriversWithInfoAndVehicle ::
   (L.MonadFlow m, Log m) =>
@@ -177,6 +168,13 @@ getDriversWithOutdatedLocationsToMakeInactive' before = do
   logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
   return drivers
 
+data FullDriver = FullDriver
+  { person :: Person,
+    location :: DriverLocation,
+    info :: DriverInformation,
+    vehicle :: Vehicle
+  }
+
 findAllDriversByIdsFirstNameAsc ::
   (Functor m, MonadFlow m) =>
   Id Merchant ->
@@ -188,13 +186,12 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = do
   vehicle <- getVehicles driverInfos
   drivers <- getDrivers vehicle
   return (linkArrays driverLocs driverInfos vehicle drivers)
-
-linkArrays :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> [FullDriver]
-linkArrays driverLocations driverInformations vehicles persons =
-  let personHashMap = buildPersonHashMap persons
-      vehicleHashMap = buildVehicleHashMap vehicles
-      driverInfoHashMap = buildDriverInfoHashMap driverInformations
-   in mapMaybe (buildFullDriver personHashMap vehicleHashMap driverInfoHashMap) driverLocations
+  where
+    linkArrays driverLocations driverInformations vehicles persons =
+      let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
+          vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
+          driverInfoHashMap = HashMap.fromList $ (\di -> (di.driverId, di)) <$> driverInformations
+       in mapMaybe (buildFullDriver personHashMap vehicleHashMap driverInfoHashMap) driverLocations
 
 linkArrayList :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)]
 linkArrayList driverLocations driverInformations vehicles persons LatLong {..} mbVariant =

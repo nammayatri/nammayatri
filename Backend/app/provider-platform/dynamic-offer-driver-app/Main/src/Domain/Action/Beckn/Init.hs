@@ -17,6 +17,7 @@ module Domain.Action.Beckn.Init where
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
@@ -220,6 +221,7 @@ handler merchantId req eitherReq = do
             specialZoneOtpCode = Nothing,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            goHomeRequestId = mbGoHomeRequestId,
             ..
           }
 
