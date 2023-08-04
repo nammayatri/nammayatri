@@ -52,13 +52,21 @@ findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$>
 
 instance FromTType' BeamFP.FareParameters FareParameters where
   fromTType' BeamFP.FareParametersT {..} = do
-    fullFPPD <- BeamFPPD.findById' (Id id)
-    let fPPD = snd $ fromJust fullFPPD
-    fullFPSD <- BeamFPSD.findById' (Id id)
-    let fPSD = snd $ fromJust fullFPSD
-    if isJust fullFPPD
-      then
-        pure $
+    mFareParametersDetails <-
+      case fareParametersType of
+        Progressive -> do
+          mFullFPPD <- BeamFPPD.findById' (Id id)
+          case mFullFPPD of
+            Just (_, fPPD) -> return (Just $ ProgressiveDetails fPPD)
+            Nothing -> return Nothing
+        Slab -> do
+          mFullFPSD <- BeamFPSD.findById' (Id id)
+          case mFullFPSD of
+            Just (_, fPSD) -> return (Just $ SlabDetails fPSD)
+            Nothing -> return Nothing
+    case mFareParametersDetails of
+      Just fareParametersDetails -> do
+        return $
           Just
             FareParameters
               { id = Id id,
@@ -70,11 +78,9 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 baseFare = baseFare,
                 waitingCharge = waitingCharge,
                 nightShiftCharge = nightShiftCharge,
-                fareParametersDetails = case fareParametersType of
-                  Progressive -> ProgressiveDetails fPPD
-                  Slab -> SlabDetails fPSD
+                fareParametersDetails
               }
-      else pure Nothing
+      Nothing -> return Nothing
 
 instance ToTType' BeamFP.FareParameters FareParameters where
   toTType' FareParameters {..} = do

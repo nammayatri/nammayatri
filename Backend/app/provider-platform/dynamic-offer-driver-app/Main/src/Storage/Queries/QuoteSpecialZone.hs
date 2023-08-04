@@ -23,8 +23,10 @@ import Domain.Types.SearchRequestSpecialZone
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Logging
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
@@ -59,26 +61,23 @@ findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 
 instance FromTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where
   fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
-    fp <- BeamQFP.findById (Id fareParametersId)
-    if isJust fp
-      then
-        pure $
-          Just
-            QuoteSpecialZone
-              { id = Id id,
-                searchRequestId = Id searchRequestId,
-                providerId = Id providerId,
-                vehicleVariant = vehicleVariant,
-                distance = distance,
-                estimatedFinishTime = estimatedFinishTime,
-                createdAt = T.localTimeToUTC T.utc createdAt,
-                updatedAt = T.localTimeToUTC T.utc updatedAt,
-                validTill = T.localTimeToUTC T.utc validTill,
-                estimatedFare = estimatedFare,
-                specialLocationTag = specialLocationTag,
-                fareParams = fromJust fp -- to take a default value?
-              }
-      else pure Nothing
+    fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError "FareParameters not found")
+    return $
+      Just
+        QuoteSpecialZone
+          { id = Id id,
+            searchRequestId = Id searchRequestId,
+            providerId = Id providerId,
+            vehicleVariant = vehicleVariant,
+            distance = distance,
+            estimatedFinishTime = estimatedFinishTime,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc updatedAt,
+            validTill = T.localTimeToUTC T.utc validTill,
+            estimatedFare = estimatedFare,
+            specialLocationTag = specialLocationTag,
+            fareParams = fp
+          }
 
 instance ToTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where
   toTType' QuoteSpecialZone {..} = do

@@ -545,19 +545,20 @@ instance FromTType' BeamB.Booking Booking where
       else pure Nothing
     where
       buildOneWayDetails _ = do
-        toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId
+        toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWayBookingDetails
-            { toLocation = fromJust toLocation,
+            { toLocation = toLocation,
               distance = distance'
             }
       buildOneWaySpecialZoneDetails _ = do
-        toLocation <- error ""
+        toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWaySpecialZoneBookingDetails
             { distance = distance',
+              toLocation = toLocation,
               ..
             }
       getRentalDetails rentalSlabId' = do

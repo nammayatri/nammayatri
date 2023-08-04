@@ -27,8 +27,9 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
@@ -113,34 +114,31 @@ setInactiveAllDQByEstId (Id estimateId) now = updateWithKV [Se.Set BeamDQ.status
 
 instance FromTType' BeamDQ.DriverQuote DriverQuote where
   fromTType' BeamDQ.DriverQuoteT {..} = do
-    fp <- BeamQFP.findById (Id fareParametersId)
-    if isJust fp
-      then
-        pure $
-          Just
-            Domain.DriverQuote
-              { id = Id id,
-                requestId = Id requestId,
-                searchTryId = Id searchTryId,
-                searchRequestForDriverId = Id <$> searchRequestForDriverId,
-                driverId = Id driverId,
-                estimateId = Id estimateId,
-                driverName = driverName,
-                driverRating = driverRating,
-                status = status,
-                vehicleVariant = vehicleVariant,
-                distance = distance,
-                distanceToPickup = distanceToPickup,
-                durationToPickup = durationToPickup,
-                createdAt = T.localTimeToUTC T.utc createdAt,
-                updatedAt = T.localTimeToUTC T.utc updatedAt,
-                validTill = T.localTimeToUTC T.utc validTill,
-                estimatedFare = estimatedFare,
-                fareParams = fromJust fp, -- this should take a default value?
-                providerId = Id providerId,
-                specialLocationTag = specialLocationTag
-              }
-      else pure Nothing
+    fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError "FareParameters not found")
+    return $
+      Just
+        Domain.DriverQuote
+          { id = Id id,
+            requestId = Id requestId,
+            searchTryId = Id searchTryId,
+            searchRequestForDriverId = Id <$> searchRequestForDriverId,
+            driverId = Id driverId,
+            estimateId = Id estimateId,
+            driverName = driverName,
+            driverRating = driverRating,
+            status = status,
+            vehicleVariant = vehicleVariant,
+            distance = distance,
+            distanceToPickup = distanceToPickup,
+            durationToPickup = durationToPickup,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc updatedAt,
+            validTill = T.localTimeToUTC T.utc validTill,
+            estimatedFare = estimatedFare,
+            fareParams = fp,
+            providerId = Id providerId,
+            specialLocationTag = specialLocationTag
+          }
 
 instance ToTType' BeamDQ.DriverQuote DriverQuote where
   toTType' DriverQuote {..} = do
