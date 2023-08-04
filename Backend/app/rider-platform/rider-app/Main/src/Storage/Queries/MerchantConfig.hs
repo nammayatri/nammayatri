@@ -40,7 +40,7 @@ import qualified Storage.Beam.MerchantConfig as BeamMC
 --     return config
 
 findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [DMC.MerchantConfig]
-findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamMC.merchantId $ Se.Eq merchantId]
+findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMC.merchantId $ Se.Eq merchantId, Se.Is BeamMC.enabled $ Se.Eq True]]
 
 instance FromTType' BeamMC.MerchantConfig MerchantConfig where
   fromTType' BeamMC.MerchantConfigT {..} = do

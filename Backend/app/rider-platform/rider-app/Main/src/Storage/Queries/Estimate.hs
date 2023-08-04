@@ -166,7 +166,7 @@ updateStatusByRequestId (Id searchId) status_ = do
 
 instance FromTType' BeamE.Estimate Estimate where
   fromTType' BeamE.EstimateT {..} = do
-    etB <- QEB.findAllByEstimateIdT (Id bppEstimateId)
+    etB <- QEB.findAllByEstimateIdT (Id id)
     trip <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
     let totalFareRange =

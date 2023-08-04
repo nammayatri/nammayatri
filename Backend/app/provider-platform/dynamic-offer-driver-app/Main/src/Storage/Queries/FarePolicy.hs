@@ -98,13 +98,22 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
   fromTType' BeamFP.FarePolicyT {..} = do
     fullDEFB <- QueriesDEFB.findAll' (KTI.Id id)
     let fDEFB = snd <$> fullDEFB
-    fullFPPD <- QueriesFPPD.findById' (Id id)
-    if isJust fullFPPD
-      then do
-        fullslabs <- QueriesFPSDS.findAll' (Id id)
-        let fPPD = snd $ fromJust fullFPPD
-        let slabs = snd <$> fullslabs
-        pure $
+    mFarePolicyDetails <-
+      case farePolicyType of
+        Progressive -> do
+          mFPPD <- QueriesFPPD.findById' (Id id)
+          case mFPPD of
+            Just (_, fPPD) -> return $ Just (ProgressiveDetails fPPD)
+            Nothing -> return Nothing
+        Slabs -> do
+          fullSlabs <- QueriesFPSDS.findAll' (Id id)
+          let slabs = snd <$> fullSlabs
+          case nonEmpty slabs of
+            Just nESlabs -> return $ Just (SlabsDetails (FPSlabsDetails nESlabs))
+            Nothing -> return Nothing
+    case mFarePolicyDetails of
+      Just farePolicyDetails -> do
+        return $
           Just
             Domain.FarePolicy
               { id = Id id,
@@ -118,11 +127,9 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
                       },
                 govtCharges = govtCharges,
                 driverExtraFeeBounds = nonEmpty fDEFB,
-                farePolicyDetails = case farePolicyType of
-                  Progressive -> ProgressiveDetails fPPD
-                  Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),
+                farePolicyDetails,
                 description = description,
                 createdAt = createdAt,
                 updatedAt = updatedAt
               }
-      else pure Nothing
+      Nothing -> return Nothing
