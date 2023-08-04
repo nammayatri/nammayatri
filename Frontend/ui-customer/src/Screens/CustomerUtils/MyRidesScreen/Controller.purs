@@ -47,6 +47,8 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+-- dhruv remove these
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -161,6 +163,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
     "success" -> do
                   let bufferCardDataPrestoList = ((myRideListTransformerProp (rideList ^. _list)))
                   let bufferCardData = myRideListTransformer state (rideList  ^. _list)
+                  _ <- pure $ spy "dhruv, state.data.isSrcServiceable" state.data.isSrcServiceable
                   _ <- pure $ setRefreshing "2000031" false
                   let loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
                   continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true}}
@@ -252,6 +255,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
   , zoneType : specialTags.priorityTag
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
+  , isSrcServiceable: state.data.isSrcServiceable
 }) (listRes))
 
 dummyFareBreakUp :: FareBreakupAPIEntity
