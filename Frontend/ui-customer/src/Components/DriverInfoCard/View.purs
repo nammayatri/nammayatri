@@ -419,7 +419,8 @@ messageNotificationView push state =
       , orientation HORIZONTAL
       , clickable true
       , onClick (\action -> do
-                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                  let delay = if os == "IOS" then 2000.0 else 5000.0
+                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
                   else pure unit
                   push action
                 ) (const MessageDriver)
@@ -746,6 +747,35 @@ contactView push state =
                 , color Color.black800
                 ] <> FontStyle.subHeading1 TypoGraphy
               ]
+          ]
+      , linearLayout[
+          width MATCH_PARENT
+        , gravity RIGHT
+        , height WRAP_CONTENT
+        ][linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity RIGHT
+          ] [ linearLayout
+              [ height $ V 40
+              , width $ V 64
+              , gravity CENTER
+              , cornerRadius 20.0
+              , background state.data.config.driverInfoConfig.callBackground
+              , stroke state.data.config.driverInfoConfig.callButtonStroke
+              , onClick (\action -> do
+                  let delay = if os == "IOS" then 2000.0 else 5000.0
+                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                  else pure unit
+                  push action
+              ) (const MessageDriver)
+              ][ imageView
+                  [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                  , height $ V state.data.config.driverInfoConfig.callHeight
+                  , width $ V state.data.config.driverInfoConfig.callWidth
+                  ]
+              ]
+            ]
           ]
     ]
     
