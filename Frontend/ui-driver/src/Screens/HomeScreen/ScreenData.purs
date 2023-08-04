@@ -100,6 +100,7 @@ initData = {
         zoneRideBooking : true,
         showGenderBanner : false,
         notRemoveBanner : true,
-        showBonusInfo : false
+        showBonusInfo : false,
+        isChatOpened : false
     }
 }

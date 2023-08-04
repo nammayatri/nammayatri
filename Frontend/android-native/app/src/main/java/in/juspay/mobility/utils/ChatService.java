@@ -66,6 +66,8 @@ public class ChatService extends Service {
     private int delay = 5000;
     static Random random = new Random();
     String merchantType = BuildConfig.MERCHANT_TYPE;
+    private long start = System.currentTimeMillis();
+    private long end = 0;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -94,6 +96,8 @@ public class ChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        start = System.currentTimeMillis();
+        end = start + delay;
         handler.postDelayed(this::handleMessages, delay);
         return  START_STICKY;
     }
@@ -235,6 +239,7 @@ public class ChatService extends Service {
 
     private void handleMessage(Message newMessage, String len) {
         try  {
+            if(System.currentTimeMillis() < end) return;
             String _dateFormatted = newMessage.timestamp;
             String _message = newMessage.message;
             String _sentBy = newMessage.sentBy;

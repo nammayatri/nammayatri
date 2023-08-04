@@ -630,6 +630,7 @@ type HomeScreenStateProps =
   , timerId :: String
   , findingRidesAgain :: Boolean
   , routeEndPoints :: Maybe RouteEndPoints
+  , isChatOpened :: Boolean
   }
 
 type RouteEndPoints = {

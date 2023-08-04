@@ -68,7 +68,8 @@ rideActionModalConfig state = let
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
-    specialLocationTag = state.data.activeRide.specialLocationTag
+    specialLocationTag = state.data.activeRide.specialLocationTag,
+    isChatOpened = state.props.isChatOpened
   }
   in rideActionModalConfig'
 
