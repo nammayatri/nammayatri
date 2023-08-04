@@ -65,8 +65,6 @@ deleteDriver merchantShortId reqDriverId = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession reqDriverId
   -- Esq.runTransaction $ do
-  QDriverInfo.deleteById (cast reqDriverId)
-  QPerson.deleteById reqDriverId
   QIV.deleteByPersonId reqDriverId
   QImage.deleteByPersonId reqDriverId
   QDriverLicense.deleteByDriverId reqDriverId
@@ -76,12 +74,14 @@ deleteDriver merchantShortId reqDriverId = do
   QDriverStats.deleteById (cast reqDriverId)
   QR.deleteByPersonId reqDriverId
   QVehicle.deleteById reqDriverId
+  QDriverInfo.deleteById (cast reqDriverId)
   QDriverFlowStatus.deleteById reqDriverId
   QMessage.deleteByPersonId reqDriverId
   QIssueReport.deleteByPersonId reqDriverId
   AadhaarOtp.deleteByPersonIdForGenerate reqDriverId
   AadhaarOtp.deleteByPersonIdForVerify reqDriverId
   AV.deleteByPersonId reqDriverId
+  QPerson.deleteById reqDriverId
   -- runInLocationDB $ QDriverLocation.deleteById reqDriverId
   QDriverLocation.deleteById reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
