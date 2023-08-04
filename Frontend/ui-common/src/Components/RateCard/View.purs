@@ -26,8 +26,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/=), (+), (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView)
+import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
@@ -38,7 +38,7 @@ import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Engineering.Helpers.Commons (os)
+import Engineering.Helpers.Commons (os, screenWidth)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -118,10 +118,12 @@ fareList push config =
         , orientation HORIZONTAL
         , margin $ MarginTop 10
         ][ textView
-            [ width WRAP_CONTENT
+            [ width $ V ((3 * screenWidth unit) /5 )
             , height WRAP_CONTENT
             , textSize FontSize.a_16
             , lineHeight "18"
+            , singleLine false
+            , maxLines 2
             , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.black700
             , text item.key
@@ -133,6 +135,8 @@ fareList push config =
             , color Color.black800
             , text item.val
             , gravity RIGHT
+            , singleLine false
+            , maxLines 2
             , weight 1.0
             ]
           ]
