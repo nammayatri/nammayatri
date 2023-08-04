@@ -27,12 +27,10 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 
 createDriverOffer :: (L.MonadFlow m, Log m) => DriverOffer -> m ()
-createDriverOffer driverOffer = do
-  createWithKV driverOffer
+createDriverOffer = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id DriverOffer -> m (Maybe DriverOffer)
-findById (Id driverOfferId) = do
-  findOneWithKV [Se.Is BeamDO.id $ Se.Eq driverOfferId]
+findById (Id driverOfferId) = findOneWithKV [Se.Is BeamDO.id $ Se.Eq driverOfferId]
 
 findByBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> m [DriverOffer]
 findByBPPQuoteId bppQuoteId = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]

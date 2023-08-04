@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Geometry where
 
+import Data.Either
 import qualified Database.Beam as B
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
@@ -34,32 +36,34 @@ import qualified Storage.Beam.Geometry as BeamG
 --         &&. containsPoint (gps.lon, gps.lat)
 --     return geometry
 
-findGeometriesContaining :: L.MonadFlow m => LatLong -> [Text] -> m [Geometry]
+findGeometriesContaining :: (L.MonadFlow m, Log m) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
   dbConf <- getMasterBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 -- someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
 -- someGeometriesContain gps regions = do
 --   geometries <- findGeometriesContaining gps regions
 --   pure $ not $ null geometries
 
-someGeometriesContain :: L.MonadFlow m => LatLong -> [Text] -> m Bool
+someGeometriesContain :: (L.MonadFlow m, Log m) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
 
-transformBeamGeometryToDomain :: BeamG.Geometry -> Geometry
-transformBeamGeometryToDomain BeamG.GeometryT {..} = do
-  Geometry
-    { id = Id id,
-      region = region
-    }
+instance FromTType' BeamG.Geometry Geometry where
+  fromTType' BeamG.GeometryT {..} = do
+    pure $
+      Just
+        Geometry
+          { id = Id id,
+            region = region
+          }
 
-transformDomainGeometryToBeam :: Geometry -> BeamG.Geometry
-transformDomainGeometryToBeam Geometry {..} =
-  BeamG.GeometryT
-    { BeamG.id = getId id,
-      BeamG.region = region
-    }
+instance ToTType' BeamG.Geometry Geometry where
+  toTType' Geometry {..} =
+    BeamG.GeometryT
+      { BeamG.id = getId id,
+        BeamG.region = region
+      }

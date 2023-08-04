@@ -27,8 +27,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 
 create :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
-create bookingCancellationReason = do
-  createWithKV bookingCancellationReason
+create = createWithKV
 
 -- findByRideBookingId ::
 --   Transactionable m =>
@@ -61,7 +60,8 @@ upsert cancellationReason = do
   if isJust res
     then
       updateOneWithKV
-        [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
+        [ Se.Set BeamBCR.bookingId (getId cancellationReason.bookingId),
+          Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
           Se.Set BeamBCR.source cancellationReason.source,
           Se.Set BeamBCR.reasonCode cancellationReason.reasonCode,
           Se.Set BeamBCR.reasonStage cancellationReason.reasonStage,

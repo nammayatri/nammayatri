@@ -33,14 +33,10 @@ import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 
 create :: (L.MonadFlow m, Log m) => Exophone -> m ()
-create exophone = do
-  createWithKV exophone
+create = createWithKV
 
 findAllMerchantIdsByPhone :: (L.MonadFlow m, Log m) => Text -> m [Id DM.Merchant]
-findAllMerchantIdsByPhone phone =
-  do
-    findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
-    <&> (DE.merchantId <$>)
+findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantId <$>)
 
 -- findAllByPhone :: Transactionable m => Text -> m [Exophone]
 -- findAllByPhone phone = do
@@ -68,8 +64,7 @@ findAllByPhone phone = do
 --     return exophone
 
 findAllByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m [Exophone]
-findAllByMerchantId merchantId = do
-  findAllWithKV [Se.Is BeamE.merchantId $ Se.Eq $ getId merchantId]
+findAllByMerchantId merchantId = findAllWithKV [Se.Is BeamE.merchantId $ Se.Eq $ getId merchantId]
 
 -- findAllExophones :: Transactionable m => m [Exophone]
 -- findAllExophones = findAll $ from $ table @ExophoneT

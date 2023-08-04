@@ -62,8 +62,7 @@ findById (Id callStatusId) = findOneWithKV [Se.Is BeamCS.id $ Se.Eq callStatusId
 --     return callStatus
 
 findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
-findByCallSid callSid = do
-  findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
+findByCallSid callSid = findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
 
 -- updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> SqlDB ()
 -- updateCallStatus callId status conversationDuration mbrecordingUrl = do

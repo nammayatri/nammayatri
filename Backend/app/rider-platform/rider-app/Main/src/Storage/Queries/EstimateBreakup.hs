@@ -26,8 +26,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
 create :: (L.MonadFlow m, Log m) => EstimateBreakup -> m ()
-create estimate = do
-  createWithKV estimate
+create = createWithKV
 
 -- findAllByEstimateIdT :: (Transactionable m) => EstimateTId -> MaybeT (DTypeBuilder m) [EstimateBreakupT]
 -- findAllByEstimateIdT = lift . findAllByEstimateId'
@@ -38,8 +37,7 @@ create estimate = do
 --   return estimateBreakup
 
 findAllByEstimateIdT :: (L.MonadFlow m, Log m) => Id Estimate -> m [EstimateBreakup]
-findAllByEstimateIdT (Id estimateId) = do
-  findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
+findAllByEstimateIdT (Id estimateId) = findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
 
 instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where
   fromTType' BeamEB.EstimateBreakupT {..} = do
