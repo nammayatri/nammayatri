@@ -27,15 +27,15 @@ import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), map, show, not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView)
+import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), map, show, not, unit)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine )
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Screens.Types (RateCardType(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config as AnimConfig
-import Engineering.Helpers.Commons (os)
+import Engineering.Helpers.Commons (os, screenWidth)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -146,10 +146,12 @@ defaultRateCardView push config =
               , margin (MarginVertical 10 10)
               , padding (PaddingHorizontal 20 20)
               ][  textView 
-                  [ width WRAP_CONTENT
+                  [ width $ V ((3 * screenWidth unit) /5 )
                   , height WRAP_CONTENT
                   , textSize FontSize.a_16 
                   , lineHeight "18"
+                  , singleLine false
+                  , maxLines 2
                   , fontStyle $ FontStyle.medium LanguageStyle
                   , color Color.black800
                   , text item.title 
@@ -161,6 +163,8 @@ defaultRateCardView push config =
                   , color Color.black800
                   , text item.description 
                   , gravity RIGHT 
+                  , singleLine false
+                  , maxLines 2
                   , weight 1.0
                   ]
                 ] ) config.rateCardArray)
@@ -267,7 +271,7 @@ driverAdditionView push config =
       , margin $ MarginTop 12
       ]
     , textView
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
       , textSize FontSize.a_14
       , lineHeight "16"
