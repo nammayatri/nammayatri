@@ -229,7 +229,14 @@ starRatingView state push =
     , gravity CENTER
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
-    ][textView
+    ][
+      imageView [
+        imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
+        , height $ V 56
+        , width $ V 56
+        , cornerRadius 50.0
+      ]
+    , textView
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
         , textSize FontSize.a_18
@@ -239,7 +246,7 @@ starRatingView state push =
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
         , lineHeight "20"
-        , margin (MarginBottom 16)
+        , margin (MarginVertical 8 16)
         ]
     , linearLayout
         [ height WRAP_CONTENT
