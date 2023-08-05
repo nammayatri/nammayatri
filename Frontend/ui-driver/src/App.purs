@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState)
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, PaymentHistoryScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
@@ -54,6 +54,7 @@ import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
+import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens.Types (HomeScreenStage(..), GlobalProps)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -97,6 +98,7 @@ newtype GlobalState = GlobalState {
   , aadhaarVerificationScreen :: AadhaarVerificationScreenState
   , globalProps :: GlobalProps
   , subscriptionScreen :: SubscriptionScreenState
+  , paymentHistoryScreen :: PaymentHistoryScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -139,6 +141,7 @@ defaultGlobalState = GlobalState{
 , aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData
 , globalProps : defaultGlobalProps
 , subscriptionScreen : SubscriptionScreenData.initData
+, paymentHistoryScreen : PaymentHistoryScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -183,6 +186,7 @@ data ScreenType =
   | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
   | GlobalPropsType (GlobalProps -> GlobalProps)
   | SubscriptionScreenStateType (SubscriptionScreenState -> SubscriptionScreenState)
+  | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -332,9 +336,12 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
 data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | NAV NAVIGATION_ACTIONS
                                   | MAKE_PAYMENT SubscriptionScreenState
+                                  | GOTO_PAYMENT_HISTORY SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | RideHistoryNav
                           | SubscriptionNav
                           | ContestNav
                           | AlertsNav
+
+data PAYMENT_HISTORY_SCREEN_OUTPUT = ViewDetails PaymentHistoryScreenState

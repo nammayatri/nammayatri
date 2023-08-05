@@ -31,3 +31,6 @@ subscriptionScreen = do
     JoinPlanExit updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ MAKE_PAYMENT updatedState)
+    PaymentHistory updatedState -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_PAYMENT_HISTORY updatedState)

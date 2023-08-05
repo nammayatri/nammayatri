@@ -27,6 +27,7 @@ data Action = BackPressed
             | JoinPlanAC PrimaryButton.Action
             | ToggleDueDetails
             | NoAction
+            | ViewPaymentHistory
 
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
@@ -34,6 +35,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | Contest SubscriptionScreenState
                     | Alerts SubscriptionScreenState
                     | JoinPlanExit SubscriptionScreenState
+                    | PaymentHistory SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = do 
@@ -60,5 +62,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ Contest state
     _ -> continue state
+
+eval ViewPaymentHistory state = exit $ PaymentHistory state
 
 eval _ state = continue state

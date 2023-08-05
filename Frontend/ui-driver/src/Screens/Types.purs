@@ -1546,3 +1546,28 @@ instance showSubscriptionSubview :: Show SubscriptionSubview where show = generi
 instance eqSubscriptionSubview :: Eq SubscriptionSubview where eq = genericEq
 instance decodeSubscriptionSubview :: Decode SubscriptionSubview where decode = defaultEnumDecode
 instance encodeSubscriptionSubview :: Encode SubscriptionSubview where encode = defaultEnumEncode
+
+
+---------------------------------------------------- PaymentHistoryScreen ----------------------------------
+
+type PaymentHistoryScreenState = {
+  data :: PaymentHistoryScreenData,
+  props :: PaymentHistoryScreenProps
+}
+
+type PaymentHistoryScreenData = {
+
+}
+
+type PaymentHistoryScreenProps = {
+  subView :: PaymentHistorySubview,
+  autoPayHistory :: Boolean
+}
+
+data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails
+
+derive instance genericPaymentHistorySubview :: Generic PaymentHistorySubview _
+instance showPaymentHistorySubview :: Show PaymentHistorySubview where show = genericShow
+instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where eq = genericEq
+instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where decode = defaultEnumDecode
+instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where encode = defaultEnumEncode

@@ -61,7 +61,7 @@ initData = {
         }
     },
     props : {
-        subView : JoinPlan,
+        subView : MyPlan,
         myPlanProps : {
             isDuesExpanded : false
         },

@@ -1926,6 +1926,11 @@ nyPaymentFlow = do
   paymentPageOutput <- paymentPageUI dummyPayload
   homeScreenFlow
 
+paymentHistoryFlow :: FlowBT String Unit
+paymentHistoryFlow = do 
+  exitAction <- UI.paymentHistory
+  pure unit 
+
 paymentFlow :: FlowBT String Unit
 paymentFlow = do
   (GlobalState state) <- getState
@@ -2024,6 +2029,7 @@ subScriptionFlow = do
     NAV AlertsNav -> notificationFlow
     GOTO_HOMESCREEN -> homeScreenFlow
     MAKE_PAYMENT state -> nyPaymentFlow
+    GOTO_PAYMENT_HISTORY state -> paymentHistoryFlow
     _ -> subScriptionFlow
 
 constructLatLong :: String -> String -> Location
