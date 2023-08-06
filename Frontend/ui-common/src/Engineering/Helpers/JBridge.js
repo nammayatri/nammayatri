@@ -985,11 +985,15 @@ export const moveCamera = function (lat1) {
 export const minimizeApp = function (str) {
   window.JBridge.minimizeApp();
 };
+
 export const toast = function (str) {
-  if(window.JBridge.toaster)
-    window.JBridge.toaster(str);
-  else
-    window.JBridge.toast(str);
+  if (window.__OS == "IOS")
+    window.JBridge.toast(str); //remove once toast is fixed in iOS.
+    else 
+      if(window.JBridge.toaster)
+        window.JBridge.toaster(str);
+      else
+        window.JBridge.toast(str);
 };
 
 export const firebaseLogEventWithParams = function (event) {
