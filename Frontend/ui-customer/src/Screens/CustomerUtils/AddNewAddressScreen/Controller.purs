@@ -228,7 +228,8 @@ eval (PrimaryButtonConfirmLocAC (PrimaryButton.OnClick)) state = do
                                             , title = (fromMaybe "" ((split (Pattern "," ) state.data.locSelectedFromMap)DA.!! 0) )
                                             , subTitle = (drop ((fromMaybe 0 (indexOf (Pattern ",") (state.data.locSelectedFromMap))) + 2) (state.data.locSelectedFromMap))
                                             , lat = Just state.data.latSelectedFromMap
-                                            , lon = Just state.data.lonSelectedFromMap }
+                                            , lon = Just state.data.lonSelectedFromMap
+                                            , locationItemType = Nothing }
                                             }
                                           }) (LOCATE_ON_MAP)
 
