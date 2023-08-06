@@ -260,14 +260,14 @@ findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id 
 findStuckRideItems (Id merchantId) bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   bookings <-
-    findAllWithKV
+    findAllWithDb
       [ Se.And
           [ Se.Is BeamB.providerId $ Se.Eq merchantId,
             Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
           ]
       ]
   rides <-
-    findAllWithKV
+    findAllWithDb
       [ Se.And
           [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
             Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore,

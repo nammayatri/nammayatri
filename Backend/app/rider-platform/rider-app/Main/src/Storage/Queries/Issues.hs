@@ -65,16 +65,17 @@ findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
       let persons' = filter (\p -> p.id == issue.customerId) persons
        in acc <> ((\p -> (issue, p)) <$> persons')
 
+-- Finding issues over non-Id; do it through DB
 findAllIssue :: (L.MonadFlow m, Log m) => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
   let limitVal = min (maybe 10 fromIntegral mbLimit) 10
       offsetVal = maybe 0 fromIntegral mbOffset
   issues <-
-    findAllWithKV
+    findAllWithDb
       [ Se.And
           [Se.Is BeamI.createdAt $ Se.GreaterThanOrEq fromDate, Se.Is BeamI.createdAt $ Se.LessThanOrEq toDate]
       ]
-  persons <- findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.id $ Se.In $ getId . Issue.customerId <$> issues]]
+  persons <- findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.id $ Se.In $ getId . Issue.customerId <$> issues]]
 
   let issueWithPerson = foldl' (getIssueWithPerson persons) [] issues
   pure $ take limitVal (drop offsetVal issueWithPerson)

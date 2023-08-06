@@ -462,11 +462,12 @@ findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
 --         &&. (booking ^. BookingStatus `in_` valList [NEW, CONFIRMED, TRIP_ASSIGNED] &&. upcoming6HrsCond)
 --     pure $ booking ^. BookingTId
 
+-- Better to do this in DB directly. Beyond 6 hours, entries should be drained
 findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 findStuckBookings (Id merchantId) bookingIds now =
   do
     let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-    findAllWithKV
+    findAllWithDb
       [ Se.And
           [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),

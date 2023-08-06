@@ -37,13 +37,14 @@ import qualified Storage.Beam.CancellationReason as BeamCR
 --     orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
 --     return cancellationReason
 
+-- Not querying by Id. In case the table is enabled someday, better to route this through DB
 findAll :: (L.MonadFlow m, Log m) => CancellationStage -> m [CancellationReason]
 findAll cancStage = do
   seCaseCondition <- case cancStage of
     OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True
     OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
     OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
-  findAllWithOptionsKV [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
+  findAllWithOptionsDb [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
 
 instance FromTType' BeamCR.CancellationReason CancellationReason where
   fromTType' BeamCR.CancellationReasonT {..} = do

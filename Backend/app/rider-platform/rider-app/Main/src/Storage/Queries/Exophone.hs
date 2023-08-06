@@ -88,22 +88,22 @@ findAllExophones = findAllWithKV [Se.Is BeamE.merchantId $ Se.Not $ Se.Eq ""]
 --       ]
 --     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
-updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
-updateAffectedPhonesHelper primaryNumbers = do
-  dbConf <- getMasterBeamConfig
-  let indianMobileCode = "+91"
-  geoms <-
-    L.runDB dbConf $
-      L.findRow $
-        B.select $
-          B.limit_ 1 $
-            B.filter_'
-              ( \BeamE.ExophoneT {..} ->
-                  B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
-                    B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
-              )
-              $ B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
-  pure (either (const False) isJust geoms)
+-- updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
+-- updateAffectedPhonesHelper primaryNumbers = do
+--   dbConf <- getMasterBeamConfig
+--   let indianMobileCode = "+91"
+--   geoms <-
+--     L.runDB dbConf $
+--       L.findRow $
+--         B.select $
+--           B.limit_ 1 $
+--             B.filter_'
+--               ( \BeamE.ExophoneT {..} ->
+--                   B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
+--                     B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
+--               )
+--               $ B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
+--   pure (either (const False) isJust geoms)
 
 updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do

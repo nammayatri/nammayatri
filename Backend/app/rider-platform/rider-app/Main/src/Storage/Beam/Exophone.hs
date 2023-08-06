@@ -61,6 +61,6 @@ exophoneTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-$(enableKVPG ''ExophoneT ['id] [])
+$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])
 
 $(mkTableInstances ''ExophoneT "exophone" "atlas_app")

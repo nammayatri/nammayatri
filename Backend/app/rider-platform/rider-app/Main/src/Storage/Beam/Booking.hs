@@ -133,6 +133,6 @@ bookingTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-$(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId]])
+$(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId], ['quoteId]])
 
 $(mkTableInstances ''BookingT "booking" "atlas_app")

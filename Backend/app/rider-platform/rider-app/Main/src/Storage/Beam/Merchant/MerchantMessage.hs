@@ -77,6 +77,6 @@ merchantMessageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-$(enableKVPG ''MerchantMessageT ['merchantId] [])
+$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
 
 $(mkTableInstances ''MerchantMessageT "merchant_message" "atlas_app")

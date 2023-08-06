@@ -106,6 +106,6 @@ getServiceNameConfigJSON = \case
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
 
-$(enableKVPG ''MerchantServiceConfigT ['merchantId] [])
+$(enableKVPG ''MerchantServiceConfigT ['merchantId, 'serviceName] [])
 
 $(mkTableInstances ''MerchantServiceConfigT "merchant_service_config" "atlas_app")

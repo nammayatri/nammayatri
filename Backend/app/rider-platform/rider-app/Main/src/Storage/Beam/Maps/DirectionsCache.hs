@@ -121,6 +121,6 @@ directionsCacheTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-$(enableKVPG ''DirectionsCacheT ['id] [])
+$(enableKVPG ''DirectionsCacheT ['id] [['originHash], ['destHash]])
 
 $(mkTableInstances ''DirectionsCacheT "directions_cache" "atlas_app")
