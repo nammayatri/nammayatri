@@ -147,8 +147,8 @@ cancelAppConfig state = let
       cornerRadius = Corners 15.0 true true false false,
       coverImageConfig {
         imageUrl = if state.data.driverInfoCardState.distance <= 500
-                    then "ny_ic_driver_near,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
-                    else "ny_ic_driver_started,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_started.png"
+                    then if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW"  then "ny_ic_auto_driver_near,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png" else "ny_ic_driver_near,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                    else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then  "ny_ic_auto_driver_started,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_started.png" else "ny_ic_driver_started,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_started.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -621,7 +621,7 @@ sourceUnserviceableConfig state =
     config = ErrorModal.config
     errorModalConfig' =
       config
-        { height = MATCH_PARENT
+        { height = if (HU.getMerchant FunctionCall == HU.NAMMAYATRI) then MATCH_PARENT else WRAP_CONTENT
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
         , corners = (Corners 20.0 true true false false)
