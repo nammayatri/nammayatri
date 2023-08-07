@@ -92,6 +92,7 @@ initData = {
       , maxPrice : 0
       , basePrice : 0
       , pickUpCharges : 0
+      , isBookingOption : false
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }

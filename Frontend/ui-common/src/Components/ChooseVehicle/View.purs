@@ -34,9 +34,9 @@ view push config =
         , width $ V 60
         ]
     , linearLayout
-      [ width WRAP_CONTENT
+      [ width $ if config.isBookingOption then MATCH_PARENT else WRAP_CONTENT
       , height WRAP_CONTENT
-      , orientation VERTICAL
+      , orientation $ if config.isBookingOption then HORIZONTAL else VERTICAL
       ][
         vehicleDetailsView push config
       , priceDetailsView push config
@@ -53,7 +53,7 @@ vehicleDetailsView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , orientation HORIZONTAL
+    , orientation $ if config.isBookingOption then VERTICAL else HORIZONTAL
     , padding $ PaddingLeft 8
     ]
     [ textView
@@ -77,13 +77,14 @@ vehicleDetailsView push config =
         , cornerRadius 2.5
         , background Color.black600
         , margin (Margin 5 12 0 0)
+        , visibility if config.isBookingOption then GONE else VISIBLE
         ]
         []
     , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
-        , margin (Margin 5 5 0 0)
+        , margin $ if config.isBookingOption then (Margin 0 0 0 0) else (Margin 5 5 0 0)
         ]
         [ textView
             $ [ width WRAP_CONTENT
@@ -100,8 +101,9 @@ priceDetailsView push config = do
   let basePrice = config.basePrice 
   linearLayout
     [ height MATCH_PARENT
-    , width WRAP_CONTENT
+    , width $ if config.isBookingOption then MATCH_PARENT else WRAP_CONTENT
     , orientation HORIZONTAL
+    , gravity $ if config.isBookingOption then RIGHT else LEFT
     , padding $ PaddingLeft 8
     ]
     [ textView
@@ -118,6 +120,7 @@ priceDetailsView push config = do
         , height $ V 14
         , margin $ Margin 4 6 0 0
         , onClick push $ const $ ShowRateCard config
+        , visibility if config.isBookingOption then GONE else VISIBLE
         ]
     , relativeLayout
         [ height WRAP_CONTENT

@@ -834,6 +834,7 @@ quoteListModelViewState state = { source: state.data.source
                             , tipViewProps : getTipViewProps state.props.tipViewProps
                             , findingRidesAgain : state.props.findingRidesAgain
                             , progress : state.props.findingQuotesProgress
+                            , vehicleVariant : state.data.selectedEstimatesObject.vehicleVariant
                             }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig

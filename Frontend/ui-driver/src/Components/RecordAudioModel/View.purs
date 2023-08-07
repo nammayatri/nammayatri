@@ -26,7 +26,7 @@ import JBridge (startLottieProcess, lottieAnimationConfig)
 import PrestoDOM (frameLayout, id, linearLayout)
 import PrestoDOM.Elements.Elements (imageView, lottieAnimationView, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
-import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, orientation, padding, text, textSize, visibility, weight, width)
+import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, orientation, padding, text, textSize, visibility, weight, width, maxLines)
 import PrestoDOM.Types.Core (PrestoDOM)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 import Styles.Colors (black800, blue600, white900) as Color

@@ -39,6 +39,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Storage (isLocalStageOn)
 import Screens.Types (Stage(..))
+import Helpers.Utils (Merchant(..), getMerchant)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -220,7 +221,7 @@ findingRidesView state push =
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action->
-                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "finding_rides_loader_with_text", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = (if (getMerchant FunctionCall == YATRI && state.vehicleVariant == "AUTO_RICKSHAW") then "finding_rides_loader_with_text_auto" else "finding_rides_loader_with_text"), lottieId = (getNewIDWithTag "lottieLoaderAnim") }
                     )(const NoAction)
       , height $ V 300
       , width $ V 300

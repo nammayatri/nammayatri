@@ -21,6 +21,7 @@ type Config
     , maxPrice :: Int
     , basePrice :: Int
     , pickUpCharges :: Int
+    , isBookingOption :: Boolean
     }
 
 config :: Config
@@ -39,4 +40,5 @@ config =
   , maxPrice : 123
   , basePrice : 0 
   , pickUpCharges : 0
+  , isBookingOption : false
   }
