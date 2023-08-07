@@ -37,8 +37,8 @@ type API =
            :<|> Common.BlockDriverWithReasonAPI
            :<|> Common.BlockDriverAPI
            :<|> Common.DriverBlockReasonListAPI
-           :<|> Common.DriverCashCollectionAPI
-           :<|> Common.DriverCashExemptionAPI
+           :<|> DriverCashCollectionAPI
+           :<|> DriverCashExemptionAPI
            :<|> Common.UnblockDriverAPI
            :<|> Common.DriverLocationAPI
            :<|> Common.DriverInfoAPI
@@ -55,6 +55,26 @@ type API =
            :<|> Common.DeleteRCAPI
            :<|> Common.ClearOnRideStuckDrivers
        )
+
+-- driver cash collection api ----------------------------------------
+-- have to write like that because in this case i have to store the dashboard used id for it. and which i am getting internally
+type DriverCashCollectionAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "collectCash"
+    :> ReqBody '[JSON] Text
+    :> Post '[JSON] APISuccess
+
+-------------------------------------
+
+-- driver cash exemption api ----------------------------------------
+
+type DriverCashExemptionAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "exemptCash"
+    :> ReqBody '[JSON] Text
+    :> Post '[JSON] APISuccess
+
+-------------------------------------
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -122,11 +142,11 @@ blockDriver merchantShortId = withFlowHandlerAPI . DDriver.blockDriver merchantS
 blockReasonList :: ShortId DM.Merchant -> FlowHandler [Common.BlockReason]
 blockReasonList _ = withFlowHandlerAPI DDriver.blockReasonList
 
-collectCash :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-collectCash merchantShortId = withFlowHandlerAPI . DDriver.collectCash merchantShortId
+collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Text -> FlowHandler APISuccess
+collectCash merchantShortId driverId = withFlowHandlerAPI . DDriver.collectCash merchantShortId driverId
 
-exemptCash :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-exemptCash merchantShortId = withFlowHandlerAPI . DDriver.exemptCash merchantShortId
+exemptCash :: ShortId DM.Merchant -> Id Common.Driver -> Text -> FlowHandler APISuccess
+exemptCash merchantShortId driverId = withFlowHandlerAPI . DDriver.exemptCash merchantShortId driverId
 
 unblockDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 unblockDriver merchantShortId = withFlowHandlerAPI . DDriver.unblockDriver merchantShortId
