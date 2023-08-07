@@ -34,7 +34,6 @@ import Prelude (Unit, bind, const, map, pure, unit, not, void, ($), (&&), (+), (
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback , cornerRadius ,stroke)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
 import Storage (isLocalStageOn)
@@ -141,7 +140,7 @@ sourceDestinationImageView =
       , imageView
         [ height $ V 27
         , width $ V 15
-        , imageUrl if os == "IOS" then if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img" else "ic_line"
+        , imageUrl if os == "IOS" then "ny_ic_line_img" else "ic_line"
         , margin if os == "IOS" then (Margin 0 0 0 0) else (Margin 7 0 0 0)
         ]
       , imageView

@@ -31,7 +31,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion, setText')
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, debounceFunction, getPreviousVersion)
+import Helpers.Utils (getLocationName, debounceFunction)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -205,7 +205,7 @@ sourceDestinationImageView =
       , imageView
         [ height $ V 45
         , width $ V 20
-        , imageUrl if os == "IOS" then ( if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then  "ic_line_img" else "ny_ic_line_img") else "ic_line"
+        , imageUrl if os == "IOS" then "ny_ic_line_img" else "ic_line"
         , margin if os == "IOS" then (Margin 0 35 0 0) else (Margin 24 35 0 0)
         ]
     , linearLayout

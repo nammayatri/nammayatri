@@ -23,7 +23,7 @@ import Common.Types.App (Version(..), LazyCheck(..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Foreign.Generic (encode)
-import Helpers.Utils (decodeError, toString, getTime, getPreviousVersion)
+import Helpers.Utils (decodeError, toString, getTime)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
 import Juspay.OTP.Reader as Readers
 import Log (printLog)
@@ -722,25 +722,21 @@ type Markers = {
 }
 
 driverTracking :: String -> Markers
-driverTracking variant = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" 
-                else if variant == "AUTO_RICKSHAW" then "ic_auto_nav_on_map"
-                else "ic_vehicle_nav_on_map",
-    destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
+driverTracking _ = {
+    srcMarker : "ic_vehicle_nav_on_map",
+    destMarker :  "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
-rideTracking variant = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" 
-                else if variant == "AUTO_RICKSHAW" then "ic_auto_nav_on_map"
-                else "ic_vehicle_nav_on_map",
-    destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
+rideTracking _ = {
+    srcMarker : "ic_vehicle_nav_on_map",
+    destMarker :  "ny_ic_dest_marker"
 }
 
 normalRoute ::String -> Markers
 normalRoute _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker",
-    destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
+    srcMarker : "ny_ic_src_marker",
+    destMarker : "ny_ic_dest_marker"
 }
 
 

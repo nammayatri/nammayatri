@@ -35,7 +35,6 @@ import Components.GenericHeader.View as GenericHeader
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
-import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
@@ -338,7 +337,7 @@ showEmergencyContact state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")) then GONE else VISIBLE
+    , visibility VISIBLE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
