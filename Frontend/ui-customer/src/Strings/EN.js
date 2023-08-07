@@ -566,5 +566,6 @@ const englishStrings = {
   "AMAZING": "Amazing!!! 🤩",
   "ASKED_FOR_EXTRA_FARE":  "Asked for Extra Fare",
   "AUTO_RICKSHAW" : "Auto Rickshaw",
-  "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "Anything that you would like to tell us? (Optional)"
+  "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "Anything that you would like to tell us? (Optional)",
+  "PLEASE_WAIT" : "Please wait"
 }

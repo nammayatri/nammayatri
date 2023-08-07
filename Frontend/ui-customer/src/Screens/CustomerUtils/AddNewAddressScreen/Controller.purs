@@ -155,7 +155,7 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do
-  _ <- pure $ locateOnMap true 0.0 0.0 state.data.polygonCoordinates state.data.nearByPickUpPoints
+  _ <- pure $ if os /= "IOS" then locateOnMap true 0.0 0.0 state.data.polygonCoordinates state.data.nearByPickUpPoints else locateOnMap true 0.0 0.0 "" []
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
   _ <- pure $ firebaseLogEvent "ny_user_favourite_select_on_map"

@@ -366,7 +366,8 @@ messageNotificationView push state =
       , orientation HORIZONTAL
       , clickable true
       , onClick (\action -> do
-                  if not state.props.isChatOpened then JB.showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS) defaultGlobalState
+                  let delay = if os == "IOS" then 2000.0 else 5000.0
+                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then JB.showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState 
                   else pure unit
                   push action
                 ) (const MessageDriver)
@@ -709,9 +710,10 @@ contactView push state =
           , cornerRadius 20.0
           , background Color.green200
           , onClick (\action -> do
-                        if not state.props.isChatOpened then JB.showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS) defaultGlobalState
-                        else pure unit
-                        push action
+                    let delay = if os == "IOS" then 2000.0 else 5000.0
+                    if not state.props.isChatOpened && state.props.chatcallbackInitiated then JB.showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                    else pure unit
+                    push action
                     )(const MessageDriver)
           ][ imageView
               [ imageWithFallback if state.props.unReadMessages then "ic_chat_badge_green,https://assets.juspay.in/nammayatri/images/user/ic_chat_badge_green.png" else "ic_call_msg,https://assets.juspay.in/nammayatri/images/user/ic_call_msg.png"
