@@ -75,7 +75,7 @@ findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
       [ Se.And
           [Se.Is BeamI.createdAt $ Se.GreaterThanOrEq fromDate, Se.Is BeamI.createdAt $ Se.LessThanOrEq toDate]
       ]
-  persons <- findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.id $ Se.In $ getId . Issue.customerId <$> issues]]
+  persons <- findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.id $ Se.In $ getId . Issue.customerId <$> issues]]
 
   let issueWithPerson = foldl' (getIssueWithPerson persons) [] issues
   pure $ take limitVal (drop offsetVal issueWithPerson)

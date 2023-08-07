@@ -103,7 +103,7 @@ updateIdleTimes driverIds = do
 -- fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
 fetchAll :: (L.MonadFlow m, Log m) => m [DriverStats]
-fetchAll = findAllWithDb [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
+fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 
 -- findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
 -- findById = Esq.findById

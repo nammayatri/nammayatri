@@ -278,7 +278,7 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id P.Person -> m ()
-deleteByPersonId (Id personId) = deleteWithDb [Se.Is BeamMR.driverId (Se.Eq personId)]
+deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamMR.driverId (Se.Eq personId)]
 
 instance FromTType' BeamMR.MessageReport MessageReport where
   fromTType' BeamMR.MessageReportT {..} = do
