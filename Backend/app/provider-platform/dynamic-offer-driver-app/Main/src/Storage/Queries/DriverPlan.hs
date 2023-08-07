@@ -15,7 +15,9 @@
 module Storage.Queries.DriverPlan where
 
 import Domain.Types.DriverPlan
+import qualified Domain.Types.DriverPlan as DPPS
 import Domain.Types.Person
+import Domain.Types.PlanDetails (PaymentMode, PlanDetails)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -34,3 +36,38 @@ findByDriverId driverId = do
     where_ $
       driverPlan ^. DriverPlanDriverId ==. val (toKey driverId)
     return driverPlan
+
+findByDriverIdAndPlanId :: Transactionable m => Id Person -> Id PlanDetails -> m (Maybe DriverPlan)
+findByDriverIdAndPlanId driverId planId = do
+  findOne $ do
+    driverPlan <- from $ table @DriverPlanT
+    where_ $
+      driverPlan ^. DriverPlanDriverId ==. val (toKey driverId) &&. driverPlan ^. DriverPlanPlanId ==. val (toKey planId)
+    return driverPlan
+
+updateMandateStatusByDriverId :: DPPS.MandateStatus -> Id Person -> SqlDB ()
+updateMandateStatusByDriverId mandateStatus driverId = do
+  update $ \tbl -> do
+    set
+      tbl
+      [ DriverPlanMandateStatus =. val (Just mandateStatus)
+      ]
+    where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+
+updatePlanIdByDriverId :: Id Person -> Id PlanDetails -> SqlDB ()
+updatePlanIdByDriverId driverId planId = do
+  update $ \tbl -> do
+    set
+      tbl
+      [DriverPlanPlanId =. val (toKey planId)]
+    where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+
+updatePaymentModeAndStatusByDriverId :: Id Person -> PaymentMode -> PlanStatus -> SqlDB ()
+updatePaymentModeAndStatusByDriverId driverId paymentMode planStatus = do
+  update $ \tbl -> do
+    set
+      tbl
+      [ DriverPlanPlanType =. val paymentMode,
+        DriverPlanPlanStatus =. val planStatus
+      ]
+    where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)

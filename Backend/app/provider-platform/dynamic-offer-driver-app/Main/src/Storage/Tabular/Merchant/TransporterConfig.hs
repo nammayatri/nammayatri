@@ -66,6 +66,7 @@ mkPersist
       minLocationAccuracy Double
       subscription Bool
       aadhaarVerificationRequired Bool
+      planMaxAmount Int
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId

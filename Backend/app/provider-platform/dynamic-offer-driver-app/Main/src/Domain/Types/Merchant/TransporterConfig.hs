@@ -54,6 +54,7 @@ data TransporterConfigD u = TransporterConfig
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     aadhaarVerificationRequired :: Bool,
+    planMaxAmount :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

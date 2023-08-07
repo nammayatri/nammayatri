@@ -42,6 +42,7 @@ data PaymentOrderE e = PaymentOrder
     clientAuthTokenExpiry :: UTCTime,
     getUpiDeepLinksOption :: Maybe Bool,
     environment :: Maybe Text,
+    driverFeeIds :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

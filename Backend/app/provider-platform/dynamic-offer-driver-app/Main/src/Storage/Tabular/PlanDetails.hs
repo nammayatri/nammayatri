@@ -25,13 +25,12 @@ import qualified Domain.Types.PlanDetails as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Kernel.Utils.Common (decodeFromText, encodeToText)
+import Kernel.Utils.Common (Money, decodeFromText, encodeToText)
 import Kernel.Utils.Error
 import Storage.Tabular.Merchant (MerchantTId)
 import Tools.Error
 
 derivePersistField "Domain.PaymentMode"
-derivePersistField "Domain.Frequency"
 
 mkPersist
   defaultSqlSettings
@@ -39,10 +38,14 @@ mkPersist
     PlanDetailsT sql=plan_details
       id Text
       paymentMode Domain.PaymentMode
-      frequency Domain.Frequency
       merchantId MerchantTId
-      planCriteriaConfigJSON Text sql=plan_criteria_config_json
-      city Text
+      criteriaConfigJSON Text sql=plan_criteria_config_json
+      name Text
+      description Text
+      maxAmount Money
+      maxCreditLimit Money
+      driverPaymentCycleDuration Int
+      driverPaymentCycleStart Int
       Primary id
       deriving Generic
     |]
@@ -54,9 +57,8 @@ instance TEntityKey PlanDetailsT where
 
 instance FromTType PlanDetailsT Domain.PlanDetails where
   fromTType PlanDetailsT {..} = do
-    planCriteriaConfig <-
-      maybe (throwError $ InternalError "Unable to decode PlanDetailsT.planCriteriaConfig") return $
-        Domain.PlanCriteriaConfig <$> decodeFromText planCriteriaConfigJSON
+    criteriaConfig <-
+      maybe (throwError $ InternalError "Unable to decode PlanDetailsT.planCriteriaConfig") (return . Domain.CriteriaConfig) (decodeFromText criteriaConfigJSON)
     return $
       Domain.PlanDetails
         { id = Id id,
@@ -66,13 +68,13 @@ instance FromTType PlanDetailsT Domain.PlanDetails where
 
 instance ToTType PlanDetailsT Domain.PlanDetails where
   toTType Domain.PlanDetails {..} = do
-    let planCriteriaConfigJSON = getConfigJSON planCriteriaConfig
+    let criteriaConfigJSON = getConfigJSON criteriaConfig
     PlanDetailsT
       { id = getId id,
         merchantId = toKey merchantId,
         ..
       }
 
-getConfigJSON :: Domain.PlanCriteriaConfig -> Text
+getConfigJSON :: Domain.CriteriaConfig -> Text
 getConfigJSON = \case
-  Domain.PlanCriteriaConfig cfg -> encodeToText cfg
+  Domain.CriteriaConfig cfg -> encodeToText cfg

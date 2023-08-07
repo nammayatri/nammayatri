@@ -25,9 +25,9 @@ import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Servant.API
 
-newtype PlanCriteriaConfig = PlanCriteriaConfig RideCountBasedFeePolicyConfig deriving (Generic, ToJSON, FromJSON, Show)
+newtype CriteriaConfig = CriteriaConfig RideCountBasedFeePolicyConfig deriving (Generic, ToJSON, FromJSON, Show)
 
-data RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig
+newtype RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig
   { rideCountBasedFeePolicy :: [RideCountBasedFeePolicy]
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -35,10 +35,14 @@ data RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig
 data PlanDetails = PlanDetails
   { id :: Id PlanDetails,
     paymentMode :: PaymentMode,
-    frequency :: Frequency,
     merchantId :: Id DMerchant.Merchant,
-    city :: Text,
-    planCriteriaConfig :: PlanCriteriaConfig
+    name :: Text,
+    description :: Text,
+    maxAmount :: Money,
+    maxCreditLimit :: Money,
+    driverPaymentCycleDuration :: Int,
+    driverPaymentCycleStart :: Int,
+    criteriaConfig :: CriteriaConfig
   }
   deriving (Generic, Show)
 

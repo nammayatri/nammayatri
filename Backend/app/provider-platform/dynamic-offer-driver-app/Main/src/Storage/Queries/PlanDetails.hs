@@ -24,8 +24,13 @@ import Storage.Tabular.PlanDetails
 create :: PlanDetails -> SqlDB ()
 create = Esq.create
 
-findById :: Transactionable m => Id PlanDetails -> m (Maybe PlanDetails)
-findById = Esq.findById
+findByIdAndPaymentMode :: Transactionable m => Id PlanDetails -> PaymentMode -> m (Maybe PlanDetails)
+findByIdAndPaymentMode planId paymentMode = do
+  findOne $ do
+    planDetails <- from $ table @PlanDetailsT
+    where_ $
+      planDetails ^. PlanDetailsId ==. val (planId.getId) &&. planDetails ^. PlanDetailsPaymentMode ==. val paymentMode
+    return planDetails
 
 findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe PlanDetails)
 findByMerchantId merchantId = do
@@ -35,11 +40,11 @@ findByMerchantId merchantId = do
       planDetails ^. PlanDetailsMerchantId ==. val (toKey merchantId)
     return planDetails
 
-findByMerchantIdAndCity :: Transactionable m => Id Merchant -> Text -> m [PlanDetails]
-findByMerchantIdAndCity merchantId city = do
-  findAll $ do
-    planDetails <- from $ table @PlanDetailsT
-    where_ $
-      planDetails ^. PlanDetailsMerchantId ==. val (toKey merchantId)
-        &&. planDetails ^. PlanDetailsCity ==. val city
-    return planDetails
+-- findByMerchantIdAndCity :: Transactionable m => Id Merchant -> Text -> m [PlanDetails]
+-- findByMerchantIdAndCity merchantId city = do
+--   findAll $ do
+--     planDetails <- from $ table @PlanDetailsT
+--     where_ $
+--       planDetails ^. PlanDetailsMerchantId ==. val (toKey merchantId)
+--         &&. planDetails ^. PlanDetailsCity ==. val city
+--     return planDetails

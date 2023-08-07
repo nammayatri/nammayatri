@@ -38,7 +38,8 @@ data DriverFee = DriverFee
     endTime :: UTCTime,
     status :: DriverFeeStatus,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    feeType :: FeeType
   }
   deriving (Generic, Show)
 
@@ -51,6 +52,8 @@ data PlatformFee = PlatformFee
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
+data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
 paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
@@ -60,6 +63,16 @@ instance FromHttpApiData DriverFeeStatus where
   parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
 
 instance ToHttpApiData DriverFeeStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+instance FromHttpApiData FeeType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData FeeType where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode

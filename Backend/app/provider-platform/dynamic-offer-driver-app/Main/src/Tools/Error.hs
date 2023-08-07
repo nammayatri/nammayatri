@@ -540,3 +540,37 @@ instance IsHTTPError MerchantPaymentMethodError where
     MerchantPaymentMethodDoesNotExist _ -> E400
 
 instance IsAPIError MerchantPaymentMethodError
+
+data SubscriptionError
+  = PlanNotFound Text
+  | InvalidPlanStatus Text
+  | InvalidMandateStatus Text
+  | InvalidPaymentMode
+  | NoCurrentPlanForDriver Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SubscriptionError
+
+instance IsBaseError SubscriptionError where
+  toMessage = \case
+    PlanNotFound planId -> Just $ "Plan with planId \"" <> show planId <> "\"not found. "
+    InvalidPlanStatus driverId -> Just $ "Subscription already active for driverId \"" <> show driverId
+    InvalidMandateStatus driverId -> Just $ "mandate already exists for driverId\"" <> show driverId <> "\""
+    NoCurrentPlanForDriver driverId -> Just $ "No plan exists for driverId\"" <> show driverId <> "\""
+    InvalidPaymentMode -> Just $ "Invalid payment method"
+
+instance IsHTTPError SubscriptionError where
+  toErrorCode = \case
+    PlanNotFound _ -> "PLAN_NOT_FOUND"
+    InvalidPlanStatus _ -> "INVALID_PLAN_STATUS"
+    InvalidMandateStatus _ -> "INVALID_MANDATE_STATUS"
+    NoCurrentPlanForDriver _ -> "NO_PLAN_FOR_DRIVER"
+    InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
+  toHttpCode = \case
+    PlanNotFound _ -> E500
+    InvalidPlanStatus _ -> E400
+    InvalidMandateStatus _ -> E400
+    InvalidPaymentMode -> E400
+    NoCurrentPlanForDriver _ -> E500
+
+instance IsAPIError SubscriptionError

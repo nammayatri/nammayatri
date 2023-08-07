@@ -21,9 +21,9 @@
 module Storage.Tabular.DriverPlan where
 
 import qualified Domain.Types.DriverPlan as Domain
+import qualified Domain.Types.PlanDetails as PD
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.PlanDetails (PlanDetailsTId)
@@ -31,6 +31,7 @@ import Storage.Tabular.PlanDetails (PlanDetailsTId)
 derivePersistField "Domain.PaymentMethodType"
 derivePersistField "Domain.PaymentMethod"
 derivePersistField "Domain.MandateStatus"
+derivePersistField "Domain.PlanStatus"
 
 mkPersist
   defaultSqlSettings
@@ -39,12 +40,16 @@ mkPersist
       id Text
       driverId PersonTId
       planId PlanDetailsTId
-      maxAmount Money
-      paymentMethodType Domain.PaymentMethodType
-      paymentMethod Domain.PaymentMethod
-      mandateStatus Domain.MandateStatus
-      activatedAt UTCTime
-      autoPay Bool
+      planType PD.PaymentMode
+      mandateId Text Maybe
+      mandateStatus Domain.MandateStatus Maybe
+      planStatus Domain.PlanStatus
+      activatedAt UTCTime Maybe
+      endAt UTCTime Maybe
+      resumeDate UTCTime Maybe
+      maxAmount Int
+      createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]

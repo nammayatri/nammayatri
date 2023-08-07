@@ -49,16 +49,17 @@ createOrderService ::
   ) =>
   Id Merchant ->
   Id Person ->
+  Maybe [Text] ->
   Id DOrder.PaymentOrder ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m Payment.CreateOrderResp
-createOrderService merchantId personId orderId createOrderReq createOrderCall = do
+createOrderService merchantId personId driverIds orderId createOrderReq createOrderCall = do
   mbExistingOrder <- runInReplica $ QOrder.findById orderId
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId personId orderId createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId personId orderId createOrderReq createOrderResp driverIds
       Esq.runTransaction $
         QOrder.create paymentOrder
       pure createOrderResp
@@ -117,8 +118,9 @@ buildPaymentOrder ::
   Id DOrder.PaymentOrder ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
+  Maybe [Text] ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId personId orderId req resp = do
+buildPaymentOrder merchantId personId orderId req resp driverIds = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   pure
@@ -143,6 +145,7 @@ buildPaymentOrder merchantId personId orderId req resp = do
         clientAuthTokenExpiry = resp.sdk_payload.payload.clientAuthTokenExpiry,
         getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
         environment = resp.sdk_payload.payload.environment,
+        driverFeeIds = driverIds,
         createdAt = now,
         updatedAt = now
       }
