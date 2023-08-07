@@ -25,7 +25,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..),Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -52,6 +52,7 @@ view triggertype push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , clickable true
+  , visibility if (EHC.os == "IOS") then GONE else VISIBLE
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
