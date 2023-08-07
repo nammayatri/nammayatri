@@ -1013,7 +1013,7 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore USER_EMAIL
       _ <- pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"
-      _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EnterMobileNumberEditText") "" )
+      _ <- pure $ setText (getNewIDWithTag "EnterMobileNumberEditText") ""
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> EnterMobileNumberScreenData.initData)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
