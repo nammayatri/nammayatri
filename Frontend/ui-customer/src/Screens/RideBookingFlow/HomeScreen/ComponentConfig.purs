@@ -703,6 +703,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , isChatOpened : state.props.isChatOpened
+                                  , chatcallbackInitiated : state.props.chatcallbackInitiated
                                   }
                               , data: driverInfoTransformer state
                             }

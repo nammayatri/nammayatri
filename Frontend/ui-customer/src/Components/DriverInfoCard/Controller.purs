@@ -50,7 +50,8 @@ type DriverInfoCardProps =
     isSpecialZone :: Boolean,
     estimatedTime :: String,
     zoneType :: ZoneType,
-    isChatOpened :: Boolean
+    isChatOpened :: Boolean,
+    chatcallbackInitiated :: Boolean
   }
 
 type DriverInfoCardData =

@@ -252,8 +252,8 @@ function refreshFlow(){
       (token != "__failed") && 
       (token != "(null)") &&
       ((currentState == "RideStarted") || currentState == "RideAccepted")){
-    if(JBridge.removeChatMessageCallback){
-      JBridge.removeChatMessageCallback();
+    if(window.storeCallBackMessageUpdated){
+      window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
     purescript.onConnectivityEvent("REFRESH")();
   }

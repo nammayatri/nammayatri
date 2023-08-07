@@ -53,6 +53,7 @@ import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSave
 import Screens.AddNewAddressScreen.ScreenData (dummyLocation) as AddNewAddressScreenData
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
+import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
@@ -960,6 +961,8 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore USER_EMAIL
       _ <- pure $ factoryResetApp ""
       _ <- pure $ firebaseLogEvent "ny_user_logout"
+      _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EnterMobileNumberEditText") "" )
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> EnterMobileNumberScreenData.initData)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
@@ -1289,7 +1292,6 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false, openReportIssue = false} }})
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data{selectedItem{rideEndTime = state.data.rideRatingState.rideEndTime, rideStartTime = state.data.rideRatingState.rideStartTime}}})
       tripDetailsScreenFlow Home
     _ -> homeScreenFlow
 
