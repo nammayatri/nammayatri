@@ -57,6 +57,9 @@ lightMaroon = "#E45454"
 red :: Color
 red = "#E55454"
 
+red100 :: Color
+red100 = "#FEF8F8"
+
 white900 :: Color
 white900 = "#FFFFFF"
 
@@ -77,3 +80,26 @@ textSecondary = "#5B5E69"
 warningRed :: Color
 warningRed  = "#f04c31"
 
+green900 :: Color 
+green900 = "#53BB6F"
+
+yellow100 :: Color
+yellow100 = "#FFFDF7"
+
+green100 :: Color
+green100 = "#F8FCF9"
+
+dustyRed :: Color
+dustyRed = "#BF4A4E"
+
+selectiveYellow :: Color
+selectiveYellow = "#FCB700"
+
+pearl :: Color 
+pearl = "#FFECED"
+
+floralWhite :: Color
+floralWhite = "#FFFAEE"
+
+orange900 :: Color
+orange900 = "#FF8533"

@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -22,6 +21,7 @@ module Storage.Tabular.DriverOnboarding.IdfyVerification where
 
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -30,6 +30,7 @@ import qualified Storage.Tabular.DriverOnboarding.Image as ImageT
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.ImageExtractionValidation"
+derivePersistField "Vehicle.Variant"
 
 mkPersist
   defaultSqlSettings
@@ -48,6 +49,8 @@ mkPersist
       documentNumberHash DbHash
       imageExtractionValidation Domain.ImageExtractionValidation
       idfyResponse Text Maybe
+      multipleRC Bool Maybe
+      dashboardPassedVehicleVariant Vehicle.Variant Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

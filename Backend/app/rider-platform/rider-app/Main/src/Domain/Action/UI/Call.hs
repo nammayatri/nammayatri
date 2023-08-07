@@ -138,8 +138,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
           updateCallStatus callStatus.id newCallStatus Nothing callDuration
           throwError CallStatusDoesNotExist
         else do
-          baseUrl <- parseBaseUrl recordUrl
-          updateCallStatus callStatus.id newCallStatus (Just baseUrl) callDuration
+          updateCallStatus callStatus.id newCallStatus (Just recordUrl) callDuration
     Nothing -> do
       if newCallStatus == CallTypes.COMPLETED
         then do

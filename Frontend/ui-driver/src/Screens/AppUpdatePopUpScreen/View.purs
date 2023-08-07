@@ -33,13 +33,14 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import Merchant.Utils (getValueFromConfig)
 import Components.PrimaryButton.View as PrimaryButton
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import Language.Types(STR(..))
 import JBridge(dateCallback)
 import Data.Function.Uncurried(runFn2)
 import Debug
+import MerchantConfig.Utils (getValueFromConfig)
+
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
 screen initialState =
@@ -95,6 +96,7 @@ inaccurateDateAndTimeView push state =
       , color Color.black700
       , fontStyle $ FontStyle.regular LanguageStyle
       , textSize FontSize.a_14
+      , gravity CENTER
       ]
     , linearLayout [
       width MATCH_PARENT
@@ -111,19 +113,18 @@ inaccurateDateAndTimeView push state =
         , fontStyle $ FontStyle.regular LanguageStyle
         , textSize FontSize.a_14
         ]
-        , PrimaryButton.view (push <<< PrimaryButtonActionController ) (primaryButtonConfig)
+        , PrimaryButton.view (push <<< PrimaryButtonActionController ) (primaryButtonConfig (getString GO_TO_SETTING))
       ]
 
   ]
 
-primaryButtonConfig ::  PrimaryButtonConfig.Config
-primaryButtonConfig  = let
+primaryButtonConfig :: String -> PrimaryButtonConfig.Config
+primaryButtonConfig val = let
     config = PrimaryButtonConfig.config
     primaryButtonConfig' = config
       { textConfig
-      { text = (getString GO_TO_SETTING)
-      , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      { text = val
+      , color = Color.primaryButtonColor}
       , background = Color.black900
       , height = (V 50)
       , margin = (Margin 16 16 16 16)
@@ -176,16 +177,15 @@ updateRequiredView push state =
           , margin (Margin 10 0 0 0)
           ]
         ]
-      , textView [
+      , textView $ [
           width MATCH_PARENT
           ,height WRAP_CONTENT
           ,fontStyle $ FontStyle.medium LanguageStyle
           ,color "#474955"
-          ,textSize FontSize.a_15
           ,margin (MarginLeft 10)
           ,text (getString PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE)
           ,padding (PaddingBottom 30)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
         , linearLayout 
           [ width MATCH_PARENT 
           , height WRAP_CONTENT
@@ -203,20 +203,15 @@ updateRequiredView push state =
                 , alpha 0.6
                 , visibility GONE
                 ][
-                  textView
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , text (getString NOT_NOW)
-                  , color Color.textSecondary
-                  , alpha 0.6
-                  , fontStyle $ FontStyle.bold LanguageStyle
-                  , textSize FontSize.a_14
-                  , clickable true
-                  , onClick (\action -> do
-                              _<- push action
-                              pure unit
-                              ) (const OnCloseClick)
-                  ]
+                    textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text (getString NOT_NOW)
+                    , color Color.textSecondary
+                    , alpha 0.6
+                    , clickable true
+                    , onClick push $ const OnCloseClick
+                    ] <> FontStyle.body4 LanguageStyle
                 ]
             , linearLayout
               [ width WRAP_CONTENT
@@ -225,19 +220,17 @@ updateRequiredView push state =
               , margin (MarginLeft 12)
               , background Color.charcoalGrey
               , cornerRadius 10.0
-              ][ textView 
+              ][ textView $
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , text (getString UPDATE)
                   , color Color.yellowText
-                  , fontStyle $ FontStyle.bold LanguageStyle
-                  , textSize FontSize.a_14
                   , onClick (\action -> do
                               _<- push action
                               _ <- JB.openUrlInApp $ getValueFromConfig "APP_LINK"
                               pure unit
                               ) (const OnAccept)
-              ] 
+              ] <> FontStyle.body4 LanguageStyle
             ]
           ]
         ]

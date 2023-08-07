@@ -53,6 +53,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.SessionizerMetrics.Types.Event
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
@@ -72,6 +73,7 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RideDetails as QRideD
 import Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import Tools.Event
 import qualified Tools.Notifications as Notify
 
 data DriverRideRes = DriverRideRes
@@ -103,7 +105,8 @@ data DriverRideRes = DriverRideRes
     bapLogo :: Maybe BaseUrl,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe Money,
+    requestedVehicleVariant :: DVeh.Variant
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -182,7 +185,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
       customerExtraFee = fareParams.customerExtraFee,
       bapName = bapMetadata <&> (.name),
-      bapLogo = bapMetadata <&> (.logoUrl)
+      bapLogo = bapMetadata <&> (.logoUrl),
+      requestedVehicleVariant = booking.vehicleVariant
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -215,7 +219,8 @@ otpRideCreate ::
     EncFlow m r,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    EventStreamFlow m r
   ) =>
   DP.Person ->
   Text ->
@@ -226,12 +231,14 @@ otpRideCreate driver otpCode booking = do
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  when (booking.vehicleVariant /= vehicle.variant) $ throwError $ InvalidRequest "Wrong Vehcile Variant"
+  when (isNotAllowedVehicleVariant vehicle.variant booking.vehicleVariant) $ throwError $ InvalidRequest "Wrong Vehicle Variant"
 
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
+  unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
   ride <- buildRide otpCode driver.id (Just transporter.id)
   rideDetails <- buildRideDetails ride
+  triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
   Esq.runTransaction $ do
     QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
     QRide.create ride
@@ -313,3 +320,6 @@ otpRideCreate driver otpCode booking = do
             vehicleModel = Just vehicle.model,
             vehicleClass = Nothing
           }
+    isNotAllowedVehicleVariant driverVehicle bookingVehicle =
+      (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
+        && driverVehicle == DVeh.TAXI

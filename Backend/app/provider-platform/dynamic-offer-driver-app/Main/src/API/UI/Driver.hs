@@ -29,6 +29,7 @@ module API.UI.Driver
     DDriver.DriverAlternateNumberReq (..),
     DDriver.DriverAlternateNumberRes (..),
     DDriver.DriverAlternateNumberOtpReq (..),
+    DDriver.DriverPhotoUploadReq (..),
     DDriver.ResendAuth (..),
     DDriver.MetaDataReq (..),
     API,
@@ -44,6 +45,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import Kernel.ServantMultipart
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -101,6 +103,10 @@ type API =
                         :> TokenAuth
                         :> MandatoryQueryParam "day" Day
                         :> Get '[JSON] DDriver.DriverStatsRes
+                      :<|> "photo"
+                        :> TokenAuth
+                        :> MultipartForm Tmp DDriver.DriverPhotoUploadReq
+                        :> Post '[JSON] APISuccess
                   )
              :<|> "metaData"
                :> TokenAuth
@@ -148,6 +154,7 @@ handler =
              :<|> ( getInformation
                       :<|> updateDriver
                       :<|> getStats
+                      :<|> uploadDriverPhoto
                   )
              :<|> updateMetaData
              :<|> ( validate
@@ -201,6 +208,9 @@ getStats day = withFlowHandlerAPI . DDriver.getStats day
 
 updateMetaData :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.MetaDataReq -> FlowHandler APISuccess
 updateMetaData req = withFlowHandlerAPI . DDriver.updateMetaData req
+
+uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
+uploadDriverPhoto req = withFlowHandlerAPI . DDriver.driverPhotoUpload req
 
 validate :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
 validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber

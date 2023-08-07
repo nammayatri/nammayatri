@@ -42,6 +42,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     whatsappProvidersPriorityList :: [WhatsappService],
     verificationService :: VerificationService,
     aadhaarVerificationService :: AadhaarVerificationService,
+    faceVerificationService :: VerificationService,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

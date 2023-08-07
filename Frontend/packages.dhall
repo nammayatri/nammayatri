@@ -127,14 +127,14 @@ in  upstream
       , "tuples"
       , "unsafe-coerce"
       ]
-    , repo = "https://github.com/belevy/purescript-presto.git"
-    , version = "p-0.15-master"
+    , repo = "https://github.com/juspay/purescript-presto.git"
+    , version = "update/github-purescript-presto"
     }
   with backtrack =
     { dependencies =
       [ "control", "effect", "prelude", "tailrec", "transformers" ]
-    , repo = "https://github.com/belevy/purescript-backtrack.git"
-    , version = "ps-0.15"
+    , repo = "https://github.com/juspay/purescript-backtrack.git"
+    , version = "update/github-purescript-backtrack-repo"
     }
   with presto-dom =
     { dependencies =
@@ -167,8 +167,8 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/belevy/purescript-presto-dom.git"
-    , version = "nammaYatri-p-0.15"
+    , repo = "https://github.com/juspay/purescript-presto-dom.git"
+    , version = "update/github-purescript-presto-dom-repo-and-font-weight"
     }
   with halogen-vdom =
     { dependencies =
@@ -188,8 +188,8 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/belevy/purescript-halogen-vdom.git"
-    , version = "p-0.15.6-master"
+    , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
+    , version = "update/github-purescript-halogen-vdom-repo"
     }
   with foreign-generic =
     { dependencies =
@@ -219,6 +219,24 @@ in  upstream
     , repo = "https://github.com/juspay/purescript-foreign-generic.git"
     , version = "main"
     }
+  with lite-decode =
+      { dependencies =
+          [ "arrays"
+          , "console"
+          , "either"
+          , "foreign"
+          , "foreign-generic"
+          , "foreign-object"
+          , "maybe"
+          , "newtype"
+          , "prelude"
+          , "transformers"
+          , "typelevel-prelude"
+          , "unsafe-coerce"
+          , "control"
+          ]
+        , repo = "https://github.com/juspay/hyper-decoder.git"
+        , version = "main"}
   with tracker =
     { dependencies =
       [ "effect"
@@ -233,8 +251,8 @@ in  upstream
       , "maybe"
       , "strings"
       ]
-    , repo = "https://github.com/belevy/purescript-tracker.git"
-    , version = "91653fb800192b9ff9f9026b2841061339ced7d2"
+    , repo = "https://github.com/juspay/purescript-tracker.git"
+    , version = "update/github-purescript-tracker-repo"
     }
   with otp-reader =
     { dependencies =

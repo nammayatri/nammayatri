@@ -35,21 +35,21 @@ findByCallSid callSid =
     where_ $ callStatus ^. CallStatusCallId ==. val callSid
     return callStatus
 
-updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> SqlDB ()
+updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> SqlDB ()
 updateCallStatus callId status conversationDuration mbrecordingUrl = do
   Esq.update $ \tbl -> do
     set
       tbl
       [ CallStatusStatus =. val status,
         CallStatusConversationDuration =. val conversationDuration,
-        CallStatusRecordingUrl =. val (showBaseUrl <$> mbrecordingUrl)
+        CallStatusRecordingUrl =. val mbrecordingUrl
       ]
     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
-countCallsByRideId :: Transactionable m => Id Ride -> m Int
-countCallsByRideId rideId = (fromMaybe 0 <$>) $
+countCallsByEntityId :: Transactionable m => Id Ride -> m Int
+countCallsByEntityId entityId = (fromMaybe 0 <$>) $
   Esq.findOne $ do
     callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusRideId ==. val (toKey rideId)
-    groupBy $ callStatus ^. CallStatusRideId
+    where_ $ callStatus ^. CallStatusEntityId ==. val (entityId.getId)
+    groupBy $ callStatus ^. CallStatusEntityId
     pure $ count @Int $ callStatus ^. CallStatusTId

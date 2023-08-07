@@ -22,7 +22,8 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
-newtype OnUpdateMessage = OnUpdateMessage
-  { order :: OnUpdateEvent
+data OnUpdateMessage = OnUpdateMessage
+  { update_target :: Text,
+    order :: OnUpdateEvent
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

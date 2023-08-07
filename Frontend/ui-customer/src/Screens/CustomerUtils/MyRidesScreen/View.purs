@@ -16,11 +16,13 @@
 module Screens.MyRidesScreen.View where
 
 import Common.Types.App
+import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
+
 import Animation as Anim
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
-import Data.Array as DA
 import Data.Array ((..))
+import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
@@ -29,9 +31,10 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit)
+import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight)
 import PrestoDOM.Animation as PrestoAnim
@@ -45,7 +48,6 @@ import Services.API (RideBookingListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
-import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm =
@@ -81,21 +83,29 @@ view listItemm push state =
       , orientation VERTICAL
       , weight 1.0
       ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-        , separatorView
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , background Color.blue600
-          , visibility if (not (DA.null state.itemsRides)) then VISIBLE else GONE
-          , orientation HORIZONTAL
-          , padding (Padding 16 12 16 16)
-          ][  textView
+        , if (not state.data.config.nyBrandingVisibility) then 
+            separatorView
+          else
+            linearLayout[][]
+        , if state.data.config.nyBrandingVisibility then do
+            textView $ 
               [ text (getString SELECT_A_RIDE)
-              , textSize FontSize.a_14
-              , fontStyle $ FontStyle.medium LanguageStyle
               , color Color.black700
-              ]
-          ]
+              , padding (Padding 16 0 16 0)
+              ] <> FontStyle.body1 LanguageStyle
+          else do
+            (linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , background Color.blue600
+            , visibility if (not (DA.null state.itemsRides)) then VISIBLE else GONE
+            , orientation HORIZONTAL
+            , padding (Padding 16 12 16 16)
+            ][  textView $
+                [ text (getString SELECT_A_RIDE)
+                , color Color.black700
+                ] <> FontStyle.body1 LanguageStyle
+            ])
         , ridesView listItemm push state
         ]
     , loadButtonView state push]
@@ -124,15 +134,13 @@ loadButtonView state push =
     , orientation VERTICAL
     , margin $ Margin 0 5 0 5
     ]
-    [ textView
-      ([ width WRAP_CONTENT
+    [ textView $
+      [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ if state.data.loadMoreText == "LoadMore" then (getString LOAD_MORE) else (getString NO_MORE_RIDES)
       , padding (Padding 10 5 10 5)
       , color Color.blue900
-      , fontStyle $ FontStyle.medium LanguageStyle
-      , lineHeight "18"
-      ] )
+      ] <> FontStyle.body1 LanguageStyle
     ]]
 
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
@@ -174,7 +182,7 @@ ridesView listItemm push state =
           , background Color.white900
           , gravity CENTER
           , visibility if state.props.apiFailure then VISIBLE else GONE
-          ][  ErrorModal.view (push <<< APIFailureActionController) (apiErrorModalConfig)]
+          ][  ErrorModal.view (push <<< APIFailureActionController) (apiErrorModalConfig state)]
       , Tuple "LOADER"
           $ PrestoAnim.animationSet
           [ PrestoAnim.Animation
@@ -200,7 +208,7 @@ ridesView listItemm push state =
             , width MATCH_PARENT
             , onAnimationEnd push OnFadeComplete
             , PrestoList.listItem listItemm
-            , PrestoList.listDataV2 $ shimmerData <$> (1..5)
+            , PrestoList.listDataV2 $ shimmerData <$> (getArray 5)
             , visibility $ case state.shimmerLoader of
                     ST.AnimatedOut -> GONE
                     _ -> VISIBLE

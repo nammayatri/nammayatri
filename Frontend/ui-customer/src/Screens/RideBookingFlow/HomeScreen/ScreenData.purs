@@ -15,16 +15,17 @@
 
 module Screens.HomeScreen.ScreenData where
 
+import Common.Types.App (RateCardType(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
-import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Styles.Colors as Color
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
+import Foreign.Object (empty)
+import MerchantConfig.DefaultConfig as DC
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 initData :: HomeScreenState
@@ -54,7 +55,17 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
-    , rateCard : { rateCardArray : [] ,additionalFare : 0, nightShiftMultiplier : 0.0, nightCharges : false,currentRateCardType : DefaultRateCard,onFirstPage:false, driverAdditionsImage : "", driverAdditionsLogic : "" , title : "Rate Card"}
+    , rateCard : { 
+       additionalFare : 0,
+       nightShiftMultiplier : 0.0, 
+       nightCharges : false,
+       currentRateCardType : DefaultRateCard,
+       onFirstPage:false, 
+       baseFare : 0,
+       extraFare : 0,
+       pickUpCharges : 0,
+       vehicleVariant : ""
+       }
     , speed : 0
     , selectedLocationListItem : Nothing
     , saveFavouriteCard : {
@@ -72,17 +83,18 @@ initData = {
     , messagesSize : "-1"
     , suggestionsList : []
     , messageToBeSent : ""
-    , nearByPickUpPoints : dummyPickUpPoints
+    , nearByPickUpPoints : []
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
+    , specialZoneSelectedVariant : Nothing
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
       , vehicleVariant: ""
       , vehicleType: ""
       , capacity: ""
-      , price: 0
+      , price: ""
       , isCheckBox: false
       , isEnabled: true
       , activeIndex: 0
@@ -90,6 +102,7 @@ initData = {
       , id: ""
       , maxPrice : 0
       , basePrice : 0
+      , showInfo : true
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -106,6 +119,8 @@ initData = {
         issueDescription : "",
         rideBookingRes : dummyRideBooking
     }
+    , config : DC.config
+    , logField : empty
     },
     props: {
       rideRequestFlow : false
@@ -122,6 +137,7 @@ initData = {
     , estimateId : ""
     , selectedQuote : Nothing
     , locationRequestCount : 0
+    , zoneTimerExpired : false
     , customerTip : {
         enableTips: false
       , tipForDriver: 10
@@ -179,6 +195,7 @@ initData = {
     , zoneType : dummyZoneType
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
+    , isChatOpened : false
     , tipViewProps : {
         stage : DEFAULT
       , isVisible : false
@@ -194,6 +211,8 @@ initData = {
     , timerId : ""
     , findingRidesAgain : false
     , routeEndPoints : Nothing
+    , findingQuotesProgress : 0.0
+    , confirmLocationCategory : ""
     }
 }
 
@@ -223,46 +242,6 @@ emergencyHelpModalData = {
   isSelectEmergencyContact : false
 }
 
-dummyQuoteList :: Array QuoteListItemState
-dummyQuoteList = [
-  {
-   seconds : 10
-  , id : "1"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "200"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  , selectedQuote : Nothing
-
-  },
-  {
-   seconds : 10
-  , id : "2"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "300"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  },
-  {
-   seconds : 3
-  , id : "3"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "3150"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  }
-]
 
 dummyPreviousRiderating :: RatingCard
 dummyPreviousRiderating = {
@@ -284,6 +263,8 @@ dummyPreviousRiderating = {
 , offeredFare : 0
 , distanceDifference : 0
 , feedback : ""
+, feedbackList : []
+, appConfig : DC.config 
 }
 
 
@@ -318,6 +299,8 @@ dummyDriverInfo =
   , merchantExoPhone : ""
   , createdAt : ""
   , initDistance : Nothing
+  , config : DC.config
+  , vehicleVariant : ""
   }
 
 dummySettingBar :: SettingSideBarState
@@ -327,7 +310,9 @@ dummySettingBar = {
   , opened : CLOSED
   , email : Nothing
   , gender : Nothing
-  }
+  , appConfig : DC.config
+  , sideBarList : ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
+}
 
 dummyAddress :: Address
 dummyAddress = {
@@ -379,11 +364,6 @@ dummyLocationName = PlaceName {
   "plusCode" : Nothing,
   "addressComponents" : []
 }
-dummyPickUpPoints :: Array Location
-dummyPickUpPoints = [
-  {place : "Kolkata airport arrival gate 1 ", lat : 12.941156, lng : 77.623510 },
-  {place : "Kolkata airport arrival gate 2 ", lat : 12.940696, lng : 77.622877 }
-]
 
 specialLocation :: SpecialLocation
 specialLocation = SpecialLocation{
@@ -396,7 +376,8 @@ dummyLocation :: Location
 dummyLocation = {
    place : "",
    lat : 0.0,
-   lng : 0.0
+   lng : 0.0,
+   address : Nothing
  }
 
 

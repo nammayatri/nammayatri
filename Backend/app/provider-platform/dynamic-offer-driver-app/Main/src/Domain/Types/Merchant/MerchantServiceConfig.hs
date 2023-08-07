@@ -131,10 +131,12 @@ getServiceName osc = case osc.serviceConfig of
   SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
+    Sms.GupShupConfig _ -> SmsService Sms.GupShup
   WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
   VerificationServiceConfig verifictaionCfg -> case verifictaionCfg of
     Verification.IdfyConfig _ -> VerificationService Verification.Idfy
+    Verification.FaceVerificationConfig _ -> VerificationService Verification.InternalScripts
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
     AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of

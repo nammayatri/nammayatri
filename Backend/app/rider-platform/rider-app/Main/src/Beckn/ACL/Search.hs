@@ -15,8 +15,12 @@
 
 module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
+import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import Data.Aeson (encode)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.Encoding as TE
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
@@ -37,9 +41,8 @@ buildOneWaySearchReq ::
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   buildSearchReq
     origin
-    (Just destination)
+    destination
     searchId
-    now
     device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
@@ -56,9 +59,8 @@ buildRentalSearchReq ::
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
   buildSearchReq
     origin
-    Nothing
+    origin
     searchId
-    startTime
     Nothing
     Nothing
     Nothing
@@ -69,9 +71,8 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
-  Maybe DSearchCommon.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
-  UTCTime ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
@@ -79,66 +80,100 @@ buildSearchReq ::
   DM.Merchant ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime device distance duration customerLanguage merchant points = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage merchant mbPoints = do
   let transactionId = getId searchId
       messageId = transactionId
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country
-  let intent = mkIntent origin mbDestination startTime customerLanguage
-  let mbRouteInfo = Search.RouteInfo {distance, duration, points}
-  let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
+  let intent = mkIntent origin destination customerLanguage distance duration mbPoints
+  let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
-  Maybe DSearchCommon.SearchReqLocation ->
-  UTCTime ->
+  DSearchCommon.SearchReqLocation ->
   Maybe Maps.Language ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Maybe [Maps.LatLong] ->
   Search.Intent
-mkIntent origin mbDestination startTime customerLanguage = do
+mkIntent origin destination customerLanguage distance duration mbPoints = do
   let startLocation =
         Search.StartInfo
-          { location = mkLocation origin,
-            time = Search.TimeTimestamp startTime
+          { location = mkLocation origin
           }
-      mkStopInfo destination =
+      endLocation =
         Search.StopInfo
           { location = mkLocation destination
           }
-      mbEndLocation = mkStopInfo <$> mbDestination
 
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
-            end = mbEndLocation,
+            end = endLocation,
             tags =
-              Search.Tags
-                { customer_language = customerLanguage
-                }
+              if isJust distance || isJust duration
+                then
+                  Just $
+                    Search.TG
+                      [ mkRouteInfoTags
+                      ]
+                else Nothing,
+            customer =
+              if isJust customerLanguage
+                then
+                  Just $
+                    Search.Customer
+                      { person =
+                          Search.Person
+                            { tags = Search.TG [mkCustomerInfoTags]
+                            }
+                      }
+                else Nothing
           }
   Search.Intent
     { ..
     }
   where
-    mkLocation info =
-      Search.Location
-        { gps =
-            Search.Gps
-              { lat = info.gps.lat,
-                lon = info.gps.lon
-              },
-          address =
-            Just
-              Search.Address
-                { locality = info.address.area,
-                  state = info.address.state,
-                  country = info.address.country,
-                  building = info.address.building,
-                  street = info.address.street,
-                  city = info.address.city,
-                  area_code = info.address.areaCode,
-                  door = info.address.door,
-                  ward = info.address.ward
+    mkRouteInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "route_info",
+          name = "Route Information",
+          list =
+            [ Search.Tag
+                { display = (\_ -> Just False) =<< distance,
+                  code = (\_ -> Just "distance_info_in_m") =<< distance,
+                  name = (\_ -> Just "Distance Information In Meters") =<< distance,
+                  value = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< duration,
+                  code = (\_ -> Just "duration_info_in_s") =<< duration,
+                  name = (\_ -> Just "Duration Information In Seconds") =<< duration,
+                  value = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< mbPoints,
+                  code = (\_ -> Just "route_points") =<< mbPoints,
+                  name = (\_ -> Just "Route Points") =<< mbPoints,
+                  value = LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints
                 }
+            ]
+        }
+
+    mkCustomerInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "customer_info",
+          name = "Customer Information",
+          list =
+            [ Search.Tag
+                { display = (\_ -> Just False) =<< customerLanguage,
+                  code = (\_ -> Just "customer_language") =<< customerLanguage,
+                  name = (\_ -> Just "Customer Language") =<< customerLanguage,
+                  value = (Just . show) =<< customerLanguage
+                }
+            ]
         }

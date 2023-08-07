@@ -123,7 +123,8 @@ createDriverStat driverId = do
       farePramIds = mapMaybe (.fareParametersId) completedRides
   cancelledRidesCount <- Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
   lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
-  missedEarnings <- Esq.runInReplica BQ.findFareForCancelledBookings
+  cancelledBookingIdsByDriver <- Esq.runInReplica $ BCRQ.findAllBookingIdsCancelledByDriverId driverId
+  missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIdsByDriver
   driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
   customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
   let driverStat =
@@ -166,19 +167,18 @@ getDriverStats (Just driverStats) driverId rideFare = do
       Just cancelledCount -> pure $ cancelledCount + 1
   earningMissed <-
     case driverStats.earningsMissed of
-      0 -> Esq.runInReplica BQ.findFareForCancelledBookings
+      0 -> do
+        cancelledBookingIdsByDriver <- Esq.runInReplica $ BCRQ.findAllBookingIdsCancelledByDriverId driverId
+        Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIdsByDriver
       _ -> pure $ driverStats.earningsMissed + fromMaybe 0 rideFare
   Esq.runNoTransaction $ DSQ.setDriverStats (cast driverId) updatedTotalRideCount cancelledCount earningMissed
   pure $ driverStats {DS.ridesCancelled = Just cancelledCount, DS.earningsMissed = earningMissed}
   where
     getTotalRideCount = do
-      prevTotal <-
-        maybe
-          ( do
-              allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
-              pure $ length allRides
-          )
-          (\_ -> pure 1)
-          driverStats.totalRidesAssigned
-      let curTotal = fromMaybe 0 driverStats.totalRidesAssigned
-      pure $ prevTotal + curTotal
+      maybe
+        ( do
+            allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+            pure $ length allRides
+        )
+        (\_ -> pure 0)
+        driverStats.totalRidesAssigned

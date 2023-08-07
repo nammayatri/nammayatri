@@ -19,11 +19,12 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
+import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment as Reexport
 import qualified Control.Lens as L
 import Data.Aeson as A
-import Data.OpenApi hiding (Example, example, title, value)
+import Data.OpenApi hiding (Example, example, tags, title, value)
 import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
 import Kernel.Utils.GenericPretty (PrettyShow)
@@ -31,7 +32,7 @@ import Kernel.Utils.Schema
 
 data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
-    update_target :: Text,
+    -- update_target :: Text,
     quote :: RideCompletedQuote,
     fulfillment :: FulfillmentInfo,
     payment :: Maybe Payment
@@ -43,18 +44,18 @@ instance ToJSON RideCompletedEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "./komn/update_target" .= update_target
+        -- <> "update_target" .= update_target
         <> "quote" .= quote
         <> "payment" .= payment
-        <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= RIDE_COMPLETED) :: A.Object)))
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_COMPLETED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)))
 
 instance FromJSON RideCompletedEvent where
   parseJSON = withObject "RideCompletedEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
     unless (update_type == RIDE_COMPLETED) $ fail "Wrong update_type."
     RideCompletedEvent
       <$> obj .: "id"
-      <*> obj .: "./komn/update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "quote"
       <*> obj .: "fulfillment"
       <*> obj .: "payment"
@@ -72,10 +73,17 @@ instance ToSchema RideCompletedEvent where
               L..~ fromList
                 [("code", update_type)]
             & required L..~ ["code"]
+        descriptor =
+          mempty
+            & type_ L.?~ OpenApiObject
+            & properties
+              L..~ fromList
+                [("descriptor", Inline st)]
+            & required L..~ ["descriptor"]
         fulfillment =
           toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
             & properties
-              L.<>~ fromList [("state", Inline st)]
+              L.<>~ fromList [("state", Inline descriptor)]
             & required L.<>~ ["state"]
     return $
       NamedSchema (Just "RideCompletedEvent") $
@@ -84,14 +92,14 @@ instance ToSchema RideCompletedEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("./komn/update_target", txt),
+                -- ("update_target", txt),
                 ("quote", quote),
                 ("payment", payment),
                 ("fulfillment", Inline fulfillment)
               ]
           & required
             L..~ [ "id",
-                   "./komn/update_target",
+                   --  "update_target",
                    "quote",
                    "fulfillment",
                    "payment"
@@ -134,26 +142,7 @@ data BreakupPrice = BreakupPrice
 instance ToSchema BreakupPrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-data FulfillmentInfo = FulfillmentInfo
-  { id :: Text, -- bppRideId
-    chargeable_distance :: DecimalValue,
+data DistanceRelatedTags = DistanceRelatedTags
+  { chargeable_distance :: DecimalValue,
     traveled_distance :: DecimalValue
   }
-  deriving (Generic, Show)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions fulfillmentInfoJSONOptions
-
-instance FromJSON FulfillmentInfo where
-  parseJSON = genericParseJSON fulfillmentInfoJSONOptions
-
-instance ToJSON FulfillmentInfo where
-  toJSON = genericToJSON fulfillmentInfoJSONOptions
-
-fulfillmentInfoJSONOptions :: A.Options
-fulfillmentInfoJSONOptions =
-  defaultOptions
-    { fieldLabelModifier = \case
-        "chargeable_distance" -> "./komn/chargeable_distance"
-        a -> a
-    }

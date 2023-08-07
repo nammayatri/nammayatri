@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Person where
 
@@ -23,6 +22,7 @@ import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.DriverQuote as DriverQuote
+import Domain.Types.MediaFile
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
@@ -390,8 +390,7 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
       return $ mkDriverWithRidesCount (person, info, vehicle, ridesCount)
 
 fetchDriverInfo :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
-fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
-  now <- getCurrentTime
+fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash =
   Esq.findOne $ do
     person :& driverInfo :& mbVehicle :& mbDriverLicense :& _mbRcAssoc :& mbRegCert <-
       from $
@@ -413,7 +412,7 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
                        joinOnlyWhenJust mbRcNumberHash $
                          do
                            just (person ^. PersonTId) ==. mbRcAssoc ?. DriverRCAssociationDriverId
-                           &&. just (just (val now)) <. mbRcAssoc ?. DriverRCAssociationAssociatedTill
+                           &&. just (val True) ==. mbRcAssoc ?. DriverRCAssociationIsRcActive
                    )
           `leftJoin` table @VehicleRegistrationCertificateT
           `Esq.on` ( \(_ :& _ :& _ :& _ :& mbRcAssoc :& mbRegCert) ->
@@ -949,3 +948,11 @@ updateAlternateMobileNumberAndCode person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
+updateMediaId driverId faceImageId =
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [PersonFaceImageId =. val (toKey <$> faceImageId)]
+    where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)

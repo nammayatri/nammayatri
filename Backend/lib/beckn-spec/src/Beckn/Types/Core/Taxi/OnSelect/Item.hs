@@ -20,30 +20,48 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
+import Beckn.Types.Core.Taxi.Common.Tags
+import Beckn.Types.Core.Taxi.OnSelect.Price as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import Kernel.Prelude
-import Kernel.Types.Common
+-- import Kernel.Types.Common
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+-- id*	[...]
+-- parent_item_id	Item/properties/id[...]
+-- descriptor	Descriptor{...}
+-- price	Price{...}
+-- category_id	Category/properties/id[...]
+-- fulfillment_id	Fulfillment/properties/id[...]
+-- rating	Rating/properties/value[...]
+-- location_id	Location/properties/id[...]
+-- time	Time{...}
+-- rateable	Rateable[...]
+-- matched	[...]
+-- related	[...]
+-- recommended	[...]
+-- tags	Tags{...}
+-- quantity
 
 data Item = Item
   { id :: Text,
-    category_id :: FareProductType,
+    -- category_id :: FareProductType,
     fulfillment_id :: Text,
-    offer_id :: Maybe Text,
-    price :: ItemPrice,
-    descriptor :: ItemDescriptor,
-    quote_terms :: [Text],
+    -- offer_id :: Maybe Text,
+    price :: Price,
+    -- descriptor :: ItemDescriptor,
+    -- quote_terms :: [Text],
     -- Only when FareProductType.ONE_WAY_TRIP
-    tags :: Maybe ItemTags,
+    tags :: Maybe TagGroups
     -- Only when FareProductType.RENTAL_TRIP
-    base_distance :: Maybe Kilometers,
-    base_duration :: Maybe Hours,
+    -- base_distance :: Maybe Kilometers,
+    -- base_duration :: Maybe Hours,
     -- Only when FareProductType.DRIVER_OFFER
-    driver_name :: Maybe Text,
-    duration_to_pickup :: Maybe Int, -- Seconds?
-    valid_till :: Maybe UTCTime,
-    rating :: Maybe Centesimal
+    -- driver_name :: Maybe Text,
+    -- duration_to_pickup :: Maybe Int, -- Seconds?
+    -- valid_till :: Maybe UTCTime
+    -- rating :: Maybe Centesimal
     -- TODO consider to make proper Item type for different FareProductType without Maybes with custom To/FromJSON
   }
   deriving (Generic, Show)
@@ -61,8 +79,6 @@ itemJSONOptions :: Options
 itemJSONOptions =
   defaultOptions
     { fieldLabelModifier = \case
-        "base_distance" -> "./komn/rental/base_distance_km"
-        "base_duration" -> "./komn/rental/base_duration_hr"
         "quote_terms" -> "./komn/quote_terms"
         a -> a
     }
@@ -76,15 +92,15 @@ data ItemDescriptor = ItemDescriptor
 instance ToSchema ItemDescriptor where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-data ItemPrice = ItemPrice
-  { currency :: Text,
-    value :: DecimalValue,
-    offered_value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
+-- data Price = Price
+--   { currency :: Text,
+--     value :: DecimalValue,
+--     offered_value :: DecimalValue
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema ItemPrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+-- instance ToSchema Price where
+--   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 data ItemTags = ItemTags
   { distance_to_nearest_driver :: DecimalValue,

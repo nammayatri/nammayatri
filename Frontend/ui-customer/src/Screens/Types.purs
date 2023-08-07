@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList, RateCardType)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -29,7 +29,10 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes)
+import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
+import MerchantConfig.Types
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 type Contacts = {
   name :: String,
@@ -138,6 +141,7 @@ type StepsHeaderModelState = {
   activeIndex :: Int,
   textArray :: Array String,
   backArrowVisibility :: Boolean
+, config :: AppConfig
 }
 
 -- ############################################################# ChooseLanguageScreen ################################################################################
@@ -148,21 +152,14 @@ type ChooseLanguageScreenState = {
 }
 
 type ChooseLanguageScreenData =  {
-  languages :: Array Language,
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type ChooseLanguageScreenProps =  {
   selectedLanguage :: String,
   btnActive :: Boolean,
   exitAnimation :: Boolean
- }
-
-
-type Language =  {
-  name :: String,
-  value :: String,
-  subTitle :: String
  }
 
 
@@ -185,7 +182,8 @@ type EnterMobileNumberScreenStateProps = {
   letterSpacing :: LetterSpacing,
   mNumberEdtFocused :: Boolean,
   otpEdtFocused :: Boolean,
-  editTextVal :: String
+  editTextVal :: String,
+  attemptLeft :: String
 }
 
 type EnterMobileNumberScreenStateData = {
@@ -195,6 +193,8 @@ type EnterMobileNumberScreenStateData = {
   , otp :: String
   , timer :: Int
   , timerID :: String
+  , config :: AppConfig,
+  logField :: Object Foreign
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -230,6 +230,7 @@ type AccountSetUpScreenStateData =
     , email :: String
     , gender :: Maybe Gender
     , nameErrorMessage :: Maybe ErrorType
+    , config :: AppConfig
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
@@ -259,7 +260,9 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     rating :: Int,
     selectedItem :: IndividualRideCardState,
-    tripId :: String
+    tripId :: String,
+    config :: AppConfig,
+    vehicleVariant :: Maybe VehicleVariant
     -- bookingId :: String
   }
 
@@ -293,7 +296,8 @@ type InvoiceScreenData =
     gst :: Number,
     totalAmount :: String,
     date :: String ,
-    selectedItem :: IndividualRideCardState
+    selectedItem :: IndividualRideCardState,
+    config :: AppConfig
   }
 
 type InvoiceScreenProps =
@@ -316,7 +320,8 @@ type ContactUsScreenData =
     subject :: String,
     description :: String,
     bookingId :: String,
-    errorMessage :: Maybe ErrorType
+    errorMessage :: Maybe ErrorType,
+    config :: AppConfig
   }
 
 type ContactUsScreenProps =
@@ -353,7 +358,9 @@ type HelpAndSupportScreenData =
     bookingId :: String,
     email :: String,
     description :: String,
-    accountStatus :: DeleteStatus
+    accountStatus :: DeleteStatus ,
+    config :: AppConfig,
+    vehicleVariant :: Maybe VehicleVariant
   }
 
 type HelpAndSuportScreenProps =
@@ -388,7 +395,9 @@ type MyRidesScreenState =
 type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
-    loadMoreText :: String
+    loadMoreText :: String,
+    config :: AppConfig,
+    logField :: Object Foreign
   }
 
 type MyRideScreenProps = {
@@ -437,7 +446,15 @@ type IndividualRideCardState =
   , isSpecialZone :: Boolean
   , nightCharges :: Boolean
   , zoneType :: ZoneType
+  , vehicleVariant :: Maybe VehicleVariant
   }
+
+
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS 
+
+derive instance genericVehicleVariant :: Generic VehicleVariant _
+instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
+instance showVehicleVariant :: Show VehicleVariant where show = genericShow
 
 type ItemState =
   {
@@ -465,8 +482,10 @@ type ItemState =
 
 -- ################################################ PermissionScreenState ##################################################
 
-type PermissionScreenState =
-  {}
+type PermissionScreenState = {
+    appConfig :: AppConfig,
+    logField :: Object Foreign
+}
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen
@@ -552,11 +571,14 @@ type HomeScreenStateData =
   , polygonCoordinates :: String
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
+  , specialZoneSelectedVariant :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponent
   , cancelRideConfirmationData :: CancelRideConfirmationData
   , pickUpCharges :: Int
   , ratingViewState :: RatingViewState
+  , config :: AppConfig
+  , logField :: Object Foreign
   }
 
 type HomeScreenStateProps =
@@ -631,6 +653,10 @@ type HomeScreenStateProps =
   , timerId :: String
   , findingRidesAgain :: Boolean
   , routeEndPoints :: Maybe RouteEndPoints
+  , findingQuotesProgress :: Number
+  , confirmLocationCategory :: String
+  , zoneTimerExpired :: Boolean
+  , isChatOpened :: Boolean
   }
 
 type RouteEndPoints = {
@@ -690,35 +716,22 @@ type TipViewProps = {
   , primaryButtonText :: String
 }
 
-type BannerViewState = {
-  backgroundColor :: String,
-  title :: String,
-  titleColor :: String,
-  actionText :: String,
-  actionTextColor :: String,
-  imageUrl :: String
-}
-
 type Contact = {
      name :: String,
      phoneNo :: String
 }
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate
-derive instance genericRateCardType :: Generic RateCardType _
-instance eqRateCardType :: Eq RateCardType where eq = genericEq
-
 type RateCard =
   {
+    baseFare :: Int,
+    extraFare :: Int,
+    pickUpCharges :: Int,
     additionalFare :: Int,
     nightShiftMultiplier :: Number,
     nightCharges :: Boolean,
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
-    rateCardArray :: Array RateCardDetails,
-    driverAdditionsImage :: String,
-    driverAdditionsLogic :: String,
-    title :: String
+    vehicleVariant :: String
   }
 
 type RateCardDetails = {
@@ -750,6 +763,8 @@ type ReferralScreenState =
     , showThanks :: Boolean
     , isInvalidCode :: Boolean
     , isExpandReference :: Boolean
+    , config :: AppConfig
+    , logField :: Object Foreign
   }
 
 -- ################################## SelectLanguageScreenState ###############################
@@ -760,7 +775,8 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type SelectLanguageScreenProps =  {
@@ -802,7 +818,9 @@ type ContactDetail = {
 
 -- ############################################## AboutUsScreenState #############################
 
-type AboutUsScreenState = {}
+type AboutUsScreenState = {
+    appConfig :: AppConfig
+}
 
 -- ############################################## MyProfileScreenState #############################
 
@@ -844,7 +862,9 @@ type MyProfileScreenData = {
   editedEmailId :: Maybe String,
   editedGender :: Maybe Gender,
   emailErrorMessage :: Maybe ErrorType,
-  nameErrorMessage :: Maybe ErrorType
+  nameErrorMessage :: Maybe ErrorType,
+  config :: AppConfig,
+  logField :: Object Foreign
 }
 
 data ErrorType = INVALID_EMAIL | EMAIL_EXISTS | EMAIL_CANNOT_BE_BLANK | INVALID_NAME | NAME_CANNOT_BE_BLANK
@@ -856,7 +876,8 @@ instance eqErrorType :: Eq ErrorType where eq = genericEq
 type Location = {
   place :: String,
   lat :: Number,
-  lng :: Number
+  lng :: Number,
+  address :: Maybe String
 }
 
 type DriverInfoCard =
@@ -889,6 +910,8 @@ type DriverInfoCard =
   , merchantExoPhone :: String
   , createdAt :: String
   , initDistance :: Maybe Int
+  , config :: AppConfig
+  , vehicleVariant :: String
   }
 
 type RatingCard =
@@ -911,6 +934,8 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , feedbackList :: Array FeedbackAnswer 
+  , appConfig :: AppConfig
   }
 
 type Address =
@@ -943,6 +968,7 @@ type SavedLocationScreenData =
   {
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
+  , config :: AppConfig
   }
 
 type DistInfo =
@@ -1005,6 +1031,9 @@ type AddNewAddressScreenData =
   , latSelectedFromMap :: Number
   , lonSelectedFromMap :: Number
   , addressComponents :: Array AddressComponents
+  , polygonCoordinates :: String
+  , nearByPickUpPoints :: Array Location
+  , config :: AppConfig
   }
 
 type AddNewAddressScreenProps =
@@ -1020,10 +1049,15 @@ type AddNewAddressScreenProps =
   , selectFromCurrentOrMap :: Boolean
   , isSearchedLocationServiceable :: Boolean
   , editSavedLocation :: Boolean
+  , isSpecialZone :: Boolean
+  , defaultPickUpPoint :: String
+  , isServiceable :: Boolean
   }
 
 type AppUpdatePopUpState =
- { version :: Int }
+ { version :: Int ,
+   logField :: Object Foreign
+ }
 
 
 data NotifyFlowEventType = RATE_DRIVER_SKIPPED | SEARCH_CANCELLED
@@ -1038,7 +1072,7 @@ instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
-data SearchResultType = QUOTES | ESTIMATES 
+data SearchResultType = QUOTES | ESTIMATES
 
 derive instance genericSearchResultType :: Generic SearchResultType _
 instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
@@ -1100,7 +1134,7 @@ type Fares = {
 
 type FareComponent = {
   fareType :: String
-, price :: Int
+, price :: String
 , title :: String
 }
 
@@ -1140,12 +1174,15 @@ data ZoneType = METRO
               | SCHOOL
               | RAILWAY
               | NOZONE
+              | AUTO_BLOCKED
 
 derive instance genericZoneType :: Generic ZoneType _
 instance showZoneType :: Show ZoneType where show = genericShow
 instance eqZoneType :: Eq ZoneType where eq = genericEq
 instance encodeZoneType :: Encode ZoneType where encode = defaultEncode
 instance decodeZoneType :: Decode ZoneType where decode = defaultDecode
+
+
 newtype TipViewData = TipViewData {
     stage :: TipViewStage
   , activeIndex :: Int

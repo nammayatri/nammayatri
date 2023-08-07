@@ -11,6 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use newtype instead of data" #-}
 
 module Beckn.Types.Core.Taxi.Search.StartInfo
   ( module Beckn.Types.Core.Taxi.Search.StartInfo,
@@ -19,14 +22,13 @@ module Beckn.Types.Core.Taxi.Search.StartInfo
 where
 
 import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Reexport
-import Beckn.Types.Core.Taxi.Search.Location (Location)
+import Beckn.Types.Core.Taxi.Search.Location as Reexport (Location)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data StartInfo = StartInfo
-  { location :: Location,
-    time :: TimeTimestamp
+  { location :: Location
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

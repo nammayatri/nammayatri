@@ -17,6 +17,7 @@ module Domain.Types.DriverOnboarding.IdfyVerification where
 
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person
+import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -40,6 +41,8 @@ data IdfyVerificationE e = IdfyVerification
     documentNumber :: EncryptedHashedField e Text,
     imageExtractionValidation :: ImageExtractionValidation,
     idfyResponse :: Maybe Text,
+    multipleRC :: Maybe Bool,
+    dashboardPassedVehicleVariant :: Maybe Vehicle.Variant,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

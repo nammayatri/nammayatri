@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.DriverOnboarding.Error where
@@ -34,6 +33,11 @@ data DriverOnboardingError
   | DLAlreadyUpdated
   | RCAlreadyLinked
   | RCAlreadyUpdated
+  | RCLimitReached Int
+  | RCNotFound Text
+  | ActiveRCNotFound
+  | RCVehicleOnRide
+  | RCActiveOnOtherAccount
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
   deriving (Generic, Eq, Show, Read, IsBecknAPIError, ToSchema, ToJSON, FromJSON)
@@ -58,6 +62,11 @@ instance IsBaseError DriverOnboardingError where
     RCAlreadyUpdated -> Just "No action required. Vehicle RC is already linked to driver."
     InvalidOperatingCity city -> Just $ "Operating city \"" <> city <> "\" is invalid."
     GenerateAadhaarOtpExceedLimit id_ -> Just $ "Generate Aadhaar otp  try limit exceeded for person \"" <> id_ <> "\"."
+    RCLimitReached limit -> Just $ "Linked RC limit exceed. Can't link more than " <> show limit <> " RCs."
+    RCNotFound rcNo -> Just $ "Vehicle Registration Certificate with registration number " <> rcNo <> " not found."
+    ActiveRCNotFound -> Just "Vehicle Registration Certificate is not active with any driver."
+    RCVehicleOnRide -> Just "Vehicle on ride. Please try again later."
+    RCActiveOnOtherAccount -> Just "RC active on another driver account."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -77,6 +86,11 @@ instance IsHTTPError DriverOnboardingError where
     RCAlreadyUpdated -> "RC_ALREADY_UPDATED"
     InvalidOperatingCity _ -> "OPERATING_CITY_INVALID"
     GenerateAadhaarOtpExceedLimit _ -> "GENERATE_AADHAAR_OTP_EXCEED_LIMIT"
+    RCLimitReached _ -> "MAXIMUM_RC_LIMIT_REACHED"
+    RCNotFound _ -> "RC_NOT_FOUND"
+    ActiveRCNotFound -> "ACTIVE_RC_NOT_FOUND"
+    RCVehicleOnRide -> "RC_Vehicle_ON_RIDE"
+    RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -94,5 +108,10 @@ instance IsHTTPError DriverOnboardingError where
     RCAlreadyUpdated -> E400
     InvalidOperatingCity _ -> E400
     GenerateAadhaarOtpExceedLimit _ -> E429
+    RCLimitReached _ -> E400
+    RCNotFound _ -> E400
+    ActiveRCNotFound -> E400
+    RCVehicleOnRide -> E400
+    RCActiveOnOtherAccount -> E400
 
 instance IsAPIError DriverOnboardingError

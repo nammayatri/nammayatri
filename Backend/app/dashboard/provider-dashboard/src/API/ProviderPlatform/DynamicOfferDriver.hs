@@ -20,6 +20,7 @@ where
 
 import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
+import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as DriverRegistration
 import qualified API.ProviderPlatform.DynamicOfferDriver.DriverReferral as DriverReferral
 import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
@@ -40,6 +41,7 @@ type API =
            :<|> Merchant.API
            :<|> Message.API
            :<|> DriverReferral.API
+           :<|> DriverRegistration.API
            :<|> Issue.API
            :<|> Volunteer.API
        )
@@ -52,5 +54,6 @@ handler merchantId =
     :<|> Merchant.handler merchantId
     :<|> Message.handler merchantId
     :<|> DriverReferral.handler merchantId
+    :<|> DriverRegistration.handler merchantId
     :<|> Issue.handler merchantId
     :<|> Volunteer.handler merchantId

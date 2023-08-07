@@ -26,15 +26,15 @@ to generate this file without the comments in this block.
   , "foldable-traversable"
   , "foreign"
   , "foreign-generic"
+  , "foreign-object"
   , "free"
   , "functions"
   , "halogen-vdom"
   , "integers"
+  , "lists"
   , "maybe"
   , "newtype"
-  , "nonempty"
   , "numbers"
-  , "ordered-collections"
   , "otp-reader"
   , "prelude"
   , "presto"
@@ -46,6 +46,8 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
+  , "unsafe-coerce"
+  , "lite-decode"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]

@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -38,6 +37,7 @@ mkPersist
       associatedTill UTCTime Maybe
       consent Bool
       consentTimestamp UTCTime
+      isRcActive Bool
       Primary id
       deriving Generic
     |]

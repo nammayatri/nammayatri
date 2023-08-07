@@ -15,9 +15,11 @@
 
 module Screens.HelpAndSupportScreen.ScreenData where
 
-import Screens.Types (HelpAndSupportScreenState)
+import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (DeleteStatus(..))
+import MerchantConfig.DefaultConfig as DC
+import Data.Maybe(Maybe(..))
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -40,7 +42,9 @@ initData = {
     faresList : [],
     email : "",
     description : "",
-    accountStatus : ACTIVE
+    accountStatus : ACTIVE,
+    config : DC.config,
+    vehicleVariant : Nothing
   },
   props:{
     apiFailure : false

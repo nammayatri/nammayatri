@@ -15,6 +15,9 @@
 
 module Screens.MyProfileScreen.View where
 
+import Common.Types.App
+import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
+
 import Animation as Anim
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
@@ -23,30 +26,29 @@ import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (lift, runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
+import Data.Array (mapWithIndex)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getCommonAssetStoreLink, getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard)
+import Resources.Constants as RSRC
+import PrestoDOM.Animation as PrestoAnim
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Common.Types.App
 import Types.App (defaultGlobalState)
-import Data.Array (mapWithIndex)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
-import PrestoDOM.Animation as PrestoAnim
-import Resources.Constants as RSRC
-import JBridge (toggleLoader, loaderText)
+import Engineering.Helpers.Utils (toggleLoader, loaderText)
 
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
@@ -93,13 +95,7 @@ view push state =
                 , height WRAP_CONTENT
                 , width MATCH_PARENT
                 ]
-                [ linearLayout
-                  [ background Color.borderColorLight
-                  , height $ V 1
-                  , margin $ MarginBottom if EHC.os == "IOS" then 12 else 2
-                  , width MATCH_PARENT
-                  ][]
-                , PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)
+                [ PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)
                 ]
               ]
         , linearLayout
@@ -116,6 +112,7 @@ view push state =
                 [ height $ V 1
                 , width MATCH_PARENT
                 , background Color.greySmoke
+                , visibility if state.data.config.nyBrandingVisibility then GONE else VISIBLE
                 ][]
               , detailsView state push
             ]
@@ -172,19 +169,16 @@ personalDetails state push =
                           , width MATCH_PARENT
                           , orientation VERTICAL
                           , margin $ Margin 16 0 16 0
-                          ][  textView
+                          ][  textView $
                               [ height WRAP_CONTENT
                               , width MATCH_PARENT
-                              , textSize FontSize.a_12
                               , text item.title
                               , color Color.black700
                               , margin $ MarginBottom 8
-                              , fontStyle $ FontStyle.regular LanguageStyle
-                              ]
-                            , textView
+                              ] <> FontStyle.body3 LanguageStyle
+                            , textView $
                               [ height WRAP_CONTENT
                               , width MATCH_PARENT
-                              , textSize FontSize.a_14
                               , text item.text
                               , color case item.fieldType of
                                   ST.EMAILID_ ->  if state.data.emailId /= Nothing then Color.black900 else Color.blue900
@@ -194,8 +188,7 @@ personalDetails state push =
                                   ST.EMAILID_ ->  if state.data.emailId /= Nothing then const $ NoAction else const $ EditProfile $ Just ST.EMAILID_
                                   ST.GENDER_ -> if state.data.gender /= Nothing then const $ NoAction  else const $ EditProfile $ Just ST.GENDER_
                                   _ -> const $ NoAction
-                              , fontStyle $ FontStyle.semiBold LanguageStyle
-                              ]
+                              ] <> FontStyle.body6 LanguageStyle
                             ]
                       , horizontalLineView state (index /= 3)
                       ] ) (personalDetailsArray state))
@@ -264,17 +257,18 @@ headerView state push =
         ][ linearLayout
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , gravity CENTER
+          , gravity $ case state.data.config.profileEditGravity of 
+              "bottom" -> BOTTOM
+              _ -> CENTER
           , orientation VERTICAL
-          ][ textView
+          ][ textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , textSize FontSize.a_16
               , text (getString EDIT)
               , color Color.blueTextColor
-              , fontStyle $ FontStyle.semiBold LanguageStyle
+              , padding $ PaddingBottom (if state.data.config.profileEditGravity == "bottom" then 10 else 0)
               , onClick push (const $ EditProfile Nothing)
-              ]
+              ] <> FontStyle.subHeading1 LanguageStyle
             ]
           ]
       ]
@@ -297,7 +291,7 @@ profileImageView state push =
             ][  imageView
                 [ height $ V 100
                 , width $ V 100
-                , imageWithFallback "ny_ic_profile_image,https://assets.juspay.in/nammayatri/images/common/ny_ic_profile_image.png"
+                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
                 ]
             ]
           ]
@@ -314,29 +308,25 @@ mobileNumberTextView state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginTop 32
-  ][  textView
+  ][  textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , textSize FontSize.a_12
       , text (getString MOBILE_NUMBER_STR)
       , color Color.black700
       , margin $ MarginBottom 8
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.body3 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , padding $ Padding 20 17 20 17
       , cornerRadius 8.0
       , stroke $ "1,"<>Color.greySmoke
-      ][textView
+      ][textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , textSize FontSize.a_16
       , text $ getValueToLocalStore MOBILE_NUMBER
       , color Color.black600
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ] ]
+      ] <> FontStyle.subHeading1 LanguageStyle ]
   ]
 
 
@@ -354,17 +344,15 @@ genderCaptureView state push =
     , background Color.white900
     , orientation VERTICAL
     ] $
-    [ textView
+    [ textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , text $ getString GENDER_STR
       , color Color.black800
       , gravity LEFT
-      , fontStyle $ FontStyle.regular LanguageStyle
       , singleLine true
-      , textSize FontSize.a_12
       , margin $ MarginBottom 12
-      ]
+      ] <> FontStyle.body3 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -374,21 +362,19 @@ genderCaptureView state push =
         , stroke $ "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]
-        [ textView
+        [ textView $
           [ text $ RSRC.getGender state.data.editedGender (getString SELECT_YOUR_GENDER)
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
           , height WRAP_CONTENT
           , width WRAP_CONTENT
           , color if state.data.editedGender == Nothing then Color.black600 else Color.black800
-          ]
+          ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity RIGHT
             ]
             [ imageView
-              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
               , height $ V 24
               , width $ V 15
               ]
@@ -434,13 +420,11 @@ genderOptionsView state push =
         , onClick push $ const $ GenderSelected item.value
         , orientation VERTICAL
         ]
-        [ textView
+        [ textView $
           [ text item.text
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.regular LanguageStyle
           , color Color.black900
           , margin $ Margin 16 15 16 15
-          ]
+          ] <> FontStyle.paragraphText LanguageStyle
         , linearLayout
           [ height $ V 1
           , width MATCH_PARENT

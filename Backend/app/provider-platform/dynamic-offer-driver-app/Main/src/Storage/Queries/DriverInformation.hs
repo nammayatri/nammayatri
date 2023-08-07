@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.DriverInformation where
 
@@ -176,6 +175,15 @@ updateOnRide driverId onRide = do
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+findByDriverIdActiveRide :: (Transactionable m) => Id Person.Driver -> m (Maybe DriverInformation)
+findByDriverIdActiveRide driverId = do
+  Esq.findOne $ do
+    driverInfo <- from $ table @DriverInformationT
+    where_ $
+      driverInfo ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+        &&. driverInfo ^. DriverInformationOnRide ==. val True
+    return driverInfo
 
 updateNotOnRideMultiple :: [Id Person.Driver] -> SqlDB ()
 updateNotOnRideMultiple driverIds = do

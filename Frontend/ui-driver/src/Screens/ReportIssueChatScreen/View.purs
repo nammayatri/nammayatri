@@ -21,9 +21,9 @@ import Components.ChatView.Controller (makeChatComponent')
 import Data.Array (length)
 import Data.Maybe (fromMaybe, isJust)
 import Effect (Effect)
-import Engineering.Helpers.Commons (screenWidth)
+import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC)
 import Font.Style (bold)
-import Helpers.Utils (convertUTCtoISC, getCurrentUTC)
+import Helpers.Utils (getCurrentUTC)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, ($), (&&), (-), (<<<), (<>), (>), (||))
@@ -68,6 +68,7 @@ view push state =
       , width MATCH_PARENT
       , onBackPressed push (const BackPressed)
       , afterRender push (const AfterRender)
+      , background Color.white900
       ] ([ relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT

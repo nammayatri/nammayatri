@@ -34,7 +34,7 @@ import Screens.HelpAndSupportScreen.ScreenData (otherIssueList,IssueOptions(..))
 import Services.API (FetchIssueListResp(..),FetchIssueListReq(..))
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
-import Helpers.Utils (toString)
+import Helpers.Utils (toString, getCommonAssetStoreLink, getAssetStoreLink)
 import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Effect.Class (liftEffect)
 import Language.Types(STR(..))
@@ -76,6 +76,7 @@ view push state =
     , orientation VERTICAL
     , onBackPressed push $ const BackPressed
     , afterRender push (const AfterRender)
+    , background Color.white900
     ]([linearLayout
      [height MATCH_PARENT
      , width MATCH_PARENT
@@ -125,7 +126,7 @@ headerLayout state push =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+            , imageWithFallback $ "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
@@ -157,27 +158,25 @@ reportAnIssueHeader state push leftText =
  , height WRAP_CONTENT
  , padding (Padding 15 10 10 10)
  , background Color.lightGreyBlue
- ][ textView
+ ][ textView $
     [ width $ V (3 * screenWidth unit / 5)
     , height MATCH_PARENT
     , text leftText
     , gravity CENTER_VERTICAL
-    , fontStyle $ FontStyle.semiBold LanguageStyle
-    , textSize FontSize.a_18
     , color Color.black800
     , lineHeight "25"
-    ]
+    ] <> FontStyle.h3 LanguageStyle
   , linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][ textView
+    ][ textView $
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , textSize FontSize.a_17
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity RIGHT
         , color Color.blueTextColor
-        ]
+        ] <> FontStyle.subHeading1 LanguageStyle
     ]
  ]
 
@@ -284,18 +283,17 @@ allOtherTopics state push =
               , orientation HORIZONTAL
               , gravity CENTER_VERTICAL
               , padding (Padding 15 17 15 17)
-              ][  textView
+              ][  textView $
                   [ height WRAP_CONTENT
                   , weight 1.0
                   , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toString (length (state.data.ongoingIssueList)))) else if (optionItem.menuOptions) == ResolvedIssues then (getIssueTitle optionItem.menuOptions)  else (getIssueTitle optionItem.menuOptions))
                   , margin (MarginLeft 10)
                   , color Color.black800
-                  , textSize FontSize.a_17
-                  ]
+                  ] <> FontStyle.body5 LanguageStyle
                   , imageView
                   [ width $ V 20
                   , height $ V 20
-                  , imageWithFallback "ny_ic_chevron_right_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_right_grey.png"
+                  , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
                   ]
               ]
               , horizontalLineView

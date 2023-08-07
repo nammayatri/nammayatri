@@ -44,6 +44,8 @@ data UserActionType
   | DELETE_DRIVER
   | UNLINK_VEHICLE
   | END_RC_ASSOCIATION
+  | SET_RC_STATUS
+  | DELETE_RC
   | UNLINK_DL
   | UNLINK_AADHAAR
   | UPDATE_PHONE_NUMBER
@@ -143,6 +145,8 @@ data UserActionType
   | UPDATE_FP_DRIVER_EXTRA_FEE
   | BALANCE_DUE
   | COLLECT_CASH
+  | EXEMPT_CASH
+  | CURRENT_ACTIVE_RIDE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

@@ -41,7 +41,15 @@ import Screens (ScreenName(..), getScreen)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Storage (setValueToLocalNativeStore, KeyStore(..))
-import JBridge (firebaseLogEvent)
+import Engineering.Helpers.LogEvent (logEvent)
+import Components.DatePickerModel as DatePickerModel
+import Components.GenericHeader as GenericHeader
+import Components.PaymentHistoryListItem as PaymentHistoryModelItem
+import Components.PaymentHistoryModel as PaymentHistoryModel
+import Components.PrimaryButton as PrimaryButton
+import Resource.Constants (decodeAddress, tripDatesCount)
+import Effect.Unsafe
+import Log
 
 instance showAction :: Show Action where
   show _ = ""
@@ -68,6 +76,17 @@ instance loggableAction :: Loggable Action where
     ErrorModalActionController action -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "error_modal_action"
     Dummy -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "dummy_action"
     NoAction -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "no_action"
+    ShowDatePicker -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "show_date_picker_action"
+    DatePickerAC act -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "date_picker_model" "on_date_select"
+    GenericHeaderAC act -> case act of
+      GenericHeader.PrefixImgOnClick -> do
+          trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header" "back_icon_on_click"
+          trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
+      GenericHeader.SuffixImgOnClick -> do
+          trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header" "forward_icon_on_click"
+          trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
+    PaymentHistoryModelAC act -> pure unit
+    OpenPaymentHistory -> pure unit
 
 data ScreenOutput = GoBack
                     | RideHistoryScreen RideHistoryScreenState
@@ -80,6 +99,7 @@ data ScreenOutput = GoBack
                     | GoToNotification
                     | GoToReferralScreen
                     | SelectedTab RideHistoryScreenState
+                    | OpenPaymentHistoryScreen RideHistoryScreenState
 
 data Action = Dummy
             | OnFadeComplete String
@@ -95,10 +115,16 @@ data Action = Dummy
             | NoAction
             | AfterRender
             | ScrollStateChanged ScrollState
+            | DatePickerAC DatePickerModel.Action
+            | ShowDatePicker
+            | GenericHeaderAC GenericHeader.Action
+            | PaymentHistoryModelAC PaymentHistoryModel.Action
+            | OpenPaymentHistory
 
 eval :: Action -> RideHistoryScreenState -> Eval Action ScreenOutput RideHistoryScreenState
 eval AfterRender state = continue state
-eval BackPressed state = exit GoBack
+eval BackPressed state = if state.props.showPaymentHistory then continue state{ props {showPaymentHistory = false }}
+                          else exit GoBack
 eval (OnFadeComplete _ ) state = if (not state.recievedResponse) then continue state else
   continue state { shimmerLoader = case state.shimmerLoader of
                               AnimatedIn ->AnimatedOut
@@ -124,7 +150,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Profile" -> exit $ ProfileScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      let _ = unsafePerformEffect $ logEvent state.logField "ny_driver_alert_click"
       exit $ GoToNotification
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
@@ -155,6 +181,23 @@ eval (Scroll value) state = do
   let loadMoreButton = if (totalItems == (firstIndex + visibleItems) && totalItems /= 0 && totalItems /= visibleItems) then true else false
   _ <- if canScrollUp then (pure $ setEnabled "2000030" false) else  (pure $ setEnabled "2000030" true)
   continue state { loaderButtonVisibility = loadMoreButton}
+
+eval (DatePickerAC (DatePickerModel.OnDateSelect idx item)) state = do
+  let newState = state{datePickerState{activeIndex = idx, selectedItem = item},rideList = [], prestoListArrayItems = []}
+  exit $ SelectedTab newState
+
+eval ShowDatePicker state = continue state{props{showDatePicker = not state.props.showDatePicker}}
+
+eval OpenPaymentHistory state = exit $ OpenPaymentHistoryScreen state
+
+eval (PaymentHistoryModelAC (PaymentHistoryModel.GenericHeaderAC (GenericHeader.PrefixImgOnClick))) state = continue state{props{showPaymentHistory = false}}
+
+eval (PaymentHistoryModelAC (PaymentHistoryModel.ErrorModalActionController (ErrorModalController.PrimaryButtonActionController PrimaryButton.OnClick))) state = continue state{props{showPaymentHistory = false}}
+
+eval (PaymentHistoryModelAC (PaymentHistoryModel.PaymentHistoryListItemAC (PaymentHistoryModelItem.OnClick id))) state = do
+  let updatedData = map (\item -> if item.id == id then item{isSelected = not item.isSelected} else item) state.data.paymentHistory.paymentHistoryList
+  continue state{data{paymentHistory { paymentHistoryList = updatedData}}}
+
 eval _ state = continue state
 
 rideHistoryListTransformer :: Array RidesInfo -> Array ItemState

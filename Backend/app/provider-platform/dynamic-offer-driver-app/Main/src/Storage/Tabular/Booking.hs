@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -69,6 +68,7 @@ mkPersist
       estimatedDuration Seconds
       fareParametersId Fare.FareParametersTId
       riderName Text Maybe
+      paymentUrl Text Maybe
       paymentMethodId SMPM.MerchantPaymentMethodTId Maybe
       createdAt UTCTime
       updatedAt UTCTime

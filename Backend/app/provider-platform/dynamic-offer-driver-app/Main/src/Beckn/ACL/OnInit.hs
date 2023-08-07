@@ -17,13 +17,18 @@ module Beckn.ACL.OnInit where
 import qualified Beckn.ACL.Common as Common
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Booking.BookingLocation as DRBL
 import qualified Domain.Types.FareParameters as DFParams
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import SharedLogic.FareCalculator
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
   let rb = res.booking
+      vehicleVariant = castVehicleVariant res.booking.vehicleVariant
+      itemId = Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant
       fareDecimalValue = fromIntegral rb.estimatedFare
       currency = "INR"
       breakup_ =
@@ -33,6 +38,66 @@ mkOnInitMessage res = do
     { order =
         OnInit.Order
           { id = res.booking.id.getId,
+            items =
+              [ OnInit.OrderItem
+                  { id = itemId,
+                    fulfillment_id = res.booking.quoteId,
+                    price =
+                      OnInit.Price
+                        { currency,
+                          value = fareDecimalValue
+                        },
+                    descriptor =
+                      OnInit.Descriptor
+                        { short_desc = Just itemId,
+                          code = Nothing
+                        }
+                  }
+              ],
+            fulfillment =
+              OnInit.FulfillmentInfo
+                { id = res.booking.quoteId,
+                  _type = buildFulfillmentType res.booking.bookingType,
+                  start =
+                    OnInit.StartInfo
+                      { location =
+                          OnInit.Location
+                            { gps =
+                                OnInit.Gps
+                                  { lat = res.booking.fromLocation.lat,
+                                    lon = res.booking.fromLocation.lon
+                                  },
+                              address = castAddress res.booking.fromLocation.address
+                            },
+                        authorization = Nothing
+                      },
+                  end =
+                    Just
+                      OnInit.StopInfo
+                        { location =
+                            OnInit.Location
+                              { gps =
+                                  OnInit.Gps
+                                    { lat = res.booking.toLocation.lat,
+                                      lon = res.booking.toLocation.lon
+                                    },
+                                address = castAddress res.booking.toLocation.address
+                              }
+                        },
+                  vehicle =
+                    OnInit.Vehicle
+                      { category = vehicleVariant
+                      },
+                  agent =
+                    res.driverName >>= \driverName ->
+                      Just
+                        OnInit.Agent
+                          { name = driverName,
+                            rateable = True,
+                            tags = Nothing,
+                            phone = Nothing
+                          }
+                },
             state = OnInit.NEW,
             quote =
               OnInit.Quote
@@ -42,24 +107,40 @@ mkOnInitMessage res = do
                         value = fareDecimalValue,
                         offered_value = fareDecimalValue
                       },
-                  breakup = breakup_
+                  breakup = Just breakup_
                 },
+            provider =
+              res.driverId >>= \dId ->
+                Just
+                  OnInit.Provider
+                    { id = dId
+                    },
             payment =
               OnInit.Payment
-                { collected_by = maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
-                  params =
+                { params =
                     OnInit.PaymentParams
-                      { currency = currency,
-                        amount = fareDecimalValue
+                      { collected_by = OnInit.BPP, --maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
+                        instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
+                        currency = currency,
+                        amount = Just fareDecimalValue
                       },
                   _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
-                  instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
-                  time = OnInit.TimeDuration "FIXME",
-                  uri = res.paymentUrl
+                  uri = res.booking.paymentUrl
                 }
           }
     }
   where
+    castAddress DRBL.LocationAddress {..} = OnInit.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
+    castVehicleVariant = \case
+      VehVar.SEDAN -> OnInit.SEDAN
+      VehVar.SUV -> OnInit.SUV
+      VehVar.HATCHBACK -> OnInit.HATCHBACK
+      VehVar.AUTO_RICKSHAW -> OnInit.AUTO_RICKSHAW
+      VehVar.TAXI -> OnInit.TAXI
+      VehVar.TAXI_PLUS -> OnInit.TAXI_PLUS
+    buildFulfillmentType = \case
+      DRB.NormalBooking -> OnInit.RIDE
+      DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->

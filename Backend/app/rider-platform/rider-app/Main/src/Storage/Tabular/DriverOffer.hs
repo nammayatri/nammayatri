@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -38,6 +37,7 @@ mkPersist
       estimateId TEstimate.EstimateTId
       merchantId MerchantTId Maybe
       driverName Text
+      driverId Text Maybe
       durationToPickup Int
       distanceToPickup HighPrecMeters
       validTill UTCTime
@@ -59,7 +59,6 @@ instance FromTType DriverOfferT Domain.DriverOffer where
     return $
       Domain.DriverOffer
         { id = Id id,
-          bppQuoteId = Id bppQuoteId,
           merchantId = fromKey <$> merchantId,
           estimateId = fromKey estimateId,
           ..
@@ -69,7 +68,6 @@ instance ToTType DriverOfferT Domain.DriverOffer where
   toTType Domain.DriverOffer {..} = do
     DriverOfferT
       { id = getId id,
-        bppQuoteId = bppQuoteId.getId,
         merchantId = toKey <$> merchantId,
         estimateId = toKey estimateId,
         ..

@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module ProviderPlatformClient.DynamicOfferDriver
   ( callDriverOfferBPP,
@@ -53,6 +52,7 @@ data DriverOfferAPIs = DriverOfferAPIs
     message :: MessageAPIs,
     volunteer :: VolunteerAPIs,
     driverReferral :: DriverReferralAPIs,
+    driverRegistration :: DriverRegistrationAPIs,
     issue :: IssueAPIs
   }
 
@@ -69,19 +69,11 @@ data DriversAPIs = DriversAPIs
     blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     blockReasonList :: Euler.EulerClient [Driver.BlockReason],
     collectCash :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    exemptCash :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unblockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Driver.DriverIds -> Euler.EulerClient Driver.DriverLocationRes,
     driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverInfoRes,
     deleteDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    documentsList :: Id Driver.Driver -> Euler.EulerClient Registration.DocumentsListResponse,
-    getDocument :: Id Driver.Image -> Euler.EulerClient Registration.GetDocumentResponse,
-    uploadDocument :: Id Driver.Driver -> Registration.UploadDocumentReq -> Euler.EulerClient Registration.UploadDocumentResp,
-    registerDL :: Id Driver.Driver -> Registration.RegisterDLReq -> Euler.EulerClient APISuccess,
-    registerRC :: Id Driver.Driver -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
-    generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
-    verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
-    auth :: Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
-    verify :: Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess,
     unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkDL :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkAadhaar :: Id Driver.Driver -> Euler.EulerClient APISuccess,
@@ -90,7 +82,9 @@ data DriversAPIs = DriversAPIs
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
-    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
+    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
+    setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
+    deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -98,6 +92,7 @@ data RidesAPIs = RidesAPIs
     rideStart :: Id Ride.Ride -> Ride.StartRideReq -> Euler.EulerClient APISuccess,
     rideEnd :: Id Ride.Ride -> Ride.EndRideReq -> Euler.EulerClient APISuccess,
     multipleRideEnd :: Ride.MultipleRideEndReq -> Euler.EulerClient Ride.MultipleRideEndResp,
+    currentActiveRide :: Text -> Euler.EulerClient (Id Ride.Ride),
     rideCancel :: Id Ride.Ride -> Ride.CancelRideReq -> Euler.EulerClient APISuccess,
     multipleRideCancel :: Ride.MultipleRideCancelReq -> Euler.EulerClient Ride.MultipleRideCancelResp,
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
@@ -138,6 +133,18 @@ data DriverReferralAPIs = DriverReferralAPIs
     linkDriverReferralCode :: (LBS.ByteString, DriverReferral.ReferralLinkReq) -> Euler.EulerClient DriverReferral.LinkReport
   }
 
+data DriverRegistrationAPIs = DriverRegistrationAPIs
+  { documentsList :: Id Driver.Driver -> Euler.EulerClient Registration.DocumentsListResponse,
+    getDocument :: Id Driver.Image -> Euler.EulerClient Registration.GetDocumentResponse,
+    uploadDocument :: Id Driver.Driver -> Registration.UploadDocumentReq -> Euler.EulerClient Registration.UploadDocumentResp,
+    registerDL :: Id Driver.Driver -> Registration.RegisterDLReq -> Euler.EulerClient APISuccess,
+    registerRC :: Id Driver.Driver -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
+    generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
+    verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
+    auth :: Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
+    verify :: Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess
+  }
+
 data MessageAPIs = MessageAPIs
   { uploadFile :: (LBS.ByteString, Message.UploadFileRequest) -> Euler.EulerClient Message.UploadFileResponse,
     addLinkAsMedia :: Message.AddLinkAsMedia -> Euler.EulerClient Message.UploadFileResponse,
@@ -168,6 +175,7 @@ mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
   let driverReferral = DriverReferralAPIs {..}
+  let driverRegistration = DriverRegistrationAPIs {..}
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let message = MessageAPIs {..}
@@ -181,6 +189,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> merchantClient
       :<|> messageClient
       :<|> driverReferralClient
+      :<|> driverRegistrationClient
       :<|> volunteerClient
       :<|> issueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
@@ -196,6 +205,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> blockDriver
       :<|> blockReasonList
       :<|> collectCash
+      :<|> exemptCash
       :<|> unblockDriver
       :<|> driverLocation
       :<|> driverInfo
@@ -208,22 +218,15 @@ mkDriverOfferAPIs merchantId token = do
       :<|> updateByPhoneNumber
       :<|> addVehicle
       :<|> updateDriverName
-      :<|> ( documentsList
-               :<|> getDocument
-               :<|> uploadDocument
-               :<|> registerDL
-               :<|> registerRC
-               :<|> generateAadhaarOtp
-               :<|> verifyAadhaarOtp
-               :<|> auth
-               :<|> verify
-             )
+      :<|> setRCStatus
+      :<|> deleteRC
       :<|> clearOnRideStuckDrivers = driversClient
 
     rideList
       :<|> rideStart
       :<|> rideEnd
       :<|> multipleRideEnd
+      :<|> currentActiveRide
       :<|> rideCancel
       :<|> multipleRideCancel
       :<|> rideInfo
@@ -256,6 +259,16 @@ mkDriverOfferAPIs merchantId token = do
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = driverReferralClient
+
+    documentsList
+      :<|> getDocument
+      :<|> uploadDocument
+      :<|> registerDL
+      :<|> registerRC
+      :<|> generateAadhaarOtp
+      :<|> verifyAadhaarOtp
+      :<|> auth
+      :<|> verify = driverRegistrationClient
 
     uploadFile
       :<|> addLinkAsMedia

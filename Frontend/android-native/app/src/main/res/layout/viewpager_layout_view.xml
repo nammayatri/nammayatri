@@ -30,208 +30,247 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                <LinearLayout
-                    android:id="@+id/indicator1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:layout_weight="1.0">
-
-                    <com.facebook.shimmer.ShimmerFrameLayout
-                        android:id="@+id/shimmer_view_container_0"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:shimmer_base_color="#FFFFFF"
-                        app:shimmer_highlight_color="#FFFFFF"
-                        app:shimmer_auto_start="true"
-                        app:shimmer_base_alpha="1.0"
-                        app:shimmer_highlight_alpha="0.6">
-
-                    <TextView
-                        android:id="@+id/tip_view_0"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="TIP"
-                        android:textColor="@color/Black900"
-                        android:gravity="center"
-                        android:textStyle="bold"
-                        android:background="@drawable/rectangle_9506"
-                        android:visibility="invisible" />
-                    </com.facebook.shimmer.ShimmerFrameLayout>
-
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:id="@+id/indicator1"
+                        android:layout_width="wrap_content"
                         android:layout_height="match_parent"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="10dp">
+                        android:layout_weight="1.0">
 
-                        <TextView
-                            android:id="@+id/indicatorText1"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:lineHeight="28dp"
-                            android:text="₹120"
-                            android:textColor="@color/Black800"
-                            android:textSize="20dp" />
-
-                        <com.google.android.material.progressindicator.LinearProgressIndicator
-                            android:id="@+id/progress_indicator_1"
+                        <com.facebook.shimmer.ShimmerFrameLayout
+                            android:id="@+id/shimmer_view_container_0"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginHorizontal="5dp"
-                            android:layout_marginTop="10dp"
-                            android:indeterminate="false"
-                            android:progress="100"
-                            android:theme="@style/MaterialTheme"
-                            app:indicatorColor="@color/green900"
-                            app:trackColor="@color/grey900"
-                            app:trackCornerRadius="20dp"
-                            app:trackThickness="7dp" />
+                            app:shimmer_base_color="#FFFFFF"
+                            app:shimmer_highlight_color="#FFFFFF"
+                            app:shimmer_auto_start="true"
+                            app:shimmer_base_alpha="1.0"
+                            app:shimmer_highlight_alpha="0.6">
 
-                    </LinearLayout>
-                </LinearLayout>
+                            <TextView
+                                android:id="@+id/tip_view_0"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="TIP"
+                                android:textColor="@color/Black900"
+                                android:gravity="center"
+                                android:textStyle="bold"
+                                android:background="@drawable/rectangle_9506"
+                                android:visibility="invisible" />
+                        </com.facebook.shimmer.ShimmerFrameLayout>
 
-                <LinearLayout
-                    android:layout_width="1dp"
-                    android:layout_height="match_parent"
-                    android:background="#E5E7EB" />
-
-
-                <LinearLayout
-                    android:id="@+id/indicator2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:layout_weight="1.0"
-                    android:orientation="vertical">
-
-                    <com.facebook.shimmer.ShimmerFrameLayout
-                        android:id="@+id/shimmer_view_container_1"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:shimmer_base_color="#FFFFFF"
-                        app:shimmer_highlight_color="#FFFFFF"
-                        app:shimmer_auto_start="true"
-                        app:shimmer_base_alpha="1.0"
-                        app:shimmer_highlight_alpha="0.6">
-                    <TextView
-                        android:id="@+id/tip_view_1"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="TIP"
-                        android:gravity="center"
-                        android:textStyle="bold"
-                        android:textColor="@color/Black900"
-                        android:background="@drawable/rectangle_9506"
-                        android:visibility="invisible"/>
-                    </com.facebook.shimmer.ShimmerFrameLayout>
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="15dp">
-
-                        <TextView
-                            android:id="@+id/indicatorText2"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:lineHeight="28dp"
-                            android:text="₹40"
-                            android:textColor="@color/Black800"
-                            android:textSize="20dp" />
-
-                        <com.google.android.material.progressindicator.LinearProgressIndicator
-                            android:id="@+id/progress_indicator_2"
+                        <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginHorizontal="5dp"
-                            android:layout_marginTop="10dp"
-                            android:indeterminate="false"
-                            android:progress="100"
-                            android:theme="@style/MaterialTheme"
-                            app:indicatorColor="@color/green900"
-                            app:trackColor="@color/grey900"
-                            app:trackCornerRadius="20dp"
-                            app:trackThickness="7dp" />
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="10dp"
+                            android:paddingBottom="10dp">
 
+                            <TextView
+                                android:id="@+id/variant1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="18dp"
+                                android:text=""
+                                android:visibility="gone"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
+                            <TextView
+                                android:id="@+id/indicatorText1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                android:lineHeight="28dp"
+                                android:text="₹120"
+                                android:textColor="@color/Black800"
+                                android:textSize="20dp" />
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_1"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="5dp"
+                                android:layout_marginTop="10dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/green900"
+                                app:trackColor="@color/grey900"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+
+                        </LinearLayout>
                     </LinearLayout>
-                </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="1dp"
                         android:layout_height="match_parent"
                         android:background="#E5E7EB" />
 
-                <LinearLayout
-                    android:id="@+id/indicator3"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:layout_weight="1.0"
-                    android:orientation="vertical">
 
-                    <com.facebook.shimmer.ShimmerFrameLayout
-                        android:id="@+id/shimmer_view_container_2"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:shimmer_base_color="#FFFFFF"
-                        app:shimmer_highlight_color="#FFFFFF"
-                        app:shimmer_auto_start="true"
-                        app:shimmer_base_alpha="1.0"
-                        app:shimmer_highlight_alpha="0.6">
-                    <TextView
-                        android:id="@+id/tip_view_2"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="TIP"
-                        android:textColor="@color/Black900"
-                        android:gravity="center"
-                        android:textStyle="bold"
-                        android:background="@drawable/rectangle_9506"
-                        android:visibility="invisible" />
-                    </com.facebook.shimmer.ShimmerFrameLayout>
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:id="@+id/indicator2"
+                        android:layout_width="wrap_content"
                         android:layout_height="match_parent"
-                        android:layout_weight="1"
                         android:gravity="center"
-                        android:orientation="vertical"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="15dp">
+                        android:layout_weight="1.0"
+                        android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/indicatorText3"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:lineHeight="28dp"
-                            android:text="₹160"
-                            android:textColor="@color/Black800"
-                            android:textSize="20dp" />
-
-                        <com.google.android.material.progressindicator.LinearProgressIndicator
-                            android:id="@+id/progress_indicator_3"
+                        <com.facebook.shimmer.ShimmerFrameLayout
+                            android:id="@+id/shimmer_view_container_1"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginHorizontal="5dp"
-                            android:layout_marginTop="10dp"
-                            android:indeterminate="false"
-                            android:progress="100"
-                            android:theme="@style/MaterialTheme"
-                            app:indicatorColor="@color/green900"
-                            app:trackColor="@color/grey900"
-                            app:trackCornerRadius="20dp"
-                            app:trackThickness="7dp" />
+                            app:shimmer_base_color="#FFFFFF"
+                            app:shimmer_highlight_color="#FFFFFF"
+                            app:shimmer_auto_start="true"
+                            app:shimmer_base_alpha="1.0"
+                            app:shimmer_highlight_alpha="0.6">
+
+                            <TextView
+                                android:id="@+id/tip_view_1"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="TIP"
+                                android:gravity="center"
+                                android:textStyle="bold"
+                                android:textColor="@color/Black900"
+                                android:background="@drawable/rectangle_9506"
+                                android:visibility="invisible" />
+                        </com.facebook.shimmer.ShimmerFrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:paddingHorizontal="10dp"
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="28dp"
+                                android:text="Ac"
+                                android:visibility="gone"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
+
+                            <TextView
+                                android:id="@+id/indicatorText2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                android:lineHeight="28dp"
+                                android:text="₹40"
+                                android:textColor="@color/Black800"
+                                android:textSize="20dp" />
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_2"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="5dp"
+                                android:layout_marginTop="10dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/green900"
+                                app:trackColor="@color/grey900"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+
+                        </LinearLayout>
                     </LinearLayout>
-                </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:background="#E5E7EB" />
+
+                    <LinearLayout
+                        android:id="@+id/indicator3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:layout_weight="1.0"
+                        android:orientation="vertical">
+
+                        <com.facebook.shimmer.ShimmerFrameLayout
+                            android:id="@+id/shimmer_view_container_2"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:shimmer_base_color="#FFFFFF"
+                            app:shimmer_highlight_color="#FFFFFF"
+                            app:shimmer_auto_start="true"
+                            app:shimmer_base_alpha="1.0"
+                            app:shimmer_highlight_alpha="0.6">
+
+                            <TextView
+                                android:id="@+id/tip_view_2"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="TIP"
+                                android:textColor="@color/Black900"
+                                android:gravity="center"
+                                android:textStyle="bold"
+                                android:background="@drawable/rectangle_9506"
+                                android:visibility="invisible" />
+                        </com.facebook.shimmer.ShimmerFrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="10dp"
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="28dp"
+                                android:text="Ac"
+                                android:visibility="gone"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
+
+                            <TextView
+                                android:id="@+id/indicatorText3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                android:lineHeight="28dp"
+                                android:text="₹160"
+                                android:textColor="@color/Black800"
+                                android:textSize="20dp" />
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_3"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="5dp"
+                                android:layout_marginTop="10dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/green900"
+                                app:trackColor="@color/grey900"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
         </LinearLayout>
@@ -261,6 +300,8 @@
                 android:layout_width="35dp"
                 android:layout_height="35dp"
                 android:layout_marginRight="12dp"
+                android:id="@+id/merchantLogoIcon"
+                android:layout_gravity="bottom"
                 android:src="@drawable/ic_launcher" />
 
             <TextView
@@ -268,6 +309,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:fontFamily="@font/plus_jakartasans_medium"
+                android:gravity="center"
+                android:lineHeight="17dp"
                 android:text="namma yatri"
                 android:textColor="#FFFFFF"
                 android:textFontWeight="800"

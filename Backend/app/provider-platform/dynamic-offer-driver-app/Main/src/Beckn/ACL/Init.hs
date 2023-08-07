@@ -17,12 +17,14 @@ module Beckn.ACL.Init where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import qualified Kernel.Product.Validation.Context as Context
-import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Field
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
@@ -39,11 +41,12 @@ buildInitReq subscriber req = do
   let context = req.context
   Context.validateContext Context.INIT context
   let order = req.message.order
-  item <- case order.items of
+  _ <- case order.items of
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
-  let initTypeReq = buildInitTypeReq item
-  itemId <- item.id & fromMaybeM (InvalidRequest "Item id required")
+  fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+  let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
+  let initTypeReq = buildInitTypeReq order.fulfillment._type
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -52,27 +55,39 @@ buildInitReq subscriber req = do
 
   pure
     DInit.InitReq
-      { driverQuoteId = itemId,
+      { estimateId = fulfillmentId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = context.city,
         bapCountry = context.country,
-        maxEstimatedDistance = order.fulfillment.tags.max_estimated_distance,
+        vehicleVariant = castVehicleVariant order.fulfillment.vehicle.category,
+        driverId = order.provider <&> (.id),
         paymentMethodInfo = mkPaymentMethodInfo order.payment,
         ..
       }
   where
-    buildInitTypeReq item = do
-      let itemCode = item.descriptor.code
-      case itemCode.fareProductType of
-        Init.ONE_WAY_SPECIAL_ZONE -> DInit.InitSpecialZoneReq
-        _ -> DInit.InitNormalReq
+    buildInitTypeReq = \case
+      Init.RIDE_OTP -> DInit.InitSpecialZoneReq
+      Init.RIDE -> DInit.InitNormalReq
+    castVehicleVariant = \case
+      Init.SEDAN -> VehVar.SEDAN
+      Init.SUV -> VehVar.SUV
+      Init.HATCHBACK -> VehVar.HATCHBACK
+      Init.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+      Init.TAXI -> VehVar.TAXI
+      Init.TAXI_PLUS -> VehVar.TAXI_PLUS
 
 mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Init.Payment {..} =
-  instrument <&> \instrument' -> do
+  params.instrument <&> \instrument' -> do
     DMPM.PaymentMethodInfo
-      { collectedBy = Common.castPaymentCollector collected_by,
+      { collectedBy = Common.castPaymentCollector params.collected_by,
         paymentType = Common.castPaymentType _type,
         paymentInstrument = Common.castPaymentInstrument instrument'
       }
+
+getMaxEstimateDistance :: Init.TagGroups -> Maybe HighPrecMeters
+getMaxEstimateDistance tagGroups = do
+  tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
+  maxEstimatedDistance <- readMaybe $ T.unpack tagValue
+  Just $ HighPrecMeters maxEstimatedDistance

@@ -15,78 +15,69 @@
 
 module Services.Backend where
 
-import Services.Config as SC
+import Data.Maybe
+import Services.API
+
+import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
-import Presto.Core.Types.API (Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
-import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
+import Data.String as DS
+import Data.Int as INT
+import Debug (spy)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Types.ModifyScreenState(modifyScreenState)
 import Types.App (GlobalState, FlowBT, ScreenType(..))
 import Services.API
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show)
+import Log (printLog)
+import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse(..))
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
+import Screens.Types (DriverStatus)
+import Services.Config as SC
+import Services.EndPoints as EP
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
+import Storage (getValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
+import Engineering.Helpers.Utils (toggleLoader)
 import Tracker.Types as Tracker
-import Services.EndPoints as EP
-import Engineering.Helpers.Commons (liftFlow, bundleVersion)
-import Data.Maybe
-import Data.String as DS
-import Log (printLog)
-import Effect.Class (liftEffect)
-import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.Types (DriverStatus)
-import Debug (spy)
+import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
+import Helpers.Utils(decodeErrorCode, getTime, toString, decodeErrorMessage)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
     _ <- pure $ printLog "dummy" dummy
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-        then pure $ (Headers [  Header "Content-Type" "application/json",
-                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                ]
-                    )
-        else pure $ (Headers [  Header "Content-Type" "application/json",
-                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
-                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                ]
-                    )
-
+    regToken <- loadS $ show REGISTERATION_TOKEN
+    pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
 
 
 getHeaders' :: String -> FlowBT String Headers
 getHeaders' dummy = do
-        _ <- pure $ printLog "dummy" dummy
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-        then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                            Header "session_id" (getValueToLocalStore SESSION_ID),
-                                            Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ]
-                                    )
-        else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                            Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
-                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                            Header "session_id" (getValueToLocalStore SESSION_ID),
-                                            Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ]
-                                    )
+    regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
+    _ <- pure $ spy "import headers" regToken
+    lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
 
 withAPIResult url f flow = do
     let start = getTime unit
@@ -109,7 +100,6 @@ withAPIResult url f flow = do
             _ <- trackExceptionFlow Tracker.API_CALL Tracker.Sdk DETAILS url (codeMessage)
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
-                _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
                 _ <- pure $ deleteValueFromLocalStore VERSION_NAME
                 _ <- pure $ deleteValueFromLocalStore BASE_URL
                 _ <- pure $ deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -142,7 +132,6 @@ withAPIResultBT url f errorHandler flow = do
             _ <- pure $ printLog "message" userMessage
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore VERSION_NAME
                 deleteValueFromLocalStore BASE_URL
                 deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -180,7 +169,6 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore VERSION_NAME
                 deleteValueFromLocalStore BASE_URL
                 deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -363,6 +351,16 @@ getDriverInfoApi payload = do
     where
         unwrapResponse (x) = x
 
+--------------------------------- getAllRcDataBT ---------------------------------------------------------------------------------------------------------------------------------
+
+getAllRcDataBT :: GetAllRcDataReq -> FlowBT String GetAllRcDataResp
+getAllRcDataBT payload = do 
+    headers <- getHeaders' ""
+    withAPIResultBT ((EP.getAllRcData "")) (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where 
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
 dummyVehicleObject :: Vehicle
 dummyVehicleObject = Vehicle
    {
@@ -401,17 +399,17 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 
-getRideHistoryReq limit offset onlyActive status = do
+getRideHistoryReq limit offset onlyActive status day = do
         headers <- getHeaders ""
-        withAPIResult (EP.getRideHistory limit offset onlyActive status) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status)
+        withAPIResult (EP.getRideHistory limit offset onlyActive status day) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day)
     where
         unwrapResponse (x) = x
 
 
-getRideHistoryReqBT :: String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
-getRideHistoryReqBT limit offset onlyActive status = do
+getRideHistoryReqBT :: String -> String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
+getRideHistoryReqBT limit offset onlyActive status day= do
         headers <- lift $ lift $ getHeaders ""
-        withAPIResultBT (EP.getRideHistory limit offset onlyActive status) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status))
+        withAPIResultBT (EP.getRideHistory limit offset onlyActive status day) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day))
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
@@ -422,28 +420,34 @@ updateDriverInfoBT payload = do
         withAPIResultBT (EP.updateDriverInfo "") (\x → x) errorHandler (lift $ lift $ callAPI headers (UpdateDriverInfoRequest payload))
     where
         errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
             BackT $ pure GoBack
 
 mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
-mkUpdateDriverInfoReq dummy = UpdateDriverInfoReq {
-       "middleName": Nothing,
-       "firstName" : Nothing,
-       "lastName"  : Nothing,
-       "deviceToken" : Nothing,
-       "canDowngradeToSedan" : Nothing,
-       "canDowngradeToHatchback" : Nothing,
-       "canDowngradeToTaxi" : Nothing,
-        "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
-            "EN_US" -> "ENGLISH"
-            "KN_IN" -> "KANNADA"
-            "HI_IN" -> "HINDI"
-            "ML_IN" -> "MALAYALAM"
-            "BN_IN" -> "BENGALI"
-            "TA_IN" -> "TAMIL"
-            _       -> "ENGLISH",
-       "bundleVersion" : Nothing,
-       "clientVersion" : Nothing,
-       "gender"        : Nothing
+mkUpdateDriverInfoReq dummy 
+  = UpdateDriverInfoReq
+    { middleName: Nothing
+    , firstName: Nothing
+    , lastName: Nothing
+    , deviceToken: Nothing
+    , canDowngradeToSedan: Nothing
+    , canDowngradeToHatchback: Nothing
+    , canDowngradeToTaxi: Nothing
+    , language:
+        Just case getValueToLocalNativeStore LANGUAGE_KEY of
+          "EN_US" -> "ENGLISH"
+          "KN_IN" -> "KANNADA"
+          "HI_IN" -> "HINDI"
+          "ML_IN" -> "MALAYALAM"
+          "BN_IN" -> "BENGALI"
+          "TA_IN" -> "TAMIL"
+          _ -> "ENGLISH"
+    , bundleVersion: Nothing
+    , clientVersion: Nothing
+    , gender: Nothing
+    , languagesSpoken: []
+    , hometown: Nothing
+    , vehicleName: Nothing
     }
 
 
@@ -507,23 +511,38 @@ walkCoordinates (Snapped points) =
   }
 
 --------------------------------- onBoardingFlow  ---------------------------------------------------------------------------------------------------------------------------------
-getCorrespondingErrorMessage :: String -> String
-getCorrespondingErrorMessage errorCode = case errorCode of
-  "IMAGE_VALIDATION_FAILED" -> (getString IMAGE_VALIDATION_FAILED)
-  "IMAGE_NOT_READABLE" -> (getString IMAGE_NOT_READABLE)
-  "IMAGE_LOW_QUALITY" -> (getString IMAGE_LOW_QUALITY)
-  "IMAGE_INVALID_TYPE" -> (getString IMAGE_INVALID_TYPE)
-  "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> (getString IMAGE_DOCUMENT_NUMBER_MISMATCH)
-  "IMAGE_EXTRACTION_FAILED" -> (getString IMAGE_EXTRACTION_FAILED)
-  "IMAGE_NOT_FOUND" -> (getString IMAGE_NOT_FOUND)
-  "IMAGE_NOT_VALID" -> (getString IMAGE_NOT_VALID)
-  "DRIVER_ALREADY_LINKED" -> (getString DRIVER_ALREADY_LINKED)
-  "DL_ALREADY_UPDATED" -> (getString DL_ALREADY_UPDATED)
-  "DL_ALREADY_LINKED"  -> (getString DL_ALREADY_LINKED)
-  "RC_ALREADY_LINKED" -> (getString RC_ALREADY_LINKED)
-  "RC_ALREADY_UPDATED" -> (getString RC_ALREADY_UPDATED)
-  "UNPROCESSABLE_ENTITY" -> (getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT)
-  _                      -> (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+getCorrespondingErrorMessage :: ErrorResponse -> String
+getCorrespondingErrorMessage errorPayload = do
+    let errorCode = decodeErrorCode errorPayload.response.errorMessage
+    case errorCode of
+        "IMAGE_VALIDATION_FAILED" -> getString IMAGE_VALIDATION_FAILED
+        "IMAGE_NOT_READABLE" -> getString IMAGE_NOT_READABLE
+        "IMAGE_LOW_QUALITY" -> getString IMAGE_LOW_QUALITY
+        "IMAGE_INVALID_TYPE" -> getString IMAGE_INVALID_TYPE
+        "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> getString IMAGE_DOCUMENT_NUMBER_MISMATCH
+        "IMAGE_EXTRACTION_FAILED" -> getString IMAGE_EXTRACTION_FAILED
+        "IMAGE_NOT_FOUND" -> getString IMAGE_NOT_FOUND
+        "IMAGE_NOT_VALID" -> getString IMAGE_NOT_VALID
+        "DRIVER_ALREADY_LINKED" -> getString DRIVER_ALREADY_LINKED
+        "DL_ALREADY_UPDATED" -> getString DL_ALREADY_UPDATED
+        "DL_ALREADY_LINKED"  -> getString DL_ALREADY_LINKED
+        "RC_ALREADY_LINKED" -> getString RC_ALREADY_LINKED
+        "RC_ALREADY_UPDATED" -> getString RC_ALREADY_UPDATED
+        "UNPROCESSABLE_ENTITY" -> getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT
+        "NO_MOBILE_NUMBER_REGISTERED" -> getString NO_MOBILE_NUMBER_REGISTERED
+        "EXCEED_OTP_GENERATION_LIMIT" -> getString EXCEED_OTP_GENERATION_LIMIT
+        "AADHAAR_NUMBER_NOT_EXIST" -> getString AADHAAR_NUMBER_NOT_EXIST
+        "INVALID_OTP" -> getString INVALID_OTP
+        "NO_SHARE_CODE" -> getString NO_SHARE_CODE
+        "WRONG_SHARE_CODE" -> getString WRONG_SHARE_CODE
+        "INVALID_SHARE_CODE" -> getString INVALID_SHARE_CODE
+        "SESSION_EXPIRED" -> getString SESSION_EXPIRED
+        "OTP_ATTEMPT_EXCEEDED" -> getString OTP_ATTEMPT_EXCEEDED
+        "UPSTREAM_INTERNAL_SERVER_ERROR" -> getString UPSTREAM_INTERNAL_SERVER_ERROR
+        "TRANSACTION_ALREADY_COMPLETED" -> getString TRANSACTION_ALREADY_COMPLETED
+        "null" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        _ -> decodeErrorMessage errorPayload.response.errorMessage
 
 registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp
 registerDriverRCBT payload = do
@@ -539,13 +558,48 @@ registerDriverRC payload = do
     where
         unwrapResponse (x) = x
 
-makeDriverRCReq :: String -> String -> Maybe String -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration = DriverRCReq
+makeRcActiveOrInactive payload = do
+     headers <- getHeaders ""
+     withAPIResult (EP.makeRcActiveOrInactive "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
+deleteRcBT :: DeleteRcReq -> FlowBT String  DeleteRcResp
+deleteRcBT payload = do
+        headers <- getHeaders' ""
+        withAPIResultBT (EP.deleteRc "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+    errorHandler (ErrorPayload errorPayload) = do
+        BackT $ pure GoBack
+
+deleteRcReq :: String -> DeleteRcReq
+deleteRcReq rcNo = DeleteRcReq 
+    {
+        "rcNo" : rcNo
+    }
+
+makeRcActiveOrInactiveReq :: Boolean -> String -> MakeRcActiveOrInactiveReq
+makeRcActiveOrInactiveReq isActivate rcNo =  MakeRcActiveOrInactiveReq 
+    {
+        "rcNo" : rcNo,
+        "isActivate" : isActivate
+    }
+
+callDriverToDriverBT :: String -> FlowBT String CallDriverToDriverResp
+callDriverToDriverBT rcNo = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.callDriverToDriver rcNo) (\x → x) errorHandler (lift $ lift $ callAPI headers (CallDriverToDriverReq rcNo))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc= DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
       "imageId" : imageId,
-      "dateOfRegistration" : dateOfRegistration
+      "dateOfRegistration" : dateOfRegistration,
+      "multipleRC" : multipleRc
     }
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp
@@ -873,3 +927,70 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
+
+driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverProfileSummaryRes)
+driverProfileSummary lazy = do
+  headers <- getHeaders ""
+  withAPIResult (EP.profileSummary lazy) (\x -> x) (callAPI headers DriverProfileSummaryReq)
+
+createPaymentOrder :: String -> Flow GlobalState (Either ErrorResponse CreateOrderRes)
+createPaymentOrder dummy = do
+    headers <- getHeaders ""
+    withAPIResult (EP.createOrder dummy) unwrapResponse $ callAPI headers (CreateOrderReq dummy)
+    where
+        unwrapResponse (x) = x
+
+paymentOrderStatus :: String -> Flow GlobalState (Either ErrorResponse OrderStatusRes)
+paymentOrderStatus orderId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
+    where
+        unwrapResponse (x) = x
+
+    
+getPaymentHistory :: String -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetPaymentHistoryResp)
+getPaymentHistory from to status = do
+      headers <- getHeaders ""
+      withAPIResult (EP.paymentHistory from to status) unwrapResponse (callAPI headers (GetPaymentHistoryReq from to status))
+   where
+        unwrapResponse (x) = x
+
+
+---------------------------------------- triggerAadhaarOtp ---------------------------------------------
+triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)
+triggerAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders ""
+  withAPIResult (EP.triggerAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> GenerateAadhaarOTPReq
+    makeReq number = GenerateAadhaarOTPReq {
+      aadhaarNumber : number,
+      consent : "Y"
+    }
+    unwrapResponse x = x
+
+---------------------------------------- verifyAadhaarOtp ---------------------------------------------
+verifyAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse VerifyAadhaarOTPResp)
+verifyAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders ""
+  withAPIResult (EP.verifyAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> VerifyAadhaarOTPReq
+    makeReq otp = VerifyAadhaarOTPReq {
+      otp : fromMaybe 0 $ INT.fromString otp
+    , shareCode : DS.take 4 otp
+    }
+    unwrapResponse x = x
+
+unVerifiedAadhaarData :: String -> String -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+unVerifiedAadhaarData driverName driverGender driverDob = do
+  headers <- getHeaders ""
+  withAPIResult (EP.unVerifiedAadhaarData "") unwrapResponse $ callAPI headers $ makeReq driverName driverGender driverDob
+  where
+    makeReq :: String -> String -> String -> UnVerifiedDataReq
+    makeReq driverName driverGender driverDob = UnVerifiedDataReq {
+        driverName : driverName ,
+        driverGender : driverGender,
+        driverDob : driverDob
+    }
+    unwrapResponse x = x

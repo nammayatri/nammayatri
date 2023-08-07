@@ -35,7 +35,7 @@ primaryButtonConfig state = let
       { textConfig
       { text = (getString UPDATE)
       , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      }
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , background = Color.black900
@@ -53,14 +53,11 @@ primaryEditTextConfig label value = let
       { editText
         { singleLine = true
           , pattern = Just "[0-9]*,10"
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           , text = value
           , alpha = 0.9
         }
       , topLabel
-        { textSize = FontSize.a_14
-        , text = label
+        { text = label
         , color = Color.greyTextColor
         }
       }

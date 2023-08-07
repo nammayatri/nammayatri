@@ -11,7 +11,6 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import JBridge (getWidthFromPercent, openUrlInMailApp)
 import JBridge as JB
-import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, map, pure, unit, ($), (+), (<>))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, height, horizontalScrollView, linearLayout, margin, onClick, orientation, padding, scrollBarX, stroke, text, textFromHtml, textView, width)
 import Styles.Colors as Color
@@ -58,6 +57,17 @@ infoComponentView item =
             , color Color.black650
             ]
           <> (FontStyle.body3 TypoGraphy)
+          <> ( if contains (Pattern "<u>") item.subTitle then
+                [ onClick
+                    ( \_ -> do
+                        _ <- openUrlInMailApp (slice ((fromMaybe 0 $ indexOf (Pattern (">")) item.subTitle) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) item.subTitle) item.subTitle)
+                        pure unit
+                    )
+                    (const unit)
+                ]
+              else
+                []
+            )
       ]
         <> if isJust item.addtionalData then
             [ textView

@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -43,6 +42,7 @@ mkPersist
       requestId SSearchRequest.SearchRequestTId
       merchantId MerchantTId Maybe
       bppEstimateId Text
+      itemId Text
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney

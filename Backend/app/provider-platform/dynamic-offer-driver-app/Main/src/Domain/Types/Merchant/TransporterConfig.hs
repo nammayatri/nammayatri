@@ -54,8 +54,11 @@ data TransporterConfigD u = TransporterConfig
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     aadhaarVerificationRequired :: Bool,
+    enableDashboardSms :: Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    rcLimit :: Int,
+    automaticRCActivationCutOff :: Seconds
   }
   deriving (Generic, Show)
 

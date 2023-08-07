@@ -3,8 +3,10 @@ echo " ---------- Start assests Customer :- --------------"
 echo "{\"images\":{" > assests.json 
 find android-native/app/src/main/res/drawable | grep ".png" | cut -d "/" -f 7 | sed 's/.png//' | awk '{print "\"" $1 "\" : true," }' >> assests.json
 find android-native/app/src/user/$1/res/drawable | grep ".png" | cut -d "/" -f 8 | sed 's/.png//' | awk '{print "\"" $1 "\" : true," }' >> assests.json
+find android-native/app/src/user/common/res/drawable | grep ".png" | cut -d "/" -f 8 | sed 's/.xml//' | awk '{print "\"" $1 "\" : true," }' >> assests.json
 find android-native/app/src/user/$1/res/drawable | grep ".xml" | cut -d "/" -f 8 | sed 's/.xml//' | awk '{print "\"" $1 "\" : true," }' >> assests.json
 find android-native/app/src/main/res/drawable | grep ".xml" | cut -d "/" -f 7 | sed 's/.xml//' | awk '{print "\"" $1 "\" : true," }' >> assests.json
+find android-native/app/src/user/common/res/drawable | grep ".xml" | cut -d "/" -f 8 | sed 's/.xml//' | awk '{print "\"" $1 "\" : true," }' >> assests.json
 
 sed '$ s/.$//' assests.json > juspay_assets.json
 echo "},\"fonts\":{" >> juspay_assets.json

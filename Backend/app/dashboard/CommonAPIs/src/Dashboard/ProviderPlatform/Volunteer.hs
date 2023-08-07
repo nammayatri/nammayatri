@@ -52,7 +52,8 @@ data BookingInfoResponse = BookingInfoResponse
     estimatedDistance :: Meters,
     estimatedFare :: Money,
     estimatedDuration :: Seconds,
-    riderName :: Maybe Text
+    riderName :: Maybe Text,
+    vehicleVariant :: Variant
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

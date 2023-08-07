@@ -1,5 +1,4 @@
 require("regenerator-runtime/runtime");
-
 // This will make sure init() is called. It will make available JBridge and Android variables
 require("presto-ui");
 require('core-js');
@@ -7,6 +6,8 @@ window.session_id = guid();
 window.version = __VERSION__;
 let previousDateObject = new Date();
 const refreshThreshold = 120;
+console.warn("Hello World");
+loadConfig();
 
 var jpConsumingBackpress = {
   event: "jp_consuming_backpress",
@@ -74,7 +75,7 @@ function guid() {
 }
 
 window.__FN_INDEX = 0;
-window.__PROXY_FN = top.__PROXY_FN || {};
+window.__PROXY_FN = {};
 
 if (!window.__OS) {
   var getOS = function () { //taken from getOS() in presto-ui
@@ -93,24 +94,24 @@ window.onMerchantEvent = function (event, payload) {
   console = top.console;
   console.log(payload);
   var clientPaylod = JSON.parse(payload);
+  var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
-    let payload = {
-      event: "initiate_result"
-      , service: "in.juspay.becknui"
-      , payload: { status: "SUCCESS" }
-      , error: false
-      , errorMessage: ""
-      , errorCode: ""
+    var isInit = "in.juspay.hyperpay" in top.window.mapps;
+    if (clientId == "open-kochi") {
+      window.merchantID = "YATRI"
+    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
+      window.merchantID = "YATRISATHI"
+    }else if (clientId.includes("provider")){
+      var merchant = clientId.replace("mobility","")
+      merchant = merchant.replace("provider","");
+      window.merchantID = merchant.toUpperCase();
+    } else {
+      // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+      window.merchantID = "NAMMAYATRI";
     }
-    if (clientPaylod.payload.clientId == "open-kochi") {
-      window.merchantID = "YATRIPARTNER"
-    } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
-      window.merchantID = "JATRISAATHIDRIVER"
-    }else {
-      window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+    if (!isInit) {
+      callInitiateResult();
     }
-    console.log(window.merchantID);
-    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
@@ -152,32 +153,27 @@ window.callUICallback = function () {
   }
 }
 
+window.onResumeListeners = [];
+
 window.onPause = function () {
-  if (window.eventListeners && window.eventListeners["onPause"]) {
-    if (Array.isArray(window.eventListeners["onPause"])) {
-      var onPauseEvents = window.eventListeners["onPause"];
-      onPauseEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onPause"] = [];
-    } else window.eventListeners["onPause"]()();
+  console.error("onEvent onPause");
+  if (JBridge.pauseMediaPlayer) {
+    JBridge.pauseMediaPlayer();
   }
 }
 
 window.onResume = function () {
+  console.error("onEvent onResume");
+  if (window.onResumeListeners && Array.isArray(window.onResumeListeners)) {
+    for (let i = 0; i < window.onResumeListeners.length;i++) {
+      window.onResumeListeners[i].call();
+    }
+  }
   if(window.scrollAction) {
     window.scrollAction();
   }
-  if (window.eventListeners && window.eventListeners["onResume"]) {
-    if (Array.isArray(window.eventListeners["onResume"])) {
-      var onResumeEvents = window.eventListeners["onResume"];
-      onResumeEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onResume"] = [];
-    } else window.eventListeners["onResume"]()();
-  }
 }
+
 window.onActivityResult = function () {
   console.log(arguments)
 }
@@ -215,6 +211,10 @@ window["onEvent'"] = function (event, args) {
   console.log(event, args);
   if (event == "onBackPressed") {
     purescript.onEvent(event)();
+  }  else if (event == "onLocationChanged") {
+    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+  } else if (event == "onInternetChanged") {
+    purescript.onConnectivityEvent("INTERNET_ACTION")();
   } else if (event == "onPause") {
     previousDateObject = new Date();
     window.onPause();
@@ -225,14 +225,43 @@ window["onEvent'"] = function (event, args) {
   else if (event == "onTimeChanged"){
     if(window.dateCallback != undefined) window.dateCallback();
     else purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
-  }   
+  } else if (event == "onDestroy") {
+    if (JBridge.onDestroy){
+      JBridge.onDestroy();
+    }
+  }  
+}
+window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
+  console.log("onEvent Payload", jsonPayload);
+  if ((JSON.parse(jsonPayload)).event == "initiate_result"){
+    callInitiateResult();
+    
+  }
+}
+
+function callInitiateResult () {
+  let payload = {
+    event: "initiate_result"
+    , service: "in.juspay.becknui"
+    , payload: { status: "SUCCESS" }
+    , error: false
+    , errorMessage: ""
+    , errorCode: ""
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
 function refreshFlow(){
   let currentDate = new Date();
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
-  let token = window.JBridge.getKeysInSharedPrefs("REGISTERATION_TOKEN");
+  let token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
   if ((diff > refreshThreshold) && (token != "__failed")){
+    if(JBridge.removeChatMessageCallback){
+      JBridge.removeChatMessageCallback();
+    }
+    if(JBridge.removeCallBackOpenChatScreen) {
+      JBridge.removeCallBackOpenChatScreen();
+    }
     purescript.onConnectivityEvent("REFRESH")();
   }
 }
@@ -247,6 +276,7 @@ function disableConsoleLogs() {
 
 if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent'")();
+  window.JOS.addEventListener("onEvent")(); // adding onEvent listener for hyperPay
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
@@ -256,12 +286,43 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes("debug")){
+
+if (sessionInfo.package_name.includes("debug")) {
   logger.enableLogger();
-}else{
+} else {
   logger.disableLogger();
 }
 
 function makeEvent(_type, _data) {
   return { type : _type, data : _data };
+}
+function loadConfig() {
+  if (window.appConfig) {
+    return;
+  }
+  const headID = document.getElementsByTagName("head")[0];
+  console.log(headID)
+  const newScript = document.createElement("script");
+  newScript.type = "text/javascript";
+  newScript.id = "ny-driver-configuration";
+  var config = window.JBridge.loadFileInDUI("v1-configuration.jsa");
+  newScript.innerHTML = config == "" ? window.JBridge.loadFileInDUI("v1-configuration.js") : config;
+  headID.appendChild(newScript);
+  try {
+      const merchantConfig = (
+          function(){
+              try {
+                  return JSON.parse(window.getMerchantConfig());
+              } catch(e){
+                  return "{}";
+              }
+          }
+      )();
+      // console.log(merchantConfig)
+      // window.appConfig = mergeDeep(defaultConfig, merchantConfig);
+      window.appConfig = merchantConfig;
+  } catch(e){
+      console.error("config parse/merge failed", e);
+      // window.appConfig = defaultConfig;
+  }
 }

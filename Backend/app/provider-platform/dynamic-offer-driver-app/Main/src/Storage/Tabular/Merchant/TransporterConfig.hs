@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -62,10 +61,13 @@ mkPersist
       driverPaymentCycleDuration Seconds
       driverPaymentCycleStartTime Seconds
       driverPaymentReminderInterval Seconds
+      rcLimit Int
+      automaticRCActivationCutOff Seconds
       timeDiffFromUtc Seconds
       minLocationAccuracy Double
       subscription Bool
       aadhaarVerificationRequired Bool
+      enableDashboardSms Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId

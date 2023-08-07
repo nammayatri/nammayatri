@@ -23,20 +23,23 @@ import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
-import Engineering.Helpers.Commons (getNewIDWithTag, os)
-import Helpers.Utils (setText', clearCountDownTimer)
+import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
+import Helpers.Utils (setText, clearCountDownTimer, showCarouselScreen)
 import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader, minimizeApp, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, void)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
+import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, when)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
-import Merchant.Utils as MU
 import Common.Types.App (LazyCheck(..)) as Lazy
+import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe
 
 instance showAction :: Show Action where
     show _ = ""
@@ -110,14 +113,11 @@ data Action = EnterOTP
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 
-eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = continueWithCmd state [
-        do
-            _ <- pure $ firebaseLogEvent "ny_user_otp_triggered"
-            _ <- pure $ hideKeyboardOnNavigation true
-            let value = (if os == "IOS" then "" else " ")
-            _ <- (setText' (getNewIDWithTag "EnterOTPNumberEditText") value )
-            pure $ ContinueCommand
-]
+eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = do
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_otp_triggered"
+    pure $ hideKeyboardOnNavigation true
+    pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
+    exit $ GoToOTP state
 
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 
@@ -133,13 +133,13 @@ eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value
     let isValidMobileNumber = case (charAt 0 value) of
                                     Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then false
                                                 else if a=='5' then
-                                                    if value=="5000500050" then true else false
-                                                        else true
-                                    Nothing -> true
-    if (length value == 10 && isValidMobileNumber) then do
-        _ <- pure $ firebaseLogEvent "ny_user_mobnum_entry"
+                                                    if value=="5000500050" then true else false 
+                                                        else true 
+                                    Nothing -> true 
+    if (length value == 10 && isValidMobileNumber) then do 
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
         pure unit
-        else pure unit
+    else pure unit
     let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber
                                         , btnActiveMobileNumber = if (length value == 10 && isValidMobileNumber) then true else false}
                                         , data = state.data { mobileNumber = if length value <= 10 then value else state.data.mobileNumber}}
@@ -183,7 +183,7 @@ eval (BackPressed flag) state = do
       let newState = state {props{enterOTP =  false,letterSpacing = PX 1.0},data{otp = ""}}
       _ <- pure $ hideKeyboardOnNavigation true
       if state.props.enterOTP then exit $ GoBack newState
-        else if MU.showCarouselScreen Lazy.FunctionCall then exit $ GoToWelcomeScreen newState{data{mobileNumber = ""}} 
+        else if showCarouselScreen Lazy.FunctionCall then exit $ GoToWelcomeScreen newState{data{mobileNumber = ""}} 
             else do 
                 void $ pure $ minimizeApp ""
                 continue state

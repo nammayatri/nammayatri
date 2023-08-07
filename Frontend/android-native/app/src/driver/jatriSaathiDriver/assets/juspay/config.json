@@ -1,157 +1,170 @@
 {
-    "app_list": [
-        "in.juspay.ec",
-        "in.juspay.godel",
-        "in.juspay.godel.placeholder",
-        "in.juspay.hyperos",
-        "in.juspay.hyperos.placeholder",
-        "in.juspay.hyperpay",
-        "in.juspay.jatrisaathidriver",
-        "in.juspay.upiintent"
-    ],
-    "dependencies": {
-        "in.juspay.ec": {
-            "default": {
-                "entry": "base.html",
-                "required_apps": [
-                    "in.juspay.godel.placeholder",
-                    "in.juspay.hyperos.placeholder",
-                    "in.juspay.upiintent"
-                ],
-                "root": "payments/in.juspay.ec/"
-            }
-        },
-        "in.juspay.godel": {
-            "default": {
-                "entry": "base.html",
-                "root": "payments/in.juspay.godel/"
-            }
-        },
-        "in.juspay.godel.placeholder": {
-            "default": {
-                "entry": "",
-                "root": "payments/in.juspay.godel/"
-            }
-        },
-        "in.juspay.hyperos": {
-            "default": {
-                "entry": "",
-                "root": ""
-            }
-        },
-        "in.juspay.hyperos.placeholder": {
-            "default": {
-                "entry": "",
-                "root": ""
-            }
-        },
-        "in.juspay.hyperpay": {
-            "default": {
-                "entry": "base.html",
-                "required_apps": [
-                    "in.juspay.ec"
-                ],
-                "root": "payments/in.juspay.hyperpay/"
-            }
-        },
-        "in.juspay.jatrisaathidriver": {
-            "default": {
-                "entry": "becknbase.html",
-                "root": ""
-            }
-        },
-        "in.juspay.upiintent": {
-            "default": {
-                "entry": "base.html",
-                "root": "payments/in.juspay.upiintent/"
-            }
-        }
+  "app_list": [
+    "in.juspay.ec",
+    "in.juspay.godel",
+    "in.juspay.godel.placeholder",
+    "in.juspay.hyperapi",
+    "in.juspay.hyperos",
+    "in.juspay.hyperos.placeholder",
+    "in.juspay.hyperpay",
+    "in.juspay.upiintent",
+    "in.yatri.provider"
+  ],
+  "dependencies": {
+    "in.juspay.ec": {
+      "default": {
+        "entry": "base.html",
+        "required_apps": [
+          "in.juspay.godel.placeholder",
+          "in.juspay.hyperos.placeholder",
+          "in.juspay.upiintent"
+        ],
+        "root": "payments/in.juspay.ec/"
+      }
     },
-    "live": {
-        "assets": {
-            "in.juspay.ec": {
-                "config": "https://assets.juspay.in/juspay/payments/in.juspay.ec/release/v1-config.zip"
-            },
-            "in.juspay.godel": {
-                "acs_js_source": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/1.0rc2/v1-acs.zip",
-                "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
-                "config": "https://d3e0hckk6jr53z.cloudfront.net/godel/v1-config.zip"
-            },
-            "in.juspay.godel.placeholder": {
-                "acs_js_source": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/1.0rc2/v1-acs.zip",
-                "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
-                "config": "https://d3e0hckk6jr53z.cloudfront.net/godel/v1-config.zip"
-            },
-            "in.juspay.hyperos": {
-                "config": "https://assets.juspay.in/juspay/payments/2.0/release/v1-config.zip",
-                "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/jatrisaathidriver/android/release/manifest.json",
-                "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.jatrisaathidriver/release/common/sdk_config.json"
-            },
-            "in.juspay.hyperos.placeholder": {
-                "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.34/v1-tracker.zip"
-            },
-            "in.juspay.hyperpay": {
-                "configuration": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/juspay/configuration/8.2/v1-configuration.zip"
-            },
-            "in.juspay.upiintent": {
-                "config": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/v1-config.zip"
-            }
-        },
-        "id": "48215399535214850",
-        "package": {
-            "in.juspay.ec": "https://assets.juspay.in/juspay/payments/in.juspay.ec/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.godel": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.godel.placeholder": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.hyperpay": "https://assets.juspay.in/juspay/payments/in.juspay.hyperpay/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.jatrisaathidriver": "https://assets.juspay.in/hyper/bundles/app/in.juspay.jatrisaathidriver/1.1.0/android/v1-index_bundle.zip",
-            "in.juspay.upiintent": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/2.0rc1/v1-index_bundle.zip"
-        },
-        "package_version": "2.5_nammayatri_android"
+    "in.juspay.godel": {
+      "default": {
+        "entry": "base.html",
+        "root": "payments/in.juspay.godel/"
+      }
     },
-    "meta": {
-        "clientId": "jatrisaathidriver",
-        "timeStamp": "Friday 25 November, 2022 at 03:28:52 AM IST"
+    "in.juspay.godel.placeholder": {
+      "default": {
+        "entry": "",
+        "root": "payments/in.juspay.godel/"
+      }
     },
-    "new": {
-        "assets": {
-            "in.juspay.ec": {
-                "config": "https://assets.juspay.in/juspay/payments/in.juspay.ec/release/v1-config.zip"
-            },
-            "in.juspay.godel": {
-                "acs_js_source": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/1.0rc2/v1-acs.zip",
-                "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
-                "config": "https://d3e0hckk6jr53z.cloudfront.net/godel/v1-config.zip"
-            },
-            "in.juspay.godel.placeholder": {
-                "acs_js_source": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/1.0rc2/v1-acs.zip",
-                "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
-                "config": "https://d3e0hckk6jr53z.cloudfront.net/godel/v1-config.zip"
-            },
-            "in.juspay.hyperos": {
-                "config": "https://assets.juspay.in/juspay/payments/2.0/release/v1-config.zip",
-                "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/jatrisaathidriver/android/release/manifest.json",
-                "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.jatrisaathidriver/release/common/sdk_config.json"
-            },
-            "in.juspay.hyperos.placeholder": {
-                "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.34/v1-tracker.zip"
-            },
-            "in.juspay.hyperpay": {
-                "configuration": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/juspay/configuration/8.2/v1-configuration.zip"
-            },
-            "in.juspay.upiintent": {
-                "config": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/v1-config.zip"
-            }
-        },
-        "id": "48215399535214850",
-        "package": {
-            "in.juspay.ec": "https://assets.juspay.in/juspay/payments/in.juspay.ec/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.godel": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.godel.placeholder": "https://assets.juspay.in/juspay/payments/in.juspay.godel/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.hyperpay": "https://assets.juspay.in/juspay/payments/in.juspay.hyperpay/release/2.0rc1/v1-index_bundle.zip",
-            "in.juspay.jatrisaathidriver": "https://assets.juspay.in/hyper/bundles/app/in.juspay.jatrisaathidriver/1.1.0/android/v1-index_bundle.zip",
-            "in.juspay.upiintent": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/2.0rc1/v1-index_bundle.zip"
-        },
-        "package_version": "2.5_nammayatri_android"
+    "in.juspay.hyperapi": {
+      "default": {
+        "entry": "base.html",
+        "required_apps": [
+          "in.juspay.ec"
+        ],
+        "root": "payments/in.juspay.hyperapi/"
+      }
     },
-    "stagger": 0
+    "in.juspay.hyperos": {
+      "default": {
+        "entry": "",
+        "root": ""
+      }
+    },
+    "in.juspay.hyperos.placeholder": {
+      "default": {
+        "entry": "",
+        "root": ""
+      }
+    },
+    "in.juspay.hyperpay": {
+      "default": {
+        "entry": "base.html",
+        "required_apps": [
+          "in.juspay.ec"
+        ],
+        "root": "payments/in.juspay.hyperpay/"
+      }
+    },
+    "in.juspay.upiintent": {
+      "default": {
+        "entry": "base.html",
+        "root": "payments/in.juspay.upiintent/"
+      }
+    },
+    "in.yatri.provider": {
+      "default": {
+        "entry": "becknbase.html",
+        "required_apps": [
+          "in.juspay.hyperpay"
+        ],
+        "root": ""
+      }
+    }
+  },
+  "live": {
+    "assets": {
+      "in.juspay.godel": {
+        "acs_js_source": "https://assets.juspay.in/hyper/bundles/acs/in.juspay.godel/1.2.90/v1-acs.zip",
+        "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
+        "config": "https://assets.juspay.in/hyper/bundles/config/in.juspay.godel/1.1.10/v1-config.zip"
+      },
+      "in.juspay.godel.placeholder": {
+        "acs_js_source": "https://assets.juspay.in/hyper/bundles/acs/in.juspay.godel/1.2.90/v1-acs.zip",
+        "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
+        "config": "https://assets.juspay.in/hyper/bundles/config/in.juspay.godel/1.1.10/v1-config.zip"
+      },
+      "in.juspay.hyperos": {
+        "config": "https://assets.juspay.in/juspay/payments/2.0/release/v1-config.zip",
+        "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathiprovider/android/cug/manifest.json",
+        "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.nammayatripartner/release/common/sdk_config.json"
+      },
+      "in.juspay.hyperos.placeholder": {
+        "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.44/v1-tracker.zip"
+      },
+      "in.yatri.provider": {
+        "configuration": "https://assets.juspay.in/hyper/configs/jatrisaathiprovider/in.yatri.provider/1.0.0/v1-configuration.zip"
+      }
+    },
+    "id": "1930660512006572-patch-1.7.4",
+    "package": {
+      "in.juspay.godel": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.15/android/v1-index_bundle.zip",
+      "in.juspay.godel.placeholder": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.15/android/v1-index_bundle.zip",
+      "in.yatri.provider": "https://assets.juspay.in/hyper/bundles/app/in.yatri.provider/1.8.25/android/v1-index_bundle.zip"
+    },
+    "package_version": "06_jatrisaathiprovider_android"
+  },
+  "meta": {
+    "clientId": "yatrisathiprovider",
+    "timeStamp": "Friday 30 June, 2023 at 03:28:31 PM IST"
+  },
+  "new": {
+    "assets": {
+      "in.juspay.ec": {
+        "config": "https://assets.juspay.in/juspay/payments/in.juspay.ec/release/v1-config.zip"
+      },
+      "in.juspay.godel": {
+        "acs_js_source": "https://assets.juspay.in/hyper/bundles/acs/in.juspay.godel/1.2.90/v1-acs.zip",
+        "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
+        "config": "https://assets.juspay.in/hyper/bundles/config/in.juspay.godel/1.1.10/v1-config.zip"
+      },
+      "in.juspay.godel.placeholder": {
+        "acs_js_source": "https://assets.juspay.in/hyper/bundles/acs/in.juspay.godel/1.2.90/v1-acs.zip",
+        "boot_loader_js_source": "https://assets.juspay.in/hyper/bundles/release/in.juspay.godel/android/1.0rc2/common/stable/v1-boot_loader.zip",
+        "config": "https://assets.juspay.in/hyper/bundles/config/in.juspay.godel/1.1.10/v1-config.zip"
+      },
+      "in.juspay.hyperos": {
+        "config": "https://assets.juspay.in/juspay/payments/2.0/release/v1-config.zip",
+        "manifest": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathiprovider/android/cug/manifest.json",
+        "sdk_config": "https://assets.juspay.in/juspay/atlas/in.juspay.nammayatripartner/release/common/sdk_config.json"
+      },
+      "in.juspay.hyperos.placeholder": {
+        "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.44/v1-tracker.zip"
+      },
+      "in.juspay.hyperpay": {
+        "configuration": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathi/configuration/1.20/v1-configuration.zip",
+        "fonts": [],
+        "icons": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathi/configuration/1.20/v1-icons.zip",
+        "strings": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathi/configuration/1.20/v1-strings.zip"
+      },
+      "in.juspay.upiintent": {
+        "config": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/v1-config.zip"
+      },
+      "in.yatri.provider": {
+        "configuration": "https://assets.juspay.in/hyper/configs/yatrisathiprovider/in.yatri.provider/1.0.10/v1-configuration.zip"
+      }
+    },
+    "id": "3304504954978199-patch-1.7.4",
+    "package": {
+      "in.juspay.ec": "https://assets.juspay.in/hyper/bundles/app/in.juspay.ec/2.18.6/android/v1-index_bundle.zip",
+      "in.juspay.godel": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.15/android/v1-index_bundle.zip",
+      "in.juspay.godel.placeholder": "https://assets.juspay.in/hyper/bundles/app/in.juspay.godel/1.2.15/android/v1-index_bundle.zip",
+      "in.juspay.hyperpay": "https://sandbox.assets.juspay.in/hyper/bundles/app/in.juspay.hyperpay/3.39.1/android/v1-index_bundle.zip",
+      "in.juspay.upiintent": "https://assets.juspay.in/hyper/bundles/app/in.juspay.upiintent/3.0.3/android/v1-index_bundle.zip",
+      "in.yatri.provider": "https://assets.juspay.in/hyper/bundles/app/in.yatri.provider/1.8.30/android/v1-index_bundle.zip"
+    },
+    "package_version": "04_yatrisathiprovider_android"
+  },
+  "patching": {
+    "maxage": 604800
+  },
+  "stagger": 100
 }

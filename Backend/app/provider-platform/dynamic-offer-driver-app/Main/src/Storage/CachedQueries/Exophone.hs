@@ -18,11 +18,13 @@ module Storage.CachedQueries.Exophone
     findByPhone,
     findByPrimaryPhone,
     findAllByMerchantId,
+    findAllCallExophoneByMerchantId,
     findAllExophones,
     updateAffectedPhones,
     deleteByMerchantId,
     clearCache,
     clearAllCache,
+    findByEndRidePhone,
   )
 where
 
@@ -42,11 +44,17 @@ findAllByMerchantId merchantId =
     Just a -> return a
     Nothing -> cacheExophones merchantId /=<< Queries.findAllByMerchantId merchantId
 
+findAllCallExophoneByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [Exophone]
+findAllCallExophoneByMerchantId merchantId = filter (\exophone -> exophone.exophoneType == CALL_RIDE) <$> findAllByMerchantId merchantId
+
 findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
-findByPhone phone = find (\exophone -> exophone.primaryPhone == phone || exophone.backupPhone == phone) <$> findAllByPhone phone
+findByPhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == CALL_RIDE) <$> findAllByPhone phone
+
+findByEndRidePhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByEndRidePhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == END_RIDE) <$> findAllByPhone phone
 
 findByPrimaryPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
-findByPrimaryPhone phone = find (\exophone -> exophone.primaryPhone == phone) <$> findAllByPhone phone
+findByPrimaryPhone phone = find (\exophone -> exophone.primaryPhone == phone && exophone.exophoneType == CALL_RIDE) <$> findAllByPhone phone
 
 findAllByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m [Exophone]
 findAllByPhone phone =

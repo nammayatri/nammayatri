@@ -36,7 +36,7 @@
                         android:layout_height="32dp"
                         android:layout_marginRight="12dp"
                         android:layout_gravity="center_vertical"
-                        android:src="@drawable/ny_ic_launcher">
+                        android:src="@drawable/ic_floating_widget">
                     </ImageView>
                     <TextView
                         android:id="@+id/HeaderTextView"
@@ -129,7 +129,6 @@
                             android:letterSpacing="0"
                             android:text="Ok"
                             android:visibility="gone"
-                            android:backgroundTint="@color/zxing_transparent"
                             android:textAllCaps="false"
                             android:includeFontPadding="false"
                             android:textColor="#2194FF"
@@ -147,7 +146,6 @@
                             style="?attr/materialButtonOutlinedStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:backgroundTint="@color/zxing_transparent"
                             android:fontFamily="@font/plus_jakartasans_semibold"
                             android:letterSpacing="0"
                             android:text="Yes"
@@ -169,7 +167,6 @@
                             style="?attr/materialButtonOutlinedStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:backgroundTint="@color/zxing_transparent"
                             android:fontFamily="@font/plus_jakartasans_semibold"
                             android:letterSpacing="0"
                             android:text="On my way"

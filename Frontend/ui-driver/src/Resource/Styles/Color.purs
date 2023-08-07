@@ -105,9 +105,6 @@ greyLight = "#ECECEC"
 orange :: Color
 orange = "#FF9F07"
 
-orange900 :: Color
-orange900 = "#FF8533"
-
 lightOrange :: Color
 lightOrange = "#16FFBD3E"
 
@@ -431,13 +428,8 @@ transparent = "#00FFFFFF"
 green200 :: Color
 green200 = "#2053BB6F"
 
-red100 :: Color
-red100 = "#10E55454"
-
 green600 :: Color
 green600 = "#269574"
-green900 :: Color
-green900 = "#53BB6F"
 
 transparentWhite :: Color
 transparentWhite = "#30FFFFFF"

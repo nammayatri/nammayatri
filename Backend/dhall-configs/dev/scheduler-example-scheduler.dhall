@@ -9,6 +9,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_scheduler_example"
+      , connectionPoolCount = +25
       }
 
 let rcfg =
@@ -44,7 +45,7 @@ in  { loggerConfig =
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , hedisPrefix = "example-scheduler"
     , port = +8051
     , loopIntervalSec = +5

@@ -19,7 +19,7 @@ import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare)
 import Components.ChooseVehicle (Config, config) as ChooseVehicle
-import Components.QuoteListItem.Controller (QuoteListItemState)
+import Components.QuoteListItem.Controller (QuoteListItemState, config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex)
 import Data.Array as DA
@@ -35,18 +35,19 @@ import Data.Number (ceil)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getFaresList, getKmMeter)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, TripDetailsScreenState)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getVehicleImage, getFaresList, getKmMeter)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
-import Screens.Types (DriverInfoCard, SearchResultType(..), LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import Debug(spy)
 import JBridge (fromMetersToKm)
-import Engineering.Helpers.BackTrack (getState)
+import MerchantConfig.DefaultConfig as DC
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Common.Types.App (LazyCheck(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -54,8 +55,8 @@ getLocationList prediction = map (\x -> getLocation x) prediction
 
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
-    prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
-  , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
+    prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+  , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
   , postfixImageVisibility : true
   , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
@@ -82,14 +83,14 @@ getLocation prediction = {
 checkShowDistance :: Int ->  Boolean
 checkShowDistance distance = (distance > 0 && distance <= 50000)
 
-getQuoteList :: Array QuoteAPIEntity -> Array QuoteListItemState
+getQuoteList :: Array QuoteAPIEntity -> Array QLI.QuoteListItemState
 getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)
 
-getQuote :: QuoteAPIEntity -> QuoteListItemState
+getQuote :: QuoteAPIEntity -> QLI.QuoteListItemState
 getQuote (QuoteAPIEntity quoteEntity) = do
   case (quoteEntity.quoteDetails)^._contents of
-    (ONE_WAY contents) -> dummyQuoteList
-    (SPECIAL_ZONE contents) -> dummyQuoteList
+    (ONE_WAY contents) -> QLI.config
+    (SPECIAL_ZONE contents) -> QLI.config
     (DRIVER_OFFER contents) -> let (DriverOfferAPIEntity quoteDetails) = contents
         in {
       seconds : (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
@@ -102,10 +103,11 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     , vehicleType : "auto"
     , driverName : quoteDetails.driverName
     , selectedQuote : Nothing
+    , appConfig : DC.config
     }
 
-getDriverInfo :: RideBookingRes -> Boolean -> DriverInfoCard
-getDriverInfo (RideBookingRes resp) isQuote =
+getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
+getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
         otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
@@ -139,6 +141,11 @@ getDriverInfo (RideBookingRes resp) isQuote =
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
+      , config : DC.config
+      , vehicleVariant : getMappedVehicleVariant $ if rideList.vehicleVariant /= "" then rideList.vehicleVariant else 
+                           case vehicleVariant of
+                            Just variant -> variant
+                            Nothing -> ""
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -164,20 +171,6 @@ encodeAddressDescription address tag placeId lat lon addressComponents = do
                       else
                         Just $ getValueByComponent addressComponents "sublocality"
                 }
-
-dummyQuoteList :: QuoteListItemState
-dummyQuoteList = {
-   seconds : 3
-  , id : "1"
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "200"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  }
 
 
 dummyRideAPIEntity :: RideAPIEntity
@@ -300,58 +293,85 @@ getContact contact = {
 }
 
 getSpecialZoneQuotes :: Array OfferRes -> Array ChooseVehicle.Config
-getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) quotes
+getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) (getFilteredQuotes quotes)
 
 getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
 getSpecialZoneQuote quote index =
   case quote of
     Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-      in ChooseVehicle.config {
-        vehicleImage = case quoteEntity.vehicleVariant of
-          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
-          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+      in ChooseVehicle.config { 
+        vehicleImage = getVehicleImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
-      , vehicleVariant = quoteEntity.vehicleVariant
-      , price = quoteEntity.estimatedTotalFare
+      , vehicleVariant =  getMappedVehicleVariant quoteEntity.vehicleVariant
+      , price = getValueFromConfig "currency" <> (show quoteEntity.estimatedTotalFare)
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
-      , capacity = case quoteEntity.vehicleVariant of
-          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
-          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
-          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
-          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
-          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
-          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+      , capacity = getVehicleCapacity quoteEntity.vehicleVariant
+      , showInfo = (getMerchant FunctionCall) == YATRI
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
 
 getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
-getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) quotes
+getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) (getFilteredEstimate quotes)
+
+
+getFilteredEstimate :: Array EstimateAPIEntity -> Array EstimateAPIEntity
+getFilteredEstimate quotes = do
+  case (getMerchant FunctionCall) of 
+    YATRISATHI -> do 
+      let acTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> (DA.any (_ == item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"])) quotes
+          nonAcTaxiVariants = DA.filter (\(EstimateAPIEntity item) -> not (DA.any (_ ==item.vehicleVariant) ["SUV", "SEDAN" , "HATCHBACK"] )) quotes
+          taxiVariant = DA.sortBy (\(EstimateAPIEntity estimateEntity1) (EstimateAPIEntity estimateEntity2) -> compare (estimateEntity1.vehicleVariant) (estimateEntity2.vehicleVariant)) acTaxiVariants
+      ((DA.take 1 taxiVariant) <> (nonAcTaxiVariants))
+    _ -> quotes
+
+getFilteredQuotes :: Array OfferRes -> Array OfferRes
+getFilteredQuotes quotes =  do 
+  case (getMerchant FunctionCall) of 
+    YATRISATHI -> do 
+      let acTaxiVariants = DA.filter(\item -> do 
+            case item of 
+              Quotes body -> do 
+                let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"]
+              _ -> false
+            ) quotes
+          nonAcTaxiVariants = DA.filter(\item -> do 
+            case item of 
+              Quotes body -> do 
+                let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                not (DA.any (_ == quoteEntity.vehicleVariant) ["SUV" , "HATCHBACK" , "SEDAN"])
+              _ -> false
+            ) quotes
+          sortedACTaxiVariants = DA.sortBy (\ quote1 quote2 -> 
+            case quote1 , quote2 of 
+              Quotes body , Quotes body2-> do
+                let (QuoteAPIEntity quoteEntity1) = body.onDemandCab
+                let (QuoteAPIEntity quoteEntity2) = body2.onDemandCab
+                compare (quoteEntity1.vehicleVariant) (quoteEntity2.vehicleVariant)
+              _ ,_ -> LT
+            ) acTaxiVariants
+      (DA.take 1 sortedACTaxiVariants) <> (nonAcTaxiVariants)
+    _ -> quotes
 
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
-        vehicleImage = case estimate.vehicleVariant of
-          "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-          "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-          "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-          "SUV" -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-          "HATCHBACK" -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
-          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-      , vehicleVariant = estimate.vehicleVariant
-      , price = estimate.estimatedTotalFare
+getEstimates (EstimateAPIEntity estimate) index = 
+  let currency = getValueFromConfig "currency"
+  in ChooseVehicle.config { 
+        vehicleImage = getVehicleImage estimate.vehicleVariant
+      , vehicleVariant = getMappedVehicleVariant estimate.vehicleVariant
+      , price = case estimate.totalFareRange of 
+                Nothing -> currency <> (show estimate.estimatedTotalFare)
+                Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
+                                              else (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
-      , capacity = case estimate.vehicleVariant of
-          "SUV" -> "6 " <> (getString SEATS)
-          _ -> "4 " <> (getString SEATS)
-      , maxPrice = (fromMaybe dummyFareRange estimate.totalFareRange)^. _maxFare
+      , capacity = getVehicleCapacity estimate.vehicleVariant
+      , showInfo = (getMerchant FunctionCall) == YATRI
+      , basePrice = estimate.estimatedTotalFare
       }
 
 dummyFareRange :: FareRange
@@ -387,3 +407,11 @@ getTripDetailsState (RideBookingRes ride) state = do
       }
     }
   }
+
+getMappedVehicleVariant :: String -> String 
+getMappedVehicleVariant variant = case (getMerchant FunctionCall) of 
+  YATRISATHI -> case variant of 
+      "TAXI" -> "TAXI"
+      _      -> "TAXI_PLUS" 
+  _ -> variant
+

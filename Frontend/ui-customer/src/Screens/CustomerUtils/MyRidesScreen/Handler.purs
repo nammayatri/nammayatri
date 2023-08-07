@@ -32,15 +32,16 @@ import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.MyRidesScreen.View as MyRidesScreen
 import Screens.Types (IndividualRideCardState, AnimationState(..))
 import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..), ScreenType(..))
-
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 myRidesScreen :: FlowBT String MY_RIDES_SCREEN_OUTPUT
 myRidesScreen = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "MyRidesScreen"
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push listItem1
-  act <- lift $ lift $ runScreen $ MyRidesScreen.screen state.myRidesScreen{shimmerLoader = AnimatedIn} listItemm
-  case act of
+  logField_ <- lift $ lift $ getLogFields
+  act <- lift $ lift $ runScreen $ MyRidesScreen.screen state.myRidesScreen{shimmerLoader = AnimatedIn , data{logField = logField_}} listItemm
+  case act of 
     GoBack updatedState -> do
       if  (updatedState.props.fromNavBar) then do
         modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBarController.OPEN}}})

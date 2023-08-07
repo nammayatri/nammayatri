@@ -18,7 +18,7 @@ module Components.PrimaryEditText.Controller where
 import Prelude((<>))
 import Font.Size as FontSize
 import Common.Styles.Colors as Color
-import Font.Style as FontStyle
+import Font.Style (Style(..)) 
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..))
 import Common.Types.App
@@ -52,8 +52,7 @@ type ConstantFieldConfig = {
   , height :: Length
   , gravity :: Gravity
   , text :: String
-  , fontStyle :: String
-  , textSize :: Int
+  , textStyle :: Style
   , color :: String
   , padding :: Padding
   , margin :: Margin
@@ -61,8 +60,6 @@ type ConstantFieldConfig = {
 
 type EditTextConfig =
   { text :: String
-  , textSize :: Int
-  , fontStyle :: String
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
@@ -77,17 +74,19 @@ type EditTextConfig =
   , capsLock :: Boolean
   , enabled :: Boolean
   , focused :: Boolean
+  , textStyle :: Style
+  , separatorRepeat :: String
+  , separator :: String
   }
 
 type TextConfig =
   { text :: String
-  , textSize :: Int
-  , fontStyle :: String
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
   , alpha :: Number
   , margin :: Margin
+  , textStyle :: Style
   }
 type ImageConfig =
   { height :: Length
@@ -105,8 +104,7 @@ config = {
   , type : ""
   , editText :
     { text : ""
-    , textSize : FontSize.a_12
-    , fontStyle : FontStyle.regular LanguageStyle
+    , textStyle : SubHeading1
     , color : Color.black800
     , gravity : LEFT
     , visibility : VISIBLE
@@ -121,6 +119,8 @@ config = {
     , capsLock : false
     , enabled : true
     , focused : false
+    , separatorRepeat : ""
+    , separator : ""
     }
   , visibility : VISIBLE
   , background : Color.white900
@@ -131,8 +131,7 @@ config = {
   , id : ""
   , topLabel :
     { text : ""
-    , fontStyle : FontStyle.regular LanguageStyle
-    , textSize :  FontSize.a_12
+    , textStyle : Body3
     , gravity : LEFT
     , visibility : VISIBLE
     , color : Color.yellow900
@@ -142,9 +141,8 @@ config = {
   , showErrorLabel : false
   , errorLabel : {
       text : ""
-    , fontStyle : FontStyle.bold LanguageStyle
-    , textSize :  FontSize.a_12
     , gravity : LEFT
+    , textStyle : Body3
     , color : Color.lightMaroon
     , visibility : GONE
     , alpha : 1.0
@@ -164,11 +162,9 @@ config = {
   , height : MATCH_PARENT
   , gravity : CENTER
   , text : "+91"
-  , fontStyle : FontStyle.bold LanguageStyle
-  , textSize : FontSize.a_14
+  , textStyle : ParagraphText
   , color : Color.black800
   , padding : Padding 0 0 0 0
   , margin : Margin 10 0 0 0
   }
-
 }

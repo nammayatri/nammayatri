@@ -18,7 +18,7 @@ view push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , background Color.black900
+    , background state.config.primaryBackground
     , padding $ PaddingVertical 10 10
     ][ linearLayout
         [ width MATCH_PARENT

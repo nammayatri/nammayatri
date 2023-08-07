@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Action.UI.DriverOnboarding.AadhaarVerification where
 
@@ -122,7 +121,7 @@ verifyAadhaarOtp mbMerchant personId req = do
           aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just res.image) True
           Esq.runNoTransaction $ Q.create aadhaarEntity
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
-          Status.statusHandler (person.id, person.merchantId)
+          Status.statusHandler (person.id, person.merchantId) Nothing
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError TransactionIdNotFound
@@ -132,8 +131,8 @@ unVerifiedAadhaarData ::
   UnVerifiedDataReq ->
   Flow APISuccess
 unVerifiedAadhaarData personId req = do
-  driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
+  mAadhaarCard <- Q.findByDriverId personId
+  when (isJust mAadhaarCard) $ throwError AadhaarDataAlreadyPresent
   aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False
   Esq.runNoTransaction $ Q.create aadhaarEntity
   return Success
@@ -194,12 +193,10 @@ mkAadhaar ::
   Bool ->
   m VDomain.AadhaarVerification
 mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
-  id <- generateGUID
   now <- getCurrentTime
   return $
     VDomain.AadhaarVerification
-      { id,
-        driverId = personId,
+      { driverId = personId,
         driverName = name,
         driverGender = gender,
         driverDob = dob,

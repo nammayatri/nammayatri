@@ -19,24 +19,28 @@
         <item name="materialAlertDialogTitleIconStyle">@style/Material.App.Theme.Title.Icon</item>
         <item name="materialAlertDialogBodyTextStyle">@style/Material.App.Theme.Body</item>
     </style>
-    <style name="Material.App.Theme.Title.Icon" parent = "MaterialAlertDialog.MaterialComponents.Title.Icon">
+
+    <style name="Material.App.Theme.Title.Icon" parent="MaterialAlertDialog.MaterialComponents.Title.Icon">
         <!--        <item name="backgroundColor">@color/colorIconBackground</item>-->
         <item name="android:layout_gravity">center</item>
     </style>
 
-    <style name="Material.App.Theme.Title.Panel" parent = "MaterialAlertDialog.MaterialComponents.Title.Panel">
+    <style name="Material.App.Theme.Title.Panel" parent="MaterialAlertDialog.MaterialComponents.Title.Panel">
         <item name="android:background">@color/colorIconBackground</item>
         <item name="android:gravity">center</item>
         <item name="android:paddingBottom">14dp</item>
     </style>
-    <style name="Material.App.Theme.Title" parent = "MaterialAlertDialog.MaterialComponents.Title.Text">
+
+    <style name="Material.App.Theme.Title" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
         <item name="android:textColor">@color/colorIconBackground</item>
         <item name="android:textSize">18sp</item>
     </style>
-    <style name="Material.App.Theme.Body" parent = "MaterialAlertDialog.MaterialComponents.Body.Text">
+
+    <style name="Material.App.Theme.Body" parent="MaterialAlertDialog.MaterialComponents.Body.Text">
         <item name="android:textColor">@color/colorBodyText</item>
-        <item name = "android:layout_marginTop">16dp</item>
+        <item name="android:layout_marginTop">16dp</item>
     </style>
+
     <style name="Alert.Button.Positive" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="backgroundTint">@color/white</item>
         <item name="rippleColor">@color/colorAccent</item>

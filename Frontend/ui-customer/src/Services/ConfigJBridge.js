@@ -1,16 +1,17 @@
-import { callbackMapper } from 'presto-ui';
-
 export const getKeyInSharedPrefKeysConfig = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  };
+  return JBridge.getKeysInSharedPref(key);
+};
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  };
+  return JBridge.getKeysInSharedPref(key);
+};
 
 export const getValueToLocalNativeStoreConfig = function (key) {
-  if (window.__OS == "IOS") {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  }
-  return window.JBridge.getKeyInNativeSharedPrefKeys(key);
+  return JBridge.getFromSharedPrefs(key);
 }
+
+export const setKeyInSharedPrefKeysImpl = function (key) {
+  return function (value) {
+    window.JBridge.setInSharedPrefs(key, value);
+  };
+};

@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Tools.Error (module Tools.Error) where
@@ -147,6 +146,7 @@ data DriverError
   = DriverAccountDisabled
   | DriverWithoutVehicle Text
   | DriverAccountBlocked
+  | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -156,6 +156,7 @@ instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
   toMessage (DriverWithoutVehicle personId) = Just $ "Driver with id = " <> personId <> " has no linked vehicle"
   toMessage DriverAccountBlocked = Just "Driver account has been blocked."
+  toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
 
 instance IsHTTPError DriverError where
@@ -163,11 +164,13 @@ instance IsHTTPError DriverError where
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
     DriverWithoutVehicle _ -> "DRIVER_WITHOUT_VEHICLE"
     DriverAccountBlocked -> "DRIVER_ACCOUNT_BLOCKED"
+    DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E500
     DriverAccountBlocked -> E403
+    DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
 
 instance IsAPIError DriverError
@@ -176,6 +179,7 @@ data AadhaarError
   = AadhaarAlreadyVerified
   | TransactionIdNotFound
   | AadhaarAlreadyLinked
+  | AadhaarDataAlreadyPresent
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''AadhaarError
@@ -184,16 +188,19 @@ instance IsBaseError AadhaarError where
   toMessage AadhaarAlreadyVerified = Just " Driver aadhar is already verified."
   toMessage TransactionIdNotFound = Just " transaction id not found for this verification"
   toMessage AadhaarAlreadyLinked = Just "aadhaar number is already linked"
+  toMessage AadhaarDataAlreadyPresent = Just "aadhaar data is already present for this driver"
 
 instance IsHTTPError AadhaarError where
   toErrorCode = \case
     AadhaarAlreadyVerified -> "AADHAAR_ALREADY_VERIFIED"
     TransactionIdNotFound -> "TRANSACTION_ID_NOT_FOUND"
     AadhaarAlreadyLinked -> "AADHAAR_ALREADY_LINKED"
+    AadhaarDataAlreadyPresent -> "AADHAAR_DATA_ALREADY_PRESENT"
   toHttpCode = \case
     AadhaarAlreadyVerified -> E400
     TransactionIdNotFound -> E400
     AadhaarAlreadyLinked -> E400
+    AadhaarDataAlreadyPresent -> E400
 
 instance IsAPIError AadhaarError
 
@@ -240,6 +247,7 @@ data DriverQuoteError
   | NoSearchRequestForDriver
   | QuoteAlreadyRejected
   | UnexpectedResponseValue
+  | NoActiveRidePresent
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -251,6 +259,7 @@ instance IsBaseError DriverQuoteError where
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
+  toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
@@ -260,6 +269,7 @@ instance IsHTTPError DriverQuoteError where
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
     UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
+    NoActiveRidePresent -> "NO_ACTIVE_RIDE_PRESENT"
   toHttpCode = \case
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
@@ -267,6 +277,7 @@ instance IsHTTPError DriverQuoteError where
     NoSearchRequestForDriver -> E400
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400
+    NoActiveRidePresent -> E400
 
 instance IsAPIError DriverQuoteError
 

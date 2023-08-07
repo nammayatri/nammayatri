@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Dashboard.Ride
   ( rideList,
@@ -19,6 +18,7 @@ module Domain.Action.Dashboard.Ride
     rideSync,
     multipleRideSync,
     rideRoute,
+    currentActiveRide,
   )
 where
 
@@ -30,6 +30,7 @@ import qualified Data.Time as Time
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
+import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -49,6 +50,8 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
@@ -167,7 +170,7 @@ rideInfo merchantShortId reqRideId = do
     if ride.status == DRide.CANCELLED
       then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
       else pure Nothing
-  driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByRideId rideId
+  driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByEntityId rideId
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
@@ -295,3 +298,14 @@ mkMultipleRideData rideId Common.RideSyncRes {..} =
     { rideId = cast @DRide.Ride @Common.Ride rideId,
       ..
     }
+
+---------------------------------------------------------------------
+currentActiveRide :: ShortId DM.Merchant -> Text -> Flow (Id Common.Ride)
+currentActiveRide _ vehicleNumber = do
+  vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (RCNotFound vehicleNumber)
+  rcActiveAssociation <- runInReplica $ DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
+  activeRide <- runInReplica $ QRide.getActiveByDriverId rcActiveAssociation.driverId >>= fromMaybeM NoActiveRidePresent
+  let rideId = cast @DRide.Ride @Common.Ride activeRide.id
+  pure rideId
+
+---------------------------------------------------------------------

@@ -19,6 +19,7 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
 where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (DRIVER_ARRIVED))
 import qualified Control.Lens as L
 import Data.Aeson as A
@@ -26,13 +27,11 @@ import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
 import Kernel.Prelude (UTCTime)
-import Kernel.Utils.Schema
 
 data DriverArrivedEvent = DriverArrivedEvent
   { id :: Text,
-    update_target :: Text,
-    fulfillment :: FulfillmentInfo,
-    arrival_time :: Maybe UTCTime
+    -- update_target :: Text,
+    fulfillment :: FulfillmentInfo
   }
   deriving (Generic, Show)
 
@@ -41,19 +40,17 @@ instance ToJSON DriverArrivedEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "./komn/update_target" .= update_target
-        <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= DRIVER_ARRIVED) :: A.Object)))
-        <> "arrival_time" .= arrival_time
+        -- <> "update_target" .= update_target
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= DRIVER_ARRIVED <> "name" .= A.String "Driver Arrived") :: A.Object) :: A.Object)))
 
 instance FromJSON DriverArrivedEvent where
   parseJSON = withObject "DriverArrivedEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
     unless (update_type == DRIVER_ARRIVED) $ fail "Wrong update_type."
     DriverArrivedEvent
       <$> obj .: "id"
-      <*> obj .: "./komn/update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "fulfillment"
-      <*> obj .: "arrival_time"
 
 instance ToSchema DriverArrivedEvent where
   declareNamedSchema _ = do
@@ -65,12 +62,19 @@ instance ToSchema DriverArrivedEvent where
             & type_ L.?~ OpenApiObject
             & properties
               L..~ fromList
-                [("code", update_type)]
-            & required L..~ ["code"]
+                [("code", update_type), ("name", txt)]
+            & required L..~ ["code", "name"]
+        descriptor =
+          mempty
+            & type_ L.?~ OpenApiObject
+            & properties
+              L..~ fromList
+                [("descriptor", Inline st)]
+            & required L..~ ["descriptor"]
         fulfillment =
           toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
             & properties
-              L.<>~ fromList [("state", Inline st)]
+              L.<>~ fromList [("state", Inline descriptor)]
             & required L.<>~ ["state"]
     return $
       NamedSchema (Just "DriverArrivedEvent") $
@@ -79,21 +83,13 @@ instance ToSchema DriverArrivedEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("./komn/update_target", txt),
+                -- ("update_target", txt),
                 ("fulfillment", Inline fulfillment),
                 ("arrival_time", arrival_time)
               ]
           & required
             L..~ [ "id",
-                   "./komn/update_target",
+                   --  "update_target",
                    "fulfillment",
                    "arrival_time"
                  ]
-
-newtype FulfillmentInfo = FulfillmentInfo
-  { id :: Text -- bppRideId
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

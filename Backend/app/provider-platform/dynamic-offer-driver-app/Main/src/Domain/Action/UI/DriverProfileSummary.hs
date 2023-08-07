@@ -18,6 +18,7 @@ import Domain.Types.Feedback.Feedback (FeedbackBadge)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as DR
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
 import Kernel.External.Encryption
@@ -27,10 +28,15 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.Booking as BQ
+import qualified Storage.Queries.BookingCancellationReason as QBCR
+import Storage.Queries.DriverStats
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.Feedback.FeedbackBadge as QFB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
+import qualified Storage.Queries.Ride as RQ
 import qualified Storage.Queries.Vehicle as QVehicle
 
 data DriverProfleSummaryRes = DriverProfleSummaryRes
@@ -55,13 +61,31 @@ data DriverProfleSummaryRes = DriverProfleSummaryRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-getDriverProfileSummary :: (Esq.EsqDBReplicaFlow m r, EncFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverProfleSummaryRes
+getDriverProfileSummary :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverProfleSummaryRes
 getDriverProfileSummary (driverId, _) = do
   person <- Esq.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehicleMB <- Esq.runInReplica $ QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
-  driverStats <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  driverStats_ <- Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  driverStats <-
+    if driverStats_.totalEarnings == 0 && driverStats_.bonusEarned == 0 && driverStats_.lateNightTrips == 0 && driverStats_.earningsMissed == 0
+      then do
+        allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+        let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
+            farePramIds = mapMaybe (.fareParametersId) completedRides
+        lateNightTripsCount <- Esq.runInReplica $ FPQ.findAllLateNightRides farePramIds
+        cancelledBookingIdsByDriver <- Esq.runInReplica $ QBCR.findAllBookingIdsCancelledByDriverId (cast person.id)
+        missedEarnings <- Esq.runInReplica $ BQ.findFareForCancelledBookings cancelledBookingIdsByDriver
+        driverSelectedFare <- Esq.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
+        customerExtraFee <- Esq.runInReplica $ FPQ.findCustomerExtraFees farePramIds
+        let bonusEarnings = driverSelectedFare + customerExtraFee + Money (length farePramIds * 10)
+            totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
+        Esq.runNoTransaction $ do
+          incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
+          setMissedEarnings (cast person.id) missedEarnings
+        QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+      else Esq.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   feedbackBadgeList <- Esq.runInReplica $ QFB.findAllFeedbackBadgeForDriver person.id
   totalUsersRated <- Esq.runInReplica $ QRating.findAllRatingUsersCountByPerson driverId
 

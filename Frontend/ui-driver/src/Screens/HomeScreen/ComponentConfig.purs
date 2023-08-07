@@ -16,35 +16,42 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
-import Prelude(unit, show, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..),Padding(..))
+import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..), Padding(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
+import Language.Strings
+import Common.Types.App (LazyCheck(..))
+import Components.ChatView as ChatView
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
-import Components.ChatView as ChatView
 import Components.RequestInfoCard as RequestInfoCard
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday)
 import Helpers.Utils as HU
-import Components.InAppKeyboardModal as InAppKeyboardModal
-import Language.Strings
 import Language.Types (STR(..))
+import Prelude ((<>))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
-import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
-import Common.Types.App (LazyCheck(..))
+import Styles.Colors as Color
+import Components.MakePaymentModal as MakePaymentModal
+import Components.RateCard as RateCard
+import Common.Types.App as CommonTypes
+import Services.API ( PaymentBreakUp(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Style as FontStyle
-import Merchant.Utils (getMerchantVehicleSize)
+import Helpers.Utils (getMerchantVehicleSize)
 
-
+import Styles.Colors as Color
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -71,7 +78,9 @@ rideActionModalConfig state = let
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
     specialLocationTag = state.data.activeRide.specialLocationTag,
-    waitTime = state.data.activeRide.waitingTime
+    waitTime = state.data.activeRide.waitingTime,
+    isChatOpened = state.props.isChatOpened,
+    requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant
   }
   in rideActionModalConfig'
 
@@ -152,6 +161,39 @@ genderBannerConfig state =
       }
   in config'
 
+------------------------------------ linkAadhaarPopupConfig -----------------------------
+linkAadhaarPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+linkAadhaarPopupConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    primaryText {
+      text = (getString AADHAAR_LINKING_REQUIRED)
+    , margin = Margin 16 24 16 4 },
+    secondaryText {
+      text = (getString AADHAAR_LINKING_REQUIRED_DESCRIPTION)
+    , margin = MarginBottom 24},
+    option1 {
+      text = (getString LINK_AADHAAR_ID)
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
+    , visibility = VISIBLE
+    , height = V 178
+    , width = V 204
+    }
+  }
+  in popUpConfig'
+
 ------------------------------------ cancelConfirmationConfig -----------------------------
 cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config
 cancelConfirmationConfig state = let
@@ -168,8 +210,7 @@ cancelConfirmationConfig state = let
     secondaryText {visibility = GONE},
     option1 {
       text = (getString CONTINUE)
-    , fontSize = FontSize.a_16
-    , width = V $ (((EHC.screenWidth unit)-92)/2)
+    , width = V $ (((EHC.screenWidth unit)-92)/2) 
     , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
     , timerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
     , enableTimer = true
@@ -180,7 +221,6 @@ cancelConfirmationConfig state = let
     option2 {
       text = (getString GO_BACK)
     , margin = MarginLeft 12
-    , fontSize = FontSize.a_16
     , width = V $ (((EHC.screenWidth unit)-92)/2)
     , color = Color.yellow900
     , strokeColor = Color.black900
@@ -189,7 +229,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
                   else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -282,8 +322,8 @@ enterOtpStateConfig state = let
       inputTextConfig {
         text = state.props.rideOtp,
         -- pattern = "[0-9]*,4",
-        fontSize = FontSize.a_22,
         focusIndex = state.props.enterOtpFocusIndex
+        , textStyle = FontStyle.Heading1
       },
       headingConfig {
         text = getString (ENTER_OTP)
@@ -294,8 +334,8 @@ enterOtpStateConfig state = let
       },
       subHeadingConfig {
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
-        fontSize = FontSize.a_14,
         visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
+      , textStyle = FontStyle.Body1
       },
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
@@ -368,18 +408,15 @@ waitTimeInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
-      text = getString WAIT_TIMER,
-      fontSize = FontSize.a_18
+      text = getString WAIT_TIMER
     }
   , primaryText {
       text = getString HOW_LONG_WAITED_FOR_PICKUP,
-      fontSize = FontSize.a_16,
       padding = Padding 16 16 0 0
     }
   , secondaryText {
       text = getString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE,
       visibility = VISIBLE,
-      fontStyle = FontStyle.regular LanguageStyle,
       padding = PaddingLeft 16
     }
   , imageConfig {
@@ -394,3 +431,102 @@ waitTimeInfoCardConfig _ = let
     }
   }
   in requestInfoCardConfig'
+
+
+makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
+makePaymentState state = {
+  title : getString GREAT_JOB,
+  description : getDescription state,
+  description2 : ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                        "HI_IN" -> "यात्री साथी का उपयोग जारी रखने के लिए, कृपया "<> state.data.paymentState.date <>" के लिए अपना भुगतान पूरा करें"
+                        "KN_IN" -> "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು "<> state.data.paymentState.date <> " ಕ್ಕೆ ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
+                        "TA_IN" -> "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, "<> state.data.paymentState.date <> " க்கு உங்கள் கட்டணத்தைச் செலுத்தவும்"
+                        "BN_IN" -> "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে " <> state.data.paymentState.date <> " -এর জন্য আপনার অর্থপ্রদান সম্পূর্ণ করুন"
+                        _       -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                     ),
+  okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
+                        "HI_IN" -> "अभी ₹" <> (show state.data.paymentState.payableAndGST) <>" का भुगतान करें"
+                        "KN_IN" -> "ಈಗ ₹"<> (show state.data.paymentState.payableAndGST)<>" ಪಾವತಿಸಿ"
+                        "TA_IN" -> "இப்போது ₹" <> (show state.data.paymentState.payableAndGST) <> " செலுத்துங்கள்"
+                        "BN_IN" -> "এখন " <> (show state.data.paymentState.payableAndGST) <> " পে করুন"
+                        _       -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
+                     ),
+  cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")) then Nothing else Just $ getString LATER,
+  ridesCount : state.data.paymentState.rideCount,
+  feeItem : [
+    { feeType : MakePaymentModal.TOTAL_COLLECTED,
+      title : getString TOTAL_MONEY_COLLECTED,
+      val : state.data.paymentState.totalMoneyCollected},
+    { feeType : MakePaymentModal.EARNED_OF_THE_DAY,
+      title : getString FARE_EARNED_OF_THE_DAY,
+      val : (state.data.paymentState.totalMoneyCollected - state.data.paymentState.payableAndGST)},
+    { feeType : MakePaymentModal.GST_PAYABLE,
+      title : getString GST_PLUS_PAYABLE,
+      val : state.data.paymentState.payableAndGST}
+  ]
+}
+
+getDescription :: ST.HomeScreenState -> String
+getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> case (isYesterday state.data.paymentState.dateObj) of
+                                  true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides</b> yesterday!"))
+                                  false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on " else " Rides</b> on ") <> state.data.paymentState.date))
+                        "HI_IN" -> if (isYesterday state.data.paymentState.dateObj) then "आपने कल <b>"<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!" else 
+                                    "आपने " <> state.data.paymentState.date <>  " को "<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!"
+                        "BN_IN" -> if (isYesterday state.data.paymentState.dateObj) then "আপনি গতকাল "<> (show state.data.paymentState.rideCount) <>"টি রাইড সম্পূর্ণ করেছেন" else 
+                                    "আপনি " <> state.data.paymentState.date <>" তারিখে " <> (show state.data.paymentState.rideCount) <> "টি রাইড সম্পূর্ণ করেছেন"
+                        "TA_IN" -> "நீங்கள் நேற்று "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
+                        "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
+                        _       -> case (isYesterday state.data.paymentState.dateObj) of
+                                    true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides yesterday!"))
+                                    false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on" else " Rides on") <> state.data.paymentState.date))
+
+rateCardState :: ST.HomeScreenState -> RateCard.Config
+rateCardState state =
+  let
+    config' = RateCard.config
+    rateCardConfig' =
+      config'
+        { title = getString FEE_BREAKUP
+        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE <> " " <> state.data.paymentState.date
+        , buttonText = Nothing
+        , currentRateCardType = CommonTypes.PaymentFareBreakup
+        , primaryButtonText = getString GOT_IT
+        , additionalStrings = [
+          {key : "FEE_CORRESPONDING_TO_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
+          {key : "GOT_IT", val : getString GOT_IT},
+          {key : "TOTAL_PAYABLE", val : getString TOTAL_PAYABLE},
+          {key : "TOTAL_PAYABLE_VAL", val : "₹" <> (show state.data.paymentState.payableAndGST)}]
+          
+        , fareList = getChargesBreakup state.data.paymentState.chargesBreakup
+
+        }
+  in
+    rateCardConfig'
+
+paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
+paymentStatusConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = state.data.paymentState.bannerBG,
+        title = state.data.paymentState.bannerTitle,
+        titleColor = state.data.paymentState.bannerTitleColor,
+        actionText = state.data.paymentState.banneActionText,
+        actionTextColor = state.data.paymentState.actionTextColor,
+        imageUrl = state.data.paymentState.bannerImage,
+        isBanner = true
+      }
+  in config'
+
+
+getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
+getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
+  key : case item.component of
+        "Government Charges" -> getString GOVERMENT_CHARGES
+        "Platform Fee" -> getString PLATFORM_FEE
+        _ -> item.component
+    } ) paymentBreakUpArr

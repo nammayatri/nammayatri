@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -47,6 +46,7 @@ mkPersist
       providerId Text
       providerUrl Text
       providerName Text
+      itemId Text
       providerMobileNumber Text
       providerCompletedRidesCount Int
       distanceToNearestDriver HighPrecMeters Maybe

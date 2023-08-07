@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Person where
 
@@ -22,6 +21,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import qualified Domain.Types.MediaFile as M
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
@@ -103,7 +103,8 @@ data PersonE e = Person
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     unencryptedAlternateMobileNumber :: Maybe Text,
-    alternateMobileNumber :: Maybe (EncryptedHashedField e Text)
+    alternateMobileNumber :: Maybe (EncryptedHashedField e Text),
+    faceImageId :: Maybe (Id M.MediaFile)
   }
   deriving (Generic)
 

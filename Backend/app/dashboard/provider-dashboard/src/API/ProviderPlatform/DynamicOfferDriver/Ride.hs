@@ -39,6 +39,7 @@ type API =
            :<|> RideStartAPI
            :<|> RideEndAPI
            :<|> MultipleRideEndAPI
+           :<|> CurrentActiveRideAPI
            :<|> RideCancelAPI
            :<|> MultipleRideCancelAPI
            :<|> RideInfoAPI
@@ -67,6 +68,10 @@ type MultipleRideEndAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'MULTIPLE_RIDE_END
     :> Common.MultipleRideEndAPI
 
+type CurrentActiveRideAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'CURRENT_ACTIVE_RIDE
+    :> Common.CurrentActiveRideAPI
+
 type RideCancelAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_CANCEL
     :> Common.RideCancelAPI
@@ -93,6 +98,7 @@ handler merchantId =
     :<|> rideStart merchantId
     :<|> rideEnd merchantId
     :<|> multipleRideEnd merchantId
+    :<|> currentActiveRide merchantId
     :<|> rideCancel merchantId
     :<|> multipleRideCancel merchantId
     :<|> rideInfo merchantId
@@ -193,3 +199,8 @@ multipleRideEnd merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.MultipleRideEndEndpoint apiTokenInfo Nothing (Just req)
   T.withResponseTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.rides.multipleRideEnd) req
+
+currentActiveRide :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler (Id Common.Ride)
+currentActiveRide merchantShortId apiTokenInfo vehichleNumber = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.rides.currentActiveRide) vehichleNumber

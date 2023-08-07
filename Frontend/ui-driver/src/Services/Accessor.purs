@@ -71,3 +71,5 @@ _lat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) {lat = n
 _lon :: forall a b c. Newtype a { lon :: b | c} => Lens' a b
 _lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) {lon = newVal}))
 
+_certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b 
+_certificateNumber = lens (unwrap >>> _.certificateNumber) (\oldRec newVal -> wrap (unwrap oldRec) {certificateNumber = newVal})

@@ -27,7 +27,7 @@
     <string name="location">অবস্থান</string>
     <string name="phone">ফোন</string>
     <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ 10 অন্তর্ভুক্ত</string>
-    <string name="away" >দূরে</string>
+    <string name="away">দূরে</string>
     <string name="we_made_you_online">আমরা আপনাকে অনলাইনে তৈরি করেছি</string>
     <string name="location_is_turned_on">অবস্থান চালু করা হয়</string>
     <string name="waiting_for_gps_signal">জিপিএস সিগন্যালের জন্য অপেক্ষা করছি</string>
@@ -36,6 +36,12 @@
     <string name="location_is_turned_off_permission_is_disabled">অবস্থান বন্ধ করা হয় / অনুমতি অক্ষম করা হয়</string>
     <string name="ride_assigned_to_another_driver">অন্য চালকের কাছে যাত্রা করা</string>
     <string name="select_date">তারিখ নির্বাচন করুন</string>
+    <string name="chatting_is_enabled">চ্যাটিং সক্ষম করা হয়েছে</string>
+    <string name="you_can_now_chat_with_driver">আপনি এখন ড্রাইভারের সাথে চ্যাট করতে পারেন</string>
+    <string name="you_can_now_chat_with_customer">আপনি এখন গ্রাহকের সাথে চ্যাট করতে পারেন</string>
+    <string name="new_ride_req">নতুন রাইড অনুরোধ</string>
+    <string name="new_ride_available_for_offering">অফার জন্য উপলব্ধ নতুন রাইড</string>
+    <string name="and">এবং</string>
     <string name="no_enabled_browser">আপনার ডিভাইসে কোনো সক্ষম ব্রাউজার পাওয়া যায়নি, অনুগ্রহ করে একটি ব্রাউজার সক্ষম বা ইনস্টল করুন</string>
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
 </resources>

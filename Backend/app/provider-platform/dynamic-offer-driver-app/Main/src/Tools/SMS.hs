@@ -15,21 +15,35 @@
 module Tools.SMS
   ( module Reexport,
     sendSMS,
+    sendDashboardSms,
+    DashboardMessageType (..),
   )
 where
 
+import qualified Domain.Types.Booking as SRB
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DR
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
 import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified SharedLogic.MessageBuilder as MessageBuilder
+import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics
 
@@ -51,3 +65,68 @@ sendSMS merchantId = Sms.sendSMS handler
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
+
+data DashboardMessageType = BOOKING | ENDRIDE | ONBOARDING | CASH_COLLECTED deriving (Show, Generic, Eq)
+
+sendDashboardSms ::
+  ( EsqDBReplicaFlow m r,
+    HasCacheConfig r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    EsqDBFlow m r,
+    EsqLocDBFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Merchant ->
+  DashboardMessageType ->
+  Maybe DR.Ride ->
+  Id DP.Person ->
+  Maybe SRB.Booking ->
+  HighPrecMoney ->
+  m ()
+sendDashboardSms merchantId messageType mbRide driverId mbBooking amount = do
+  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  if transporterConfig.enableDashboardSms
+    then do
+      driver <- Esq.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      smsCfg <- asks (.smsCfg)
+      mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      let countryCode = fromMaybe "+91" driver.mobileCountryCode
+      let phoneNumber = countryCode <> mobileNumber
+          sender = smsCfg.sender
+
+      case messageType of
+        BOOKING -> whenJust mbRide \ride ->
+          whenJust mbBooking \booking -> do
+            message <-
+              MessageBuilder.buildBookingMessage merchantId $
+                MessageBuilder.BuildBookingMessageReq
+                  { otp = ride.otp,
+                    amount = show booking.estimatedFare
+                  }
+            sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        ENDRIDE -> whenJust mbRide \ride -> do
+          message <-
+            MessageBuilder.buildEndRideMessage merchantId $
+              MessageBuilder.BuildEndRideMessageReq
+                { rideAmount = show amount,
+                  rideShortId = ride.shortId.getShortId
+                }
+          sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        ONBOARDING -> do
+          message <-
+            MessageBuilder.buildOnboardingMessage merchantId $
+              MessageBuilder.BuildOnboardingMessageReq
+                {
+                }
+          sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        CASH_COLLECTED -> do
+          message <-
+            MessageBuilder.buildCollectCashMessage merchantId $
+              MessageBuilder.BuildCollectCashMessageReq
+                { amount = show amount
+                }
+          sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+    else do
+      logInfo "Merchant not configured to send dashboard sms"

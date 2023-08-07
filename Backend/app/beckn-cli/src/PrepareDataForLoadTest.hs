@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeApplications #-}
 
 module PrepareDataForLoadTest
   ( prepareDataForLoadTest,
@@ -98,17 +97,30 @@ generateSearchRequest = do
                                 API.Location
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
                                     address = Nothing
-                                  },
-                              time = API.TimeTimestamp example
+                                  }
                             },
-                        end = Nothing,
-                        tags =
-                          API.Tags
-                            { customer_language = Nothing
-                            }
+                        end =
+                          API.StopInfo
+                            { location =
+                                API.Location
+                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629},
+                                    address = Nothing
+                                  }
+                            },
+                        tags = Nothing,
+                        customer = Nothing
+                        -- API.Tags
+                        --   { --customer_language = Nothing
+                        --     code = Nothing,
+                        --     name = Nothing,
+                        --     list_1_code = Nothing,
+                        --     list_1_name = Nothing,
+                        --     list_1_value = Nothing,
+                        --     list_2_code = Nothing,
+                        --     list_2_name = Nothing,
+                        --     list_2_value = Nothing
+                        --   }
                       }
-                },
-            routeInfo = Nothing,
-            device = Nothing
+                }
           }
   pure $ API.BecknReq context intent

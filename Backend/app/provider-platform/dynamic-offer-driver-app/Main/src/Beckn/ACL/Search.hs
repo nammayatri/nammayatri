@@ -14,15 +14,21 @@
 
 module Beckn.ACL.Search where
 
+import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified Beckn.Types.Core.Taxi.Search as Search
+import Data.Aeson
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.External.Maps.Interface (LatLong (..))
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Tools.Error
+import qualified Tools.Maps as Maps
 
 buildSearchReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
@@ -30,11 +36,15 @@ buildSearchReq ::
   Search.SearchReq ->
   m DSearch.DSearchReq
 buildSearchReq subscriber req = do
+  now <- getCurrentTime
   let context = req.context
   validateContext Context.SEARCH context
   let intent = req.message.intent
   let pickup = intent.fulfillment.start
-  dropOff <- intent.fulfillment.end & fromMaybeM (InvalidRequest "Missing field: intent.fulfillment.end")
+      dropOff = intent.fulfillment.end
+  let distance = getDistance =<< intent.fulfillment.tags
+  let duration = getDuration =<< intent.fulfillment.tags
+  let customerLanguage = buildCustomerLanguage =<< intent.fulfillment.customer
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
@@ -50,13 +60,35 @@ buildSearchReq subscriber req = do
         bapCity = context.city,
         bapCountry = context.country,
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
-        pickupTime = pickup.time.timestamp,
+        pickupTime = now,
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
         pickupAddress = pickup.location.address,
         dropAddrress = dropOff.location.address,
-        routeDistance = (.distance) =<< req.message.routeInfo,
-        routeDuration = (.duration) =<< req.message.routeInfo,
-        device = req.message.device,
-        customerLanguage = intent.fulfillment.tags.customer_language,
-        routePoints = (.points) =<< req.message.routeInfo
+        routeDistance = distance,
+        routeDuration = duration,
+        device = Nothing,
+        routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
+        customerLanguage = customerLanguage
       }
+
+getDistance :: Search.TagGroups -> Maybe Meters
+getDistance tagGroups = do
+  tagValue <- getTag "route_info" "distance_info_in_m" tagGroups
+  distanceValue <- readMaybe $ T.unpack tagValue
+  Just $ Meters distanceValue
+
+getDuration :: Search.TagGroups -> Maybe Seconds
+getDuration tagGroups = do
+  tagValue <- getTag "route_info" "duration_info_in_s" tagGroups
+  durationValue <- readMaybe $ T.unpack tagValue
+  Just $ Seconds durationValue
+
+buildCustomerLanguage :: Search.Customer -> Maybe Language
+buildCustomerLanguage Search.Customer {..} = do
+  tagValue <- getTag "customer_info" "customer_language" person.tags
+  readMaybe $ T.unpack tagValue
+
+buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
+buildRoutePoints tagGroups = do
+  tagValue <- getTag "route_info" "route_points" tagGroups
+  decode $ encodeUtf8 tagValue

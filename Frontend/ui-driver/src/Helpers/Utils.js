@@ -382,6 +382,7 @@ export const storeCallBackForNotification = function (cb) {
           var callback = callbackMapper.map(function (notificationType) {
             cb(action(notificationType))();
           });
+          window.onResumeListeners = [];
           JBridge.storeCallBackForNotification(callback);
       }
   }}
@@ -392,6 +393,17 @@ export const storeCallBackForNotification = function (cb) {
 
 export const getcurrentdate = function (string) {
   var today = new Date();
+  var dd = String(today.getDate()).padStart(2, '0');
+  var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+  var yyyy = today.getFullYear();
+
+  today = yyyy + '-' + mm + '-' + dd;
+  return today;
+}
+
+export const getDatebyCount = function (count) {
+  var today = new Date();
+  today.setDate(today.getDate() - count);
   var dd = String(today.getDate()).padStart(2, '0');
   var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
   var yyyy = today.getFullYear();
@@ -649,3 +661,73 @@ export const getPastWeeks = function (count) {
     console.log("error in getPastWeeks", e);
   }
 };
+
+export const getPeriod = function(date) {
+  var currentDate = new Date();
+  var pastDate = new Date(date);
+  var diff = Math.floor(currentDate.getTime() - pastDate.getTime());
+  var days = Math.floor(diff/(1000 * 60 * 60 * 24));
+  var months = Math.floor(days/31);
+  var years = Math.floor(months/12);
+  var period = years > 0 ? years : months > 0 ? months : days > 0 ? days : 0
+  var periodType = years > 0 ? "Yrs" : months > 0 ? "Months" : days > 0 ? "Days" : "new"
+  return {period : Math.abs(period)
+  , periodType : periodType}
+  }
+
+export const getMerchantId = function(id) {
+  return window.merchantID;
+}
+
+export const startPP = function (payload) {
+	return function (sc) {
+		return function () {
+			var cb = function (code) {
+				return function (_response) {
+					return function () {
+            var response = JSON.parse(_response);
+						console.log("%cHyperpay Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                               
+						sc(response.payload.payload.status.value0)();
+					}
+				}
+			}
+			if (JOS) {      
+				try {
+					payload = JSON.parse(payload);                    
+					console.log("%cHyperpay Request ", "background:darkblue;color:white;font-size:13px;padding:2px", payload);
+
+					if (JOS.isMAppPresent("in.juspay.hyperpay")()){
+            console.log("inside process call");
+						JOS.emitEvent("in.juspay.hyperpay")("onMerchantEvent")(["process",JSON.stringify(payload)])(cb)();
+					} else {
+            sc("FAIL")();
+					}
+				} catch (err) {
+					console.error("Hyperpay Request not sent : ", err);
+				}
+			}else{
+            sc("FAIL")();
+        }
+		}
+	}
+}
+
+export const consumeBP = function (unit){
+  var jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: true }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+}
+
+export const isYesterday = function (dateString){
+  try {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1);
+    var date = new Date(dateString);
+    return (yesterday.toDateString() == date.toDateString());
+  }catch(error){
+    console.error(error);
+  }
+  return false;
+}

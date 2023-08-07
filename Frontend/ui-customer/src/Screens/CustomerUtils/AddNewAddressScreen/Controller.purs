@@ -17,6 +17,7 @@ module Screens.AddNewAddressScreen.Controller where
 
 import Prelude
 import Accessor (_description, _place_id, _distance)
+import Common.Types.App (LazyCheck (..))
 import Components.GenericHeader as GenericHeader
 import Components.LocationListItem as LocationListItemController
 import Components.PrimaryButton as PrimaryButton
@@ -28,10 +29,13 @@ import Data.Eq
 import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..), fromMaybe, fromJust)
+import Data.Number (fromString) as Number
 import Data.String (trim, length, split, Pattern(..), drop, indexOf, toLower)
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn5)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
-import Data.Number (fromString) as Number
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
 import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent)
 import Language.Strings (getString)
@@ -144,9 +148,7 @@ eval (AddressChanged input) state = do
     else continue state
 
 eval (MAPREADY key latitude longitude) state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0 "" []
-  case key of 
-    _ -> continueWithCmd state[ do
+    continueWithCmd state[ do
       _ <- checkPermissionAndUpdatePersonMarker state
       pure AfterRender
     ]
@@ -156,8 +158,7 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0 "" []
-  _ <- pure $ currentPosition ""
+  let _ = unsafePerformEffect $ runEffectFn5 locateOnMap true 0.0 0.0 state.data.polygonCoordinates state.data.nearByPickUpPoints
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
@@ -168,8 +169,10 @@ eval SetLocationOnMap state = do
 eval (UpdateLocation key lat lon) state = do
   case key of
     "LatLon" -> do
-      exit $ UpdateLocationName state (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
-    _ -> continue state
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
+    _ ->  if DA.length (DA.filter( \item -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
+            exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
+          else continue state
 
 eval (UpdateCurrLocName lat lon name) state = do
   continue state {data{locSelectedFromMap = name, latSelectedFromMap = (fromMaybe 0.0 (Number.fromString lat)), lonSelectedFromMap = (fromMaybe 0.0 (Number.fromString lon))}}
@@ -181,7 +184,7 @@ eval (SelectedCurrentLocation lat lon name) state = do
 eval (UpdateCurrentLocation lat lng) state = continue state{data{ lat = (fromMaybe 0.0 (Number.fromString lat) ), lon = (fromMaybe 0.0 (Number.fromString lng))}}
 
 eval RecenterCurrentLocation state = continueWithCmd state [do
-  _ <- pure $ currentPosition ""
+  _ <- pure $ currentPosition "NO_ZOOM"
   pure NoAction
   ]
 
@@ -293,7 +296,7 @@ getLocationList prediction = map (\x -> getLocation x) prediction
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
     postfixImageUrl : " "
-  , prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
+  , prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
@@ -348,10 +351,10 @@ encodeAddressDescription state = do
 getSavedLocations :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
 getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
   {
-  prefixImageUrl : case (toLower (item.tag) ) of
-                "home" -> "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png"
-                "work" -> "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png"
-                _      -> "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png"
+  prefixImageUrl : case (toLower (item.tag) ) of 
+                "home" -> "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"
+                "work" -> "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"
+                _      -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
 , postfixImageUrl : ""
 , postfixImageVisibility : false
 , title : (fromMaybe "" ((split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))
@@ -414,13 +417,14 @@ checkPermissionAndUpdatePersonMarker state = do
       else pure unit
 
 showPersonMarker :: AddNewAddressScreenState -> String -> Location -> Effect Unit
-showPersonMarker state marker location = animateCamera location.lat location.lng 19
+showPersonMarker state marker location = animateCamera location.lat location.lng 19 ""
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =
   { lat: lat
   , lng : lng
   , place : ""
+  , address : Nothing
   }
 
 calculateDistance ::Array LocationListItemState -> String -> Number -> Number -> Array DistInfo

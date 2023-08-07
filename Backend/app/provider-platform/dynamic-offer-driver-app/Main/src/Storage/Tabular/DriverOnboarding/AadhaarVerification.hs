@@ -15,13 +15,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Tabular.DriverOnboarding.AadhaarVerification where
 
 import qualified Domain.Types.DriverOnboarding.AadhaarVerification as Domain
+import Domain.Types.Person (Person)
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -32,7 +32,6 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     AadhaarVerificationT sql=aadhaar_verification
-      id Text
       driverId PersonTId
       driverName Text
       driverGender Text
@@ -42,21 +41,20 @@ mkPersist
       isVerified Bool
       createdAt  UTCTime
       updatedAt  UTCTime
-      Primary id
+      Primary driverId
       deriving Generic
     |]
 
 instance TEntityKey AadhaarVerificationT where
-  type DomainKey AadhaarVerificationT = Id Domain.AadhaarVerification
-  fromKey (AadhaarVerificationTKey _id) = Id _id
-  toKey (Id id) = AadhaarVerificationTKey id
+  type DomainKey AadhaarVerificationT = Id Person
+  fromKey (AadhaarVerificationTKey _id) = fromKey _id
+  toKey id = AadhaarVerificationTKey $ toKey id
 
 instance FromTType AadhaarVerificationT Domain.AadhaarVerification where
   fromTType AadhaarVerificationT {..} = do
     return $
       Domain.AadhaarVerification
-        { id = Id id,
-          driverId = fromKey driverId,
+        { driverId = fromKey driverId,
           ..
         }
 
@@ -64,7 +62,6 @@ instance ToTType AadhaarVerificationT Domain.AadhaarVerification where
   toTType :: Domain.AadhaarVerification -> AadhaarVerificationT
   toTType Domain.AadhaarVerification {..} =
     AadhaarVerificationT
-      { id = getId id,
-        driverId = toKey driverId,
+      { driverId = toKey driverId,
         ..
       }

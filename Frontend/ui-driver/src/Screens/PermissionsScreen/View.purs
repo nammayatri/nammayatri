@@ -16,7 +16,7 @@
 module Screens.PermissionsScreen.View where
 
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width, cornerRadius, weight, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width, cornerRadius, weight, afterRender, imageWithFallback, background)
 import Effect (Effect)
 import Language.Strings(getString)
 import Language.Types (STR(..))
@@ -30,6 +30,8 @@ import Screens.PermissionsScreen.ScreenData (Permissions(..), permissionsList, L
 import JBridge as JB
 import Common.Types.App
 import Screens.PermissionsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
@@ -37,9 +39,9 @@ screen initialState =
   , view
   , name : "PermissionsScreen"
   , globalEvents : [ (\ push -> do
+    _ <- JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
     _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack
     _ <- JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
-    _ <- JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
     pure $ pure unit)]
   , eval
   }
@@ -51,6 +53,7 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , afterRender push (const AfterRender)
+    , background Color.white900
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -161,7 +164,7 @@ checkBox item state =
         , imageView
         [ width (V 18)
         , height (V 18)
-        , imageWithFallback "ny_ic_check_box,https://assets.juspay.in/nammayatri/images/driver/ny_ic_check_box.png"
+        , imageWithFallback $ "ny_ic_check_box," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_box.png"
         , visibility case item.permission of
             Location -> if state.props.isLocationPermissionChecked then VISIBLE else GONE
             Overlay -> if state.props.isOverlayPermissionChecked then VISIBLE else GONE
@@ -175,10 +178,10 @@ titleImage :: forall w. Listtype -> PrestoDOM (Effect Unit) w
 titleImage item = 
  imageView
     [ imageWithFallback case item.permission of
-     Location -> "ny_ic_permission_location,https://assets.juspay.in/nammayatri/images/driver/ny_ic_permission_location.png"
-     Overlay -> "ny_ic_permission_overlay,https://assets.juspay.in/nammayatri/images/driver/ny_ic_permission_overlay.png"
-     AutoStart -> "ny_ic_permission_autostart,https://assets.juspay.in/nammayatri/images/driver/ny_ic_permission_autostart.png"
-     Battery -> "ny_ic_permission_battery,https://assets.juspay.in/nammayatri/images/driver/ny_ic_permission_battery.png"
+     Location -> "ny_ic_permission_location," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_location.png"
+     Overlay -> "ny_ic_permission_overlay," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_overlay.png"
+     AutoStart -> "ny_ic_permission_autostart," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_autostart.png"
+     Battery -> "ny_ic_permission_battery," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_battery.png"
     , width (V 44)
     , height (V 44)
     , margin (Margin 15 2 15 0)

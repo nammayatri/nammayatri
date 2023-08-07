@@ -56,11 +56,9 @@ view push state =
                 , color Color.black700
                 , gravity CENTER
                 , weight 1.0
-                , textSize FontSize.a_16
-                , fontStyle $ FontStyle.regular LanguageStyle
                 , padding (PaddingBottom 40)
                 , margin (MarginHorizontal 10 10)
-                ])
+                ] <> FontStyle.body5 TypoGraphy)
                 , linearLayout
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
@@ -78,7 +76,8 @@ primaryButtonConfig state = let
       { textConfig
       { text = state.buttonText
       , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+    --   , textSize = FontSize.a_18 NEED TO CHECK
+      }
       , background = Color.black900
       , cornerRadius = 0.0
       , height = (V 50)

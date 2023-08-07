@@ -29,20 +29,30 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Prelude
 import PrestoDOM
+import MerchantConfig.Utils (getValueFromConfig)
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    imageUploadCondition = getValueFromConfig "imageUploadOptional" || state.data.imageFront /= ""
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT), textSize = FontSize.a_16}
+      { textConfig{ text = (getString NEXT)}
       , width = MATCH_PARENT
       , background = Color.black900
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , height = (V 60)
-      , isClickable = state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9 && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "")
-      , alpha = if (state.data.imageFront /= "" && state.data.dob /= "" && DS.length state.data.driver_license_number >= 9) && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && (state.data.dateOfIssue /= Just "") then 1.0 else 0.8
+      , isClickable = state.data.dob /= "" && 
+                      DS.length state.data.driver_license_number >= 9 && 
+                      (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) 
+                      && (state.data.dateOfIssue /= Just "" && 
+                      imageUploadCondition)
+      , alpha = if (state.data.dob /= "" && 
+                    DS.length state.data.driver_license_number >= 9) && 
+                    (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && 
+                    (state.data.dateOfIssue /= Just "" && 
+                    imageUploadCondition) then 1.0 else 0.8
       }
   in primaryButtonConfig'
 
@@ -54,14 +64,11 @@ primaryEditTextConfig state = let
       { editText
         { singleLine = true
           , pattern = Just "[A-Z0-9]*,16"
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           , placeholder = (getString ENTER_DL_NUMBER)
           , capsLock = true
         }
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString DRIVING_LICENSE_NUMBER)
+        { text = (getString DRIVING_LICENSE_NUMBER)
         , color = Color.greyTextColor
         }
       , margin = (MarginBottom 15)
@@ -78,16 +85,13 @@ primaryEditTextConfigReEnterDl state = let
       { editText
         { singleLine = true
           , pattern = Just "[A-Z0-9]*,16"
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           , placeholder = (getString ENTER_DL_NUMBER)
           , capsLock = true
           , color = Color.black800
         }
       , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString RE_ENTER_DRIVING_LICENSE_NUMBER)
+        { text = (getString RE_ENTER_DRIVING_LICENSE_NUMBER)
         , color = Color.greyTextColor
         }
       , margin = (MarginBottom 15)

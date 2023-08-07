@@ -14,23 +14,27 @@
 
 module Domain.Action.Dashboard.Volunteer where
 
+import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking.BookingLocation as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Vehicle.Variant as Domain
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (Success))
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.SMS as Sms
 
 bookingInfo :: ShortId DM.Merchant -> Text -> Flow Common.BookingInfoResponse
 bookingInfo merchantShortId otpCode = do
@@ -47,8 +51,17 @@ bookingInfo merchantShortId otpCode = do
           estimatedDistance,
           estimatedFare,
           estimatedDuration,
-          riderName
+          riderName,
+          vehicleVariant = convertVehicleVariant vehicleVariant
         }
+
+    convertVehicleVariant Domain.SEDAN = Common.SEDAN
+    convertVehicleVariant Domain.SUV = Common.SUV
+    convertVehicleVariant Domain.HATCHBACK = Common.HATCHBACK
+    convertVehicleVariant Domain.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
+    convertVehicleVariant Domain.TAXI = Common.TAXI
+    convertVehicleVariant Domain.TAXI_PLUS = Common.TAXI_PLUS
+
     buildBookingLocation Domain.BookingLocation {..} =
       Common.BookingLocation
         { address = buildLocationAddress address,
@@ -69,6 +82,9 @@ assignCreateAndStartOtpRide _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
 
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  fork "sending dashboard sms - start ride" $ do
+    mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
+    Sms.sendDashboardSms booking.providerId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0
   shandle <- RideStart.buildStartRideHandle requestor.merchantId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return Success

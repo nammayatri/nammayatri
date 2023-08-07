@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Tools.Client (DataServer (..), CallServerAPI (..), clientWithMerchant) where
@@ -69,20 +68,6 @@ instance
     dataServer <- getDataServer serverName
     let driverOfferAPIs = mkAPIs dataServer.token
     callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr (Proxy :: Proxy Raw)
-
---instance
---  ( CoreMetrics m,
---    HasFlowEnv m k '["dataServers" ::: [DataServer]],
---    MonadFlow m,
---    CallServerAPI apis m k d r1,
---    FromJSON a,
---    ToJSON a,
---    r ~ ((LBS.ByteString, a) -> r1)
---  ) =>
---  CallServerAPI apis m k ((LBS.ByteString, a) -> d) r
---  where
---  callServerAPI serverName mkAPIs descr f c =
---    callServerAPI @_ @m serverName mkAPIs descr (`f` c)
 
 instance
   ( CoreMetrics m,

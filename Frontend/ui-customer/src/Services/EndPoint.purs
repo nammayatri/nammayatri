@@ -23,6 +23,9 @@ import Services.Config (getBaseUrl)
 triggerOTP :: String -> String
 triggerOTP dummyString = (getBaseUrl "dummy1") <> "/auth"
 
+triggerSignatureOTP :: String -> String
+triggerSignatureOTP dummyString = (getBaseUrl "dummy1") <> "/auth/signature"
+
 resendOTP :: String -> String
 resendOTP token = (getBaseUrl "2") <> "/auth/otp/"<>token<>"/resend"
 
@@ -138,3 +141,6 @@ onCall _ = (getBaseUrl "38") <> "/onCall"
 
 callbackRequest :: String -> String
 callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
+
+bookingFeedback :: String -> String
+bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"

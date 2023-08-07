@@ -30,6 +30,7 @@ module Domain.Action.UI.Driver
     DriverAlternateNumberReq (..),
     DriverAlternateNumberRes (..),
     DriverAlternateNumberOtpReq (..),
+    DriverPhotoUploadReq (..),
     ResendAuth (..),
     DriverPaymentHistoryResp,
     MetaDataReq (..),
@@ -45,6 +46,7 @@ module Domain.Action.UI.Driver
     respondQuote,
     offerQuoteLockKey,
     getStats,
+    driverPhotoUpload,
     validate,
     verifyAuth,
     resendOtp,
@@ -55,8 +57,14 @@ module Domain.Action.UI.Driver
   )
 where
 
+import AWS.S3 as S3
+import qualified Dashboard.Common.Message as M
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified Data.ByteString as BS
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
+import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DDF
 import Domain.Types.DriverInformation (DriverInformation)
@@ -64,10 +72,12 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.MetaData as MD
@@ -81,7 +91,9 @@ import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
+import EulerHS.Types (base64Encode)
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import Kernel.External.Encryption
@@ -92,7 +104,9 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
+import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime)
+import Kernel.ServantMultipart
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
@@ -134,6 +148,7 @@ import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
@@ -143,12 +158,14 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Text.Read as Read
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 import Tools.SMS as Sms hiding (Success)
+import Tools.Verification
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
@@ -176,7 +193,8 @@ data DriverInformationRes = DriverInformationRes
     mode :: Maybe DriverInfo.DriverMode,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
-    gender :: Maybe SP.Gender
+    gender :: Maybe SP.Gender,
+    mediaUrl :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -208,7 +226,8 @@ data DriverEntityRes = DriverEntityRes
     mode :: Maybe DriverInfo.DriverMode,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
-    gender :: Maybe SP.Gender
+    gender :: Maybe SP.Gender,
+    mediaUrl :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -326,6 +345,27 @@ data DriverStatsRes = DriverStatsRes
     bonusEarning :: Money
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverPhotoUploadReq = DriverPhotoUploadReq
+  { image :: FilePath,
+    fileType :: M.FileType,
+    reqContentType :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp DriverPhotoUploadReq where
+  fromMultipart form = do
+    DriverPhotoUploadReq
+      <$> fmap fdPayload (lookupFile "image" form)
+      <*> (lookupInput "fileType" form >>= (Read.readEither . T.unpack))
+      <*> fmap fdFileCType (lookupFile "image" form)
+
+instance ToMultipart Tmp DriverPhotoUploadReq where
+  toMultipart driverPhotoUploadReq =
+    MultipartData
+      [Input "fileType" (show driverPhotoUploadReq.fileType)]
+      [FileData "image" (T.pack driverPhotoUploadReq.image) "" (driverPhotoUploadReq.image)]
 
 data DriverAlternateNumberReq = DriverAlternateNumberReq
   { mobileCountryCode :: Text,
@@ -525,6 +565,9 @@ buildDriverEntityRes (person, driverInfo) = do
   vehicleMB <- Esq.runInReplica $ QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
+  mediaUrl <- forM person.faceImageId $ \mediaId -> do
+    mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+    return mediaEntry.url
   return $
     DriverEntityRes
       { id = person.id,
@@ -550,7 +593,8 @@ buildDriverEntityRes (person, driverInfo) = do
         mode = driverInfo.mode,
         clientVersion = person.clientVersion,
         bundleVersion = person.bundleVersion,
-        gender = Just person.gender
+        gender = Just person.gender,
+        mediaUrl = mediaUrl
       }
 
 changeDriverEnableState ::
@@ -738,7 +782,8 @@ buildDriver req merchantId = do
         SP.whatsappNotificationEnrollStatus = Nothing,
         SP.bundleVersion = Nothing,
         SP.alternateMobileNumber = Nothing,
-        SP.unencryptedAlternateMobileNumber = Nothing
+        SP.unencryptedAlternateMobileNumber = Nothing,
+        SP.faceImageId = Nothing
       }
 
 buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id DM.Merchant -> m SV.Vehicle
@@ -809,7 +854,7 @@ getNearbySearchRequests (driverId, merchantId) = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -910,7 +955,7 @@ respondQuote (driverId, _) req = do
                   customerExtraFee = searchTry.customerExtraFee,
                   nightShiftCharge = Nothing
                 }
-          driverQuote <- buildDriverQuote driver searchReq sReqFD fareParams
+          driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
           Esq.runTransaction $ do
             QDrQt.create driverQuote
@@ -940,9 +985,10 @@ respondQuote (driverId, _) req = do
       SP.Person ->
       DSR.SearchRequest ->
       SearchRequestForDriver ->
+      Id DEstimate.Estimate ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver searchReq sd fareParams = do
+    buildDriverQuote driver searchReq sd estimateId fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
@@ -967,6 +1013,7 @@ respondQuote (driverId, _) req = do
             providerId = searchReq.providerId,
             estimatedFare,
             fareParams,
+            estimateId,
             specialLocationTag = searchReq.specialLocationTag
           }
     thereAreActiveQuotes = do
@@ -1013,6 +1060,80 @@ getStats (driverId, merchantId) date = do
                   fareParameters
            in Money $ GHCL.sum driverSelFares' + GHCL.sum customerExtFees' + GHCL.sum deadKmFare'
       }
+
+driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
+driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId driverId <> ":hitsCount"
+
+driverPhotoUpload :: (Id SP.Person, Id DM.Merchant) -> DriverPhotoUploadReq -> Flow APISuccess
+driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
+  checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
+  person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
+  encImage <- L.runIO $ base64Encode <$> BS.readFile image
+  imageExtension <- validateContentType
+  let req = IF.FaceValidationReq {file = encImage}
+  _ <- validateFaceImage merchantId req
+  filePath <- createFilePath (getId driverId) fileType imageExtension
+  transporterConfig <- CQTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
+  let fileUrl =
+        transporterConfig.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "driver-profile-picture"
+          & T.replace "<FILE_PATH>" filePath
+  result <- try @_ @SomeException $ S3.put (T.unpack filePath) encImage
+  case result of
+    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+    Right _ -> do
+      case person.faceImageId of
+        Just mediaFileId -> do
+          Esq.runTransaction $ do
+            QPerson.updateMediaId driverId Nothing
+            MFQuery.deleteById mediaFileId
+        Nothing -> return ()
+      createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType}
+  where
+    validateContentType = do
+      case fileType of
+        Common.Image -> case reqContentType of
+          "image/png" -> pure "png"
+          "image/jpeg" -> pure "jpg"
+          _ -> throwError $ FileFormatNotSupported reqContentType
+        _ -> throwError $ FileFormatNotSupported reqContentType
+
+createFilePath ::
+  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+  Text ->
+  Common.FileType ->
+  Text ->
+  m Text
+createFilePath driverId fileType imageExtension = do
+  pathPrefix <- asks (.s3Env.pathPrefix)
+  now <- getCurrentTime
+  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+  return
+    ( pathPrefix <> "/driver-profile-picture/" <> "driver-" <> driverId <> "/"
+        <> show fileType
+        <> "/"
+        <> fileName
+        <> imageExtension
+    )
+
+createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Flow APISuccess
+createMediaEntry driverId Common.AddLinkAsMedia {..} = do
+  fileEntity <- mkFile url
+  Esq.runTransaction $ do
+    MFQuery.create fileEntity
+    QPerson.updateMediaId driverId (Just fileEntity.id)
+  return Success
+  where
+    mkFile fileUrl = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        Domain.MediaFile
+          { id,
+            _type = Domain.Image,
+            url = fileUrl,
+            createdAt = now
+          }
 
 makeAlternatePhoneNumberKey :: Id SP.Person -> Text
 makeAlternatePhoneNumberKey id = "DriverAlternatePhoneNumber:PersonId-" <> id.getId

@@ -55,6 +55,7 @@ oldIdfyWebhookHandler secret val = do
       case vsc of
         Verification.IdfyConfig idfyCfg -> do
           Idfy.webhookHandler idfyCfg onVerify secret val
+        Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -76,6 +77,7 @@ idfyWebhookHandler merchantShortId secret val = do
       case vsc of
         Verification.IdfyConfig idfyCfg -> do
           Idfy.webhookHandler idfyCfg onVerify secret val
+        Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
@@ -86,7 +88,7 @@ onVerify resp respDump = do
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   -- running statusHandler to enable Driver
-  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId)
+  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId) verificationReq.multipleRC
 
   return ack_
   where

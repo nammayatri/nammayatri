@@ -31,6 +31,7 @@ import Control.Monad.Free (Free)
 import Control.Monad.Except.Trans (ExceptT)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Control.Transformers.Back.Trans (BackT)
+import Data.Maybe (Maybe(..))
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
@@ -84,15 +85,24 @@ derive instance newtypeNotificationData :: Newtype NotificationData _
 instance encodeNotificationData :: Encode NotificationData where encode = defaultEncode
 instance decodeNotificationData :: Decode NotificationData where decode = defaultDecode
 
+newtype SignatureAuthData = SignatureAuthData {
+  signature :: String
+  , authData :: String
+  }
+
+derive instance genericSignatureAuthData :: Generic SignatureAuthData _
+derive instance newtypeSignatureAuthData :: Newtype SignatureAuthData _
+instance encodeSignatureAuthData :: Encode SignatureAuthData where encode = defaultEncode
+instance decodeSignatureAuthData :: Decode SignatureAuthData where decode = defaultDecode
+
 newtype GlobalPayload = GlobalPayload
-  { activity_recreated :: String
-  , betaAssets :: Boolean
+  { betaAssets :: Maybe Boolean
   , payload :: Payload
-  , requestId :: String
-  , sdkName :: String
-  , sdkVersion :: String
-  , service :: String
-  , service_based :: Boolean
+  , requestId :: Maybe String
+  , sdkName :: Maybe String
+  , sdkVersion :: Maybe String
+  , service :: Maybe String
+  , service_based :: Maybe Boolean
   }
 
 derive instance newGlobalPayload :: Newtype GlobalPayload _
@@ -101,15 +111,31 @@ instance decodeGlobalPayload :: Decode GlobalPayload where decode = defaultDecod
 instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode
 
 newtype Payload = Payload
-  { service :: String
-  , environment :: String
+  { service :: Maybe String
+  , environment :: Maybe String
   , notificationData :: Maybe NotificationData
+  , signatureAuthData :: Maybe SignatureAuthData
+  , search_type :: Maybe String
+  , source :: Maybe LocationData
+  , destination :: Maybe LocationData
+  , payment_method :: Maybe String
   }
+
+newtype LocationData = LocationData {
+    lat :: Number
+  , lon :: Number
+  , name :: Maybe String
+}
 
 derive instance newPayload :: Newtype Payload _
 derive instance genericPayload :: Generic Payload _
 instance decodePayload :: Decode Payload where decode = defaultDecode
 instance encodePayload :: Encode Payload where encode = defaultEncode
+
+derive instance newLocationData :: Newtype LocationData _
+derive instance genericLocationData :: Generic LocationData _
+instance decodeLocationData :: Decode LocationData where decode = defaultDecode
+instance encodeLocationData :: Encode LocationData where encode = defaultEncode
 
 type OptionButtonList = {
     reasonCode :: String,
@@ -125,6 +151,14 @@ newtype Version = Version
     maintenance :: Int
   }
 
+type CheckBoxOptions = {
+    text :: String,
+    subText :: String,
+    value :: String,
+    isSelected :: Boolean
+}
+
+
 derive instance genericVersion :: Generic Version _
 derive instance newtypeVersion :: Newtype Version _
 instance standardEncodeVersion :: StandardEncode Version where standardEncode (Version body) = standardEncode body
@@ -132,6 +166,27 @@ instance showVersion :: Show Version where show = genericShow
 instance decodeVersion :: Decode Version where decode = defaultDecode
 instance encodeVersion  :: Encode Version where encode = defaultEncode
 
+newtype EventPayload = EventPayload {
+    event :: String
+  , payload :: Maybe InnerPayload
+}
+
+type InnerPayload = {
+    action :: String
+  , trip_amount :: Maybe Int
+  , trip_id :: Maybe String
+  , screen :: Maybe String
+  , exit_app :: Boolean
+  , ride_status :: Maybe String
+}
+
+derive instance genericEventPayload :: Generic EventPayload _
+instance encodeEventPayload  :: Encode EventPayload where encode = defaultEncode
+
+type LayoutBound = 
+  { height :: Int
+  , width :: Int
+}
 -- newtype LocationLatLong = LocationLatLong
 --   { lat :: String
 --   , long :: String
@@ -146,3 +201,45 @@ instance encodeVersion  :: Encode Version where encode = defaultEncode
 -- derive instance newtypeLocationLatLong :: Newtype LocationLatLong _
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
+
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup
+derive instance genericRateCardType :: Generic RateCardType _
+instance eqRateCardType :: Eq RateCardType where eq = genericEq
+
+type FareList = {
+  key :: String,
+  val :: String
+}
+
+data PaymentStatus = Success | Pending | Failed
+
+derive instance genericPaymentStatus :: Generic PaymentStatus _
+instance standardEncodePaymentStatus :: StandardEncode PaymentStatus where standardEncode _ = standardEncode {}
+instance showPaymentStatus :: Show PaymentStatus where show = genericShow
+instance decodePaymentStatus :: Decode PaymentStatus where decode = defaultDecode
+instance encodePaymentStatus  :: Encode PaymentStatus where encode = defaultEncode
+instance eqPaymentStatus :: Eq PaymentStatus where eq = genericEq
+
+data APIPaymentStatus =  NEW
+                      | PENDING_VBV
+                      | CHARGED
+                      | AUTHENTICATION_FAILED 
+                      | AUTHORIZATION_FAILED
+                      | JUSPAY_DECLINED
+                      | AUTHORIZING
+                      | COD_INITIATED
+                      | STARTED
+                      | AUTO_REFUNDED
+
+derive instance genericAPIPaymentStatus :: Generic APIPaymentStatus _
+instance showAPIPaymentStatus :: Show APIPaymentStatus where show = genericShow
+instance decodeAPIPaymentStatus :: Decode APIPaymentStatus where decode = defaultEnumDecode
+instance encodeAPIPaymentStatus  :: Encode APIPaymentStatus where encode = defaultEnumEncode
+instance eqAPIPaymentStatus :: Eq APIPaymentStatus where eq = genericEq
+instance standardEncodeAPIPaymentStatus :: StandardEncode APIPaymentStatus where standardEncode _ = standardEncode {}
+
+type DateObj = {
+  date :: Int
+, month :: String
+, year :: Int
+}

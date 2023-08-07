@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -18,19 +18,20 @@ module Screens.AddNewAddressScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import PrestoDOM (Visibility(..))
 import Screens.HomeScreen.ScreenData (dummyAddress)
-import Screens.Types (AddNewAddressScreenState, CardType(..))
+import Screens.Types (AddNewAddressScreenState, CardType(..), Location)
 import Services.API (Prediction(..))
+import MerchantConfig.DefaultConfig as DC
  
 initData :: AddNewAddressScreenState
 initData = {
   data: {
     locationList : []
   , selectedItem : {
-      prefixImageUrl : "" 
+      prefixImageUrl : ""
     , postfixImageUrl : ""
     , postfixImageVisibility : false
-    , lat : Nothing 
-    , lon : Nothing 
+    , lat : Nothing
+    , lon : Nothing
     , placeId : Nothing
     , subTitle : ""
     , title : ""
@@ -65,10 +66,13 @@ initData = {
   , lonSelectedFromMap : 0.0
   , existsAs : ""
   , currentLocation : ""
-  , currLat : Nothing 
+  , currLat : Nothing
   , currLon : Nothing
   , recentSearchs : { predictionArray : []}
   , addressComponents : []
+  , polygonCoordinates : ""
+  , nearByPickUpPoints : []
+  , config : DC.config
   },
   props: {
   showSavePlaceView : false
@@ -82,6 +86,17 @@ initData = {
   , selectFromCurrentOrMap : true
   , isSearchedLocationServiceable : true
   , editSavedLocation : false
-  } 
+  , isSpecialZone : false
+  , defaultPickUpPoint : ""
+  , isServiceable : false
+  }
 
 }
+
+dummyLocation :: Location
+dummyLocation = {
+   place : "",
+   lat : 0.0,
+   lng : 0.0,
+   address : Nothing
+ }

@@ -25,21 +25,26 @@ import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (not, (<>))
+import Prelude (not, (<>), (==))
 import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString CONTINUE) }
+      { textConfig { text = (getString CONTINUE) 
+                  ,  color = state.data.config.primaryTextColor 
+                  }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActiveMobileNumber
       , alpha = if state.props.btnActiveMobileNumber then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
+      , background = state.data.config.primaryBackground
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
       }
   in primaryButtonConfig'
@@ -48,11 +53,13 @@ verifyOTPButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 verifyOTPButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString CONTINUE) }
+      { textConfig{ text = (getString CONTINUE) 
+                  , color = state.data.config.primaryTextColor }
       , id = "PrimaryButtonOTP"
       , isClickable = state.props.btnActiveOTP
       , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
+      , background = state.data.config.primaryBackground
       , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
       }
   in primaryButtonConfig'
@@ -66,18 +73,14 @@ mobileNumberEditTextConfig state = let
             color = Color.black800
           , singleLine = true
           , pattern = Just "[0-9]*,10"
-          , fontStyle = FontStyle.bold LanguageStyle
-          , textSize = FontSize.a_16
           , margin = MarginHorizontal 10 10
           , focused = state.props.mNumberEdtFocused
           , text = state.props.editTextVal
         }
       , background = Color.white900
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString ENTER_YOUR_MOBILE_NUMBER)
+        { text = (getString ENTER_YOUR_MOBILE_NUMBER)
         , color = Color.black800
-        , fontStyle = FontStyle.semiBold LanguageStyle
         , alpha = 0.8
         }
       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
@@ -91,8 +94,8 @@ mobileNumberEditTextConfig state = let
       , showConstantField = true
       , constantField { 
           color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
-        , textSize = FontSize.a_16
         , padding = PaddingBottom 1
+        , textStyle = FontStyle.SubHeading2
         }
       }
     in primaryEditTextConfig'
@@ -107,8 +110,7 @@ otpEditTextConfig state = let
         , singleLine = true
         , pattern = Just "[0-9]*,4"
         , margin = MarginHorizontal 10 10
-        , fontStyle = FontStyle.bold LanguageStyle
-        , textSize = FontSize.a_16
+        , textStyle = FontStyle.Body7
         , letterSpacing = state.props.letterSpacing
         , text = ""
         , focused = state.props.otpEdtFocused
@@ -117,20 +119,16 @@ otpEditTextConfig state = let
       , background = Color.white900
       , margin = (Margin 0 30 0 20)
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> state.data.mobileNumber
+        { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> state.data.mobileNumber
         , color = Color.black800
-        , fontStyle = FontStyle.regular LanguageStyle
         , alpha = 0.8
         } 
       , id = (EHC.getNewIDWithTag "EnterOTPNumberEditText")
       , type = "number"
       , height = V 54
       , errorLabel {
-            text = (getString WRONG_OTP),
+            text = if state.props.attemptLeft == "" then getString WRONG_OTP else getString INCORRECT_OTP_PLEASE_TRY_AGAIN <> state.props.attemptLeft <> getString N_MORE_ATTEMPTS_LEFT,
             visibility = VISIBLE,
-            textSize = FontSize.a_12,
-            fontStyle = FontStyle.bold LanguageStyle,
             alpha = 0.8
       },
       width = MATCH_PARENT,
@@ -148,7 +146,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12)
       , visibility = if state.props.enterOTP then VISIBLE else GONE-- config.prefixImageConfig.visibility -- Removed choose langauge screen
       } 

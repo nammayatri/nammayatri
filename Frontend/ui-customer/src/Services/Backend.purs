@@ -16,25 +16,27 @@
 module Services.Backend where
 
 import Services.API
-import Services.Config as SC
+
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..), LazyCheck(..))
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
 import Foreign.Generic (encode)
-import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, getPreviousVersion)
-import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
+import Helpers.Utils (decodeError, toString, getTime, getPreviousVersion)
+import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import Juspay.OTP.Reader as Readers
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
 import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
-import Presto.Core.Types.API (Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+-- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (Address, Stage(..))
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService, MapRouteConfig)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
@@ -45,45 +47,32 @@ import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersi
 import Data.Array ((!!), take)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Debug (spy)
+import Services.Config as SC
+import Engineering.Helpers.Utils as EHU
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-                        then pure $ (Headers [  Header "Content-Type" "application/json",
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ]
-                                    )
-                        else pure $ (Headers [  Header "Content-Type" "application/json",
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN) ,
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ]
-                                    )
+    regToken <- loadS $ show REGISTERATION_TOKEN
+    pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
 
 getHeaders' :: String -> FlowBT String Headers
 getHeaders' _ = do
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-            then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                                ]
-                                        )
-            else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                                ]
-                                        )
+    regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
+    lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
 
 
 
@@ -103,15 +92,14 @@ withAPIResult url f flow = do
             _ <- pure $ printLog "Err Code" (err.code)
             _ <- pure $ printLog "Err" err
             let errResp = err.response
-            let codeMessage = decodeErrorCode errResp.errorMessage
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeErrorMessage errResp.errorMessage
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
 
             _ <- (trackApiCallFlow Tracker.Network Tracker.Exception DETAILS start end (err.code) (codeMessage) url "" "") $> errResp
             _ <- trackExceptionFlow Tracker.API_CALL Tracker.Sdk DETAILS url (codeMessage)
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
-                _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
                 _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
                 _ <- liftFlow $ stopChatListenerService
                 _ <- pure $ factoryResetApp ""
@@ -133,13 +121,12 @@ withAPIResultBT url f errorHandler flow = do
             _ <- pure $ printLog "Err" err
 
             let errResp = err.response
-            let codeMessage = decodeErrorCode errResp.errorMessage
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeErrorMessage errResp.errorMessage
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
             _ <- pure $ printLog "message" userMessage
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore REGISTRATION_APPROVED
                 lift $ lift $ liftFlow $ stopChatListenerService
                 pure $ factoryResetApp ""
@@ -163,20 +150,18 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
             _ <- pure $ printLog "Err Code" (err.code)
             _ <- pure $ printLog "Err" err
             let errResp = err.response
-            let codeMessage = decodeErrorCode errResp.errorMessage
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "code" codeMessage
-            let userMessage = decodeErrorMessage errResp.errorMessage
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
 
             if (err.code == 401 &&  codeMessage == "INVALID_TOKEN") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
-                deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore REGISTRATION_APPROVED
                 pure $ factoryResetApp ""
                   else pure unit
             (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
-
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
     _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
@@ -185,7 +170,7 @@ triggerOTPBT payload = do
     where
     errorHandler errorPayload = do
         let errResp = errorPayload.response
-        let codeMessage = decodeErrorCode errResp.errorMessage
+        let codeMessage = decodeError errResp.errorMessage "errorCode"
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
             pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
             else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
@@ -194,12 +179,23 @@ triggerOTPBT payload = do
 
 
 makeTriggerOTPReq :: String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber = TriggerOTPReq
+makeTriggerOTPReq mobileNumber =
+    let merchant = SC.getMerchantId ""
+    in TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : if ( SC.getMerchantId "")== "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "")
+      "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant
     }
+
+---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------
+
+triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerSignatureOTPResp)
+triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
+    Headers headers <- getHeaders ""
+    withAPIResult (EP.triggerSignatureOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerSignatureOTPReq signatureAuthData.authData)
+    where
+        unwrapResponse (x) = x
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
@@ -210,7 +206,7 @@ resendOTPBT token = do
     where
     errorHandler  errorPayload  = do
         let errResp = errorPayload.response
-        let codeMessage = decodeErrorCode errResp.errorMessage
+        let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "AUTH_BLOCKED") then
             pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
             else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
@@ -226,12 +222,12 @@ verifyTokenBT payload token = do
     where
     errorHandler errorPayload = do
         let errResp = errorPayload.response
-        let codeMessage = decodeErrorCode errResp.errorMessage
+        let codeMessage = decodeError errResp.errorMessage "errorCode"
         if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
             pure $ toast (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false}})
-                void $ lift $ lift $ toggleLoader false
+                void $ lift $ lift $ EHU.toggleLoader false
                 pure $ toast "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
                 pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
@@ -313,7 +309,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
     where
     errorHandler errorPayload  = do
         pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
-        _ <- lift $ lift $ toggleLoader false
+        _ <- lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
 
 -- ------------------------------------------------------------------------ GetCoordinatesBT Function --------------------------------------------------------------------------------------
@@ -329,7 +325,6 @@ placeDetailsBT (PlaceDetailsReq id) = do
 rideSearchBT :: SearchReq -> FlowBT String SearchRes
 rideSearchBT payload = do
         headers <- getHeaders' ""
-        _ <- pure $ spy "" "req for searchid"
         withAPIResultBT (EP.searchReq "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where
       errorHandler errorPayload = do
@@ -489,8 +484,8 @@ updateProfile (UpdateProfileReq payload) = do
     where
         unwrapResponse (x) = x
 
-mkUpdateProfileRequest :: UpdateProfileReq
-mkUpdateProfileRequest =
+mkUpdateProfileRequest :: LazyCheck -> UpdateProfileReq
+mkUpdateProfileRequest _ =
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing
@@ -723,13 +718,13 @@ type Markers = {
 
 driverTracking :: String -> Markers
 driverTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
 rideTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 
@@ -863,3 +858,20 @@ makeSosStatus :: String -> SosStatus
 makeSosStatus sosStatus = SosStatus {
      "status" : sosStatus
 }
+
+
+------------------------------------------------------------------------ Ride Feedback ------------------------------------------------------------------------------------
+
+bookingFeedbackBT :: RideFeedbackReq -> FlowBT String RideFeedbackRes
+bookingFeedbackBT payload = do
+    headers <- getHeaders' ""
+    withAPIResultBT (EP.bookingFeedback "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+      errorHandler errorPayload = do
+            BackT $ pure GoBack
+
+makeRideFeedBackReq :: String -> Array FeedbackAnswer -> RideFeedbackReq
+makeRideFeedBackReq id feedbackList = RideFeedbackReq
+    {   "rideId" : id
+    ,   "feedback" : feedbackList
+    }

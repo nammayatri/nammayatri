@@ -37,6 +37,7 @@ import Components.SelectListModal.Controller as GenderSelection
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import MerchantConfig.Utils (getValueFromConfig)
 
 removeAlternateNumberConfig :: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
 removeAlternateNumberConfig state = let
@@ -54,18 +55,15 @@ removeAlternateNumberConfig state = let
         },
       option1 {
         text = (getString CANCEL)
-      , fontSize = FontSize.a_16
       , color = Color.black900
       , strokeColor = Color.black700
-      , fontStyle = FontStyle.semiBold LanguageStyle
       },
       option2 {text = (getString YES_REMOVE_IT)
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
-      , fontSize = FontSize.a_16
-      , margin = (MarginLeft 12)
-      , fontStyle = FontStyle.semiBold LanguageStyle }
+      , margin = (MarginLeft 12) 
+      }
     }
   in popUpConfig'
 
@@ -117,21 +115,15 @@ enterOtpExceededModalStateConfig state = let
         },
       option1 {
         text = (getString TRY_AGAIN_LATER)
-      , fontSize = FontSize.a_16
       , color = Color.black900
       , strokeColor = Color.black700
-      , fontStyle = FontStyle.semiBold LanguageStyle
       , visibility =false
-
       },
       option2 {text = (getString TRY_AGAIN_LATER)
       , color = Color.yellow900
       , strokeColor = Color.white900
-      , fontSize = FontSize.a_16
       , margin = (Margin 16 0 16 0 )
-      , fontStyle = FontStyle.semiBold LanguageStyle
       , width = (V 50)
-
       , background = Color.black900
       }
     }
@@ -147,7 +139,6 @@ enterOtpState state = let
         otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
       inputTextConfig {
         text = state.props.alternateMobileOtp,
-        fontSize = FontSize.a_22,
         focusIndex = state.props.enterOtpFocusIndex
       },
       headingConfig {
@@ -161,7 +152,6 @@ enterOtpState state = let
       subHeadingConfig {
         text = if((getValueToLocalStore LANGUAGE_KEY) == "EN_US") then (getString (OTP_SENT_TO) <> (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
         color = Color.black800,
-        fontSize = FontSize.a_14,
         margin = (Margin 0 0 0 8),
         visibility = (if (state.props.otpIncorrect) == false then VISIBLE else GONE)
       },
@@ -189,7 +179,6 @@ enterMobileNumberState state = let
         inputTextConfig {
           text = if(state.props.isEditAlternateMobile) then (if (state.data.driverEditAlternateMobile  == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverEditAlternateMobile)) else (if (state.data.driverAlternateMobile == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverAlternateMobile))
         , color = if(state.props.isEditAlternateMobile) then (if( state.data.driverEditAlternateMobile == Nothing ) then Color.black500 else Color.black800) else (if( state.data.driverAlternateMobile == Nothing ) then Color.black500 else Color.black800)
-        , fontSize = FontSize.a_16
         , focusIndex = 0
         , gravity = LEFT
         },
@@ -221,6 +210,5 @@ optionList state =
       {title:DRIVER_NAME_INFO, value:"" , editButtonReq : false},
       {title:DRIVER_MOBILE_INFO, value:"" ,editButtonReq : false},
       {title:DRIVER_LICENCE_INFO, value:"",editButtonReq : false},
-      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile},
-      {title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}
-    ]
+      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile}
+    ] <> if getValueFromConfig "showGenderBanner" then [{title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}] else []

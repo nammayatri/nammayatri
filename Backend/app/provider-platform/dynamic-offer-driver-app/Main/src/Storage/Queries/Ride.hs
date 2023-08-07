@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Ride where
 
@@ -422,3 +421,12 @@ findStuckRideItems merchantId bookingIds now = do
   pure $ mkStuckRideItem <$> res
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
+
+findLastRideAssigned :: Transactionable m => Id Person -> m (Maybe Ride)
+findLastRideAssigned driverId = do
+  Esq.findOne $ do
+    lastRide <- from $ table @RideT
+    where_ $ lastRide ^. RideDriverId ==. val (toKey driverId)
+    orderBy [desc $ lastRide ^. RideCreatedAt]
+    limit 1
+    return lastRide

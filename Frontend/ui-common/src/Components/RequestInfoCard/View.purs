@@ -16,18 +16,20 @@
 module Components.RequestInfoCard.View where
 
 import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig)
-import Prelude ((*), Unit, ($), const, (/), unit, (-))
+import Prelude ((*), Unit, ($), const, (/), unit, (-), (<>))
 import Effect (Effect)
 import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (screenWidth)
+import Common.Types.App (LazyCheck(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-view push state= 
+view push state = 
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -70,32 +72,28 @@ view push state=
               ]
         ]
         , genericTextView push state.secondaryText
-        , textView
+        , textView $
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , color state.buttonConfig.color
           , gravity state.buttonConfig.gravity
-          , fontStyle state.buttonConfig.fontStyle
           , text state.buttonConfig.text
-          , textSize state.buttonConfig.fontSize
           , padding state.buttonConfig.padding
           , margin state.buttonConfig.margin
           , onClick push $ const Close
-          ]
+          ] <> (FontStyle.getFontStyle state.buttonConfig.textStyle LanguageStyle)
      ]
 
   ]
 
 genericTextView :: forall w. (Action -> Effect Unit) -> TextConfig -> PrestoDOM (Effect Unit) w
 genericTextView push config = 
-  textView
+  textView $
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , padding config.padding
   , margin config.margin
   , text config.text
-  , fontStyle config.fontStyle
-  , textSize config.fontSize
   , color config.color
   , visibility config.visibility
-  ]
+  ] <> (FontStyle.getFontStyle config.textStyle LanguageStyle)

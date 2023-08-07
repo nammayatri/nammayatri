@@ -11,15 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Types.Id
+import Kernel.Utils.IOLogging (LoggerEnv)
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person ()
 
@@ -52,11 +54,10 @@ findById ::
 findById = Esq.findById
 
 findLastVehicleRC ::
-  (Transactionable m, EncFlow m r) =>
-  Text ->
+  (Transactionable m) =>
+  DbHash ->
   m (Maybe VehicleRegistrationCertificate)
-findLastVehicleRC certNumber = do
-  certNumberHash <- getDbHash certNumber
+findLastVehicleRC certNumberHash = do
   rcs <- findAll $ do
     rc <- from $ table @VehicleRegistrationCertificateT
     where_ $ rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
@@ -66,6 +67,16 @@ findLastVehicleRC certNumber = do
   where
     headMaybe [] = Nothing
     headMaybe (x : _) = Just x
+
+updateVehicleVariant :: Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> SqlDB ()
+updateVehicleVariant id variant = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ VehicleRegistrationCertificateVehicleVariant =. val variant
+      ]
+    where_ $
+      tbl ^. VehicleRegistrationCertificateId ==. val (id.getId)
 
 findByRCAndExpiry ::
   Transactionable m =>
@@ -80,3 +91,22 @@ findByRCAndExpiry certNumber expiry = do
       rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
     return rc
+
+findAllById :: Transactionable m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+findAllById rcIds =
+  findAll $ do
+    rc <- from $ table @VehicleRegistrationCertificateT
+    where_ $ rc ^. VehicleRegistrationCertificateId `in_` valList (map (.getId) rcIds)
+    return rc
+
+findLastVehicleRCWrapper ::
+  ( Transactionable m,
+    EncFlow m r,
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    HasField "loggerEnv" r LoggerEnv
+  ) =>
+  Text ->
+  m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCWrapper certNumber = do
+  certNumberHash <- getDbHash certNumber
+  Esq.runInReplica $ findLastVehicleRC certNumberHash
