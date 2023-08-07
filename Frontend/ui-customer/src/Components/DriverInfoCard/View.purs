@@ -297,7 +297,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
-  ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then textView[] else sosView push state
+  ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else sosView push state
     , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
@@ -363,12 +363,19 @@ locationTrackButton push state =
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
-  ][  imageView
-      [ imageWithFallback $ "ny_ic_location_track," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
-      , height $ V 18
-      , width $ V 18
-      , margin $ Margin 10 10 10 10
-      ]
+  ][  linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , background Color.white900
+      , stroke $ "1,"<> Color.grey900
+      , cornerRadius 20.0
+      ][  imageView
+        [ imageWithFallback $ "ny_ic_location_track," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
+        , height $ V 18
+        , width $ V 18
+        , margin $ Margin 10 10 10 10
+        ]
+      ]  
   ]
 
 sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
@@ -724,10 +731,10 @@ contactView push state =
             ][ textView $
                 [ text $"is " <> secondsToHms state.data.eta
                 , color Color.black800
-                , visibility if state.data.distance > 1000 then VISIBLE else GONE
+                , visibility if (state.data.distance > 1000 && (secondsToHms state.data.eta) /= "") then VISIBLE else GONE
                 ] <> FontStyle.subHeading1 TypoGraphy
               , textView $
-                [ text case state.data.distance > 1000 of
+                [ text case (state.data.distance > 1000 && (secondsToHms state.data.eta) /= "") of
                     true -> getString AWAY
                     false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
                 , color Color.black800
@@ -806,8 +813,8 @@ driverDetailsView push state =
           ] <> FontStyle.body7 TypoGraphy
         , textView (
           [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of 
-                          "TAXI_PLUS" -> (getString AC_TAXI)
-                          "TAXI" -> (getString NON_AC_TAXI)
+                          "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
+                          "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
                           _ -> "")
           , color Color.black700
           , width $ V ((screenWidth unit) /2 - 20)
