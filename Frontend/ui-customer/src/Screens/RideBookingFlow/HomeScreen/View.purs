@@ -272,7 +272,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if showLabel then (if os == "IOS" then 90 else 70) else (if os == "IOS" then 20 else 34))
+                    , padding (PaddingBottom if showLabel then if os == "IOS" then 90 else 70 else if os == "IOS" then 54 else 34)
                     , gravity CENTER
                     , orientation VERTICAL
                     ]
@@ -1669,9 +1669,9 @@ confirmPickUpLocationView push state =
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             , gravity CENTER
-            , padding (Padding zonePadding 4 zonePadding 4)
+            , padding if os == "IOS" then (PaddingVertical 4 4) else (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
-            , visibility if state.props.confirmLocationCategory /= "" && os /= "IOS" then VISIBLE else GONE
+            , visibility if state.props.confirmLocationCategory /= "" then VISIBLE else GONE
             ] [ imageView
                 [ width (V 20)
                 , height (V 20)

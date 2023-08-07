@@ -575,6 +575,12 @@ accountSetUpScreenFlow = do
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen -> enterMobileNumberScreen{data{ otp = ""}})
       enterMobileNumberScreenFlow
 
+fetchDefaultPickupPoint :: Array Location -> Number -> Number -> String
+fetchDefaultPickupPoint locations lati longi =
+  case filter (\loc -> loc.lat - lati >= -0.0001 && loc.lat - lati <= 0.0001 && loc.lng - longi <= 0.0001 && loc.lng - longi >= -0.0001) locations of
+    [foundLocation] -> foundLocation.place
+    _ -> ""
+
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   (GlobalState currentState) <- getState
@@ -727,7 +733,10 @@ homeScreenFlow = do
                                               }) srcSpecialLocation.gates
         (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place, findingQuotesProgress = 0.0 }})
+        if (length pickUpPoints > 0) then do
+          let pickupLoc = if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, defaultPickUpPoint = pickupLoc, findingQuotesProgress = 0.0 }})
+          else modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = "", defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place, findingQuotesProgress = 0.0 }})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           else pure unit
@@ -1325,7 +1334,7 @@ rideSearchFlow flowType = do
         false -> do
           _ <- pure $ removeAllPolylines ""
           _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong finalState.data.polygonCoordinates finalState.data.nearByPickUpPoints
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, defaultPickUpPoint = "", confirmLocationCategory = ""}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false
         true -> do
@@ -1340,7 +1349,7 @@ rideSearchFlow flowType = do
               when (finalState.props.customerTip.enableTips) $ do
                 cancelEstimate finalState.props.estimateId
               _ <- pure $ updateLocalStage TryAgain
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true, defaultPickUpPoint = "", confirmLocationCategory = ""}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true}})
             _        -> do
               let sourceSpecialTagIcon = specialLocationIcons finalState.props.zoneType.sourceTag
                   destSpecialTagIcon = specialLocationIcons finalState.props.zoneType.destinationTag
@@ -1355,7 +1364,7 @@ rideSearchFlow flowType = do
                     Just (LatLong source), Just (LatLong dest) -> do
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : address.formattedAddress, address : Nothing }, destination : { lat : dest.lat, lng : dest.lon, place : finalState.data.destination, address : Nothing } }) } })
                     _ , _ -> pure unit
-                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}, defaultPickUpPoint = "", confirmLocationCategory = ""}})
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
                   _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
                   if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000 )then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
@@ -1372,7 +1381,7 @@ rideSearchFlow flowType = do
                         void $ lift $ lift $ toggleLoader false
 
                 Nothing -> pure unit
-    else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel, defaultPickUpPoint = "", confirmLocationCategory = ""}})
+    else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
 
   homeScreenFlow
 
