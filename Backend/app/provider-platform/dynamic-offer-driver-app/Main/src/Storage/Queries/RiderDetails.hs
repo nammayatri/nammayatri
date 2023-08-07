@@ -50,10 +50,10 @@ updateHasTakenValidRide (Id riderId) = do
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
 findAllReferredByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [RiderDetails]
-findAllReferredByDriverId (Id driverId) = findAllWithKV [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
+findAllReferredByDriverId (Id driverId) = findAllWithDb [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
 
 findByMobileNumberHashAndMerchant :: (L.MonadFlow m, Log m) => DbHash -> Id Merchant -> m (Maybe RiderDetails)
-findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
+findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
 updateReferralInfo :: (L.MonadFlow m, MonadTime m, Log m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m ()
 updateReferralInfo customerNumberHash merchantId referralId driverId = do

@@ -64,14 +64,14 @@ findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq sho
 
 loadAllProviders :: (L.MonadFlow m, Log m) => m [Merchant]
 loadAllProviders = do
-  findAllWithKV [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
+  findAllWithDb [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
 
 -- findAll :: Transactionable m => m [Merchant]
 -- findAll =
 --   Esq.findAll $ do from $ table @MerchantT
 
 findAll :: (L.MonadFlow m, Log m) => m [Merchant]
-findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
+findAll = findAllWithDb [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
 -- update :: Merchant -> SqlDB ()
 -- update org = do

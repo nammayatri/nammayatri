@@ -108,4 +108,4 @@ instance Serialize RiderDetails where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash], ['referredByDriver]])
+$(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash, 'merchantId]])

@@ -98,4 +98,4 @@ instance Serialize DriverRCAssociation where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''DriverRCAssociationT ['id] [['driverId]])
+$(enableKVPG ''DriverRCAssociationT ['id] [['driverId], ['rcId]])

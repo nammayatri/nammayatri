@@ -72,14 +72,15 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
         )
     ]
 
+-- Should not support driver Id as a key in index, since it will be 1 to many; routing these queries through DB
 findByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   now <- getCurrentTime
-  findAllWithKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
+  findAllWithDb [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
 
 deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByDriverId (Id personId) =
-  deleteWithKV
+  deleteWithDb
     [Se.Is BeamSRFD.driverId (Se.Eq personId)]
 
 setInactiveBySTId :: (L.MonadFlow m, Log m) => Id SearchTry -> m ()

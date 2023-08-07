@@ -234,7 +234,7 @@ getDriverInfos driverLocs = do
 
 getOnRideStuckDriverIds :: (L.MonadFlow m, Log m) => m [DriverInformation]
 getOnRideStuckDriverIds = do
-  rideIds <- findAllWithKV [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
+  rideIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
   findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> rideIds)]]
 
 getVehicles ::
@@ -405,10 +405,10 @@ findByIdAndRoleAndMerchantId :: (L.MonadFlow m, Log m) => Id Person -> Person.Ro
 findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 findAllByMerchantId :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
-findAllByMerchantId roles (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
+findAllByMerchantId roles (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
 
 findAdminsByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
-findAdminsByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
+findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
 findByMobileNumberAndMerchant :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =

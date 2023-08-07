@@ -112,4 +112,4 @@ leaderBoardConfigsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 leaderBoardConfigsToPSModifiers =
   M.empty
 
-$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId]])
+$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId, 'leaderBoardType]])

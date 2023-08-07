@@ -24,7 +24,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
 findAll :: (L.MonadFlow m, Log m) => m [CancellationReason]
-findAll = findAllWithOptionsKV [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
+findAll = findAllWithOptionsDb [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
 
 instance FromTType' BeamCR.CancellationReason CancellationReason where
   fromTType' BeamCR.CancellationReasonT {..} = do

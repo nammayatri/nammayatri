@@ -73,7 +73,7 @@ createInitialDriverStats driverId = do
 --     return $ driverStats ^. DriverStatsTId
 
 getTopDriversByIdleTime :: (L.MonadFlow m, Log m) => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime count_ ids = findAllWithOptionsKV [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
+getTopDriversByIdleTime count_ ids = findAllWithOptionsDb [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
 
 -- updateIdleTime :: Id Driver -> SqlDB ()
 -- updateIdleTime driverId = updateIdleTimes [driverId]
@@ -103,7 +103,7 @@ updateIdleTimes driverIds = do
 -- fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
 fetchAll :: (L.MonadFlow m, Log m) => m [DriverStats]
-fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
+fetchAll = findAllWithDb [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 
 -- findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
 -- findById = Esq.findById
@@ -220,7 +220,7 @@ setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 getDriversSortedOrder :: (L.MonadFlow m, Log m) => Maybe Integer -> m [DriverStats]
-getDriversSortedOrder mbLimitVal = findAllWithOptionsKV [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
+getDriversSortedOrder mbLimitVal = findAllWithOptionsDb [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
 
 setCancelledRidesCountAndIncrementEarningsMissed :: (MonadFlow m) => Id Driver -> Int -> Money -> m ()
 setCancelledRidesCountAndIncrementEarningsMissed (Id driverId') cancelledCount missedEarning = do

@@ -106,4 +106,4 @@ merchantMessageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantMessageToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantMessageT ['merchantId] [])
+$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])

@@ -151,4 +151,4 @@ rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
 rideToPSModifiers =
   M.empty
 
-$(enableKVPG ''RideT ['id] [['bookingId], ['driverId]])
+$(enableKVPG ''RideT ['id] [['bookingId]])

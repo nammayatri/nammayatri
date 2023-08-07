@@ -168,4 +168,4 @@ messageReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
 messageReportToPSModifiers =
   M.empty
 
-$(enableKVPG ''MessageReportT ['driverId] [['messageId]])
+$(enableKVPG ''MessageReportT ['driverId, 'messageId] [['messageId], ['driverId]])

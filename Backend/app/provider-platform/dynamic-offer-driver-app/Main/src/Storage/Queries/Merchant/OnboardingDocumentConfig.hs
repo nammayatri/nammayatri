@@ -93,7 +93,7 @@ update config = do
       Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
       Se.Set BeamODC.updatedAt now
     ]
-    [Se.Is BeamODC.merchantId $ Se.Eq $ getId config.merchantId]
+    [Se.Is BeamODC.merchantId $ Se.Eq $ getId config.merchantId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
 
 instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   fromTType' BeamODC.OnboardingDocumentConfigT {..} = do

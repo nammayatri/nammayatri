@@ -121,4 +121,4 @@ onboardingDocumentConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 onboardingDocumentConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [])
+$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [['merchantId]])

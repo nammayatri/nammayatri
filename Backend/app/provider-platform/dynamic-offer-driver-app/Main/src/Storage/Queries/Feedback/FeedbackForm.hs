@@ -29,7 +29,7 @@ import qualified Storage.Beam.Feedback.FeedbackForm as BFF
 --   from $ table @FeedbackFormT
 
 findAllFeedback :: (L.MonadFlow m, Log m) => m [FeedbackFormRes]
-findAllFeedback = findAllWithKV [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
+findAllFeedback = findAllWithDb [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
 
 -- findAllFeedbackByRating :: Transactionable m => Int -> m [FeedbackFormRes]
 -- findAllFeedbackByRating rating =
@@ -41,7 +41,7 @@ findAllFeedback = findAllWithKV [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
 --     pure feedbackForm
 
 findAllFeedbackByRating :: (L.MonadFlow m, Log m) => Int -> m [FeedbackFormRes]
-findAllFeedbackByRating rating = findAllWithKV [Se.Or [Se.Is BFF.rating $ Se.Eq $ Just rating, Se.Is BFF.rating $ Se.Eq Nothing]]
+findAllFeedbackByRating rating = findAllWithDb [Se.Or [Se.Is BFF.rating $ Se.Eq $ Just rating, Se.Is BFF.rating $ Se.Eq Nothing]]
 
 instance FromTType' BFF.FeedbackForm FeedbackFormRes where
   fromTType' BFF.FeedbackFormT {..} = do

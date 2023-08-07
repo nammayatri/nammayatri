@@ -97,7 +97,7 @@ upsert cancellationReason = do
 --     return (rideBookingCancellationReason ^. BookingCancellationReasonBookingId)
 
 findAllBookingIdsCancelledByDriverId :: MonadFlow m => Id Person -> m [Id Booking]
-findAllBookingIdsCancelledByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
+findAllBookingIdsCancelledByDriverId driverId = findAllWithDb [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
 
 instance FromTType' (BeamBCR.BookingCancellationReasonT Identity) BookingCancellationReason where
   fromTType' BeamBCR.BookingCancellationReasonT {..} = do

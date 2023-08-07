@@ -119,4 +119,4 @@ instance Serialize Exophone where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone]])
+$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])

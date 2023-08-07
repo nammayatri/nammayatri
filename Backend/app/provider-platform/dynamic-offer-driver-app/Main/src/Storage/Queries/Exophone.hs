@@ -75,7 +75,7 @@ findAllByMerchantId (Id merchantId) = do
 -- findAllExophones = findAll $ from $ table @ExophoneT
 
 findAllExophones :: (L.MonadFlow m, Log m) => m [Exophone]
-findAllExophones = findAllWithKV [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
+findAllExophones = findAllWithDb [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
 
 -- updateAffectedPhones :: [Text] -> SqlDB ()
 -- updateAffectedPhones primaryPhones = do
@@ -93,24 +93,24 @@ findAllExophones = findAllWithKV [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
 --       ]
 --     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
-updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
-updateAffectedPhonesHelper primaryNumbers = do
-  dbConf <- getMasterBeamConfig
-  let indianMobileCode = "+91"
-  geoms <-
-    L.runDB dbConf $
-      L.findRow $
-        B.select $
-          B.limit_ 1 $
-            B.filter_'
-              ( \BeamE.ExophoneT {..} ->
-                  B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
-                    B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
-              )
-              $
-              -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-              B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
-  either (const (pure False)) (pure . isJust) geoms
+-- updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
+-- updateAffectedPhonesHelper primaryNumbers = do
+--   dbConf <- getMasterBeamConfig
+--   let indianMobileCode = "+91"
+--   geoms <-
+--     L.runDB dbConf $
+--       L.findRow $
+--         B.select $
+--           B.limit_ 1 $
+--             B.filter_'
+--               ( \BeamE.ExophoneT {..} ->
+--                   B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
+--                     B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
+--               )
+--               $
+--               -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+--               B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
+--   either (const (pure False)) (pure . isJust) geoms
 
 updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do

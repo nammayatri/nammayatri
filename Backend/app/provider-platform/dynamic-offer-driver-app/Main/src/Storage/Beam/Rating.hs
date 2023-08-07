@@ -96,4 +96,4 @@ instance Serialize Rating where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''RatingT ['id] [['rideId], ['driverId]])
+$(enableKVPG ''RatingT ['id] [['rideId]])

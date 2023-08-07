@@ -63,7 +63,7 @@ findById (Id messageId) = do
 
 findAllWithLimitOffset :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
-  messages <- findAllWithOptionsKV [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
+  messages <- findAllWithOptionsDb [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
   pure $
     map
       ( \Message {..} ->

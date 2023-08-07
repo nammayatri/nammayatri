@@ -261,7 +261,7 @@ updateStatusByIds rideIds status = do
 updateDistance :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> HighPrecMeters -> m ()
 updateDistance driverId distance = do
   now <- getCurrentTime
-  updateOneWithKV
+  updateWithKV
     [ Se.Set BeamR.traveledDistance distance,
       Se.Set BeamR.updatedAt now
     ]

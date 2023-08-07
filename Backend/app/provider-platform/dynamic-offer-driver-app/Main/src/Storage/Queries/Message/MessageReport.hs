@@ -89,13 +89,13 @@ findById :: (L.MonadFlow m, Log m) => Id MessageReport -> m (Maybe MessageReport
 findById (Id id) = findOneWithKV [Se.Is BeamMR.messageId $ Se.Eq id]
 
 findAllMessageWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
-findAllMessageWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamM.createdAt) Nothing Nothing
+findAllMessageWithSeConditionCreatedAtdesc conditions = findAllWithOptionsDb conditions (Se.Desc BeamM.createdAt) Nothing Nothing
 
 findAllMessageTranslationWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
 findAllMessageTranslationWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamMT.createdAt) Nothing Nothing
 
-findAllMessageReportWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
-findAllMessageReportWithSeCondition = findAllWithKV
+-- findAllMessageReportWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
+-- findAllMessageReportWithSeCondition = findAllWithKV
 
 -- findByDriverIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 -- findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
@@ -139,11 +139,12 @@ findAllMessageReportWithSeCondition = findAllWithKV
 
 --     messageTranslationMap messageTranslations = Map.toList $ Map.fromList [(mt.messageId, mt) | mt <- messageTranslations]
 
+-- Routing this directly through DB
 findByDriverIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = fromMaybe 10 mbLimit `min` 10
       offsetVal = fromMaybe 0 mbOffset
-  messageReport <- findAllMessageReportWithSeCondition [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+  messageReport <- findAllWithDb [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
   message <- findAllMessageWithSeConditionCreatedAtdesc [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
   let rawMessageFromMessage Message {..} =
         RawMessage
@@ -277,7 +278,7 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id P.Person -> m ()
-deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamMR.driverId (Se.Eq personId)]
+deleteByPersonId (Id personId) = deleteWithDb [Se.Is BeamMR.driverId (Se.Eq personId)]
 
 instance FromTType' BeamMR.MessageReport MessageReport where
   fromTType' BeamMR.MessageReportT {..} = do

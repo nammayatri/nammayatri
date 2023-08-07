@@ -81,7 +81,7 @@ findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id B
 findStuckBookings (Id merchantId) bookingIds now = do
   let updatedTimestamp = addUTCTime (- (6 * 60 * 60)) now
   (Domain.Types.Booking.id <$>)
-    <$> findAllWithKV
+    <$> findAllWithDb
       [ Se.And
           [ Se.Is BeamB.providerId (Se.Eq merchantId),
             Se.Is BeamB.id (Se.In (getId <$> bookingIds)),

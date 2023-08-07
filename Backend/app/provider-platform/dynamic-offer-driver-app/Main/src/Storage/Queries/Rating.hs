@@ -42,7 +42,7 @@ updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
     [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.driverId (Se.Eq driverId)]]
 
 findAllRatingsForPerson :: (L.MonadFlow m, Log m) => Id Person -> m [Rating]
-findAllRatingsForPerson driverId = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
+findAllRatingsForPerson driverId = findAllWithDb [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
 
 findRatingForRide :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]

@@ -32,7 +32,7 @@ import qualified Storage.Beam.DriverBlockReason as BeamDBR
 --   Esq.findAll $ from $ table @DriverBlockReasonT
 
 findAll :: (L.MonadFlow m, Log m) => m [DriverBlockReason]
-findAll = findAllWithKV [Se.Is BeamDBR.reasonCode $ Se.Not $ Se.Eq ""]
+findAll = findAllWithDb [Se.Is BeamDBR.reasonCode $ Se.Not $ Se.Eq ""]
 
 instance FromTType' BeamDBR.DriverBlockReason DriverBlockReason where
   fromTType' BeamDBR.DriverBlockReasonT {..} = do
