@@ -7,6 +7,7 @@ let
   openStreetDataFileName = "southern-zone-230805";
   openStreetDataFile = builtins.fetchurl {
     url = "http://download.geofabrik.de/asia/india/${openStreetDataFileName}.osm.pbf";
+    sha256 = "sha256:1y5vhcn47bqmsl6k94nf8c6kry25bmipf2vng2702b4ly8zncyvz";
   };
 in
 {
