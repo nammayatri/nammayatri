@@ -213,15 +213,14 @@ process dbStreamKey count = do
       -- EL.logInfo ("DB_SYNC_PROCESS_TIME" :: Text) (show (0 :: Integer))
       -- void $ publishDBSyncMetric $ Event.QueryBatchProcessTime (int2Double 0)
       pure 0
-    Right (Just c) -> do
-      successCount <- run c
-      {- Let's try to decode and run the commands -}
-      -- afterProcess <- EL.getCurrentDateInMillis
-      -- EL.logInfo ("DB_SYNC_PROCESS_TIME" :: Text) (show $ afterProcess - beforeProcess)
-      -- void $ publishDBSyncMetric $ Event.QueryBatchProcessTime (int2Double (afterProcess - beforeProcess))
-      {- time taken to process batch -}
-      pure successCount
+    Right (Just c) -> run c
   where
+    {- Let's try to decode and run the commands -}
+    -- afterProcess <- EL.getCurrentDateInMillis
+    -- EL.logInfo ("DB_SYNC_PROCESS_TIME" :: Text) (show $ afterProcess - beforeProcess)
+    -- void $ publishDBSyncMetric $ Event.QueryBatchProcessTime (int2Double (afterProcess - beforeProcess))
+    {- time taken to process batch -}
+
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries

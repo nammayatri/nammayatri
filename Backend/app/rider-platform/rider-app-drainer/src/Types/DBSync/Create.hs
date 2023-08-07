@@ -21,6 +21,7 @@ import qualified "rider-app" Storage.Beam.FeedbackForm as FeedbackForm
 import qualified "rider-app" Storage.Beam.Geometry as Geometry
 import qualified "rider-app" Storage.Beam.HotSpotConfig as HotSpotConfig
 import qualified "rider-app" Storage.Beam.Issue as Issue
+import qualified "rider-app" Storage.Beam.Maps.DirectionsCache as DirectionsCache
 import qualified "rider-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "rider-app" Storage.Beam.Merchant as Merchant
 import qualified "rider-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
@@ -63,6 +64,7 @@ data DBCreateObject
   | FareBreakupObject FareBreakup.FareBreakup
   | GeometryObject Geometry.Geometry
   | IssueObject Issue.Issue
+  | DirectionsCacheObject DirectionsCache.DirectionsCache
   | PlaceNameCacheObject PlaceNameCache.PlaceNameCache
   | MerchantObject Merchant.Merchant
   | MerchantMessageObject MerchantMessage.MerchantMessage
@@ -111,6 +113,7 @@ modelName (ExophoneObject _) = "Exophone"
 modelName (FareBreakupObject _) = "FareBreakup"
 modelName (GeometryObject _) = "Geometry"
 modelName (IssueObject _) = "Issue"
+modelName (DirectionsCacheObject _) = "DirectionsCache"
 modelName (PlaceNameCacheObject _) = "PlaceNameCache"
 modelName (MerchantObject _) = "Merchant"
 modelName (MerchantMessageObject _) = "MerchantMessage"

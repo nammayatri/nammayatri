@@ -31,6 +31,7 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("FareBreakup" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FareBreakupObject obj), val) <- cmds]
     |::| runCreate dbConf ("Geometry" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (GeometryObject obj), val) <- cmds]
     |::| runCreate dbConf ("Issue" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (IssueObject obj), val) <- cmds]
+    |::| runCreate dbConf ("DirectionsCache" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DirectionsCacheObject obj), val) <- cmds]
     |::| runCreate dbConf ("PlaceNameCache" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PlaceNameCacheObject obj), val) <- cmds]
     |::| runCreate dbConf ("Merchant" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantObject obj), val) <- cmds]
     |::| runCreate dbConf ("MerchantMessage" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantMessageObject obj), val) <- cmds]

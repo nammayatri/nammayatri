@@ -140,9 +140,41 @@ let hccfg =
       }
 
 let tables =
-      { enableKVForWriteAlso = [] : List Text
-      , enableKVForRead = [] : List Text
-      , tableAllocation = 0 : Natural
+      { enableKVForWriteAlso =
+            [ "booking"
+            , "registration_token"
+            , "search_request"
+            , "person_flow_status"
+            , "estimate_breakup"
+            , "estimate"
+            , "on_search_event"
+            , "driver_offer"
+            , "quote"
+            , "booking_location"
+            , "ride"
+            , "fare_breakup"
+            , "special_zone_quote"
+            , "search_request_location"
+            ]
+          : List Text
+      , enableKVForRead =
+            [ "booking"
+            , "registration_token"
+            , "search_request"
+            , "person_flow_status"
+            , "estimate_breakup"
+            , "estimate"
+            , "on_search_event"
+            , "driver_offer"
+            , "quote"
+            , "booking_location"
+            , "ride"
+            , "fare_breakup"
+            , "special_zone_quote"
+            , "search_request_location"
+            ]
+          : List Text
+      , tableAllocation = 100 : Natural
       }
 
 in  { esqDBCfg

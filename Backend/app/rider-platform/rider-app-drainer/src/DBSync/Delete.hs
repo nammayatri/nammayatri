@@ -36,6 +36,7 @@ runDeleteCommands (cmd, val) = do
     DeleteDBCommand id _ _ _ _ (FareBreakupDeleteOptions _ whereClause) -> runDelete id val whereClause ("FareBreakup" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (GeometryDeleteOptions _ whereClause) -> runDelete id val whereClause ("Geometry" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (IssueDeleteOptions _ whereClause) -> runDelete id val whereClause ("Issue" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (DirectionsCacheDeleteOptions _ whereClause) -> runDelete id val whereClause ("DirectionsCache" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (PlaceNameCacheDeleteOptions _ whereClause) -> runDelete id val whereClause ("PlaceNameCache" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MerchantDeleteOptions _ whereClause) -> runDelete id val whereClause ("Merchant" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MerchantMessageDeleteOptions _ whereClause) -> runDelete id val whereClause ("MerchantMessage" :: Text) =<< dbConf

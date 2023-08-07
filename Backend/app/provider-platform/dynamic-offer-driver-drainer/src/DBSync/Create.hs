@@ -22,6 +22,7 @@ runCreateCommands :: Show b => [(CreateDBCommand, b)] -> ReaderT Env EL.Flow [Ei
 runCreateCommands cmds = do
   dbConf <- fromJust <$> L.getOption KBT.PsqlDbCfg
   runCreate dbConf ("RegistrationToken" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
+    |::| runCreate dbConf ("BapMetadata" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BapMetadataObject obj), val) <- cmds]
     |::| runCreate dbConf ("Booking" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingObject obj), val) <- cmds]
     |::| runCreate dbConf ("BookingLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingLocationObject obj), val) <- cmds]
     |::| runCreate dbConf ("BookingCancellationReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BookingCancellationReasonObject obj), val) <- cmds]
@@ -29,6 +30,7 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("CallStatus" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CallStatusObject obj), val) <- cmds]
     |::| runCreate dbConf ("CancellationReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (CancellationReasonObject obj), val) <- cmds]
     |::| runCreate dbConf ("DriverFlowStatus" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverFlowStatusObject obj), val) <- cmds]
+    |::| runCreate dbConf ("DriverBlockReason" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverBlockReasonObject obj), val) <- cmds]
     |::| runCreate dbConf ("DriverFee" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverFeeObject obj), val) <- cmds]
     |::| runCreate dbConf ("DriverInformation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverInformationObject obj), val) <- cmds]
     |::| runCreate dbConf ("DriverLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverLocationObject obj), val) <- cmds]
@@ -78,6 +80,7 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("Message" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MessageObject obj), val) <- cmds]
     |::| runCreate dbConf ("MessageReport" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MessageReportObject obj), val) <- cmds]
     |::| runCreate dbConf ("MessageTranslation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MessageTranslationObject obj), val) <- cmds]
+    |::| runCreate dbConf ("MetaData" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MetaDataObject obj), val) <- cmds]
     |::| runCreate dbConf ("OnboardingDocumentConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (OnboardingDocumentConfigObject obj), val) <- cmds]
     |::| runCreate dbConf ("Person" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonObject obj), val) <- cmds]
     |::| runCreate dbConf ("QuoteSpecialZone" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (QuoteSpecialZoneObject obj), val) <- cmds]
