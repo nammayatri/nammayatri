@@ -49,17 +49,16 @@ createOrderService ::
   ) =>
   Id Merchant ->
   Id Person ->
-  Maybe [Text] ->
-  Id DOrder.PaymentOrder ->
+  [Text] ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m Payment.CreateOrderResp
-createOrderService merchantId personId driverIds orderId createOrderReq createOrderCall = do
-  mbExistingOrder <- runInReplica $ QOrder.findById orderId
+createOrderService merchantId personId invoiceIds createOrderReq createOrderCall = do
+  mbExistingOrder <- runInReplica $ QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId personId orderId createOrderReq createOrderResp driverIds
+      paymentOrder <- buildPaymentOrder merchantId personId createOrderReq createOrderResp invoiceIds
       Esq.runTransaction $
         QOrder.create paymentOrder
       pure createOrderResp
@@ -115,17 +114,16 @@ buildPaymentOrder ::
   ) =>
   Id Merchant ->
   Id Person ->
-  Id DOrder.PaymentOrder ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
-  Maybe [Text] ->
+  [Text] ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId personId orderId req resp driverIds = do
+buildPaymentOrder merchantId personId req resp invoiceIds = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   pure
     DOrder.PaymentOrder
-      { id = orderId,
+      { id = Id req.orderId,
         shortId = ShortId req.orderShortId,
         paymentServiceOrderId = resp.id,
         requestId = resp.sdk_payload.requestId,
@@ -145,7 +143,7 @@ buildPaymentOrder merchantId personId orderId req resp driverIds = do
         clientAuthTokenExpiry = resp.sdk_payload.payload.clientAuthTokenExpiry,
         getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
         environment = resp.sdk_payload.payload.environment,
-        driverFeeIds = driverIds,
+        driverFeeIds = invoiceIds,
         createdAt = now,
         updatedAt = now
       }

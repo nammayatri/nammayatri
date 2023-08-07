@@ -14,55 +14,19 @@
 
 module Domain.Types.DriverPlan where
 
-import Data.Aeson
-import qualified Data.Bifunctor as BF
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
-import qualified Data.Text.Encoding as Dt
+import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Person as DP
-import Domain.Types.PlanDetails (PaymentMode)
-import qualified Domain.Types.PlanDetails as DPlan
+import qualified Domain.Types.Plan as DPlan
 import Kernel.Prelude
 import Kernel.Types.Id
-import Servant.API
-
-data MandateStatus = CREATED | ACTIVE | PAUSED | REVOKED | FAILURE | EXPIRED deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
-
-data PlanStatus = ACTIVE_PLAN | INACTIVE_PLAN | PENDING_PLAN deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 data DriverPlan = DriverPlan
   { driverId :: Id DP.Person,
-    planId :: Id DPlan.PlanDetails,
-    planType :: PaymentMode,
-    mandateId :: Maybe Text,
-    mandateStatus :: Maybe MandateStatus,
-    planStatus :: PlanStatus,
-    activatedAt :: Maybe UTCTime,
-    endAt :: Maybe UTCTime,
-    resumeDate :: Maybe UTCTime,
-    maxAmount :: Int,
+    planId :: Id DPlan.Plan,
+    planType :: DPlan.PaymentMode,
+    planStatus :: DPlan.PlanStatus,
+    mandateId :: Maybe (Id DM.Mandate),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
-
-instance FromHttpApiData MandateStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData MandateStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
-instance FromHttpApiData PlanStatus where
-  parseUrlPiece = parseHeader . Dt.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData PlanStatus where
-  toUrlPiece = Dt.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode

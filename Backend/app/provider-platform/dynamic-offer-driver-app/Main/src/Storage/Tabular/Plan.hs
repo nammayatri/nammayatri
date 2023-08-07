@@ -19,34 +19,33 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.PlanDetails where
+module Storage.Tabular.Plan where
 
 import Control.Monad
-import qualified Domain.Types.PlanDetails as Domain
+import qualified Domain.Types.Plan as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Money)
 import Kernel.Types.Id
-import Kernel.Utils.Common (Money, decodeFromText, encodeToText)
-import Kernel.Utils.Error
+import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
 import Tools.Error
 
-derivePersistField "Domain.PaymentType"
-derivePersistField "Domain.PlanMode"
+derivePersistField "Domain.PaymentMode"
 derivePersistField "Domain.Frequency"
 derivePersistField "Domain.PlanStatus"
+derivePersistField "Domain.PlanType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    PlanDetailsT sql=plan_details
+    PlanT sql=plan
       id Text
-      paymentMode Domain.PaymentType
+      paymentMode Domain.PaymentMode
       merchantId MerchantTId
       name Text
       description Text
       maxAmount Money
+      registrationAmount Money
       isOfferApplicable Bool
       maxCreditLimit Money
       rideCountBasedFeePolicyJSON Text sql=ride_count_based_fee_policy_json
@@ -54,30 +53,30 @@ mkPersist
       freeRideCount Int
       frequency Domain.Frequency
       planType Domain.PlanType
-      Primary id paymentMode
+      Primary id
       deriving Generic
     |]
 
-instance TEntityKey PlanDetailsT where
-  type DomainKey PlanDetailsT = (Id Domain.PlanDetails, Domain.PaymentType)
-  fromKey (PlanDetailsTKey _id paymentType) = (Id _id, paymentType)
-  toKey (Id id, paymentType) = PlanDetailsTKey id paymentType
+instance TEntityKey PlanT where
+  type DomainKey PlanT = Id Domain.Plan
+  fromKey (PlanTKey _id) = (Id _id)
+  toKey (Id id) = PlanTKey id
 
-instance FromTType PlanDetailsT Domain.PlanDetails where
-  fromTType PlanDetailsT {..} = do
+instance FromTType PlanT Domain.Plan where
+  fromTType PlanT {..} = do
     rideCountBasedFeePolicy <-
-      maybe (throwError $ InternalError "Unable to decode PlanDetailsT.planCriteriaConfig") (return . Domain.RideCountBasedFeePolicyConfig) (decodeFromText rideCountBasedFeePolicyJSON)
+      maybe (throwError $ InternalError "Unable to decode PlanT.planCriteriaConfig") (return . Domain.RideCountBasedFeePolicyConfig) (decodeFromText rideCountBasedFeePolicyJSON)
     return $
-      Domain.PlanDetails
+      Domain.Plan
         { id = Id id,
           merchantId = fromKey merchantId,
           ..
         }
 
-instance ToTType PlanDetailsT Domain.PlanDetails where
-  toTType Domain.PlanDetails {..} = do
+instance ToTType PlanT Domain.Plan where
+  toTType Domain.Plan {..} = do
     let rideCountBasedFeePolicyJSON = getConfigJSON rideCountBasedFeePolicy
-    PlanDetailsT
+    PlanT
       { id = getId id,
         merchantId = toKey merchantId,
         ..

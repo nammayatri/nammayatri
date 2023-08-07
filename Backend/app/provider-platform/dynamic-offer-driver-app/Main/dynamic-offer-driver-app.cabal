@@ -64,7 +64,7 @@ library
       API.UI.OrgAdmin
       API.UI.Payment
       API.UI.Performance
-      API.UI.Plans
+      API.UI.Plan
       API.UI.Registration
       API.UI.Ride
       API.UI.RideRoute
@@ -138,7 +138,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Performance
-      Domain.Action.UI.Plans
+      Domain.Action.UI.Plan
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
@@ -197,6 +197,7 @@ library
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
+      Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.MediaFile
       Domain.Types.Merchant
@@ -214,7 +215,7 @@ library
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.Person
-      Domain.Types.PlanDetails
+      Domain.Types.Plan
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -259,6 +260,7 @@ library
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
       SharedLogic.MessageBuilder
+      SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.Ride
       SharedLogic.SearchTryLocker
@@ -327,6 +329,7 @@ library
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
+      Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.MediaFile
       Storage.Queries.Merchant
@@ -344,7 +347,7 @@ library
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.MetaData
       Storage.Queries.Person
-      Storage.Queries.PlanDetails
+      Storage.Queries.Plan
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
@@ -405,6 +408,7 @@ library
       Storage.Tabular.Issue.IssueOption
       Storage.Tabular.Issue.IssueReport
       Storage.Tabular.Issue.IssueTranslation
+      Storage.Tabular.Mandate
       Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.MediaFile
       Storage.Tabular.Merchant
@@ -423,7 +427,7 @@ library
       Storage.Tabular.Message.MessageTranslation
       Storage.Tabular.MetaData
       Storage.Tabular.Person
-      Storage.Tabular.PlanDetails
+      Storage.Tabular.Plan
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
       Storage.Tabular.RegistrationToken

@@ -33,6 +33,8 @@ module Domain.Action.UI.Driver
     DriverPhotoUploadReq (..),
     ResendAuth (..),
     DriverPaymentHistoryResp,
+    DriverDuesResp (..),
+    DriverPlanResp (..),
     MetaDataReq (..),
     getInformation,
     setActivity,
@@ -52,6 +54,8 @@ module Domain.Action.UI.Driver
     resendOtp,
     remove,
     getDriverPayments,
+    getDriverDues,
+    getDriverPlan,
     DriverInfo.DriverMode,
     updateMetaData,
   )
@@ -83,6 +87,7 @@ import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.MetaData as MD
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
@@ -1383,3 +1388,58 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
             amount = sgst
           }
       ]
+
+data DriverDuesResp = DriverDuesResp
+  { dues :: [DriverDuesEntity],
+    totalDue :: Money,
+    overdueThreshold :: Money
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+data DriverDuesEntity = DriverDuesEntity
+  { date :: UTCTime,
+    amount :: Money,
+    earnings :: Money,
+    offers :: [OfferEntity]
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+data OfferEntity = OfferEntity
+  { title :: Maybe Text,
+    description :: Maybe Text,
+    tnc :: Maybe Text
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+getDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverDuesResp
+getDriverDues (_personId, _merchantId) = do
+  return $
+    DriverDuesResp
+      { dues = [],
+        totalDue = 0,
+        overdueThreshold = 100
+      }
+
+data DriverPlanResp = DriverPlanResp
+  { id :: Text,
+    name :: Text,
+    description :: Text,
+    amount :: Money,
+    freeRideCount :: Int,
+    frequency :: DPlan.Frequency,
+    offers :: [OfferEntity]
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+getDriverPlan :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverPlanResp
+getDriverPlan (_personId, _merchantId) = do
+  return $
+    DriverPlanResp
+      { id = "Text",
+        name = "Text",
+        description = "Text",
+        amount = 0,
+        freeRideCount = 0,
+        frequency = DPlan.DAILY,
+        offers = []
+      }

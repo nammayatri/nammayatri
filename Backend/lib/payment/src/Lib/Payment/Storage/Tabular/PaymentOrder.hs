@@ -56,7 +56,7 @@ mkPersist
       environment Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
-      driverFeeIds [Text] Maybe
+      driverFeeIds [Text]
       Primary id
       deriving Generic
     |]

@@ -20,7 +20,6 @@ import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
-import Domain.Types.PlanDetails (PaymentMode)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -368,17 +367,5 @@ updatePendingPayment isPending driverId = do
       tbl
       [ DriverInformationPaymentPending =. val isPending,
         DriverInformationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
-
-updatePlanPaymentMode ::
-  PaymentMode ->
-  Id Person.Driver ->
-  SqlDB ()
-updatePlanPaymentMode paymentMode driverId = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverInformationPlanPaymentMode =. val paymentMode
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.PlanDetails where
+module Domain.Types.Plan where
 
 import Data.Aeson
 import qualified Data.Bifunctor as BF
@@ -27,13 +27,14 @@ import Servant.API
 
 newtype RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig [RideCountBasedFeePolicy] deriving (Generic, ToJSON, FromJSON, Show)
 
-data PlanDetails = PlanDetails
-  { id :: Id PlanDetails,
+data Plan = Plan
+  { id :: Id Plan,
     paymentMode :: PaymentMode,
     merchantId :: Id DMerchant.Merchant,
     name :: Text,
     description :: Text,
     maxAmount :: Money,
+    registrationAmount :: Money,
     isOfferApplicable :: Bool,
     maxCreditLimit :: Money,
     rideCountBasedFeePolicy :: RideCountBasedFeePolicyConfig, -- todo
@@ -55,7 +56,7 @@ data RideCountBasedFeePolicy = RideCountBasedFeePolicy
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-data PaymentType = MANUAL | AUTOPAY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+data PaymentMode = MANUAL | AUTOPAY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data Frequency = DAILY | WEEKLY | MONTHLY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
@@ -73,12 +74,12 @@ instance ToHttpApiData Frequency where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-instance FromHttpApiData PaymentType where
+instance FromHttpApiData PaymentMode where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
 
-instance ToHttpApiData PaymentType where
+instance ToHttpApiData PaymentMode where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode

@@ -12,29 +12,31 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.PlanDetails where
+module Storage.Queries.Mandate where
 
-import Domain.Types.Merchant
-import Domain.Types.PlanDetails
+import Domain.Types.Mandate
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.PlanDetails
+import Storage.Tabular.Mandate
 
-create :: PlanDetails -> SqlDB ()
-create = Esq.create
+findById :: Transactionable m => Id Mandate -> m (Maybe Mandate)
+findById = Esq.findById
 
-findByPlanIdAndPlanType :: Transactionable m => Id PlanDetails -> PaymentType -> m (Maybe PlanDetails)
-findByPlanIdAndPlanType planId paymentType = Esq.findOne $ do
-  planDetails <- from $ table @PlanDetailsT
-  where_ $
-    planDetails ^. PlanDetailsTId ==. val (toKey (planId, paymentType))
-  return planDetails
-
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe PlanDetails)
-findByMerchantId merchantId = do
-  findOne $ do
-    planDetails <- from $ table @PlanDetailsT
+findByStatus :: Transactionable m => Id Mandate -> [MandateStatus] -> m (Maybe Mandate)
+findByStatus mandateId status =
+  Esq.findOne $ do
+    mandate <- from $ table @MandateT
     where_ $
-      planDetails ^. PlanDetailsMerchantId ==. val (toKey merchantId)
-    return planDetails
+      mandate ^. MandateTId ==. val (toKey mandateId)
+        &&. mandate ^. MandateStatus `in_` (valList status)
+    return mandate
+
+updateStatus :: Id Mandate -> MandateStatus -> SqlDB ()
+updateStatus mandateId status = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ MandateStatus =. val status
+      ]
+    where_ $ tbl ^. MandateTId ==. val (toKey mandateId)

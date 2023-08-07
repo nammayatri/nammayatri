@@ -27,7 +27,6 @@ import Servant.API
 
 data DriverFee = DriverFee
   { id :: Id DriverFee,
-    shortId :: ShortId DriverFee,
     driverId :: Id Driver,
     govtCharges :: Money,
     platformFee :: PlatformFee,

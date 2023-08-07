@@ -22,7 +22,7 @@ module Storage.Tabular.DriverInformation where
 import qualified Data.ByteString as BS
 import qualified Domain.Types.DriverInformation as Domain
 import Domain.Types.Person (Person)
-import Domain.Types.PlanDetails (PaymentMode)
+import Domain.Types.Plan (PaymentMode)
 import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -54,7 +54,6 @@ mkPersist
       canDowngradeToTaxi Bool
       mode Domain.DriverMode Maybe
       aadhaarVerified Bool
-      planPaymentMode PaymentMode
       blockedReason Text Maybe
       blockExpiryTime UTCTime Maybe
       createdAt UTCTime

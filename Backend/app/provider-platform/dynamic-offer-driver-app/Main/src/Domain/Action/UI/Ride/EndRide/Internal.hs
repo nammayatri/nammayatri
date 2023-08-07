@@ -331,7 +331,6 @@ mkDriverFee ::
   m DF.DriverFee
 mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
   id <- generateGUID
-  shortId <- generateShortId
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime

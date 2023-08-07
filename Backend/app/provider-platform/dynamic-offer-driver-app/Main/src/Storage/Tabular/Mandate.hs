@@ -18,53 +18,47 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.DriverPlan where
+module Storage.Tabular.Mandate where
 
-import qualified Domain.Types.DriverPlan as Domain
-import Domain.Types.Person (Person)
-import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.Mandate as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Money)
 import Kernel.Types.Id
-import Storage.Tabular.Mandate (MandateTId)
-import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.Plan (PlanTId)
+
+derivePersistField "Domain.MandateStatus"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    DriverPlanT sql=driver_plan
-      driverId PersonTId
-      planId PlanTId
-      planType DPlan.PaymentMode
-      mandateId MandateTId Maybe
-      planStatus DPlan.PlanStatus
+    MandateT sql=mandate
+      id Text
+      status Domain.MandateStatus
+      startDate UTCTime
+      endDate UTCTime
+      maxAmount Money
       createdAt UTCTime
       updatedAt UTCTime
-      Primary driverId
+      Primary id
       deriving Generic
     |]
 
-instance TEntityKey DriverPlanT where
-  type DomainKey DriverPlanT = Id Person
-  fromKey (DriverPlanTKey _driverId) = fromKey _driverId
-  toKey driverId = DriverPlanTKey $ toKey driverId
+instance TEntityKey MandateT where
+  type DomainKey MandateT = Id Domain.Mandate
+  fromKey (MandateTKey _id) = Id _id
+  toKey (Id id) = MandateTKey id
 
-instance FromTType DriverPlanT Domain.DriverPlan where
-  fromTType DriverPlanT {..} = do
+instance FromTType MandateT Domain.Mandate where
+  fromTType MandateT {..} = do
     return $
-      Domain.DriverPlan
-        { driverId = fromKey driverId,
-          planId = fromKey planId,
-          mandateId = fromKey <$> mandateId,
+      Domain.Mandate
+        { id = Id id,
           ..
         }
 
-instance ToTType DriverPlanT Domain.DriverPlan where
-  toTType Domain.DriverPlan {..} = do
-    DriverPlanT
-      { driverId = toKey driverId,
-        planId = toKey planId,
-        mandateId = toKey <$> mandateId,
+instance ToTType MandateT Domain.Mandate where
+  toTType Domain.Mandate {..} = do
+    MandateT
+      { id = getId id,
         ..
       }

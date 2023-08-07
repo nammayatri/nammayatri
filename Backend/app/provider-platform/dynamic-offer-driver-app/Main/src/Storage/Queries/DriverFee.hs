@@ -28,13 +28,6 @@ create = Esq.create
 findById :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 findById = Esq.findById
 
-findByShortId :: Transactionable m => ShortId DriverFee -> m (Maybe DriverFee)
-findByShortId shortId = do
-  findOne $ do
-    driverFee <- from $ table @DriverFeeT
-    where_ $ driverFee ^. DriverFeeShortId ==. val (getShortId shortId)
-    return driverFee
-
 findPendingFeesByDriverFeeId :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 findPendingFeesByDriverFeeId driverFeeId = do
   findOne $ do
