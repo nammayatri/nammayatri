@@ -956,7 +956,7 @@ rateExperienceView state push =
   , gravity CENTER
   ][ 
     imageView [
-      imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
+      imageWithFallback "ny_ic_driver_avatar,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_avatar.png"
       , height $ V 56
       , width $ V 56
       , cornerRadius 50.0
