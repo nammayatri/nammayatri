@@ -385,12 +385,12 @@ convertToCommon res =
     }
 
 ---------------------------------------------------------------------
-collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Text -> Flow APISuccess
 collectCash = recordPayment False
 
 ---------------------------------------------------------------------
 
-exemptCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+exemptCash :: ShortId DM.Merchant -> Id Common.Driver -> Text -> Flow APISuccess
 exemptCash = recordPayment True
 
 ---------------------------------------------------------------------
@@ -400,8 +400,8 @@ paymentStatus isExempted
   | isExempted = EXEMPTED
   | otherwise = COLLECTED_CASH
 
-recordPayment :: Bool -> ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-recordPayment isExempted merchantShortId reqDriverId = do
+recordPayment :: Bool -> ShortId DM.Merchant -> Id Common.Driver -> Text -> Flow APISuccess
+recordPayment isExempted merchantShortId reqDriverId requestorId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -419,8 +419,8 @@ recordPayment isExempted merchantShortId reqDriverId = do
   CDI.updatePendingPayment False driverFee.driverId
   CDI.updateSubscription True driverId
   -- Esq.runTransaction $ do
-  _ <- QDF.updateStatus (paymentStatus isExempted) driverFee.id now
-  _ <- QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
+  QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) driverFee.id now
+  QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
   fork "sending dashboard sms - collected cash" $ do
     let totalDriverFee = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
     Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalDriverFee
