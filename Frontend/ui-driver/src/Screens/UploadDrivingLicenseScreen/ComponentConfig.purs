@@ -84,7 +84,7 @@ primaryEditTextConfigReEnterDl state = let
           , capsLock = true
           , color = Color.black800
         }
-      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
+      , stroke = if ((DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) && DS.toLower(state.data.reEnterDriverLicenseNumber) /=  "") then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
       , topLabel
         { textSize = FontSize.a_12
         , text = (getString RE_ENTER_DRIVING_LICENSE_NUMBER)

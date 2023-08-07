@@ -200,7 +200,7 @@ reEnterLicenceNumber state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text (getString SAME_REENTERED_DL_MESSAGE)
-      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then VISIBLE else GONE
+      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && DS.toLower(state.data.reEnterDriverLicenseNumber) /=  "") then VISIBLE else GONE
       , color Color.red
       , margin (MarginBottom 10)
       ]
