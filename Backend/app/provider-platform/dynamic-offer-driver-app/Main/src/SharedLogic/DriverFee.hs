@@ -34,6 +34,7 @@ mergeDriverFee oldFee newFee now = do
       startTime = oldFee.startTime
       endTime = newFee.endTime
       status = PAYMENT_OVERDUE
+      collectedBy = Nothing
       createdAt = now
       updatedAt = now
   let newDriverFee = DriverFee {..}

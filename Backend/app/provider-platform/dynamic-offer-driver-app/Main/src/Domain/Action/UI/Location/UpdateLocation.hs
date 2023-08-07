@@ -186,6 +186,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
       -- payBy is also over - still ongoing/pending - unsubscribe
       handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
+    when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy

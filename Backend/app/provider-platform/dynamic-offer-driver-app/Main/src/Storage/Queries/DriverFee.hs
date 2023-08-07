@@ -146,3 +146,14 @@ updateStatus status driverFeeId now = do
         DriverFeeUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+
+updateCollectedPaymentStatus :: DriverFeeStatus -> Maybe Text -> Id DriverFee -> UTCTime -> SqlDB ()
+updateCollectedPaymentStatus status collectorId driverFeeId now = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverFeeStatus =. val status,
+        DriverFeeCollectedBy =. val collectorId,
+        DriverFeeUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)

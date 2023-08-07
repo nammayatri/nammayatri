@@ -47,6 +47,7 @@ mkPersist
       endTime UTCTime
       numRides Int
       status Domain.DriverFeeStatus
+      collectedBy Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
