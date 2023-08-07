@@ -27,13 +27,13 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
-import Kernel.Utils.Common (decodeFromText, encodeToText)
+import Kernel.Utils.Common (Money, decodeFromText, encodeToText)
 import Kernel.Utils.Error
 import Storage.Tabular.Merchant (MerchantTId)
 import Tools.Error
 
 derivePersistField "Domain.PaymentType"
-derivePersistField "Domain.PlanType"
+derivePersistField "Domain.PlanMode"
 derivePersistField "Domain.Frequency"
 derivePersistField "Domain.PlanStatus"
 
@@ -42,7 +42,7 @@ mkPersist
   [defaultQQ|
     PlanDetailsT sql=plan_details
       id Text
-      paymentType Domain.PaymentType
+      paymentMode Domain.PaymentType
       merchantId MerchantTId
       name Text
       description Text
@@ -54,7 +54,7 @@ mkPersist
       freeRideCount Int
       frequency Domain.Frequency
       planType Domain.PlanType
-      Primary id paymentType
+      Primary id paymentMode
       deriving Generic
     |]
 

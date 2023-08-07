@@ -55,6 +55,7 @@ data TransporterConfigD u = TransporterConfig
     subscription :: Bool,
     aadhaarVerificationRequired :: Bool,
     enableDashboardSms :: Bool,
+    planMaxAmount :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     rcLimit :: Int,

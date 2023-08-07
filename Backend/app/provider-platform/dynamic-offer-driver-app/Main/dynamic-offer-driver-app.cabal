@@ -64,6 +64,7 @@ library
       API.UI.OrgAdmin
       API.UI.Payment
       API.UI.Performance
+      API.UI.Plans
       API.UI.Registration
       API.UI.Ride
       API.UI.RideRoute
@@ -137,6 +138,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Performance
+      Domain.Action.UI.Plans
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide

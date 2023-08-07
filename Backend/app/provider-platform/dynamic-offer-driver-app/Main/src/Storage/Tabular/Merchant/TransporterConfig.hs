@@ -68,6 +68,7 @@ mkPersist
       subscription Bool
       aadhaarVerificationRequired Bool
       enableDashboardSms Bool
+      planMaxAmount Int
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId

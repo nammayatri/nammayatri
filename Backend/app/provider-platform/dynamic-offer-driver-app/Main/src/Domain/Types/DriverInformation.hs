@@ -25,6 +25,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (Person)
+import Domain.Types.PlanDetails (PaymentMode)
 import EulerHS.Prelude
 import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -73,6 +74,7 @@ data DriverInformationE e = DriverInformation
     aadhaarVerified :: Bool,
     blockedReason :: Maybe Text,
     blockExpiryTime :: Maybe UTCTime,
+    planPaymentMode :: PaymentMode,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

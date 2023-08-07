@@ -18,11 +18,11 @@ module Domain.Action.UI.Payment
     getStatus,
     getOrder,
     juspayWebhookHandler,
+    createMandateOrder,
   )
 where
 
 import Domain.Types.DriverFee
-import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
@@ -48,6 +48,7 @@ import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverFee as DF
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -86,7 +87,7 @@ createOrder (driverId, merchantId) driverFeeId = do
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
       orderId = cast @DriverFee @DOrder.PaymentOrder driverFee.id
       createOrderCall = Payment.createOrder merchantId -- api call
-  DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
+  DPayment.createOrderService commonMerchantId commonPersonId Nothing orderId createOrderReq createOrderCall
 
 getOrder ::
   ( CacheFlow m r,
@@ -161,5 +162,39 @@ processPayment merchantId orderStatus driverFeeId = do
       CDI.updatePendingPayment False driverFee.driverId
       CDI.updateSubscription True driverFee.driverId
       Esq.runTransaction $ do
-        QDF.updateStatus DF.CLEARED driverFeeId now
+        QDF.updateStatus CLEARED driverFeeId now
         QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
+
+--- Create Mandate ---
+createMandateOrder ::
+  (Id DP.Person, Id DM.Merchant) ->
+  Id DriverFee ->
+  HighPrecMoney ->
+  Flow Payment.CreateOrderResp
+createMandateOrder (driverId, merchantId) driverFeeId maxAmount = do
+  driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
+  driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFeeId)
+  unless (driver.id == driverId) $ throwError NotAnExecutor
+  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  let driverEmail = fromMaybe "test@juspay.in" driver.email
+  dueDriverFees <- DF.findAllPendingAndDueDriverFeeByDriverId driverId
+  orderId <- generateGUID
+  let dues = sum $ map (\pendingFees -> fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) dueDriverFees
+  let dueDriverFeeIds = map (\pendingFee -> pendingFee.id.getId) dueDriverFees
+  let createOrderReq =
+        Payment.CreateOrderReq
+          { orderShortId = driverFee.shortId.getShortId,
+            amount = max (round (dues + maxAmount)) (round dues),
+            customerId = driver.id.getId,
+            customerEmail = driverEmail,
+            customerPhone = driverPhone,
+            paymentPageClientId = "yatrisathi",
+            customerFirstName = Just driver.firstName,
+            customerLastName = driver.lastName
+            --- To do add mandate specific params in request --
+          }
+
+  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
+      commonPersonId = cast @DP.Person @DPayment.Person driver.id
+      createOrderCall = Payment.createOrder merchantId -- api call
+  DPayment.createOrderService commonMerchantId commonPersonId (Just $ driverFeeId.getId : dueDriverFeeIds) orderId createOrderReq createOrderCall

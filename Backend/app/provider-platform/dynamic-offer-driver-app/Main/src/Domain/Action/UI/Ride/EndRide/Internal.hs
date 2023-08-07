@@ -344,6 +344,7 @@ mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterC
         updatedAt = now,
         platformFee = DF.PlatformFee platformFee cgst sgst,
         totalEarnings = fromMaybe 0 rideFare,
+        feeType = DF.RECURRING_INVOICE,
         ..
       }
 

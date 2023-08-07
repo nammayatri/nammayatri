@@ -29,7 +29,7 @@ newtype RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig [RideCount
 
 data PlanDetails = PlanDetails
   { id :: Id PlanDetails,
-    paymentType :: PaymentType,
+    paymentMode :: PaymentMode,
     merchantId :: Id DMerchant.Merchant,
     name :: Text,
     description :: Text,

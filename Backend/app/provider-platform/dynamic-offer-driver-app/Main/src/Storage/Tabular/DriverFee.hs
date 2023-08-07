@@ -29,7 +29,7 @@ import Kernel.Types.Id
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.DriverFeeStatus"
-
+derivePersistField "Domain.FeeType"
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -49,6 +49,7 @@ mkPersist
       status Domain.DriverFeeStatus
       createdAt UTCTime
       updatedAt UTCTime
+      feeType Domain.FeeType
       Primary id
       deriving Generic
     |]
