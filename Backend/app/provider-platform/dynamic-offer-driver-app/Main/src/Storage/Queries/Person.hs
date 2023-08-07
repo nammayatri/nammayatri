@@ -111,7 +111,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
             B.filter_'
               ( \(person, driverInfo, vehicle) ->
                   person.merchantId B.==?. B.val_ (getId merchantId)
-                    B.&&?. B.maybe_ (B.sqlBool_ $ B.val_ True) (\rNo -> maybe (B.sqlBool_ $ B.val_ True) (B.sqlBool_ . B.like_ rNo . B.val_) mbVehicleNumberSearchString) vehicle.registrationNo
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked
