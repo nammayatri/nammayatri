@@ -94,6 +94,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds,
+    goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: Variant.Variant
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
@@ -124,5 +125,6 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       rideRequestPopupDelayDuration = delayDuration,
       specialLocationTag = searchRequest.specialLocationTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
+      goHomeRequestId = nearbyReq.goHomeRequestId,
       ..
     }

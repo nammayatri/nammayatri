@@ -14,20 +14,36 @@
 
 module Storage.Queries.Vehicle.Internal where
 
-import qualified Domain.Types.Person as DP
+import Domain.Types.DriverInformation as DriverInfo
+import Domain.Types.Person as DP
 import Domain.Types.Vehicle as DV
+import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Id
-import Storage.Tabular.Vehicle as Vehicle
+import Kernel.Utils.Logging (Log)
+import qualified Sequelize as Se
+import Storage.Beam.Vehicle as BeamV
+import Storage.Queries.Vehicle ()
+
+-- getVehicles ::
+--   Transactionable m =>
+--   [Id DP.Person] ->
+--   m [Vehicle]
+-- getVehicles personIds = do
+--   Esq.findAll $ do
+--     vehicles <- from $ table @VehicleT
+--     where_ $
+--       vehicles ^. VehicleDriverId `in_` valList (toKey <$> personIds)
+--     return vehicles
 
 getVehicles ::
-  Transactionable m =>
-  [Id DP.Person] ->
-  m [Vehicle]
-getVehicles personIds = do
-  Esq.findAll $ do
-    vehicles <- from $ table @VehicleT
-    where_ $
-      vehicles ^. VehicleDriverId `in_` valList (toKey <$> personIds)
-    return vehicles
+  (MonadFlow m, Log m) =>
+  [DriverInfo.DriverInformation] ->
+  m [DV.Vehicle]
+getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
+  where
+    personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
+
+fetchDriverIDsFromInfo :: [DriverInformation] -> [Id DP.Person]
+fetchDriverIDsFromInfo = map DriverInfo.driverId

@@ -601,7 +601,7 @@ activateGoHomeFeature (driverId, _) driverHomeLocationId = do
   whenM (isJust <$> QDGR.findActive driverId) $ throwError DriverGoHomeRequestAlreadyActive
   unlessM ((< 2) <$> QDGR.todaySuccessCount driverId) $ throwError DriverGoHomeRequestDailyUsageLimitReached
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
-  Esq.runTransaction . QDGR.create =<< buildDriverGoHomeRequest driverHomeLocation
+  QDGR.create =<< buildDriverGoHomeRequest driverHomeLocation
   pure APISuccess.Success
   where
     buildDriverGoHomeRequest driverHomeLocation = do
@@ -624,7 +624,7 @@ deactivateGoHomeFeature (personId, _) = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  Esq.runTransaction $ QDGR.finishActiveFailed driverId
+  QDGR.finishActiveFailed driverId
   pure APISuccess.Success
 
 addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> AddHomeLocationReq -> m APISuccess.APISuccess
@@ -635,7 +635,7 @@ addHomeLocation (driverId, _) req = do
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   oldHomeLocations <- QDHL.findAllByDriverId driverId
   unless (length oldHomeLocations < 5) $ throwError DriverHomeLocationLimitReached
-  Esq.runTransaction . QDHL.create =<< buildDriverHomeLocation
+  QDHL.create =<< buildDriverHomeLocation
   pure APISuccess.Success
   where
     buildDriverHomeLocation = do
@@ -664,7 +664,7 @@ deleteHomeLocation (driverId, _) driverHomeLocationId = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  Esq.runTransaction $ QDHL.deleteById driverHomeLocationId
+  QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
 listDriver :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
@@ -751,6 +751,8 @@ deleteDriver admin driverId = do
   QDriverStats.deleteById (cast driverId)
   QR.deleteByPersonId driverId
   QVehicle.deleteById driverId
+  QDHL.deleteByDriverId driverId
+  QDriverLocation.deleteById driverId
   QDFS.deleteById driverId
   QPerson.deleteById driverId
   -- runInLocationDB $ QDriverLocation.deleteById driverId
@@ -1137,8 +1139,9 @@ respondQuote (driverId, _) req = do
             providerId = searchReq.providerId,
             estimatedFare,
             fareParams,
-            estimateId,
-            specialLocationTag = searchReq.specialLocationTag
+            specialLocationTag = searchReq.specialLocationTag,
+            goHomeRequestId = sd.goHomeRequestId,
+            estimateId
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)

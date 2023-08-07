@@ -85,7 +85,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
   prepareDriverPoolBatch' previousBatchesDrivers
   where
     getPreviousBatchesDrivers = do
-      batches <- previouslyAttemptedDrivers searchReq.id
+      batches <- previouslyAttemptedDrivers searchTry.id
       return $ (.driverPoolResult.driverId) <$> batches
 
     prepareDriverPoolBatch' previousBatchesDrivers = do
@@ -101,26 +101,28 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           else return []
       currentDriverPoolBatch <-
         if notNull allNearbyGoHomeDrivers
-          then calculateGoHomeBatch transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers
+          then calculateGoHomeBatch transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers
           else do
             allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep
             allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool radiusStep transporterConfig
-            calculateNormalBatch transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep
+            calculateNormalBatch transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers
 
       incrementDriverRequestCount currentDriverPoolBatch searchTry.id
       cacheBatch currentDriverPoolBatch
       pure $ addDistanceSplitConfigBasedDelaysForDriversWithinBatch currentDriverPoolBatch
       where
-        calculateGoHomeBatch transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers = do
-          logDebug $ "GoHomeDriverPool-" <> show allNearbyGoHomeDrivers
-          let onlyNewGoHomeDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyGoHomeDrivers
+        calculateGoHomeBatch transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers = do
+          let allNearbyGoHomeDrivers' = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyGoHomeDrivers
+          logDebug $ "GoHomeDriverPool-" <> show allNearbyGoHomeDrivers'
+          let onlyNewGoHomeDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyGoHomeDrivers'
           goHomeDriverPoolBatch <- mkDriverPoolBatch onlyNewGoHomeDrivers intelligentPoolConfig transporterConfig
           logDebug $ "GoHomeDriverPoolBatch-" <> show goHomeDriverPoolBatch
           pure goHomeDriverPoolBatch
 
-        calculateNormalBatch transporterConfig intelligentPoolConfig normalDriverPool radiusStep = do
+        calculateNormalBatch transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers = do
           logDebug $ "NormalDriverPool-" <> show normalDriverPool
-          let onlyNewNormalDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) normalDriverPool
+          let allNearbyDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) normalDriverPool
+          let onlyNewNormalDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyDrivers
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
               incrementPoolRadiusStep searchReq.id
@@ -223,8 +225,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
               Random -> pure $ take fillSize driversWithValidReqAmount
         cacheBatch batch = do
           logDebug $ "Caching batch-" <> show batch
-          batches <- previouslyAttemptedDrivers searchReq.id
-          Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchReq.id) (batches <> batch) (60 * 30)
+          batches <- previouslyAttemptedDrivers searchTry.id
+          Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchTry.id) (batches <> batch) (60 * 30)
         -- splitDriverPoolForSorting :: minQuotes Int -> [DriverPool Array] -> ([GreaterThanMinQuotesDP], [LessThanMinQuotesDP])
         splitDriverPoolForSorting merchantId minQuotes =
           foldrM

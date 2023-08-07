@@ -9,7 +9,6 @@ import Domain.Types.Vehicle as DV
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
@@ -33,7 +32,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (Transactionable m, MonadTime m) =>
+  (MonadFlow m, MonadTime m) =>
   Maybe Variant ->
   LatLong ->
   Meters ->
@@ -42,10 +41,10 @@ getNearestDrivers ::
   Maybe Seconds ->
   m [NearestDriversResult]
 getNearestDrivers mbVariant fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
-  driverLocs <- Int.getAllDriverLocsNearby merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
-  driverInfos <- Int.getDriverInfosWithOnRideCond (driverLocs <&> (.driverId)) (if onlyNotOnRide then Int.NotOnRide else Int.OnAndNotOnRide)
-  vehicle <- Int.getVehicles (driverInfos <&> (.driverId))
-  drivers <- Int.getDrivers (vehicle <&> (.driverId))
+  driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide)
+  vehicle <- Int.getVehicles driverInfos
+  drivers <- Int.getDrivers vehicle
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers
   logDebug $ "GetNearestDrivers Result:- " <> show (length res)

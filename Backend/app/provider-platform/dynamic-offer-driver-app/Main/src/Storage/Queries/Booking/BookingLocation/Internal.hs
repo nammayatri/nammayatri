@@ -14,19 +14,29 @@
 
 module Storage.Queries.Booking.BookingLocation.Internal where
 
-import Domain.Types.Booking.BookingLocation
+import Domain.Types.Booking.BookingLocation as Domain
+import EulerHS.Language (MonadFlow)
+import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Booking.BookingLocation
+import Kernel.Types.Logging
+import qualified Sequelize as Se
+import Storage.Beam.Booking.BookingLocation as BeamBL
+import Storage.Queries.Booking.BookingLocation ()
+
+-- getBookingLocs ::
+--   Transactionable m =>
+--   [Id BookingLocation] ->
+--   m [BookingLocation]
+-- getBookingLocs locationIds = do
+--   Esq.findAll $ do
+--     bookingLoc <- from $ table @BookingLocationT
+--     where_ $
+--       bookingLoc ^. BookingLocationTId `in_` valList (toKey <$> locationIds)
+--     return bookingLoc
 
 getBookingLocs ::
-  Transactionable m =>
-  [Id BookingLocation] ->
-  m [BookingLocation]
-getBookingLocs locationIds = do
-  Esq.findAll $ do
-    bookingLoc <- from $ table @BookingLocationT
-    where_ $
-      bookingLoc ^. BookingLocationTId `in_` valList (toKey <$> locationIds)
-    return bookingLoc
+  (MonadFlow m, Log m) =>
+  [Id Domain.BookingLocation] ->
+  m [Domain.BookingLocation]
+getBookingLocs locationIds = findAllWithKV [Se.Is BeamBL.id $ Se.In $ getId <$> locationIds]

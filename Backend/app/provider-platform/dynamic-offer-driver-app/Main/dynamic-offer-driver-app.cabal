@@ -274,6 +274,8 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Common
       Storage.Beam.Driver.DriverFlowStatus
+      Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
+      Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
@@ -413,6 +415,7 @@ library
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.Geometry
       Storage.Queries.Instances.DriverInformation
+      Storage.Queries.Instances.Person
       Storage.Queries.Issue.Comment
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
@@ -453,12 +456,6 @@ library
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
-      Storage.Tabular.Booking
-      Storage.Tabular.Driver.GoHomeFeature.DriverGoHomeRequest
-      Storage.Tabular.Driver.GoHomeFeature.DriverHomeLocation
-      Storage.Tabular.DriverQuote
-      Storage.Tabular.Merchant.DriverPoolConfig
-      Storage.Tabular.SearchRequestForDriver
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Call

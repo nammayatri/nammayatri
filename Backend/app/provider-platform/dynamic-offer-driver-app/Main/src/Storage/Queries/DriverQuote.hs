@@ -138,6 +138,7 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
                 estimatedFare = estimatedFare,
                 fareParams = fromJust fp, -- this should take a default value?
                 providerId = Id providerId,
+                goHomeRequestId = Id <$> goHomeRequestId,
                 specialLocationTag = specialLocationTag
               }
       else pure Nothing
@@ -164,6 +165,7 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.estimatedFare = estimatedFare,
         BeamDQ.fareParametersId = getId fareParams.id,
         BeamDQ.providerId = getId providerId,
+        BeamDQ.goHomeRequestId = getId <$> goHomeRequestId,
         BeamDQ.specialLocationTag = specialLocationTag
       }
 

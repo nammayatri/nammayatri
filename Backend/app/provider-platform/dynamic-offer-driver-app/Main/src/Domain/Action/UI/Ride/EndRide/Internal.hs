@@ -66,7 +66,6 @@ import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
-import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats

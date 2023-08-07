@@ -14,41 +14,83 @@
 
 module Storage.Queries.DriverInformation.Internal where
 
-import Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.Person as DP
+import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Id
-import Storage.Tabular.DriverInformation
+import qualified Sequelize as Se
+import Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Queries.Instances.DriverInformation ()
+
+-- getDriverInfos ::
+--   Transactionable m =>
+--   [Id DP.Person] ->
+--   m [DriverInformation]
+-- getDriverInfos personIds = do
+--   Esq.findAll $ do
+--     driverInfos <- from $ table @DriverInformationT
+--     where_ $
+--       driverInfos ^. DriverInformationDriverId `in_` valList (toKey <$> personIds)
+--     return driverInfos
+
+fetchDriverIDsFromLocations :: [DDL.DriverLocation] -> [Id DP.Person]
+fetchDriverIDsFromLocations = map DDL.driverId
 
 getDriverInfos ::
-  Transactionable m =>
-  [Id DP.Person] ->
-  m [DriverInformation]
-getDriverInfos personIds = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationDriverId `in_` valList (toKey <$> personIds)
-    return driverInfos
+  MonadFlow m =>
+  [DDL.DriverLocation] ->
+  m [DriverInfo.DriverInformation]
+getDriverInfos driverLocs = do
+  findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
+  where
+    personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
 
 data GetDriverInfosWithOnRideCondIsOnRide = NotOnRide | OnRide | OnAndNotOnRide
 
-getDriverInfosWithOnRideCond ::
-  Transactionable m =>
-  [Id DP.Person] ->
-  GetDriverInfosWithOnRideCondIsOnRide ->
-  m [DriverInformation]
-getDriverInfosWithOnRideCond personIds isOnRide = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationDriverId `in_` valList (toKey <$> personIds)
-        &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
-        &&. ( case isOnRide of
-                OnAndNotOnRide -> val True
-                NotOnRide -> not_ (driverInfos ^. DriverInformationOnRide)
-                OnRide -> driverInfos ^. DriverInformationOnRide
-            )
-        &&. not_ (driverInfos ^. DriverInformationBlocked)
-    return driverInfos
+-- getDriverInfosWithOnRideCond ::
+--   Transactionable m =>
+--   [Id DP.Person] ->
+--   GetDriverInfosWithOnRideCondIsOnRide ->
+--   m [DriverInformation]
+-- getDriverInfosWithOnRideCond personIds isOnRide = do
+--   Esq.findAll $ do
+--     driverInfos <- from $ table @DriverInformationT
+--     where_ $
+--       driverInfos ^. DriverInformationDriverId `in_` valList (toKey <$> personIds)
+--         &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
+--         &&. ( case isOnRide of
+--                 OnAndNotOnRide -> val True
+--                 NotOnRide -> not_ (driverInfos ^. DriverInformationOnRide)
+--                 OnRide -> driverInfos ^. DriverInformationOnRide
+--             )
+--         &&. not_ (driverInfos ^. DriverInformationBlocked)
+--     return driverInfos
+
+getDriverInfosWithCond :: MonadFlow m => [Id DP.Person] -> Bool -> Bool -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
+            Se.Or
+              [ Se.And
+                  [ Se.Is BeamDI.mode $ Se.Eq Nothing,
+                    Se.Is BeamDI.active $ Se.Eq True
+                  ],
+                Se.And
+                  [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
+                    Se.Or
+                      [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
+                        Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
+                      ]
+                  ]
+              ],
+            Se.Is BeamDI.blocked $ Se.Eq False
+          ]
+            <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
+        )
+    ]
+  where
+    personsKeys = getId . cast <$> driverLocs

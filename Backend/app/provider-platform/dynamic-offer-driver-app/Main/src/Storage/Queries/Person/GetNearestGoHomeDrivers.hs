@@ -14,7 +14,6 @@ import Domain.Types.Vehicle as DV
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
@@ -48,15 +47,15 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestGoHomeDrivers ::
-  (Transactionable m, MonadTime m) =>
+  (MonadFlow m, MonadTime m) =>
   NearestGoHomeDriversReq ->
   m [NearestGoHomeDriversResult]
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
-  driverLocs <- Int.getAllDriverLocsNearby merchantId driverPositionInfoExpiry fromLocation nearestRadius
+  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfos <- Int.getDriverInfosWithOnRideCond (driverHomeLocs <&> (.driverId)) Int.NotOnRide
-  vehicle <- Int.getVehicles (driverInfos <&> (.driverId))
-  drivers <- Int.getDrivers (vehicle <&> (.driverId))
+  driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False
+  vehicle <- Int.getVehicles driverInfos
+  drivers <- Int.getDrivers vehicle
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers
   logDebug $ "GetNearestGoHomeDrivers Result:- " <> show (length res)

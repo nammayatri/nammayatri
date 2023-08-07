@@ -76,11 +76,11 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
         validTill = validTill,
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
-  let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
+
+  driverPoolZipSearchRequests <- processDriverPool validTill
   -- Esq.runTransaction $ do
   _ <- QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
-  _ <- QSRD.createMany searchRequestsForDrivers
+  _ <- QSRD.createMany $ driverPoolZipSearchRequests <&> (._2)
   forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
     QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
 

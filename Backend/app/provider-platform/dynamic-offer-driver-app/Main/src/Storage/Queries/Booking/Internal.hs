@@ -15,23 +15,43 @@
 module Storage.Queries.Booking.Internal where
 
 import qualified Domain.Types.Booking as Booking
-import qualified Domain.Types.Person as DP
+--import qualified Domain.Types.Person as DP
+
+--import Kernel.Types.Id
+
+import Domain.Types.DriverQuote (DriverQuote)
+import EulerHS.Language (MonadFlow)
+import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
-import Storage.Queries.FullEntityBuilders (buildFullBooking)
-import Storage.Tabular.Booking
+import Kernel.Utils.Common (Log)
+import qualified Sequelize as Se
+import Storage.Beam.Booking as BeamB
+import Storage.Queries.Instances.Person ()
+
+-- getBookingInfo ::
+--   Transactionable m =>
+--   [Id DP.Person] ->
+--   m [Booking.Booking]
+-- getBookingInfo driverIds = buildDType $ do
+--   res <-
+--     Esq.findAll' $ do
+--       booking <- from $ table @BookingT
+--       where_ $
+--         booking ^. BookingQuoteId `in_` valList (driverIds <&> (.getId))
+--           &&. booking ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
+--       return booking
+--   catMaybes <$> mapM buildFullBooking res
 
 getBookingInfo ::
-  Transactionable m =>
-  [Id DP.Person] ->
+  (MonadFlow m, Log m) =>
+  [DriverQuote] ->
   m [Booking.Booking]
-getBookingInfo driverIds = buildDType $ do
-  res <-
-    Esq.findAll' $ do
-      booking <- from $ table @BookingT
-      where_ $
-        booking ^. BookingQuoteId `in_` valList (driverIds <&> (.getId))
-          &&. booking ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
-      return booking
-  catMaybes <$> mapM buildFullBooking res
+getBookingInfo driverQuote =
+  findAllWithKV
+    [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
+    ]
+  where
+    personsKeys = fetchDriverIDsTextFromQuote driverQuote
+
+fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
+fetchDriverIDsTextFromQuote = map (.driverId.getId)

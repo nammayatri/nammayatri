@@ -13,7 +13,6 @@ import Domain.Types.Vehicle as DV
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
@@ -43,7 +42,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (Transactionable m, MonadTime m) =>
+  (MonadFlow m, MonadTime m) =>
   Maybe Variant ->
   LatLong ->
   Meters ->
@@ -53,12 +52,12 @@ getNearestDriversCurrentlyOnRide ::
   m [NearestDriversResultCurrentlyOnRide]
 getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
   let onRideRadius = fromIntegral (radiusMeters - reduceRadiusValue) :: Double
-  driverLocs <- Int.getAllDriverLocsNearby merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
-  driverInfos <- Int.getDriverInfosWithOnRideCond (driverLocs <&> (.driverId)) Int.OnRide
-  vehicles <- Int.getVehicles (driverInfos <&> (.driverId))
-  drivers <- Int.getDrivers (vehicles <&> (.driverId))
-  driverQuote <- Int.getDriverQuote (drivers <&> (.id))
-  bookingInfo <- Int.getBookingInfo (driverQuote <&> (.driverId))
+  driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True
+  vehicles <- Int.getVehicles driverInfos
+  drivers <- Int.getDrivers vehicles
+  driverQuote <- Int.getDriverQuote drivers
+  bookingInfo <- Int.getBookingInfo driverQuote
   bookingLocation <- Int.getBookingLocs (bookingInfo <&> (.toLocation.id))
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
   let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers onRideRadius

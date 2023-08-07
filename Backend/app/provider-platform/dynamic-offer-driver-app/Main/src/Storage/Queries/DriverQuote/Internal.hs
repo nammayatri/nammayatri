@@ -16,24 +16,43 @@ module Storage.Queries.DriverQuote.Internal where
 
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Person as Person
+--import Storage.Queries.DriverQuote (baseDriverQuoteQuery)
+--import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
+
+import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Id
-import Storage.Queries.DriverQuote (baseDriverQuoteQuery)
-import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
-import Storage.Tabular.DriverQuote
+import Kernel.Utils.Common (Log)
+import qualified Sequelize as Se
+import Storage.Beam.DriverQuote as BeamDQ
+import Storage.Queries.Instances.Person ()
+
+-- getDriverQuote ::
+--   Transactionable m =>
+--   [Id Person] ->
+--   m [DriverQuote]
+-- getDriverQuote personIds =
+--   buildDType $ do
+--     res <- Esq.findAll' $ do
+--       (dQuote :& farePars) <-
+--         from baseDriverQuoteQuery
+--       where_ $
+--         dQuote ^. DriverQuoteDriverId `in_` valList (toKey <$> personIds)
+--           &&. dQuote ^. DriverQuoteStatus ==. val DriverQuote.Active
+--       pure (dQuote, farePars)
+--     catMaybes <$> mapM buildFullDriverQuote res
 
 getDriverQuote ::
-  Transactionable m =>
-  [Id Person] ->
-  m [DriverQuote]
-getDriverQuote personIds =
-  buildDType $ do
-    res <- Esq.findAll' $ do
-      (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
-      where_ $
-        dQuote ^. DriverQuoteDriverId `in_` valList (toKey <$> personIds)
-          &&. dQuote ^. DriverQuoteStatus ==. val DriverQuote.Active
-      pure (dQuote, farePars)
-    catMaybes <$> mapM buildFullDriverQuote res
+  (MonadFlow m, Log m) =>
+  [Person] ->
+  m [DriverQuote.DriverQuote]
+getDriverQuote persons =
+  findAllWithKV
+    [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
+    ]
+  where
+    personKeys = getId <$> fetchDriverIDsFromPersons persons
+
+fetchDriverIDsFromPersons :: [Person] -> [Id Person]
+fetchDriverIDsFromPersons = map (.id)

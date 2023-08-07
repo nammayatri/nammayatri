@@ -14,68 +14,77 @@
 
 module Storage.Queries.DriverLocation.Internal where
 
-import qualified Data.Maybe as Mb
+-- import qualified Data.Maybe as Mb
+
+-- import Domain.Types.Person as Person
+
+import Data.Maybe (Maybe)
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant
-import Domain.Types.Person as Person
 import Kernel.External.Maps as Maps
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Value)
-import Storage.Tabular.DriverLocation
+import qualified Storage.Queries.DriverLocation as QueriesDL
 
-getDriverLocsWithMerchantId ::
-  Transactionable m =>
-  [Id Person] ->
-  Id Merchant ->
-  m [DriverLocation]
-getDriverLocsWithMerchantId driverIds merchantId = do
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationDriverId `in_` valList (toKey <$> driverIds)
-        &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-    return driverLocs
+-- getDriverLocsWithMerchantId ::
+--   Transactionable m =>
+--   [Id Person] ->
+--   Id Merchant ->
+--   m [DriverLocation]
+-- getDriverLocsWithMerchantId driverIds merchantId = do
+--   Esq.findAll $ do
+--     driverLocs <- from $ table @DriverLocationT
+--     where_ $
+--       driverLocs ^. DriverLocationDriverId `in_` valList (toKey <$> driverIds)
+--         &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+--     return driverLocs
 
-getDriverLocsNearby ::
-  (Transactionable m, MonadTime m) =>
+-- getDriverLocsNearby ::
+--   (Transactionable m, MonadTime m) =>
+--   Id Merchant ->
+--   [Id Person] ->
+--   Maybe Seconds ->
+--   LatLong ->
+--   Meters ->
+--   m [DriverLocation]
+-- getDriverLocsNearby merchantId driverIds mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
+--   now <- getCurrentTime
+--   Esq.findAll $ do
+--     driverLocs <- from $ table @DriverLocationT
+--     where_ $
+--       driverLocs ^. DriverLocationDriverId `in_` valList (toKey <$> driverIds)
+--         &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+--         &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+--                 ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+--             )
+--         &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters.getMeters)
+--     orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+--     return driverLocs
+
+-- getAllDriverLocsNearby ::
+--   (Transactionable m, MonadTime m) =>
+--   Id Merchant ->
+--   Maybe Seconds ->
+--   LatLong ->
+--   Meters ->
+--   m [DriverLocation]
+-- getAllDriverLocsNearby merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
+--   now <- getCurrentTime
+--   Esq.findAll $ do
+--     driverLocs <- from $ table @DriverLocationT
+--     where_ $
+--       driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+--         &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+--                 ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+--             )
+--         &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters.getMeters)
+--     orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+--     return driverLocs
+getDriverLocsWithCond ::
+  (MonadFlow m, MonadTime m) =>
   Id Merchant ->
-  [Id Person] ->
   Maybe Seconds ->
   LatLong ->
   Meters ->
   m [DriverLocation]
-getDriverLocsNearby merchantId driverIds mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
-  now <- getCurrentTime
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationDriverId `in_` valList (toKey <$> driverIds)
-        &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-            )
-        &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters.getMeters)
-    orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
-    return driverLocs
-
-getAllDriverLocsNearby ::
-  (Transactionable m, MonadTime m) =>
-  Id Merchant ->
-  Maybe Seconds ->
-  LatLong ->
-  Meters ->
-  m [DriverLocation]
-getAllDriverLocsNearby merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
-  now <- getCurrentTime
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-            )
-        &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters.getMeters)
-    orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
-    return driverLocs
+getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters.getMeters merchantId

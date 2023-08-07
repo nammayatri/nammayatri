@@ -14,21 +14,35 @@
 
 module Storage.Queries.Person.Internal where
 
-import Domain.Types.Person as Person
 import qualified Domain.Types.Person as DP
+import Domain.Types.Vehicle as DV
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Id
-import Storage.Tabular.Person as TPerson
+import qualified Sequelize as Se
+import qualified Storage.Beam.Person as BeamP
+import Storage.Queries.Instances.Person ()
+
+-- getDrivers ::
+--   Transactionable m =>
+--   [Id DP.Person] ->
+--   m [DP.Person]
+-- getDrivers personIds = do
+--   Esq.findAll $ do
+--     persons <- from $ table @PersonT
+--     where_ $
+--       persons ^. PersonTId `in_` valList (toKey <$> personIds)
+--         &&. persons ^. PersonRole ==. val Person.DRIVER
+--     return persons
 
 getDrivers ::
-  Transactionable m =>
-  [Id DP.Person] ->
+  (MonadFlow m) =>
+  [DV.Vehicle] ->
   m [DP.Person]
-getDrivers personIds = do
-  Esq.findAll $ do
-    persons <- from $ table @PersonT
-    where_ $
-      persons ^. PersonTId `in_` valList (toKey <$> personIds)
-        &&. persons ^. PersonRole ==. val Person.DRIVER
-    return persons
+getDrivers vehicles = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
+  where
+    personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
+
+fetchDriverIDsFromVehicle :: [Vehicle] -> [Id DP.Person]
+fetchDriverIDsFromVehicle = map (.driverId)

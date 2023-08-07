@@ -13,37 +13,73 @@
 -}
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation where
 
 import Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
+-- import qualified EulerHS.Language as L
+import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as Domain
 import Domain.Types.Person
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
-import Storage.Tabular.Driver.GoHomeFeature.DriverHomeLocation
+import Kernel.Types.App (MonadFlow)
+import Kernel.Types.Id (Id (..))
+import Lib.Utils ()
+import qualified Sequelize as Se
+import Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as BeamDHL
 
-create :: DriverHomeLocation -> SqlDB ()
-create = Esq.create
+create :: MonadFlow m => Domain.DriverHomeLocation -> m ()
+create = createWithKV
 
-findById ::
-  Transactionable m =>
-  Id DriverHomeLocation ->
-  m (Maybe DriverHomeLocation)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id DriverHomeLocation ->
+--   m (Maybe DriverHomeLocation)
+-- findById = Esq.findById
 
-findAllByDriverId :: Transactionable m => Id Driver -> m [DriverHomeLocation]
-findAllByDriverId driverId = do
-  Esq.findAll $ do
-    driverHomeLocation <- from $ table @DriverHomeLocationT
-    where_ $ driverHomeLocation ^. DriverHomeLocationDriverId ==. val (toKey driverId)
-    return driverHomeLocation
+findById :: MonadFlow m => Id Domain.DriverHomeLocation -> m (Maybe Domain.DriverHomeLocation)
+findById (Kernel.Types.Id.Id driverHomeLocId) = findOneWithKV [Se.Is BeamDHL.id $ Se.Eq driverHomeLocId]
 
-deleteById :: Id DriverHomeLocation -> SqlDB ()
-deleteById = deleteByKey @DriverHomeLocationT
+-- findAllByDriverId :: Transactionable m => Id Driver -> m [DriverHomeLocation]
+-- findAllByDriverId driverId = do
+--   Esq.findAll $ do
+--     driverHomeLocation <- from $ table @DriverHomeLocationT
+--     where_ $ driverHomeLocation ^. DriverHomeLocationDriverId ==. val (toKey driverId)
+--     return driverHomeLocation
 
-deleteByDriverId :: Id Driver -> SqlDB ()
-deleteByDriverId driverId =
-  Esq.delete $ do
-    driverHomeLocation <- from $ table @DriverHomeLocationT
-    where_ $ driverHomeLocation ^. DriverHomeLocationDriverId ==. val (toKey $ cast driverId)
+findAllByDriverId :: MonadFlow m => Id Driver -> m [Domain.DriverHomeLocation]
+findAllByDriverId (Kernel.Types.Id.Id driverId) = findAllWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
+
+-- deleteById :: Id DriverHomeLocation -> SqlDB ()
+-- deleteById = deleteByKey @DriverHomeLocationT
+
+deleteById :: MonadFlow m => Id Domain.DriverHomeLocation -> m ()
+deleteById (Kernel.Types.Id.Id driverHomeLocId) = deleteWithKV [Se.Is BeamDHL.id $ Se.Eq driverHomeLocId]
+
+-- deleteByDriverId :: Id Driver -> SqlDB ()
+-- deleteByDriverId driverId =
+--   Esq.delete $ do
+--     driverHomeLocation <- from $ table @DriverHomeLocationT
+--     where_ $ driverHomeLocation ^. DriverHomeLocationDriverId ==. val (toKey $ cast driverId)
+
+deleteByDriverId :: MonadFlow m => Id Driver -> m ()
+deleteByDriverId (Kernel.Types.Id.Id driverId) = deleteWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
+
+instance FromTType' BeamDHL.DriverHomeLocation Domain.DriverHomeLocation where
+  fromTType' BeamDHL.DriverHomeLocationT {..} = do
+    pure $
+      Just
+        Domain.DriverHomeLocation
+          { id = Kernel.Types.Id.Id id,
+            driverId = Kernel.Types.Id.Id driverId,
+            ..
+          }
+
+instance ToTType' BeamDHL.DriverHomeLocation Domain.DriverHomeLocation where
+  toTType' Domain.DriverHomeLocation {..} =
+    BeamDHL.DriverHomeLocationT
+      { id = id.getId,
+        driverId = getId driverId,
+        ..
+      }

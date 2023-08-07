@@ -445,16 +445,15 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      Esq.runInReplica $
-        QP.getNearestGoHomeDrivers $
-          QP.NearestGoHomeDriversReq
-            { variant = variant,
-              fromLocation = getCoordinates fromLocation,
-              nearestRadius = driverPoolCfg.goHomeFromLocationRadius,
-              homeRadius = driverPoolCfg.goHomeToLocationRadius,
-              merchantId,
-              driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry
-            }
+      QP.getNearestGoHomeDrivers $
+        QP.NearestGoHomeDriversReq
+          { variant = variant,
+            fromLocation = getCoordinates fromLocation,
+            nearestRadius = driverPoolCfg.goHomeFromLocationRadius,
+            homeRadius = driverPoolCfg.goHomeToLocationRadius,
+            merchantId,
+            driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry
+          }
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -627,7 +626,7 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
           radius
           merchantId
           driverPoolCfg.driverPositionInfoExpiry
-          reduceRadiusValue
+          driverPoolCfg.radiusShrinkValueForDriversOnRide
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts

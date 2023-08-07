@@ -43,5 +43,6 @@
       "bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin": "1460d294-8c69-44b9-811a-c370949d056e",
       "bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service": "5425f717-3838-476a-a6ed-58a7a71c6c57"
     }
-  }
+  },
+  "haskell.serverExecutablePath": "/nix/store/sia6f0addb6ji6j499svklw3ppj7cbd3-haskell-language-server-1.10.0.0/bin/haskell-language-server"
 }
