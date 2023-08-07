@@ -225,6 +225,23 @@ updateStatus status (Id driverFeeId) now =
     [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
+-- updateCollectedPaymentStatus :: DriverFeeStatus -> Maybe Text -> Id DriverFee -> UTCTime -> SqlDB ()
+-- updateCollectedPaymentStatus status collectorId driverFeeId now = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverFeeStatus =. val status,
+--         DriverFeeCollectedBy =. val collectorId,
+--         DriverFeeUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+
+updateCollectedPaymentStatus :: (L.MonadFlow m, Log m) => DriverFeeStatus -> Maybe Text -> Id DriverFee -> UTCTime -> m ()
+updateCollectedPaymentStatus status collectorId (Id driverFeeId) now = do
+  updateOneWithKV
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy collectorId]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+
 instance FromTType' BeamDF.DriverFee DriverFee where
   fromTType' BeamDF.DriverFeeT {..} = do
     pure $
@@ -241,6 +258,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             startTime = startTime,
             endTime = endTime,
             status = status,
+            collectedBy = collectedBy,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -261,6 +279,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.startTime = startTime,
         BeamDF.endTime = endTime,
         BeamDF.status = status,
+        BeamDF.collectedBy = collectedBy,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt
       }

@@ -66,6 +66,7 @@ data DriverFeeT f = DriverFeeT
     endTime :: B.C f Time.UTCTime,
     numRides :: B.C f Int,
     status :: B.C f Domain.DriverFeeStatus,
+    collectedBy :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -108,6 +109,7 @@ driverFeeTMod =
       endTime = B.fieldNamed "end_time",
       numRides = B.fieldNamed "num_rides",
       status = B.fieldNamed "status",
+      collectedBy = B.fieldNamed "collected_by",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

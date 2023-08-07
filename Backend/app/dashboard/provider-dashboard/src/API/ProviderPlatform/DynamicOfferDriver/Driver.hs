@@ -257,14 +257,14 @@ collectCash merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.CollectCashEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.collectCash) driverId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.collectCash) driverId apiTokenInfo.personId.getId
 
 exemptCash :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 exemptCash merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.ExemptCashEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.exemptCash) driverId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.exemptCash) driverId apiTokenInfo.personId.getId
 
 enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
