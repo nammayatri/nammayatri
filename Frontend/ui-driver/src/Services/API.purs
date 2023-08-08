@@ -616,7 +616,7 @@ newtype UpdateDriverInfoReq
   , clientVersion :: Maybe Common.Version
   , bundleVersion :: Maybe Common.Version
   , gender :: Maybe String
-  , languagesSpoken :: Array String
+  , languagesSpoken :: Maybe (Array String)
   , hometown :: Maybe String
   , vehicleName :: Maybe String
   }
@@ -1896,7 +1896,7 @@ newtype DriverProfileSummaryRes
   , driverSummary :: DriverSummary
   , missedOpp :: DriverMissedOpp
   , feedbackBadges :: DriverBadges
-  , languagesSpoken :: Array String
+  , languagesSpoken :: Maybe (Array String)
   , hometown :: Maybe String
   }
 

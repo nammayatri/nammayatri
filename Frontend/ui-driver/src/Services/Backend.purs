@@ -445,7 +445,7 @@ mkUpdateDriverInfoReq dummy
     , bundleVersion: Nothing
     , clientVersion: Nothing
     , gender: Nothing
-    , languagesSpoken: []
+    , languagesSpoken: Nothing
     , hometown: Nothing
     , vehicleName: Nothing
     }
