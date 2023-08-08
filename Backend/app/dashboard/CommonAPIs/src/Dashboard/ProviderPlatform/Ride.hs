@@ -260,7 +260,7 @@ data RideInfoRes = RideInfoRes
     driverInitiatedCallCount :: Int,
     bookingToRideStartDuration :: Maybe Minutes,
     distanceCalculationFailed :: Maybe Bool,
-    vehicleVarient :: Maybe Variant
+    vehicleVariant :: Maybe Variant
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

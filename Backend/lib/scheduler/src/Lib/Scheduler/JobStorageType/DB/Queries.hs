@@ -17,21 +17,21 @@
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
 import Data.Singletons (SingI)
-import qualified Database.Beam as B
-import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
+-- import qualified Database.Beam as B
+-- import qualified EulerHS.Language as L
+-- import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (MonadTime (getCurrentTime))
-import Kernel.Types.Error
+-- import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Logging
-import Kernel.Types.MonadGuid
-import Kernel.Utils.Error
+-- import Kernel.Types.Logging
+-- import Kernel.Types.MonadGuid
+-- import Kernel.Utils.Error
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.DB.Table
-import qualified Lib.Scheduler.JobStorageType.DB.TableB as BeamSJ
+-- import qualified Lib.Scheduler.JobStorageType.DB.TableB as BeamSJ
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types as ST
 
@@ -53,28 +53,28 @@ createJobIn inTime maxShards jobData = do
           maxErrors = 5
         }
 
-createJobIn' :: forall t (e :: t) m. (SingI e, JobInfoProcessor e, JobProcessor t, L.MonadFlow m, MonadTime m, MonadGuid m, Log m) => NominalDiffTime -> Int -> JobContent e -> m ()
-createJobIn' inTime maxShards jobData = do
-  void $
-    ScheduleJob.createJobIn' @t @e create'' inTime maxShards $
-      JobEntry
-        { jobData = jobData,
-          maxErrors = 5
-        }
+-- createJobIn' :: forall t (e :: t) m. (SingI e, JobInfoProcessor e, JobProcessor t, L.MonadFlow m, MonadTime m, MonadGuid m, Log m) => NominalDiffTime -> Int -> JobContent e -> m ()
+-- createJobIn' inTime maxShards jobData = do
+--   void $
+--     ScheduleJob.createJobIn' @t @e create'' inTime maxShards $
+--       JobEntry
+--         { jobData = jobData,
+--           maxErrors = 5
+--         }
 
-create'' :: (L.MonadFlow m, Log m) => AnyJob t -> m ()
-create'' (ST.AnyJob ST.Job {..}) = do
-  let storedJobInfo = ST.storeJobInfo jobInfo
-  dbConf <- L.getOption KBT.PsqlDbCfg >>= fromMaybeM (InternalError "distance is null for one way booking")
-  conn <- L.getOrInitSqlConn dbConf
-  case conn of
-    Right c -> do
-      void $
-        L.runDB c $
-          L.insertRows $
-            B.insert (BeamSJ.schedulerJob BeamSJ.atlasDB) $
-              B.insertExpressions [BeamSJ.SchedulerJobT (B.val_ $ getId id) (B.val_ $ ST.storedJobType storedJobInfo) (B.val_ $ ST.storedJobContent storedJobInfo) (B.val_ shardId) (B.val_ scheduledAt) (B.val_ createdAt) (B.val_ updatedAt) (B.val_ maxErrors) (B.val_ currErrors) (B.val_ status)]
-    Left _ -> pure ()
+-- create'' :: (L.MonadFlow m, Log m) => AnyJob t -> m ()
+-- create'' (ST.AnyJob ST.Job {..}) = do
+--   let storedJobInfo = ST.storeJobInfo jobInfo
+--   dbConf <- L.getOption KBT.PsqlDbCfg >>= fromMaybeM (InternalError "distance is null for one way booking")
+--   conn <- L.getOrInitSqlConn dbConf
+--   case conn of
+--     Right c -> do
+--       void $
+--         L.runDB c $
+--           L.insertRows $
+--             B.insert (BeamSJ.schedulerJob BeamSJ.atlasDB) $
+--               B.insertExpressions [BeamSJ.SchedulerJobT (B.val_ $ getId id) (B.val_ $ ST.storedJobType storedJobInfo) (B.val_ $ ST.storedJobContent storedJobInfo) (B.val_ shardId) (B.val_ scheduledAt) (B.val_ createdAt) (B.val_ updatedAt) (B.val_ maxErrors) (B.val_ currErrors) (B.val_ status)]
+--     Left _ -> pure ()
 
 createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> Int -> JobContent e -> Esq.SqlDB ()
 createJobByTime byTime maxShards jobData = do

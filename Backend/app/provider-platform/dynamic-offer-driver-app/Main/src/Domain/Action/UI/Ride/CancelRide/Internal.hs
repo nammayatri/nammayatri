@@ -31,7 +31,7 @@ import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn')
+import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
@@ -201,19 +201,19 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
     ReSchedule _ -> do
       let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       maxShards <- asks (.maxShards)
-      -- Esq.runTransaction $ do
-      --   createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-      --     SendSearchRequestToDriverJobData
-      --       { searchTryId = newSearchTry.id,
-      --         estimatedRideDistance = searchReq.estimatedDistance,
-      --         driverExtraFeeBounds = driverExtraFeeBounds
-      --       }
-      createJobIn' @_ @'SendSearchRequestToDriver inTime maxShards $
-        SendSearchRequestToDriverJobData
-          { searchTryId = newSearchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance,
-            driverExtraFeeBounds = driverExtraFeeBounds
-          }
+      Esq.runTransaction $ do
+        --   createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+        --     SendSearchRequestToDriverJobData
+        --       { searchTryId = newSearchTry.id,
+        --         estimatedRideDistance = searchReq.estimatedDistance,
+        --         driverExtraFeeBounds = driverExtraFeeBounds
+        --       }
+        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+          SendSearchRequestToDriverJobData
+            { searchTryId = newSearchTry.id,
+              estimatedRideDistance = searchReq.estimatedDistance,
+              driverExtraFeeBounds = driverExtraFeeBounds
+            }
     _ -> return ()
 
   BP.sendEstimateRepetitionUpdateToBAP booking ride searchTry.estimateId cancellationSource

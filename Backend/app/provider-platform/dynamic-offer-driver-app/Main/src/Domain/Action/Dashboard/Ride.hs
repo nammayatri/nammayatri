@@ -229,7 +229,7 @@ rideInfo merchantShortId reqRideId = do
         driverInitiatedCallCount,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
-        vehicleVarient = castDVehicleVariant <$> rideDetails.vehicleVariant
+        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
       }
 
 mkLocationAPIEntity :: DBLoc.BookingLocation -> Common.LocationAPIEntity
