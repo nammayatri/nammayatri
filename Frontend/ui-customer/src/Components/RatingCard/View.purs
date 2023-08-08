@@ -228,14 +228,20 @@ starRatingView state push =
     , gravity CENTER
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
-    ][ textView $
+    ][ imageView [
+        imageWithFallback "ny_ic_driver_avatar,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_avatar.png"
+        , height $ V 56
+        , width $ V 56
+        , cornerRadius 50.0
+      ]
+    ,textView $
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
         , text $ getString RATE_YOUR_RIDE_WITH <> state.data.driverName
         , color Color.black800
         , maxLines 2
         , gravity CENTER
-        , margin (MarginBottom 16)
+        , margin (MarginVertical 8 16)
         ] <> FontStyle.subHeading2 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
