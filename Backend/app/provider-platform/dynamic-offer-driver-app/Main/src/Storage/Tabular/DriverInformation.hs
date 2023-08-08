@@ -22,12 +22,15 @@ module Storage.Tabular.DriverInformation where
 import qualified Data.ByteString as BS
 import qualified Domain.Types.DriverInformation as Domain
 import Domain.Types.Person (Person)
+import Domain.Types.Plan (PaymentMode)
 import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
+
+derivePersistField "PaymentMode"
 
 mkPersist
   defaultSqlSettings

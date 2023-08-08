@@ -279,7 +279,7 @@ primaryButtonConfirmPickupConfig state =
           , color = state.data.config.primaryTextColor
           }
         , cornerRadius = state.data.config.primaryButtonCornerRadius
-        , margin = (Margin 0 22 0 0)
+        , margin = (MarginTop 8)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
         }
@@ -720,6 +720,7 @@ driverInfoCardViewState state = { props:
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
+                                  , isChatOpened : state.props.isChatOpened
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -972,13 +973,17 @@ menuButtonConfig state item = let
         , margin = (MarginRight 15)
         , activeStroke = ("2," <> Color.positive)
       }
-      , height = WRAP_CONTENT
       , id = item.place
       , lat = item.lat
       , lng = item.lng
       , leftsidebutton = true
-      , padding = PaddingBottom 10
+      , padding = (Padding 16 16 16 16)
+      , cornerRadius = 6.0
+      , height = WRAP_CONTENT
+      , width = MATCH_PARENT
       , isSelected = item.place == state.props.defaultPickUpPoint
+      , layoutStroke = ("1," <> if item.place == state.props.defaultPickUpPoint then Color.blue700' else Color.grey900)
+      , layoutBg =  if item.place == state.props.defaultPickUpPoint then Color.blue600 else Color.white900
     }
     in menuButtonConfig'
 

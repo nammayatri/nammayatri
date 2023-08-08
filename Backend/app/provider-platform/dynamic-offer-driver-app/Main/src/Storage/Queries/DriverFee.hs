@@ -28,13 +28,6 @@ create = Esq.create
 findById :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 findById = Esq.findById
 
-findByShortId :: Transactionable m => ShortId DriverFee -> m (Maybe DriverFee)
-findByShortId shortId = do
-  findOne $ do
-    driverFee <- from $ table @DriverFeeT
-    where_ $ driverFee ^. DriverFeeShortId ==. val (getShortId shortId)
-    return driverFee
-
 findPendingFeesByDriverFeeId :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 findPendingFeesByDriverFeeId driverFeeId = do
   findOne $ do
@@ -146,3 +139,13 @@ updateStatus status driverFeeId now = do
         DriverFeeUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+
+findAllPendingAndDueDriverFeeByDriverId :: Transactionable m => Id Person -> m [DriverFee]
+findAllPendingAndDueDriverFeeByDriverId driverId = do
+  findAll $ do
+    driverFee <- from $ table @DriverFeeT
+    where_ $
+      driverFee ^. DriverFeeFeeType ==. val RECURRING_INVOICE
+        &&. (driverFee ^. DriverFeeStatus ==. val PAYMENT_PENDING ||. driverFee ^. DriverFeeStatus ==. val PAYMENT_OVERDUE)
+        &&. driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
+    return driverFee

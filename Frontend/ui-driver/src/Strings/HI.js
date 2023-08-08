@@ -623,5 +623,6 @@ const hindiStrings = {
   SELECT_A_DATE_RANGE : "विवरण डाउनलोड करने के लिए एक तिथि सीमा चुनें",
   FEE_PAYMENT_HISTORY : "शुल्क भुगतान इतिहास",
   LANGUAGES_स्पोकन : "बोली जाने वाली भाषाएँ",
-  VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें"
+  VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें",
+  RIDE_TYPE : "सवारी का प्रकार"
 }

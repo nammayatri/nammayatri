@@ -64,21 +64,25 @@ createOrder (personId, merchantId) rideId = do
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let createOrderReq =
         Payment.CreateOrderReq
-          { orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
+          { orderId = rideId.getId,
+            orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
             amount = totalFare,
             customerId = person.id.getId,
             customerEmail,
             customerPhone,
             paymentPageClientId = "yatrisathi",
             customerFirstName = person.firstName,
-            customerLastName = person.lastName
+            customerLastName = person.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
       orderId = cast @DRide.Ride @DOrder.PaymentOrder rideId
       createOrderCall = Payment.createOrder merchantId -- api call
-  DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
+  DPayment.createOrderService commonMerchantId commonPersonId [orderId.getId] createOrderReq createOrderCall
 
 -- order status -----------------------------------------------------
 

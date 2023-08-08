@@ -22,13 +22,12 @@ module Domain.Action.UI.Payment
 where
 
 import Domain.Types.DriverFee
-import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption
-import Kernel.External.Payment.Interface (TransactionStatus)
+import Kernel.External.Payment.Interface hiding (createOrder, orderStatus)
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
@@ -43,50 +42,31 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
+import qualified SharedLogic.Payment as SPayment
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Payment as Payment
 
 -- create order -----------------------------------------------------
-
 createOrder ::
+  ( CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m
+  ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DriverFee ->
-  Flow Payment.CreateOrderResp
+  m Payment.CreateOrderResp
 createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
-  when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse $ getId driverFeeId)
-  driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
-  unless (driver.id == driverId) $ throwError NotAnExecutor
-  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  let driverEmail = fromMaybe "test@juspay.in" driver.email
-  pendingFees <- QDF.findPendingFeesByDriverFeeId driverFee.id >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  let pendingAmount = fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst
-  let createOrderReq =
-        Payment.CreateOrderReq
-          { orderShortId = driverFee.shortId.getShortId,
-            amount = round pendingAmount,
-            customerId = driver.id.getId,
-            customerEmail = driverEmail,
-            customerPhone = driverPhone,
-            paymentPageClientId = "yatrisathi",
-            customerFirstName = Just driver.firstName,
-            customerLastName = driver.lastName
-          }
-
-  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
-      commonPersonId = cast @DP.Person @DPayment.Person driver.id
-      orderId = cast @DriverFee @DOrder.PaymentOrder driverFee.id
-      createOrderCall = Payment.createOrder merchantId -- api call
-  DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
+  SPayment.createOrder (driverId, merchantId) [driverFee] Nothing
 
 getOrder ::
   ( CacheFlow m r,
@@ -161,5 +141,5 @@ processPayment merchantId orderStatus driverFeeId = do
       CDI.updatePendingPayment False driverFee.driverId
       CDI.updateSubscription True driverFee.driverId
       Esq.runTransaction $ do
-        QDF.updateStatus DF.CLEARED driverFeeId now
+        QDF.updateStatus CLEARED driverFeeId now
         QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active

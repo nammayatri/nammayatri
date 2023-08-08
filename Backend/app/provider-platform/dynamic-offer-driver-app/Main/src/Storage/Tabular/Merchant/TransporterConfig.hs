@@ -61,13 +61,17 @@ mkPersist
       driverPaymentCycleDuration Seconds
       driverPaymentCycleStartTime Seconds
       driverPaymentReminderInterval Seconds
+      driverAutoPayNotificationTime Seconds
+      driverAutoPayExecutionTime Seconds
       rcLimit Int
       automaticRCActivationCutOff Seconds
       timeDiffFromUtc Seconds
       minLocationAccuracy Double
       subscription Bool
+      subscriptionStartTime UTCTime
       aadhaarVerificationRequired Bool
       enableDashboardSms Bool
+      planMaxAmount Int
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId
@@ -97,6 +101,8 @@ instance FromTType TransporterConfigT Domain.TransporterConfig where
           driverPaymentCycleDuration = secondsToNominalDiffTime driverPaymentCycleDuration,
           driverPaymentCycleStartTime = secondsToNominalDiffTime driverPaymentCycleStartTime,
           driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
+          driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
+          driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
           ..
         }
 
@@ -114,5 +120,7 @@ instance ToTType TransporterConfigT Domain.TransporterConfig where
         driverPaymentCycleDuration = nominalDiffTimeToSeconds driverPaymentCycleDuration,
         driverPaymentCycleStartTime = nominalDiffTimeToSeconds driverPaymentCycleStartTime,
         driverPaymentReminderInterval = nominalDiffTimeToSeconds driverPaymentReminderInterval,
+        driverAutoPayNotificationTime = nominalDiffTimeToSeconds driverAutoPayNotificationTime,
+        driverAutoPayExecutionTime = nominalDiffTimeToSeconds driverAutoPayExecutionTime,
         ..
       }

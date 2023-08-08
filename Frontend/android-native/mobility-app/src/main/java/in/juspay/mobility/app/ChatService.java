@@ -70,6 +70,8 @@ public class ChatService extends Service {
     static Random random = new Random();
     String merchantType = "";
     private int delay = 5000;
+    private long start = System.currentTimeMillis();
+    private long end = 0;
     MobilityAppBridge.SendMessageCallBack sendMessageCallBack;
     MessageOverlayService.SendMessageCallBack sendMessageCallBackOverlay;
 
@@ -125,6 +127,8 @@ public class ChatService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.startForeground(serviceNotificationID, createNotification());
+        start = System.currentTimeMillis();
+        end = start + delay;
         handler.postDelayed(this::handleMessages, delay);
         return START_STICKY;
     }
@@ -265,6 +269,7 @@ public class ChatService extends Service {
 
     private void handleMessage(Message newMessage, String len) {
         try {
+            if(System.currentTimeMillis() < end) return;
             String _dateFormatted = newMessage.timestamp;
             String _message = newMessage.message;
             String _sentBy = newMessage.sentBy;

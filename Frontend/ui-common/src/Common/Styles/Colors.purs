@@ -100,3 +100,6 @@ pearl = "#FFECED"
 
 floralWhite :: Color
 floralWhite = "#FFFAEE"
+
+orange900 :: Color
+orange900 = "#FF8533"

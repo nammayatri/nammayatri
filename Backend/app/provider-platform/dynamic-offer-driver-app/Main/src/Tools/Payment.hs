@@ -18,7 +18,7 @@ module Tools.Payment
     orderStatus,
     offerList,
     offerApply,
-    offerNotify,
+    offerNotify
   )
 where
 
@@ -29,7 +29,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     offerApply,
     offerList,
     offerNotify,
-    orderStatus,
+    orderStatus
   )
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude

@@ -138,19 +138,19 @@ public class MessageOverlayService extends Service implements View.OnClickListen
                 if(suggestion3.equals("")) {
                     suggestion3 = getFallBackSuggestion(suggestions.s3, language);
                 }
-                if (suggestion1View != null && suggestion1 != "") {
+                if (suggestion1View != null && !suggestion1.equals("")) {
                     suggestion1View.setText(suggestion1);
                     suggestion1View.setTypeface(typeface);
                     suggestion1View.setVisibility(View.VISIBLE);
                     suggestion1View.setOnClickListener(this);
                 }
-                if (suggestion2View != null && suggestion2 != "") {
+                if (suggestion2View != null && !suggestion2.equals("")) {
                     suggestion2View.setText(suggestion2);
                     suggestion2View.setTypeface(typeface);
                     suggestion2View.setVisibility(View.VISIBLE);
                     suggestion2View.setOnClickListener(this);
                 }
-                if (suggestion3View != null && suggestion3 != "") {
+                if (suggestion3View != null && !suggestion3.equals("")) {
                     suggestion3View.setText(suggestion3);
                     suggestion3View.setTypeface(typeface);
                     suggestion3View.setVisibility(View.VISIBLE);

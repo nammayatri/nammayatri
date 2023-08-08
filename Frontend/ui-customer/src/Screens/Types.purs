@@ -571,6 +571,7 @@ type HomeScreenStateData =
   , polygonCoordinates :: String
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
+  , specialZoneSelectedVariant :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponent
   , cancelRideConfirmationData :: CancelRideConfirmationData
@@ -655,6 +656,7 @@ type HomeScreenStateProps =
   , findingQuotesProgress :: Number
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
+  , isChatOpened :: Boolean
   }
 
 type RouteEndPoints = {

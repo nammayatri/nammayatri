@@ -273,7 +273,8 @@ type DriverProfileScreenData = {
   isRCActive :: Boolean,
   openInactiveRCViewOrNotArray :: Array Int,
   logField :: Object Foreign, 
-  analyticsData :: AnalyticsData
+  analyticsData :: AnalyticsData,
+  fromHomeScreen :: Boolean
 }
 
 type RcData = {
@@ -833,7 +834,8 @@ type ActiveRide = {
   waitingTime :: String,
   waitTimeInfo :: Boolean,
   rideCreatedAt :: String,
-  specialLocationTag :: Maybe String
+  specialLocationTag :: Maybe String,
+  requestedVehicleVariant :: Maybe String
 }
 
 type HomeScreenProps =  {
@@ -867,7 +869,8 @@ type HomeScreenProps =  {
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
   timerRefresh :: Boolean,
-  showlinkAadhaarPopup :: Boolean
+  showlinkAadhaarPopup :: Boolean,
+  isChatOpened :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent

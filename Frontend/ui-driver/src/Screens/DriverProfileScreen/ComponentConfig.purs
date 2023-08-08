@@ -138,7 +138,7 @@ primaryButtonConfig state = let
       { textConfig
       { text = getString UPDATE
       , color = Color.primaryButtonColor}
-      , margin = MarginHorizontal 10 10
+      , margin = Margin 10 0 10 10
       , cornerRadius = 10.0
       , background = Color.black900
       , height = (V 48)
@@ -203,15 +203,12 @@ removeAlternateNumberConfig :: ST.DriverProfileScreenState -> PopUpModal.Config
 removeAlternateNumberConfig state = let
     config = PopUpModal.config
     popUpConfig' = config {
-      gravity = BOTTOM,
       primaryText {
         text = getString REMOVE_ALTERNATE_NUMBER
-      , margin = Margin 16 24 16 0
       },
       secondaryText {
         text = getString ARE_YOU_SURE_YOU_WANT_TO_REMOVE_YOUR_ALTERNATE_MOBILE_NUMBER
       , color = Color.black700
-      , margin = Margin 16 12 16 40
         },
       option1 {
         text = getString CANCEL
@@ -222,8 +219,7 @@ removeAlternateNumberConfig state = let
         text = getString YES_REMOVE_IT
       , background = Color.red
       , color = Color.white900
-      , strokeColor = Color.red
-      , margin = MarginLeft 1 }
+      , strokeColor = Color.red}
     }
   in popUpConfig'
 
@@ -361,7 +357,7 @@ addRCButtonConfig state = let
       { textConfig
       { text = (getString ADD_NEW_RC)
       , color = Color.blue900}
-      , margin = (Margin 16 15 16 0)
+      , margin = (Margin 16 15 16 24)
       , cornerRadius = 10.0
       , background = Color.blue600
       , height = (V 60)

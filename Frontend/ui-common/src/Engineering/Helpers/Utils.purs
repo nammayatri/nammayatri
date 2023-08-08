@@ -3,6 +3,8 @@ module Engineering.Helpers.Utils where
 import Prelude
 
 import Data.Maybe (Maybe(..))
+import Data.Time.Duration (Milliseconds(..))
+import Presto.Core.Types.Language.Flow (delay)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
@@ -41,7 +43,17 @@ loaderText mainTxt subTxt = do
       pure unit
 
 getSeparatorFactor :: Int
-getSeparatorFactor = if os == "IOS" then 8 else 25
+getSeparatorFactor = 8
 
 defaultSeparatorCount :: Int
 defaultSeparatorCount = 4
+
+showAndHideLoader :: Number -> String -> String -> GlobalState -> Effect Unit
+showAndHideLoader delayInMs title description state = do
+  _ <- launchAff $ flowRunner state $ do
+    _ <- loaderText title description
+    _ <- toggleLoader true
+    _ <- delay $ Milliseconds delayInMs
+    _ <- toggleLoader false
+    pure unit
+  pure unit

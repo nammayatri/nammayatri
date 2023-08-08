@@ -29,13 +29,12 @@ import Kernel.Types.Id
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.DriverFeeStatus"
-
+derivePersistField "Domain.FeeType"
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     DriverFeeT sql=driver_fee
       id Text
-      shortId Text
       driverId PersonTId
       totalEarnings Money
       govtCharges Money
@@ -49,6 +48,7 @@ mkPersist
       status Domain.DriverFeeStatus
       createdAt UTCTime
       updatedAt UTCTime
+      feeType Domain.FeeType
       Primary id
       deriving Generic
     |]
@@ -64,7 +64,6 @@ instance FromTType DriverFeeT Domain.DriverFee where
       Domain.DriverFee
         { id = Id id,
           driverId = cast $ fromKey driverId,
-          shortId = ShortId shortId,
           platformFee = Domain.PlatformFee platformFee cgst sgst,
           ..
         }
@@ -74,7 +73,6 @@ instance ToTType DriverFeeT Domain.DriverFee where
     DriverFeeT
       { driverId = toKey $ cast driverId,
         id = getId id,
-        shortId = getShortId shortId,
         platformFee = platformFee.fee,
         cgst = platformFee.cgst,
         sgst = platformFee.sgst,
