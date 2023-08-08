@@ -1926,9 +1926,9 @@ dummyPayload = PaymentPagePayload {
     }
 }
 
-nyPaymentFlow :: FlowBT String Unit
-nyPaymentFlow = do
-  response <- lift $ lift $ Remote.subscribePlan "paymentMode" "planId"
+nyPaymentFlow :: {paymentMode :: String , planId :: String} -> FlowBT String Unit
+nyPaymentFlow paymentConfig = do
+  response <- lift $ lift $ Remote.subscribePlan paymentConfig.paymentMode paymentConfig.planId
   case response of
     Right (SubscribePlanResp listResp) -> do
       case listResp.orderResp of
@@ -1939,10 +1939,10 @@ nyPaymentFlow = do
           setValueToLocalStore DISABLE_WIDGET "false"
           let _ = consumeBP unit
           if (paymentPageOutput == "backpressed") then subScriptionFlow else pure unit-- backpressed FAIL
-          orderStatus <- lift $ lift $ Remote.paymentOrderStatus "orderId"
+          orderStatus <- lift $ lift $ Remote.paymentOrderStatus resp.id
           case orderStatus of
-            Right (OrderStatusRes resp) ->
-              case resp.status of
+            Right (OrderStatusRes statusResp) ->
+              case statusResp.status of
                 PS.CHARGED -> setPaymentStatus Success sdk_payload.payload
                 PS.AUTHORIZATION_FAILED -> setPaymentStatus Failed sdk_payload.payload
                 PS.AUTHENTICATION_FAILED -> setPaymentStatus Failed sdk_payload.payload
@@ -2071,7 +2071,8 @@ subScriptionFlow = do
     GOTO_HOMESCREEN -> homeScreenFlow
     MAKE_PAYMENT state -> do
       setValueToLocalStore DISABLE_WIDGET "true"
-      nyPaymentFlow
+      let joinPlanConfig = {paymentMode : state.props.joinPlanProps.paymentMode , planId: state.props.joinPlanProps.selectedPlan}
+      nyPaymentFlow joinPlanConfig
     GOTO_PAYMENT_HISTORY state -> paymentHistoryFlow
     PAUSE_AUTOPAY state -> do
       void $ lift $ lift $ toggleLoader true

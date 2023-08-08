@@ -10,6 +10,7 @@ import Prelude (class Show, bind, pure, unit, not, ($), (==))
 import PrestoDOM (Eval, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
+import Screens.SubscriptionScreen.Transformer (myPlanListTransformer, planListTransformer)
 import Screens.Types (SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), UiPlansResp(..))
 import Storage (KeyStore(..), setValueToLocalNativeStore)
@@ -66,8 +67,6 @@ eval BackPressed state =
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
 
-eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state
-
 eval (ClearDue PrimaryButton.OnClick) state = continue state
 
 eval (SwitchPlan PrimaryButton.OnClick) state = exit $ SwitchCurrentPlan state
@@ -76,11 +75,13 @@ eval GotoManagePlan state = continue state {props {subView = ManagePlan }}
 
 eval (SelectPlan planID ) state = continue state {props {managePlanProps {selectedPlan = planID}}}
 
+eval (ChoosePlan planID ) state = continue state {props {joinPlanProps {selectedPlan = planID}}}
+
+eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state { props {joinPlanProps {paymentMode = "AUTOPAY" } }} -- MANUAL | AUTOPAY
+
 eval HeaderRightClick state = case state.props.subView of
     MyPlan -> exit $ PaymentHistory state 
     _ -> continue state
-
-eval (ChoosePlan planID ) state = continue state {props {joinPlanProps {selectedPlan = planID}}}
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
                   Mb.Just SuccessPopup -> continue state {props {popUpState = Mb.Nothing}}
@@ -89,9 +90,9 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
                   Mb.Just CancelAutoPay -> exit $ CancelAutoPayPlan state -- CancelAutoPay API
                   Mb.Nothing -> continue state
               
-eval (PopUpModalAC (PopUpModal.DismisTextClick)) state = exit $ PauseAutoPay state -- PauseAutoPay API
+eval (PopUpModalAC (PopUpModal.DismisTextClick)) state = exit $ ResumeAutoPayPlan state -- ResumeAutoPay
 
-eval (ResumeAutoPay PrimaryButton.OnClick) state = exit $ ResumeAutoPayPlan state -- ResumeAutoPay
+eval (ResumeAutoPay PrimaryButton.OnClick) state = exit $ PauseAutoPay state -- PauseAutoPay API
 
 eval CancelAutoPayAC state = continue state {props {popUpState = Mb.Just CancelAutoPay}}
 
@@ -112,12 +113,12 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state
 
-eval (LoadPlans (UiPlansResp plans)) state = do 
-  -- fill Data
-  continue state
+eval (LoadPlans plans) state =   -- fill Data
+  continue state {data {joinPlanData {allPlans = planListTransformer plans}} }
 
-eval (LoadMyPlans (GetCurrentPlanResp plans)) state = do 
-  -- fill Data
-  continue state
+eval (LoadMyPlans plans) state = -- fill Data
+  continue state{data{myPlanData{planEntity = myPlanListTransformer plans}}}
+
+eval ShowError state = continue state{props{showError = true}}
 
 eval _ state = continue state

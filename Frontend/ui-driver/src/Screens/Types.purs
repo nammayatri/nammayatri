@@ -1519,7 +1519,9 @@ type SubscriptionScreenProps = {
   joinPlanProps :: JoinPlanProps,
   popUpState :: Maybe SubscribePopupType,
   paymentStatus :: Maybe Common.PaymentStatus,
-  resumeBtnVisibility :: Boolean
+  resumeBtnVisibility :: Boolean,
+  showError :: Boolean,
+  showShimmer :: Boolean
 }
 
 type JoinPlanData = {
@@ -1527,7 +1529,8 @@ type JoinPlanData = {
 }
 
 type JoinPlanProps = {
-  selectedPlan :: String
+  selectedPlan :: String,
+  paymentMode :: String
 }
 
 type ManagePlanData = {
@@ -1541,9 +1544,12 @@ type ManagePlanProps = {
 
 type MyPlanData = {
   dueItems :: Array DueItem,
-  offers :: Array PromoConfig,
+  planEntity :: PlanCardConfig,
   paymentMethod :: PaymentMethod,
-  autoPayStatus :: AutoPayStatus
+  autoPayStatus :: AutoPayStatus,
+  lowAccountBalance :: Boolean,
+  switchAndSave :: Boolean,
+  paymentMethodWarning :: Boolean
 }
 
 type MyPlanProps = {
@@ -1561,16 +1567,16 @@ type PlanCardConfig = {
   , description :: String
   , isSelected :: Boolean
   , offers :: Array PromoConfig
-  , offerDescription :: String
   , planPrice :: Number
 }
 
 type PromoConfig = {
-    title :: String
+    title :: Maybe String
   , isGradient :: Boolean
   , gradient :: Array String
   , hasImage :: Boolean
   , imageURL :: String
+  , offerDescription :: Maybe String
 }
 
 data PaymentMethod = UPI_AUTOPAY | MANUAL

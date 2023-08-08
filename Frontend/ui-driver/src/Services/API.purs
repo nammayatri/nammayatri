@@ -2283,19 +2283,18 @@ newtype PlanEntity = PlanEntity {
   description :: String,
   amount :: Number,
   freeRideCount :: Int,
-  frequency :: String , -- DAILY | WEEKLY | MONTHLY | PER_RIDE
+  frequency :: String, -- DAILY | WEEKLY | MONTHLY | PER_RIDE
   offerList :: Array OfferEntity
 }
 
 newtype OfferEntity = OfferEntity {
-  sponsored_by :: Maybe String,
   title :: Maybe String,
   description :: Maybe String,
   tnc :: Maybe String
 }
 
 instance makeUiPlansReq :: RestEndpoint UiPlansReq UiPlansResp where
- makeRequest reqBody@(UiPlansReq dummy) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody
+ makeRequest reqBody@(UiPlansReq dummy) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2342,7 +2341,7 @@ newtype SubscribePlanResp = SubscribePlanResp {
 }
 
 instance makeSubscribePlanReq :: RestEndpoint SubscribePlanReq SubscribePlanResp where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.subscribePlan "") headers reqBody
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.subscribePlan "") headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = standardEncode req
 
@@ -2380,7 +2379,7 @@ newtype DuesEntity = DuesEntity {
 
 
 instance makePaymentDuesReq :: RestEndpoint PaymentDuesReq PaymentDuesResp where
- makeRequest reqBody@(PaymentDuesReq dummy ) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody
+ makeRequest reqBody@(PaymentDuesReq dummy ) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2412,7 +2411,7 @@ data PauseMandateReq = PauseMandateReq String
 newtype PauseMandateResp = PauseMandateResp ApiSuccessResult
 
 instance makePauseMandateReq :: RestEndpoint PauseMandateReq PauseMandateResp where
- makeRequest reqBody@(PauseMandateReq driverId) headers = defaultMakeRequest POST (EP.pauseMandate driverId) headers reqBody
+ makeRequest reqBody@(PauseMandateReq driverId) headers = defaultMakeRequest POST (EP.pauseMandate driverId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2437,7 +2436,7 @@ data ResumeMandateReq = ResumeMandateReq String
 newtype ResumeMandateResp = ResumeMandateResp ApiSuccessResult
 
 instance makeResumeMandateReq :: RestEndpoint ResumeMandateReq ResumeMandateResp where
- makeRequest reqBody@(ResumeMandateReq driverId) headers = defaultMakeRequest POST (EP.resumeMandate driverId) headers reqBody
+ makeRequest reqBody@(ResumeMandateReq driverId) headers = defaultMakeRequest POST (EP.resumeMandate driverId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2464,7 +2463,7 @@ newtype SelectPlanReq = SelectPlanReq {
 newtype SelectPlanResp = SelectPlanResp ApiSuccessResult
 
 instance makeSelectPlanReq :: RestEndpoint SelectPlanReq SelectPlanResp where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.selectPlan "") headers reqBody
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.selectPlan "") headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = standardEncode req
 
@@ -2489,7 +2488,7 @@ data CancelAutoPayReq = CancelAutoPayReq String
 newtype CancelAutoPayResp = CancelAutoPayResp ApiSuccessResult
 
 instance makeCancelAutoPayReq :: RestEndpoint CancelAutoPayReq CancelAutoPayResp where
- makeRequest reqBody@(CancelAutoPayReq driverId) headers = defaultMakeRequest POST (EP.cancelAutoPay driverId) headers reqBody
+ makeRequest reqBody@(CancelAutoPayReq driverId) headers = defaultMakeRequest POST (EP.cancelAutoPay driverId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2514,7 +2513,7 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
 }
 
 instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq GetCurrentPlanResp where
- makeRequest reqBody@(GetCurrentPlanReq driverId) headers = defaultMakeRequest GET (EP.getCurrentPlan driverId) headers reqBody
+ makeRequest reqBody@(GetCurrentPlanReq driverId) headers = defaultMakeRequest GET (EP.getCurrentPlan driverId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 

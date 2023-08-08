@@ -23,13 +23,12 @@ import Helpers.Utils (getAssetStoreLink, getImageUrl)
 import Helpers.Utils as HU
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (>), bind, pure, discard, void)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import Screens.Types (AutoPayStatus(..), MyPlanData, PaymentMethod(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..), GlobalProps)
 import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), UiPlansResp(..))
 import Services.Backend as Remote
@@ -91,7 +90,8 @@ view push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , weight 1.0
-          ][ joinPlanView push state (state.props.subView == JoinPlan)
+          ][ errorView push state
+            , joinPlanView push state (state.props.subView == JoinPlan)
             , managePlanView push state (state.props.subView == ManagePlan)
             , myPlanView push state (state.props.subView == MyPlan)
             , autoPayDetailsView push state (state.props.subView == PlanDetails)
@@ -123,6 +123,7 @@ joinPlanView push state visibility' =
       ][ imageView
           [ width $ V 116
           , height $ V 368
+          , margin $ MarginTop 20
           , imageWithFallback "ny_ic_ny_driver,"
           ]
         , enjoyBenefitsView push state
@@ -347,9 +348,9 @@ myPlanBodyview push state =
          , paymentMethodView push state.data.myPlanData
        ]
      , planDescriptionView push state
-     , if true then alertView push (getImageURL "ny_ic_warning_red") Color.red "Low Account Balance" "Your bank account balance is low. Add at least ₹25 by 17 Aug 2023 to enjoy uninterrupted rides" "" NoAction else dummyView
-     , if true then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 "Switch and Save" "You have completed over 7 rides today. Save up to ₹10 by switching to the DAILY UNLIMITED plan" "Switch Now" NoAction else dummyView
-     , if true then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 "Payment mode changed to manual" "You have cancelled your UPI Autopay. You can clear your dues manually." "" NoAction else dummyView
+     , if state.data.myPlanData.lowAccountBalance then alertView push (getImageURL "ny_ic_warning_red") Color.red "Low Account Balance" "Your bank account balance is low. Add at least ₹25 by 17 Aug 2023 to enjoy uninterrupted rides" "" NoAction else dummyView
+     , if state.data.myPlanData.switchAndSave then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 "Switch and Save" "You have completed over 7 rides today. Save up to ₹10 by switching to the DAILY UNLIMITED plan" "Switch Now" NoAction else dummyView
+     , if state.data.myPlanData.paymentMethodWarning then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 "Payment mode changed to manual" "You have cancelled your UPI Autopay. You can clear your dues manually." "" NoAction else dummyView
      , duesView push state
      , if state.props.resumeBtnVisibility then PrimaryButton.view (push <<< ResumeAutoPay) (resumeAutopayButtonConfig state) else dummyView
     ]
@@ -401,7 +402,7 @@ planDescriptionView push state =
     , margin $ MarginBottom 12
     ](map 
          (\item -> promoCodeView push item
-         ) state.data.myPlanData.offers)
+         ) state.data.myPlanData.planEntity.offers)
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -613,7 +614,7 @@ duesView push state =
 
 promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
 promoCodeView push state =
-  linearLayout
+  linearLayout 
   ([ height WRAP_CONTENT
   , width WRAP_CONTENT
   , cornerRadius 100.0
@@ -630,13 +631,14 @@ promoCodeView push state =
      , visibility if state.hasImage then VISIBLE else GONE
      , imageWithFallback state.imageURL
      ] 
-   , textView
-     [ text state.title
-     , textSize FontSize.a_10
+   , textView $
+     [ textSize FontSize.a_10
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.blue900
      , padding $ PaddingBottom 3
-     ]
+     ] <> case state.title of
+            Mb.Nothing -> [visibility GONE]
+            Mb.Just txt -> [text txt]
   ]
 
 alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> String -> Action -> PrestoDOM (Effect Unit) w
@@ -838,26 +840,32 @@ planCardView push state isSelected action =
       , orientation HORIZONTAL
       , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       , margin $ MarginVertical 12 12
-      ](map 
-          (\item -> promoCodeView push item
-          ) state.offers)
+      ](map  (\item -> promoCodeView push item) state.offers)
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , padding $ Padding 8 8 8 8
-      , background Color.white900
-      , visibility if isSelected && (DS.length state.offerDescription > 0) then VISIBLE else GONE
-      , cornerRadius 4.0
-      ][ textView
-        [ textFromHtml state.offerDescription
-        , textSize FontSize.a_12
-        , fontStyle $ FontStyle.regular LanguageStyle
-        , color Color.black600
-        , lineHeight "20"
-        ]
-      ]
-   ]
+      ](map (\item ->
+          linearLayout
+            ([ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , padding $ Padding 8 8 8 8
+            , background Color.white900
+            , cornerRadius 4.0
+            ] <> case item.offerDescription of 
+                  Mb.Just desc -> [text desc, visibility if isSelected then VISIBLE else GONE]
+                  Mb.Nothing -> [visibility GONE])
+            [ textView
+              [ textSize FontSize.a_12
+              , textFromHtml $ Mb.fromMaybe "" item.offerDescription
+              , fontStyle $ FontStyle.regular LanguageStyle
+              , color Color.black600
+              , lineHeight "20"
+              ]
+            ]
+         )state.offers)
+    ]
 
 offerCountView :: forall w. Int -> Boolean -> PrestoDOM (Effect Unit) w
 offerCountView count isSelected = 
@@ -1017,4 +1025,24 @@ autoPayPGView push state =
           , text "Success"
           ] <> FontStyle.tags TypoGraphy
       ]
+  ]
+
+errorView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+errorView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , margin $ MarginHorizontal 30 30
+  , visibility if state.props.showError then VISIBLE else GONE
+  , clickable true
+  , gravity CENTER
+  ][ imageView
+      [ imageWithFallback "ny_ic_api_failed,"
+      , height $ V 180
+      , width $ V 280
+      ]
+    , commonTV push "Uh oh! We might be lost" Color.black900 (FontStyle.h2 TypoGraphy) 0 CENTER
+    , commonTV push "Experiencing error <Error Code>.\nPlease try again" Color.black700 (FontStyle.paragraphText TypoGraphy) 8 CENTER
   ]

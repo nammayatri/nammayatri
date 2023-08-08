@@ -29,6 +29,7 @@ import Styles.Colors as Color
 import Screens.Types (PromoConfig)
 import Debug (spy)
 import Language.Strings (getString)
+import Data.Maybe as Mb
 
 
 view :: forall w . (Action -> Effect Unit) -> DueDetailsListState -> PrestoDOM (Effect Unit) w
@@ -183,11 +184,12 @@ promoCodeView push state =
      , visibility if state.hasImage then VISIBLE else GONE
      , imageWithFallback state.imageURL
      ] 
-   , textView
-     [ text state.title
-     , textSize FontSize.a_10
+   , textView $
+     [ textSize FontSize.a_10
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.blue900
      , padding $ PaddingBottom 3
-     ]
+     ] <> case state.title of
+          Mb.Nothing -> [visibility GONE]
+          Mb.Just txt -> [text txt]
   ]

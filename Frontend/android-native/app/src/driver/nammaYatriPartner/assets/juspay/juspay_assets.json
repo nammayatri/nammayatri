@@ -133,6 +133,7 @@
       "ny_ic_alerts_active" : true,
       "ny_ic_alerts_inactive" : true,
       "ny_ic_anonymous_call" : true,
+      "ny_ic_api_failed" : true,
       "ny_ic_api_failure_popup" : true,
       "ny_ic_app_date_and_time" : true,
       "ny_ic_app_info" : true,

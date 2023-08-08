@@ -89,6 +89,7 @@ pupupModalConfig state = let
       , padding = Padding 16 16 16 16
       , gravity = CENTER
       , backgroundColor =  Color.black9000
+      , backgroundClickable = false
       , dismisText = case state.props.popUpState of
                       Mb.Just CancelAutoPay -> Mb.Just "Cancel Autopay and Pay Manually"
                       _ -> Mb.Nothing
