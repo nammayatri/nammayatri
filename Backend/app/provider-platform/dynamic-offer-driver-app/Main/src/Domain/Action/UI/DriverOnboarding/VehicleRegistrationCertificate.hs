@@ -345,7 +345,7 @@ activateRC driverId merchantId now rc = do
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber
       let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc
-      VQuery.upsert vehicle
+      VQuery.create vehicle
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()
 deactivateCurrentRC driverId = do
@@ -354,7 +354,9 @@ deactivateCurrentRC driverId = do
     Just association -> do
       rc <- RCQuery.findById association.rcId >>= fromMaybeM (RCNotFound "")
       deactivateRC rc driverId -- call deativate RC flow
-    Nothing -> return () -- Do nothing if no active association to driver
+    Nothing -> do
+      removeVehicle driverId
+      return ()
 
 deleteRC :: (Id Person.Person, Id DM.Merchant) -> DeleteRCReq -> Bool -> Flow APISuccess
 deleteRC (driverId, _) DeleteRCReq {..} isOldFlow = do
