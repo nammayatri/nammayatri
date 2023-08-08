@@ -104,7 +104,7 @@ initData = {
     activeRcIndex : 0,
     deleteRcView : false,
     alreadyActive : false,
-    callDriver : true,
+    callDriver : false,
     openRcView : false,
     detailsUpdationType : Nothing,
     btnActive : false

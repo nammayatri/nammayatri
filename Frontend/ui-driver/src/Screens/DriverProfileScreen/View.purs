@@ -400,8 +400,8 @@ missedOpportunityView state push  =
       [ text (getString MISSED_OPPORTUNITY)
       , margin $ Margin 0 0 16 4
       , textSize FontSize.a_16
-      , color Color.black 
-      , fontStyle $ FontStyle.medium LanguageStyle
+      , color Color.black900 
+      , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
     , linearLayout
       [height WRAP_CONTENT
@@ -411,7 +411,7 @@ missedOpportunityView state push  =
   ]
 
 missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
-missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> " %"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> "%"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
   {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
     {key : (getString EARNINGS_MISSED), value : "₹" <>  show analyticsData.missedEarnings , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
@@ -459,7 +459,7 @@ driverAnalyticsView state push =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: "rated by " <> show analyticsData.totalUsersRated <> " users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
+        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: "rated by " <> show analyticsData.totalUsersRated <> " users", postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
           , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
@@ -777,8 +777,8 @@ additionalDetails push state =
       [ text if state.props.screenType == ST.DRIVER_DETAILS then (getString ABOUT_ME) else (getString ABOUT_VEHICLE)
       , margin $ Margin 0 0 0 12
       , textSize FontSize.a_16
-      , color Color.black 
-      , fontStyle $ FontStyle.medium LanguageStyle
+      , color Color.black900
+      , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
   ] <> [detailsListViewComponent state push {  backgroundColor : Color.blue600
                               , separatorColor : Color.white900
@@ -1387,7 +1387,7 @@ vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , 
   , { key : (getString NAME) , value : Nothing , action : UpdateValue ST.VEHICLE_NAME , isEditable : true }]
 
 driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true }
+driverAboutMeArray state =  [{ key : (getString LANGUAGES_SPOKEN) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true }
   -- , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }
   ]
 
@@ -1437,6 +1437,7 @@ rcEditPopUpView push state =
     , background Color.black9000
     , alignParentBottom "true,-1"
     , clickable true
+    , onClick push (const RemoveEditRC)
     ]
     ([ linearLayout
         [ height WRAP_CONTENT
@@ -1520,6 +1521,7 @@ trackingCardRcEditView push state item =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , textSize FontSize.a_18
+        , fontStyle $ FontStyle.medium LanguageStyle
         , text item.text 
         , color $ if item.type == ST.DELETING_RC then Color.red else Color.black800
         ]
@@ -1574,6 +1576,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
     , background Color.black9000
     , alignParentBottom "true,-1"
     , clickable true
+    , onClick push (const SkipActiveRc)
     ]
     ([ linearLayout
         [ height WRAP_CONTENT
@@ -1591,7 +1594,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
               [ text $ "RC - " <> state.data.rcNumber <> (getString ACTIVE_RC_ON_ANOTHER_DRIVER)
               , fontStyle $ FontStyle.bold LanguageStyle
               , height WRAP_CONTENT
-              , color Color.black9000
+              , color Color.black800
               , textSize FontSize.a_18
               , padding $ Padding 10 0 10 0
               , margin $ Margin 4 0 4 4
@@ -1692,6 +1695,7 @@ trackingCardRcActiveOnAnotherDriverProfileView push state item =
         , textSize FontSize.a_16
         , text item.text
         , color $ Color.black900 
+        , fontStyle $ FontStyle.medium LanguageStyle
         ]
         ,linearLayout[
           width MATCH_PARENT,

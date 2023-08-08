@@ -233,6 +233,7 @@ data Action = BackPressed
             | OpenRcView Int
             | AddRcButtonAC PrimaryButtonController.Action
             | SkipActiveRc
+            | RemoveEditRC
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -337,7 +338,7 @@ eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
 
 eval (DriverSummary response) state = do
   let (DriverProfileSummaryRes resp) = response
-  continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = resp.languagesSpoken, languageList = updateLanguageList state (resp.languagesSpoken)}}
+  continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = (fromMaybe [] resp.languagesSpoken), languageList = updateLanguageList state (fromMaybe [] resp.languagesSpoken)}}
 
 eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
 
@@ -477,6 +478,8 @@ eval (AddRcButtonAC PrimaryButtonController.OnClick) state = do
   exit $ AddingRC state
 
 eval SkipActiveRc state = continue state { props {alreadyActive = false}}
+
+eval RemoveEditRC state = continue state { props {activateRcView = false}}
 
 eval (UpdateValueAC (PrimaryButton.OnClick)) state = do 
   if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age 
