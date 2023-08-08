@@ -32,11 +32,13 @@ import Kernel.Utils.Shutdown
 import Lib.Scheduler.Environment
 import Lib.Scheduler.Handler (SchedulerHandle, handler)
 import Lib.Scheduler.Metrics
+import Lib.Scheduler.Types (JobProcessor)
 import Servant (Context (EmptyContext))
 import System.Exit
 import UnliftIO
 
 runSchedulerService ::
+  (JobProcessor t, FromJSON t) =>
   SchedulerConfig ->
   SchedulerHandle t ->
   IO ()
@@ -58,12 +60,10 @@ runSchedulerService SchedulerConfig {..} handle_ = do
       else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
-
   let schedulerEnv = SchedulerEnv {..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure
-
   Metrics.serve metricsPort
   let serverStartAction = handler handle_
   randSecDelayBeforeStart <- Seconds <$> getRandomInRange (0, loopIntervalSec.getSeconds)

@@ -41,6 +41,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Scheduler.Environment (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
@@ -112,7 +113,9 @@ data AppCfg = AppCfg
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType
   }
   deriving (Generic, FromDhall)
 
@@ -180,7 +183,9 @@ data AppEnv = AppEnv
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType
   }
   deriving (Generic)
 

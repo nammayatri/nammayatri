@@ -37,7 +37,7 @@ schedulerHandle :: LoggerResources -> SchedulerHandle SchedulerJobType
 schedulerHandle loggerRes =
   SchedulerHandle
     { getTasksById = QSJ.getTasksById,
-      getReadyTasks = QSJ.getReadyTasks,
+      getReadyTasks = return ([], []),
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,

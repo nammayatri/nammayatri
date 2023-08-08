@@ -29,6 +29,8 @@ library
       Lib.Scheduler.JobHandler
       Lib.Scheduler.JobStorageType.DB.Queries
       Lib.Scheduler.JobStorageType.DB.Table
+      Lib.Scheduler.JobStorageType.Redis.Queries
+      Lib.Scheduler.JobStorageType.SchedulerType
       Lib.Scheduler.Metrics
       Lib.Scheduler.ScheduleJob
       Lib.Scheduler.Types

@@ -52,7 +52,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+-- import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
+
+import Lib.Scheduler.Environment (SchedulerType)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
@@ -60,7 +63,6 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
--- import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -89,7 +91,9 @@ endRideTransaction ::
     EsqLocRepDBFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasField "maxShards" r Int,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -280,7 +284,7 @@ safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
 
-createDriverFee :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m ()
+createDriverFee :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m ()
 createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
@@ -306,13 +310,12 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
     let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
     case isPendingPaymentJobScheduled of
       Nothing -> do
-        Esq.runNoTransaction $
-          createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
-            SendPaymentReminderToDriverJobData
-              { startTime = driverFee.startTime,
-                endTime = driverFee.endTime,
-                timeDiff = transporterConfig.timeDiffFromUtc
-              }
+        createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
+          SendPaymentReminderToDriverJobData
+            { startTime = driverFee.startTime,
+              endTime = driverFee.endTime,
+              timeDiff = transporterConfig.timeDiffFromUtc
+            }
         setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
       _ -> pure ()
 
@@ -320,12 +323,11 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
     isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
     case isOverduePaymentJobScheduled of
       Nothing -> do
-        Esq.runNoTransaction $
-          createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
-            UnsubscribeDriverForPaymentOverdueJobData
-              { startTime = driverFee.startTime,
-                timeDiff = transporterConfig.timeDiffFromUtc
-              }
+        createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
+          UnsubscribeDriverForPaymentOverdueJobData
+            { startTime = driverFee.startTime,
+              timeDiff = transporterConfig.timeDiffFromUtc
+            }
         setOverduePaymentCache driverFee.endTime overduePaymentJobTs
       _ -> pure ()
 

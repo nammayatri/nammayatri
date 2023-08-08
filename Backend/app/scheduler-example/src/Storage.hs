@@ -34,9 +34,6 @@ createJobFunc (AnyJob job@Job {id}) = do
     modifyMVar_ jobsList $ \map_ -> do
       return $ Map.insert id (AnyJob job) map_
 
--- create :: AnyJob SchedulerJobType -> SchedulerM ()
--- create =
-
 findAll :: SchedulerM [AnyJob SchedulerJobType]
 findAll = liftIO $ Map.elems <$> readMVar jobsList
 

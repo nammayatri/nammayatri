@@ -161,7 +161,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"
@@ -218,4 +218,6 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , schedulerSetName = "Scheduled_Jobs"
+    , schedulerType = common.schedulerType.RedisBased
     }
