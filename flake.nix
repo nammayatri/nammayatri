@@ -7,6 +7,12 @@
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
+    # We cannot use southern-zone-latest here, because the sha256 will change
+    # over time.  NOTE: This file is not permanent, find the available one at
+    # https://download.geofabrik.de/asia/india/
+    # NOTE: If you change this, also change `openStreetDataFileName` in osrm.nix
+    osrm-pbf.url = "http://download.geofabrik.de/asia/india/southern-zone-230801.osm.pbf";
+    osrm-pbf.flake = false;
 
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
     easy-purescript-nix.flake = false;
