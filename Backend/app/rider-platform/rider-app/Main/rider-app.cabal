@@ -178,6 +178,7 @@ library
       Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
       Domain.Types.Person
+      Domain.Types.Person.DisabilityType
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Person.PersonStats
@@ -238,6 +239,7 @@ library
       Storage.Beam.Payment.PaymentOrder
       Storage.Beam.Payment.PaymentTransaction
       Storage.Beam.Person
+      Storage.Beam.Person.DisabilityType
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.Person.PersonStats
@@ -266,6 +268,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.Person.DisabilityType
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
       Storage.Queries.AppInstalls
@@ -295,6 +298,7 @@ library
       Storage.Queries.MerchantConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.Person
+      Storage.Queries.Person.DisabilityType
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Person.PersonStats

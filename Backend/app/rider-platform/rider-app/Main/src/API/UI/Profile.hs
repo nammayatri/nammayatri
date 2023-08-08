@@ -20,9 +20,13 @@ module API.UI.Profile
     DProfile.PersonDefaultEmergencyNumber (..),
     DProfile.UpdateProfileDefaultEmergencyNumbersResp,
     DProfile.GetProfileDefaultEmergencyNumbersResp (..),
+    -- DisabilityList,
     API,
     getPersonDetails,
     updatePerson,
+    updateDefaultEmergencyNumbers,
+    getDefaultEmergencyNumbers,
+    -- getAllDisabilities,
     handler,
   )
 where
@@ -30,6 +34,7 @@ where
 import qualified Domain.Action.UI.Profile as DProfile
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
+-- import qualified Domain.Types.Person.DisabilityType as DTypes
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -37,6 +42,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth
+
+-- import qualified Domain.Types.Person.DisabilityType as DTypes
 
 type API =
   "profile"
@@ -52,7 +59,12 @@ type API =
                       :<|> TokenAuth
                     :> Get '[JSON] DProfile.GetProfileDefaultEmergencyNumbersResp
                 )
+                --  :<|> "disabilityTypes"
+                --    :> TokenAuth
+                --    :> Get '[JSON] DisabilityList
        )
+
+-- type DisabilityList = [DTypes.DisabilityAPIEntity]
 
 handler :: FlowServer API
 handler =
@@ -60,6 +72,8 @@ handler =
     :<|> updatePerson
     :<|> updateDefaultEmergencyNumbers
     :<|> getDefaultEmergencyNumbers
+
+-- :<|> getAllDisabilities
 
 getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.ProfileRes
 getPersonDetails = withFlowHandlerAPI . DProfile.getPersonDetails
@@ -72,3 +86,6 @@ updateDefaultEmergencyNumbers (personId, _) = withFlowHandlerAPI . withPersonIdL
 
 getDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers = withFlowHandlerAPI . DProfile.getDefaultEmergencyNumbers
+
+-- getAllDisabilities :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DisabilityList
+-- getAllDisabilities = withFlowHandlerAPI . DProfile.getAllDisabilities

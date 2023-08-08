@@ -104,6 +104,7 @@ mkAuthReq =
       deviceToken = Nothing,
       notificationToken = Nothing,
       whatsappNotificationEnroll = Nothing,
+      disabilityId = Nothing,
       firstName = Nothing,
       middleName = Nothing,
       lastName = Nothing,

@@ -19,7 +19,7 @@ where
 
 import qualified Domain.Types.CancellationReason as DCR
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Functions
+import Kernel.Beam.Functions (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Storage.Queries.CancellationReason as QCR
 

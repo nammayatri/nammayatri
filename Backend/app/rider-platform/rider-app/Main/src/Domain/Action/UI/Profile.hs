@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.UI.Profile
   ( ProfileRes,
@@ -24,12 +25,14 @@ module Domain.Action.UI.Profile
     updatePerson,
     updateDefaultEmergencyNumbers,
     getDefaultEmergencyNumbers,
+    getAllDisabilities,
   )
 where
 
 import Data.List (nubBy)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Person.DisabilityType as DType
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -48,7 +51,10 @@ import Kernel.Utils.Validation
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant
+-- import qualified Storage.CachedQueries.Person.DisabilityType as PDT
+
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Person.DisabilityType as QPD
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
 import Tools.Error
 import Tools.Metrics
@@ -65,6 +71,7 @@ data UpdateProfileReq = UpdateProfileReq
     referralCode :: Maybe Text,
     language :: Maybe Maps.Language,
     gender :: Maybe Person.Gender,
+    disabilityId :: Maybe Text, -- (Id DType.DisabilityType),
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version
   }
@@ -130,6 +137,7 @@ updatePerson personId req = do
       req.notificationToken
       req.language
       req.gender
+      req.disabilityId
       req.clientVersion
       req.bundleVersion
   pure APISuccess.Success
@@ -188,6 +196,9 @@ getDefaultEmergencyNumbers (personId, _) = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
   return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList
+
+getAllDisabilities :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m [DType.DisabilityAPIEntity]
+getAllDisabilities (_, _) = map DType.makeDisabilityAPIEntity <$> runInReplica QPD.getAllDisabilities
 
 getUniquePersonByMobileNumber :: UpdateProfileDefaultEmergencyNumbersReq -> [PersonDefaultEmergencyNumber]
 getUniquePersonByMobileNumber req =

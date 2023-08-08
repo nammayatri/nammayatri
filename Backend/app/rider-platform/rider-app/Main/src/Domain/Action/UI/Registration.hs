@@ -35,6 +35,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
+-- import qualified Domain.Types.Person.DisabilityType as PDT
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Person.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
@@ -84,6 +85,7 @@ data AuthReq = AuthReq
     deviceToken :: Maybe Text,
     notificationToken :: Maybe Text,
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
+    disabilityId :: Maybe Text, -- (Id PDT.DisabilityType),
     firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
@@ -103,6 +105,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "deviceToken"
         <*> obj .:? "userId" -- TODO :: This needs to be changed to notificationToken
         <*> obj .:? "whatsappNotificationEnroll"
+        <*> obj .:? "disabilityId"
         <*> obj .:? "firstName"
         <*> obj .:? "middleName"
         <*> obj .:? "lastName"
@@ -270,7 +273,7 @@ signatureAuth req mbBundleVersion mbClientVersion = do
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` req.email
       _ <- RegistrationToken.setDirectAuth regToken.id
-      _ <- Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing)
+      _ <- Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) req.disabilityId (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing)
       personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity)
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
@@ -322,7 +325,8 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         blockedByRuleId = if useFraudDetection then personWithSameDeviceToken >>= (.blockedByRuleId) else Nothing,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
-        whatsappNotificationEnrollStatus = Nothing
+        whatsappNotificationEnrollStatus = Nothing,
+        disabilityId = Nothing --req.disabilityId
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing

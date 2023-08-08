@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantConfig as DMC
+-- import qualified Domain.Types.Person.DisabilityType as DTypes
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
@@ -94,6 +95,7 @@ data PersonE e = Person
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
+    disabilityId :: Maybe Text, --(Id DTypes.DisabilityType),
     referralCode :: Maybe Text,
     referredAt :: Maybe UTCTime,
     hasTakenValidRide :: Bool,
@@ -138,6 +140,7 @@ data PersonAPIEntity = PersonAPIEntity
     hasTakenValidRide :: Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
+    disabilityId :: Maybe Text, --(Id DTypes.DisabilityType),
     language :: Maybe Maps.Language,
     gender :: Gender,
     bundleVersion :: Maybe Version,
@@ -151,5 +154,6 @@ makePersonAPIEntity Person {..} =
     { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = maskText <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
+      disabilityId = disabilityId,
       ..
     }

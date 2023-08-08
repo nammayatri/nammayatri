@@ -23,7 +23,23 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se
-import Storage.Beam.Person.PersonStats as BeamPS hiding (Id)
+import Storage.Beam.Person.PersonStats as BeamPS
+  ( PersonStats,
+    PersonStatsT
+      ( PersonStatsT,
+        completedRides,
+        driverCancelledRides,
+        eveningPeakRides,
+        morningPeakRides,
+        offPeakRides,
+        personId,
+        updatedAt,
+        userCancelledRides,
+        weekdayRides,
+        weekendPeakRides,
+        weekendRides
+      ),
+  )
 
 create :: (L.MonadFlow m, Log m) => Domain.PersonStats -> m ()
 create = createWithKV

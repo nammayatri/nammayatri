@@ -29,6 +29,7 @@ import Database.Beam.Postgres
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Person as Domain
+import qualified Domain.Types.Person.DisabilityType as DTypes
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption (DbHash)
@@ -94,6 +95,23 @@ deriving stock instance Ord OptApiMethods
 instance IsString OptApiMethods where
   fromString = show
 
+instance FromField DTypes.DisabilityType where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DTypes.DisabilityType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DTypes.DisabilityType
+
+instance FromBackendRow Postgres DTypes.DisabilityType
+
+instance IsString DTypes.DisabilityType where
+  fromString = show
+
+deriving stock instance Ord DTypes.DisabilityType
+
+type DisabilityType = PersonT Identity
+
 data PersonT f = PersonT
   { id :: B.C f Text,
     firstName :: B.C f (Maybe Text),
@@ -120,6 +138,7 @@ data PersonT f = PersonT
     description :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     whatsappNotificationEnrollStatus :: B.C f (Maybe OptApiMethods),
+    disabilityId :: B.C f (Maybe Text), --B.C f (Maybe DTypes.DisabilityType),
     createdAt :: B.C f Time.UTCTime,
     blockedAt :: B.C f (Maybe Time.LocalTime),
     blockedByRuleId :: B.C f (Maybe Text),
@@ -168,6 +187,7 @@ personTMod =
       description = B.fieldNamed "description",
       merchantId = B.fieldNamed "merchant_id",
       whatsappNotificationEnrollStatus = B.fieldNamed "whatsapp_notification_enroll_status",
+      disabilityId = B.fieldNamed "disability_id",
       createdAt = B.fieldNamed "created_at",
       blockedAt = B.fieldNamed "blocked_at",
       blockedByRuleId = B.fieldNamed "blocked_by_rule_id",
@@ -179,6 +199,6 @@ personTMod =
       referredAt = B.fieldNamed "referred_at"
     }
 
-$(enableKVPG ''PersonT ['id] [['mobileNumberHash], ['emailHash], ['referralCode], ['deviceToken]])
+$(enableKVPG ''PersonT ['id] [['mobileNumberHash], ['emailHash], ['referralCode], ['deviceToken], ['disabilityId]])
 
 $(mkTableInstances ''PersonT "person" "atlas_app")
