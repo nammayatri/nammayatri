@@ -214,7 +214,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
 --     maxDayTime date = UTCTime date 66600
 
 findOneByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
-findOneByDriverId (Id personId) = findOneWithKV [Se.Is BeamR.driverId $ Se.Eq personId]
+findOneByDriverId (Id personId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq personId] <&> listToMaybe
 
 getInProgressByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
 getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
@@ -265,7 +265,7 @@ updateDistance driverId distance = do
     [ Se.Set BeamR.traveledDistance distance,
       Se.Set BeamR.updatedAt now
     ]
-    [Se.Is BeamR.driverId (Se.Eq $ getId driverId)]
+    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
 updateAll :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
