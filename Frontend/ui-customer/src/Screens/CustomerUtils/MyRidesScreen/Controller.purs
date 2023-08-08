@@ -20,7 +20,7 @@ import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (union, (!!), length, filter, unionBy, head, all, null)
+import Data.Array (union, (!!), length, filter, unionBy, head, all, null, sortWith, reverse)
 import Data.Int (fromString, round, toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -194,7 +194,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone"
-}) (listRes ))
+}) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
@@ -248,7 +248,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
   , zoneType : specialTags.priorityTag
   , vehicleVariant : rideDetails.vehicleVariant
-}) (listRes))
+}) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 
 dummyFareBreakUp :: FareBreakupAPIEntity
