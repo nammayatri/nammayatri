@@ -101,6 +101,8 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import MerchantConfig.Utils (getValueFromConfig)
+import MerchantConfig.Utils as MU
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -347,7 +349,7 @@ tabImageView state push =
           , margin $ MarginRight 10
           , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
           , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
-          , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png" --change the link once uploaded to asset
+          , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
           ]
   ,  PrestoAnim.animationSet 
     [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
@@ -429,20 +431,29 @@ driverAnalyticsView state push =
         , color Color.black900
         , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
-    , linearLayout  
+    , let bonusActivated = getValueFromConfig "BONUS_EARNED" == "true"  in 
+      linearLayout  
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , margin $ Margin 0 12 0 12
-      , background Color.blue600
+      , margin if bonusActivated then (MarginVertical 12 12) else (MarginVertical 4 12)
+      , background if bonusActivated then Color.blue600 else Color.transparent
       , cornerRadius 10.0
-      ][  infoTileView state {primaryText: "₹ " <> analyticsData.totalEarnings, subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
-        , linearLayout
-          [ height MATCH_PARENT
-          , width (V 1)
-          , margin (Margin 0 16 0 16)
-          , background Color.lightGreyShade
-          ][]
-        , infoTileView state {primaryText: "₹ " <> analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+      ][  if bonusActivated then 
+            linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            ]
+            [ 
+              infoTileView state {primaryText: "₹ " <> analyticsData.totalEarnings, subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+            , linearLayout
+              [ height MATCH_PARENT
+              , width (V 1)
+              , margin (Margin 0 16 0 16)
+              , background Color.lightGreyShade
+              ][]
+            , infoTileView state {primaryText: "₹ " <> analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+            ]
+          else infoCard state push {key : (getString EARNED_ON_APP), value : "₹" <> analyticsData.totalEarnings , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
         ]
       , linearLayout  
         [ width MATCH_PARENT
@@ -727,7 +738,8 @@ vehicleDetailsView push state =
   , width MATCH_PARENT
   , orientation VERTICAL 
   , margin $ MarginHorizontal 16 16
-  ][  vehicleAnalyticsView push state
+  , visibility GONE
+  ][  --vehicleAnalyticsView push state
    ]
 
 
@@ -882,7 +894,12 @@ alternateNumberLayoutView state push =
     else 
       linearLayout [
         height WRAP_CONTENT,
-        width MATCH_PARENT
+        width MATCH_PARENT,
+        afterRender (\action -> do
+        _ <- push action
+        _ <- JB.requestKeyboardShow (EHC.getNewIDWithTag "alternateMobileNumber")
+        pure unit
+        ) (const AfterRender)
       ] 
       [PrimaryEditText.view (push <<< PrimaryEditTextActionController) (alternatePrimaryEditTextConfig state)]
   ]

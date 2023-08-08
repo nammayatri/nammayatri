@@ -624,5 +624,6 @@ const hindiStrings = {
   FEE_PAYMENT_HISTORY : "शुल्क भुगतान इतिहास",
   LANGUAGES_स्पोकन : "बोली जाने वाली भाषाएँ",
   VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें",
-  RIDE_TYPE : "सवारी का प्रकार"
+  RIDE_TYPE : "सवारी का प्रकार",
+  PLACE_CALL_REQUEST : "कॉल अनुरोध करें"
 }

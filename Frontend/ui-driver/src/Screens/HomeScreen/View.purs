@@ -556,7 +556,7 @@ driverDetail push state =
          [ width $ V 42
          , height $ V 42
          , onClick push $ const GoToProfile
-         , imageWithFallback $ "ny_ic_new_avatar," <> (if (MU.getMerchant FunctionCall == MU.YATRISATHI) then "https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_new_avatar.png" else "https://assets.juspay.in/beckn/nammayatri/driver/images/ic_new_avatar.png")
+         , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
          ]
       ]
     , linearLayout

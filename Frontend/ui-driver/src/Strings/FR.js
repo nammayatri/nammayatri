@@ -476,5 +476,6 @@ const frenchStrings = {
   FEE_PAYMENT_HISTORY : "Historique de paiement des frais",
   LANGUAGES_SPOKEN : "Langues parlées",
   VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements",
-  RIDE_TYPE : "Type de trajet"
+  RIDE_TYPE : "Type de trajet",
+  PLACE_CALL_REQUEST : "Faire une demande d'appel"
 }
