@@ -173,6 +173,7 @@
       "ny_ic_dl_blue" : true,
       "ny_ic_download" : true,
       "ny_ic_download_button" : true,
+      "ny_ic_driver_avatar" : true,
       "ny_ic_driver_near" : true,
       "ny_ic_driver_profile" : true,
       "ny_ic_driver_started" : true,

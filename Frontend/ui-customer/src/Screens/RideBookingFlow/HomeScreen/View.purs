@@ -1001,7 +1001,13 @@ rateExperienceView state push =
   , stroke $ "1,"<>Color.grey800
   , padding $ Padding 10 10 10 10
   , gravity CENTER
-  ][ commonTextView state push ((getString RATE_YOUR_RIDE_WITH) <> state.data.driverInfoCardState.driverName) Color.black800 (FontStyle.h3 TypoGraphy) 10
+  ][ imageView [
+      imageWithFallback "ny_ic_driver_avatar,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_avatar.png"
+      , height $ V 56
+      , width $ V 56
+      , cornerRadius 50.0
+    ]
+    , commonTextView state push ((getString RATE_YOUR_RIDE_WITH) <> state.data.driverInfoCardState.driverName) Color.black800 (FontStyle.h3 TypoGraphy) 10
     , commonTextView state push (getString YOUR_FEEDBACK_HELPS_US) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
     , linearLayout
       [ height WRAP_CONTENT

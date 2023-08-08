@@ -1129,7 +1129,9 @@ eval (DriverArrivedAction driverArrivalTime) state = do
   exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
-  _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
+  _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "WAITING_ACTION_TRIGGERED" 
+                then setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED" 
+                else pure unit
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryAction timerID timeInMinutes seconds)) state = do
