@@ -522,6 +522,7 @@ type HomeScreenStateData =
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard
+  , driverDetails :: DriverDetails
   , previousRideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
   , sourceAddress :: Address
@@ -592,6 +593,7 @@ type HomeScreenStateProps =
   , searchExpire :: Int
   , isEstimateChanged :: Boolean
   , showRateCard :: Boolean
+  , showDriverDetails :: Boolean
   , showRateCardIcon :: Boolean
   , emergencyHelpModal :: Boolean
   , sendMessageActive :: Boolean
@@ -698,6 +700,35 @@ type RateCard =
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean
   }
+
+
+-- type DriverDetails = 
+--     { props :: DriverDetailsProps
+--     , data :: DriverDetailsData
+--     }
+-- type DriverDetailsProps = 
+--     { currentStage :: Stage,
+--       zoneType :: ZoneType,
+--       isSpecialZone :: Boolean
+--     }   
+type DriverDetails = 
+    { rideId :: String
+    , firstName :: String
+    , middleName :: String
+    , lastName ::String
+    , totalRidesAssigned :: Int
+    , rating :: Number
+    , totalUsersRated :: Int
+    , language :: String
+    , mobileNumber :: String
+    , totalDistanceTravelled :: Int
+    , homeTown :: String
+    , lateNightTrips :: Int
+    , totalCompletedTrips :: Int 
+    , lastRegistered ::  String
+    
+    }  
+
 
 type EmergencyHelpModelState = {
    currentlySelectedContact :: Contact,

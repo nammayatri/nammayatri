@@ -1,12 +1,10 @@
 module Components.DriverDetails.Controller where
-import Components.PrimaryButton as PrimaryButtonController
-import Components.SourceToDestination as SourceToDestinationController
 import Screens.Types(Stage, ZoneType(..))
 import Data.Maybe (Maybe)
 
 
 
-data Action = NoAction
+data Action = Close | BackPressed | NoAction 
         
 
 type DriverDetailsState = 
@@ -15,9 +13,12 @@ type DriverDetailsState =
     }
     
 type DriverDetailsProps = 
-    { currentStage :: Stage
-    , zoneType :: ZoneType
-  }
+    { currentStage :: Stage,
+      zoneType :: ZoneType,
+      isSpecialZone :: Boolean
+     
+    }
+
 
 type DriverDetailsData = 
     { rideId :: String
@@ -33,5 +34,7 @@ type DriverDetailsData =
     , homeTown :: String
     , lateNightTrips :: Int
     , totalCompletedTrips :: Int 
-    , lastRegistered :: String
-    }    
+    , lastRegistered ::  String
+    
+    }  
+

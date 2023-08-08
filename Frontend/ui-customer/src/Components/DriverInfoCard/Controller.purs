@@ -21,6 +21,8 @@ import Screens.Types(Stage, ZoneType(..))
 import Data.Maybe(Maybe)
 import Components.ChatView as ChatView
 
+
+
 data Action = NoAction
             | Support
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -33,6 +35,7 @@ data Action = NoAction
             | ZoneOTPExpiryAction String String Int
             | OnNavigate
             | RemoveNotification
+            | DriverDetails 
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -49,6 +52,7 @@ type DriverInfoCardProps =
     isSpecialZone :: Boolean,
     estimatedTime :: String,
     zoneType :: ZoneType
+
   }
 
 type DriverInfoCardData =

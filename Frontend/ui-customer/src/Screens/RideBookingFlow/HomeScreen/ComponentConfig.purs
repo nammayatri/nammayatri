@@ -25,6 +25,8 @@ import Components.Banner as Banner
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
+import Components.DriverDetails as DriverDetails
+import Components.DriverDetails (DriverDetailsData)
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
 import Components.FareBreakUp as FareBreakUp
@@ -52,7 +54,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData , TipViewStage(..) , TipViewProps)
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData , TipViewStage(..) , TipViewProps, DriverDetails)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Data.Int as INT
@@ -671,7 +673,16 @@ driverInfoCardViewState state = { props:
                                   }
                               , data: driverInfoTransformer state
                             }
+driverDetailsViewState :: ST.HomeScreenState -> DriverDetails.DriverDetailsState
+driverDetailsViewState state = { props:
+                                  {
+                                    currentStage: state.props.currentStage
+                                  , zoneType : state.props.zoneType.priorityTag
+                                  , isSpecialZone: state.props.isSpecialZone
 
+                                  }
+                                , data : driverDetailsTransformer state
+                                }
 chatViewConfig :: ST.HomeScreenState -> ChatView.Config
 chatViewConfig state = let
   config = ChatView.config
@@ -761,6 +772,27 @@ driverInfoTransformer state =
     , merchantExoPhone : cardState.merchantExoPhone
     , lastMessage : state.data.lastMessage
     }
+driverDetailsTransformer :: ST.HomeScreenState -> DriverDetailsData 
+driverDetailsTransformer state = 
+  let cardState = state.data.driverDetails
+  in
+  {
+      rideId :cardState.rideId
+    , firstName :cardState.firstName
+    , middleName :cardState.middleName
+    , lastName :cardState.lastName
+    , totalRidesAssigned :cardState.totalRidesAssigned
+    , rating :cardState.rating
+    , totalUsersRated :cardState.totalUsersRated
+    , language :cardState.language
+    , mobileNumber :cardState.mobileNumber
+    , totalDistanceTravelled :cardState.totalDistanceTravelled
+    , homeTown :cardState.homeTown
+    , lateNightTrips :cardState.lateNightTrips
+    , totalCompletedTrips :cardState.totalCompletedTrips
+    , lastRegistered :cardState.lastRegistered
+
+  }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
 emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp

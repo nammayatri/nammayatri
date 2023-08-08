@@ -20,7 +20,7 @@ import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Styles.Colors as Color
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..),DriverDetails)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -45,6 +45,7 @@ initData = {
     , selectList : []
     , quoteListModelState : []
     , driverInfoCardState : dummyDriverInfo
+    , driverDetails :dummyDriverDetails
     , previousRideRatingState : dummyPreviousRiderating
     , settingSideBar : dummySettingBar
     , sourceAddress : dummyAddress
@@ -135,6 +136,7 @@ initData = {
     , searchExpire : 90
     , isEstimateChanged : false
     , showRateCard : false
+    , showDriverDetails : false
     , showRateCardIcon : false
     , sendMessageActive : false
     , chatcallbackInitiated : false
@@ -193,6 +195,7 @@ selectedContactData ::  Contact
 selectedContactData =
   { name : "", phoneNo : "" }
 
+
 emergencyHelpModalData :: EmergencyHelpModelState
 emergencyHelpModalData = {
   showCallPolicePopUp : false,
@@ -205,6 +208,7 @@ emergencyHelpModalData = {
   sosStatus : "",
   isSelectEmergencyContact : false
 }
+
 
 dummyQuoteList :: Array QuoteListItemState
 dummyQuoteList = [
@@ -268,6 +272,24 @@ dummyPreviousRiderating = {
 , distanceDifference : 0
 , feedback : ""
 }
+dummyDriverDetails :: DriverDetails
+dummyDriverDetails =
+  {
+     rideId : ""
+    , firstName : ""
+    , middleName :""
+    , lastName :""
+    , totalRidesAssigned :0
+    , rating :0.0
+    , totalUsersRated :0
+    , language :""
+    , mobileNumber : ""
+    , totalDistanceTravelled :0
+    , homeTown :""
+    , lateNightTrips :0
+    , totalCompletedTrips :0
+    , lastRegistered : ""
+  }
 
 
 dummyDriverInfo :: DriverInfoCard

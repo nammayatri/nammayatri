@@ -737,6 +737,7 @@ driverDetailsView push state =
               , width $ V 50
               , padding $ Padding 2 3 2 1
               , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
+              , onClick push $ const DriverDetails
               ]
           ]
         , textView

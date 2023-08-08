@@ -23,6 +23,7 @@ import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
 import Components.DriverInfoCard.Controller as DriverInfoCardController
+import Components.DriverDetails as DriverDetailsController
 import Components.EmergencyHelp as EmergencyHelpController
 import Components.ErrorModal.Controller as ErrorModalController
 import Components.FareBreakUp as FareBreakUp
@@ -78,7 +79,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..), DriverDetails)
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -462,6 +463,7 @@ data ScreenOutput = LogoutUser
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
                   | GoToEmergencyContacts HomeScreenState
+                  -- | DriverDetails HomeScreenState
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
@@ -548,6 +550,8 @@ data Action = NoAction
             | EstimatesTryAgain GetQuotesRes
             | EstimateChangedPopUpController PopUpModal.Action
             | RateCardAction RateCard.Action
+            | DriverDetailsActionController DriverDetailsController.Action
+            | ShowDriverDetails
             | ShowRateCard
             | UpdateETA Int Int
             | EmergencyHelpModalAC EmergencyHelpController.Action
@@ -579,6 +583,7 @@ data Action = NoAction
             | InitializeChat
             | RemoveChat
             | OpenChatScreen
+            | OpenDriverDetails
             | ChatViewActionController ChatView.Action
             | HideLiveDashboard String
             | LiveDashboardAction
@@ -642,6 +647,11 @@ eval (OpenChatScreen) state = do
   continueWithCmd state{props{openChatScreen = false}} [do
     pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
   ]
+eval (OpenDriverDetails) state = do
+  continueWithCmd state {props {showDriverDetails = false}} [do
+   pure $ (DriverInfoCardActionController (DriverInfoCardController.DriverDetails ))
+  
+  ]
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
   let sendMessageActive = if (STR.length (STR.trim value)) >= 1 then
@@ -678,6 +688,8 @@ eval (ChatViewActionController (ChatView.BackPressed)) state = do
       pure $ BackPressed
     ]
 
+
+
 eval InitializeChat state = do
   continue state {props { chatcallbackInitiated = true } }
 
@@ -698,6 +710,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
 eval (DriverInfoCardActionController (DriverInfoCardController.RemoveNotification)) state = do
   continue state {props { showChatNotification = false}}
 
+
+
 eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false
   case state.props.currentStage of
@@ -714,6 +728,7 @@ eval BackPressed state = do
                         else do
                         _ <- pure $ updateLocalStage SearchLocationModel
                         continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
+                      
     ConfirmingLocation -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
@@ -757,6 +772,7 @@ eval BackPressed state = do
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ SaveFavouriteCardAction SaveFavouriteCardController.OnClose]
                           else if state.props.showShareAppPopUp then continue state{props{showShareAppPopUp=false}}
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
+                          else if state.props.showDriverDetails then continue state{ props{showDriverDetails = false}}
                           else if state.props.emergencyHelpModelState.showContactSupportPopUp then continue state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
                           else if state.props.emergencyHelpModelState.showCallPolicePopUp then continue state {props{emergencyHelpModelState{showCallPolicePopUp = false}}}
                           else if state.props.emergencyHelpModelState.showCallSuccessfulPopUp then continue state {props{emergencyHelpModelState{showCallSuccessfulPopUp = false}}}
@@ -766,6 +782,7 @@ eval BackPressed state = do
                               pure NoAction
                             ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
+                          -- else if state.props.driverDetailsState then continue state {props { driverDetailsState = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else do
                             _ <- pure $ minimizeApp ""
@@ -862,6 +879,8 @@ eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) 
 eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.DriverDetails)) state =continue state{ props{showDriverDetails = true}}
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
@@ -1029,6 +1048,7 @@ eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
   continue state { props { cancelSearchCallDriver = true } }
 
+
 eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
   _ <- pure $ performHapticFeedback unit
   continue state { props { isLocationTracking = true } }
@@ -1036,6 +1056,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
+
+
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
   continueWithCmd state
@@ -1581,6 +1603,8 @@ eval (RateCardAction RateCard.GoToDriverAddition) state = continue state { data{
 
 eval (RateCardAction RateCard.GoToFareUpdate) state = continue state { data{rateCard{currentRateCardType = FareUpdate,onFirstPage = true}}}
 
+-- eval (DriverDetailsAction DriverDetails.BackPressed) state = continue state { props { showDriverDetails = false} , data{}}
+
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showMultipleRideInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showMultipleRideInfo = false } }
@@ -1591,6 +1615,9 @@ eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
+
+eval ShowDriverDetails state = do
+  continue state { props { showDriverDetails = false}}
 
 eval (PopUpModalShareAppAction PopUpModal.OnButton1Click) state= continue state{props{showShareAppPopUp=false}}
 
