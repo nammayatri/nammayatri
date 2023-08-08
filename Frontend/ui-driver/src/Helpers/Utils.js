@@ -139,6 +139,21 @@ export const countDown = function (countDownTime) {
 }
 
 
+export const clampNumber = function (number) {
+  return function(originalMax) {
+    return function(newMax) {
+      const originalMin = 0;
+      const newMin = 0;
+      const originalRange = originalMax - originalMin;
+      const newRange = newMax - newMin;
+      
+      const percentage = (number - originalMin) / originalRange;
+      
+      return Math.floor(newMin + percentage * newRange);
+    }
+  }
+}
+
 export const get15sTimer = function (cb){
       return function (action) {
           return function(){

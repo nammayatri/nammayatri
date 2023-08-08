@@ -597,5 +597,10 @@ const kannadaStrings = {
   FEE_PAYMENT_HISTORY : "ಶುಲ್ಕ ಪಾವತಿ ಇತಿಹಾಸ",
   LANGUAGES_SPOKEN : "ಮಾತನಾಡುವ ಭಾಷೆಗಳು",
   VIEW_PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸವನ್ನು ವೀಕ್ಷಿಸಿ",
-  RIDE_TYPE : "ರೈಡ್ ಪ್ರಕಾರ"
+  RIDE_TYPE : "ರೈಡ್ ಪ್ರಕಾರ",
+  TRIP_DATE : "Trip Date ",
+  OFFER_APPLIED : "Offer Applied",
+  YOUR_EARNINGS : "Your earnings",
+  NUMBER_OF_RIDES : "No. of Rides",
+  FARE_BREAKUP : "Fare Breakup"
 }

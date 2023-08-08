@@ -34,6 +34,7 @@ import Data.Array ((!!), mapWithIndex)
 import Data.Maybe (fromMaybe)
 import Control.Monad.Trans.Class (lift)
 import JBridge (startTimerWithTime)
+import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -228,6 +229,17 @@ view push state =
                     ]
                 ]
             ]
+        , textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , margin $ MarginTop 5
+            , padding $ Padding 5 5 5 5
+            , onClick push $ const DismisTextClick
+            ] <> (case state.dismisText of
+                    Just txt -> [text txt]
+                    Nothing -> [visibility GONE]) 
+              <> (FontStyle.subHeading2 LanguageStyle)
         ]
     ]
 

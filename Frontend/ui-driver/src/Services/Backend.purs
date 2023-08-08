@@ -994,3 +994,71 @@ unVerifiedAadhaarData driverName driverGender driverDob = do
         driverDob : driverDob
     }
     unwrapResponse x = x
+
+
+getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
+getUiPlans dummy = do
+    headers <- getHeaders ""
+    withAPIResult (EP.getUiPlans "") unwrapResponse $ callAPI headers (UiPlansReq "")
+    where
+        unwrapResponse (x) = x
+
+getCurrentPlan :: String -> Flow GlobalState (Either ErrorResponse GetCurrentPlanResp)
+getCurrentPlan driverId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.getCurrentPlan driverId) unwrapResponse $ callAPI headers (GetCurrentPlanReq driverId)
+    where
+        unwrapResponse (x) = x
+
+
+subscribePlan :: String -> String  -> Flow GlobalState (Either ErrorResponse SubscribePlanResp)
+subscribePlan paymentMode planId = do
+  headers <- getHeaders ""
+  withAPIResult (EP.subscribePlan "") unwrapResponse $ callAPI headers $ makeReq paymentMode planId
+  where
+    makeReq :: String -> String -> SubscribePlanReq
+    makeReq paymentMode planId = SubscribePlanReq {
+        paymentMode : paymentMode ,
+        planId : planId
+    }
+    unwrapResponse x = x
+
+paymentDues :: String -> Flow GlobalState (Either ErrorResponse PaymentDuesResp)
+paymentDues dummy = do
+    headers <- getHeaders ""
+    withAPIResult (EP.paymentDues "") unwrapResponse $ callAPI headers (PaymentDuesReq "")
+    where
+        unwrapResponse (x) = x
+
+selectPlan :: String -> String  -> Flow GlobalState (Either ErrorResponse SelectPlanResp)
+selectPlan paymentMode planId = do
+  headers <- getHeaders ""
+  withAPIResult (EP.selectPlan "") unwrapResponse $ callAPI headers $ makeReq paymentMode planId
+  where
+    makeReq :: String -> String -> SelectPlanReq
+    makeReq paymentMode planId = SelectPlanReq {
+        paymentMode : paymentMode ,
+        planId : planId
+    }
+    unwrapResponse x = x
+
+resumeMandate :: String -> Flow GlobalState (Either ErrorResponse ResumeMandateResp)
+resumeMandate driverId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.resumeMandate driverId) unwrapResponse $ callAPI headers (ResumeMandateReq driverId)
+    where
+        unwrapResponse (x) = x
+
+pauseMandate :: String -> Flow GlobalState (Either ErrorResponse PauseMandateResp)
+pauseMandate driverId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.pauseMandate driverId) unwrapResponse $ callAPI headers (PauseMandateReq driverId)
+    where
+        unwrapResponse (x) = x
+
+cancelAutoPay :: String -> Flow GlobalState (Either ErrorResponse CancelAutoPayResp)
+cancelAutoPay driverId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.cancelAutoPay driverId) unwrapResponse $ callAPI headers (CancelAutoPayReq driverId)
+    where
+        unwrapResponse (x) = x

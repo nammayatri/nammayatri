@@ -574,7 +574,10 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         if (sharedPref != null)
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onPause").apply();
-        if (BuildConfig.MERCHANT_TYPE.equals("DRIVER") && widgetService != null && Settings.canDrawOverlays(this) && !sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+        if (BuildConfig.MERCHANT_TYPE.equals("DRIVER") &&
+                widgetService != null && Settings.canDrawOverlays(this) &&
+                !sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.REGISTERATION_TOKEN), "null").equals("null") &&
+                !sharedPref.getString("DISABLE_WIDGET", "true").equals("true")) {
             widgetService.putExtra("payload", "{}");
             widgetService.putExtra("data", "{}");
             startService(widgetService);

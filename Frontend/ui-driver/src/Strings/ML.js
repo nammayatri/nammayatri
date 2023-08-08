@@ -593,5 +593,10 @@ const mlStrings = {
   FEE_PAYMENT_HISTORY : "ഫീസ് പേയ്‌മെന്റ് ചരിത്രം",
   LANGUAGES_SPOKEN : "സംസാരിക്കുന്ന ഭാഷകൾ",
   VIEW_PAYMENT_HISTORY : "പേയ്മെന്റ് ചരിത്രം കാണുക",
-  RIDE_TYPE : "റൈഡ് തരം"
+  RIDE_TYPE : "റൈഡ് തരം",
+  TRIP_DATE : "Trip Date ",
+  OFFER_APPLIED : "Offer Applied",
+  YOUR_EARNINGS : "Your earnings",
+  NUMBER_OF_RIDES : "No. of Rides",
+  FARE_BREAKUP : "Fare Breakup"
 }

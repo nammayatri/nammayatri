@@ -633,5 +633,10 @@ const bengaliStrings = {
 	FEE_PAYMENT_HISTORY : "ফি প্রদানের ইতিহাস",
 	LANGUAGES_SPOKEN : "কথিত ভাষা",
   	VIEW_PAYMENT_HISTORY : "পেমেন্ট ইতিহাস দেখুন",
-	RIDE_TYPE : "রাইড টাইপ"
+	RIDE_TYPE : "রাইড টাইপ",
+	TRIP_DATE : "Trip Date ",
+	OFFER_APPLIED : "Offer Applied",
+	YOUR_EARNINGS : "Your earnings",
+	NUMBER_OF_RIDES : "No. of Rides",
+	FARE_BREAKUP : "Fare Breakup"
 	}
