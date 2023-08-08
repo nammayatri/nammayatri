@@ -27,8 +27,7 @@ import Kernel.Randomizer
 import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Dhall (readDhallConfigDefault)
-import Kernel.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
+import Kernel.Utils.IOLogging (LoggerEnv)
 import Lib.Scheduler
 import Lib.Scheduler.ScheduleJob (createJobIn)
 import Storage as QSJ
@@ -37,7 +36,7 @@ schedulerHandle :: LoggerResources -> SchedulerHandle SchedulerJobType
 schedulerHandle loggerRes =
   SchedulerHandle
     { getTasksById = QSJ.getTasksById,
-      getReadyTasks = QSJ.getReadyTasks,
+      getReadyTasks = return ([], []),
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,
@@ -53,12 +52,7 @@ schedulerHandle loggerRes =
     }
 
 runExampleScheduler :: (SchedulerConfig -> SchedulerConfig) -> IO ()
-runExampleScheduler configModifier = do
-  appCfg <- configModifier <$> readDhallConfigDefault "scheduler-example-scheduler"
-  let loggerConfig = appCfg.loggerConfig
-  loggerEnv <- prepareLoggerEnv loggerConfig Nothing
-  let loggerRes = LoggerResources {..}
-  runSchedulerService appCfg $ schedulerHandle loggerRes
+runExampleScheduler _ = pure ()
 
 -----------------
 

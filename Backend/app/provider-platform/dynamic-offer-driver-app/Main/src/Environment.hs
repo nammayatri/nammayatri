@@ -106,7 +106,8 @@ data AppCfg = AppCfg
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    schedulerSetName :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -174,7 +175,8 @@ data AppEnv = AppEnv
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    schedulerSetName :: Text
   }
   deriving (Generic)
 

@@ -62,6 +62,10 @@ data SchedulerEnv = SchedulerEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
+    schedulerType :: SchedulerType,
+    schedulerSetName :: Text,
+    streamName :: Text,
+    groupName :: Text,
     metrics :: SchedulerMetrics,
     loopIntervalSec :: Seconds,
     expirationTime :: Integer,
@@ -87,6 +91,8 @@ releaseSchedulerEnv SchedulerEnv {..} = do
 newtype SchedulerM a = SchedulerM {unSchedulerM :: MockM SchedulerEnv a}
   deriving newtype (Functor, Applicative, Monad, MonadReader SchedulerEnv, MonadIO)
   deriving newtype (Metrics.CoreMetrics, C.MonadThrow, C.MonadCatch, C.MonadMask, MonadClock, MonadTime, MonadGuid, Log, Forkable, MonadUnliftIO)
+
+data SchedulerType = RedisBased | DbBased deriving (Show, Enum, Eq, Read, Generic, FromDhall)
 
 runSchedulerM :: SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM env action = runMock env $ unSchedulerM action

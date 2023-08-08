@@ -12,18 +12,23 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Lib.Scheduler.Types where
 
+import Data.Aeson
+import Data.Aeson.Types
 import Data.Singletons
 import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common as Comon
 import Kernel.Utils.GenericPretty
 
 -- Job initializer
@@ -39,9 +44,14 @@ data StoredJobInfo = StoredJobInfo
   { storedJobType :: Text,
     storedJobContent :: Text
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON, FromJSON)
 
-data AnyJobInfo t = forall (e :: t). (JobProcessor t, JobInfoProcessor e) => AnyJobInfo (JobInfo e)
+type JobFlow t e =
+  (JobProcessor t, JobInfoProcessor e, SingI e, ToJSON t, FromJSON t)
+
+type JobMonad m = (MonadTime m, MonadGuid m, MonadThrow m, Log m)
+
+data AnyJobInfo t = forall (e :: t). (JobFlow t e) => AnyJobInfo (JobInfo e)
 
 data JobInfo (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   JobInfo
@@ -80,9 +90,39 @@ class (JobProcessor t) => JobInfoProcessor (e :: t) where
     content <- decodeFromText storedContent
     return $ JobInfo jobType content
 
-data AnyJob t = forall (e :: t). (JobProcessor t, JobInfoProcessor e) => AnyJob (Job e)
+data AnyJob t = forall (e :: t). JobFlow t e => AnyJob (Job e)
 
-data Job (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
+instance (JobProcessor t) => FromJSON (AnyJob t) where
+  parseJSON (Object obj) = do
+    storedJobInfo <- obj .: "storedJobInfo"
+    (AnyJobInfo jobInfo) :: AnyJobInfo t <- maybe (fail "Failed to restore AnyJobInfo") pure (restoreAnyJobInfoMain @t storedJobInfo)
+    id <- obj .: "id"
+    shardId <- obj .: "shardId"
+    scheduledAt <- obj .: "scheduledAt"
+    createdAt <- obj .: "createdAt"
+    updatedAt <- obj .: "updatedAt"
+    maxErrors <- obj .: "maxErrors"
+    currErrors <- obj .: "currErrors"
+    status <- obj .: "status"
+    return (AnyJob (Job {..}))
+  parseJSON wrongVal = typeMismatch "Object AnyJob" wrongVal
+
+instance ToJSON (AnyJob t) where
+  toJSON (AnyJob Job {..}) = do
+    let storedJobInfo = storeJobInfo jobInfo
+    object
+      [ "id" .= getId id,
+        "storedJobInfo" .= storedJobInfo,
+        "shardId" .= shardId,
+        "scheduledAt" .= scheduledAt,
+        "createdAt" .= createdAt,
+        "updatedAt" .= updatedAt,
+        "maxErrors" .= maxErrors,
+        "currErrors" .= currErrors,
+        "status" .= status
+      ]
+
+data Job (e :: t) = JobFlow t e =>
   Job
   { id :: Id AnyJob,
     jobInfo :: JobInfo e,
@@ -96,7 +136,7 @@ data Job (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   }
 
 data JobStatus = Pending | Completed | Failed
-  deriving (Show, Eq, Read, Generic)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable JobStatus
 
 derivePersistField "JobStatus"

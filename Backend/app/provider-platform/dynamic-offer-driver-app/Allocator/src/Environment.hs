@@ -94,11 +94,11 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("driver-offer-allocator:" <>)
+      else connectHedisCluster hedisClusterCfg identity
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
+      else connectHedisCluster hedisNonCriticalClusterCfg identity
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   return HandlerEnv {..}

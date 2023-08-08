@@ -16,7 +16,7 @@
 
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
-import Data.Singletons (SingI)
+import qualified Data.ByteString as BS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -27,7 +27,7 @@ import Lib.Scheduler.JobStorageType.DB.Table
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types
 
-createJob :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => Int -> JobContent e -> Esq.SqlDB ()
+createJob :: forall t (e :: t). JobFlow t e => Int -> JobContent e -> Esq.SqlDB ()
 createJob maxShards jobData = do
   void $
     ScheduleJob.createJob @t @e @Esq.SqlDB Esq.create maxShards $
@@ -36,7 +36,7 @@ createJob maxShards jobData = do
           maxErrors = 5
         }
 
-createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> Int -> JobContent e -> Esq.SqlDB ()
+createJobIn :: forall t (e :: t). JobFlow t e => NominalDiffTime -> Int -> JobContent e -> Esq.SqlDB ()
 createJobIn inTime maxShards jobData = do
   void $
     ScheduleJob.createJobIn @t @e @Esq.SqlDB Esq.create inTime maxShards $
@@ -45,7 +45,7 @@ createJobIn inTime maxShards jobData = do
           maxErrors = 5
         }
 
-createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> Int -> JobContent e -> Esq.SqlDB ()
+createJobByTime :: forall t (e :: t). JobFlow t e => UTCTime -> Int -> JobContent e -> Esq.SqlDB ()
 createJobByTime byTime maxShards jobData = do
   void $
     ScheduleJob.createJobByTime @t @e @Esq.SqlDB Esq.create byTime maxShards $
@@ -69,14 +69,14 @@ getTasksById ids = Esq.findAll $ do
 getShardIdKey :: Text
 getShardIdKey = "DriverOffer:Jobs:ShardId"
 
-getReadyTasks :: FromTType SchedulerJobT (AnyJob t) => Maybe Int -> SchedulerM [AnyJob t]
+getReadyTasks :: FromTType SchedulerJobT (AnyJob t) => Maybe Int -> SchedulerM ([AnyJob t], [BS.ByteString])
 getReadyTasks mbMaxShards = do
   now <- getCurrentTime
   shardId <-
     case mbMaxShards of
       Just maxShards -> (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
       Nothing -> pure 0 -- wouldn't be used to fetch jobs in case of nothing
-  Esq.findAll $ do
+  res <- Esq.findAll $ do
     job <- from $ table @SchedulerJobT
     where_ $
       job ^. SchedulerJobStatus ==. val Pending
@@ -84,6 +84,7 @@ getReadyTasks mbMaxShards = do
         &&. whenJust_ mbMaxShards (\_ -> job ^. SchedulerJobShardId ==. val shardId)
     orderBy [asc $ job ^. SchedulerJobScheduledAt]
     pure job
+  return (res, [])
 
 updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
 updateStatus newStatus jobId = do

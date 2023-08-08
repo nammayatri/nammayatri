@@ -20,6 +20,7 @@ where
 
 import qualified Control.Monad.Catch as C
 import Control.Monad.Trans.Cont
+import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -28,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobHandler
+import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
 import UnliftIO
@@ -35,7 +37,7 @@ import UnliftIO
 data SchedulerHandle t = SchedulerHandle
   { jobHandlers :: JobHandlersList t,
     getTasksById :: [Id AnyJob] -> SchedulerM [AnyJob t],
-    getReadyTasks :: SchedulerM [AnyJob t],
+    getReadyTasks :: SchedulerM ([AnyJob t], [BS.ByteString]),
     markAsComplete :: Id AnyJob -> SchedulerM (),
     markAsFailed :: Id AnyJob -> SchedulerM (),
     updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM (),
@@ -44,13 +46,16 @@ data SchedulerHandle t = SchedulerHandle
     reScheduleOnError :: Id AnyJob -> Int -> UTCTime -> SchedulerM ()
   }
 
-handler :: SchedulerHandle t -> SchedulerM ()
+handler :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
 handler hnd = do
+  schedulerType <- asks (.schedulerType)
   iterSessionId <- generateGUIDText
   before <- getCurrentTime
   withLogTag iterSessionId $ do
     logInfo "Starting runner iteration"
-    runnerIteration hnd
+    case schedulerType of
+      RedisBased -> runnerIterationRedis hnd
+      DbBased -> runnerIteration hnd
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
   loopIntervalSec <- asks (.loopIntervalSec)
@@ -60,9 +65,50 @@ handler hnd = do
 errorLogger :: (Log m, Show a) => a -> m ()
 errorLogger e = logError $ "error occured: " <> show e
 
+runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
+runnerIterationRedis hnd@SchedulerHandle {} = do
+  key <- asks (.streamName)
+  groupName <- asks (.groupName)
+  (readyTasks, recordIds) <- RQ.getReadyTasks Nothing
+  logTagDebug "All Tasks - Count" . show $ length readyTasks
+  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> id) readyTasks
+  logTagDebug "Available tasks - Count" . show $ length readyTasks
+  terminationMVar <- newEmptyMVar
+  let inspectTermination = modifyMVarMasked_ terminationMVar pure
+      waitAll :: MonadUnliftIO m => [Async a] -> m ()
+      waitAll = mapConcurrently_ waitCatch
+  flip withAsync (waitEitherTerminationOrExecEnd terminationMVar) $
+    withAsyncList (map runTask readyTasks) $ \asyncList -> do
+      res <- race (waitAll asyncList) inspectTermination
+      case res of
+        Left _ -> pure ()
+        Right _ -> do
+          mapM_ cancel asyncList
+          waitAll asyncList
+  unless (null recordIds) do
+    void $ Hedis.xAck key groupName recordIds
+    void $ Hedis.xDel key recordIds
+  where
+    waitEitherTerminationOrExecEnd :: MVar () -> Async () -> SchedulerM ()
+    waitEitherTerminationOrExecEnd termMVar exec =
+      void (waitCatch exec) `C.catchAll` \e -> mask $ \restore -> do
+        logInfo "terminating gracefully"
+        errorLogger e
+        termPeriod <- asks (.graceTerminationPeriod)
+        restore (threadDelaySec termPeriod) `C.catchAll` \e' ->
+          logInfo "terminating immediately" >> errorLogger e'
+        putMVar termMVar ()
+        throwIO e
+
+    runTask :: AnyJob t -> SchedulerM ()
+    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId=" <> id.getId) $ do
+      res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+      registerExecutionResult hnd anyJob res
+      releaseLock id
+
 runnerIteration :: forall t. SchedulerHandle t -> SchedulerM ()
 runnerIteration hnd@SchedulerHandle {..} = do
-  readyTasks <- getReadyTasks
+  (readyTasks, _) <- getReadyTasks
   logTagDebug "All Tasks - Count" . show $ length readyTasks
   logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> id) readyTasks
   tasksPerIteration <- asks (.tasksPerIteration)
@@ -136,11 +182,14 @@ releaseLock jobId = Hedis.unlockRedis jobId.getId
 
 executeTask :: SchedulerHandle t -> AnyJob t -> SchedulerM ExecutionResult
 executeTask SchedulerHandle {..} (AnyJob job) = do
+  schedulerType <- asks (.schedulerType)
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution $ "No handler function found for the job type = " <> show (fromSing $ jobType $ jobInfo job)
     Just handlerFunc_ -> do
       -- TODO: Fix this logic, that's not how we have to handle this issue
-      latestState' <- getTasksById [id job]
+      latestState' <- case schedulerType of
+        RedisBased -> pure [AnyJob job]
+        DbBased -> getTasksById [id job]
       case latestState' of
         [AnyJob latestState] ->
           if scheduledAt latestState > scheduledAt job || status latestState /= Pending

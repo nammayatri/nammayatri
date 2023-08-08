@@ -32,11 +32,13 @@ import Kernel.Utils.Shutdown
 import Lib.Scheduler.Environment
 import Lib.Scheduler.Handler (SchedulerHandle, handler)
 import Lib.Scheduler.Metrics
+import Lib.Scheduler.Types (JobProcessor)
 import Servant (Context (EmptyContext))
 import System.Exit
 import UnliftIO
 
 runSchedulerService ::
+  (JobProcessor t, FromJSON t) =>
   SchedulerConfig ->
   SchedulerHandle t ->
   IO ()
@@ -46,8 +48,8 @@ runSchedulerService SchedulerConfig {..} handle_ = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
-  hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
+  hedisEnv <- connectHedis hedisCfg identity
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg identity
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
@@ -55,15 +57,17 @@ runSchedulerService SchedulerConfig {..} handle_ = do
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
+      else connectHedisCluster hedisClusterCfg identity
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
-
+  let schedulerType = RedisBased
+  let groupName = "myGroup"
+  let schedulerSetName = "Scheduled_Jobs"
+  let streamName = "dynamic-offer-driver-app:Available_Jobs"
   let schedulerEnv = SchedulerEnv {..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure
-
   Metrics.serve metricsPort
   let serverStartAction = handler handle_
   randSecDelayBeforeStart <- Seconds <$> getRandomInRange (0, loopIntervalSec.getSeconds)

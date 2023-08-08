@@ -20,6 +20,7 @@ module Lib.Scheduler.ScheduleJob
 where
 
 import Data.Singletons
+import Data.Time.Clock.System ()
 import qualified Data.UUID as UU
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Types.Common
@@ -30,7 +31,7 @@ import Lib.Scheduler.Types
 
 createJob ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  (JobFlow t e, JobMonad m) =>
   (AnyJob t -> m ()) ->
   Int ->
   JobEntry e ->
@@ -41,7 +42,7 @@ createJob createJobFunc maxShards jobEntry = do
 
 createJobIn ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  (JobFlow t e, JobMonad m) =>
   (AnyJob t -> m ()) ->
   NominalDiffTime ->
   Int ->
@@ -55,7 +56,7 @@ createJobIn createJobFunc diff maxShards jobEntry = do
 
 createJobByTime ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  (JobFlow t e, JobMonad m) =>
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->
@@ -73,7 +74,7 @@ createJobByTime createJobFunc scheduledAt maxShards jobEntry = do
 
 createJobImpl ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  (JobFlow t e, JobMonad m) =>
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->

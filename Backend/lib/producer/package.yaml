@@ -1,4 +1,4 @@
-name: scheduler
+name: producer
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -13,7 +13,7 @@ copyright: "2023 Juspay Technologies Private Limited"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description: Please see the README on GitHub
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 
 default-extensions:
   - ConstraintKinds
@@ -33,13 +33,14 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
-  - StandaloneDeriving
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -50,41 +51,48 @@ default-extensions:
   - UndecidableInstances
 
 dependencies:
+  - aeson
   - base >= 4.7 && < 5
+  - mobility-core
+  - hedis
+  - hashmap
+  - monad-control
+  - euler-hs
+  - bytestring
   - record-dot-preprocessor
   - record-hasfield
-  - bytestring
   - text
   - time
-  - aeson
-  - exceptions
-  - containers
-  - transformers
-  - unliftio
-  - unliftio-core
-  - prometheus-client
   - servant-server
-  - singletons
-  - uuid
+  - persistent
+  - persistent-postgresql
+  - esqueleto
+  - template-haskell
 
 ghc-options:
-  - -fwrite-ide-info
-  - -hiedir=.hie
   - -Wall
   - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
   - -Werror
+  - -Widentities
+  - -Wunused-imports
   - -fplugin=RecordDotPreprocessor
+  - -fwrite-ide-info
+  - -hiedir=.hie
 
 library:
-  source-dirs:
-    - src
+  source-dirs: src
   ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
-  dependencies:
-    - mobility-core
+    - -Wincomplete-uni-patterns
+
+executables:
+  producer-exe:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+      - -Wincomplete-uni-patterns
+    dependencies:
+      - producer
+      - mobility-core

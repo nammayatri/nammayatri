@@ -32,3 +32,5 @@ packages:
   lib/scheduler
   lib/sessionizer-metrics
   test
+  lib/producer
+

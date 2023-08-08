@@ -160,7 +160,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"
@@ -216,4 +216,5 @@ in  { esqDBCfg
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , schedulerSetName = "Scheduled_Jobs"
     }
