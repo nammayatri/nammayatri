@@ -52,7 +52,7 @@ update farePolicy = do
   void $
     updateOneWithKV
       [ Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
-        Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
+        Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftEnd <$> farePolicy.nightShiftBounds,
         Se.Set BeamFP.updatedAt now
       ]
       [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
