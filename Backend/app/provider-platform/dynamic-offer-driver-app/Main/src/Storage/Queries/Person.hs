@@ -505,6 +505,7 @@ updatePersonRec (Id personId) person = do
     [ Se.Set BeamP.firstName $ person.firstName,
       Se.Set BeamP.middleName $ person.middleName,
       Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.role $ person.role,
       Se.Set BeamP.gender $ person.gender,
       Se.Set BeamP.email $ person.email,
       Se.Set BeamP.hometown $ person.hometown,

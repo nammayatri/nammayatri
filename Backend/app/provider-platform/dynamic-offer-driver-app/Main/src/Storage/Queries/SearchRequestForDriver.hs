@@ -76,7 +76,7 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
 findByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   now <- getCurrentTime
-  findAllWithKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
+  findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
 
 deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByDriverId (Id personId) =
