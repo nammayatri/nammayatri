@@ -97,7 +97,8 @@ initData = {
           bannerImage : "",
           showBannerImage : false,
           chargesBreakup : [],
-          blockedDueToPayment : false
+          blockedDueToPayment : false,
+          laterButtonVisibility : false
         }
     },
     props: {

@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
-import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map)
+import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map, (&&), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..), Padding(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -453,7 +453,8 @@ makePaymentState state = {
                         "BN_IN" -> "এখন " <> (show state.data.paymentState.payableAndGST) <> " পে করুন"
                         _       -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
                      ),
-  cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")) then Nothing else Just $ getString LATER,
+  cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")
+                          && not state.data.paymentState.laterButtonVisibility) then Nothing else Just $ getString LATER,
   ridesCount : state.data.paymentState.rideCount,
   feeItem : [
     { feeType : MakePaymentModal.TOTAL_COLLECTED,

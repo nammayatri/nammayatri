@@ -564,13 +564,13 @@ makeRcActiveOrInactive payload = do
     where
         unwrapResponse (x) = x
 
-deleteRcBT :: DeleteRcReq -> FlowBT String  DeleteRcResp
-deleteRcBT payload = do
-        headers <- getHeaders' ""
-        withAPIResultBT (EP.deleteRc "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
-    where
-    errorHandler (ErrorPayload errorPayload) = do
-        BackT $ pure GoBack
+deleteRc :: DeleteRcReq -> Flow GlobalState (Either ErrorResponse DeleteRcResp)
+deleteRc payload = do
+        headers <- getHeaders ""
+        withAPIResult (EP.deleteRc "" ) unwrapResponse $ callAPI headers $ payload
+    where unwrapResponse x = x
+
+
 
 deleteRcReq :: String -> DeleteRcReq
 deleteRcReq rcNo = DeleteRcReq 

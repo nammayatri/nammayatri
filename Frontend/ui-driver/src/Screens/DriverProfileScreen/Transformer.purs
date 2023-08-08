@@ -23,7 +23,7 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     , totalCompletedTrips: summary.totalCompletedTrips
     , totalUsersRated: response.totalUsersRated
     , rating: response.rating
-    , chipRailData: getChipRailArray response.driverSummary response.languagesSpoken
+    , chipRailData: getChipRailArray response.driverSummary response.languagesSpoken (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2)
     , badges: [] -- TODO implement Badges
     , missedEarnings: missedOpp.missedEarnings
     , ridesCancelled: missedOpp.ridesCancelled
@@ -32,8 +32,8 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     , totalDistanceTravelled: (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2) <> "km"
     }
 
-getChipRailArray :: DriverSummary -> Array String -> Array ChipRailData
-getChipRailArray (DriverSummary summary) lang =
+getChipRailArray :: DriverSummary -> Array String -> String -> Array ChipRailData
+getChipRailArray (DriverSummary summary) lang totalDistanceTravelled =
   let
     alive = getPeriod summary.lastRegistered
   in
@@ -57,6 +57,12 @@ getChipRailArray (DriverSummary summary) lang =
             ]
           else
             []
+    )<>
+    (
+      [ { mainTxt: totalDistanceTravelled <>"km"
+        , subTxt: getString TRAVELLED_ON_APP
+        }
+      ]
     )
 
 -- getPeriodType :: String -> String TODO :: Add translation Part

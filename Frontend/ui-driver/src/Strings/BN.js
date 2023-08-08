@@ -633,5 +633,6 @@ const bengaliStrings = {
 	FEE_PAYMENT_HISTORY : "ফি প্রদানের ইতিহাস",
 	LANGUAGES_SPOKEN : "কথিত ভাষা",
   	VIEW_PAYMENT_HISTORY : "পেমেন্ট ইতিহাস দেখুন",
-	RIDE_TYPE : "রাইড টাইপ"
+	RIDE_TYPE : "রাইড টাইপ",
+	PLACE_CALL_REQUEST : "স্থান কল অনুরোধ"
 	}

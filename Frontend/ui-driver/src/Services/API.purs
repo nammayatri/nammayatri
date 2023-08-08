@@ -399,6 +399,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , blocked               :: Maybe Boolean
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
+    , subscribed            :: Boolean
     }
 
 
