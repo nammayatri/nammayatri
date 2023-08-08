@@ -1034,7 +1034,7 @@ driverProfileFlow = do
       driverProfileFlow
     UPDATE_LANGUAGES language -> do
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
-          requiredData = initialData{languagesSpoken = language}
+          requiredData = initialData{languagesSpoken = Just language}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {updateLanguages = false}})
       driverProfileFlow
