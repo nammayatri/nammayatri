@@ -102,7 +102,7 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
-    if (clientPaylod.payload.clientId == "open-kochi") {
+    if (clientPaylod.payload.clientId == "yatriprovider") {
       window.merchantID = "YATRIPARTNER"
     } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
       window.merchantID = "JATRISAATHIDRIVER"
