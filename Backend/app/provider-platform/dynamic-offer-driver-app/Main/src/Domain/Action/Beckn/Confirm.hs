@@ -125,7 +125,7 @@ handler transporter req quote = do
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          ride <- buildRide driver.id booking
+          ride <- buildRide driver.id booking req.customerPhoneNumber
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
@@ -220,10 +220,10 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking = do
+    buildRide driverId booking customerPhoneNumber = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
-      otp <- generateOTPCode
+      let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
       return
