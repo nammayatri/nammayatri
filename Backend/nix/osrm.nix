@@ -1,14 +1,9 @@
-_:
+{ inputs, ... }:
 
 let
-  # We cannot use southern-zone-latest here, because the sha256 will change over
-  # time.
-  # NOTE: This file is not permanent, find the available one at https://download.geofabrik.de/asia/india/
-  openStreetDataFileName = "southern-zone-230720";
-  openStreetDataFile = builtins.fetchurl {
-    url = "http://download.geofabrik.de/asia/india/${openStreetDataFileName}.osm.pbf";
-    sha256 = "sha256:0ig54rlfllgg81a5smmvxyr41h3dvzqx6c3d0ky3v3q11z362gj9";
-  };
+  openStreetDataFile = inputs.osrm-pbf;
+  # NOTE: This *should* match the flake input.
+  openStreetDataFileName = "southern-zone-230801";
 in
 {
   perSystem = { pkgs, lib, ... }: {
