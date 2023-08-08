@@ -15,37 +15,38 @@
 
 module Screens.EnterMobileNumberScreen.Controller where
 
+import Effect.Unsafe
+
+import Common.Types.App (LazyCheck(..)) as Lazy
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Components.MobileNumberEditor.Controller as MobileNumberEditorController
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
+import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (setText, clearCountDownTimer, showCarouselScreen)
-import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader, minimizeApp, firebaseLogEvent)
+import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toast, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, void)
+import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, void, when, not)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
-import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, when)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
-import Common.Types.App (LazyCheck(..)) as Lazy
-import Engineering.Helpers.LogEvent (logEvent)
-import Effect.Unsafe
+import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
 
 instance showAction :: Show Action where
     show _ = ""
 
 instance loggableAction :: Loggable Action where
-    performLog action appId = case action of
+    performLog action appId =  case action of
         AfterRender -> trackAppScreenRender appId "screen" (getScreen ENTER_MOBILE_NUMBER_SCREEN)
         BackPressed flag -> do
             if flag then do
@@ -57,19 +58,22 @@ instance loggableAction :: Loggable Action where
         MobileNumberButtonAction act -> case act of
             PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "continue_mobilenumber"
             PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "no_action"
+        WhatsAppOTPButtonAction act -> case act of
+            PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "continue_mobilenumber"
+            PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "no_action"
         VerifyOTPButtonAction act -> case act of
             PrimaryButtonController.OnClick -> do
                 trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "continue_otp"
                 trackAppEndScreen appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
             PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "no_action"
         MobileNumberEditTextAction act -> case act of 
-            PrimaryEditTextController.TextChanged id value -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobilenumber_edit_text_changed" "primary_edit_text"
-            PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobilenumber_edit_text_focus_changed" "primary_edit_text"
+            MobileNumberEditorController.TextChanged id value -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobilenumber_edit_text_changed" "primary_edit_text"
+            MobileNumberEditorController.FocusChanged _ -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobilenumber_edit_text_focus_changed" "primary_edit_text"
+            MobileNumberEditorController.CountryCodeSelected _ -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "countrycode_edit_text_changed" "on_click_country_code"
+            MobileNumberEditorController.ShowOptions -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "country_code_list_showed" "on_click_show"
+            MobileNumberEditorController.CloseOptions -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "country_code_list_closed" "on_click_close"
         OTPEditTextAction act -> case act of 
             PrimaryEditTextController.TextChanged id value -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_changed" "primary_edit_text"
-            PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_focus_changed" "primary_edit_text"
-        OTPEditTextAction act -> case act of
-            PrimaryEditTextController.TextChanged _ _ -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_changed" "primary_edit_text"
             PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_focus_changed" "primary_edit_text"
         GenericHeaderActionController act -> case act of
             GenericHeaderController.PrefixImgOnClick -> do
@@ -98,7 +102,7 @@ data Action = EnterOTP
             | AutoFill String
             | MobileNumberButtonAction PrimaryButtonController.Action
             | VerifyOTPButtonAction PrimaryButtonController.Action
-            | MobileNumberEditTextAction PrimaryEditTextController.Action
+            | MobileNumberEditTextAction MobileNumberEditorController.Action
             | OTPEditTextAction PrimaryEditTextController.Action
             | GenericHeaderActionController GenericHeaderController.Action
             | Resend
@@ -110,6 +114,7 @@ data Action = EnterOTP
             | TermsAndConditions
             | StepsHeaderModelAC StepsHeaderModelController.Action
             | SetPhoneNumber String
+            | WhatsAppOTPButtonAction PrimaryButtonController.Action
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 
@@ -119,6 +124,8 @@ eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = do
     pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
     exit $ GoToOTP state
 
+eval (WhatsAppOTPButtonAction PrimaryButtonController.OnClick) state = continue state
+
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 
 eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
@@ -126,26 +133,46 @@ eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
     _ <- pure $ clearCountDownTimer state.data.timerID
     updateAndExit state $ GoToAccountSetUp state
 
-eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do
-    _ <- if length value == 10 then do
+eval (MobileNumberEditTextAction (MobileNumberEditorController.TextChanged id value)) state = do
+    let maxLen = mobileNumberMaxLength state.data.countryObj.countryShortCode
+    _ <- if length value ==  mobileNumberMaxLength state.data.countryObj.countryShortCode then do
             pure $ hideKeyboardOnNavigation true
             else pure unit
-    let isValidMobileNumber = case (charAt 0 value) of
-                                    Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then false
-                                                else if a=='5' then
-                                                    if value=="5000500050" then true else false 
-                                                        else true 
-                                    Nothing -> true 
-    if (length value == 10 && isValidMobileNumber) then do 
-        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
-        pure unit
-    else pure unit
+    _ <- pure $ spy "maxLen" maxLen
+    _ <- pure $ spy "Length value" (length value)
+    let isValidMobileNumber = mobileNumberValidator state.data.countryObj.countryCode state.data.countryObj.countryShortCode value 
     let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber
-                                        , btnActiveMobileNumber = if (length value == 10 && isValidMobileNumber) then true else false}
-                                        , data = state.data { mobileNumber = if length value <= 10 then value else state.data.mobileNumber}}
+                                        , btnActiveMobileNumber = if isValidMobileNumber then true else false
+                                        , countryCodeOptionExpended = false}
+                                        , data = state.data { mobileNumber = if (length value) <= maxLen then value else state.data.mobileNumber}}
+    if  isValidMobileNumber then do 
+         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
+         pure unit
+     else pure unit
+
     continue newState
 
-eval (MobileNumberEditTextAction (PrimaryEditTextController.FocusChanged boolean)) state = continue state { props{ mNumberEdtFocused = boolean}}
+eval (MobileNumberEditTextAction (MobileNumberEditorController.FocusChanged boolean)) state = continue state { props{ mNumberEdtFocused = boolean, countryCodeOptionExpended = not boolean}}
+
+eval (MobileNumberEditTextAction (MobileNumberEditorController.CountryCodeSelected country)) state = do 
+    _ <-  pure $ hideKeyboardOnNavigation true
+    let maxLen = mobileNumberMaxLength country.countryShortCode
+    _ <- pure $ spy "maxLen" maxLen
+    _ <- pure $ spy "country" country
+    let isValidMobileNumber = mobileNumberValidator country.countryCode country.countryShortCode state.data.mobileNumber 
+    let newState = state {data {countryObj = country} 
+                        , props {countryCodeOptionExpended = false, mNumberEdtFocused = true
+                        , isValidMobileNumber = isValidMobileNumber
+                        , btnActiveMobileNumber = isValidMobileNumber }}
+    if isValidMobileNumber then do 
+         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
+         pure unit
+    else pure unit
+    continue newState
+
+eval (MobileNumberEditTextAction MobileNumberEditorController.ShowOptions) state = continue state{props {countryCodeOptionExpended = true, mNumberEdtFocused = false}}
+
+eval (MobileNumberEditTextAction MobileNumberEditorController.CloseOptions) state = continue state {props {countryCodeOptionExpended = false}}
 
 eval (OTPEditTextAction (PrimaryEditTextController.FocusChanged boolean)) state = continue state { props{ otpEdtFocused = boolean}}
 

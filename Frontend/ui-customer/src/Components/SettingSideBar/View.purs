@@ -18,23 +18,23 @@ module Components.SettingSideBar.View where
 import Common.Types.App
 
 import Animation (translateInXSidebarAnim, translateOutXSidebarAnim)
+import Common.Types.App (LazyCheck(..))
 import Components.SettingSideBar.Controller (Action(..), SettingSideBarState, Status(..), Tag(..), Item)
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Data.Maybe (Maybe(..))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -191,7 +191,7 @@ profileView state push =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text ("+91 " <> (getValueToLocalStore MOBILE_NUMBER))
+          , text ((getValueToLocalStore COUNTRY_CODE) <> " " <> (getValueToLocalStore MOBILE_NUMBER))
           , color state.appConfig.profileName
           ] <> FontStyle.paragraphText TypoGraphy
         , linearLayout[

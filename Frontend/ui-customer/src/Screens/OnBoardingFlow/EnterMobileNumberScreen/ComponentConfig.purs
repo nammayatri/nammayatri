@@ -15,23 +15,27 @@
 
 module Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig where
 
+import Common.Types.App
+
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
+import Components.MobileNumberEditor as MobileNumberEditor
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..))
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge as JB 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (not, (<>), (==))
-import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
+import Prelude (not, (<>), (==), (&&), (/=), show)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), gravity)
 import Screens.Types as ST
+import Storage (KeyStore(..))
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Utils (mobileNumberMaxLength)
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
@@ -46,6 +50,30 @@ mobileNumberButtonConfig state = let
       , margin = (Margin 0 0 0 0 )
       , background = state.data.config.primaryBackground
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      }
+  in primaryButtonConfig'
+
+whatsAppOTPButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
+whatsAppOTPButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig { 
+        text = (getString GET_OTP_VIA_WHATSAPP) 
+      , color = state.data.config.driverInfoConfig.ratingTextColor 
+        }
+      , id = "PrimaryButtonWhatsAppOTP"
+      , isClickable = state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91")
+      , alpha = if state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91") then 1.0 else 0.4
+      , margin = (Margin 0 0 0 0 )
+      , background = state.data.config.whatsappOTPButtonColor
+      , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , stroke = ("1," <> Color.borderColorLight)
+      , isSuffixImage = true
+      , suffixImageConfig {
+        imageUrl = "ny_ic_whatsapp_logo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_whatsapp_logo.png",
+        margin = (Margin 10 0 0 0),
+        gravity = CENTER
+        }
       }
   in primaryButtonConfig'
 
@@ -64,18 +92,19 @@ verifyOTPButtonConfig state = let
       }
   in primaryButtonConfig'
 
-mobileNumberEditTextConfig :: ST.EnterMobileNumberScreenState -> PrimaryEditText.Config
+mobileNumberEditTextConfig :: ST.EnterMobileNumberScreenState -> MobileNumberEditor.Config
 mobileNumberEditTextConfig state = let 
-    config = PrimaryEditText.config
-    primaryEditTextConfig' = config
+    config = MobileNumberEditor.config
+    mobileNumberEditor' = config
       { editText
         {
             color = Color.black800
           , singleLine = true
-          , pattern = Just "[0-9]*,10"
+          , pattern = Just ("[0-9]*," <> show (mobileNumberMaxLength state.data.countryObj.countryShortCode))
           , margin = MarginHorizontal 10 10
           , focused = state.props.mNumberEdtFocused
           , text = state.props.editTextVal
+          , placeholder = (getString ENTER_MOBILE_NUMBER)
         }
       , background = Color.white900
       , topLabel
@@ -91,14 +120,16 @@ mobileNumberEditTextConfig state = let
       , errorLabel
         { text = (getString INVALID_MOBILE_NUMBER)
         }
-      , showConstantField = true
-      , constantField { 
-          color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
+      , showCountryCodeField= true
+      , countryCodeField { 
+          color = if state.props.countryCodeOptionExpended then Color.black800 else Color.grey900 
         , padding = PaddingBottom 1
         , textStyle = FontStyle.SubHeading2
+        , countryCodeOptionExpended = state.props.countryCodeOptionExpended
+        , countryCode = state.data.countryObj.countryCode
         }
       }
-    in primaryEditTextConfig'
+    in mobileNumberEditor'
 
 otpEditTextConfig :: ST.EnterMobileNumberScreenState -> PrimaryEditText.Config
 otpEditTextConfig state = let 
@@ -119,7 +150,7 @@ otpEditTextConfig state = let
       , background = Color.white900
       , margin = (Margin 0 30 0 20)
       , topLabel
-        { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> state.data.mobileNumber
+        { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " " <> state.data.countryObj.countryCode <> state.data.mobileNumber
         , color = Color.black800
         , alpha = 0.8
         } 

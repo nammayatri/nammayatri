@@ -91,6 +91,7 @@ config =
   , fontType: "Assets"
   , languageList : []
   , confirmPickUpLocationBorder: "#101010"
+  , whatsappOTPButtonColor :"#F1F3F4"
   , bannerConfig : {
         backgroundColor : "#F0FAF0"
       , title : "Complete your profile for a personalised ride experience"
