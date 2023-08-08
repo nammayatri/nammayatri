@@ -33,9 +33,10 @@ import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import Environment
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 
+import qualified Domain.Types.Vehicle as DVeh
+import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
@@ -227,7 +228,8 @@ rideInfo merchantShortId reqRideId = do
         cancellationReason,
         driverInitiatedCallCount,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
-        distanceCalculationFailed = ride.distanceCalculationFailed
+        distanceCalculationFailed = ride.distanceCalculationFailed,
+        vehicleVarient = castDVehicleVariant <$> rideDetails.vehicleVariant
       }
 
 mkLocationAPIEntity :: DBLoc.BookingLocation -> Common.LocationAPIEntity
@@ -259,6 +261,15 @@ mkBookingStatus ride now = do
     DRide.INPROGRESS -> Common.ONGOING_6HRS
     DRide.COMPLETED -> Common.COMPLETED
     DRide.CANCELLED -> Common.CANCELLED
+
+castDVehicleVariant :: DVeh.Variant -> Common.Variant
+castDVehicleVariant = \case
+  DVeh.SUV -> Common.SUV
+  DVeh.HATCHBACK -> Common.HATCHBACK
+  DVeh.SEDAN -> Common.SEDAN
+  DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
+  DVeh.TAXI -> Common.TAXI
+  DVeh.TAXI_PLUS -> Common.TAXI_PLUS
 
 ---------------------------------------------------------------------
 rideSync :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes
