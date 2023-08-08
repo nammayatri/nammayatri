@@ -16,7 +16,8 @@ import Debug (spy)
 import Engineering.Helpers.Commons (os)
 import Effect (Effect (..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
-
+import Data.String (length)
+import Data.String.CodeUnits (charAt)
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 
 foreign import loaderTextIOS :: EffectFn2 String String Unit
@@ -57,3 +58,32 @@ showAndHideLoader delayInMs title description state = do
     _ <- toggleLoader false
     pure unit
   pure unit
+
+mobileNumberValidator :: String -> String -> String -> Boolean 
+mobileNumberValidator country countryShortCode mobileNumber = 
+  case countryShortCode of 
+    "IN" -> (length mobileNumber == 10) && 
+            case (charAt 0 mobileNumber) of
+              Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then false
+                          else if a=='5' then
+                              if mobileNumber=="5000500050" then true else false 
+                                  else true 
+              Nothing -> true 
+    "FR" -> (length mobileNumber == 9) && 
+            case (charAt 0 mobileNumber) of 
+              Just a -> a == '6' || a == '7'
+              Nothing -> false
+    "BD" -> (length mobileNumber == 10) && 
+            case (charAt 0 mobileNumber) of 
+              Just a -> a == '1'
+              Nothing -> false
+    _ -> false 
+
+mobileNumberMaxLength :: String -> Int 
+mobileNumberMaxLength countryShortCode = 
+  case countryShortCode of 
+    "IN" -> 10
+    "FR" -> 9 
+    "BD" -> 10
+    _ -> 0
+
