@@ -39,7 +39,7 @@ update config = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDIPC.availabilityTimeWeightage config.availabilityTimeWeightage,
-      Se.Set BeamDIPC.actualPickupDistanceWeightage config.actualPickupDistanceWeightage,
+      -- Se.Set BeamDIPC.actualPickupDistanceWeightage config.actualPickupDistanceWeightage,
       Se.Set BeamDIPC.availabilityTimeWindowOption config.availabilityTimeWindowOption,
       Se.Set BeamDIPC.acceptanceRatioWeightage config.acceptanceRatioWeightage,
       Se.Set BeamDIPC.acceptanceRatioWindowOption config.acceptanceRatioWindowOption,

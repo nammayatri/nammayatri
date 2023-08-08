@@ -29,7 +29,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Time
+-- import Kernel.Types.Time
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB

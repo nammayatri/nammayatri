@@ -35,10 +35,10 @@ create = createWithKV
 findById :: (L.MonadFlow m, Log m) => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
 findById (Id drcaId) = findOneWithKV [Se.Is BeamDRCA.id $ Se.Eq drcaId]
 
-getActiveAssociationByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m (Maybe DriverRCAssociation)
-getActiveAssociationByDriver (Id personId) = do
-  now <- getCurrentTime
-  findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
+-- getActiveAssociationByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m (Maybe DriverRCAssociation)
+-- getActiveAssociationByDriver (Id personId) = do
+--   now <- getCurrentTime
+--   findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
 
 -- findAllByDriverId ::
 --   Transactionable m =>
