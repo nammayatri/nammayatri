@@ -55,6 +55,9 @@ type API =
              :> "select"
              :> TokenAuth
              :> Put '[JSON] APISuccess
+           :<|> "currentPlan"
+             :> TokenAuth
+             :> Post '[JSON] DPlan.CurrentPlanRes
        )
 
 handler :: FlowServer API
@@ -66,6 +69,7 @@ handler =
     :<|> planDowngradeToManual
     :<|> planSubscribe
     :<|> planSelect
+    :<|> currentPlan
 
 planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Maybe DPlan.PaymentMode -> FlowHandler DPlan.PlanListAPIRes
 planList (driverId, merchantId) mbLimit mbOffset = withFlowHandlerAPI . DPlan.planList (driverId, merchantId) mbLimit mbOffset
@@ -87,3 +91,7 @@ planSubscribe planId (driverId, merchantId) = withFlowHandlerAPI . DPlan.planSub
 
 planSelect :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
 planSelect planId = withFlowHandlerAPI . DPlan.planSelect planId
+
+currentPlan :: (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.CurrentPlanRes
+
+planResume = withFlowHandlerAPI . DPlan.planResume

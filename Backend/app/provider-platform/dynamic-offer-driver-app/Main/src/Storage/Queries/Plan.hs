@@ -39,3 +39,11 @@ findByMerchantId merchantId = do
     where_ $
       plan ^. PlanMerchantId ==. val (toKey merchantId)
     return plan
+
+findByMerchantIdAndPaymentMode :: Transactionable m => Id Merchant -> PaymentMode -> m [Plan]
+findByMerchantIdAndPaymentMode merchantId paymentMode = Esq.findAll $ do
+  plan <- from $ table @PlanT
+  where_ $
+    plan ^. PlanMerchantId ==. val (toKey merchantId)
+      &&. plan ^. PlanPaymentMode ==. val paymentMode
+  return plan

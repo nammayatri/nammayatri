@@ -216,7 +216,6 @@ library
       Domain.Types.MetaData
       Domain.Types.Person
       Domain.Types.Plan
-      Domain.Types.PlanDetails
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -349,7 +348,6 @@ library
       Storage.Queries.MetaData
       Storage.Queries.Person
       Storage.Queries.Plan
-      Storage.Queries.PlanDetails
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
@@ -430,7 +428,6 @@ library
       Storage.Tabular.MetaData
       Storage.Tabular.Person
       Storage.Tabular.Plan
-      Storage.Tabular.PlanDetails
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
       Storage.Tabular.RegistrationToken

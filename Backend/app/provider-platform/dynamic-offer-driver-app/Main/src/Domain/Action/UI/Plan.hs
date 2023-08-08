@@ -30,8 +30,10 @@ import Kernel.Utils.Common hiding (id)
 import qualified SharedLogic.Payment as SPayment
 import Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDPlan
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Plan as QPD
 import Tools.Error
+import qualified Tools.Payment as TPayment
 
 data PlanListAPIRes = PlanListAPIRes
   { list :: [PlanEntity],
@@ -46,7 +48,8 @@ data PlanEntity = PlanEntity
     amount :: Money,
     freeRideCount :: Int,
     frequency :: Frequency,
-    offers :: [OfferEntity]
+    offers :: [OfferEntity],
+    planType :: PlanType
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -57,13 +60,65 @@ data OfferEntity = OfferEntity
   }
   deriving (Generic, ToJSON, ToSchema)
 
+data CurrentPlanRes = CurrentPlanRes
+  { currentPlanDetails :: PlanEntity
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
 planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Maybe PaymentMode -> Flow PlanListAPIRes
-planList (_driverId, _merchantId) _mbLimit _mbOffset _mbPaymentType = do
-  now <- getCurrentTime
+planList (driverId, merchantId) _mbLimit _mbOffset mbPaymentType = do
+  paymentMode <- fromMaybe AUTOPAY mbPaymentType
+  plans <- Esq.runInReplica $ QPD.findByMerchantIdAndPaymentMode merchantId paymentMode
+  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  subStartDate <- transporterConfig.subscriptionStartDate -- todo ::add the time configured in the transporter config
   return $
     PlanListAPIRes
-      { list = [],
-        subscriptionStartDate = now
+      { list = plans,
+        subscriptionStartDate = subStartDate
+      }
+
+convertPlanToPlanEntity :: Plan -> PlanEntity
+convertPlanToPlanEntity plan = do
+  planAmount <- case plan.Frequency of
+    DAILY -> platformFee (filter (\r -> r.platformFee /= 0) plan.rideCountBasedFeePolicy) !! 0 -- todo :: check the logic
+    PERRIDE -> perRideFee (filter (\r -> r.perRideFee /= 0) plan.rideCountBasedFeePolicy) !! 0 -- todo :: check the logic
+    _ -> 0
+  offers <- TPayment.offerList merchantId (makeOfferReq driverId plan)
+  offerEntities <- map makeOfferEntity offers.offerResp
+  return
+    PlanEntity
+      { id = getId plan.Id,
+        name = plan.name,
+        description = plan.description,
+        amount = planAmount,
+        freeRideCount = plan.freeRideCount,
+        frequency = plan.frequency,
+        offers = offers,
+        planType = plan.planType
+      }
+
+makeOfferEntity :: Payment.OfferResp -> OfferEntity
+makeOfferEntity offer =
+  OfferEntity
+    { title = offer.offerDescription.title,
+      description = offer.offerDescription.description,
+      tnc = offer.offerDescription.tnc
+    }
+
+makeOfferReq :: Id SP.Person -> Plan -> Payment.OfferReq
+makeOfferReq driverId plan = do
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mobileNumber <- case person.mobileNumber of
+    Just number -> mapM decrypt number
+    Nothing -> Nothing
+  offerOrder <- TPayment.OfferOrder {orderId = Nothing, amount = fromIntegral plan.maxAmount, currency = INR}
+  customerReq <- TPayment.OfferCustomer {customerId = driverId, email = person.email, mobile = mobileNumber}
+  return
+    TPayment.OfferListReq
+      { order = offerOrder,
+        customer = Just customerReq,
+        planId = plan.id,
+        registrationDate = getCurrentTime
       }
 
 newtype PlanSubscribeReq = PlanSubscribeReq
@@ -182,3 +237,10 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
     castPlanPaymentMode = \case
       AUTOPAY -> Payment.REQUIRED
       MANUAL -> Payment.OPTIONAL
+
+currentPlan :: Id SP.Person -> Id DM.Merchant -> Flow CurrentPlanRes
+currentPlan driverId merchantId = do
+  currentDriverPlan <- Esq.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
+  currentPlan <- Esq.runInReplica $ QPD.findByPlanId currentDriverPlan.planId currentDriverPlan.planType >>= fromMaybeM (PlanNotFound currentDriverPlan.planId.getId)
+  currentPlanEntity <- convertPlanToPlanEntity currentPlan
+  return CurrentPlanRes {currentPlanDetails = currentPlanEntity}

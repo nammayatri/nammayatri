@@ -58,7 +58,7 @@ data RideCountBasedFeePolicy = RideCountBasedFeePolicy
 
 data PaymentMode = MANUAL | AUTOPAY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
-data Frequency = DAILY | WEEKLY | MONTHLY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+data Frequency = DAILY | WEEKLY | MONTHLY | PERRIDE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 data PlanType = DEFAULT | SUBSCRIPTION deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
