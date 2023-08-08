@@ -11,7 +11,7 @@ import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
@@ -33,14 +33,19 @@ import Data.Array as DA
 import PrestoDOM.Types.Core (toPropValue)
 import Data.String.Regex (match)
 import Halogen.VDom.DOM.Prop (PropValue)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, setRefreshing)
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
   { initialState
   , view: view listItemm
   , name: "EmergencyContactsScreen"
-  , globalEvents: [globalOnScroll "EmergencyContactsScreen"]
+  , globalEvents: [ globalOnScroll "EmergencyContactsScreen",
+                    ( \push -> do
+                        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
+                        pure (pure unit)
+                    )
+                  ]
   , eval
   }
 
@@ -182,6 +187,7 @@ showEmergencyContact listitemm push config =
     , height MATCH_PARENT
     , background Color.blue600
     , weight 1.0
+    , onRefresh push (const RefreshScreen)
     ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "EmergencyContactTag"] )
     [ showEmergencyContactData listitemm push config
     ]
