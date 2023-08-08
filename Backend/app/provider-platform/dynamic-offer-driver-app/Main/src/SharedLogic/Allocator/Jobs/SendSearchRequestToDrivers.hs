@@ -30,6 +30,7 @@ import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import SharedLogic.DriverPool
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -49,7 +50,9 @@ sendSearchRequestToDrivers ::
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    Log m
+    Log m,
+    HasField "enableLocationTrackingNearByRide" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -72,7 +75,9 @@ sendSearchRequestToDrivers' ::
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    Log m
+    Log m,
+    HasField "enableLocationTrackingNearByRide" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   DriverPoolConfig ->
   SearchRequest ->

@@ -713,14 +713,12 @@ getNearestDrivers ::
   (Transactionable m, MonadTime m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
   Maybe Variant ->
   LatLong ->
-  Int ->
-  Id Merchant ->
   Bool ->
-  Maybe Seconds ->
+  [DriverLocation] ->
   m [NearestDriversResult]
-getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
+getNearestDrivers mbVariant LatLong {..} onlyNotOnRide driverLocs = do
   res <- do
-    driverLocs <- getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
+    -- driverLocs <- getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
     driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
     vehicle <- getVehiclesWithCond driverInfos
     drivers <- getDrivers vehicle

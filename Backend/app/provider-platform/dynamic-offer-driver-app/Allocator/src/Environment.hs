@@ -37,6 +37,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
@@ -75,7 +76,9 @@ data HandlerEnv = HandlerEnv
     maxShards :: Int,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    enableLocationTrackingNearByRide :: Bool,
+    ltsCfg :: LT.LocationTrackingeServiceConfig
   }
   deriving (Generic)
 

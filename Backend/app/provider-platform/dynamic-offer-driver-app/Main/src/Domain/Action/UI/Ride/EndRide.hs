@@ -51,6 +51,8 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified Storage.CachedQueries.Merchant as MerchantS
@@ -60,6 +62,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.SMS as Sms
+
+-- import  Data.List.NonEmpty (nonEmpty)
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq
 
@@ -96,7 +100,8 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DM.Merchant -> m (Maybe DMPM.MerchantPaymentMethod),
-    sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m ()
+    sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
+    addIntermediateRoutePoints :: Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> m ()
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -121,11 +126,12 @@ buildEndRideHandle merchantId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantId,
-        sendDashboardSms = Sms.sendDashboardSms
+        sendDashboardSms = Sms.sendDashboardSms,
+        addIntermediateRoutePoints = LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler
       }
 
 driverEndRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "enableLocationTrackingEndRide" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -136,7 +142,7 @@ driverEndRide handle rideId req = do
     $ DriverReq req
 
 callBasedEndRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "enableLocationTrackingEndRide" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -144,7 +150,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "enableLocationTrackingEndRide" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -155,7 +161,7 @@ dashboardEndRide handle rideId req =
     $ DashboardReq req
 
 endRide ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "enableLocationTrackingEndRide" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -195,8 +201,18 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       pure $ getCoordinates booking.toLocation
 
   whenWithLocationUpdatesLock driverId $ do
+    ltsCfg <- asks (.ltsCfg)
+    enableLocationTrackingEndRide <- asks (.enableLocationTrackingEndRide)
+    if enableLocationTrackingEndRide
+      then do
+        res <- LF.rideEnd ltsCfg rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
+        logDebug $ "endRide rust xyz" <> show res
+        whenJust (nonEmpty res.loc) $ \locs -> do
+          addIntermediateRoutePoints rideId driverId locs
+      else do
+        withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint
+
     -- here we update the current ride, so below we fetch the updated version
-    withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint
     ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
     now <- getCurrentTime
