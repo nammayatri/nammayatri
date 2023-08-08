@@ -41,9 +41,6 @@ create = createWithKV
 findById :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 
-findByIdBeam :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
-findByIdBeam (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
-
 -- findByShortId :: Transactionable m => ShortId DriverFee -> m (Maybe DriverFee)
 -- findByShortId shortId = do
 --   findOne $ do
@@ -186,7 +183,7 @@ findUnpaidAfterPayBy (Id driverId) now =
 
 updateFee :: (L.MonadFlow m, Log m) => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m ()
 updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
-  driverFeeObject <- findByIdBeam driverFeeId
+  driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
       let govtCharges' = df.govtCharges

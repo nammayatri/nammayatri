@@ -44,7 +44,7 @@ create = createWithKV
 --   pure farePolicy
 
 findByFarePolicyIdAndStartDistance :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
-findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findOneWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
+findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> listToMaybe
 
 -- update :: Id DFP.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
 -- update farePolicyId startDistace minFee maxFee = do

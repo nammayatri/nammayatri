@@ -59,7 +59,7 @@ update config = do
       Se.Set BeamDPC.singleBatchProcessTime config.singleBatchProcessTime,
       Se.Set BeamDPC.updatedAt now
     ]
-    [Se.Is BeamDPC.merchantId (Se.Eq $ getId config.merchantId)]
+    [Se.And [Se.Is BeamDPC.merchantId (Se.Eq $ getId config.merchantId), Se.Is BeamDPC.tripDistance (Se.Eq config.tripDistance)]]
 
 instance FromTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
   fromTType' BeamDPC.DriverPoolConfigT {..} = do

@@ -18,12 +18,6 @@ module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsS
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
-  ( FromTType' (fromTType'),
-    ToTType' (toTType'),
-    deleteWithKV,
-    findAllWithOptionsKV,
-    findOneWithKV,
-  )
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
@@ -41,7 +35,7 @@ findById'' ::
   (L.MonadFlow m, Log m) =>
   Id DFP.FarePolicy ->
   m (Maybe BeamFPSS.FullFarePolicySlabsDetailsSlab)
-findById'' (Id farePolicyId) = findOneWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
+findById'' (Id farePolicyId) = findAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] <&> listToMaybe
 
 deleteAll' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
 deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
