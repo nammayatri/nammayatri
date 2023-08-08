@@ -46,7 +46,11 @@ import qualified Tools.Call as Call
 -- create callStatus = void $ Esq.createUnique callStatus
 
 create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
-create = createWithKV
+create cs = do
+  callS <- findById (cs.id)
+  case callS of
+    Nothing -> createWithKV cs
+    Just _ -> pure ()
 
 -- findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 -- findById = Esq.findById

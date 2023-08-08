@@ -29,7 +29,11 @@ import qualified Storage.Beam.CallStatus as BeamCT
 import qualified Storage.Beam.Common as BeamCommon
 
 create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
-create = createWithKV
+create cs = do
+  callS <- findById (cs.id)
+  case callS of
+    Nothing -> createWithKV cs
+    Just _ -> pure ()
 
 findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCT.id $ Se.Eq callStatusId]
