@@ -78,6 +78,7 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | BackPressed
             | AfterRender
             | NoAction
+            | RefreshScreen
             | ContactsCallback (Array Contacts)
             | CheckingContactList
             | PopUpModalAction PopUpModal.Action
@@ -180,6 +181,14 @@ eval (ContactsCallback allContacts) state = do
 
 eval (RemoveButtonClicked contactDetail) state = continue state{props{showInfoPopUp = true}, data{removedContactDetail = contactDetail}}
 
+eval RefreshScreen state = do
+  continueWithCmd state
+      [do
+        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
+        _ <- pure $ contactPermission unit
+        pure NoAction
+  ]
+
 eval BackPressed state =
   if(state.props.showContactList) then do
     localContacts <- pure $ getValueToLocalStore CONTACTS
@@ -221,7 +230,9 @@ eval (ContactListScroll value) state = do
   let firstIndex = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!0)))
   let visibleItems = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!1)))
   let totalItems = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!2)))
+  let canScrollUp = if firstIndex == 0 then false else true
   let loadMoreButton = if (totalItems == (firstIndex + visibleItems) && totalItems /= 0 && totalItems /= visibleItems) then true else false
+  _ <- if canScrollUp then (pure $ setEnabled (getNewIDWithTag "EmergencyContactTag") false) else  (pure $ setEnabled (getNewIDWithTag "EmergencyContactTag") true)
   if loadMoreButton  then continueWithCmd state [do pure LoadMoreContacts]
   else continue state { data{loadMoreDisabled = loadMoreButton}}
 
