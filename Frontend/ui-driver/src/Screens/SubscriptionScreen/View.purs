@@ -19,12 +19,13 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getImageUrl)
+import Helpers.Utils (getAssetStoreLink, getImageUrl, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (>), bind, pure, discard, void)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, shimmerFrameLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
@@ -1046,3 +1047,74 @@ errorView push state =
     , commonTV push "Uh oh! We might be lost" Color.black900 (FontStyle.h2 TypoGraphy) 0 CENTER
     , commonTV push "Experiencing error <Error Code>.\nPlease try again" Color.black700 (FontStyle.paragraphText TypoGraphy) 8 CENTER
   ]
+  
+shimmerView :: forall w. PrestoDOM (Effect Unit) w
+shimmerView  = linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  ][ linearLayout
+  [ height $ V 55
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , gravity CENTER_VERTICAL
+  , padding $ PaddingHorizontal 16 16
+  , stroke $ "2," <> Color.grey900
+  ][  customTextView 24 50 10
+     ,  customTextView 24 40 220
+  ] 
+  , linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL 
+  , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
+  ][
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginTop 30
+      , orientation HORIZONTAL][
+        customTextView 40 100 20
+      ,  customTextView 40 120 100
+      ]
+    , sfl 180 
+    , sfl 100
+    , sfl 100
+    , sfl 100
+   ]
+  ]
+
+
+customTextView :: forall w. Int -> Int -> Int -> PrestoDOM (Effect Unit) w
+customTextView height' width' marginLeft =
+  shimmerFrameLayout
+    [ 
+    margin $ MarginLeft marginLeft
+    , cornerRadius 8.0
+    , stroke $ "1," <> Color.grey900
+    ][
+      linearLayout [
+        width $ V width'
+        , height $ V height'
+        , margin $ Margin 8 8 8 8 
+        , background Color.grey900
+      ][]
+    ]
+
+sfl :: forall w. Int -> PrestoDOM (Effect Unit) w
+sfl height' = 
+  shimmerFrameLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 16 16 16 16
+    , cornerRadius 8.0
+    , padding $ Padding 15 15 15 15
+    , stroke $ "2," <> Color.grey900
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height $ V height'
+        , background Color.grey900
+        , cornerRadius 8.0
+        ][]
+    ]
