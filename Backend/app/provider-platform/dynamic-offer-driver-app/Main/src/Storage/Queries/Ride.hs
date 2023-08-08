@@ -261,21 +261,28 @@ updateStatusByIds rideIds status = do
 updateDistance :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> HighPrecMeters -> m ()
 updateDistance driverId distance = do
   now <- getCurrentTime
+  dist <- getDistance driverId
+  let distance' = maybe distance (distance +) dist
   updateWithKV
-    [ Se.Set BeamR.traveledDistance distance,
+    [ Se.Set BeamR.traveledDistance distance',
       Se.Set BeamR.updatedAt now
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
+getDistance :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m (Maybe HighPrecMeters)
+getDistance driverId = do
+  ride <- getInProgressByDriverId driverId
+  pure $ Ride.traveledDistance <$> ride
+
 updateAll :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime
-  updateOneWithKV
+  updateWithKV
     [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.fare ride.fare,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
-      Se.Set BeamR.tripStartLat (ride.tripEndPos <&> (.lat)),
-      Se.Set BeamR.tripStartLon (ride.tripEndPos <&> (.lon)),
+      Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
+      Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
       Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
       Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
       Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,

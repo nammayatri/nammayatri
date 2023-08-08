@@ -234,8 +234,8 @@ getDriverInfos driverLocs = do
 
 getOnRideStuckDriverIds :: (L.MonadFlow m, Log m) => m [DriverInformation]
 getOnRideStuckDriverIds = do
-  rideIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.id <$>)
-  findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> rideIds)]]
+  driverIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.driverId <$>)
+  findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
 
 getVehicles ::
   (L.MonadFlow m, Log m) =>
@@ -249,7 +249,7 @@ getDrivers ::
   (L.MonadFlow m, Log m) =>
   [Vehicle] ->
   m [Person]
-getDrivers vehicles = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
+getDrivers vehicles = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In personKeys, Se.Is BeamP.role $ Se.Eq Person.DRIVER]]
   where
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
@@ -684,7 +684,8 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
                       ]
                   ]
               ],
-            Se.Is BeamDI.blocked $ Se.Eq False
+            Se.Is BeamDI.blocked $ Se.Eq False,
+            Se.Is BeamDI.subscribed $ Se.Eq True
           ]
             <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
         )
