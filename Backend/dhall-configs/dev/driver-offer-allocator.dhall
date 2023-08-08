@@ -37,6 +37,7 @@ in  { appCfg =
         //  { loggerConfig =
                     appCfg.loggerConfig
                 //  { logFilePath = "/tmp/driver-offer-allocator.log" }
+            , migrationPath = None Text
             }
     , schedulerConfig
     }

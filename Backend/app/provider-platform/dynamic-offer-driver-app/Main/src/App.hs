@@ -19,7 +19,6 @@ import qualified App.Server as App
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
 import EulerHS.Prelude
@@ -59,7 +58,7 @@ runDynamicOfferDriverApp configModifier = do
 runDynamicOfferDriverApp' :: AppCfg -> IO ()
 runDynamicOfferDriverApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = T.trace ((show appCfg.esqDBCfg) <> "/n" <> (show appCfg.loggerConfig.logRawSql)) $ L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <-
     try (buildAppEnv appCfg)
       >>= handleLeftIO @SomeException exitBuildingAppEnvFailure "Couldn't build AppEnv: "
