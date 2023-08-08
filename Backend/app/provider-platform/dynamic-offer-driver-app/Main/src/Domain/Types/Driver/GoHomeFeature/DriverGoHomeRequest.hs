@@ -33,3 +33,13 @@ data DriverGoHomeRequest = DriverGoHomeRequest
     updatedAt :: UTCTime
   }
   deriving (Generic, HasCoordinates)
+
+data CachedGoHomeRequest = CachedGoHomeRequest
+  { status :: Maybe DriverGoHomeRequestStatus,
+    cnt :: Int,
+    validTill :: Maybe UTCTime,
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    isOnRide :: Bool,
+    expiryTime :: UTCTime
+  }
+  deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)

@@ -62,7 +62,7 @@ instance B.Table DriverHomeLocationT where
 instance ModelMeta DriverHomeLocationT where
   modelFieldModification = driverHomeLocationTMod
   modelTableName = "driver_home_location"
-  modelSchemaName = Just "dynamic_offer_driver_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverHomeLocation = DriverHomeLocationT Identity
 

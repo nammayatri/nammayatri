@@ -86,7 +86,7 @@ findActive (Id.Id driverId) = findAllWithOptionsKV [Se.And [Se.Is BeamDHR.driver
 --       ]
 --     where_ $ tbl ^. DriverGoHomeRequestTId ==. val (toKey driverGoHomeRequestId)
 
-finishSuccessfully :: MonadFlow m => Id Driver -> m ()
+finishSuccessfully :: MonadFlow m => Id DDGR.DriverGoHomeRequest -> m ()
 finishSuccessfully (Id.Id driverGoHomeRequestId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -106,7 +106,7 @@ finishSuccessfully (Id.Id driverGoHomeRequestId) = do
 --         ]
 --       where_ $ tbl ^. DriverGoHomeRequestTId ==. val (toKey $ active.id)
 
-finishActiveFailed :: (MonadFlow m, Log m) => Id Driver -> m ()
+finishActiveFailed :: (MonadFlow m) => Id Driver -> m ()
 finishActiveFailed driverId = do
   mbActive <- findActive driverId
   whenJust mbActive $ \active -> do
@@ -114,6 +114,13 @@ finishActiveFailed driverId = do
     updateOneWithKV
       [Se.Set BeamDHR.status DDGR.FAILED, Se.Set BeamDHR.updatedAt now]
       [Se.Is BeamDHR.id $ Se.Eq $ getId active.id]
+
+finishWithFailure :: (MonadFlow m) => Id DDGR.DriverGoHomeRequest -> m ()
+finishWithFailure ghrId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamDHR.status DDGR.FAILED, Se.Set BeamDHR.updatedAt now]
+    [Se.Is BeamDHR.id $ Se.Eq $ getId ghrId]
 
 -- isWithinRange ::
 --   (Transactionable m) =>

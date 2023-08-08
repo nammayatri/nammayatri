@@ -51,6 +51,7 @@ import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
@@ -125,7 +126,8 @@ handler transporter req quote = do
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          ride <- buildRide driver.id booking
+          ghrId <- CGHR.getDriverGoHomeRequestInfo driver.id <&> (.driverGoHomeRequestId)
+          ride <- buildRide driver.id booking ghrId
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
@@ -220,7 +222,7 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking = do
+    buildRide driverId booking ghrId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       otp <- generateOTPCode
@@ -249,7 +251,8 @@ handler transporter req quote = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            numberOfDeviation = Nothing
+            numberOfDeviation = Nothing,
+            driverGoHomeRequestId = ghrId
           }
 
     buildTrackingUrl rideId = do

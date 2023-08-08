@@ -62,6 +62,7 @@ import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
@@ -243,7 +244,8 @@ otpRideCreate driver otpCode booking = do
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
-  ride <- buildRide otpCode driver.id (Just transporter.id)
+  ghrId <- CGHR.getDriverGoHomeRequestInfo driver.id <&> (.driverGoHomeRequestId)
+  ride <- buildRide otpCode driver.id (Just transporter.id) ghrId
   rideDetails <- buildRideDetails ride
   triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
   -- Esq.runTransaction $ do
@@ -273,7 +275,7 @@ otpRideCreate driver otpCode booking = do
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide otp driverId merchantId = do
+    buildRide otp driverId merchantId ghrId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -301,7 +303,8 @@ otpRideCreate driver otpCode booking = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            numberOfDeviation = Nothing
+            numberOfDeviation = Nothing,
+            driverGoHomeRequestId = ghrId
           }
 
     buildTrackingUrl rideId = do

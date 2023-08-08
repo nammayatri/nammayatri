@@ -147,6 +147,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig
+import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
@@ -205,7 +206,8 @@ data DriverInformationRes = DriverInformationRes
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
-    mediaUrl :: Maybe Text
+    mediaUrl :: Maybe Text,
+    driverGoHomeInfo :: DDGR.CachedGoHomeRequest
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -572,7 +574,8 @@ getInformation (personId, merchantId) = do
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  pure $ makeDriverInformationRes driverEntity organization driverReferralCode driverStats
+  driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
+  pure $ makeDriverInformationRes driverEntity organization driverReferralCode driverStats driverGoHomeInfo
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _) isActive mode = do
@@ -598,24 +601,27 @@ activateGoHomeFeature (driverId, _) driverHomeLocationId = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  whenM (isJust <$> QDGR.findActive driverId) $ throwError DriverGoHomeRequestAlreadyActive
-  unlessM ((< 2) <$> QDGR.todaySuccessCount driverId) $ throwError DriverGoHomeRequestDailyUsageLimitReached
+  dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
+  whenM (liftM2 (||) (return $ isJust dghInfo.status) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
+  unlessM (liftM2 (&&) (return $ dghInfo.cnt > 0) ((< 2) <$> QDGR.todaySuccessCount driverId)) $ throwError DriverGoHomeRequestDailyUsageLimitReached
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
-  QDGR.create =<< buildDriverGoHomeRequest driverHomeLocation
+  activateDriverGoHomeRequest driverId driverHomeLocation
+  --QDGR.create =<< buildDriverGoHomeRequest driverHomeLocation
   pure APISuccess.Success
-  where
-    buildDriverGoHomeRequest driverHomeLocation = do
-      id <- generateGUID
-      now <- getCurrentTime
-      return $
-        DDGR.DriverGoHomeRequest
-          { lat = driverHomeLocation.lat,
-            lon = driverHomeLocation.lon,
-            status = DDGR.ACTIVE,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+
+-- where
+--   buildDriverGoHomeRequest driverHomeLocation = do
+--     id <- generateGUID
+--     now <- getCurrentTime
+--     return $
+--       DDGR.DriverGoHomeRequest
+--         { lat = driverHomeLocation.lat,
+--           lon = driverHomeLocation.lon,
+--           status = DDGR.ACTIVE,
+--           createdAt = now,
+--           updatedAt = now,
+--           ..
+--         }
 
 deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m APISuccess.APISuccess
 deactivateGoHomeFeature (personId, _) = do
@@ -624,7 +630,8 @@ deactivateGoHomeFeature (personId, _) = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  QDGR.finishActiveFailed driverId
+  CQDGR.deactivateDriverGoHomeRequest driverId Nothing
+  --QDGR.finishActiveFailed driverId
   pure APISuccess.Success
 
 addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> AddHomeLocationReq -> m APISuccess.APISuccess
@@ -807,7 +814,8 @@ updateDriver (personId, _) req = do
   org <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  return $ makeDriverInformationRes driverEntity org driverReferralCode driverStats
+  driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId
+  return $ makeDriverInformationRes driverEntity org driverReferralCode driverStats driverGoHomeInfo
   where
     checkIfCanDowngrade mVehicle = do
       case mVehicle of
@@ -943,12 +951,13 @@ buildMetaData req personId = do
         MD.updatedAt = now
       }
 
-makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DriverInformationRes
-makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats =
+makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> DriverInformationRes
+makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats dghInfo =
   DriverInformationRes
     { organization = DM.makeMerchantAPIEntity org,
       referralCode = referralCode <&> (.getId),
       numberOfRides = driverStats.totalRides,
+      driverGoHomeInfo = dghInfo,
       ..
     }
 

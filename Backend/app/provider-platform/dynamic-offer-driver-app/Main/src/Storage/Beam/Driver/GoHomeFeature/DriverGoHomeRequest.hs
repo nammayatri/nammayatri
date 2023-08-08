@@ -95,7 +95,7 @@ instance B.Table DriverGoHomeRequestT where
 instance ModelMeta DriverGoHomeRequestT where
   modelFieldModification = driverGoHomeRequestTMod
   modelTableName = "driver_go_home_request"
-  modelSchemaName = Just "dynamic_offer_driver_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverGoHomeRequest = DriverGoHomeRequestT Identity
 
