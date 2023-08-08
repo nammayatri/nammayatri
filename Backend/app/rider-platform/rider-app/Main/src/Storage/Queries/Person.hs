@@ -23,6 +23,7 @@ import qualified Database.Beam as B
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
+import Domain.Types.Person.DisabilityType as DTypes
 import qualified Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
 import qualified EulerHS.Prelude as EP
@@ -329,10 +330,11 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Language ->
   Maybe Gender ->
+  Maybe (Id DTypes.DisabilityType) ->
   Maybe Version ->
   Maybe Version ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbDisabilityId mbCVersion mbBVersion = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -349,6 +351,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.referredAt (Just now) | isJust mbReferralCode]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
         <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
+        <> [Se.Set BeamP.disabilityId mbDisabilityId | isJust mbDisabilityId]
         <> [Se.Set BeamP.clientVersion (versionToText <$> mbCVersion) | isJust mbCVersion]
         <> ([Se.Set BeamP.bundleVersion $ versionToText <$> mbBVersion | isJust mbBVersion])
     )
@@ -625,6 +628,7 @@ instance FromTType' BeamP.Person Person where
             description = description,
             merchantId = Id merchantId,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+            disabilityId = Id <$> disabilityId,
             referralCode = referralCode,
             referredAt = referredAt,
             hasTakenValidRide = hasTakenValidRide,
@@ -664,6 +668,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.description = description,
         BeamP.merchantId = getId merchantId,
         BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+        BeamP.disabilityId = getId <$> disabilityId,
         BeamP.referralCode = referralCode,
         BeamP.referredAt = referredAt,
         BeamP.hasTakenValidRide = hasTakenValidRide,
