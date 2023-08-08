@@ -2026,6 +2026,18 @@
         "type": "github"
       }
     },
+    "osrm-pbf": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-d9h6rU4ITpkLJeoGWYgmHNUYNbZIQRB22lhVwwN8Nlg=",
+        "type": "file",
+        "url": "http://download.geofabrik.de/asia/india/southern-zone-230801.osm.pbf"
+      },
+      "original": {
+        "type": "file",
+        "url": "http://download.geofabrik.de/asia/india/southern-zone-230801.osm.pbf"
+      }
+    },
     "passetto-hs": {
       "flake": false,
       "locked": {
@@ -2318,6 +2330,7 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "easy-purescript-nix": "easy-purescript-nix",
+        "osrm-pbf": "osrm-pbf",
         "shared-kernel": "shared-kernel"
       }
     },
