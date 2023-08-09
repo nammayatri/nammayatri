@@ -13,18 +13,16 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.DriverRCAssociation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -49,29 +47,10 @@ instance B.Table DriverRCAssociationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverRCAssociationT where
-  modelFieldModification = driverRCAssociationTMod
-  modelTableName = "driver_rc_association"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverRCAssociation = DriverRCAssociationT Identity
 
-driverRCAssociationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverRCAssociationT)
-driverRCAssociationTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "driver_rc_association"
-    <> B.modifyTableFields driverRCAssociationTMod
-
-instance FromJSON DriverRCAssociation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverRCAssociation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverRCAssociation
-
-driverRCAssociationTMod :: DriverRCAssociationT (B.FieldModification (B.TableField DriverRCAssociationT))
-driverRCAssociationTMod =
+driverRcAssociationTMod :: DriverRCAssociationT (B.FieldModification (B.TableField DriverRCAssociationT))
+driverRcAssociationTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       driverId = B.fieldNamed "driver_id",
@@ -83,19 +62,6 @@ driverRCAssociationTMod =
       isRcActive = B.fieldNamed "is_rc_active"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
+$(enableKVPG ''DriverRCAssociationT ['id] [['driverId]])
 
-driverRcAssociationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverRcAssociationToHSModifiers =
-  M.empty
-
-driverRcAssociationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverRcAssociationToPSModifiers =
-  M.empty
-
-instance Serialize DriverRCAssociation where
-  put = error "undefined"
-  get = error "undefined"
-
-$(enableKVPG ''DriverRCAssociationT ['id] [['driverId], ['rcId]])
+$(mkTableInstances ''DriverRCAssociationT "driver_rc_association" "atlas_driver_offer_bpp")

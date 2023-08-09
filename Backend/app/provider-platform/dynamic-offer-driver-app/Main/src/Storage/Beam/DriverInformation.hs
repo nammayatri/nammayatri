@@ -13,28 +13,19 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverInformation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
--- import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
--- import Database.Beam.Postgres
---   ( Postgres,
---   )
--- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverInformation as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
--- import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -71,26 +62,7 @@ instance B.Table DriverInformationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta DriverInformationT where
-  modelFieldModification = driverInformationTMod
-  modelTableName = "driver_information"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverInformation = DriverInformationT Identity
-
-dInformationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverInformationT)
-dInformationTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "driver_information"
-    <> B.modifyTableFields driverInformationTMod
-
-instance FromJSON DriverInformation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverInformation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverInformation
 
 driverInformationTMod :: DriverInformationT (B.FieldModification (B.TableField DriverInformationT))
 driverInformationTMod =
@@ -119,19 +91,6 @@ driverInformationTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverInformationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverInformationToHSModifiers =
-  M.empty
-
-driverInformationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverInformationToPSModifiers =
-  M.empty
-
-instance Serialize DriverInformation where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''DriverInformationT ['driverId] [])
+
+$(mkTableInstances ''DriverInformationT "driver_information" "atlas_driver_offer_bpp")

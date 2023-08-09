@@ -13,16 +13,13 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use newtype instead of data" #-}
-
 module Storage.Beam.Exophone where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -76,20 +73,7 @@ instance B.Table ExophoneT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta ExophoneT where
-  modelFieldModification = exophoneTMod
-  modelTableName = "exophone"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Exophone = ExophoneT Identity
-
-instance FromJSON Exophone where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Exophone where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Exophone
 
 exophoneTMod :: ExophoneT (B.FieldModification (B.TableField ExophoneT))
 exophoneTMod =
@@ -104,19 +88,6 @@ exophoneTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
+$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone]])
 
-exophoneToHSModifiers :: M.Map Text (A.Value -> A.Value)
-exophoneToHSModifiers =
-  M.empty
-
-exophoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
-exophoneToPSModifiers =
-  M.empty
-
-instance Serialize Exophone where
-  put = error "undefined"
-  get = error "undefined"
-
-$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])
+$(mkTableInstances ''ExophoneT "exophone" "atlas_driver_offer_bpp")

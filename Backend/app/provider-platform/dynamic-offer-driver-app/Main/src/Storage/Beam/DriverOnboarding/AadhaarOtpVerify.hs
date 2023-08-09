@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.AadhaarOtpVerify where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -48,20 +46,7 @@ instance B.Table AadhaarOtpVerifyT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta AadhaarOtpVerifyT where
-  modelFieldModification = aadhaarOtpVerifyTMod
-  modelTableName = "aadhaar_otp_verify"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type AadhaarOtpVerify = AadhaarOtpVerifyT Identity
-
-instance FromJSON AadhaarOtpVerify where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON AadhaarOtpVerify where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show AadhaarOtpVerify
 
 aadhaarOtpVerifyTMod :: AadhaarOtpVerifyT (B.FieldModification (B.TableField AadhaarOtpVerifyT))
 aadhaarOtpVerifyTMod =
@@ -75,19 +60,6 @@ aadhaarOtpVerifyTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize AadhaarOtpVerify where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-aadhaarOtpVerifyToHSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpVerifyToHSModifiers =
-  M.empty
-
-aadhaarOtpVerifyToPSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpVerifyToPSModifiers =
-  M.empty
-
 $(enableKVPG ''AadhaarOtpVerifyT ['id] [['driverId]])
+
+$(mkTableInstances ''AadhaarOtpVerifyT "aadhaar_otp_verify" "atlas_driver_offer_bpp")

@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.LeaderBoardConfig where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -69,20 +67,9 @@ instance B.Table LeaderBoardConfigsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta LeaderBoardConfigsT where
-  modelFieldModification = leaderBoardConfigsTMod
-  modelTableName = "leader_board_configs"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
+type LeaderBoardConfig = LeaderBoardConfigsT Identity
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
-
-instance FromJSON LeaderBoardConfigs where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON LeaderBoardConfigs where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show LeaderBoardConfigs
 
 leaderBoardConfigsTMod :: LeaderBoardConfigsT (B.FieldModification (B.TableField LeaderBoardConfigsT))
 leaderBoardConfigsTMod =
@@ -97,19 +84,6 @@ leaderBoardConfigsTMod =
       merchantId = B.fieldNamed "merchant_id"
     }
 
-instance Serialize LeaderBoardConfigs where
-  put = error "undefined"
-  get = error "undefined"
+$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId]])
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-leaderBoardConfigsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-leaderBoardConfigsToHSModifiers =
-  M.empty
-
-leaderBoardConfigsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-leaderBoardConfigsToPSModifiers =
-  M.empty
-
-$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId, 'leaderBoardType]])
+$(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs" "atlas_driver_offer_bpp")

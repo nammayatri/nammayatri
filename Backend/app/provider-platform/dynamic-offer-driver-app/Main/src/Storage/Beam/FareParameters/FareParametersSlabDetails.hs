@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FareParameters.FareParametersSlabDetails where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
@@ -34,8 +32,6 @@ import qualified Kernel.Types.Id as KId
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
-
--- import Storage.Tabular.Vehicle ()
 
 instance IsString Vehicle.Variant where
   fromString = show
@@ -54,22 +50,9 @@ instance B.Table FareParametersSlabDetailsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . fareParametersId
 
-instance ModelMeta FareParametersSlabDetailsT where
-  modelFieldModification = fareParametersSlabDetailsTMod
-  modelTableName = "fare_parameters_slab_details"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FareParametersSlabDetails = FareParametersSlabDetailsT Identity
 
 type FullFareParametersSlabDetails = (KId.Id Domain.FareParameters, Domain.FParamsSlabDetails)
-
-instance FromJSON FareParametersSlabDetails where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FareParametersSlabDetails where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FareParametersSlabDetails
 
 fareParametersSlabDetailsTMod :: FareParametersSlabDetailsT (B.FieldModification (B.TableField FareParametersSlabDetailsT))
 fareParametersSlabDetailsTMod =
@@ -80,19 +63,6 @@ fareParametersSlabDetailsTMod =
       cgst = B.fieldNamed "cgst"
     }
 
-instance Serialize FareParametersSlabDetails where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-fareParametersSlabDetailsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-fareParametersSlabDetailsToHSModifiers =
-  M.empty
-
-fareParametersSlabDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-fareParametersSlabDetailsToPSModifiers =
-  M.empty
-
 $(enableKVPG ''FareParametersSlabDetailsT ['fareParametersId] [])
+
+$(mkTableInstances ''FareParametersSlabDetailsT "fare_parameters_slab_details" "atlas_driver_offer_bpp")

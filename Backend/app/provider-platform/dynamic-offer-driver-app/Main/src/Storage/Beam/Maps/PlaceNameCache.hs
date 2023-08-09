@@ -14,14 +14,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Beam.Maps.PlaceNameCache where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Data.Vector as V
@@ -73,20 +71,7 @@ instance B.Table PlaceNameCacheT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta PlaceNameCacheT where
-  modelFieldModification = placeNameCacheTMod
-  modelTableName = "place_name_cache"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type PlaceNameCache = PlaceNameCacheT Identity
-
-instance FromJSON PlaceNameCache where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON PlaceNameCache where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show PlaceNameCache
 
 placeNameCacheTMod :: PlaceNameCacheT (B.FieldModification (B.TableField PlaceNameCacheT))
 placeNameCacheTMod =
@@ -102,19 +87,6 @@ placeNameCacheTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize PlaceNameCache where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-placeNameCacheToHSModifiers :: M.Map Text (A.Value -> A.Value)
-placeNameCacheToHSModifiers =
-  M.empty
-
-placeNameCacheToPSModifiers :: M.Map Text (A.Value -> A.Value)
-placeNameCacheToPSModifiers =
-  M.empty
-
 $(enableKVPG ''PlaceNameCacheT ['id] [['placeId], ['geoHash]])
+
+$(mkTableInstances ''PlaceNameCacheT "place_name_cache" "atlas_driver_offer_bpp")

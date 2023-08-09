@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverReferral where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -43,20 +41,7 @@ instance B.Table DriverReferralT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . referralCode
 
-instance ModelMeta DriverReferralT where
-  modelFieldModification = driverReferralTMod
-  modelTableName = "driver_referral"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverReferral = DriverReferralT Identity
-
-instance FromJSON DriverReferral where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverReferral where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverReferral
 
 driverReferralTMod :: DriverReferralT (B.FieldModification (B.TableField DriverReferralT))
 driverReferralTMod =
@@ -66,19 +51,6 @@ driverReferralTMod =
       linkedAt = B.fieldNamed "linked_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverReferralToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverReferralToHSModifiers =
-  M.empty
-
-driverReferralToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverReferralToPSModifiers =
-  M.empty
-
-instance Serialize DriverReferral where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''DriverReferralT ['referralCode] [['driverId]])
+
+$(mkTableInstances ''DriverReferralT "driver_referral" "atlas_driver_offer_bpp")

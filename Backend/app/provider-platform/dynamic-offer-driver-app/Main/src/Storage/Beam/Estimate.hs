@@ -14,6 +14,7 @@
 -}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Estimate where
@@ -22,8 +23,6 @@ import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
 import Data.ByteString.Lazy (fromStrict)
 import Data.Coerce (coerce)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Data.Vector as V
@@ -44,8 +43,6 @@ import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
--- import Data.Aeson (FromJSON, ToJSON)
 
 instance FromBackendRow Postgres [Domain.EstimateBreakup]
 
@@ -107,9 +104,6 @@ data EstimateT f = EstimateT
 instance IsString Domain.EstimateBreakup where
   fromString = show
 
--- instance IsString Money where
---   fromString = show
-
 instance IsString Variant.Variant where
   fromString = show
 
@@ -119,22 +113,7 @@ instance B.Table EstimateT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta EstimateT where
-  modelFieldModification = estimateTMod
-  modelTableName = "estimate"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Estimate = EstimateT Identity
-
-instance FromJSON Estimate where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Estimate where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Estimate
-
-deriving stock instance Read Estimate
 
 estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
 estimateTMod =
@@ -155,19 +134,6 @@ estimateTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-estimateToHSModifiers :: M.Map Text (A.Value -> A.Value)
-estimateToHSModifiers =
-  M.empty
-
-estimateToPSModifiers :: M.Map Text (A.Value -> A.Value)
-estimateToPSModifiers =
-  M.empty
-
-instance Serialize Estimate where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''EstimateT ['id] [])
+
+$(mkTableInstances ''EstimateT "estimate" "atlas_driver_offer_bpp")

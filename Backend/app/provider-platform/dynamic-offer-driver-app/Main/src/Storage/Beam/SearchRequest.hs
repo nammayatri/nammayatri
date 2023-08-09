@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequest where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -72,20 +70,7 @@ instance B.Table SearchRequestT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SearchRequestT where
-  modelFieldModification = searchRequestTMod
-  modelTableName = "search_request"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type SearchRequest = SearchRequestT Identity
-
-instance FromJSON SearchRequest where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SearchRequest where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SearchRequest
 
 deriving stock instance Ord Context.City
 
@@ -113,19 +98,6 @@ searchRequestTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-searchRequestToHSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestToHSModifiers =
-  M.empty
-
-searchRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestToPSModifiers =
-  M.empty
-
-instance Serialize SearchRequest where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''SearchRequestT ['id] [['transactionId]])
+
+$(mkTableInstances ''SearchRequestT "search_request" "atlas_driver_offer_bpp")

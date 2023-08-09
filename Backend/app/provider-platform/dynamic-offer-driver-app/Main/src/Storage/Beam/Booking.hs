@@ -13,20 +13,17 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Booking where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.FareProduct as FareProductD
@@ -39,8 +36,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
--- import Storage.Tabular.Vehicle ()
 
 instance FromField Domain.BookingStatus where
   fromField = fromFieldEnum
@@ -104,35 +99,13 @@ instance IsString Domain.BookingType where
 instance IsString Veh.Variant where
   fromString = show
 
--- instance IsString Money where
---   fromString = show
-
 instance B.Table BookingT where
   data PrimaryKey BookingT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta BookingT where
-  modelFieldModification = bookingTMod
-  modelTableName = "booking"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Booking = BookingT Identity
-
-bookingTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BookingT)
-bookingTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "booking"
-    <> B.modifyTableFields bookingTMod
-
-instance FromJSON Booking where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Booking where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Booking
 
 deriving stock instance Ord Context.City
 
@@ -172,19 +145,6 @@ bookingTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-bookingToHSModifiers :: M.Map Text (A.Value -> A.Value)
-bookingToHSModifiers =
-  M.empty
-
-bookingToPSModifiers :: M.Map Text (A.Value -> A.Value)
-bookingToPSModifiers =
-  M.empty
-
-instance Serialize Booking where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''BookingT ['id] [['specialZoneOtpCode], ['quoteId]])
+
+$(mkTableInstances ''BookingT "booking" "atlas_driver_offer_bpp")

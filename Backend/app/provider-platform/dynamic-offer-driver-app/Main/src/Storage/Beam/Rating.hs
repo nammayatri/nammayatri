@@ -13,18 +13,16 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Rating where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
+-- import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -48,26 +46,21 @@ instance B.Table RatingT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RatingT where
-  modelFieldModification = ratingTMod
-  modelTableName = "rating"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Rating = RatingT Identity
 
-ratingTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RatingT)
-ratingTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "rating"
-    <> B.modifyTableFields ratingTMod
+-- ratingTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RatingT)
+-- ratingTable =
+--   BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+--     <> B.setEntityName "rating"
+--     <> B.modifyTableFields ratingTMod
 
-instance FromJSON Rating where
-  parseJSON = A.genericParseJSON A.defaultOptions
+-- instance FromJSON Rating where
+--   parseJSON = A.genericParseJSON A.defaultOptions
 
-instance ToJSON Rating where
-  toJSON = A.genericToJSON A.defaultOptions
+-- instance ToJSON Rating where
+--   toJSON = A.genericToJSON A.defaultOptions
 
-deriving stock instance Show Rating
+-- deriving stock instance Show Rating
 
 ratingTMod :: RatingT (B.FieldModification (B.TableField RatingT))
 ratingTMod =
@@ -81,19 +74,6 @@ ratingTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
+$(enableKVPG ''RatingT ['id] [['rideId], ['driverId]])
 
-ratingToHSModifiers :: M.Map Text (A.Value -> A.Value)
-ratingToHSModifiers =
-  M.empty
-
-ratingToPSModifiers :: M.Map Text (A.Value -> A.Value)
-ratingToPSModifiers =
-  M.empty
-
-instance Serialize Rating where
-  put = error "undefined"
-  get = error "undefined"
-
-$(enableKVPG ''RatingT ['id] [['rideId]])
+$(mkTableInstances ''RatingT "rating" "atlas_driver_offer_bpp")

@@ -13,21 +13,14 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Message.MessageReport where
 
 import Data.Aeson
 import qualified Data.Aeson as A
--- import Data.ByteString.Internal (ByteString)
-
--- import Database.PostgreSQL.Simple.HStore
--- import qualified Data.Map as Map
--- import qualified Data.Vector as Vector
-
 import Data.ByteString (ByteString)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -36,7 +29,6 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Message.MessageReport as Domain
@@ -61,16 +53,6 @@ instance FromBackendRow Postgres Domain.DeliveryStatus
 instance IsString Domain.DeliveryStatus where
   fromString = show
 
--- fromFieldmessageDynamicFields ::
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion Domain.MessageDynamicFieldsType
--- fromFieldmessageDynamicFields f mbValue = do
---   value <- fromField f mbValue
---   case A.fromJSON value of
---     A.Success val -> pure val
---     _ -> DPSF.returnError ConversionFailed f "Conversion failed."
-
 fromFieldmessageDynamicFields ::
   DPSF.Field ->
   Maybe ByteString ->
@@ -86,8 +68,6 @@ instance FromField Domain.MessageDynamicFieldsType where
 
 instance HasSqlValueSyntax be Value => HasSqlValueSyntax be Domain.MessageDynamicFieldsType where
   sqlValueSyntax = sqlValueSyntax . A.toJSON
-
--- sqlValueSyntax value = sqlValueSyntax (Vector.fromList (Map.toList value))
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageDynamicFieldsType
 
@@ -106,7 +86,6 @@ data MessageReportT f = MessageReportT
     likeStatus :: B.C f Bool,
     reply :: B.C f (Maybe Text),
     messageDynamicFields :: B.C f A.Value,
-    -- messageDynamicFields :: B.C f Domain.MessageDynamicFieldsType,
     updatedAt :: B.C f Time.LocalTime,
     createdAt :: B.C f Time.LocalTime
   }
@@ -118,26 +97,7 @@ instance B.Table MessageReportT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta MessageReportT where
-  modelFieldModification = messageReportTMod
-  modelTableName = "message_report"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type MessageReport = MessageReportT Identity
-
-messageReportTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity MessageReportT)
-messageReportTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "message_report"
-    <> B.modifyTableFields messageReportTMod
-
-instance FromJSON MessageReport where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MessageReport where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MessageReport
 
 messageReportTMod :: MessageReportT (B.FieldModification (B.TableField MessageReportT))
 messageReportTMod =
@@ -153,19 +113,6 @@ messageReportTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize MessageReport where
-  put = error "undefined"
-  get = error "undefined"
+$(enableKVPG ''MessageReportT ['driverId] [['messageId]])
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-messageReportToHSModifiers :: M.Map Text (A.Value -> A.Value)
-messageReportToHSModifiers =
-  M.empty
-
-messageReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
-messageReportToPSModifiers =
-  M.empty
-
-$(enableKVPG ''MessageReportT ['driverId, 'messageId] [['messageId], ['driverId]])
+$(mkTableInstances ''MessageReportT "message_report" "atlas_driver_offer_bpp")

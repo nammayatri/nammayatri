@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Feedback.FeedbackBadge where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -47,20 +45,7 @@ instance B.Table FeedbackBadgeT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FeedbackBadgeT where
-  modelFieldModification = feedbackBadgeTMod
-  modelTableName = "feedback_badge"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FeedbackBadge = FeedbackBadgeT Identity
-
-instance FromJSON FeedbackBadge where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FeedbackBadge where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FeedbackBadge
 
 feedbackBadgeTMod :: FeedbackBadgeT (B.FieldModification (B.TableField FeedbackBadgeT))
 feedbackBadgeTMod =
@@ -73,19 +58,6 @@ feedbackBadgeTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize FeedbackBadge where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-feedbackBadgeToHSModifiers :: M.Map Text (A.Value -> A.Value)
-feedbackBadgeToHSModifiers =
-  M.empty
-
-feedbackBadgeToPSModifiers :: M.Map Text (A.Value -> A.Value)
-feedbackBadgeToPSModifiers =
-  M.empty
-
 $(enableKVPG ''FeedbackBadgeT ['id] [['driverId]])
+
+$(mkTableInstances ''FeedbackBadgeT "feedback_badge" "atlas_driver_offer_bpp")

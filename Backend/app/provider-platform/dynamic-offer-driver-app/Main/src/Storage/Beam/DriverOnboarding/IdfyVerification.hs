@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.IdfyVerification where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -28,7 +26,6 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
@@ -42,16 +39,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Beam.DriverOnboarding.Image ()
-
--- instance FromField Image.ImageType where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
-
--- instance FromBackendRow Postgres Image.ImageType
 
 instance FromField Domain.ImageExtractionValidation where
   fromField = fromFieldEnum
@@ -90,26 +77,7 @@ instance B.Table IdfyVerificationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta IdfyVerificationT where
-  modelFieldModification = idfyVerificationTMod
-  modelTableName = "idfy_verification"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
-idfyVerificationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity IdfyVerificationT)
-idfyVerificationTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "idfy_verification"
-    <> B.modifyTableFields idfyVerificationTMod
-
 type IdfyVerification = IdfyVerificationT Identity
-
-instance FromJSON IdfyVerification where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON IdfyVerification where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show IdfyVerification
 
 deriving stock instance Ord Domain.ImageExtractionValidation
 
@@ -135,22 +103,9 @@ idfyVerificationTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-idfyVerificationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-idfyVerificationToHSModifiers =
-  M.empty
-
-idfyVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-idfyVerificationToPSModifiers =
-  M.empty
-
 instance IsString Domain.ImageExtractionValidation where
   fromString = show
 
-instance Serialize IdfyVerification where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''IdfyVerificationT ['id] [['driverId], ['requestId]])
+
+$(mkTableInstances ''IdfyVerificationT "idfy_verification" "atlas_driver_offer_bpp")

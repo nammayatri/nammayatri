@@ -13,20 +13,17 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Vehicle where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -35,7 +32,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH (enableKVPG)
+import Lib.UtilsTH (enableKVPG, mkTableInstances)
 import Sequelize
 
 instance FromField Domain.RegistrationCategory where
@@ -93,26 +90,7 @@ instance B.Table VehicleT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta VehicleT where
-  modelFieldModification = vehicleTMod
-  modelTableName = "vehicle"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Vehicle = VehicleT Identity
-
-vehicleTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleT)
-vehicleTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "vehicle"
-    <> B.modifyTableFields vehicleTMod
-
-instance FromJSON Vehicle where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Vehicle where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Vehicle
 
 deriving stock instance Ord Domain.Category
 
@@ -139,19 +117,6 @@ vehicleTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-vehicleToHSModifiers :: M.Map Text (A.Value -> A.Value)
-vehicleToHSModifiers =
-  M.empty
-
-vehicleToPSModifiers :: M.Map Text (A.Value -> A.Value)
-vehicleToPSModifiers =
-  M.empty
-
-instance Serialize Vehicle where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
+
+$(mkTableInstances ''VehicleT "vehicle" "atlas_driver_offer_bpp")

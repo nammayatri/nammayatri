@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.MediaFile where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -52,20 +50,7 @@ instance B.Table MediaFileT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta MediaFileT where
-  modelFieldModification = mediaFileTMod
-  modelTableName = "media_file"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type MediaFile = MediaFileT Identity
-
-instance FromJSON MediaFile where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MediaFile where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MediaFile
 
 instance FromField Domain.MediaType where
   fromField = fromFieldEnum
@@ -90,22 +75,9 @@ mediaFileTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-mediaFileToHSModifiers :: M.Map Text (A.Value -> A.Value)
-mediaFileToHSModifiers =
-  M.empty
-
-mediaFileToPSModifiers :: M.Map Text (A.Value -> A.Value)
-mediaFileToPSModifiers =
-  M.empty
-
 instance IsString Domain.MediaType where
   fromString = show
 
-instance Serialize MediaFile where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''MediaFileT ['id] [])
+
+$(mkTableInstances ''MediaFileT "media_file" "atlas_driver_offer_bpp")

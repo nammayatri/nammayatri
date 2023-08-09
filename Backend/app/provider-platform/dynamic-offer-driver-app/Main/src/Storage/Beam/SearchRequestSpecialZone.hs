@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequestSpecialZone where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -34,8 +32,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
--- import Storage.Tabular.Vehicle ()
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax :: HasSqlValueSyntax be String => BaseUrl -> be
@@ -68,20 +64,7 @@ instance B.Table SearchRequestSpecialZoneT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SearchRequestSpecialZoneT where
-  modelFieldModification = searchRequestSpecialZoneTMod
-  modelTableName = "search_request_special_zone"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type SearchRequestSpecialZone = SearchRequestSpecialZoneT Identity
-
-instance FromJSON SearchRequestSpecialZone where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SearchRequestSpecialZone where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SearchRequestSpecialZone
 
 searchRequestSpecialZoneTMod :: SearchRequestSpecialZoneT (B.FieldModification (B.TableField SearchRequestSpecialZoneT))
 searchRequestSpecialZoneTMod =
@@ -103,19 +86,6 @@ searchRequestSpecialZoneTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-searchRequestSpecialZoneToHSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestSpecialZoneToHSModifiers =
-  M.empty
-
-searchRequestSpecialZoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestSpecialZoneToPSModifiers =
-  M.empty
-
-instance Serialize SearchRequestSpecialZone where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''SearchRequestSpecialZoneT ['id] [['transactionId], ['messageId]])
+
+$(mkTableInstances ''SearchRequestSpecialZoneT "search_request_special_zone" "atlas_driver_offer_bpp")

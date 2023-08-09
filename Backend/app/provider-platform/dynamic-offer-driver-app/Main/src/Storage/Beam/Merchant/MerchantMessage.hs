@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.MerchantMessage where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -66,20 +64,7 @@ instance B.Table MerchantMessageT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . messageKey
 
-instance ModelMeta MerchantMessageT where
-  modelFieldModification = merchantMessageTMod
-  modelTableName = "merchant_message"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type MerchantMessage = MerchantMessageT Identity
-
-instance FromJSON MerchantMessage where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MerchantMessage where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MerchantMessage
 
 merchantMessageTMod :: MerchantMessageT (B.FieldModification (B.TableField MerchantMessageT))
 merchantMessageTMod =
@@ -91,19 +76,6 @@ merchantMessageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize MerchantMessage where
-  put = error "undefined"
-  get = error "undefined"
+$(enableKVPG ''MerchantMessageT ['merchantId] [])
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-merchantMessageToHSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantMessageToHSModifiers =
-  M.empty
-
-merchantMessageToPSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantMessageToPSModifiers =
-  M.empty
-
-$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
+$(mkTableInstances ''MerchantMessageT "merchant_message" "atlas_driver_offer_bpp")

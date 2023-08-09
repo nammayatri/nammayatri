@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedWildCards #-}
+-- {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -8,10 +8,6 @@ module Storage.Beam.Common where
 
 import qualified Database.Beam as B
 import GHC.Generics (Generic)
--- import Storage.Beam.DriverOnboarding.Image
-
--- import Storage.Beam.DriverOnboarding.IdfyVerification
-
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
@@ -38,7 +34,7 @@ atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { driverLocation = dLocationTable,
+      { driverLocation = driverLocationTable,
         exophone = dExophone,
         geometry = geometryTable,
         vehicle = vehicleTable,
@@ -47,13 +43,13 @@ atlasDB =
         person = personTable,
         driverLicense = driverLicenseTable,
         idfyVerification = idfyVerificationTable,
-        driverRCAssociation = driverRCAssociationTable,
+        driverRCAssociation = driverRcAssociationTable,
         vehicleRegistrationCertificate = vehicleRegistrationCertificateTable,
-        driverInformation = dInformationTable,
+        driverInformation = driverInformationTable,
         booking = bookingTable,
         ride = rideTable,
         rideDetails = rideDetailsTable,
-        rDetails = rDetailsTable,
+        riderDetails = riderDetailsTable,
         callStatus = callStatusTable,
         quoteSpecialZone = quoteSpecialZoneTable,
         messageReport = messageReportTable,
@@ -77,7 +73,7 @@ data AtlasDB f = AtlasDB
     booking :: f (B.TableEntity BookingT),
     ride :: f (B.TableEntity RideT),
     rideDetails :: f (B.TableEntity RideDetailsT),
-    rDetails :: f (B.TableEntity RiderDetailsT),
+    riderDetails :: f (B.TableEntity RiderDetailsT),
     callStatus :: f (B.TableEntity CallStatusT),
     quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
     messageReport :: f (B.TableEntity MessageReportT),

@@ -23,22 +23,19 @@ module Storage.Beam.DriverLocation where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
-import qualified Database.Beam.Schema.Tables as B
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
-import Kernel.Types.Common hiding (id)
+import Kernel.Utils.Common (getPoint)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -79,35 +76,13 @@ data DriverLocationT f = DriverLocationT
   }
   deriving (Generic, B.Beamable)
 
-dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
-dLocationTable =
-  B.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "driver_location"
-    <> B.modifyTableFields driverLocationTMod
-
 instance B.Table DriverLocationT where
   data PrimaryKey DriverLocationT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta DriverLocationT where
-  modelFieldModification = driverLocationTMod
-  modelTableName = "driver_location"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverLocation = DriverLocationT Identity
-
-instance FromJSON DriverLocation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverLocation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverLocation
-
-instance IsString Point where
-  fromString = show
 
 driverLocationTMod :: DriverLocationT (B.FieldModification (B.TableField DriverLocationT))
 driverLocationTMod =
@@ -122,17 +97,6 @@ driverLocationTMod =
       merchantId = B.fieldNamed "merchant_id"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverLocationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverLocationToHSModifiers =
-  M.empty
-
-driverLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverLocationToPSModifiers =
-  M.empty
-
 toRowExpression personId latLong updateTime now merchantId =
   DriverLocationT
     (B.val_ personId)
@@ -144,8 +108,6 @@ toRowExpression personId latLong updateTime now merchantId =
     (B.val_ now)
     (B.val_ merchantId)
 
-instance Serialize DriverLocation where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''DriverLocationT ['driverId] [])
+
+$(mkTableInstances ''DriverLocationT "driver_location" "atlas_driver_offer_bpp")

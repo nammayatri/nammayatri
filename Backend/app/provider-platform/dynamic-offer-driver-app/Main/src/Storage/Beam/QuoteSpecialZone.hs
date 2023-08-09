@@ -13,18 +13,15 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.QuoteSpecialZone where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -56,35 +53,13 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
 instance IsString Variant.Variant where
   fromString = show
 
--- instance IsString Common.Money where
---   fromString = show
-
 instance B.Table QuoteSpecialZoneT where
   data PrimaryKey QuoteSpecialZoneT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta QuoteSpecialZoneT where
-  modelFieldModification = quoteSpecialZoneTMod
-  modelTableName = "quote_special_zone"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type QuoteSpecialZone = QuoteSpecialZoneT Identity
-
-quoteSpecialZoneTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity QuoteSpecialZoneT)
-quoteSpecialZoneTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "quote_special_zone"
-    <> B.modifyTableFields quoteSpecialZoneTMod
-
-instance FromJSON QuoteSpecialZone where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON QuoteSpecialZone where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show QuoteSpecialZone
 
 quoteSpecialZoneTMod :: QuoteSpecialZoneT (B.FieldModification (B.TableField QuoteSpecialZoneT))
 quoteSpecialZoneTMod =
@@ -103,19 +78,6 @@ quoteSpecialZoneTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-quoteSpecialZoneToHSModifiers :: M.Map Text (A.Value -> A.Value)
-quoteSpecialZoneToHSModifiers =
-  M.empty
-
-quoteSpecialZoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
-quoteSpecialZoneToPSModifiers =
-  M.empty
-
-instance Serialize QuoteSpecialZone where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''QuoteSpecialZoneT ['id] [['searchRequestId]])
+
+$(mkTableInstances ''QuoteSpecialZoneT "quote_special_zone" "atlas_driver_offer_bpp")

@@ -383,7 +383,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
                 ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
                 rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. (BeamRD.id rideDetails''))
-                riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> (B.just_ (BeamRDR.id riderDetails'')) B.==?. (BeamB.riderId booking'))
+                riderDetails' <- B.join_' (BeamCommon.riderDetails BeamCommon.atlasDB) (\riderDetails'' -> (B.just_ (BeamRDR.id riderDetails'')) B.==?. (BeamB.riderId booking'))
                 pure (booking', ride', rideDetails', riderDetails')
   res' <- case res of
     Right x -> do

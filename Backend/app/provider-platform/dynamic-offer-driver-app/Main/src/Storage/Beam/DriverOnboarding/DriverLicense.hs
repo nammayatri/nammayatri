@@ -13,18 +13,15 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.DriverLicense where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -35,15 +32,6 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()
 
--- instance FromField Domain.VerificationStatus where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VerificationStatus where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
-
--- instance FromBackendRow Postgres Domain.VerificationStatus
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
     driverId :: B.C f Text,
@@ -70,26 +58,11 @@ instance B.Table DriverLicenseT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverLicenseT where
-  modelFieldModification = driverLicenseTMod
-  modelTableName = "driver_license"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
-driverLicenseTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLicenseT)
-driverLicenseTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "driver_license"
-    <> B.modifyTableFields driverLicenseTMod
-
 type DriverLicense = DriverLicenseT Identity
 
-instance FromJSON DriverLicense where
-  parseJSON = A.genericParseJSON A.defaultOptions
+deriving stock instance Eq DriverLicense
 
-instance ToJSON DriverLicense where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverLicense
+deriving stock instance Ord DriverLicense
 
 driverLicenseTMod :: DriverLicenseT (B.FieldModification (B.TableField DriverLicenseT))
 driverLicenseTMod =
@@ -112,19 +85,6 @@ driverLicenseTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverLicenseToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverLicenseToHSModifiers =
-  M.empty
-
-driverLicenseToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverLicenseToPSModifiers =
-  M.empty
-
-instance Serialize DriverLicense where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''DriverLicenseT ['id] [['driverId], ['licenseNumberHash]])
+
+$(mkTableInstances ''DriverLicenseT "driver_license" "atlas_driver_offer_bpp")

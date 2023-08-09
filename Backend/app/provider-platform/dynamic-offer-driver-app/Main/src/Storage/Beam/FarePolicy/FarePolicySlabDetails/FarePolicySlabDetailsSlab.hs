@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
@@ -34,8 +32,6 @@ import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
-
--- import Storage.Tabular.Vehicle ()
 
 instance IsString Vehicle.Variant where
   fromString = show
@@ -60,22 +56,9 @@ instance B.Table FarePolicySlabsDetailsSlabT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FarePolicySlabsDetailsSlabT where
-  modelFieldModification = farePolicySlabsDetailsSlabTMod
-  modelTableName = "fare_policy_slabs_details_slab"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlabT Identity
 
 type FullFarePolicySlabsDetailsSlab = (KTI.Id Domain.FarePolicy, Domain.FPSlabsDetailsSlab)
-
-instance FromJSON FarePolicySlabsDetailsSlab where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FarePolicySlabsDetailsSlab where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FarePolicySlabsDetailsSlab
 
 deriving stock instance Ord Domain.WaitingCharge
 
@@ -100,19 +83,6 @@ farePolicySlabsDetailsSlabTMod =
       nightShiftCharge = B.fieldNamed "night_shift_charge"
     }
 
-instance Serialize FarePolicySlabsDetailsSlab where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-farePolicySlabsDetailsSlabToHSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicySlabsDetailsSlabToHSModifiers =
-  M.empty
-
-farePolicySlabsDetailsSlabToPSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicySlabsDetailsSlabToPSModifiers =
-  M.empty
-
 $(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [['farePolicyId]])
+
+$(mkTableInstances ''FarePolicySlabsDetailsSlabT "fare_policy_slabs_details_slab" "atlas_driver_offer_bpp")

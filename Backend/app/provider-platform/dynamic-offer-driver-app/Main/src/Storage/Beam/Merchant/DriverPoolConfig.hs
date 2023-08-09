@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.DriverPoolConfig where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Data.Vector as V
@@ -98,20 +96,7 @@ instance B.Table DriverPoolConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . merchantId
 
-instance ModelMeta DriverPoolConfigT where
-  modelFieldModification = driverPoolConfigTMod
-  modelTableName = "driver_pool_config"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverPoolConfig = DriverPoolConfigT Identity
-
-instance FromJSON DriverPoolConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverPoolConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverPoolConfig
 
 deriving stock instance Ord PoolSortingType
 
@@ -145,19 +130,6 @@ driverPoolConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize DriverPoolConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverPoolConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverPoolConfigToHSModifiers =
-  M.empty
-
-driverPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverPoolConfigToPSModifiers =
-  M.empty
-
 $(enableKVPG ''DriverPoolConfigT ['merchantId] [])
+
+$(mkTableInstances ''DriverPoolConfigT "driver_pool_config" "atlas_driver_offer_bpp")

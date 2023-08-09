@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverStats where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -53,20 +51,7 @@ instance B.Table DriverStatsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta DriverStatsT where
-  modelFieldModification = driverStatsTMod
-  modelTableName = "driver_stats"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverStats = DriverStatsT Identity
-
-instance FromJSON DriverStats where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverStats where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverStats
 
 driverStatsTMod :: DriverStatsT (B.FieldModification (B.TableField DriverStatsT))
 driverStatsTMod =
@@ -84,19 +69,6 @@ driverStatsTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverStatsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverStatsToHSModifiers =
-  M.empty
-
-driverStatsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverStatsToPSModifiers =
-  M.empty
-
-instance Serialize DriverStats where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''DriverStatsT ['driverId] [])
+
+$(mkTableInstances ''DriverStatsT "driver_stats" "atlas_driver_offer_bpp")

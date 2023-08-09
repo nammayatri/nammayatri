@@ -13,13 +13,12 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BusinessEvent where
 
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -79,18 +78,7 @@ instance B.Table BusinessEventT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta BusinessEventT where
-  modelFieldModification = businessEventTMod
-  modelTableName = "business_event"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type BusinessEvent = BusinessEventT Identity
-
-instance FromJSON BusinessEvent where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON BusinessEvent where
-  toJSON = A.genericToJSON A.defaultOptions
 
 instance FromJSON Domain.EventType where
   parseJSON = A.genericParseJSON A.defaultOptions
@@ -103,8 +91,6 @@ instance FromJSON Domain.WhenPoolWasComputed where
 
 instance ToJSON Domain.WhenPoolWasComputed where
   toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show BusinessEvent
 
 deriving stock instance Ord Domain.EventType
 
@@ -131,19 +117,6 @@ businessEventTMod =
       rideId = B.fieldNamed "ride_id"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-businessEventToHSModifiers :: M.Map Text (A.Value -> A.Value)
-businessEventToHSModifiers =
-  M.empty
-
-businessEventToPSModifiers :: M.Map Text (A.Value -> A.Value)
-businessEventToPSModifiers =
-  M.empty
-
-instance Serialize BusinessEvent where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''BusinessEventT ['id] [])
+
+$(mkTableInstances ''BusinessEventT "business_event" "atlas_driver_offer_bpp")
