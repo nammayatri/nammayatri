@@ -23,7 +23,7 @@ import Database.Beam as B
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Person
 import qualified EulerHS.Language as L
-import Kernel.Beam.Functions (findAllWithKV, findAllWithOptionsKV, getLocationDbBeamConfig, getMasterBeamConfig, updateOneWithKV)
+import Kernel.Beam.Functions (findAllWithKV, findAllWithOptionsKV, findOneWithKV, getLocationDbBeamConfig, getMasterBeamConfig, updateOneWithKV)
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Types.Common
@@ -59,7 +59,7 @@ create newDriverGoHomeRequest = do
       L.insertRows $
         B.insert (BeamCommon.driverGoHomeRequest BeamCommon.atlasDB) $
           B.insertExpressions
-            [BeamDHR.toRowExpression (newDriverGoHomeRequest.id.getId) (getId newDriverGoHomeRequest.driverId) newDriverGoHomeRequest.lat newDriverGoHomeRequest.lon newDriverGoHomeRequest.status newDriverGoHomeRequest.createdAt newDriverGoHomeRequest.updatedAt]
+            [BeamDHR.toRowExpression (newDriverGoHomeRequest.id.getId) (getId newDriverGoHomeRequest.driverId) newDriverGoHomeRequest.lat newDriverGoHomeRequest.lon newDriverGoHomeRequest.status newDriverGoHomeRequest.numCancellation newDriverGoHomeRequest.createdAt newDriverGoHomeRequest.updatedAt]
 
 -- findActive :: Transactionable m => Id Driver -> m (Maybe DriverGoHomeRequest)
 -- findActive driverId = do
@@ -71,6 +71,9 @@ create newDriverGoHomeRequest = do
 --     Esq.limit 1
 --     Esq.orderBy [Esq.desc $ driverGoHomeRequest ^. DriverGoHomeRequestCreatedAt]
 --     return driverGoHomeRequest
+
+findById :: (MonadFlow m) => Id DDGR.DriverGoHomeRequest -> m (Maybe DDGR.DriverGoHomeRequest)
+findById (Id.Id driverGoHomeRequestId) = findOneWithKV [Se.Is BeamDHR.id $ Se.Eq driverGoHomeRequestId]
 
 findActive :: (MonadFlow m, Log m) => Id Driver -> m (Maybe DDGR.DriverGoHomeRequest)
 findActive (Id.Id driverId) = findAllWithOptionsKV [Se.And [Se.Is BeamDHR.driverId $ Se.Eq driverId, Se.Is BeamDHR.status $ Se.Eq DDGR.ACTIVE]] (Se.Desc BeamDHR.createdAt) (Just 1) Nothing <&> listToMaybe
@@ -170,3 +173,10 @@ todaySuccessCount :: (MonadFlow m) => Id Driver -> m Int
 todaySuccessCount driverId = do
   now <- getCurrentTime
   length <$> findAllWithKV [Se.Is BeamDHR.driverId $ Se.Eq $ getId driverId, Se.Is BeamDHR.status $ Se.Eq DDGR.SUCCESS, Se.Is BeamDHR.createdAt $ Se.GreaterThanOrEq now {utctDayTime = 0}, Se.Is BeamDHR.createdAt $ Se.LessThanOrEq now {utctDayTime = 86400}]
+
+updateCancellationCount :: (MonadFlow m) => Id DDGR.DriverGoHomeRequest -> Int -> m ()
+updateCancellationCount dghrId val = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamDHR.numCancellation val, Se.Set BeamDHR.updatedAt now]
+    [Se.Is BeamDHR.id $ Se.Eq $ getId dghrId]

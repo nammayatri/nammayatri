@@ -29,6 +29,7 @@ data DriverGoHomeRequest = DriverGoHomeRequest
     lat :: Double,
     lon :: Double,
     status :: DriverGoHomeRequestStatus,
+    numCancellation :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

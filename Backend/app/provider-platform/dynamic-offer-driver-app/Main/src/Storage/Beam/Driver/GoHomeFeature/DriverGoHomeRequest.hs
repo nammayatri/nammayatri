@@ -63,7 +63,7 @@ driverGoHomeRequestTable =
     <> B.setEntityName "driver_go_home_request"
     <> B.modifyTableFields driverGoHomeRequestTMod
 
-toRowExpression reqId driverId lat lon status createdAt updatedAt =
+toRowExpression reqId driverId lat lon status numCancellation createdAt updatedAt =
   DriverGoHomeRequestT
     (B.val_ reqId)
     (B.val_ driverId)
@@ -71,6 +71,7 @@ toRowExpression reqId driverId lat lon status createdAt updatedAt =
     (B.val_ lon)
     (getPoint (lat, lon))
     (B.val_ status)
+    (B.val_ numCancellation)
     (B.val_ createdAt)
     (B.val_ updatedAt)
 
@@ -81,6 +82,7 @@ data DriverGoHomeRequestT f = DriverGoHomeRequestT
     lon :: B.C f Double,
     point :: B.C f Point,
     status :: B.C f Domain.DriverGoHomeRequestStatus,
+    numCancellation :: B.C f Int,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -116,6 +118,7 @@ driverGoHomeRequestTMod =
       lon = B.fieldNamed "lon",
       point = B.fieldNamed "point",
       status = B.fieldNamed "status",
+      numCancellation = B.fieldNamed "num_cancellation",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

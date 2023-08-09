@@ -25,14 +25,15 @@ import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverLocation as DDriverLocation
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -42,7 +43,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as QDrLoc
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -78,17 +81,17 @@ data CancelRideReq = CancelRideReq
 
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
 
-driverCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+driverCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m) => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 driverCancelRideHandler shandle personId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
     cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
-dashboardCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+dashboardCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m) => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $
     cancelRideHandler shandle (DashboardRequestorId merchantId) rideId req
 
-cancelRideHandler :: MonadHandler m => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+cancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
@@ -107,6 +110,13 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
+          dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
+          when (isJust dghInfo.status) $ do
+            dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
+            driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
+            QDGR.updateCancellationCount dghReqId (driverGoHomeReq.numCancellation + 1)
+            when (driverGoHomeReq.numCancellation < 1) $ -- config cnt - 1
+              QDGR.updateCancellationCount dghReqId (driverGoHomeReq.numCancellation + 1) >> CQDGR.deactivateDriverGoHomeRequest driverId (Just DDGR.SUCCESS)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- findDriverLocationId driver.merchantId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

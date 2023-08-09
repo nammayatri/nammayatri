@@ -89,6 +89,7 @@ activateDriverGoHomeRequest driverId driverHomeLoc = do
           { lat = driverHomeLocation.lat,
             lon = driverHomeLocation.lon,
             status = DDGR.ACTIVE,
+            numCancellation = 0,
             createdAt = now,
             updatedAt = now,
             ..
@@ -117,3 +118,11 @@ deactivateDriverGoHomeRequest driverId mbStatus = do
         else do
           BeamDHR.finishWithFailure driverGoHomeReqId
           Hedis.setExp ghKey (templateGoHomeData Nothing ghInfo.cnt Nothing Nothing False (Just ghInfo.expiryTime) currTime) expTime
+
+resetDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r) => Id DP.Driver -> m ()
+resetDriverGoHomeRequest driverId = do
+  currTime <- getLocalCurrentTime 19800
+  let ghKey = makeGoHomeReqKey driverId
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  ghInfo <- getDriverGoHomeRequestInfo driverId
+  Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt (Just $ addUTCTime 1800 currTime) ghInfo.driverGoHomeRequestId False (Just ghInfo.expiryTime) currTime) expTime
