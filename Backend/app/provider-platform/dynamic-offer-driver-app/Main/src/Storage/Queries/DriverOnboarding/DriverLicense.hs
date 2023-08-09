@@ -31,7 +31,7 @@ create = createWithKV
 
 upsert :: (L.MonadFlow m, Log m) => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
-  res <- findOneWithKV [Se.Is BeamDL.id $ Se.Eq (getId a.id)]
+  res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
   if isJust res
     then
       updateOneWithKV
@@ -43,7 +43,7 @@ upsert a@DriverLicense {..} = do
           Se.Set BeamDL.failedRules failedRules,
           Se.Set BeamDL.updatedAt updatedAt
         ]
-        [Se.Is BeamDL.id (Se.Eq $ getId a.id)]
+        [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
     else createWithKV a
 
 findById :: (L.MonadFlow m, Log m) => Id DriverLicense -> m (Maybe DriverLicense)

@@ -36,7 +36,7 @@ create = createWithKV
 
 upsert :: (L.MonadFlow m, Log m) => Vehicle -> m ()
 upsert a@Vehicle {..} = do
-  res <- findOneWithKV [Se.Is BeamV.driverId $ Se.Eq (getId a.driverId)]
+  res <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq a.registrationNo]
   if isJust res
     then
       updateOneWithKV
@@ -51,7 +51,7 @@ upsert a@Vehicle {..} = do
           Se.Set BeamV.registrationCategory registrationCategory,
           Se.Set BeamV.updatedAt updatedAt
         ]
-        [Se.Is BeamV.driverId (Se.Eq $ getId a.driverId)]
+        [Se.Is BeamV.registrationNo (Se.Eq a.registrationNo)]
     else createWithKV a
 
 findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)

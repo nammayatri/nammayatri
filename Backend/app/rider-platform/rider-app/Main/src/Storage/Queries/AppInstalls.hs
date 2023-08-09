@@ -15,7 +15,7 @@ import qualified Storage.Beam.AppInstalls as BeamAI
 
 upsert :: (L.MonadFlow m, Log m) => AppInstalls.AppInstalls -> m ()
 upsert a@AppInstalls {..} = do
-  res <- findOneWithKV [Se.Is BeamAI.id $ Se.Eq (getId a.id)]
+  res <- findOneWithKV [Se.And [Se.Is BeamAI.merchantId $ Se.Eq (getId a.merchantId), Se.Is BeamAI.source $ Se.Eq a.source, Se.Is BeamAI.deviceToken $ Se.Eq a.deviceToken]]
   if isJust res
     then
       updateOneWithKV
@@ -27,7 +27,7 @@ upsert a@AppInstalls {..} = do
           Se.Set BeamAI.platform platform,
           Se.Set BeamAI.updatedAt updatedAt
         ]
-        [Se.Is BeamAI.id (Se.Eq $ getId id)]
+        [Se.And [Se.Is BeamAI.merchantId $ Se.Eq (getId a.merchantId), Se.Is BeamAI.source $ Se.Eq a.source, Se.Is BeamAI.deviceToken $ Se.Eq a.deviceToken]]
     else createWithKV a
 
 instance FromTType' BeamAI.AppInstalls AppInstalls where

@@ -54,7 +54,7 @@ create = createWithKV
 
 upsert :: (L.MonadFlow m, Log m) => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
-  res <- findOneWithKV [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
+  res <- findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry, Se.Is BeamVRC.id $ Se.Eq (getId a.id)]]
   if isJust res
     then
       updateOneWithKV
@@ -72,7 +72,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.failedRules failedRules,
           Se.Set BeamVRC.updatedAt updatedAt
         ]
-        [Se.Is BeamVRC.id (Se.Eq $ getId a.id)]
+        [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry, Se.Is BeamVRC.id $ Se.Eq (getId a.id)]]
     else createWithKV a
 
 -- findById ::
