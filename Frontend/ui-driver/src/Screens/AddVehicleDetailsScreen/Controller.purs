@@ -101,7 +101,7 @@ instance loggableAction :: Loggable Action where
     WhatsAppSupport -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "whatsAppSupport"
     PreviewImageAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "preview_image"
     DatePickerAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
-    DatePicker year month date -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
+    DatePicker resp year month date -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
     NoAction -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = GoToApplicationSubmitted AddVehicleDetailsScreenState
@@ -131,7 +131,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | ReferralMobileNumberAction ReferralMobileNumberController.Action
   | GenericMessageModalAction GenericMessageModalController.Action
   | ReferralMobileNumber
-  | DatePicker Int Int Int
+  | DatePicker String Int Int Int
   | PreviewImageAction
   | DatePickerAction
 
@@ -248,10 +248,13 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   updateAndExit state $ (GoToApplicationSubmitted state)
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
 
-eval (DatePicker year month date) state = do
-  continue state {data = state.data { dateOfRegistration = Just $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" , dateOfRegistrationView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year), rcImageID = "null"}} -- rcImageID made null to handle fallback
+eval (DatePicker resp year month date) state = do
+  case resp of 
+    "SELECTED" -> continue state {data = state.data { dateOfRegistration = Just $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" , dateOfRegistrationView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year), rcImageID = "null"}
+                                  , props {isDateClickable = true}} -- rcImageID made null to handle fallback
+    _ -> continue state {props {isDateClickable = true}}
 
-eval DatePickerAction state = continue state
+eval DatePickerAction state = continue state {props {isDateClickable = false}}
 
 eval PreviewImageAction state = continue state
 

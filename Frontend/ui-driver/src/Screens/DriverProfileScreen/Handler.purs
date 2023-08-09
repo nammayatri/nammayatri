@@ -72,7 +72,9 @@ driverProfileScreen = do
       App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
-    GoToBookingOptions state -> App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
+    GoToBookingOptions state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
     VerifyAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP1 state)
     ResendAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP1 state)
     ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
