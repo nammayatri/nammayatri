@@ -888,6 +888,7 @@ homeScreenTopIconView push state =
                     , height $ V 24
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
+                    , accessibilityHint "Menu Icon Button"
                     ]
                 ]
             , linearLayout
@@ -929,6 +930,7 @@ homeScreenTopIconView push state =
                       , color Color.black800
                       , gravity LEFT
                       , lineHeight "23"
+                      , accessibilityHint "Pickup Location is Current Location Button"
                       ]
                     <> FontStyle.body7 LanguageStyle
                 ]
@@ -1299,6 +1301,7 @@ topLeftIconView state push =
           , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain , RideCompleted, RideRating]) then GONE else VISIBLE
           , clickable true
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
+          , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back Button" else "Menu Icon Button"
           ]
           [ imageView
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
@@ -2340,6 +2343,7 @@ currentLocationView push state =
             , gravity CENTER_VERTICAL
             , cornerRadius 5.0
             , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
+            , accessibilityHint "Pickup location Editable Field"
             ]
             [ imageView
                 [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"

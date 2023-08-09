@@ -57,6 +57,7 @@ type TextConfig =
   , visibility :: Visibility
   , height :: Length
   , width :: Length
+  , accessibilityHint :: String
   }
 
 
@@ -80,6 +81,7 @@ config =   {
     , color : Color.yellow900
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
+    , accessibilityHint : ""
     }
   , width: MATCH_PARENT
   , height: V 50

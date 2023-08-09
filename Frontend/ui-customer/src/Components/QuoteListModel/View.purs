@@ -37,7 +37,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -88,6 +88,7 @@ paymentView state =
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , visibility if state.showProgress then VISIBLE else GONE
+          , accessibilityHint "Booking Status: Looking for rides"
           ]
     , linearLayout
         [ background Color.grey900
@@ -113,6 +114,7 @@ paymentView state =
           , text $ if (getPaymentMethod unit) == "cash" then (getString PAY_DRIVER_USING_CASH_OR_UPI) else (getString PAY_DRIVER_USING_WALLET)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
+          , accessibilityHint "Payment Method Cash or UPI"
           ] <> FontStyle.body1 TypoGraphy
         ]
     ]
@@ -172,6 +174,7 @@ sourceDestinationView state push =
         , weight 1.0
         , text state.source
         , color state.appConfig.quoteListModel.textColor
+        , accessibilityHint $ "Pickup Location " <> state.destination
         , ellipsize true
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
@@ -193,6 +196,7 @@ sourceDestinationView state push =
         , text state.destination
         , margin $ MarginLeft 12
         , color state.appConfig.quoteListModel.textColor
+        , accessibilityHint $ "Drop Location " <> state.destination
         , ellipsize true
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
@@ -277,6 +281,7 @@ addTipView state push =
         , margin $ MarginHorizontal 16 16
         , cornerRadius 12.0
         , padding $ Padding 20 16 20 16
+        , accessibilityHint if state.tipViewProps.onlyPrimaryText then state.tipViewProps.primaryText else "Label It seems to be taking longer than usual. you can add a tip to find a ride quicker"
         ]
         [
           textView
@@ -319,6 +324,7 @@ addTipView state push =
                         , cornerRadius 8.0
                         , width WRAP_CONTENT
                         , height WRAP_CONTENT
+                        , accessibilityHint $ item <> " Selector, Select to confirm amount"
                         , padding (Padding 20 10 20 10)
                         , fontStyle $ FontStyle.bold LanguageStyle
                         , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index))
@@ -448,6 +454,7 @@ quoteListTopSheetView state push =
                   [ height $ V 40
                   , width $ V 40
                   , onClick push $ const GoBack
+                  , accessibilityHint "Cancel Search Button"
                   ][  imageView
                       [ height $ V 24
                       , width $ V 24
@@ -565,7 +572,9 @@ continueWithTipButtonConfig state = let
     config = PrimaryButton.config
     continueWithTipButtonConfig' = config
       { textConfig
-        { text = state.tipViewProps.primaryButtonText}
+        { text = state.tipViewProps.primaryButtonText
+        , accessibilityHint = state.tipViewProps.primaryButtonText <> " Button" 
+        }
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 10
       }

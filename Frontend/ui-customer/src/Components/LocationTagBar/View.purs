@@ -15,7 +15,7 @@
 
 module Components.LocationTagBar.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, accessibilityHint, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine)
 import Components.LocationTagBar.Controller(Action(..))
 import Data.Array (mapWithIndex, filter, findIndex, (!!), null)
 import Effect (Effect)
@@ -69,6 +69,10 @@ view push state =
             , lineHeight "18"
             , padding $ PaddingBottom 1
             , ellipsize true
+            , accessibilityHint case item of
+                    WORK_TAG -> "Work Button, Select to book a ride"
+                    HOME_TAG -> "Home Button, Select to book a ride"
+                    _        -> "All Favourites Button Select to show all added favourites"
             , text case item of
                     WORK_TAG -> getString WORK
                     HOME_TAG -> getString HOME

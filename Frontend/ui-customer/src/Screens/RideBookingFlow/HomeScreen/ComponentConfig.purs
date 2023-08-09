@@ -231,6 +231,7 @@ whereToButtonConfig state =
         , width = MATCH_PARENT
         , gravity = LEFT
         , color = state.data.config.primaryTextColor 
+        , accessibilityHint = "Where To Button"
         }
       , height = V 60
       , gravity = CENTER
