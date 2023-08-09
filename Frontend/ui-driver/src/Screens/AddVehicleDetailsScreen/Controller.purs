@@ -23,7 +23,7 @@ import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..))
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimarySelectItem.Controller as PrimarySelectItem
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import JBridge (disableActionEditText, uploadFile, hideKeyboardOnNavigation, openWhatsAppSupport)
+import JBridge (disableActionEditText, uploadFile, hideKeyboardOnNavigation, openWhatsAppSupport, showDialer)
 import Effect.Class (liftEffect)
 import Components.SelectVehicleTypeModal.Controller as SelectVehicleTypeModal
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -40,6 +40,7 @@ import Screens (ScreenName(..), getScreen)
 import Data.Maybe
 import Debug (spy)
 import Data.String(length)
+import Merchant.Utils (getMerchant, Merchant(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -215,7 +216,9 @@ eval (TutorialModal manual) state = do
     _ -> continue state
 eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = continue state{props{openRCManual = false, openRegistrationDateManual = false}}
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
-  _ <- liftEffect $ openWhatsAppSupport "+918618963188"
+  if getMerchant unit == YATRIPARTNER
+    then pure $ showDialer "+917411782309" false
+    else liftEffect $ openWhatsAppSupport "+918618963188"
   pure WhatsAppSupport
   ]
 eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
