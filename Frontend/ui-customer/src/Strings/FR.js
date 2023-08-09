@@ -491,5 +491,7 @@ export function getStringValue(key) {
     "DIAL_112": "Composez le 112 ?",
     "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "Vous êtes sur le point d'appeler le centre d'urgence le plus proche. Voulez-vous poursuivre?",
     "AC_TAXI" : "AC Taxi",
-    "NON_AC_TAXI" : "Taxi non climatisé"
+    "NON_AC_TAXI" : "Taxi non climatisé",
+    "GET_OTP_VIA_WHATSAPP" : "Obtenez OTP via WhatsApp",
+    "OR" : "ou"
   }

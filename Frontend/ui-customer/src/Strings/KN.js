@@ -579,5 +579,7 @@ const kannadaStrings = {
   "PLATFORM_GST" : "ತೆರಿಗೆಗಳು (GST)",
   "MISC_WAITING_CHARGE" : "ಇತರ (ವೇಟಿಂಗ್ ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ)",
   "AC_TAXI" : "AC ಟ್ಯಾಕ್ಸಿ",
-  "NON_AC_TAXI" : "ನಾನ್ ಎಸಿ ಟ್ಯಾಕ್ಸಿ"
+  "NON_AC_TAXI" : "ನಾನ್ ಎಸಿ ಟ್ಯಾಕ್ಸಿ",
+  "GET_OTP_VIA_WHATSAPP" : "WhatsApp ಮೂಲಕ OTP ಪಡೆಯಿರಿ",
+  "OR" : "ಅಥವಾ"
 }

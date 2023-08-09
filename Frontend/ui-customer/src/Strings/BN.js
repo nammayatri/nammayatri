@@ -599,5 +599,7 @@ const bengaliStrings = {
   "PLATFORM_GST": "কর (GST)",
   "MISC_WAITING_CHARGE": "বিবিধ (ওয়েটিং চার্জ সহ)",
   "AC_TAXI": "AC ট্যাক্সি",
-  "NON_AC_TAXI": "কোন এসি ট্যাক্সি নেই"
+  "NON_AC_TAXI": "কোন এসি ট্যাক্সি নেই",
+  "GET_OTP_VIA_WHATSAPP" : "হোয়াটসঅ্যাপের মাধ্যমে ওটিপি পান",
+  "OR" : "বা"
 }

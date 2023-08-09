@@ -15,24 +15,25 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList, RateCardType)
+import MerchantConfig.Types
+
+import Common.Types.App (OptionButtonList, RateCardType, CountryCodeObj)
+import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
-import Components.ChatView.Controller (ChatComponent)
-import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
-import Data.Show.Generic (genericShow)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
+import Data.Show.Generic (genericShow)
+import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
+import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
+import PrestoDOM (LetterSpacing)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
-import MerchantConfig.Types
-import Foreign.Object (Object)
-import Foreign (Foreign)
 
 type Contacts = {
   name :: String,
@@ -183,18 +184,20 @@ type EnterMobileNumberScreenStateProps = {
   mNumberEdtFocused :: Boolean,
   otpEdtFocused :: Boolean,
   editTextVal :: String,
-  attemptLeft :: String
+  attemptLeft :: String,
+  countryCodeOptionExpended :: Boolean
 }
 
 type EnterMobileNumberScreenStateData = {
     mobileNumber :: String
+  , countryObj :: CountryCodeObj
   , tokenId :: String
   , attempts :: Int
   , otp :: String
   , timer :: Int
   , timerID :: String
-  , config :: AppConfig,
-  logField :: Object Foreign
+  , config :: AppConfig
+  , logField :: Object Foreign
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
