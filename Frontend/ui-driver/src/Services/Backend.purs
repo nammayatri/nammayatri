@@ -353,16 +353,6 @@ getDriverInfoApi payload = do
     where
         unwrapResponse (x) = x
 
---------------------------------- getAllRcDataBT ---------------------------------------------------------------------------------------------------------------------------------
-
-getAllRcDataBT :: GetAllRcDataReq -> FlowBT String GetAllRcDataResp
-getAllRcDataBT payload = do 
-    headers <- getHeaders' "" true
-    withAPIResultBT ((EP.getAllRcData "")) (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
-    where 
-        errorHandler (ErrorPayload errorPayload) =  do
-            BackT $ pure GoBack
-
 dummyVehicleObject :: Vehicle
 dummyVehicleObject = Vehicle
    {
@@ -555,42 +545,8 @@ registerDriverRC payload = do
     where
         unwrapResponse (x) = x
 
-makeRcActiveOrInactive payload = do
-     headers <- getHeaders "" false
-     withAPIResult (EP.makeRcActiveOrInactive "") unwrapResponse $ callAPI headers payload
-    where
-        unwrapResponse (x) = x
-
-deleteRcBT :: DeleteRcReq -> FlowBT String  DeleteRcResp
-deleteRcBT payload = do
-        headers <- getHeaders' "" false
-        withAPIResultBT (EP.deleteRc "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
-    where
-    errorHandler (ErrorPayload errorPayload) = do
-        BackT $ pure GoBack
-
-deleteRcReq :: String -> DeleteRcReq
-deleteRcReq rcNo = DeleteRcReq 
-    {
-        "rcNo" : rcNo
-    }
-
-makeRcActiveOrInactiveReq :: Boolean -> String -> MakeRcActiveOrInactiveReq
-makeRcActiveOrInactiveReq isActivate rcNo =  MakeRcActiveOrInactiveReq 
-    {
-        "rcNo" : rcNo,
-        "isActivate" : isActivate
-    }
-
-callDriverToDriverBT :: String -> FlowBT String CallDriverToDriverResp
-callDriverToDriverBT rcNo = do
-  headers <- getHeaders' "" false
-  withAPIResultBT (EP.callDriverToDriver rcNo) (\x → x) errorHandler (lift $ lift $ callAPI headers (CallDriverToDriverReq rcNo))
-  where
-    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
-
-makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration multipleRc= DriverRCReq
+makeDriverRCReq :: String -> String -> Maybe String -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration = DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
@@ -861,15 +817,6 @@ deleteIssueBT issueId = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
------------------------------------ currentDateAndTime -------------------------------------
-currentDateAndTimeBT :: String -> FlowBT String CurrentDateAndTimeRes
-currentDateAndTimeBT _ = do
-     headers <- getHeaders' "" false
-     withAPIResultBT (EP.currentDateAndTime "") (\x → x) errorHandler (lift $ lift $ callAPI headers (CurrentDateAndTimeReq ""))
-    where
-        errorHandler (ErrorPayload errorPayload) =  do
-            BackT $ pure GoBack
-
 ---------------------------------------- otpRide ---------------------------------------------
 
 otpRide dummyRideOtp payload = do
@@ -924,11 +871,6 @@ leaderBoard request = do
     where
         unwrapResponse (x) = x
 
-driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverProfileSummaryRes)
-driverProfileSummary lazy = do
-  headers <- getHeaders "" true
-  withAPIResult (EP.profileSummary lazy) (\x -> x) (callAPI headers DriverProfileSummaryReq)
-
 createPaymentOrder :: String -> Flow GlobalState (Either ErrorResponse CreateOrderRes)
 createPaymentOrder dummy = do
     headers <- getHeaders "" true
@@ -954,7 +896,7 @@ getPaymentHistory from to status = do
 
 getOrder :: String -> Flow GlobalState (Either ErrorResponse GetOrderRes)
 getOrder id = do
-      headers <- getHeaders ""
+      headers <- getHeaders "" true
       withAPIResult (EP.getOrder id) unwrapResponse (callAPI headers (GetOrderReq id))
    where
         unwrapResponse (x) = x

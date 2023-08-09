@@ -840,14 +840,6 @@ userSosStatusBT sosId requestBody = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
-callbackRequestBT :: LazyCheck -> FlowBT String RequestCallbackRes
-callbackRequestBT lazyCheck = do
-        headers <- getHeaders' "" false
-        withAPIResultBT (EP.callbackRequest "") (\x → x) errorHandler (lift $ lift $ callAPI headers RequestCallbackReq)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
-
 makeUserSosReq :: UserSosFlow -> String -> UserSosReq
 makeUserSosReq flow rideId = UserSosReq {
      "flow" : flow,
@@ -865,19 +857,3 @@ makeSosStatus sosStatus = SosStatus {
      "status" : sosStatus
 }
 
-
------------------------------------------------------------------------- Ride Feedback ------------------------------------------------------------------------------------
-
-bookingFeedbackBT :: RideFeedbackReq -> FlowBT String RideFeedbackRes
-bookingFeedbackBT payload = do
-    headers <- getHeaders' "" false
-    withAPIResultBT (EP.bookingFeedback "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
-    where
-      errorHandler errorPayload = do
-            BackT $ pure GoBack
-
-makeRideFeedBackReq :: String -> Array FeedbackAnswer -> RideFeedbackReq
-makeRideFeedBackReq id feedbackList = RideFeedbackReq
-    {   "rideId" : id
-    ,   "feedback" : feedbackList
-    }
