@@ -20,7 +20,7 @@ import Prelude (bind, pure, ($), (<$>), discard)
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
 import Types.App (ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-import MerchantConfig.Utils (getAppConfig)
+import Engineering.Helpers.Utils(getAppConfig)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)

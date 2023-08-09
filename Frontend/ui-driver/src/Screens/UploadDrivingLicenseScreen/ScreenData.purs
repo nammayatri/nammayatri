@@ -43,5 +43,6 @@ initData = {
       , openGenericMessageModal : false
       , errorVisibility : false
       , openDateOfIssueManual: false
+      , isDateClickable : true
       }
     }

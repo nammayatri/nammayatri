@@ -15,17 +15,18 @@
 
 module Components.SelectMenuButton.View where
 
-import Prelude (Unit, const, ($), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, imageWithFallback)
+import Common.Types.App
+
+import Common.Types.App (LazyCheck(..))
 import Components.SelectMenuButton.Controller (Action(..), State)
 import Effect (Effect)
-import Font.Style as FontStyle
 import Font.Size as FontSize
-import Styles.Colors as Color
-import Common.Types.App
+import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Prelude ((<>), (||), not)
+import Prelude (Unit, const, ($), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
+import Styles.Colors as Color
 
 view 
   :: forall w.(Action -> Effect Unit)
@@ -41,13 +42,13 @@ view push state =
       , width MATCH_PARENT
       , background Color.greySmoke
       , margin (Margin 20 5 20 5)
-      , visibility if state.index == 0 then GONE else VISIBLE
+      , visibility if state.index == 0 || (not state.lineVisiblity) then GONE else VISIBLE
       ][]
       , linearLayout
-          [ height (V 80)
+          [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
-          , padding (Padding 20 15 0 15)
+          , padding (Padding 16 24 16 0)
           , onClick push (const (OnSelection state))
           , gravity CENTER_VERTICAL
           ][ linearLayout
@@ -62,9 +63,8 @@ view push state =
                 ] <> if state.isSelected then FontStyle.subHeading2 TypoGraphy else FontStyle.body5 TypoGraphy
                 , textView $
                 [ width WRAP_CONTENT
-                , height if state.index == 0 then ( V 0) else WRAP_CONTENT
+                , height WRAP_CONTENT
                 , text state.text.subtitle
-                , visibility if state.index == 0 then GONE else VISIBLE
                 ] <> if state.isSelected then FontStyle.subHeading2 TypoGraphy else FontStyle.body5 TypoGraphy
               ]
             ,linearLayout

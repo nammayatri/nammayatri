@@ -156,7 +156,8 @@ type AddVehicleDetailsScreenProps =  {
   limitExceedModal :: Boolean,
   errorVisibility :: Boolean,
   openRegistrationDateManual :: Boolean,
-  addRcFromProfile :: Boolean
+  addRcFromProfile :: Boolean,
+  isDateClickable :: Boolean
  }
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
@@ -194,6 +195,7 @@ type UploadDrivingLicenseStateProps = {
   , openGenericMessageModal :: Boolean
   , errorVisibility :: Boolean
   , openDateOfIssueManual :: Boolean
+  , isDateClickable :: Boolean
 }
 
  -- ############################################################# RegistrationScreen ################################################################################
@@ -1472,6 +1474,7 @@ type EnterAadhaarNumberScreenStateProps = {
 , showErrorAadhaar :: Boolean
 , fromHomeScreen :: Boolean
 , showLogoutPopup :: Boolean
+, isDateClickable :: Boolean
 }
 
 data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails

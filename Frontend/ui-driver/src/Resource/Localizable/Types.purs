@@ -638,7 +638,7 @@ data STR = LETS_GET_STARTED
         | LANGUAGES_SPOKEN
         | VIEW_PAYMENT_HISTORY
         | RIDE_TYPE
-
+        | ENGLISH
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1265,3 +1265,4 @@ getStringFromEnum key = case key of
     LANGUAGES_SPOKEN -> "LANGUAGES_SPOKEN"
     VIEW_PAYMENT_HISTORY -> "VIEW_PAYMENT_HISTORY"
     RIDE_TYPE -> "RIDE_TYPE"
+    ENGLISH -> "ENGLISH"

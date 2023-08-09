@@ -65,7 +65,7 @@ instance loggableAction :: Loggable Action where
     Logout -> trackAppEndScreen appId (getScreen AADHAAR_VERIFICATION_SCREEN)
     PopUpModalAC _ -> pure unit
     SelectDateOfBirthAction -> pure unit
-    DatePicker _ _ _ _-> pure unit
+    DatePicker _ _ _ _ _-> pure unit
 
 data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState
   | VerfiyOTP AadhaarVerificationScreenState
@@ -87,7 +87,7 @@ data Action = BackPressed
             | Logout
             | PopUpModalAC PopUpModal.Action
             | SelectDateOfBirthAction
-            | DatePicker String Int Int Int
+            | DatePicker String String Int Int Int
 
 eval :: Action -> AadhaarVerificationScreenState -> Eval Action ScreenOutput AadhaarVerificationScreenState
 eval action state = case action of
@@ -123,7 +123,13 @@ eval action state = case action of
   PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state {props {showLogoutPopup = false}})
   PopUpModalAC (PopUpModal.OnButton2Click) -> exit $ LogOut state
 
-  DatePicker _ year month date -> continue state {data { driverDob = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)}}
+  DatePicker _ resp year month date -> do 
+    case resp of 
+      "SELECTED" -> continue state {data { driverDob = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)}
+                                    , props {isDateClickable = true}}
+      _ -> continue state {props {isDateClickable = true}}
+
+  SelectDateOfBirthAction -> continue state {props {isDateClickable = false}}
 
   AadhaarNameEditText (PrimaryEditText.TextChanged _ val) -> continue state {data { driverName =  val }}
 

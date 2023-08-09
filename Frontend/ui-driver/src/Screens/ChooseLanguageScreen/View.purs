@@ -94,9 +94,9 @@ scrollableView state push =
         ][PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ imageView
-              [ width ( V 270)
-              , height ( V 270)
-              , imageWithFallback $ "ny_ic_welcome," <> (getAssetStoreLink FunctionCall) <> "ny_ic_welcome.png"
+              [ width ( V 300)
+              , height ( V 190)
+              , imageWithFallback $ "ny_ic_welcome,"
               ]]
         , linearLayout
           [ height WRAP_CONTENT
@@ -108,11 +108,11 @@ scrollableView state push =
             ] $ textView (
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , textSize FontSize.a_26
+                , textSize FontSize.a_20
                 , text $ getString WELCOME_TEXT
                 , color Color.greyTextColor
                 , gravity CENTER_HORIZONTAL
-                , margin $ MarginHorizontal 20 20
+                , margin $ Margin 70 32 74 32
                 ] <> FontStyle.h1 TypoGraphy
                 )
           ]
@@ -123,7 +123,7 @@ scrollableView state push =
               , width WRAP_CONTENT
               , text $ getString CHOOSE_LANGUAGE
               , color Color.inactive
-              , margin $ Margin 20 50 0 0
+              , margin $ Margin 16 0 0 0
               ] <> FontStyle.body1 TypoGraphy
               )
         , menuButtonDriver state push
@@ -145,5 +145,5 @@ menuButtonDriver state push =
       [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
       ] $ MenuButton.view
           (push <<< (MenuButtonAction))
-          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) (state.data.config.languageList)
+          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index, lineVisiblity : false }) (state.data.config.languageList)
   )

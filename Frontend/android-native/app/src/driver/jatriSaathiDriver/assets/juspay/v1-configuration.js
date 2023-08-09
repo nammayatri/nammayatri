@@ -23,7 +23,7 @@ window.getMerchantConfig = function () {
     "languageList": [{
         "name": "English",
         "value": "EN_US",
-        "subtitle": ""
+        "subtitle": "ইংরেজি"
       },
       {
         "name": "বাংলা",
@@ -34,10 +34,16 @@ window.getMerchantConfig = function () {
         "name": "हिंदी",
         "value": "HI_IN",
         "subtitle": "Hindi"
+      },
+      {
+        "name":"தமிழ்",
+        "value":"TA_IN", 
+        "subtitle": "Tamil"
       }
     ],
+    "engilshInNative" : "ইংরেজি",
     "englishStrings": {
-      "WELCOME_TEXT": "Welcome to the Yatri Sathi Driver",
+      "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
       "ABOUT_TEXT": "Yatri Sathi partner is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",
       "NEED_IT_TO_ENABLE_LOCATION": "Yatri Sathi Driver collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only West Bengal registered number",
@@ -48,7 +54,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours."
     },
     "hindiStrings": {
-      "WELCOME_TEXT": "Welcome to the Yatri Sathi Driver",
+      "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
       "ABOUT_TEXT": "Yatri Sathi partner चालकों को सवारियों से जोड़ने का एक खुला मंच है। ऐप ड्राइवरों के लिए प्रस्तावित वांछित दरों के साथ सवारियों को ढूंढना सुविधाजनक बनाता है। कोई सवारी आधारित कमीशन नहीं, बस मासिक सदस्यता के रूप में छोटी राशि का भुगतान करें",
       "NEED_IT_TO_ENABLE_LOCATION": "Yatri Sathi partner ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only West Bengal registered number",
@@ -59,7 +65,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।"
     },
     "bengaliStrings": {
-      "WELCOME_TEXT": "Welcome to the Yatri Sathi Driver",
+      "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
       "ABOUT_TEXT": "যাত্রী সাথী অংশীদার চালকদের রাইডারদের সাথে সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি চালকদের জন্য প্রস্তাবিত পছন্দসই রেট সহ রাইডার খুঁজে পেতে সুবিধাজনক করে তোলে। কোন রাইড ভিত্তিক কমিশন নেই, শুধুমাত্র মাসিক সাবস্ক্রিপশন আকারে অল্প পরিমাণ অর্থ প্রদান করুন",
       "NEED_IT_TO_ENABLE_LOCATION": "জাটি সাথি ড্রাইভার ড্রাইভারের বর্তমান অবস্থান নিরীক্ষণের জন্য আপনার অবস্থানটি ভাগ করে নিতে সক্ষম করতে অবস্থানের ডেটা সংগ্রহ করে, এমনকি অ্যাপটি বন্ধ থাকলেও বা ব্যবহার না করা হয়।",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "বর্তমানে, আমরা শুধুমাত্র পশ্চিমবঙ্গ নিবন্ধিত নম্বর অনুমোদন করি",

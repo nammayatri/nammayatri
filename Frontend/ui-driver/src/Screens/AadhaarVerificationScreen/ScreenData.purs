@@ -34,5 +34,6 @@ initData =
       , showErrorAadhaar : false
       , fromHomeScreen : false
       , showLogoutPopup : false
+      , isDateClickable : true
       }
   }
