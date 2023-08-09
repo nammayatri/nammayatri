@@ -231,6 +231,7 @@ library
       Lib.DriverScore.Types
       Lib.LocationUpdates
       Lib.Mesh
+      Lib.Schema
       Lib.Utils
       Lib.UtilsTH
       SharedLogic.Allocator

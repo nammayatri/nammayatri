@@ -39,6 +39,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
+import Lib.Schema
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -81,7 +82,7 @@ data DriverLocationT f = DriverLocationT
 
 dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
 dLocationTable =
-  B.setEntitySchema (Just "atlas_person_location")
+  B.setEntitySchema (Just getLocationSchemaName)
     <> B.setEntityName "driver_location"
     <> B.modifyTableFields driverLocationTMod
 
@@ -94,7 +95,7 @@ instance B.Table DriverLocationT where
 instance ModelMeta DriverLocationT where
   modelFieldModification = driverLocationTMod
   modelTableName = "driver_location"
-  modelSchemaName = Just "atlas_person_location"
+  modelSchemaName = Just getLocationSchemaName
 
 type DriverLocation = DriverLocationT Identity
 
