@@ -15,15 +15,21 @@
 
 module Screens.EnterMobileNumberScreen.ScreenData where
 
-import Screens.Types (EnterMobileNumberScreenState)
+import Data.Monoid.MList (get)
+import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import PrestoDOM (LetterSpacing(..))
-import Foreign.Object (empty)
+import Screens.Types (EnterMobileNumberScreenState)
 
 initData :: EnterMobileNumberScreenState
 initData = {
     data: {
       mobileNumber: ""
+    , countryObj: {
+        countryCode : "+91",
+        countryName : "India",
+        countryShortCode : "IN"
+      }
     , tokenId : ""
     , attempts : 0
     , otp : ""
@@ -45,6 +51,7 @@ initData = {
         mNumberEdtFocused : false,
         otpEdtFocused : false,
         editTextVal : "",
-        attemptLeft : ""
+        attemptLeft : "",
+        countryCodeOptionExpended : false
     }
 }

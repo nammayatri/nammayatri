@@ -243,3 +243,9 @@ type DateObj = {
 , month :: String
 , year :: Int
 }
+
+type CountryCodeObj = {
+  countryName :: String 
+  , countryCode :: String 
+  , countryShortCode :: String
+}
