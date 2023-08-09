@@ -20,6 +20,7 @@ import Data.Maybe
 import Screens.AddVehicleDetailsScreen.ComponentConfig
 
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal.View as GenericMessageModal
 import Components.PrimaryButton as PrimaryButton
 import Components.ReferralMobileNumber.View as ReferralMobileNumber
@@ -30,20 +31,19 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
+import Prelude ((<>))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==), not, (>=), (&&), (/=))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), editText, frameLayout, imageView, linearLayout, onBackPressed, onChange, onClick, scrollView, textView, afterRender, alignParentRight, relativeLayout, alignParentBottom, maxLines, ellipsize, layoutGravity, inputTypeI, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, hint, id, imageUrl, margin, orientation, padding, pattern, stroke, text, textSize, visibility, weight, width, textFromHtml, imageWithFallback)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -351,8 +351,8 @@ vehicleRegistrationNumber state push =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text (getString SAME_REENTERED_RC_MESSAGE)
-                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber)) then VISIBLE else GONE
-                , color Color.darkGrey
+                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber) && (DS.length state.data.reEnterVehicleRegistrationNumber) /= 0 ) then VISIBLE else GONE
+                , color Color.warningRed
                 ]
           ]
         ]
@@ -549,9 +549,10 @@ dateOfRCRegistrationView push state =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , onClick (\action -> do
-                        _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker 
-                        pure unit
+                      _ <- push action
+                      JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker 
                       ) $ const DatePickerAction
+        , clickable state.props.isDateClickable
       ][ textView $
         [ text if state.data.dateOfRegistration == Just "" then (getString SELECT_DATE_OF_REGISTRATION) else state.data.dateOfRegistrationView
         , color if state.data.dateOfRegistration == Just "" then Color.darkGrey else Color.greyTextColor

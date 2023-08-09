@@ -21,11 +21,12 @@ window.getMerchantConfig = function () {
     "BONUS_EARNED" : "true",
     "clientName" : "Namma Yatri",
     "languageList" : [
-      {"name":"English","value":"EN_US", "subtitle": ""}, 
+      {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"}, 
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
       {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
       {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"}
       ],
+    "engilshInNative" : "ಆಂಗ್ಲ",
     "englishStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
       "ABOUT_TEXT": "Namma Yatri partner is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",

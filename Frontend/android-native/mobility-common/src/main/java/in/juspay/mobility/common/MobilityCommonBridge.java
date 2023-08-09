@@ -19,6 +19,7 @@ import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.IntentSender;
@@ -44,6 +45,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Environment;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -1175,8 +1177,8 @@ public class MobilityCommonBridge extends HyperBridge {
 
                 DatePickerDialog datePickerDialog = new DatePickerDialog(bridgeComponents.getActivity(), datePickerTheme, (datePicker, year, month, date) -> {
                     if (callback != null) {
-                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%d,%d,%d);",
-                                callback, year, month, date);
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d,%d);",
+                                callback, "SELECTED", year, month, date);
                         bridgeComponents.getJsCallback().addJsToWebView(javascript);
                     }
                 }, mYear, mMonth, mDate) {
@@ -1232,6 +1234,20 @@ public class MobilityCommonBridge extends HyperBridge {
                         }
                     }
                 };
+                datePickerDialog.setOnCancelListener(var1 -> {
+                    if (callback != null) {
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s', '%s',%d,%d,%d);",
+                                callback, "CANCELLED", 0, 0, 0);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
+                datePickerDialog.setOnDismissListener(var1 -> {
+                    if (callback != null) {
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d,%d);",
+                                callback,"DISMISSED", 0, 0, 0);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
 
                 switch (label) {
                     case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS:

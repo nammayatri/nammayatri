@@ -18,9 +18,20 @@ import Effect (Effect (..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Foreign.Generic (decode, encode)
+import MerchantConfig.Types (AppConfig)
+import MerchantConfig.DefaultConfig as DefaultConfig
+import Types.App (FlowBT)
+import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
+
+
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 
 foreign import loaderTextIOS :: EffectFn2 String String Unit
+
+foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
 toggleLoader flag = do
@@ -87,3 +98,20 @@ mobileNumberMaxLength countryShortCode =
     "BD" -> 10
     _ -> 0
 
+getAppConfig :: FlowBT String AppConfig
+getAppConfig = liftFlowBT $ getAppConfig_
+
+getAppConfig_ :: Effect AppConfig
+getAppConfig_  = do
+  config' <- getConfig
+  pure $
+    case config' of
+      Just config -> do
+        case runExcept (decode (encode config )) of
+            Right (obj :: AppConfig) -> config
+            Left err ->DefaultConfig.config
+      Nothing -> do
+            DefaultConfig.config
+
+getConfig :: forall  a. Effect (Maybe a)
+getConfig = getMerchantConfig Just Nothing

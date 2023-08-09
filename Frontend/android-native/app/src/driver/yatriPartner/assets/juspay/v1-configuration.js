@@ -23,7 +23,7 @@ window.getMerchantConfig = function () {
     "languageList": [{
         "name": "English",
         "value": "EN_US",
-        "subtitle": ""
+        "subtitle": "ഇംഗ്ലീഷ്"
       },
       {
         "name": "മലയാളം",
@@ -31,6 +31,7 @@ window.getMerchantConfig = function () {
         "subtitle": "Malayalam"
       }
     ],
+    "engilshInNative" : "ഇംഗ്ലീഷ്",
     "englishStrings": {
       "WELCOME_TEXT": "Welcome to the Yatri Partner",
       "ABOUT_TEXT": "Yatri partner is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",
