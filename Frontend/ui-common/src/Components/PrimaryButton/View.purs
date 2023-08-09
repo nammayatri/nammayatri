@@ -17,7 +17,7 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender,accessibilityHint, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
@@ -79,6 +79,7 @@ view push config =
                       , color config.textConfig.color
                       , gravity config.textConfig.gravity
                       , lineHeight "20"
+                      , accessibilityHint config.textConfig.accessibilityHint
                       ]
                     <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
                 , suffixImageLayout config
