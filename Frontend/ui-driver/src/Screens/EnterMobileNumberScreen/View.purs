@@ -188,24 +188,32 @@ termsAndConditionsView state push =
   , orientation HORIZONTAL
   , margin (Margin 15 10 16 20)
   ][ linearLayout
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , orientation VERTICAL
       , margin (MarginLeft 10)
+      , gravity CENTER
       ][textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text (getString BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR)
+        , text $ (getString BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR) <> " "
         , color Color.greyTextColor
         , alpha 0.5
         ] <> FontStyle.body3 TypoGraphy)
-      , underlinedTextView state push
-      , textView (
+      , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , onClick (\action -> do
+                  _<- push action
+                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
+                  pure unit
+                  ) (const NonDisclosureAgreementAction)
+      ][ textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text (getString DATA_COLLECTION_AUTHORITY)
-        , color Color.greyTextColor
-        , alpha 0.5
+        , text "T&Cs"
+        , color Color.primaryBlue
         ] <> FontStyle.body3 TypoGraphy)
+      ]
       ]
   ]
