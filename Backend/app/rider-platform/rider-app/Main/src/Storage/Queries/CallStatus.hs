@@ -47,7 +47,7 @@ import qualified Tools.Call as Call
 
 create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
 create cs = do
-  callS <- findById (cs.id)
+  callS <- findByCallSid (cs.callId)
   case callS of
     Nothing -> createWithKV cs
     Just _ -> pure ()
