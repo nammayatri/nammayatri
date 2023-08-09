@@ -124,6 +124,7 @@ search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHand
   (searchId, searchExpiry, routeInfo) <- case req of
     OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion mbDevice oneWay
     RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion mbDevice rental
+  logDebug "Rupak checking"
   return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::

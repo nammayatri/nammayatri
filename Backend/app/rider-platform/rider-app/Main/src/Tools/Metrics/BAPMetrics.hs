@@ -25,6 +25,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Common
 import Lib.SessionizerMetrics.Prometheus.CounterConfig
+import Lib.SessionizerMetrics.Prometheus.CounterConfig ()
+import Lib.SessionizerMetrics.Prometheus.Internal (incrementCounter)
 import Prometheus as P
 import Tools.Metrics.BAPMetrics.Types as Reexport
 
@@ -43,24 +45,30 @@ finishSearchMetrics merchantName txnId = do
 incrementRideCreatedRequestCount :: HasBAPMetrics m r => Text -> m ()
 incrementRideCreatedRequestCount merchantId = do
   bmContainer <- asks (.bapMetrics)
-  version <- asks (.version)
-  incrementRideCreatedRequestCount' bmContainer merchantId version
-
-incrementRideCreatedRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
-incrementRideCreatedRequestCount' bmContainer merchantId version = do
+  -- version <- asks (.version)
+  -- incrementRideCreatedRequestCount' bmContainer merchantId version
   let rideCreatedCounter = bmContainer.rideCreatedCounter
-  liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion) P.incCounter
+  let promConfig = PrometheusCounterConfig {counterName = rideCreatedCounter, label = merchantId}
+  incrementCounter promConfig
+
+-- incrementRideCreatedRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
+-- incrementRideCreatedRequestCount' bmContainer merchantId version = do
+--   let rideCreatedCounter = bmContainer.rideCreatedCounter
+--   liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion) P.incCounter
 
 incrementSearchRequestCount :: HasBAPMetrics m r => Text -> m ()
 incrementSearchRequestCount merchantName = do
   bmContainer <- asks (.bapMetrics)
-  version <- asks (.version)
-  incrementSearchRequestCount' bmContainer merchantName version
-
-incrementSearchRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
-incrementSearchRequestCount' bmContainer merchantName version = do
+  -- version <- asks (.version)
+  -- incrementSearchRequestCount' bmContainer merchantName version
   let searchRequestCounter = bmContainer.searchRequestCounter
-  liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion) P.incCounter
+  let promConfig = PrometheusCounterConfig {counterName = searchRequestCounter, label = merchantName}
+  incrementCounter promConfig
+
+-- incrementSearchRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
+-- incrementSearchRequestCount' bmContainer merchantName version = do
+--   let searchRequestCounter = bmContainer.searchRequestCounter
+--   liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion) P.incCounter
 
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)

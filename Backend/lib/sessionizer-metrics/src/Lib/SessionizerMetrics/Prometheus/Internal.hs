@@ -16,14 +16,18 @@ module Lib.SessionizerMetrics.Prometheus.Internal where
 
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Utils.Common
+-- import Kernel.Utils.Common
+
+-- import Lib.SessionizerMetrics.Types.Event
+
+import Kernel.Utils.Common (logDebug)
 import Lib.SessionizerMetrics.Prometheus.CounterConfig
-import Lib.SessionizerMetrics.Types.Event
 import Prometheus as P
 
-incrementCounter :: MonadIO m => PrometheusCounterConfig -> m ()
+incrementCounter :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2, MonadIO m, Log m) => PrometheusCounterConfig -> m ()
 incrementCounter promConfig = do
-  let counterName' = (promConfig.counterName, promConfig.counterName)
+  logDebug "Prometheus Increment Counter"
+  let counterName' = promConfig.counterName
   let label' = promConfig.label
   version <- asks (.version)
   liftIO $ P.withLabel counterName' (label', version.getDeploymentVersion) P.incCounter
