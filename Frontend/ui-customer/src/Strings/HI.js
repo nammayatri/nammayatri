@@ -582,5 +582,7 @@ const hindiStrings = {
   "PLATFORM_GST" : "कर (जीएसटी)",
   "MISC_WAITING_CHARGE" : "विविध (प्रतीक्षा शुल्क सहित)",
   "AC_TAXI" : "एसी टैक्सी",
-  "NON_AC_TAXI" : "नॉन-एसी टैक्सी"
+  "NON_AC_TAXI" : "नॉन-एसी टैक्सी",
+  "GET_OTP_VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से ओटीपी प्राप्त करें",
+  "OR" : "या"
 }
