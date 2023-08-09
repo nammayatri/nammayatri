@@ -81,7 +81,7 @@ data DriverLocationT f = DriverLocationT
 
 dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
 dLocationTable =
-  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+  B.setEntitySchema (Just "atlas_person_location")
     <> B.setEntityName "driver_location"
     <> B.modifyTableFields driverLocationTMod
 
@@ -94,7 +94,7 @@ instance B.Table DriverLocationT where
 instance ModelMeta DriverLocationT where
   modelFieldModification = driverLocationTMod
   modelTableName = "driver_location"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
+  modelSchemaName = Just "atlas_person_location"
 
 type DriverLocation = DriverLocationT Identity
 
