@@ -40,6 +40,7 @@ import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -77,7 +78,9 @@ cancelRideImpl ::
     HasCacheConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EventStreamFlow m r,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasField "enableLocationTrackingNearByRide" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -170,7 +173,9 @@ repeatSearch ::
     HasHttpClientOptions r c,
     HasField "maxShards" r Int,
     HasShortDurationRetryCfg r c,
-    CacheFlow m r
+    CacheFlow m r,
+    HasField "enableLocationTrackingNearByRide" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   DMerc.Merchant ->
   DFP.FullFarePolicy ->

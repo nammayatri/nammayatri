@@ -41,6 +41,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
@@ -71,7 +72,9 @@ prepareDriverPoolBatch ::
     EsqLocRepDBFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "enableLocationTrackingNearByRide" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -402,7 +405,9 @@ getNextDriverPoolBatch ::
     EsqLocRepDBFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "enableLocationTrackingNearByRide" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

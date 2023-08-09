@@ -42,6 +42,7 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -112,7 +113,11 @@ data AppCfg = AppCfg
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    enableLocationTrackingStartRide :: Bool,
+    enableLocationTrackingEndRide :: Bool,
+    enableLocationTrackingNearByRide :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -180,7 +185,11 @@ data AppEnv = AppEnv
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    enableLocationTrackingStartRide :: Bool,
+    enableLocationTrackingEndRide :: Bool,
+    enableLocationTrackingNearByRide :: Bool
   }
   deriving (Generic)
 
