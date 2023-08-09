@@ -50,6 +50,7 @@ initData = {
       limitExceedModal : false,
       errorVisibility : false,
       openRegistrationDateManual : false,
-      addRcFromProfile : false
+      addRcFromProfile : false,
+      isDateClickable : true
     }
 }

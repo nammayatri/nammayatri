@@ -16,20 +16,22 @@
 module Screens.UploadDrivingLicenseScreen.ComponentConfig where
 
 import Common.Types.App
+import Language.Strings
+import Prelude(not, (/=), (&&), (||), (>=), (<=), (==))
+import PrestoDOM
+import Data.Semigroup ((<>))
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Control.Monad.State (state)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Strings
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getValueFromConfig)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Prelude
-import PrestoDOM
-import MerchantConfig.Utils (getValueFromConfig)
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
@@ -89,7 +91,7 @@ primaryEditTextConfigReEnterDl state = let
           , capsLock = true
           , color = Color.black800
         }
-      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
+      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && not (DS.null state.data.reEnterDriverLicenseNumber)) then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
       , topLabel
         { text = (getString RE_ENTER_DRIVING_LICENSE_NUMBER)
         , color = Color.greyTextColor

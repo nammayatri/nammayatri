@@ -20,7 +20,8 @@ data Action = OnSelection State
 type State = { 
       text :: Text , 
       isSelected :: Boolean ,
-      index :: Int
+      index :: Int,
+      lineVisiblity :: Boolean
       }
 type Text = { 
     name :: String, 

@@ -60,8 +60,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Utils (Merchant(..), getAppConfig, getMerchant, getValueFromConfig)
-import MerchantConfig.Utils (getAppConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import Engineering.Helpers.Utils (getAppConfig)
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<))
