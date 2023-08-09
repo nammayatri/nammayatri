@@ -31,7 +31,7 @@ import Types.App (GlobalState, FlowBT, ScreenType(..))
 import Services.API
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<>), void, map, show, class Show)
+import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
@@ -49,44 +49,31 @@ import Debug (spy)
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
     _ <- pure $ printLog "dummy" dummy
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-        then pure $ (Headers $ [  Header "Content-Type" "application/json",
-                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                    )
-        else pure $ (Headers $ [  Header "Content-Type" "application/json",
-                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
-                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                    )
-
+    regToken <- loadS $ show REGISTERATION_TOKEN
+    pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
+                    <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 
 getHeaders' :: String -> Boolean -> FlowBT String Headers
 getHeaders' dummy isGzipCompressionEnabled = do
-        _ <- pure $ printLog "dummy" dummy
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-        then lift $ lift $ pure $ (Headers $ [Header "Content-Type" "application/json",
-                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                            Header "session_id" (getValueToLocalStore SESSION_ID),
-                                            Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                                    )
-        else lift $ lift $ pure $ (Headers $ [Header "Content-Type" "application/json",
-                                            Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
-                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                            Header "session_id" (getValueToLocalStore SESSION_ID),
-                                            Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                                    )
+    regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
+    _ <- pure $ spy "import headers" regToken
+    lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
+                    <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do
     let start = getTime unit
@@ -363,6 +350,16 @@ getDriverInfoApi payload = do
     where
         unwrapResponse (x) = x
 
+--------------------------------- getAllRcDataBT ---------------------------------------------------------------------------------------------------------------------------------
+
+getAllRcDataBT :: GetAllRcDataReq -> FlowBT String GetAllRcDataResp
+getAllRcDataBT payload = do 
+    headers <- getHeaders' "" true
+    withAPIResultBT ((EP.getAllRcData "")) (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where 
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
 dummyVehicleObject :: Vehicle
 dummyVehicleObject = Vehicle
    {
@@ -401,17 +398,17 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 
-getRideHistoryReq limit offset onlyActive status = do
+getRideHistoryReq limit offset onlyActive status day = do
         headers <- getHeaders "" true
-        withAPIResult (EP.getRideHistory limit offset onlyActive status) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status)
+        withAPIResult (EP.getRideHistory limit offset onlyActive status day) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day)
     where
         unwrapResponse (x) = x
 
 
-getRideHistoryReqBT :: String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
-getRideHistoryReqBT limit offset onlyActive status = do
+getRideHistoryReqBT :: String -> String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
+getRideHistoryReqBT limit offset onlyActive status day= do
         headers <- lift $ lift $ getHeaders "" true
-        withAPIResultBT (EP.getRideHistory limit offset onlyActive status) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status))
+        withAPIResultBT (EP.getRideHistory limit offset onlyActive status day) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day))
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
@@ -539,8 +536,42 @@ registerDriverRC payload = do
     where
         unwrapResponse (x) = x
 
-makeDriverRCReq :: String -> String -> Maybe String -> DriverRCReq
-makeDriverRCReq regNo imageId dateOfRegistration = DriverRCReq
+makeRcActiveOrInactive payload = do
+     headers <- getHeaders "" false
+     withAPIResult (EP.makeRcActiveOrInactive "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
+deleteRcBT :: DeleteRcReq -> FlowBT String  DeleteRcResp
+deleteRcBT payload = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.deleteRc "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+    errorHandler (ErrorPayload errorPayload) = do
+        BackT $ pure GoBack
+
+deleteRcReq :: String -> DeleteRcReq
+deleteRcReq rcNo = DeleteRcReq 
+    {
+        "rcNo" : rcNo
+    }
+
+makeRcActiveOrInactiveReq :: Boolean -> String -> MakeRcActiveOrInactiveReq
+makeRcActiveOrInactiveReq isActivate rcNo =  MakeRcActiveOrInactiveReq 
+    {
+        "rcNo" : rcNo,
+        "isActivate" : isActivate
+    }
+
+callDriverToDriverBT :: String -> FlowBT String CallDriverToDriverResp
+callDriverToDriverBT rcNo = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.callDriverToDriver rcNo) (\x → x) errorHandler (lift $ lift $ callAPI headers (CallDriverToDriverReq rcNo))
+  where
+    errorHandler (ErrorPayload errorPayload) = BackT $ pure GoBack
+
+makeDriverRCReq :: String -> String -> Maybe String -> Boolean -> DriverRCReq
+makeDriverRCReq regNo imageId dateOfRegistration multipleRc= DriverRCReq
     {
       "vehicleRegistrationCertNumber" : regNo,
       "operatingCity" : "BANGALORE",
@@ -873,3 +904,70 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
+
+driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverProfileSummaryRes)
+driverProfileSummary lazy = do
+  headers <- getHeaders "" true
+  withAPIResult (EP.profileSummary lazy) (\x -> x) (callAPI headers DriverProfileSummaryReq)
+
+createPaymentOrder :: String -> Flow GlobalState (Either ErrorResponse CreateOrderRes)
+createPaymentOrder dummy = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.createOrder dummy) unwrapResponse $ callAPI headers (CreateOrderReq dummy)
+    where
+        unwrapResponse (x) = x
+
+paymentOrderStatus :: String -> Flow GlobalState (Either ErrorResponse OrderStatusRes)
+paymentOrderStatus orderId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
+    where
+        unwrapResponse (x) = x
+
+    
+getPaymentHistory :: String -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetPaymentHistoryResp)
+getPaymentHistory from to status = do
+      headers <- getHeaders "" true
+      withAPIResult (EP.paymentHistory from to status) unwrapResponse (callAPI headers (GetPaymentHistoryReq from to status))
+   where
+        unwrapResponse (x) = x
+
+
+---------------------------------------- triggerAadhaarOtp ---------------------------------------------
+triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)
+triggerAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.triggerAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> GenerateAadhaarOTPReq
+    makeReq number = GenerateAadhaarOTPReq {
+      aadhaarNumber : number,
+      consent : "Y"
+    }
+    unwrapResponse x = x
+
+---------------------------------------- verifyAadhaarOtp ---------------------------------------------
+verifyAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse VerifyAadhaarOTPResp)
+verifyAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.verifyAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> VerifyAadhaarOTPReq
+    makeReq otp = VerifyAadhaarOTPReq {
+      otp : fromMaybe 0 $ INT.fromString otp
+    , shareCode : DS.take 4 otp
+    }
+    unwrapResponse x = x
+
+unVerifiedAadhaarData :: String -> String -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+unVerifiedAadhaarData driverName driverGender driverDob = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.unVerifiedAadhaarData "") unwrapResponse $ callAPI headers $ makeReq driverName driverGender driverDob
+  where
+    makeReq :: String -> String -> String -> UnVerifiedDataReq
+    makeReq driverName driverGender driverDob = UnVerifiedDataReq {
+        driverName : driverName ,
+        driverGender : driverGender,
+        driverDob : driverDob
+    }
+    unwrapResponse x = x

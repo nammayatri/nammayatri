@@ -49,41 +49,29 @@ import Debug (spy)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders _ isGzipCompressionEnabled = do
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-                        then pure $ (Headers $ [  Header "Content-Type" "application/json",
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                                    )
-                        else pure $ (Headers $ [  Header "Content-Type" "application/json",
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN) ,
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                            ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                                    )
+    regToken <- loadS $ show REGISTERATION_TOKEN
+    pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
+                      <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 getHeaders' :: String -> Boolean -> FlowBT String Headers
 getHeaders' _ isGzipCompressionEnabled = do
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
-            then lift $ lift $ pure $ (Headers $ [Header "Content-Type" "application/json",
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                                ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                                        )
-            else lift $ lift $ pure $ (Headers $ [Header "Content-Type" "application/json",
-                                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
-                                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
-                                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
-                                                Header "session_id" (getValueToLocalStore SESSION_ID),
-                                                Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
-                                                ] <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
-                                        )
+    regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
+    lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
+                        Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                        Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
+                        Header "session_id" (getValueToLocalStore SESSION_ID),
+                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                    ] <> case regToken of
+                        Nothing -> []
+                        Just token -> [Header "token" token]
+                      <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 
 
@@ -200,6 +188,15 @@ makeTriggerOTPReq mobileNumber = TriggerOTPReq
       "mobileCountryCode" : "+91",
       "merchantId" : if ( SC.getMerchantId "")== "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "")
     }
+
+---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------
+
+triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerSignatureOTPResp)
+triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
+    Headers headers <- getHeaders "" false
+    withAPIResult (EP.triggerSignatureOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerSignatureOTPReq signatureAuthData.authData)
+    where
+        unwrapResponse (x) = x
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
@@ -329,7 +326,6 @@ placeDetailsBT (PlaceDetailsReq id) = do
 rideSearchBT :: SearchReq -> FlowBT String SearchRes
 rideSearchBT payload = do
         headers <- getHeaders' "" true
-        _ <- pure $ spy "" "req for searchid"
         withAPIResultBT (EP.searchReq "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where
       errorHandler errorPayload = do
