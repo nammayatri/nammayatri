@@ -429,6 +429,7 @@ eval (LanguageSelection (CheckList.ChangeCheckBoxSate item)) state = do
 
 eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
   let languagesSelected = getSelectedLanguages state
+  pure $ toast $ (getString STR.LANGUAGE_UPDATED)
   exit $ UpdateLanguages state languagesSelected
 
 eval ActivateRc state = continue state{props{activateRcView = true}}
