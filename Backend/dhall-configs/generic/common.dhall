@@ -34,6 +34,8 @@ let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE >
 
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 
+let prometheusCounterConfig = { counterName : Text, label : Text }
+
 let eventStreamNameType = < KAFKA_STREAM | LOG_STREAM | REDIS_STREAM >
 
 let streamConfig = < KafkaStream : kafkaConfig | LogStream : Text >
@@ -74,6 +76,7 @@ in  { smsSessionConfig
     , periodType = PeriodType
     , consumerType = ConsumerType
     , kafkaConfig
+    , prometheusCounterConfig
     , streamConfig
     , eventStreamNameType
     , eventType

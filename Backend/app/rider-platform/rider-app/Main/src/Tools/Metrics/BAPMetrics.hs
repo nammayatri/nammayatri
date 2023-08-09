@@ -24,6 +24,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Common
+import Lib.SessionizerMetrics.Prometheus.CounterConfig
 import Prometheus as P
 import Tools.Metrics.BAPMetrics.Types as Reexport
 

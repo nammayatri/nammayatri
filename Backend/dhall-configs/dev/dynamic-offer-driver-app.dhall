@@ -91,6 +91,10 @@ let sampleKafkaConfig
       , kafkaKey = "dynamic-offer-driver"
       }
 
+let samplePrometheusCounterConfig
+    : globalCommon.prometheusCounterConfig
+    = { counterName = "searchRequestCounter", label = "merchantName" }
+
 let sampleLogConfig
     : Text
     = "log-stream"
