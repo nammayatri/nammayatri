@@ -32,7 +32,7 @@ createDSReq :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
 createDSReq = createWithKV
 
 create :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
-create dsReq = createDSReq dsReq >> QSRL.create dsReq.fromLocation >> QSRL.create dsReq.toLocation
+create dsReq = QSRL.create dsReq.fromLocation >> QSRL.create dsReq.toLocation >> createDSReq dsReq
 
 findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
