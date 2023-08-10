@@ -148,7 +148,7 @@ languagesChoices =
     , subText : "Telugu"
     , isSelected : false
     }
-  , { value: "BA_IN"
+  , { value: "BN_IN"
     , text: "বাংলা"
     , subText : "Bangla"
     , isSelected : false
