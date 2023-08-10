@@ -126,8 +126,8 @@ getValidTill (Id searchRequestId) = do
 
 instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
   fromTType' BeamSRSZ.SearchRequestSpecialZoneT {..} = do
-    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "FromLocation not found")
-    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError "ToLocation not found")
+    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in SearchRequestSpecialZone for fromLocationId: " <> show fromLocationId)
+    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in SearchRequestSpecialZone for toLocationId: " <> show toLocationId)
     pUrl <- parseBaseUrl bapUri
     pure $
       Just

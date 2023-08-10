@@ -171,7 +171,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion
-    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "ToLocation not found")
+    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in SearchRequest for fromLocationId:" <> show fromLocationId)
     tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
     pure $
       Just

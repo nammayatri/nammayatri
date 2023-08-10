@@ -114,7 +114,7 @@ setInactiveAllDQByEstId (Id estimateId) now = updateWithKV [Se.Set BeamDQ.status
 
 instance FromTType' BeamDQ.DriverQuote DriverQuote where
   fromTType' BeamDQ.DriverQuoteT {..} = do
-    fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError "FareParameters not found")
+    fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in DriverQuote for id: " <> show fareParametersId)
     return $
       Just
         Domain.DriverQuote

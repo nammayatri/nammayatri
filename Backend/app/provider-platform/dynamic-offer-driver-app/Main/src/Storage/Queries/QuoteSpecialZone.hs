@@ -61,7 +61,7 @@ findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 
 instance FromTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where
   fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
-    fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError "FareParameters not found")
+    fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in QuoteSpecialZone for id: " <> show fareParametersId)
     return $
       Just
         QuoteSpecialZone

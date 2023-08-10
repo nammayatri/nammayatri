@@ -127,9 +127,9 @@ findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.sta
 
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
-    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "FromLocation not found")
-    tl <- QBBL.findById (Id toLocationId) >>= fromMaybeM (InternalError "ToLocation not found")
-    fp <- QueriesFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError "FareParameters not found")
+    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> show fromLocationId)
+    tl <- QBBL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> show toLocationId)
+    fp <- QueriesFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in booking for Id: " <> show fareParametersId)
     pUrl <- parseBaseUrl bapUri
     pure $
       Just

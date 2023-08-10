@@ -497,7 +497,7 @@ cancelBookings bookingIds now =
 
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
-    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "fromLocation is null for booking")
+    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "fromLocation not found in booking for fromLocationId: " <> show fromLocationId)
     tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
     bookingDetails <- case fareProductType of

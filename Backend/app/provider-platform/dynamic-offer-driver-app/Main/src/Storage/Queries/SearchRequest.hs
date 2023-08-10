@@ -55,8 +55,8 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError "FromLocation not found in SearchRequest")
-    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError "ToLocation not found in SearchRequest")
+    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in SearchRequest for fromLocationId:" <> show fromLocationId)
+    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in SearchRequest for toLocationId:" <> show toLocationId)
     pUrl <- parseBaseUrl bapUri
     pure $
       Just
