@@ -2096,6 +2096,7 @@ newtype PaymentDetailsEntity = PaymentDetailsEntity {
   , charges :: Int
   , chargesBreakup :: Array PaymentBreakUp
   , txnInfo :: Array TxnInfo
+  , status :: String
   , driverFeeId :: String
 }
 

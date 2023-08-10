@@ -8,6 +8,7 @@ export function getStringValue(key) {
 }
 
 const mlStrings = {
+  ENTER_AADHAAR_DETAILS: "ആധാർ വിശദാംശങ്ങൾ നൽകുക",
   INACCURATE_DATE_AND_TIME: "കൃത്യമല്ലാത്ത തീയതിയും സമയവും!",
   ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "നിങ്ങളുടെ ഉപകരണത്തിന്റെ തീയതിയും സമയവും ക്രമീകരിച്ച് വീണ്ടും ശ്രമിക്കുക",
   THE_CURRENT_DATE_AND_TIME_IS: "നിലവിലെ തീയതിയും സമയവുമാണ്",

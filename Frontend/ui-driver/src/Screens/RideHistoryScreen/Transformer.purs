@@ -20,7 +20,7 @@ getPaymentHistoryItem (PaymentDetailsEntity item) =
     , totalEarning : item.totalEarnings
     , totalRides : item.totalRides
     , date : item.date
-    , status : case firstTxnInfo of
+    , status : if DA.length item.txnInfo /= 0 then(case firstTxnInfo of
                 Just (TxnInfo item) -> case item.status of
                                         NEW -> Pending
                                         PENDING_VBV -> Pending
@@ -32,7 +32,9 @@ getPaymentHistoryItem (PaymentDetailsEntity item) =
                                         COD_INITIATED -> Pending
                                         STARTED -> Pending
                                         AUTO_REFUNDED -> Pending
-                Nothing -> Pending
+                Nothing -> Pending)
+                else if item.status == "COLLECTED_CASH" then Success
+                else Pending
     , id : case firstTxnInfo of
                 Just (TxnInfo item) -> item.id
                 Nothing -> ""

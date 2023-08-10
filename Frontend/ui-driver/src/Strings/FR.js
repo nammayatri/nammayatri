@@ -7,6 +7,7 @@ export function getStringValue(key) {
 }
 
 const frenchStrings = {
+  ENTER_AADHAAR_DETAILS: "Entrez les détails d'Aadhaar",
   LETS_GET_STARTED: "Commençons",
   YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION: "Votre demande a été soumise avec succès et est en cours de vérification",
   VIEW_STATUS: "Afficher l'état",

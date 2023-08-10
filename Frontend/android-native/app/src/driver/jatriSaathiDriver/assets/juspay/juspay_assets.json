@@ -96,6 +96,7 @@
       "ic_ride_not_found" : true,
       "ic_ride_related" : true,
       "ic_roundcorner_overlay" : true,
+      "ic_sedan" : true,
       "ic_sedan_non_ac" : true,
       "ic_send" : true,
       "ic_send_blue" : true,
