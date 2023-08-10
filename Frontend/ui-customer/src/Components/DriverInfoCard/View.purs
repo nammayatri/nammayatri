@@ -308,7 +308,7 @@ mapOptionsView push state =
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginVertical 5 5
-      ][ if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state else textView[]
+      ][ if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state else (textView[height $ V 0])
         , if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else locationTrackButton push state
       ]
     ]
