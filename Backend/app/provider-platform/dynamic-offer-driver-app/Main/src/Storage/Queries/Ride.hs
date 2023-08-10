@@ -158,12 +158,12 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
           )
       ]
       (Se.Desc BeamR.createdAt)
-      Nothing
-      Nothing
+      (Just limitVal)
+      (Just offsetVal)
   bookings <- findAllWithOptionsKV [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides] (Se.Desc BeamB.createdAt) Nothing Nothing
 
   let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
-  pure $ take limitVal (drop offsetVal rideWithBooking)
+  pure $ take limitVal rideWithBooking
   where
     getRideWithBooking bookings acc ride =
       let bookings' = filter (\b -> b.id == ride.bookingId) bookings

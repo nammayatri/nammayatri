@@ -460,13 +460,13 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
           )
       ]
       (Se.Desc BeamB.createdAt)
-      Nothing
-      Nothing
+      (Just limit')
+      (Just offset')
 
-  rides <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) (fromIntegral <$> mbLimit) (fromIntegral <$> mbOffset)
+  rides <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) Nothing Nothing
   let filteredBookings = matchBookingsWithRides bookings rides
   let filteredB = (filterBookingsWithConditions filteredBookings)
-  pure $ take limit' (drop offset' filteredB)
+  pure $ take limit' filteredB
   where
     matchBookingsWithRides :: [Booking] -> [Ride.Ride] -> [(Booking, Maybe Ride.Ride)]
     matchBookingsWithRides bookings rides =
