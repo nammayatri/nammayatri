@@ -36,7 +36,7 @@ import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Types.Id (Id)
+import Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Storage.CachedQueries.DriverInformation as DIQuery
 import Storage.CachedQueries.Merchant.TransporterConfig
@@ -150,10 +150,10 @@ verificationStatus onboardingTryLimit imagesNum verificationReq =
 enableDriver :: Id SP.Person -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ Nothing = return ()
 enableDriver personId (Just dl) = do
-  DIQuery.verifyAndEnableDriver personId
-  case dl.driverName of
-    Just name -> Person.updateName personId name
-    Nothing -> return ()
+  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  unless driverInfo.enabled $ do
+    DIQuery.verifyAndEnableDriver personId
+    whenJust dl.driverName $ \name -> Person.updateName personId name
 
 activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Flow ()
 activateRCAutomatically _ _ Nothing = return ()
