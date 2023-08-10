@@ -100,7 +100,7 @@ public class ChatService extends Service {
         firebaseAuth = FirebaseAuth.getInstance();
         merchant = getApplicationContext().getResources().getString(R.string.service);
         merchantType = merchant.contains("partner") || merchant.contains("driver") || merchant.contains("provider") ? "DRIVER" : "USER";
-        sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPrefs = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         this.startForeground(serviceNotificationID, createNotification());
         if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");

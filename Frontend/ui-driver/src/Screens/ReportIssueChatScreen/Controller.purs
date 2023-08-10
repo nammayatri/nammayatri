@@ -172,7 +172,7 @@ eval AddImage state =
     continueWithCmd state { props { showImageModel = true, isPopupModelOpen = true }
                           , data  { addImagesState { images = state.data.addedImages, stateChanged = false } } } [do
       _ <- pure $ clearFocus (getNewIDWithTag "submit_chat_edit_text")
-      void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = (getNewIDWithTag "add_images_model_done_button"), scaleType = "CENTER_CROP" }
+      void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "add_images_model_done_button"}
       pure NoAction
     ]
 
@@ -233,7 +233,7 @@ eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
 ---------------------------------------------------- Add Image Model ----------------------------------------------------
 eval (AddImagesModelAction (ImageModel.AddImage)) state =
   continueWithCmd state [do
-    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = (getNewIDWithTag "add_images_model_done_button"), scaleType = "CENTER_CROP" }
+    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "add_images_model_done_button" }
     _ <- liftEffect $ uploadFile unit
     pure NoAction
   ]

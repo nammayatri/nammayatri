@@ -297,3 +297,8 @@ foreign import consumeBP :: Unit -> Unit
 
 paymentPageUI :: PaymentPagePayload -> FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+
+getNegotiationUnit :: String -> String
+getNegotiationUnit varient = case varient of
+  "AUTO_RICKSHAW" -> "10"
+  _ -> "20"

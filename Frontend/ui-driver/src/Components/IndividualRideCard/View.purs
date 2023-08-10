@@ -218,10 +218,6 @@ rideDetails showTripId =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           ][ textView $
-              [ text "Trip Id : "
-              , color Color.black900
-              ] <> FontStyle.body1 TypoGraphy
-            , textView $
               [ PrestoList.textHolder "shortRideId"
               , margin $ MarginRight 12
               , color Color.black900

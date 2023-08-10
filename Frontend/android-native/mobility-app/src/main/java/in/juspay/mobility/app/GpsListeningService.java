@@ -153,7 +153,7 @@ public class GpsListeningService extends Service {
     }
 
     private boolean updateDriverStatus() {
-        SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
