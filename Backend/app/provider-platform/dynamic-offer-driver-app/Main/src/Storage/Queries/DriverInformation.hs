@@ -254,9 +254,9 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
-        B.orderBy_ (\(person, driverInfo) -> B.desc_ (driverInfo.createdAt)) $
-          B.limit_ (fromMaybe 100 mbLimit) $
-            B.offset_ (fromMaybe 0 mbOffset) $
+        B.limit_ (fromMaybe 100 mbLimit) $
+          B.offset_ (fromMaybe 0 mbOffset) $
+            B.orderBy_ (\(person, driverInfo) -> B.desc_ (driverInfo.createdAt)) $
               B.filter_'
                 ( \(person, driverInfo) ->
                     person.role B.==?. B.val_ Person.DRIVER

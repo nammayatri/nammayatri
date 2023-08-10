@@ -141,9 +141,9 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId
     L.runDB dbConf $
       L.findRows $
         B.select $
-          B.orderBy_ (\vehicle -> B.desc_ vehicle.createdAt) $
-            B.limit_ limitVal $
-              B.offset_ offsetVal $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\vehicle -> B.desc_ vehicle.createdAt) $
                 B.filter_'
                   ( \BeamV.VehicleT {..} ->
                       merchantId B.==?. B.val_ merchantId'
