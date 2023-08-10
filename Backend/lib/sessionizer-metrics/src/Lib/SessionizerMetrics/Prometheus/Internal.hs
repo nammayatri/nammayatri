@@ -24,7 +24,17 @@ import Kernel.Utils.Common (logDebug)
 import Lib.SessionizerMetrics.Prometheus.CounterConfig
 import Prometheus as P
 
-incrementCounter :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2, MonadIO m, Log m) => PrometheusCounterConfig -> m ()
+incrementCounter ::
+  ( MonadReader r1 m,
+    MonadGuid m,
+    MonadTime m,
+    HasField "getDeploymentVersion" r2 Text,
+    HasField "version" r1 r2,
+    MonadIO m,
+    Log m
+  ) =>
+  PrometheusCounterConfig ->
+  m ()
 incrementCounter promConfig = do
   logDebug "Prometheus Increment Counter"
   let counterName' = promConfig.counterName

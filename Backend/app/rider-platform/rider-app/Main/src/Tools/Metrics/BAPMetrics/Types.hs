@@ -29,9 +29,12 @@ type HasBAPMetrics m r = HasFlowEnv m r ["bapMetrics" ::: BAPMetricsContainer, "
 data BAPMetricsContainer = BAPMetricsContainer
   { searchRequestCounter :: SearchRequestCounterMetric,
     rideCreatedCounter :: RideCreatedCounterMetric,
+    --eventRequestCounter :: EventCounterMetric,
     searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric
   }
+
+-- type EventCounterMetric = P.Vector P.Label3 P.Counter
 
 type SearchRequestCounterMetric = P.Vector P.Label2 P.Counter
 
@@ -39,12 +42,19 @@ type RideCreatedCounterMetric = P.Vector P.Label2 P.Counter
 
 type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
 
+-- type RideCreatedCounterMetric = P.Vector P.Label3 P.Counter
+
+-- type SearchDurationMetric = (P.Vector P.Label3 P.Histogram, P.Vector P.Label2 P.Counter)
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   return $ BAPMetricsContainer {..}
+
+-- registerSearchRequestCounterMetric :: IO EventCounterMetric
+-- registerSearchRequestCounterMetric = P.register $ P.vector ("event", "merchant_name", "version") $ P.counter $ P.Info "search_request_count" ""
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
 registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version") $ P.counter $ P.Info "search_request_count" ""

@@ -21,5 +21,6 @@ import Prometheus as P
 data PrometheusCounterConfig = PrometheusCounterConfig
   { counterName :: P.Vector P.Label2 P.Counter,
     label :: Text
+    -- event :: Text
   }
   deriving (Generic)
