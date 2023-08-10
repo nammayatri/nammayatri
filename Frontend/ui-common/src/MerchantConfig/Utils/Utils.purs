@@ -15,6 +15,7 @@ import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
+import Data.Show.Generic (genericShow) 
 
 foreign import getStringFromConfig :: String -> String
 
@@ -33,7 +34,7 @@ data Merchant
   | MOBILITY_RS
 
 derive instance genericMerchant :: Generic Merchant _
-
+instance showMerchant :: Show Merchant where show = genericShow
 instance eqMerchant :: Eq Merchant where
   eq = genericEq
 

@@ -33,6 +33,7 @@ to generate this file without the comments in this block.
   , "integers"
   , "lists"
   , "maybe"
+  , "monoid-extras"
   , "newtype"
   , "numbers"
   , "otp-reader"
@@ -47,7 +48,6 @@ to generate this file without the comments in this block.
   , "transformers"
   , "tuples"
   , "unsafe-coerce"
-  , "lite-decode"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]
