@@ -50,7 +50,7 @@ view push config =
             , onClick
                 ( \action -> do
                     _ <- pure $ toggleBtnLoader config.id true
-                    _ <- pure $ startLottieProcess lottieAnimationConfig{ rawJson = getValueFromConfig "apiLoaderLottie", lottieId = (getNewIDWithTag config.id), scaleType = "CENTER_CROP" }
+                    _ <- pure $ startLottieProcess lottieAnimationConfig{ rawJson = getValueFromConfig "apiLoaderLottie", lottieId = getNewIDWithTag config.id}
                     push action
                 )
                 (const OnClick)

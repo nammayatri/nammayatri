@@ -20,7 +20,7 @@ public class SheetModel {
     private final int driverMinExtraFee;
     private final int driverMaxExtraFee;
     private final int rideRequestPopupDelayDuration;
-    private final double negotiationUnit;
+    private final int negotiationUnit;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
 
@@ -38,7 +38,7 @@ public class SheetModel {
                       int driverMinExtraFee,
                       int driverMaxExtraFee,
                       int rideRequestPopupDelayDuration,
-                      double negotiationUnit,
+                      int negotiationUnit,
                       int customerExtraFee,
                       String specialLocationTag,
                       String sourcePinCode,
@@ -160,7 +160,7 @@ public class SheetModel {
         return rideRequestPopupDelayDuration;
     }
 
-    public double getNegotiationUnit() {
+    public int getNegotiationUnit() {
         return negotiationUnit;
     }
 

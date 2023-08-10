@@ -76,6 +76,8 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import in.juspay.hypersdk.data.KeyValueStore;
+
 public class LocationUpdateService extends Service {
     private static final String LOG_TAG = "LocationServices";
     private final String LOCATION_UPDATES = "LOCATION_UPDATES";
@@ -202,7 +204,7 @@ public class LocationUpdateService extends Service {
 
     private void updateConfigVariables() {
         try {
-            SharedPreferences sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
             String MAX_LIMIT_TO_STORE_LOCATION_PT = "MAX_LIMIT_TO_STORE_LOCATION_PT";
             maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "30"));
@@ -340,9 +342,9 @@ public class LocationUpdateService extends Service {
         });
     }
 
+    @Nullable
     private String getValueFromStorage(String k) {
-        SharedPreferences sharedPreff = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        return sharedPreff.getString(k, null);
+        return KeyValueStore.read(getApplicationContext(),getApplicationContext().getString(R.string.preference_file_key),k,null);
     }
 
     private JSONObject getLatLng(Double lat, Double lng) throws JSONException {
@@ -782,7 +784,7 @@ public class LocationUpdateService extends Service {
     private void startGPSListeningService() {
         try {
             Intent gpsListeningService = new Intent(this, GpsListeningService.class);
-            SharedPreferences sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             gpsListeningService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && sharedPrefs.getString("ACTIVITY_STATUS", "null").equals("onPause")) {
                 AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);

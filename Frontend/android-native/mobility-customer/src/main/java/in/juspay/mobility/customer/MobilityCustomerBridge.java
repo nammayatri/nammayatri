@@ -549,7 +549,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     googleMap.setOnCameraIdleListener(() -> {
                         double lat1 = (googleMap.getCameraPosition().target.latitude);
                         double lng = (googleMap.getCameraPosition().target.longitude);
-                        Boolean insidePolygon = pointInsidePolygon(geoJson, lat1, lng);
                         ExecutorService executor = Executors.newSingleThreadExecutor();
                         Handler handler = new Handler(Looper.getMainLooper());
                         executor.execute(() -> {

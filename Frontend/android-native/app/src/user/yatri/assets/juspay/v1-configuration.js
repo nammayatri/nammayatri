@@ -145,7 +145,7 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Support",
-      "YOUR_FEEDBACK_HELPS_US" : "യാത്രാ അനുഭവം മെച്ചപ്പെടുത്താൻ നിങ്ങളുടെ ഫീഡ്‌ബാക്ക് ഞങ്ങളെ സഹായിക്കുന്നു"
+      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience"
     },
     "malayalamStrings": {
       "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
@@ -162,7 +162,7 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക",
-      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience"
+      "YOUR_FEEDBACK_HELPS_US" : "യാത്രാ അനുഭവം മെച്ചപ്പെടുത്താൻ നിങ്ങളുടെ ഫീഡ്‌ബാക്ക് ഞങ്ങളെ സഹായിക്കുന്നു"
   },
     "languageList": [{
       "name": "English",

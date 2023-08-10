@@ -48,7 +48,7 @@ import Engineering.Helpers.Utils(loaderText, toggleLoader, getAppConfig)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText,convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
 import Foreign.Class (class Encode, encode, decode)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime, withinTimeRange)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -97,7 +97,6 @@ baseAppFlow baseFlow = do
     checkDateAndTime 
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
-    setValueToLocalNativeStore NEGOTIATION_UNIT if (getMerchant FunctionCall == YATRI) then "20" else "10"
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
@@ -297,6 +296,7 @@ getDriverInfoFlow = do
       let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
       void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
       setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
+      setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant
       case getDriverInfoResp.blocked of
         Just value -> void $ pure $ setCleverTapUserProp "Blocked" (show $ value)
         Nothing -> pure unit

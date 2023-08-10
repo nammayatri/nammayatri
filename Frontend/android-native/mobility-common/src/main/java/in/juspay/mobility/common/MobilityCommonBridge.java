@@ -213,7 +213,16 @@ public class MobilityCommonBridge extends HyperBridge {
             receivers.deRegister(bridgeComponents.getContext());
             receivers = null;
         }
+        polyline = null;
         googleMap = null;
+        markers = null;
+        pickupPointsZoneMarkers = null;
+        layer = null;
+
+        // CallBacks
+        storeLocateOnMapCallBack = null;
+        storeDashboardCallBack = null;
+        userPositionMarker = null;
     }
 
     // region Store and Trigger CallBack
