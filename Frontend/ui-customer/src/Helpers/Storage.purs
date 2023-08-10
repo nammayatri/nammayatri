@@ -75,6 +75,7 @@ data KeyStore
   | FARE_ESTIMATE_DATA
   | LAST_LOGIN
   | SELECTED_VARIANT
+  | COUNTRY_CODE
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -21,9 +21,10 @@ import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
-import Components.StepsHeaderModel as StepsHeaderModel
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.MobileNumberEditor as MobileNumberEditor
+import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -39,15 +40,15 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=))
+import MerchantConfig.Utils (getValueFromConfig)
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import MerchantConfig.Utils( getValueFromConfig )
 import Types.App (defaultGlobalState)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
@@ -126,31 +127,48 @@ enterMobileNumberView  state lang push =
     , visibility  if state.props.enterOTP then GONE else VISIBLE
     , alpha if state.props.enterOTP then 0.0 else 1.0
     , orientation VERTICAL
-    ][PrestoAnim.animationSet
-      [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
-      ] $ PrimaryEditText.view (push <<< MobileNumberEditTextAction) (mobileNumberEditTextConfig state)
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , weight 1.0
-      ][]
-    , PrestoAnim.animationSet
-      ( if EHC.os == "IOS" then [] else [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 400 15 0 0 true PrestoAnim.Linear -- Temporary fix for iOS
-      ]) $ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , margin (Margin 11 0 0 10)
-        ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false
-        , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
-          ]
-    , PrestoAnim.animationSet
-      [ Anim.fadeIn $ not state.props.enterOTP
-      , Anim.fadeOut state.props.enterOTP
-      ] $
-      linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
+    ][
+      PrestoAnim.animationSet
+        [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig 
+        ] $ MobileNumberEditor.view (push <<< MobileNumberEditTextAction) (mobileNumberEditTextConfig state)
+       ,  PrestoAnim.animationSet
+          ( if EHC.os == "IOS" then [] else [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig 
+          , Anim.fadeOut state.props.countryCodeOptionExpended
+          ]) $ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , margin (MarginVertical 8 12)
+            , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
+            ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false
+            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
+              ]
+        , PrestoAnim.animationSet
+          [ Anim.fadeIn $ not state.props.enterOTP 
+          , Anim.fadeOut $ state.props.enterOTP || state.props.countryCodeOptionExpended
+          ] $
+          linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
+            ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
+        , PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpended] $ textView $ [
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text $ getString OR
+          , gravity CENTER
+          , margin $ MarginVertical 24 24
+          , color Color.black500
+          , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
+          ] <> FontStyle.tags TypoGraphy
+        , PrestoAnim.animationSet
+          [ Anim.fadeIn $ not state.props.enterOTP
+          , Anim.fadeOut $ state.props.countryCodeOptionExpended || state.props.enterOTP
+          ] $
+          linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
+            ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state)]
     ]
 
 commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w

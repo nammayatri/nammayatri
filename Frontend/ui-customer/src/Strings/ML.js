@@ -521,5 +521,7 @@ const malayalamStrings = {
   "PLATFORM_GST" : "നികുതികൾ (ജിഎസ്ടി)",
   "MISC_WAITING_CHARGE" : "മറ്റ്. (വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ)",
   "AC_TAXI" : "AC ടാക്സി",
-  "NON_AC_TAXI": "എസി ടാക്സി ഇല്ല"
+  "NON_AC_TAXI": "എസി ടാക്സി ഇല്ല",
+  "GET_OTP_VIA_WHATSAPP" : "വാട്ട്‌സ്ആപ്പ് വഴി OTP നേടുക",
+  "OR" : "അഥവാ"
 }

@@ -184,14 +184,15 @@ triggerOTPBT payload = do
         BackT $ pure GoBack
 
 
-makeTriggerOTPReq :: String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber =
+makeTriggerOTPReq :: String -> String -> String -> TriggerOTPReq
+makeTriggerOTPReq mobileNumber countryCode otpChannel =
     let merchant = SC.getMerchantId ""
     in TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
-      "mobileCountryCode" : "+91",
-      "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant
+      "mobileCountryCode" : countryCode,
+      "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant,
+      "otpChannel" : otpChannel
     }
 
 ---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------

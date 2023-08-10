@@ -277,6 +277,7 @@
       "ny_ic_wallet" : true,
       "ny_ic_wallet_filled" : true,
       "ny_ic_welcome_customer" : true,
+      "ny_ic_whatsapp_logo" : true,
       "ny_ic_work" : true,
       "ny_ic_work_blue" : true,
       "ny_ic_zone_pickup_marker" : true,
