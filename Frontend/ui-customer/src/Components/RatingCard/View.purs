@@ -72,6 +72,7 @@ currentRatingView push state =
   , orientation VERTICAL
   , padding $ Padding 16 24 16 30
   , background Color.white900
+  , accessibilityHint "Bottom Sheet Active"
   , cornerRadii $ Corners 20.0 true true false false
   , clickable true
   , adjustViewWithKeyboard "true"
@@ -232,6 +233,7 @@ starRatingView state push =
     ][ textView $
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
+        , accessibilityHint $ "Rate your Ride with " <> state.data.driverName
         , text $ getString RATE_YOUR_RIDE_WITH <> state.data.driverName
         , color Color.black800
         , maxLines 2

@@ -1018,7 +1018,7 @@ rateExperienceView state push =
           ][imageView
               [ height $ V 30
               , width $ V 30
-              , accessibilityHint ("start" <> show item)
+              , accessibilityHint (show item <> "star" )
               , imageWithFallback if item <= state.data.ratingViewState.selectedRating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
                                       else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
               ]
@@ -1098,6 +1098,7 @@ completedRideDetails state push =
       ][  imageView
           [ height $ V 40
           , width $ V 40
+          , accessibilityHint "Contact Support"
           , imageWithFallback "ic_headphone_white,https://assets.juspay.in/nammayatri/images/user/ic_headphone_white.png"
           , onClick push $ const Support
           ]
@@ -1107,6 +1108,7 @@ completedRideDetails state push =
       , weight 1.0
       , orientation VERTICAL
       , gravity CENTER
+      , accessibilityHint $ "Ride Complete. Final Fare ₹"  <> show state.data.finalAmount
       ][  textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -1151,6 +1153,7 @@ completedRideDetails state push =
       , margin $ MarginTop 10
       , gravity CENTER_VERTICAL
       , onClick push $ const RideDetails
+      , accessibilityHint "Ride Details"
       ][  textView
           [ height WRAP_CONTENT
           , text $ getString RIDE_DETAILS
@@ -1248,6 +1251,7 @@ commonTextView state push text' color' fontStyle marginTop =
   textView $
   [ width MATCH_PARENT
   , height WRAP_CONTENT
+  , accessibilityHint text'
   , text text'
   , color color'
   , gravity CENTER
