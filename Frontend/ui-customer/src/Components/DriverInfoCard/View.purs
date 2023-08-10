@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -254,6 +254,7 @@ otpView push state =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
+            , accessibilityHint item
             , color state.data.config.quoteListModel.otpTextColor
             ] <> FontStyle.h2 TypoGraphy)
         ]) $ split (Pattern "")  state.data.otp)
@@ -279,6 +280,7 @@ expiryTimeView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
+              , accessibilityHint "O T P"
               , text $ getString OTP <> ":"
               , color Color.black700
               ] <> FontStyle.body4 TypoGraphy)
@@ -330,6 +332,7 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 4
+      , accessibilityHint "Share Ride"
       , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
       , onClick push $ const ShareRide
       ]
@@ -345,6 +348,7 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 12 10 10
+      , accessibilityHint "Contact Customer Support"
       , onClick push $ const Support
       ]
   ]
@@ -361,6 +365,7 @@ locationTrackButton push state =
   , stroke $ "1,"<> Color.grey900
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
   , cornerRadius 20.0
+  , accessibilityHint "Track your ride"
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
   ][  imageView
@@ -383,6 +388,7 @@ sosView push state =
         [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
+        , accessibilityHint $ "S O S Icon, Select to view S O S options"
         , onClick push $ const OpenEmergencyHelp
         ]
     ]
@@ -544,6 +550,7 @@ otpAndWaitView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
+              , accessibilityHint "O T P"
               , text $ getString OTP <> ":"
               , color state.data.config.quoteListModel.otpTitleColor
               ] <> FontStyle.body4 TypoGraphy)
@@ -566,6 +573,7 @@ waitTimeView push state =
   , gravity CENTER_VERTICAL
   , margin $ MarginLeft 12
   , padding $ Padding 14 2 14 2
+  , accessibilityHint $ "Wait Timer : " <> state.data.waitingTime
   , visibility case state.props.currentSearchResultType == QUOTES of
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
@@ -684,6 +692,7 @@ cancelRideLayout push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , padding $ Padding 5 5 5 5
+  , accessibilityHint "Cancel Ride"
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
   ][ textView (
@@ -709,6 +718,7 @@ contactView push state =
     ][  linearLayout
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
+        , accessibilityHint $ "Ride Status : " <>  if state.data.distance > 1000 then (state.data.driverName <> " is " <> secondsToHms state.data.eta <> " Away ") else (state.data.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
         , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
         ][  textView $
             [ text $ state.data.driverName <> " "
@@ -748,6 +758,7 @@ contactView push state =
               , cornerRadius 20.0
               , background state.data.config.driverInfoConfig.callBackground
               , stroke state.data.config.driverInfoConfig.callButtonStroke
+              , accessibilityHint "Chat With Driver"
               , onClick (\action -> do
                   if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
                   else pure unit
@@ -789,6 +800,7 @@ driverDetailsView push state =
           ][imageView
               [ height $ V 50
               , width $ V 50
+              , accessibilityHint $ "Driver - rated " <> (if state.data.rating == 0.0 then "New" else (show state.data.rating <> "stars"))
               , padding $ Padding 2 3 2 1
               , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
               ]  
@@ -797,6 +809,7 @@ driverDetailsView push state =
           [ text state.data.driverName
           , maxLines 1
           , ellipsize true
+          , accessibilityHint $ "Driver : " <> state.data.driverName
           , color Color.black800
           , width MATCH_PARENT
           , height WRAP_CONTENT
@@ -808,6 +821,10 @@ driverDetailsView push state =
                           "TAXI" -> (getString NON_AC_TAXI)
                           _ -> "")
           , color Color.black700
+          , accessibilityHint $ "Vehicle:" <> (state.data.vehicleDetails <> case state.data.vehicleVariant of 
+                          "TAXI_PLUS" -> "AC Taxi"
+                          "TAXI" -> "Non AC Taxi"
+                          _ -> "")
           , width $ V ((screenWidth unit) /2 - 20)
           , maxLines 2
           , singleLine false
@@ -866,6 +883,7 @@ driverDetailsView push state =
                         , weight 1.0
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
+                        , accessibilityHint state.data.registrationNumber
                         , color Color.black
                         , gravity CENTER
                         ] <> FontStyle.body7 TypoGraphy
@@ -920,6 +938,7 @@ paymentMethodView push state title shouldShowIcon =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
+  , accessibilityHint $ "Ride Fare, " <> state.data.config.currency <> show state.data.price <> "Pay by Cash or U P I"
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT

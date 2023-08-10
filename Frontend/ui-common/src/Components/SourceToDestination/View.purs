@@ -18,7 +18,7 @@ module Components.SourceToDestination.View where
 import Prelude (Unit, ($), (<>), (/), (<), (>), (==))
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action,Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id, accessibilityHint)
 import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -63,6 +63,7 @@ sourceLayout config =
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , margin config.sourceMargin
+  , accessibilityHint $ "Pickup Location, " <> config.sourceTextConfig.text
   ][  imageView
       [ width config.sourceImageConfig.width
       , height config.sourceImageConfig.height
@@ -121,6 +122,7 @@ destinationLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
+      , accessibilityHint $ "Drop Location, " <> config.destinationTextConfig.text
       ][  textView $
           [ text config.destinationTextConfig.text
           , layoutGravity "center_vertical"
