@@ -25,11 +25,12 @@ import Components.PrimaryEditText as PrimaryEditText
 import Components.GenericMessageModal as GenericMessageModal
 import PrestoDOM.Types.Core (class Loggable)
 import Components.TutorialModal as TutorialModalController
-import JBridge (disableActionEditText, uploadFile, hideKeyboardOnNavigation, openWhatsAppSupport)
+import JBridge (disableActionEditText, uploadFile, hideKeyboardOnNavigation, openWhatsAppSupport, showDialer)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Merchant.Utils (getMerchant, Merchant(..))
 import Data.Maybe
 
 
@@ -137,7 +138,9 @@ eval (TutorialModal manual) state = do
     _ -> continue state
 eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = continue state{props{openLicenseManual = false, openDateOfIssueManual = false}} 
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
-  _ <- liftEffect $ openWhatsAppSupport "+918618963188"
+  if getMerchant unit == YATRIPARTNER
+    then pure $ showDialer "+917411782309" false
+    else liftEffect $ openWhatsAppSupport "+918618963188"
   pure NoAction
   ]
 eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount

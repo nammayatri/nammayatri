@@ -18,7 +18,7 @@ import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&),(||),not,
 import PrestoDOM (Eval, continue, exit,continueWithCmd,updateAndExit)
 import Screens.Types (ApplicationStatusScreenState)
 import PrestoDOM.Types.Core (class Loggable)
-import JBridge (openWhatsAppSupport, minimizeApp,toast,showDialer, hideKeyboardOnNavigation )
+import JBridge (openWhatsAppSupport, minimizeApp,toast, showDialer, hideKeyboardOnNavigation )
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent,trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
@@ -36,6 +36,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag,getExpiryTime,setText')
 import Storage(KeyStore(..),getValueToLocalStore)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -114,7 +115,9 @@ eval (ReTry docType) state = case docType of
                                 _ -> continue state
 eval Logout state = exit LogoutAccount
 eval SupportCall  state = continueWithCmd state [do
-  _ <- liftEffect $ openWhatsAppSupport "+918618963188"
+  if getMerchant unit == YATRIPARTNER
+    then pure $ showDialer "+917411782309" false
+    else liftEffect $ openWhatsAppSupport "+918618963188"
   pure Dummy
   ]
 eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state = do
