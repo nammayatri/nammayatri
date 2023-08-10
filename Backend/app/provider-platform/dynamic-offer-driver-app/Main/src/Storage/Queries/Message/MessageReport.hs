@@ -41,7 +41,6 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Beam.Message.MessageReport as BeamMR
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
-import Storage.Beam.Person as BeamP (PersonT (createdAt, id))
 import Storage.Queries.Message.Message as QMM hiding (create)
 import Storage.Queries.Message.MessageTranslation as QMMT hiding (create)
 import qualified Storage.Queries.Person ()
@@ -187,39 +186,36 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
 findByMessageIdAndDriverId :: (L.MonadFlow m, Log m) => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 findByMessageIdAndDriverId (Id messageId) (Id driverId) = findOneWithKV [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
 
-findByMessageIdAndStatusWithLimitAndOffset ::
-  (L.MonadFlow m, Log m) =>
-  Maybe Int ->
-  Maybe Int ->
-  Id Msg.Message ->
-  Maybe DeliveryStatus ->
-  m [(MessageReport, P.Person)]
-findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
-  let limitVal = min (maybe 10 fromIntegral mbLimit) 20
-      offsetVal = maybe 0 fromIntegral mbOffset
-  messageReport <-
-    findAllWithOptionsKV
-      [ Se.And
-          ( [Se.Is BeamMR.messageId $ Se.Eq messageID]
-              <> ([Se.Is BeamMR.deliveryStatus $ Se.Eq (fromJust mbDeliveryStatus) | isJust mbDeliveryStatus])
-          )
-      ]
-      (Se.Desc BeamMR.createdAt)
-      Nothing
-      Nothing
-  person <-
-    findAllWithOptionsKV
-      [Se.Is BeamP.id $ Se.In $ getId . DTMR.driverId <$> messageReport]
-      (Se.Desc BeamP.createdAt)
-      Nothing
-      Nothing
-
-  let messageOfPerson = foldl' (getMessageOfPerson messageReport) [] person
-  pure $ take limitVal (drop offsetVal messageOfPerson)
+findByMessageIdAndStatusWithLimitAndOffset :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Id Msg.Message -> Maybe DeliveryStatus -> m [(MessageReport, P.Person)]
+findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageId) mbDeliveryStatus = do
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\(messageReport, _) -> B.desc_ (messageReport.createdAt)) $
+                B.filter_'
+                  ( \(messageReport, _) ->
+                      messageReport.messageId B.==?. B.val_ messageId
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\deliveryStatus -> messageReport.deliveryStatus B.==?. B.val_ deliveryStatus) mbDeliveryStatus
+                  )
+                  do
+                    messageReport <- B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
+                    person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> person.id B.==?. messageReport.driverId)
+                    pure (messageReport, person)
+  case resp of
+    Right resp' -> do
+      let messageReport' = fst <$> resp'
+          person' = snd <$> resp'
+      messageReport <- catMaybes <$> mapM fromTType' messageReport'
+      person <- catMaybes <$> mapM fromTType' person'
+      pure $ zip messageReport person
+    Left _ -> pure []
   where
-    getMessageOfPerson messageReports acc person' =
-      let messageReports' = filter (\messageReport -> getId messageReport.driverId == getId person'.id) messageReports
-       in acc <> ((\messageReport -> (messageReport, person')) <$> messageReports')
+    limitVal = min (maybe 10 fromIntegral mbLimit) 20
+    offsetVal = maybe 0 fromIntegral mbOffset
 
 getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
