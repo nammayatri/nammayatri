@@ -48,7 +48,7 @@ view push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
-          , padding (Padding 16 24 16 0)
+          , padding (Padding 16 24 0 0)
           , onClick push (const (OnSelection state))
           , gravity CENTER_VERTICAL
           ][ linearLayout

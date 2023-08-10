@@ -71,6 +71,8 @@ import Helpers.Utils (getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getValueFromConfig)
+import MerchantConfig.Utils as MU
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width)
@@ -101,8 +103,6 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import MerchantConfig.Utils (getValueFromConfig)
-import MerchantConfig.Utils as MU
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -459,7 +459,7 @@ driverAnalyticsView state push =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: "rated by " <> show analyticsData.totalUsersRated <> " users", postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
+        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: (getString RATED_BY)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString USERS), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
           , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
@@ -1080,11 +1080,11 @@ infoView state push =
 getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
 getRcDetails state = do 
   let config = state.data.activeRCData
-  [{ key : "RC Status" , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
-  , { key : "Reg. Number" , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }
-  , { key : "Type" , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }
-  , { key : "Model Name" , value : Just config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
-  , { key : "Colour" , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ] <> 
+  [{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
+  , { key : (getString REG_NUMBER) , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }
+  , { key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }
+  , { key :(getString MODEL_NAME) , value : Just config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ] <> 
     if not null state.data.rcDataArray then 
       [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }] 
     else []
