@@ -171,7 +171,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             updateTipView(holder, model);
             
-            if (key != null && ( key.equals("jatrisaathidriver") || key.equals("yatripartner"))){
+            if (key != null && ( key.equals("jatrisaathidriver") || key.equals("yatriprovider"))){
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
@@ -613,7 +613,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
         if (key != null && key.equals("jatrisaathidriver")){
             merchantLogo.setText("Jatri Sathi");
-        } else if (key != null && key.equals("yatripartner")){
+        } else if (key != null && key.equals("yatriprovider")){
             merchantLogo.setText("Yatri Driver");
         }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
