@@ -529,5 +529,7 @@ const englishStrings = {
   "PLATFORM_GST" : "Taxes (GST)",
   "MISC_WAITING_CHARGE" : "Misc. (including Waiting Charges)",
   "AC_TAXI" : "AC Taxi",
-  "NON_AC_TAXI" : "Non AC Taxi"
+  "NON_AC_TAXI" : "Non AC Taxi",
+  "GET_OTP_VIA_WHATSAPP" : "Get OTP via WhatsApp",
+  "OR" : "Or"
 }

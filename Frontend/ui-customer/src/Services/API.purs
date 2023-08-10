@@ -72,6 +72,7 @@ newtype TriggerOTPReq = TriggerOTPReq {
     mobileNumber :: String
   , mobileCountryCode :: String
   , merchantId :: String
+  , otpChannel :: String
 }
 
 instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq TriggerOTPResp where

@@ -1,7 +1,4 @@
-module Common.Animation.Config
-    ( AnimConfig
-    )
-    where
+module Common.Animation.Config where
 
 import PrestoDOM.Animation (Interpolator, RepeatCount)
 import PrestoDOM.Animation as PrestoAnim

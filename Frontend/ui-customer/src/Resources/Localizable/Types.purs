@@ -544,7 +544,8 @@ data STR
  | NON_AC
  | AC_TAXI 
  | NON_AC_TAXI
-
+ | GET_OTP_VIA_WHATSAPP
+ | OR
 getKeyString :: STR -> String
 getKeyString key = case key of
   WAS_YOUR_CALL_SUCCESSFUL -> "WAS_YOUR_CALL_SUCCESSFUL"
@@ -1077,3 +1078,5 @@ getKeyString key = case key of
   MISC_WAITING_CHARGE -> "MISC_WAITING_CHARGE"
   AC_TAXI -> "AC_TAXI"
   NON_AC_TAXI -> "NON_AC_TAXI"
+  GET_OTP_VIA_WHATSAPP -> "GET_OTP_VIA_WHATSAPP"
+  OR -> "OR"
