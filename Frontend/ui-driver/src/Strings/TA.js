@@ -556,7 +556,7 @@ const tamilStrings = {
   SUMMARY : "சுருக்கம்",
   NAMMA_BONUS  : "நம்ம போனஸ்",
   TRIPS_COMPLETED : "முடிந்த பயணங்கள்",
-  LATE_NIGHT_TRIPS  :"லேட் நைட் ட்ரிப்ஸ்",
+  LATE_NIGHT_TRIPS  :"தாமதமான இரவு பயணங்கள்",
   ABOUT_ME  : "என்னைப் பற்றி",
   ABOUT_VEHICLE : "வாகனம் பற்றி",
   ADD : "சேர்",
@@ -596,5 +596,10 @@ const tamilStrings = {
   LANGUAGES_SPOKEN : "பேசும் மொழிகள்",
   VIEW_PAYMENT_HISTORY : "கட்டண வரலாற்றைக் காண்க",
   RIDE_TYPE : "சவாரி வகை",
-  PLACE_CALL_REQUEST : "Place Call Request"
+  PLACE_CALL_REQUEST : "Place Call Request",
+  RC_STATUS : "RC நிலை",
+  BOOKING_OPTIONS : "முன்பதிவு விருப்பங்கள்",
+  RATED_BY : "",
+  USERS : "பயனர்கள் மூலம் மதிப்பிடப்பட்டது",
+  MONTHS : "மாதங்கள்"
 }

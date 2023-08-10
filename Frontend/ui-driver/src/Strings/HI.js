@@ -626,5 +626,9 @@ const hindiStrings = {
   LANGUAGES_स्पोकन : "बोली जाने वाली भाषाएँ",
   VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें",
   RIDE_TYPE : "सवारी का प्रकार",
-  PLACE_CALL_REQUEST : "कॉल अनुरोध करें"
+  PLACE_CALL_REQUEST : "कॉल अनुरोध करें",
+  RC_STATUS : "आरसी स्थिति",
+  RATED_BY : "द्वारा मूल्यांकित",
+  USERS : "उपयोगकर्ताओं",
+  MONTHS : "महीने"
 }

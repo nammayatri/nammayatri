@@ -477,5 +477,9 @@ const frenchStrings = {
   LANGUAGES_SPOKEN : "Langues parlées",
   VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements",
   RIDE_TYPE : "Type de trajet",
-  PLACE_CALL_REQUEST : "Faire une demande d'appel"
+  PLACE_CALL_REQUEST : "Faire une demande d'appel",
+  RC_STATUS : "Statut RC",
+  RATED_BY : "Évalué par",
+  USERS : "UTILISATRICES",
+  MONTHS : "Mois"
 }
