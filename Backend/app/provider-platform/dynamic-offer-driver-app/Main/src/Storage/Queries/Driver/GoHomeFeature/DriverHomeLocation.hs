@@ -24,6 +24,7 @@ import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.App (MonadFlow)
+import Kernel.Types.Common (getCurrentTime)
 import Kernel.Types.Id (Id (..))
 import Lib.Utils ()
 import qualified Sequelize as Se
@@ -65,6 +66,13 @@ deleteById (Kernel.Types.Id.Id driverHomeLocId) = deleteWithKV [Se.Is BeamDHL.id
 
 deleteByDriverId :: MonadFlow m => Id Driver -> m ()
 deleteByDriverId (Kernel.Types.Id.Id driverId) = deleteWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
+
+updateHomeLocationById :: MonadFlow m => Id Domain.DriverHomeLocation -> Domain.DriverHomeLocation -> m ()
+updateHomeLocationById homeLocationId driverHomeLocation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamDHL.lat driverHomeLocation.lat, Se.Set BeamDHL.lon driverHomeLocation.lon, Se.Set BeamDHL.address driverHomeLocation.address, Se.Set BeamDHL.tag driverHomeLocation.tag, Se.Set BeamDHL.updatedAt now]
+    [Se.Is BeamDHL.id $ Se.Eq $ getId homeLocationId]
 
 instance FromTType' BeamDHL.DriverHomeLocation Domain.DriverHomeLocation where
   fromTType' BeamDHL.DriverHomeLocationT {..} = do

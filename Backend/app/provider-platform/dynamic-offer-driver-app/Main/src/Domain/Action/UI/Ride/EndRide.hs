@@ -208,7 +208,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     driverGoHomeReq <- QDGR.findById ghrId >>= fromMaybeM (InternalError "DriverGoHomeRequest Not found")
     let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
     routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
-    driverHomeDist <- fromMaybeM (InternalError "Could not get distance from google Directions API") (routesResp & ((.distance) . head))
+    driverHomeDist <- fromMaybeM (InternalError "Could not get distance from google Directions API") (routesResp & ((.distance) . head)) --The default case should Ideally never happen unless Directions API fails to return distance.
     if driverHomeDist.getMeters <= 3000 --config
       then CQDGR.deactivateDriverGoHomeRequest driverId (Just DDGR.SUCCESS)
       else CQDGR.resetDriverGoHomeRequest driverId

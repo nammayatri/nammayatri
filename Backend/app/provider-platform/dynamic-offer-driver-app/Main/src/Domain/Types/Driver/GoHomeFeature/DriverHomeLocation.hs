@@ -25,6 +25,9 @@ data DriverHomeLocation = DriverHomeLocation
     driverId :: Id Person,
     lat :: Double,
     lon :: Double,
+    address :: Text,
+    tag :: Text,
+    updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
   deriving (Generic, HasCoordinates)
@@ -32,7 +35,9 @@ data DriverHomeLocation = DriverHomeLocation
 data DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
   { id :: Id DriverHomeLocation,
     lat :: Double,
-    lon :: Double
+    lon :: Double,
+    address :: Text,
+    tag :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 

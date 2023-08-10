@@ -42,6 +42,8 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
@@ -87,7 +89,7 @@ buildStartRideHandle merchantId = do
       }
 
 driverStartRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, CacheFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -98,7 +100,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, CacheFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -109,7 +111,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, CacheFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -148,6 +150,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
+  CQDGR.setDriverGoHomeIsOnRide driverId
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW

@@ -556,6 +556,8 @@ data DriverHomeLocationError
   = DriverHomeLocationNotFound Text
   | DriverHomeLocationDoesNotExist Text
   | DriverHomeLocationLimitReached
+  | DriverHomeLocationUpdateWhileActiveError
+  | DriverHomeLocationDeleteWhileActiveError
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverHomeLocationError
@@ -565,16 +567,22 @@ instance IsBaseError DriverHomeLocationError where
     DriverHomeLocationNotFound driverHomeLocationId -> Just $ "Driver home location with id \"" <> show driverHomeLocationId <> "\" not found."
     DriverHomeLocationDoesNotExist driverHomeLocationId -> Just $ "No driver home location matches passed data \"<>" <> show driverHomeLocationId <> "\"."
     DriverHomeLocationLimitReached -> Just "Driver home location limit already reached."
+    DriverHomeLocationUpdateWhileActiveError -> Just "Cannot Update Driver Home Location while Go To feature is active."
+    DriverHomeLocationDeleteWhileActiveError -> Just "Cannot Delete Driver Home Location while Go To feature is active."
 
 instance IsHTTPError DriverHomeLocationError where
   toErrorCode = \case
     DriverHomeLocationNotFound _ -> "DRIVER_HOME_LOCATION_NOT_FOUND"
     DriverHomeLocationDoesNotExist _ -> "DRIVER_HOME_LOCATION_DOES_NOT_EXIST"
     DriverHomeLocationLimitReached -> "DRIVER_HOME_LOCATION_LIMIT_REACHED"
+    DriverHomeLocationUpdateWhileActiveError -> "DRIVER_HOME_LOCATION_UPDATE_WHILE_ACTIVE_ERROR"
+    DriverHomeLocationDeleteWhileActiveError -> "DRIVER_HOME_LOCATION_DELETE_WHILE_ACTIVE_ERROR"
   toHttpCode = \case
     DriverHomeLocationNotFound _ -> E500
     DriverHomeLocationDoesNotExist _ -> E400
     DriverHomeLocationLimitReached -> E400
+    DriverHomeLocationUpdateWhileActiveError -> E400
+    DriverHomeLocationDeleteWhileActiveError -> E400
 
 instance IsAPIError DriverHomeLocationError
 

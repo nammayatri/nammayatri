@@ -95,7 +95,7 @@ findAllRidesByDriverId ::
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
 
 findSuccRideByGoHomeRequestId :: (L.MonadFlow m, Log m) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
-findSuccRideByGoHomeRequestId (Id ghrId) = findOneWithKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Not $ Se.Eq DRide.COMPLETED]] -- To Be added
+findSuccRideByGoHomeRequestId (Id ghrId) = findOneWithKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] -- To Be added
 
 findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]

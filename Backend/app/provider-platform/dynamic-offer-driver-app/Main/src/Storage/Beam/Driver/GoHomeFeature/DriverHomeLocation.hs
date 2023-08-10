@@ -49,6 +49,9 @@ data DriverHomeLocationT f = DriverHomeLocationT
     driverId :: B.C f Text,
     lat :: B.C f Double,
     lon :: B.C f Double,
+    address :: B.C f Text,
+    tag :: B.C f Text,
+    updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -81,6 +84,9 @@ driverHomeLocationTMod =
       driverId = B.fieldNamed "driver_id",
       lat = B.fieldNamed "lat",
       lon = B.fieldNamed "lon",
+      address = B.fieldNamed "home_address",
+      tag = B.fieldNamed "tag",
+      updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
 

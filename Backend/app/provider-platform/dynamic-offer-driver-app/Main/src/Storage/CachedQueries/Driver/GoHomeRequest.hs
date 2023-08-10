@@ -7,7 +7,6 @@ import Data.Text (pack)
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.Person as DP
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.App (MonadFlow)
@@ -15,6 +14,7 @@ import Kernel.Types.Common (MonadTime (getCurrentTime), generateGUID)
 import Kernel.Types.Id (Id)
 import Kernel.Types.SlidingWindowCounters (PeriodType (Days))
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, getLocalCurrentTime, secondsToNominalDiffTime)
+import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.SlidingWindowCounters (incrementPeriod)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as BeamDHR
@@ -33,13 +33,13 @@ getDriverGoHomeRequestInfo driverId = do
     Just ghrData -> do
       if fromMaybe False $ liftM2 (||) (ghrData.validTill <&> (> currTime)) (pure ghrData.isOnRide)
         then return ghrData
-        else checkInvalidReqData ghrData currTime ghkey -- OnRide Condition
+        else checkInvalidReqData ghrData currTime ghkey driverId -- OnRide Condition
     Nothing -> do
       Hedis.setExp ghkey (templateGoHomeData Nothing 2 Nothing Nothing False Nothing currTime) expTime
       return $ templateGoHomeData Nothing 2 Nothing Nothing False Nothing currTime
 
-checkInvalidReqData :: (CacheFlow m r, L.MonadFlow m) => CachedGoHomeRequest -> UTCTime -> Text -> m CachedGoHomeRequest
-checkInvalidReqData ghrData currTime ghkey = do
+checkInvalidReqData :: (CacheFlow m r, MonadFlow m) => CachedGoHomeRequest -> UTCTime -> Text -> Id DP.Driver -> m CachedGoHomeRequest
+checkInvalidReqData ghrData currTime ghkey driverId = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   if ghrData.expiryTime > currTime
     then case ghrData.validTill of
@@ -48,14 +48,16 @@ checkInvalidReqData ghrData currTime ghkey = do
         succRide <- Ride.findSuccRideByGoHomeRequestId ghrId
         if isJust succRide
           then do
-            Hedis.setExp ghkey (templateGoHomeData Nothing (ghrData.cnt - 1) Nothing Nothing False (Just ghrData.expiryTime) currTime) expTime
+            deactivateDriverGoHomeRequest driverId (Just SUCCESS)
             return (templateGoHomeData Nothing (ghrData.cnt - 1) Nothing Nothing False (Just ghrData.expiryTime) currTime)
           else do
-            Hedis.setExp ghkey (templateGoHomeData Nothing ghrData.cnt Nothing Nothing False (Just ghrData.expiryTime) currTime) expTime
+            logDebug "Driver Deactivating GoHomeRequest"
+            deactivateDriverGoHomeRequest driverId (Just FAILED)
             return (templateGoHomeData Nothing ghrData.cnt Nothing Nothing False (Just ghrData.expiryTime) currTime)
       Nothing -> do
         return ghrData
     else do
+      whenJust (ghrData.driverGoHomeRequestId) BeamDHR.finishWithFailure --Failing it as a default case as it's already a new day and old count does not matter.
       Hedis.setExp ghkey (templateGoHomeData Nothing 2 Nothing Nothing False Nothing currTime) expTime
       return $ templateGoHomeData Nothing 2 Nothing Nothing False Nothing currTime
 
@@ -67,7 +69,7 @@ templateGoHomeData stat count vTill ghrId isOnRde expiryTime currTime =
       validTill = vTill,
       driverGoHomeRequestId = ghrId,
       isOnRide = isOnRde,
-      expiryTime = fromMaybe (addUTCTime 0 (incrementPeriod Days currTime)) expiryTime
+      expiryTime = fromMaybe (incrementPeriod Days currTime) expiryTime
     }
 
 activateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r) => Id DP.Driver -> DDHL.DriverHomeLocation -> m ()
@@ -107,10 +109,12 @@ deactivateDriverGoHomeRequest driverId mbStatus = do
       BeamDHR.finishSuccessfully driverGoHomeReqId
       Hedis.setExp ghKey (templateGoHomeData Nothing (ghInfo.cnt - 1) Nothing Nothing False (Just ghInfo.expiryTime) currTime) expTime
     Just FAILED -> do
+      logDebug "Here:- inside deactivate driver go home request"
       BeamDHR.finishWithFailure driverGoHomeReqId
       Hedis.setExp ghKey (templateGoHomeData Nothing ghInfo.cnt Nothing Nothing False (Just ghInfo.expiryTime) currTime) expTime
     Nothing -> do
       succRide <- Ride.findSuccRideByGoHomeRequestId driverGoHomeReqId
+      logDebug $ "Seccess ride stat :" <> show succRide
       if isJust succRide
         then do
           BeamDHR.finishSuccessfully driverGoHomeReqId
@@ -126,3 +130,19 @@ resetDriverGoHomeRequest driverId = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   ghInfo <- getDriverGoHomeRequestInfo driverId
   Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt (Just $ addUTCTime 1800 currTime) ghInfo.driverGoHomeRequestId False (Just ghInfo.expiryTime) currTime) expTime
+
+increaseDriverGoHomeRequestCount :: (MonadFlow m, CacheFlow m r) => Id DP.Driver -> m ()
+increaseDriverGoHomeRequestCount driverId = do
+  currTime <- getLocalCurrentTime 19800
+  let ghKey = makeGoHomeReqKey driverId
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  ghInfo <- getDriverGoHomeRequestInfo driverId
+  Hedis.setExp ghKey (templateGoHomeData ghInfo.status (ghInfo.cnt + 1) ghInfo.validTill ghInfo.driverGoHomeRequestId ghInfo.isOnRide (Just ghInfo.expiryTime) currTime) expTime
+
+setDriverGoHomeIsOnRide :: (MonadFlow m, CacheFlow m r) => Id DP.Driver -> m ()
+setDriverGoHomeIsOnRide driverId = do
+  currTime <- getLocalCurrentTime 19800
+  let ghKey = makeGoHomeReqKey driverId
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  ghInfo <- getDriverGoHomeRequestInfo driverId
+  Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt ghInfo.validTill ghInfo.driverGoHomeRequestId True (Just ghInfo.expiryTime) currTime) expTime

@@ -115,15 +115,17 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
             dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
             driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
             QDGR.updateCancellationCount dghReqId (driverGoHomeReq.numCancellation + 1)
-            when (driverGoHomeReq.numCancellation < 1) $ -- config cnt - 1
-              QDGR.updateCancellationCount dghReqId (driverGoHomeReq.numCancellation + 1) >> CQDGR.deactivateDriverGoHomeRequest driverId (Just DDGR.SUCCESS)
+            when (driverGoHomeReq.numCancellation == 1) $ do
+              -- config cnt - 1
+              logDebug "HERE inside < 2"
+              CQDGR.deactivateDriverGoHomeRequest driverId (Just DDGR.SUCCESS)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- findDriverLocationId driver.merchantId driverId
-          booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-          disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
+          -- booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+          -- disToPickup <- forM mbLocation $ \location -> do
+          --   pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
-          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId)
+          buildRideCancelationReason currentDriverLocation Nothing (Just driverId) DBCR.ByDriver ride (Just driver.merchantId)
     DashboardRequestorId reqMerchantId -> do
       driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)

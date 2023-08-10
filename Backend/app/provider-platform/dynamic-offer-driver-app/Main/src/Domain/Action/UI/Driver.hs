@@ -12,11 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 
 module Domain.Action.UI.Driver
   ( DriverInformationRes (..),
     GetHomeLocationsRes (..),
     AddHomeLocationReq (..),
+    UpdateHomeLocationReq (..),
     ListDriverRes (..),
     DriverEntityRes (..),
     OnboardDriverReq (..),
@@ -40,6 +42,7 @@ module Domain.Action.UI.Driver
     activateGoHomeFeature,
     deactivateGoHomeFeature,
     addHomeLocation,
+    updateHomeLocation,
     getHomeLocations,
     deleteHomeLocation,
     setActivity,
@@ -426,10 +429,14 @@ data DriverTxnInfo = DriverTxnInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-newtype AddHomeLocationReq = AddHomeLocationReq
-  { position :: LatLong
+data AddHomeLocationReq = AddHomeLocationReq
+  { position :: LatLong,
+    address :: Text,
+    tag :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+type UpdateHomeLocationReq = AddHomeLocationReq
 
 newtype GetHomeLocationsRes = GetHomeLocationsRes
   { locations :: [DDHL.DriverHomeLocationAPIEntity]
@@ -603,7 +610,7 @@ activateGoHomeFeature (driverId, _) driverHomeLocationId = do
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
   whenM (liftM2 (||) (return $ isJust dghInfo.status) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
-  unlessM (liftM2 (&&) (return $ dghInfo.cnt > 0) ((< 2) <$> QDGR.todaySuccessCount driverId)) $ throwError DriverGoHomeRequestDailyUsageLimitReached
+  unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
   activateDriverGoHomeRequest driverId driverHomeLocation
   --QDGR.create =<< buildDriverGoHomeRequest driverHomeLocation
@@ -642,19 +649,37 @@ addHomeLocation (driverId, _) req = do
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   oldHomeLocations <- QDHL.findAllByDriverId driverId
   unless (length oldHomeLocations < 5) $ throwError DriverHomeLocationLimitReached
-  QDHL.create =<< buildDriverHomeLocation
+  QDHL.create =<< buildDriverHomeLocation driverId req
   pure APISuccess.Success
-  where
-    buildDriverHomeLocation = do
-      id <- generateGUID
-      now <- getCurrentTime
-      return $
-        DDHL.DriverHomeLocation
-          { lat = req.position.lat,
-            lon = req.position.lon,
-            createdAt = now,
-            ..
-          }
+
+buildDriverHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> AddHomeLocationReq -> m DDHL.DriverHomeLocation
+buildDriverHomeLocation driverId req = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DDHL.DriverHomeLocation
+      { lat = req.position.lat,
+        lon = req.position.lon,
+        address = req.address,
+        tag = req.tag,
+        updatedAt = now,
+        createdAt = now,
+        ..
+      }
+
+updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
+updateHomeLocation (driverId, _) homeLocationId req = do
+  _ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInfo.enabled $ throwError DriverAccountDisabled
+  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
+  when (isJust dghInfo.status) $ throwError DriverHomeLocationUpdateWhileActiveError
+  oldHomeLocations <- QDHL.findAllByDriverId driverId
+  let isPresent = filter ((== homeLocationId) . (.id)) oldHomeLocations
+  unless (length isPresent == 1) $ throwError $ DriverHomeLocationDoesNotExist (T.pack "The given driver home location ID is invalid")
+  QDHL.updateHomeLocationById homeLocationId =<< buildDriverHomeLocation driverId req
+  return APISuccess.Success
 
 getHomeLocations :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m GetHomeLocationsRes
 getHomeLocations (driverId, _) = do
@@ -671,6 +696,8 @@ deleteHomeLocation (driverId, _) driverHomeLocationId = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
+  when (isJust dghInfo.status) $ throwError DriverHomeLocationDeleteWhileActiveError
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 

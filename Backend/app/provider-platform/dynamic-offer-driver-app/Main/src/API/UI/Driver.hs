@@ -98,6 +98,11 @@ type API =
                       :> TokenAuth
                       :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
                       :> Delete '[JSON] APISuccess
+                      :<|> "update"
+                      :> TokenAuth
+                      :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
+                      :> ReqBody '[JSON] DDriver.UpdateHomeLocationReq
+                      :> Post '[JSON] APISuccess
                   )
              :<|> "nearbyRideRequest"
                :> ( TokenAuth
@@ -175,6 +180,7 @@ handler =
                       :<|> addHomeLocation
                       :<|> getHomeLocations
                       :<|> deleteHomeLocation
+                      :<|> updateHomeLocation
                   )
              :<|> getNearbySearchRequests
              :<|> offerQuote
@@ -210,6 +216,9 @@ deactivateGoHomeFeature = withFlowHandlerAPI . DDriver.deactivateGoHomeFeature
 
 addHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.AddHomeLocationReq -> FlowHandler APISuccess
 addHomeLocation (personId, driverId) = withFlowHandlerAPI . DDriver.addHomeLocation (personId, driverId)
+
+updateHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> DDriver.UpdateHomeLocationReq -> FlowHandler APISuccess
+updateHomeLocation (personId, driverId) homeLocationId = withFlowHandlerAPI . DDriver.updateHomeLocation (personId, driverId) homeLocationId
 
 getHomeLocations :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.GetHomeLocationsRes
 getHomeLocations = withFlowHandlerAPI . DDriver.getHomeLocations
