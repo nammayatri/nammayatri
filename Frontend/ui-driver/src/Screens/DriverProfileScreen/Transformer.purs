@@ -65,8 +65,3 @@ getChipRailArray (DriverSummary summary) lang totalDistanceTravelled =
         }
       ]
     )
-
--- getPeriodType :: String -> String TODO :: Add translation Part
--- getPeriodType = case _ of 
---   "new" -> "New"
---   "year" -> getString YEAR

@@ -68,7 +68,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (cleverTapAPI != null) {
             cleverTapAPI.pushFcmRegistrationId(newToken,true);
         }
-        SharedPreferences sharedPref = this.getSharedPreferences(
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
                 this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString("FCM_TOKEN", newToken);
@@ -164,7 +164,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         }
                     }
 
-                    SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     String notificationType = (String) payload.get("notification_type");
                     stopChatService(notificationType, sharedPref);
                     String key = getString(R.string.service);
@@ -349,7 +349,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     @SuppressLint("StaticFieldLeak")
     private void updateFCMToken(final String deviceToken) {
-        SharedPreferences sharedPref = this.getSharedPreferences(
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
                 this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         String baseUrl = sharedPref.getString("BASE_URL", "null");
@@ -415,7 +415,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void startWidgetService(String widgetMessage, JSONObject data, JSONObject payload) {
-        SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
         String key = getString(R.string.service);
         String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
@@ -432,7 +432,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void startMainActivity() {
-        SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String key = getString(R.string.service);
         String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
         if (merchantType.equals("DRIVER") && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {

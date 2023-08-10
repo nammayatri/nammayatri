@@ -1442,7 +1442,7 @@ export const startLottieProcess = function (configObj) {
   if (JBridge.isFilePresentDeep) {
     lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
   } else {
-    lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    lottieName = isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
   }
   try {
     if (window.__OS == "IOS") {
@@ -1454,6 +1454,14 @@ export const startLottieProcess = function (configObj) {
     return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType);
   }
 };
+
+function isFilePresent(fileName) {
+   if (window.__OS == "IOS") {
+      return JBridge.isFilePresent(fileName) == "0" ? false : true;
+   } else {
+      return JBridge.isFilePresent(fileName);
+   }
+}
 
 export const methodArgumentCount = function (functionName) {
   try {

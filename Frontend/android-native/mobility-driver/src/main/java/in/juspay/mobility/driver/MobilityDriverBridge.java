@@ -127,7 +127,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     private static String storeDriverCallBack = null;
     private static String storeUpdateTimeCallBack = null;
     private static String storeImageUploadCallBack = null;
-    private static CallBack callBack;
+    private CallBack callBack;
 
     public MobilityDriverBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -175,7 +175,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     public void registerCallBacks() {
         if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
-            MobilityDriverBridge.callBack = new CallBack() {
+            callBack = new CallBack() {
                 @Override
                 public void customerCallBack(String notificationType) {
                     Log.i(OTHERS, "No Customer CallBack Required");
@@ -213,14 +213,30 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
-    @JavascriptInterface
     public void onDestroy() {
+        Log.e("onDestroy","onDestroy");
         NotificationUtils.deRegisterCallback(callBack);
         Utils.deRegisterCallback(callBack);
         DefaultMediaPlayerControl.mediaPlayer.reset();
         if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
             OverlaySheetService.registerCallback(callBack);
         }
+        // Clearing all static variables
+        // Media Utils
+        youTubePlayerView = null;
+        youtubePlayer = null;
+        videoDuration = 0;
+        audioPlayers = null;
+        audioRecorder = null;
+
+        // Others
+        isUploadPopupOpen = false;
+
+        // CallBacks
+        storeDriverCallBack = null;
+        storeUpdateTimeCallBack = null;
+        storeImageUploadCallBack = null;
+        callBack = null;
     }
     //endregion
 
@@ -351,7 +367,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void pauseMediaPlayer() {
-        DefaultMediaPlayerControl.mediaPlayer.pause();
+        if (DefaultMediaPlayerControl.mediaPlayer.isPlaying()) {
+            DefaultMediaPlayerControl.mediaPlayer.pause();
+        }
         for (MediaPlayerView audioPlayer : audioPlayers) {
             audioPlayer.onPause(audioPlayer.getPlayer());
         }

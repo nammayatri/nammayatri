@@ -105,8 +105,11 @@ public class MainActivity extends AppCompatActivity {
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+            if (key != null && key.equals("LANGUAGE_KEY")) {
+                MobilityCommonBridge.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
+            }
             if (key != null && key.equals("REGISTERATION_TOKEN")) {
-                String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+                String token = sharedPreferences.getString("REGISTERATION_TOKEN", "null");
                 if (token.equals("__failed")) {
                     final PackageManager pm = getApplicationContext().getPackageManager();
                     final Intent intent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
@@ -115,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
                             activity.finishAffinity();// Finishes all activities.
                             activity.startActivity(intent);
                         } else {
-                            sharedPref.edit().clear().apply();
+                            sharedPreferences.edit().clear().apply();
                         }
                     } catch (NullPointerException e) {
                         e.printStackTrace();
@@ -124,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
             }
             // Update Driver status in Local Storage
             if (key != null && key.equals("DRIVER_STATUS")) {
-                String status = sharedPref.getString("DRIVER_STATUS", "null");
+                String status = sharedPreferences.getString("DRIVER_STATUS", "null");
                 WorkManager mWorkManager = WorkManager.getInstance(getApplicationContext());
                 if (status.equals("null")) {
                     if (context != null) {
@@ -140,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             }
-            if (key != null && sharedPref.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY"))) {
+            if (key != null && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY"))) {
                 System.out.println("TRIGGERED UPDATE POLLING");
                 Context context = getApplicationContext();
                 Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
@@ -252,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         activity = this;
-        sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
         sharedPref.registerOnSharedPreferenceChangeListener(mListener);
         String key = getResources().getString(R.string.service);
@@ -374,7 +377,7 @@ public class MainActivity extends AppCompatActivity {
         String key = MERCHANT_TYPE;
         String merchantId = key.equals("USER") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
         String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
-        SharedPreferences sharedPreff = this.getSharedPreferences(
+        SharedPreferences sharedPreff = getApplicationContext().getSharedPreferences(
                 activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreff.edit();
         editor.putString("MERCHANT_ID", merchantId);
@@ -625,7 +628,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void countAppUsageDays() {
         Date currentDate = new Date();
-        SharedPreferences sharedPref = this.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         long millis = sharedPref.getLong("PREVIOUS_USED_DATE", 0L);
         if (millis == 0L) {
             sharedPref.edit().putLong("PREVIOUS_USED_DATE", currentDate.getTime()).apply();

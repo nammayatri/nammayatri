@@ -221,13 +221,11 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
-  }
-  else if (event == "onTimeChanged"){
-    if(window.dateCallback != undefined) window.dateCallback();
-    else purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
-  } else if (event == "onDestroy") {
-    if (JBridge.onDestroy){
-      JBridge.onDestroy();
+  } else if (event == "onTimeChanged") {
+    if(window.dateCallback != undefined) {
+      window.dateCallback();
+    } else {
+      purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
     }
   }  
 }
