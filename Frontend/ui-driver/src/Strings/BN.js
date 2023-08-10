@@ -635,5 +635,9 @@ const bengaliStrings = {
 	LANGUAGES_SPOKEN : "কথিত ভাষা",
   	VIEW_PAYMENT_HISTORY : "পেমেন্ট ইতিহাস দেখুন",
 	RIDE_TYPE : "রাইড টাইপ",
-	PLACE_CALL_REQUEST : "স্থান কল অনুরোধ"
-	}
+	PLACE_CALL_REQUEST : "স্থান কল অনুরোধ",
+	RC_STATUS : "আরসি স্ট্যাটাস",
+	RATED_BY : "দ্বারা রেট",
+	USERS : "ব্যবহারকারী",
+	MONTHS : "মাস"
+}

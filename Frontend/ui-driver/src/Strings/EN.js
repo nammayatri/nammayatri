@@ -629,5 +629,9 @@ const englishStrings = {
   LANGUAGES_SPOKEN : "Languages spoken",
   VIEW_PAYMENT_HISTORY : "View payment history",
   RIDE_TYPE : "Ride Type",
-  PLACE_CALL_REQUEST : "Place Call Request"
+  PLACE_CALL_REQUEST : "Place Call Request",
+  RC_STATUS : "Rc Status",
+  RATED_BY : "Rated By",
+  USERS : "Users",
+  MONTHS : "Months"
 }

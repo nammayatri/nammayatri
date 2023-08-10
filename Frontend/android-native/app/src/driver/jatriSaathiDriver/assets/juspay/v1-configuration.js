@@ -75,6 +75,17 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "যাত্রী সাথীতে দূরত্ব ভ্রমণ",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।"
     },
+    "tamilStrings": {
+      "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
+      "ABOUT_TEXT": "யாத்ரி சதி பார்ட்னர் என்பது ஓட்டுநர்களை ரைடர்களுடன் இணைக்க ஒரு திறந்த தளமாகும். முன்மொழியப்பட்ட விரும்பிய கட்டணங்களுடன் ரைடர்களைக் கண்டறிவதைப் பயன்பாடானது ஓட்டுநர்களுக்கு வசதியாக்குகிறது. சவாரி அடிப்படையிலான கமிஷன் இல்லை, மாதாந்திர சந்தா வடிவத்தில் சிறிய தொகையை செலுத்துங்கள்",
+      "NEED_IT_TO_ENABLE_LOCATION": "பயன்பாடு மூடப்பட்டிருந்தாலும் அல்லது பயன்பாட்டில் இல்லாவிட்டாலும் கூட, இயக்கி தற்போதைய இருப்பிடத்தைக் கண்காணிக்க உங்கள் இருப்பிடத்தைப் பகிர்வதை இயக்க, யாத்ரி சதி டிரைவர் இருப்பிடத் தரவைச் சேகரிக்கிறார்.",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only West Bengal registered number",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "ஜாத்ரி சதி ஆதரவுக் குழுவிற்கு அழைப்பு விடுக்க உள்ளீர்கள். தொடர வேண்டுமா?",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "உங்கள் இருப்பிடம், டாக்சிகள் மூலம் அருகிலுள்ள அனைத்தையும் வரைபடமாக்குவதற்கும், விரைவான பயணத்தைப் பெறுவதற்கும் எங்கள் அமைப்புக்கு உதவுகிறது.",
+      "EARNED_ON_APP" : "YS இல் சம்பாதித்தது",
+      "TRAVELLED_ON_APP" : "Yatri Sathitraல் பயணம்",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் பிரச்சினையை விவரிக்கவும். யாத்ரி சதி அதை 24 மணி நேரத்திற்குள் தீர்க்க முயற்சிப்பார்."
+    },
     "logs": ["JUSPAY","FIREBASE"]
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"

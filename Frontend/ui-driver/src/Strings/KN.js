@@ -599,5 +599,9 @@ const kannadaStrings = {
   LANGUAGES_SPOKEN : "ಮಾತನಾಡುವ ಭಾಷೆಗಳು",
   VIEW_PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸವನ್ನು ವೀಕ್ಷಿಸಿ",
   RIDE_TYPE : "ರೈಡ್ ಪ್ರಕಾರ",
-  PLACE_CALL_REQUEST : "ಕರೆ ವಿನಂತಿಯನ್ನು ಇರಿಸಿ"
+  PLACE_CALL_REQUEST : "ಕರೆ ವಿನಂತಿಯನ್ನು ಇರಿಸಿ",
+  RC_STATUS : "RC ಸ್ಥಿತಿ",
+  RATED_BY : "ಇವರಿಂದ ರೇಟ್ ಮಾಡಲಾಗಿದೆ",
+  USERS : "ಬಳಕೆದಾರರು",
+  MONTHS : "ತಿಂಗಳುಗಳು"
 }

@@ -595,5 +595,9 @@ const mlStrings = {
   LANGUAGES_SPOKEN : "സംസാരിക്കുന്ന ഭാഷകൾ",
   VIEW_PAYMENT_HISTORY : "പേയ്മെന്റ് ചരിത്രം കാണുക",
   RIDE_TYPE : "റൈഡ് തരം",
-  PLACE_CALL_REQUEST : "കോൾ അഭ്യർത്ഥന സ്ഥാപിക്കുക"
+  PLACE_CALL_REQUEST : "കോൾ അഭ്യർത്ഥന സ്ഥാപിക്കുക",
+  RC_STATUS : "RC നില",
+  RATED_BY : "റേറ്റുചെയ്തത്",
+  USERS : "ഉപയോക്താക്കൾ",
+  MONTHS : "മാസങ്ങൾ"
 }
