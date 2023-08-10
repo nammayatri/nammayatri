@@ -35,6 +35,7 @@ import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..)) 
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -97,6 +98,7 @@ countryCodeCaptureView push config  =
     , gravity CENTER
     , cornerRadius config.countryCodeCaptureConfig.cornerRadius
     , onClick  push $ const $ (if not config.countryCodeField.countryCodeOptionExpended then  ShowOptions else CloseOptions)
+    , clickable $ (getMerchant FunctionCall) == (YATRISATHI)
     ] $
     [ 
       textView $
@@ -112,6 +114,7 @@ countryCodeCaptureView push config  =
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity RIGHT
+          , visibility if (getMerchant FunctionCall) == (YATRISATHI) then VISIBLE else GONE
           ]
           [ imageView
             [ imageWithFallback if config.countryCodeField.countryCodeOptionExpended then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
