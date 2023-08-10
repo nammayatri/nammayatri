@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
@@ -59,11 +60,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DCR.CancellationStage
 
 instance FromBackendRow Postgres DCR.CancellationStage
 
-instance FromField DCR.CancellationReasonCode where
-  fromField = fromFieldEnum
+deriving newtype instance FromField DCR.CancellationReasonCode
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DCR.CancellationReasonCode where
-  sqlValueSyntax = autoSqlValueSyntax
+deriving newtype instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DCR.CancellationReasonCode
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DCR.CancellationReasonCode
 
