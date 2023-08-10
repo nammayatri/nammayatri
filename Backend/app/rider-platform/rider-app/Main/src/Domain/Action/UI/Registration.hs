@@ -18,6 +18,7 @@ module Domain.Action.UI.Registration
     ResendAuthRes,
     AuthVerifyReq (..),
     AuthVerifyRes (..),
+    OTPChannel (..),
     auth,
     signatureAuth,
     verify,
@@ -74,6 +75,7 @@ import Tools.Metrics
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp
+import qualified Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
@@ -87,8 +89,8 @@ data AuthReq = AuthReq
     lastName :: Maybe Text,
     email :: Maybe Text,
     language :: Maybe Maps.Language,
-    gender :: Maybe SP.Gender
-    -- otpChannel :: Maybe OTPChannel
+    gender :: Maybe SP.Gender,
+    otpChannel :: Maybe OTPChannel
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -107,6 +109,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "email"
         <*> obj .:? "language"
         <*> obj .:? "gender"
+        <*> obj .:? "otpChannel"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -136,11 +139,11 @@ data AuthRes = AuthRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- Need to have discussion around this
--- data OTPChannel = SMS | WHATSAPP
---   deriving (Generic, Show, Enum, Eq, FromJSON, ToJSON, ToSchema)
+data OTPChannel = SMS | WHATSAPP
+  deriving (Generic, Show, Enum, Eq, FromJSON, ToJSON, ToSchema)
 
--- defaultOTPChannel :: OTPChannel
--- defaultOTPChannel = SMS
+defaultOTPChannel :: OTPChannel
+defaultOTPChannel = SMS
 
 type ResendAuthRes = AuthRes
 
@@ -186,7 +189,7 @@ auth req mbBundleVersion mbClientVersion = do
   let countryCode = req.mobileCountryCode
       mobileNumber = req.mobileNumber
       notificationToken = req.notificationToken
-  -- otpChannel = fromMaybe defaultOTPChannel req.otpChannel
+      otpChannel = fromMaybe defaultOTPChannel req.otpChannel
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
@@ -212,15 +215,22 @@ auth req mbBundleVersion mbClientVersion = do
         let otpHash = smsCfg.credConfig.otpHash
             phoneNumber = countryCode <> mobileNumber
             sender = smsCfg.sender
-        withLogTag ("personId_" <> getId person.id) $ do
-          message <-
-            MessageBuilder.buildSendOTPMessage merchant.id $
-              MessageBuilder.BuildSendOTPMessageReq
-                { otp = otpCode,
-                  hash = otpHash
-                }
-          Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
-            >>= Sms.checkSmsResult
+        case otpChannel of
+          SMS ->
+            withLogTag ("personId_" <> getId person.id) $ do
+              message <-
+                MessageBuilder.buildSendOTPMessage merchant.id $
+                  MessageBuilder.BuildSendOTPMessageReq
+                    { otp = otpCode,
+                      hash = otpHash
+                    }
+              Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+                >>= Sms.checkSmsResult
+          WHATSAPP ->
+            withLogTag ("personId_" <> getId person.id) $ do
+              _ <- callWhatsappOptApi phoneNumber person.id merchant.id (Just Whatsapp.OPT_IN)
+              result <- Whatsapp.whatsAppOtpApi person.merchantId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
+              when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
   return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
 
