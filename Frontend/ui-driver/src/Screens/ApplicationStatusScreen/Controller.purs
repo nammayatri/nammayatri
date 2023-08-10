@@ -31,13 +31,13 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, pure, unit, bind, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
+import Prelude (class Show, pure, show, unit, bind, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (ApplicationStatusScreenState)
 import Services.API(DriverRegistrationStatusResp(..))
-import Services.Config (getSupportNumber)
+import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), getValueToLocalStore)
 
 instance showAction :: Show Action where
@@ -117,8 +117,10 @@ eval (ReTry docType) state = case docType of
                                 _ -> continue state
 eval Logout state = exit LogoutAccount
 eval SupportCall  state = continueWithCmd state [do
-  _ <- liftEffect $ case getMerchant FunctionCall of
-    NAMMAYATRI -> openWhatsAppSupport "+918618963188"
+  let merchant = getMerchant FunctionCall
+  _ <- case merchant of
+    NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+    YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure Dummy
   ]

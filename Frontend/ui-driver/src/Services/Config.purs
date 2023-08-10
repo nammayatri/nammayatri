@@ -104,3 +104,10 @@ getSupportNumber _ = case getEnv of
                         UAT  -> ""
                         PROD -> ""
                         _ -> ""
+
+getWhatsAppSupportNo :: String -> String
+getWhatsAppSupportNo _ = case getEnv of
+                        DEV  -> ""
+                        UAT  -> ""
+                        PROD -> ""
+                        _ -> ""
