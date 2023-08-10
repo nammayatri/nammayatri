@@ -252,7 +252,7 @@ public class ChatService extends Service {
             if (_sentBy.equals("Driver")) {
                 String appName = getApplicationContext().getResources().getString(R.string.app_name);
                 if (appName.equals("Yatri Driver"))
-                    sentBy = "yatripartner";
+                    sentBy = "yatriprovider";
                 else if(appName.equals("Jatri Sathi Driver"))
                     sentBy = "jatrisaathidriver";
                 else
