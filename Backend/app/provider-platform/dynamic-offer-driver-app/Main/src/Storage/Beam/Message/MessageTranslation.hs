@@ -24,6 +24,7 @@ import qualified Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
@@ -58,6 +59,12 @@ instance ModelMeta MessageTranslationT where
   modelFieldModification = messageTranslationTMod
   modelTableName = "message_translation"
   modelSchemaName = Just "atlas_driver_offer_bpp"
+
+messageTranslationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity MessageTranslationT)
+messageTranslationTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "message_translation"
+    <> B.modifyTableFields messageTranslationTMod
 
 type MessageTranslation = MessageTranslationT Identity
 

@@ -25,7 +25,9 @@ import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry
+import Storage.Beam.Message.Message
 import Storage.Beam.Message.MessageReport
+import Storage.Beam.Message.MessageTranslation
 import Storage.Beam.Person
 import Storage.Beam.QuoteSpecialZone
 import Storage.Beam.Rating (RatingT, ratingTable)
@@ -58,7 +60,9 @@ atlasDB =
         quoteSpecialZone = quoteSpecialZoneTable,
         messageReport = messageReportTable,
         bookingCancellationReason = bookingCancellationReasonTable,
-        rating = ratingTable
+        rating = ratingTable,
+        message = messageTable,
+        messageTranslation = messageTranslationTable
       }
 
 data AtlasDB f = AtlasDB
@@ -82,6 +86,8 @@ data AtlasDB f = AtlasDB
     quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
     messageReport :: f (B.TableEntity MessageReportT),
     bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),
-    rating :: f (B.TableEntity RatingT)
+    rating :: f (B.TableEntity RatingT),
+    message :: f (B.TableEntity MessageT),
+    messageTranslation :: f (B.TableEntity MessageTranslationT)
   }
   deriving (Generic, B.Database be)

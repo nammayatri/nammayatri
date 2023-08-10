@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Message.Message as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -63,6 +64,12 @@ instance ModelMeta MessageT where
   modelFieldModification = messageTMod
   modelTableName = "message"
   modelSchemaName = Just "atlas_driver_offer_bpp"
+
+messageTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity MessageT)
+messageTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "message"
+    <> B.modifyTableFields messageTMod
 
 type Message = MessageT Identity
 
