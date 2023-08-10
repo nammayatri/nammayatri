@@ -546,9 +546,9 @@ additionalRcsView state push config =
             ]
         ]
 
-getRcDetailsForInactiveRcs config  = 
-  [ { key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
-  , { key : (getString MODEL_NAME) , value : Just config.model, action :  NoAction , isEditable : false}
+getRcDetailsForInactiveRcs config  = [
+    --{ key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
+    { key : (getString MODEL_NAME) , value : Just config.model, action :  NoAction , isEditable : false}
   , { key : (getString COLOUR) , value : Just config.color, action :NoAction , isEditable : false } 
   , { key : "" , value : Just (getString EDIT_RC), action : UpdateRC config.value false , isEditable : false } ]
 
