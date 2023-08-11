@@ -11,39 +11,56 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Plan where
 
 import Domain.Types.Merchant
 import Domain.Types.Plan
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Types.Id as KTI
+import qualified Sequelize as Se
+import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 import Storage.Tabular.Plan
 
-create :: Plan -> SqlDB ()
-create = Esq.create
+-- create :: Plan -> SqlDB ()
+-- create = Esq.create
 
-findByIdAndPaymentMode :: Transactionable m => Id Plan -> PaymentMode -> m (Maybe Plan)
-findByIdAndPaymentMode planId paymentMode = Esq.findOne $ do
-  plan <- from $ table @PlanT
-  where_ $
-    plan ^. PlanTId ==. val (toKey planId)
-      &&. plan ^. PlanPaymentMode ==. val paymentMode
-  return plan
+create :: (L.MonadFlow m, Log m) => Plan -> m ()
+create = createWithKV
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe Plan)
-findByMerchantId merchantId = do
-  findOne $ do
-    plan <- from $ table @PlanT
-    where_ $
-      plan ^. PlanMerchantId ==. val (toKey merchantId)
-    return plan
+-- findByIdAndPaymentMode :: Transactionable m => Id Plan -> PaymentMode -> m (Maybe Plan)
+-- findByIdAndPaymentMode planId paymentMode = Esq.findOne $ do
+--   plan <- from $ table @PlanT
+--   where_ $
+--     plan ^. PlanTId ==. val (toKey planId)
+--       &&. plan ^. PlanPaymentMode ==. val paymentMode
+--   return plan
 
-findByMerchantIdAndPaymentMode :: Transactionable m => Id Merchant -> PaymentMode -> m [Plan]
-findByMerchantIdAndPaymentMode merchantId paymentMode = Esq.findAll $ do
-  plan <- from $ table @PlanT
-  where_ $
-    plan ^. PlanMerchantId ==. val (toKey merchantId)
-      &&. plan ^. PlanPaymentMode ==. val paymentMode
-  return plan
+findByIdAndPaymentMode :: (L.MonadFlow m, Log m) => Id Plan -> PaymentMode -> m (Maybe Plan)
+findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamDI.id $ Se.Eq planId, Se.Is BeamDI.paymentMode $ Se.Eq paymentMode]]
+
+-- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe Plan)
+-- findByMerchantId merchantId = do
+--   findOne $ do
+--     plan <- from $ table @PlanT
+--     where_ $
+--       plan ^. PlanMerchantId ==. val (toKey merchantId)
+--     return plan
+
+findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Plan]
+findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamDEFB.merchantId $ Se.Eq merchantId]
+
+-- findByMerchantIdAndPaymentMode :: Transactionable m => Id Merchant -> PaymentMode -> m [Plan]
+-- findByMerchantIdAndPaymentMode merchantId paymentMode = Esq.findAll $ do
+--   plan <- from $ table @PlanT
+--   where_ $
+--     plan ^. PlanMerchantId ==. val (toKey merchantId)
+--       &&. plan ^. PlanPaymentMode ==. val paymentMode
+--   return plan
+
+findByMerchantIdAndPaymentMode :: (L.MonadFlow m, Log m) => Id Merchant -> PaymentMode -> m [Plan]
+findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamDEFB.merchantId $ Se.Eq merchantId, Se.Is BeamDEFB.paymentMode $ Se.Eq paymentMode]]

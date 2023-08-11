@@ -293,6 +293,7 @@ library
       Storage.Beam.DriverOnboarding.Image
       Storage.Beam.DriverOnboarding.OperatingCity
       Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
+      Storage.Beam.DriverPlan
       Storage.Beam.DriverQuote
       Storage.Beam.DriverReferral
       Storage.Beam.DriverStats
@@ -312,6 +313,7 @@ library
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
       Storage.Beam.Geometry
+      Storage.Beam.Invoice
       Storage.Beam.Issue.Comment
       Storage.Beam.Issue.IssueCategory
       Storage.Beam.Issue.IssueOption
@@ -336,6 +338,7 @@ library
       Storage.Beam.MetaData
       Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Person
+      Storage.Beam.Plan
       Storage.Beam.QuoteSpecialZone
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken

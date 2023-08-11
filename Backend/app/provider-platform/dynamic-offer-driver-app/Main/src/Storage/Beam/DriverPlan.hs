@@ -20,12 +20,6 @@
 
 module Storage.Beam.DriverPlan where
 
-import qualified Domain.Types.DriverPlan as Domain
-import Domain.Types.Person (Person)
-import qualified Domain.Types.Plan as DPlan
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import Kernel.Types.Id
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
@@ -38,25 +32,28 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Domain.Types.DriverPlan as Domain
+import Domain.Types.Person (Person)
+import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import EulerHS.Prelude (Generic)
-import Kernel.Prelude hiding (Generic)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
 data DriverPlanT f = DriverPlanT
-    {
-        driverId :: B.C f Text,
-        planId :: B.C f Text,
-        planType :: B.C f DPlan.PaymentMode,
-        mandateId :: B.C f Text Maybe,
-        createdAt :: B.C f UTCTime,
-        updatedAt :: B.C f UTCTime
-    }
-    deriving(Generic, B.Beamable)
-
+  { driverId :: B.C f Text,
+    planId :: B.C f Text,
+    planType :: B.C f DPlan.PaymentMode,
+    mandateId :: B.C f Text Maybe,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
+  }
+  deriving (Generic, B.Beamable)
 
 instance B.Table DriverPlanT where
   data PrimaryKey DriverPlanT f
@@ -99,10 +96,12 @@ psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
 driverPlanToHSModifiers :: M.Map Text (A.Value -> A.Value)
+
 driverFeeToHSModifiers =
   M.empty
 
 driverPlanToPSModifiers :: M.Map Text (A.Value -> A.Value)
+
 driverFeeToPSModifiers =
   M.empty
 
