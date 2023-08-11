@@ -37,7 +37,7 @@ initData = {
     , timerID : ""
     , config : DC.config
     , logField : empty
-    , otpChannel : ""
+    , otpChannel : "SMS"
     },
     props: {
         enterOTP : false,

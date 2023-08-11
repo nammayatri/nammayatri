@@ -32,6 +32,7 @@ to generate this file without the comments in this block.
   , "halogen-vdom"
   , "integers"
   , "maybe"
+  , "monoid-extras"
   , "newtype"
   , "numbers"
   , "otp-reader"
