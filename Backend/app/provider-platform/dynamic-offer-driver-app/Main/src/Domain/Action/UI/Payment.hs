@@ -22,18 +22,20 @@ module Domain.Action.UI.Payment
 where
 
 import Domain.Types.DriverFee
-import qualified Domain.Types.DriverFee as DF
+import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Plan as DP
 import Environment
 -- import qualified EulerHS.Language as L
 
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Payment.Interface (TransactionStatus)
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
-import qualified Kernel.External.Payment.Juspay.Types as Juspay
+import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
@@ -46,91 +48,50 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
-import Storage.CachedQueries.CacheConfig
+import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.Invoice as QIN
+import qualified Storage.Queries.Mandate as QM
 import Tools.Error
-import Tools.Metrics
 import qualified Tools.Payment as Payment
 
 -- create order -----------------------------------------------------
-
-createOrder ::
-  (Id DP.Person, Id DM.Merchant) ->
-  Id DriverFee ->
-  Flow Payment.CreateOrderResp
+createOrder :: (Id DP.Person, Id DM.Merchant) -> Id DriverFee -> Flow Payment.CreateOrderResp
 createOrder (driverId, merchantId) driverFeeId = do
-  driverFee <- B.runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  -- driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
-  when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse $ getId driverFeeId)
-  driver <- B.runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
-  -- driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
-  unless (driver.id == driverId) $ throwError NotAnExecutor
-  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  let driverEmail = fromMaybe "test@juspay.in" driver.email
-  pendingFees <- QDF.findPendingFeesByDriverFeeId driverFee.id >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  let pendingAmount = fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst
-  let createOrderReq =
-        Payment.CreateOrderReq
-          { orderShortId = driverFee.shortId.getShortId,
-            amount = round pendingAmount,
-            customerId = driver.id.getId,
-            customerEmail = driverEmail,
-            customerPhone = driverPhone,
-            paymentPageClientId = "yatrisathi",
-            customerFirstName = Just driver.firstName,
-            customerLastName = driver.lastName
-          }
+  driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing
+  return createOrderResp
 
-  let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
-      commonPersonId = cast @DP.Person @DPayment.Person driver.id
-      orderId = cast @DriverFee @DOrder.PaymentOrder driverFee.id
-      createOrderCall = Payment.createOrder merchantId -- api call
-  DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
-
-getOrder ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
-    EncFlow m r,
-    CoreMetrics m
-  ) =>
-  (Id DP.Person, Id DM.Merchant) ->
-  Id DOrder.PaymentOrder ->
-  m DOrder.PaymentOrderAPIEntity
+getOrder :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
 getOrder (personId, _) orderId = do
   order <- B.runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   -- order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 
-mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
+mkOrderAPIEntity :: DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
   clientAuthToken_ <- decrypt clientAuthToken
   return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}
 
 -- order status -----------------------------------------------------
 
-getStatus ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
-    EncFlow m r,
-    CoreMetrics m
-  ) =>
-  (Id DP.Person, Id DM.Merchant) ->
-  Id DOrder.PaymentOrder ->
-  m DPayment.PaymentStatusResp
+getStatus :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
   paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
-  processPayment merchantId paymentStatus.status (cast orderId)
+  order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  processPayment merchantId (cast order.personId) orderId
+  unless (order.status /= Payment.CHARGED) $ do
+    case paymentStatus of
+      DPayment.MandatePaymentStatus {..} -> processMandate (cast order.personId) DM.ACTIVE mandateStartDate mandateEndDate mandateId mandateMaxAmount
+      _ -> pure ()
   pure paymentStatus
 
 -- webhook ----------------------------------------------------------
@@ -148,24 +109,81 @@ juspayWebhookHandler merchantShortId authData value = do
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc -> do
-      orderStatusContent <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
-      case orderStatusContent of
+      orderStatusResp <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
+      case orderStatusResp of
         Nothing -> throwError $ InternalError "Order Contents not found."
-        Just osc -> do
-          processPayment merchantId osc.order.status (Id osc.order.order_id)
-          pure Ack
+        Just osr -> do
+          case osr of
+            Payment.OrderStatusResp {..} -> do
+              unless (transactionStatus /= Payment.CHARGED) $ do
+                order <- runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+                processPayment merchantId (cast order.personId) order.id
+            Payment.MandateOrderStatusResp {..} -> do
+              unless (transactionStatus /= Payment.CHARGED) $ do
+                order <- runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+                processPayment merchantId (cast order.personId) order.id
+                processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate mandateId mandateMaxAmount
+                processMandateStatus mandateStatus mandateId
+            Payment.MandateStatusResp {..} -> do
+              processMandateStatus status mandateId
+            Payment.BadStatusResp -> pure ()
+      pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
 
-processPayment :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> TransactionStatus -> Id DriverFee -> m ()
-processPayment merchantId orderStatus driverFeeId = do
-  driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
-  driverInfo <- CDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+processPayment :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Flow ()
+processPayment merchantId driverId orderId = do
+  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  unless (orderStatus /= Juspay.CHARGED) $ do
-    Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
-      CDI.updatePendingPayment False driverFee.driverId
-      CDI.updateSubscription True driverFee.driverId
-      -- Esq.runTransaction $ do
-      QDF.updateStatus DF.CLEARED driverFeeId now
-      QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
+  invoices <- runInReplica $ QIN.findAllByInvoiceId (cast orderId)
+  let driverFeeIds = (.driverFeeId) <$> invoices
+  Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
+    CDI.updatePendingPayment False (cast driverId)
+    CDI.updateSubscription True (cast driverId)
+    QDF.updateStatusByIds CLEARED driverFeeIds now
+    QDFS.clearPaymentStatus driverId driverInfo.active
+
+processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Text -> HighPrecMoney -> Flow ()
+processMandate driverId mandateStatus startDate endDate mandateId maxAmount = do
+  Redis.whenWithLockRedis (paymentProcessingLockKey mandateId) 60 $ do
+    mbExistingMandate <- runInReplica $ QM.findById (Id mandateId)
+    case mbExistingMandate of
+      Just mandate -> Esq.runNoTransaction $ QM.updateStatus mandate.id mandateStatus
+      Nothing -> Esq.runTransaction $ QM.create =<< mkMandate
+  Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
+    Esq.runTransaction $ QDP.updateMandateIdByDriverId driverId (Id mandateId)
+  where
+    mkMandate = do
+      now <- getCurrentTime
+      return $
+        DM.Mandate
+          { id = Id mandateId,
+            status = mandateStatus,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+processMandateStatus :: Payment.MandateStatus -> Text -> Flow ()
+processMandateStatus mandateStatus mandateId = do
+  when (mandateStatus == Payment.ACTIVE) $ do
+    driverPlan <- runInReplica $ QDP.findByMandateId (Id mandateId) >>= fromMaybeM (NoCurrentPlanForDriver mandateId)
+    Esq.runTransaction $ do
+      QM.updateStatus (Id mandateId) DM.ACTIVE
+      QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
+    CDI.updateSubscription True (cast driverPlan.driverId)
+    CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
+  when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
+    driverPlan <- runInReplica $ QDP.findByMandateId (Id mandateId) >>= fromMaybeM (NoCurrentPlanForDriver mandateId)
+    Esq.runTransaction $ do
+      QM.updateStatus (Id mandateId) DM.INACTIVE
+      QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
+    CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
+  where
+    castAutoPayStatus = \case
+      Payment.CREATED -> Nothing
+      Payment.ACTIVE -> Just DI.ACTIVE
+      Payment.REVOKED -> Just DI.CANCELLED_PSP
+      Payment.FAILURE -> Nothing
+      Payment.PAUSED -> Just DI.PAUSED_PSP
+      Payment.EXPIRED -> Nothing

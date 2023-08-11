@@ -41,6 +41,12 @@ updateMultiple transaction = do
         PaymentTransactionAmount =. val transaction.amount,
         PaymentTransactionCurrency =. val transaction.currency,
         PaymentTransactionJuspayResponse =. val transaction.juspayResponse,
+        PaymentTransactionMandateStatus =. val transaction.mandateStatus,
+        PaymentTransactionMandateStartDate =. val transaction.mandateStartDate,
+        PaymentTransactionMandateEndDate =. val transaction.mandateEndDate,
+        PaymentTransactionMandateId =. val transaction.mandateId,
+        PaymentTransactionMandateFrequency =. val transaction.mandateFrequency,
+        PaymentTransactionMandateMaxAmount =. val transaction.mandateMaxAmount,
         PaymentTransactionUpdatedAt =. val now
       ]
     where_ $ tbl ^. PaymentTransactionId ==. val transaction.id.getId

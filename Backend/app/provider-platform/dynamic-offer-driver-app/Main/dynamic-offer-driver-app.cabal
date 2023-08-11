@@ -64,6 +64,7 @@ library
       API.UI.OrgAdmin
       API.UI.Payment
       API.UI.Performance
+      API.UI.Plan
       API.UI.Registration
       API.UI.Ride
       API.UI.RideRoute
@@ -137,6 +138,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Performance
+      Domain.Action.UI.Plan
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
@@ -172,6 +174,7 @@ library
       Domain.Types.DriverOnboarding.Image
       Domain.Types.DriverOnboarding.OperatingCity
       Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+      Domain.Types.DriverPlan
       Domain.Types.DriverQuote
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
@@ -189,12 +192,14 @@ library
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.Geometry
+      Domain.Types.Invoice
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
       Domain.Types.LeaderBoardConfig
+      Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.MediaFile
       Domain.Types.Merchant
@@ -212,6 +217,7 @@ library
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.Person
+      Domain.Types.Plan
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -260,6 +266,7 @@ library
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
       SharedLogic.MessageBuilder
+      SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.Ride
       SharedLogic.SearchTryLocker
@@ -385,6 +392,7 @@ library
       Storage.Queries.DriverOnboarding.OperatingCity
       Storage.Queries.DriverOnboarding.Status
       Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
+      Storage.Queries.DriverPlan
       Storage.Queries.DriverQuote
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
@@ -404,12 +412,14 @@ library
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.Geometry
       Storage.Queries.Instances.DriverInformation
+      Storage.Queries.Invoice
       Storage.Queries.Issue.Comment
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
       Storage.Queries.Issue.IssueTranslation
       Storage.Queries.LeaderBoardConfig
+      Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.MediaFile
       Storage.Queries.Merchant
@@ -427,6 +437,7 @@ library
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.MetaData
       Storage.Queries.Person
+      Storage.Queries.Plan
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
@@ -439,6 +450,10 @@ library
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
+      Storage.Tabular.DriverPlan
+      Storage.Tabular.Invoice
+      Storage.Tabular.Mandate
+      Storage.Tabular.Plan
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Call

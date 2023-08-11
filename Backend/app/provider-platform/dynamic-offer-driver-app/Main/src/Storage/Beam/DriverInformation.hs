@@ -60,6 +60,7 @@ data DriverInformationT f = DriverInformationT
     blockedReason :: B.C f (Maybe Text),
     blockExpiryTime :: B.C f (Maybe Time.UTCTime),
     mode :: B.C f (Maybe Domain.DriverMode),
+    autoPayStatus :: B.C f (Maybe Domain.DriverAutoPayStatus),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -115,6 +116,7 @@ driverInformationTMod =
       canDowngradeToHatchback = B.fieldNamed "can_downgrade_to_hatchback",
       canDowngradeToTaxi = B.fieldNamed "can_downgrade_to_taxi",
       mode = B.fieldNamed "mode",
+      autoPayStatus = B.fieldNamed "auto_pay_status",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

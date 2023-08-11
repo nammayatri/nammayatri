@@ -54,7 +54,7 @@ instance IsString Domain.DriverFeeStatus where
 
 data DriverFeeT f = DriverFeeT
   { id :: B.C f Text,
-    shortId :: B.C f Text,
+    merchantId :: B.C f Text,
     driverId :: B.C f Text,
     totalEarnings :: B.C f Money,
     govtCharges :: B.C f Money,
@@ -67,6 +67,7 @@ data DriverFeeT f = DriverFeeT
     numRides :: B.C f Int,
     status :: B.C f Domain.DriverFeeStatus,
     collectedBy :: B.C f (Maybe Text),
+    feeType :: B.C f Domain.FeeType,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -97,7 +98,7 @@ driverFeeTMod :: DriverFeeT (B.FieldModification (B.TableField DriverFeeT))
 driverFeeTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      shortId = B.fieldNamed "short_id",
+      merchantId = B.fieldNamed "merchant_id",
       driverId = B.fieldNamed "driver_id",
       totalEarnings = B.fieldNamed "total_earnings",
       govtCharges = B.fieldNamed "govt_charges",
@@ -110,6 +111,7 @@ driverFeeTMod =
       numRides = B.fieldNamed "num_rides",
       status = B.fieldNamed "status",
       collectedBy = B.fieldNamed "collected_by",
+      feeType = B.fieldNamed "fee_type",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

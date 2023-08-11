@@ -206,6 +206,36 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
 
+updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
+updateStatus status driverFeeId now = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverFeeStatus =. val status,
+        DriverFeeUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+
+updateStatusByIds :: DriverFeeStatus -> [Id DriverFee] -> UTCTime -> SqlDB ()
+updateStatusByIds status driverFeeId now = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverFeeStatus =. val status,
+        DriverFeeUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverFeeTId `in_` valList (toKey <$> driverFeeId)
+
+findAllPendingAndDueDriverFeeByDriverId :: Transactionable m => Id Person -> m [DriverFee]
+findAllPendingAndDueDriverFeeByDriverId driverId = do
+  findAll $ do
+    driverFee <- from $ table @DriverFeeT
+    where_ $
+      driverFee ^. DriverFeeFeeType ==. val RECURRING_INVOICE
+        &&. (driverFee ^. DriverFeeStatus ==. val PAYMENT_PENDING ||. driverFee ^. DriverFeeStatus ==. val PAYMENT_OVERDUE)
+        &&. driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
+    return driverFee
+
 -- updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
 -- updateStatus status driverFeeId now = do
 --   Esq.update $ \tbl -> do

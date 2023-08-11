@@ -19,6 +19,7 @@ import qualified Data.Bifunctor as BF
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
@@ -27,7 +28,7 @@ import Servant.API
 
 data DriverFee = DriverFee
   { id :: Id DriverFee,
-    shortId :: ShortId DriverFee,
+    merchantId :: Id Merchant,
     driverId :: Id Driver,
     govtCharges :: Money,
     platformFee :: PlatformFee,
@@ -39,7 +40,8 @@ data DriverFee = DriverFee
     status :: DriverFeeStatus,
     collectedBy :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    feeType :: FeeType
   }
   deriving (Generic, Show)
 
@@ -52,6 +54,8 @@ data PlatformFee = PlatformFee
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
+data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
 paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
@@ -61,6 +65,16 @@ instance FromHttpApiData DriverFeeStatus where
   parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
 
 instance ToHttpApiData DriverFeeStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+instance FromHttpApiData FeeType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData FeeType where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode

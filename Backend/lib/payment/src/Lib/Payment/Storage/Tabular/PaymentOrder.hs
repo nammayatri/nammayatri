@@ -54,6 +54,10 @@ mkPersist
       clientAuthTokenExpiry UTCTime
       getUpiDeepLinksOption Bool Maybe
       environment Text Maybe
+      createMandate Payment.MandateType Maybe
+      mandateMaxAmount HighPrecMoney Maybe
+      mandateStartDate UTCTime Maybe
+      mandateEndDate UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
