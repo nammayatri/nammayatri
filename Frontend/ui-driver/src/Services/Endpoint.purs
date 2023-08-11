@@ -195,3 +195,30 @@ verifyAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/verifyAadhaarOtp"
 
 unVerifiedAadhaarData :: String -> String
 unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"
+
+getUiPlans :: String -> String 
+getUiPlans _ = (getBaseUrl "") <> "/plan/list"
+
+getCurrentPlan :: String -> String 
+getCurrentPlan driverId = (getBaseUrl "") <> "/plan/currentPlan"
+
+subscribePlan :: String -> String 
+subscribePlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/subscribe"
+
+paymentDues :: String -> String 
+paymentDues _ = (getBaseUrl "") <> "/payment/dues"
+
+pauseMandate :: String -> String 
+pauseMandate driverId = (getBaseUrl "") <> driverId <> "/payment/pauseMandate"
+
+resumeMandate :: String -> String 
+resumeMandate _ = (getBaseUrl "") <> "/plan/resume"
+
+selectPlan :: String -> String
+selectPlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/select"
+
+cancelAutoPay :: String -> String
+cancelAutoPay driverId = (getBaseUrl "") <> driverId <> "/payment/cancelAutoPay"
+
+suspendMandate :: String -> String 
+suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend"

@@ -34,6 +34,7 @@ import Data.Array ((!!), mapWithIndex)
 import Data.Maybe (fromMaybe)
 import Control.Monad.Trans.Class (lift)
 import JBridge (startTimerWithTime)
+import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -93,8 +94,17 @@ view push state =
             , gravity CENTER
             , visibility state.coverImageConfig.visibility
             , cornerRadii state.cornerRadius
-            ]
-            [ imageView
+            , orientation VERTICAL
+            ][  textView $
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , margin $ MarginVertical 10 10
+                , color Color.black800
+                ] <> (case state.topTitle of
+                        Just txt -> [text txt]
+                        Nothing -> [visibility GONE])
+                  <> (FontStyle.h2 LanguageStyle)
+              , imageView
                 [ height state.coverImageConfig.height
                 , width state.coverImageConfig.width
                 , margin state.coverImageConfig.margin
@@ -228,6 +238,17 @@ view push state =
                     ]
                 ]
             ]
+        , textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , margin $ MarginTop 5
+            , padding $ Padding 5 5 5 5
+            , onClick push $ const DismisTextClick
+            ] <> (case state.dismisText of
+                    Just txt -> [text txt]
+                    Nothing -> [visibility GONE]) 
+              <> (FontStyle.subHeading2 LanguageStyle)
         ]
     ]
 

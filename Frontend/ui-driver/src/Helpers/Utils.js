@@ -139,6 +139,21 @@ export const countDown = function (countDownTime) {
 }
 
 
+export const clampNumber = function (number) {
+  return function(originalMax) {
+    return function(newMax) {
+      const originalMin = 0;
+      const newMin = 0;
+      const originalRange = originalMax - originalMin;
+      const newRange = newMax - newMin;
+      
+      const percentage = (number - originalMin) / originalRange;
+      
+      return Math.floor(newMin + percentage * newRange);
+    }
+  }
+}
+
 export const get15sTimer = function (cb){
       return function (action) {
           return function(){
@@ -730,4 +745,19 @@ export const isYesterday = function (dateString){
     console.error(error);
   }
   return false;
+}
+
+export const getPopupObject = function (just, nothing, key){
+  try {
+    var val = JBridge.getFromSharedPrefs(key);
+    if (val == "__failed") {
+      return nothing;
+    } 
+    console.log("zxc console key ", val);
+    console.log("zxc console parsed key ", JSON.parse(val));
+    return just(JSON.parse(val));
+  } catch( e ){
+    console.warn(e);
+  }
+  return nothing;
 }
