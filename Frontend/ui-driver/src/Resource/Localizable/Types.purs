@@ -640,8 +640,8 @@ data STR = LETS_GET_STARTED
         | RIDE_TYPE
         | ENGLISH
         | RC_STATUS
-        | RATED_BY 
-        | USERS 
+        | RATED_BY_USERS1
+        | RATED_BY_USERS2 
         | MONTHS 
 
 getStringFromEnum :: STR -> String
@@ -1271,6 +1271,6 @@ getStringFromEnum key = case key of
     RIDE_TYPE -> "RIDE_TYPE"
     ENGLISH -> "ENGLISH"
     RC_STATUS -> "RC_STATUS"
-    RATED_BY -> "RATED_BY"
-    USERS -> "USERS"
+    RATED_BY_USERS1 -> "RATED_BY_USERS1"
+    RATED_BY_USERS2 -> "RATED_BY_USERS2"
     MONTHS -> "MONTHS"

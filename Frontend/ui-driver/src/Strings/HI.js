@@ -623,12 +623,13 @@ const hindiStrings = {
   DOWNLOAD_STATEMENT : "स्टेटमेंट डाउनलोड करें",
   SELECT_A_DATE_RANGE : "विवरण डाउनलोड करने के लिए एक तिथि सीमा चुनें",
   FEE_PAYMENT_HISTORY : "शुल्क भुगतान इतिहास",
+  LANGUAGES_SPOKEN: "भाषा मैं बोल सकता हूँ",
   LANGUAGES_स्पोकन : "बोली जाने वाली भाषाएँ",
   VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें",
   RIDE_TYPE : "सवारी का प्रकार",
   PLACE_CALL_REQUEST : "कॉल अनुरोध करें",
   RC_STATUS : "आरसी स्थिति",
-  RATED_BY : "द्वारा मूल्यांकित",
-  USERS : "उपयोगकर्ताओं",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "उपयोगकर्ताओं द्वारा मूल्यांकित",
   MONTHS : "महीने"
 }

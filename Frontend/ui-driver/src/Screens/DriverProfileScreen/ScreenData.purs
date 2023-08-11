@@ -71,7 +71,8 @@ initData = {
       , totalCompletedTrips : 0
       , totalUsersRated : 0
       , rating : Just 0.0
-      , chipRailData : []
+      , lateNightTrips : 0
+      , lastRegistered : ""
       , badges : []
       , missedEarnings : 0
       , ridesCancelled : 0

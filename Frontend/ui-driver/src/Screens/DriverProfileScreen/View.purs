@@ -459,7 +459,7 @@ driverAnalyticsView state push =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: (getString RATED_BY)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString USERS), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
+        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: (getString RATED_BY_USERS1)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString RATED_BY_USERS2), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
           , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
@@ -470,7 +470,7 @@ driverAnalyticsView state push =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation HORIZONTAL
-            ] $ map (\item -> chipRailView item) state.data.analyticsData.chipRailData
+            ] $ map (\item -> chipRailView item) (getChipRailArray state.data.analyticsData.lateNightTrips state.data.analyticsData.lastRegistered state.data.languagesSpoken state.data.analyticsData.totalDistanceTravelled)
            ]
   ]
 

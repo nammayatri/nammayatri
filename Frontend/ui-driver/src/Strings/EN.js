@@ -631,7 +631,7 @@ const englishStrings = {
   RIDE_TYPE : "Ride Type",
   PLACE_CALL_REQUEST : "Place Call Request",
   RC_STATUS : "Rc Status",
-  RATED_BY : "Rated By",
-  USERS : "Users",
+  RATED_BY_USERS1 : "Rated By",
+  RATED_BY_USERS2 : "Users",
   MONTHS : "Months"
 }
