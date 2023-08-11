@@ -98,11 +98,11 @@ instance Serialize DriverPlan where
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-driverFeeToHSModifiers :: M.Map Text (A.Value -> A.Value)
+driverPlanToHSModifiers :: M.Map Text (A.Value -> A.Value)
 driverFeeToHSModifiers =
   M.empty
 
-driverFeeToPSModifiers :: M.Map Text (A.Value -> A.Value)
+driverPlanToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverFeeToPSModifiers =
   M.empty
 
