@@ -18,6 +18,7 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
@@ -46,7 +47,8 @@ createOrder ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    MonadFlow m
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   [DriverFee] ->
@@ -55,7 +57,7 @@ createOrder ::
 createOrder (driverId, merchantId) driverFees mbMandateOrder = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
-  driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
   unless (driver.id == driverId) $ throwError NotAnExecutor
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   invoiceId <- generateGUID
@@ -64,7 +66,7 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder = do
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       amount = sum $ (\pendingFees -> fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId invoiceShortId.getShortId now <$> driverFees
-  runNoTransaction $ QIN.createMany invoices
+  QIN.createMany invoices
   let createOrderReq =
         CreateOrderReq
           { orderId = invoiceId,

@@ -22,7 +22,6 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -34,8 +33,6 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Plan as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.External.Encryption (DbHash (..))
-import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
@@ -107,7 +104,7 @@ data PlanT f = PlanT
     planBaseAmount :: B.C f Domain.PlanBaseAmount,
     -- rideCountBasedFeePolicy :: RideCountBasedFeePolicyConfig, -- todo
     -- distanceBasedFeePolicy :: , -- todo
-    freeRideCount :: Int,
+    freeRideCount :: B.C f Int,
     frequency :: B.C f Domain.Frequency,
     planType :: B.C f Domain.PlanType
   }
@@ -126,7 +123,7 @@ instance ModelMeta PlanT where
 
 type Plan = PlanT Identity
 
-planTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
+planTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PlanT)
 planTable =
   BST.setEntitySchema (Just "atlas_driver_offer_bpp")
     <> B.setEntityName "plan"
@@ -144,7 +141,7 @@ deriving stock instance Ord Domain.Frequency
 
 deriving stock instance Ord Domain.PlanType
 
-deriving stock instance Ord Domain.PaymentMode
+-- deriving stock instance Ord Domain.PaymentMode
 
 deriving stock instance Ord Domain.PlanBaseAmount
 

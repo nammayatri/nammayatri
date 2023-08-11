@@ -1453,8 +1453,8 @@ data OfferEntity = OfferEntity
 
 getDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverDuesResp
 getDriverDues (personId, _merchantId) = do
-  driverPlan <- Esq.runInReplica $ QDPlan.findByDriverId personId >>= fromMaybeM (NoCurrentPlanForDriver personId.getId)
-  plan <- Esq.runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId driverPlan.planType >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
+  driverPlan <- runInReplica $ QDPlan.findByDriverId personId >>= fromMaybeM (NoCurrentPlanForDriver personId.getId)
+  plan <- runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId driverPlan.planType >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
   dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId personId
   return $
     DriverDuesResp
