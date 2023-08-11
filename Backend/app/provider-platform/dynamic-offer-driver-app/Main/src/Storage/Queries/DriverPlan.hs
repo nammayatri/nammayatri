@@ -11,67 +11,126 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverPlan where
 
 import Domain.Types.DriverPlan
-import qualified Domain.Types.Mandate as DM
+import Domain.Types.Mandate
 import Domain.Types.Person
 import Domain.Types.Plan
+import qualified EulerHS.Language as L
+-- import Kernel.Storage.Esqueleto as Esq
+
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common
-import Storage.Tabular.DriverPlan
+import Kernel.Types.Logging (Log)
+import Kernel.Types.Time
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverPlan as BeamDF
 
-create :: DriverPlan -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DriverPlan -> m ()
+create = createWithKV
 
-findByDriverId :: Transactionable m => Id Person -> m (Maybe DriverPlan)
-findByDriverId driverId = do
-  findOne $ do
-    driverPlan <- from $ table @DriverPlanT
-    where_ $
-      driverPlan ^. DriverPlanDriverId ==. val (toKey driverId)
-    return driverPlan
+findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverPlan)
+findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamDF.driverId $ Se.Eq driverId]
 
-findByMandateId :: Transactionable m => Id DM.Mandate -> m (Maybe DriverPlan)
-findByMandateId mandateId = do
-  findOne $ do
-    driverPlan <- from $ table @DriverPlanT
-    where_ $
-      driverPlan ^. DriverPlanMandateId ==. val (Just $ toKey mandateId)
-    return driverPlan
+-- findByDriverId :: Transactionable m => Id Person -> m (Maybe DriverPlan)
+-- findByDriverId driverId = do
+--   findOne $ do
+--     driverPlan <- from $ table @DriverPlanT
+--     where_ $
+--       driverPlan ^. DriverPlanDriverId ==. val (toKey driverId)
+--     return driverPlan
 
-updatePlanIdByDriverId :: Id Person -> Id Plan -> SqlDB ()
-updatePlanIdByDriverId driverId planId = do
+findByMandateId :: (L.MonadFlow m, Log m) => Id Mandate -> m (Maybe DriverPlan)
+findByMandateId (Id mandateId) = findOneWithKV [Se.Is BeamDF.mandateId $ Se.Eq (Just mandateId)]
+
+-- findByMandateId :: Transactionable m => Id DM.Mandate -> m (Maybe DriverPlan)
+-- findByMandateId mandateId = do
+--   findOne $ do
+--     driverPlan <- from $ table @DriverPlanT
+--     where_ $
+--       driverPlan ^. DriverPlanMandateId ==. val (Just $ toKey mandateId)
+--     return driverPlan
+
+updatePlanIdByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Id Plan -> m ()
+updatePlanIdByDriverId (Id driverId) (Id planId) = do
   now <- getCurrentTime
-  update $ \tbl -> do
-    set
-      tbl
-      [ DriverPlanPlanId =. val (toKey planId),
-        DriverPlanUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+  updateOneWithKV
+    [Se.Set BeamDF.planId planId, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.driverId (Se.Eq driverId)]
 
-updateMandateIdByDriverId :: Id Person -> Id DM.Mandate -> SqlDB ()
-updateMandateIdByDriverId driverId mandateId = do
+-- updatePlanIdByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Id Plan -> SqlDB ()
+-- updatePlanIdByDriverId driverId planId = do
+--   now <- getCurrentTime
+--   update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverPlanPlanId =. val (toKey planId),
+--         DriverPlanUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+
+updateMandateIdByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Id Mandate -> m ()
+updateMandateIdByDriverId driverId (Id mandateId) = do
   now <- getCurrentTime
-  update $ \tbl -> do
-    set
-      tbl
-      [ DriverPlanMandateId =. val (Just $ toKey mandateId),
-        DriverPlanUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+  updateOneWithKV
+    [Se.Set BeamDF.mandateId (Just mandateId), Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
 
-updatePaymentModeByDriverId :: Id Person -> PaymentMode -> SqlDB ()
+-- updateMandateIdByDriverId :: Id Person -> Id DM.Mandate -> SqlDB ()
+-- updateMandateIdByDriverId driverId mandateId = do
+--   now <- getCurrentTime
+--   update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverPlanMandateId =. val (Just $ toKey mandateId),
+--         DriverPlanUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+
+updatePaymentModeByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> PaymentMode -> m ()
 updatePaymentModeByDriverId driverId paymentMode = do
   now <- getCurrentTime
-  update $ \tbl -> do
-    set
-      tbl
-      [ DriverPlanPlanType =. val paymentMode,
-        DriverPlanUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+  updateOneWithKV
+    [ Se.Set BeamDF.planType paymentMode,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
+
+-- updatePaymentModeByDriverId :: Id Person -> PaymentMode -> SqlDB ()
+-- updatePaymentModeByDriverId driverId paymentMode = do
+--   now <- getCurrentTime
+--   update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverPlanPlanType =. val paymentMode,
+--         DriverPlanUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+
+instance FromTType' BeamDF.DriverPlan DriverPlan where
+  fromTType' BeamDF.DriverPlanT {..} = do
+    pure $
+      Just
+        DriverPlan
+          { driverId = Id driverId,
+            planId = Id planId,
+            planType = planType,
+            mandateId = Id <$> mandateId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamDF.DriverPlan DriverPlan where
+  toTType' DriverPlan {..} = do
+    BeamDF.DriverPlanT
+      { BeamDF.driverId = getId driverId,
+        BeamDF.planId = getId planId,
+        BeamDF.planType = planType,
+        BeamDF.mandateId = getId <$> mandateId,
+        BeamDF.createdAt = createdAt,
+        BeamDF.updatedAt = updatedAt
+      }

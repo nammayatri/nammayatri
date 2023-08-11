@@ -20,11 +20,10 @@ import Domain.Types.Plan
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Types.Id as KTI
+import Kernel.Types.Logging
 import qualified Sequelize as Se
-import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
-import Storage.Tabular.Plan
+import qualified Storage.Beam.Plan as BeamP
 
 -- create :: Plan -> SqlDB ()
 -- create = Esq.create
@@ -41,7 +40,7 @@ create = createWithKV
 --   return plan
 
 findByIdAndPaymentMode :: (L.MonadFlow m, Log m) => Id Plan -> PaymentMode -> m (Maybe Plan)
-findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamDI.id $ Se.Eq planId, Se.Is BeamDI.paymentMode $ Se.Eq paymentMode]]
+findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq planId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
 
 -- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe Plan)
 -- findByMerchantId merchantId = do
@@ -52,7 +51,7 @@ findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is Be
 --     return plan
 
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Plan]
-findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamDEFB.merchantId $ Se.Eq merchantId]
+findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamP.merchantId $ Se.Eq merchantId]
 
 -- findByMerchantIdAndPaymentMode :: Transactionable m => Id Merchant -> PaymentMode -> m [Plan]
 -- findByMerchantIdAndPaymentMode merchantId paymentMode = Esq.findAll $ do
@@ -63,4 +62,44 @@ findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamDEFB.merchantId $ Se
 --   return plan
 
 findByMerchantIdAndPaymentMode :: (L.MonadFlow m, Log m) => Id Merchant -> PaymentMode -> m [Plan]
-findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamDEFB.merchantId $ Se.Eq merchantId, Se.Is BeamDEFB.paymentMode $ Se.Eq paymentMode]]
+findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
+
+instance FromTType' BeamP.Plan Plan where
+  fromTType' BeamP.PlanT {..} = do
+    pure $
+      Just
+        Plan
+          { id = Id id,
+            paymentMode = paymentMode,
+            merchantId = Id merchantId,
+            name = name,
+            description = description,
+            maxAmount = maxAmount,
+            registrationAmount = registrationAmount,
+            isOfferApplicable = isOfferApplicable,
+            maxCreditLimit = maxCreditLimit,
+            planBaseAmount = planBaseAmount,
+            -- rideCountBasedFeePolicy :: RideCountBasedFeePolicyConfig, -- todo
+            -- distanceBasedFeePolicy :: , -- todo
+            freeRideCount = freeRideCount,
+            frequency = frequency,
+            planType = planType
+          }
+
+instance ToTType' BeamP.Plan Plan where
+  toTType' Plan {..} = do
+    BeamP.PlanT
+      { BeamP.id = getId id,
+        BeamP.paymentMode = paymentMode,
+        BeamP.merchantId = getId merchantId,
+        BeamP.name = name,
+        BeamP.description = description,
+        BeamP.maxAmount = maxAmount,
+        BeamP.registrationAmount = registrationAmount,
+        BeamP.isOfferApplicable = isOfferApplicable,
+        BeamP.maxCreditLimit = maxCreditLimit,
+        BeamP.planBaseAmount = planBaseAmount,
+        BeamP.freeRideCount = freeRideCount,
+        BeamP.frequency = frequency,
+        BeamP.planType = planType
+      }

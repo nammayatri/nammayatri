@@ -320,6 +320,7 @@ library
       Storage.Beam.Issue.IssueReport
       Storage.Beam.Issue.IssueTranslation
       Storage.Beam.LeaderBoardConfig
+      Storage.Beam.Mandate
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.MediaFile
       Storage.Beam.Merchant
@@ -453,10 +454,6 @@ library
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
-      Storage.Tabular.DriverPlan
-      Storage.Tabular.Invoice
-      Storage.Tabular.Mandate
-      Storage.Tabular.Plan
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Call

@@ -24,7 +24,6 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -32,15 +31,12 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Domain.Types.DriverPlan as Domain
-import Domain.Types.Person (Person)
+-- import qualified Domain.Types.DriverPlan as Domain
+-- import Domain.Types.Person (Person)
 import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
-import EulerHS.Prelude (Generic)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import Kernel.Types.Common hiding (id)
-import Kernel.Types.Id
+import Kernel.Types.Common
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -49,11 +45,16 @@ data DriverPlanT f = DriverPlanT
   { driverId :: B.C f Text,
     planId :: B.C f Text,
     planType :: B.C f DPlan.PaymentMode,
-    mandateId :: B.C f Text Maybe,
+    mandateId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
+
+instance FromBackendRow Postgres DPlan.PaymentMode
+
+instance FromField DPlan.PaymentMode where
+  fromField = fromFieldEnum
 
 instance B.Table DriverPlanT where
   data PrimaryKey DriverPlanT f
@@ -79,8 +80,7 @@ deriving stock instance Show DriverPlan
 driverPlanTMod :: DriverPlanT (B.FieldModification (B.TableField DriverPlanT))
 driverPlanTMod =
   B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driverId",
+    { driverId = B.fieldNamed "driverId",
       planId = B.fieldNamed "planId",
       planType = B.fieldNamed "planType",
       mandateId = B.fieldNamed "mandateId",
@@ -96,13 +96,16 @@ psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
 driverPlanToHSModifiers :: M.Map Text (A.Value -> A.Value)
-
-driverFeeToHSModifiers =
+driverPlanToHSModifiers =
   M.empty
 
 driverPlanToPSModifiers :: M.Map Text (A.Value -> A.Value)
-
-driverFeeToPSModifiers =
+driverPlanToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverPlanT ['driverId])
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DPlan.PaymentMode where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DPlan.PaymentMode
+
+$(enableKVPG ''DriverPlanT ['driverId] [])

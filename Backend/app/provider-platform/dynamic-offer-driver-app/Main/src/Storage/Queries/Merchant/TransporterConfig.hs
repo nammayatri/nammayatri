@@ -162,6 +162,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             enableDashboardSms = enableDashboardSms,
             createdAt = createdAt,
             rcLimit = rcLimit,
+            subscriptionStartTime = subscriptionStartTime,
             automaticRCActivationCutOff = automaticRCActivationCutOff,
             updatedAt = updatedAt
           }
@@ -204,6 +205,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.minLocationAccuracy = minLocationAccuracy,
         BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
         BeamTC.enableDashboardSms = enableDashboardSms,
+        BeamTC.subscriptionStartTime = subscriptionStartTime,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,

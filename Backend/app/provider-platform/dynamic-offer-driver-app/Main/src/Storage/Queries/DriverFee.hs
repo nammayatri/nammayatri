@@ -48,8 +48,8 @@ findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 --     where_ $ driverFee ^. DriverFeeShortId ==. val (getShortId shortId)
 --     return driverFee
 
-findByShortId :: (L.MonadFlow m, Log m) => ShortId DriverFee -> m (Maybe DriverFee)
-findByShortId shortId = findOneWithKV [Se.Is BeamDF.shortId $ Se.Eq $ getShortId shortId]
+-- findByShortId :: (L.MonadFlow m, Log m) => ShortId DriverFee -> m (Maybe DriverFee)
+-- findByShortId shortId = findOneWithKV [Se.Is BeamDF.shortId $ Se.Eq $ getShortId shortId]
 
 -- findPendingFeesByDriverFeeId :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 -- findPendingFeesByDriverFeeId driverFeeId = do
@@ -233,7 +233,7 @@ updateStatusByIds status driverFeeIds now =
 --     return driverFee
 
 findAllPendingAndDueDriverFeeByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [DriverFee]
-findAllPendingAndDueDriverFeeByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Or [Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq (toKey driverId)]]
+findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Or [Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
 -- updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
 -- updateStatus status driverFeeId now = do
@@ -274,7 +274,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
       Just
         DriverFee
           { id = Id id,
-            shortId = ShortId shortId,
+            merchantId = Id merchantId,
             driverId = Id driverId,
             govtCharges = govtCharges,
             platformFee = Domain.PlatformFee platformFee cgst sgst,
@@ -284,6 +284,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             startTime = startTime,
             endTime = endTime,
             status = status,
+            feeType = feeType,
             collectedBy = collectedBy,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -293,7 +294,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
   toTType' DriverFee {..} = do
     BeamDF.DriverFeeT
       { BeamDF.id = getId id,
-        BeamDF.shortId = getShortId shortId,
+        BeamDF.merchantId = getId merchantId,
         BeamDF.driverId = getId driverId,
         BeamDF.govtCharges = govtCharges,
         BeamDF.platformFee = platformFee.fee,
@@ -305,6 +306,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.startTime = startTime,
         BeamDF.endTime = endTime,
         BeamDF.status = status,
+        BeamDF.feeType = feeType,
         BeamDF.collectedBy = collectedBy,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt

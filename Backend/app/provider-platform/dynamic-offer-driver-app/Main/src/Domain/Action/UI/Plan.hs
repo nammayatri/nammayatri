@@ -24,8 +24,8 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.Plan
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
@@ -94,7 +94,7 @@ data PlanSubscribeRes = PlanSubscribeRes
 -- This API is for listing all the AUTO PAY plans
 planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow PlanListAPIRes
 planList (driverId, merchantId) _mbLimit _mbOffset = do
-  plans <- Esq.runInReplica $ QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
+  plans <- B.runInReplica $ QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   plansList <- mapM (convertPlanToPlanEntity driverId) plans
   return $
@@ -107,8 +107,8 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
 currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
 currentPlan (driverId, _merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverPlan <- Esq.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
-  plan <- Esq.runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
+  driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
+  plan <- B.runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
   currentPlanEntity <- convertPlanToPlanEntity driverId plan
   return CurrentPlanRes {currentPlanDetails = currentPlanEntity}
   where
@@ -124,11 +124,11 @@ planSubscribe :: Id Plan -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribe
 planSubscribe planId (driverId, merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (isNothing driverInfo.autoPayStatus || driverInfo.autoPayStatus == Just DI.CANCELLED_PSP) $ throwError InvalidAutoPayStatus
-  plan <- Esq.runInReplica $ QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
-  driverPlan <- Esq.runInReplica $ QDPlan.findByDriverId driverId
+  plan <- B.runInReplica $ QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
+  driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
   when (isNothing driverPlan) $ do
     newDriverPlan <- mkDriverPlan plan
-    Esq.runNoTransaction $ QDPlan.create newDriverPlan
+    QDPlan.create newDriverPlan
   (createOrderResp, orderId) <- createMandateInvoiceAndOrder driverId merchantId plan
   return $
     PlanSubscribeRes
@@ -152,8 +152,8 @@ planSubscribe planId (driverId, merchantId) = do
 -- This API is to switch between plans of current Payment Method Preference.
 planSelect :: Id Plan -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 planSelect planId (driverId, _) = do
-  void $ Esq.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
-  Esq.runNoTransaction $ QDPlan.updatePlanIdByDriverId driverId planId
+  void $ B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
+  QDPlan.updatePlanIdByDriverId driverId planId
   return Success
 
 -- This API is to make Mandate Inactive and switch to Manual plan type from Autopay.
@@ -161,11 +161,10 @@ planSuspend :: (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 planSuspend (driverId, _merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (isJust driverInfo.autoPayStatus && driverInfo.autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
-  driverPlan <- Esq.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
+  driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateActiveMandateExists driverId driverPlan
-  Esq.runTransaction $ do
-    QM.updateStatus mandate.id DM.INACTIVE
-    CDI.updateAutoPayStatus (Just DI.SUSPENDED) (cast driverId)
+  QM.updateStatus mandate.id DM.INACTIVE
+  CDI.updateAutoPayStatus (Just DI.SUSPENDED) (cast driverId)
   return Success
 
 -- This API is to make Mandate Active and switch to Autopay plan type. If an only if an Auto Pay plan was paused/cancelled by driver from App.
@@ -173,11 +172,10 @@ planResume :: (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 planResume (driverId, _merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (isJust driverInfo.autoPayStatus && driverInfo.autoPayStatus == Just DI.SUSPENDED) $ throwError InvalidAutoPayStatus
-  driverPlan <- Esq.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
+  driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateInActiveMandateExists driverId driverPlan
-  Esq.runTransaction $ do
-    QM.updateStatus mandate.id DM.ACTIVE
-    CDI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)
+  QM.updateStatus mandate.id DM.ACTIVE
+  CDI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)
   return Success
 
 ---------------------------------------------------------------------------------------------------------
@@ -189,7 +187,7 @@ validateActiveMandateExists driverId driverPlan = do
   case driverPlan.mandateId of
     Nothing -> throwError $ ActiveMandateDoNotExist driverId.getId
     Just mandateId -> do
-      mandate <- Esq.runInReplica $ QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
+      mandate <- B.runInReplica $ QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
       unless (mandate.status == DM.INACTIVE) $ throwError (ActiveMandateDoNotExist driverId.getId)
       return mandate
 
@@ -198,7 +196,7 @@ validateInActiveMandateExists driverId driverPlan = do
   case driverPlan.mandateId of
     Nothing -> throwError $ ActiveMandateDoNotExist driverId.getId
     Just mandateId -> do
-      mandate <- Esq.runInReplica $ QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
+      mandate <- B.runInReplica $ QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
       unless (mandate.status == DM.ACTIVE) $ throwError (ActiveMandateDoNotExist driverId.getId)
       return mandate
 
@@ -206,7 +204,7 @@ validateActiveMandateDoNotExists :: Id SP.Person -> DriverPlan -> Flow ()
 validateActiveMandateDoNotExists driverId driverPlan = do
   case driverPlan.mandateId of
     Just mandateId -> do
-      mandate <- Esq.runInReplica $ QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
+      mandate <- B.runInReplica $ QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
       unless (mandate.status == DM.ACTIVE) $ throwError (ActiveMandateExists driverId.getId)
     Nothing -> pure ()
 
@@ -217,7 +215,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
     then SPayment.createOrder (driverId, merchantId) driverFees (Just mandateOrder)
     else do
       driverFee <- mkDriverFee
-      Esq.runNoTransaction $ QDF.create driverFee
+      QDF.create driverFee
       SPayment.createOrder (driverId, merchantId) [driverFee] (Just mandateOrder)
   where
     mandateOrder =
@@ -244,6 +242,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             govtCharges = 0,
             startTime = now,
             endTime = now,
+            collectedBy = Nothing,
             driverId = cast driverId
           }
 

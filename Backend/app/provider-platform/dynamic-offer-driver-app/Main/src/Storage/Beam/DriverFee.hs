@@ -52,6 +52,18 @@ instance FromBackendRow Postgres Domain.DriverFeeStatus
 instance IsString Domain.DriverFeeStatus where
   fromString = show
 
+instance FromField Domain.FeeType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FeeType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FeeType
+
+instance FromBackendRow Postgres Domain.FeeType
+
+deriving stock instance Ord Domain.FeeType
+
 data DriverFeeT f = DriverFeeT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
@@ -131,4 +143,4 @@ driverFeeToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverFeeToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverFeeT ['id] [['shortId], ['driverId]])
+$(enableKVPG ''DriverFeeT ['id] [['driverId]]) -- check if mId needed

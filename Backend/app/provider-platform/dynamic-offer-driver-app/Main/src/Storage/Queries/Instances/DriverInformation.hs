@@ -49,6 +49,7 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
             canDowngradeToHatchback = canDowngradeToHatchback,
             canDowngradeToTaxi = canDowngradeToTaxi,
             mode = mode,
+            autoPayStatus = autoPayStatus,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -76,6 +77,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamDI.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamDI.mode = mode,
+        BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.createdAt = createdAt,
         BeamDI.updatedAt = updatedAt
       }
