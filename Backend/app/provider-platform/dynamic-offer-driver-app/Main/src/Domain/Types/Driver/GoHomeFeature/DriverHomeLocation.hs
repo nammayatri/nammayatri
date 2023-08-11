@@ -30,7 +30,7 @@ data DriverHomeLocation = DriverHomeLocation
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic, HasCoordinates)
+  deriving (Generic, HasCoordinates, ToSchema)
 
 data DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
   { id :: Id DriverHomeLocation,

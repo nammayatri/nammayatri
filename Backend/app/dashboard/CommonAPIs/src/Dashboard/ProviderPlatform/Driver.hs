@@ -84,6 +84,20 @@ data DriverListRes = DriverListRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
+  { id :: Id DriverHomeLocation,
+    lat :: Double,
+    lon :: Double,
+    address :: Text,
+    tag :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type GetHomeLocationsRes = [DriverHomeLocationAPIEntity]
+
+type UpdateDriverHomeLocationReq = DriverHomeLocationAPIEntity
+
 data DriverListItem = DriverListItem
   { driverId :: Id Driver,
     firstName :: Text,
@@ -680,3 +694,19 @@ newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type GetDriverHomeLocationAPI =
+  Capture "driverId" (Id Driver)
+    :> "getHomeLocation"
+    :> Get '[JSON] GetHomeLocationsRes
+
+type UpdateDriverHomeLocationAPI =
+  Capture "driverId" (Id Driver)
+    :> "updateHomeLocation"
+    :> ReqBody '[JSON] UpdateDriverHomeLocationReq
+    :> Post '[JSON] APISuccess
+
+type IncrementDriverGoToCountAPI =
+  Capture "driverId" (Id Driver)
+    :> "incrementGoToCount"
+    :> Post '[JSON] APISuccess

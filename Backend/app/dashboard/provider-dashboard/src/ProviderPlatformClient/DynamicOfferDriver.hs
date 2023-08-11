@@ -83,6 +83,9 @@ data DriversAPIs = DriversAPIs
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
+    getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
+    updateDriverHomeLocation :: Id Driver.Driver -> Driver.UpdateDriverHomeLocationReq -> Euler.EulerClient APISuccess,
+    incrementDriverGoToCount :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess
   }
@@ -220,7 +223,10 @@ mkDriverOfferAPIs merchantId token = do
       :<|> updateDriverName
       :<|> setRCStatus
       :<|> deleteRC
-      :<|> clearOnRideStuckDrivers = driversClient
+      :<|> clearOnRideStuckDrivers
+      :<|> getDriverHomeLocation
+      :<|> updateDriverHomeLocation
+      :<|> incrementDriverGoToCount = driversClient
 
     rideList
       :<|> rideStart
