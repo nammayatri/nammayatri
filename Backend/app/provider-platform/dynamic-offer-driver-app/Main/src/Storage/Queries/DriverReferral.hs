@@ -2,6 +2,7 @@
 
 module Storage.Queries.DriverReferral where
 
+import qualified Database.Beam as B
 import Domain.Types.DriverReferral as DDR
 import qualified Domain.Types.Person as SP
 import qualified EulerHS.Language as L
@@ -10,6 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverReferral as BeamDR
 
 -- create :: DriverReferral -> SqlDB ()
@@ -36,6 +38,28 @@ findByRefferalCode (Id referralId) = findOneWithKV [Se.Is BeamDR.referralCode $ 
 --     driverReferral <- from $ table @DriverReferralT
 --     where_ $ driverReferral ^. DriverReferralDriverId ==. val (toKey driverId)
 --     return driverReferral
+
+getLastRefferalCode ::
+  (L.MonadFlow m, Log m) =>
+  m (Id DriverReferral)
+getLastRefferalCode = do
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.limit_ 1 $
+            B.orderBy_ (\driverReferral -> B.desc_ driverReferral.referralCode) do
+              B.all_ (BeamCommon.driverReferral BeamCommon.atlasDB)
+  case resp of
+    Right (Just val) -> do
+      mbDriverReferral <- fromTType' val
+      case mbDriverReferral of
+        Just mbDriverReferral' -> do
+          let referralCode = DDR.referralCode mbDriverReferral'
+          pure referralCode
+        Nothing -> pure "100000"
+    _ -> return "100000"
 
 findById ::
   (L.MonadFlow m, Log m) =>
