@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root_container"
     android:layout_width="match_parent"
-    android:layout_height="90dp"
+    android:layout_height="93dp"
     android:orientation="vertical"
 
     android:layout_margin="16dp">
@@ -106,11 +106,16 @@
                     android:layout_marginHorizontal="25dp"
                     android:indeterminate="false" />
 
-                <ImageView
+                <com.google.android.material.imageview.ShapeableImageView
                     android:layout_width="64dp"
                     android:layout_height="64dp"
-                    android:src="@drawable/ic_floating_widget"
-                    android:id="@+id/floating_logo" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:srcCompat="@drawable/ic_floating_widget"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50"
+                    />
+
 
                 <LinearLayout
                     android:layout_width="wrap_content"
