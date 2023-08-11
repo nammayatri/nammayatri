@@ -1536,6 +1536,7 @@ currentRideFlow = do
     setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
     _ <- updateStage $ HomeScreenStage HomeScreen
     pure unit
+  void $ pure $ setCleverTapUserProp "Driver On-ride" if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"
   (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && (getMerchant FunctionCall) == YATRISATHI}})
   homeScreenFlow
@@ -1778,6 +1779,7 @@ homeScreenFlow = do
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
+      void $ pure $ setCleverTapUserProp "Driver On-ride" "No"
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
