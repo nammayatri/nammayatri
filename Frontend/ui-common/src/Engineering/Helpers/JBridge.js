@@ -654,9 +654,13 @@ export const stopChatListenerService = function () {
 }
 
 export const sendMessage = function (message) {
-  console.log("Send Message Called");
   if (JBridge.sendMessage) {
-    JBridge.sendMessage(message);
+    let timer;
+    if(timer) clearTimeout(timer);
+    const fn = function () {
+      return JBridge.sendMessage(message);
+    }
+    timer = setTimeout(fn, 200);
   }
 };
 

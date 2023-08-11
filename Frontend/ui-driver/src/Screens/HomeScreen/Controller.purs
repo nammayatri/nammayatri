@@ -504,17 +504,17 @@ eval RemoveChat state = do
   ]
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  if not state.props.chatcallbackInitiated then continue state else do
+  if not state.props.chatcallbackInitiated then continue state {props {canSendSuggestion = true}} else do
     let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
     case (Array.last messages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
-                      if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
+      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
+                      if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}, props {canSendSuggestion = true}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                         let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
                         let suggestions = getSuggestionsfromKey message
-                        updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestions, messagesSize = size}, props {unReadMessages = unReadMessages}}
-      Nothing -> continue state
+                        updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestions, messagesSize = size}, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
+      Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
@@ -545,10 +545,12 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
     continue state
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
-  let message = getMessageFromKey chatSuggestion "EN_US"
-  _ <- pure $ sendMessage message
-  let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
-  continue state
+  if state.props.canSendSuggestion then do
+    let message = getMessageFromKey chatSuggestion "EN_US"
+    _ <- pure $ sendMessage message
+    let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
+    continue state{props {canSendSuggestion = false}}
+  else continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
   _ <- pure $ hideKeyboardOnNavigation true

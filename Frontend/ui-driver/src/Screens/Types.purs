@@ -873,7 +873,8 @@ type HomeScreenProps =  {
   showBonusInfo :: Boolean,
   timerRefresh :: Boolean,
   showlinkAadhaarPopup :: Boolean,
-  isChatOpened :: Boolean
+  isChatOpened :: Boolean,
+  canSendSuggestion :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent

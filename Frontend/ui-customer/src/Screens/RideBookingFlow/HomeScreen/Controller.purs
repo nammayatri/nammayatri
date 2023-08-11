@@ -700,17 +700,17 @@ eval Support state = continue state {props {callSupportPopUp = true}}
 eval RideDetails state = exit $ RideDetailsScreen state -- TODO needs to fill the data
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  if not state.props.chatcallbackInitiated then continue state else do
+  if not state.props.chatcallbackInitiated then continue state {props {canSendSuggestion = true}} else do
     let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
     case (last messages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
-                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
+      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
+                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}, props {canSendSuggestion = true}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                         let unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
                         let suggestions = getSuggestionsfromKey message
-                        updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages && (size == (show $ (length messages) - 1) || state.data.messagesSize == "-1")}}
-      Nothing -> continue state
+                        updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages && (size == (show $ (length messages) - 1) || state.data.messagesSize == "-1"), canSendSuggestion = true}}
+      Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
   if not state.props.chatcallbackInitiated then continue state else do
@@ -739,10 +739,12 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
     continue state
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
-  let message = getMessageFromKey chatSuggestion "EN_US"
-  _ <- pure $ sendMessage message
-  let _ = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
-  continue state
+  if state.props.canSendSuggestion then do
+    let message = getMessageFromKey chatSuggestion "EN_US"
+    _ <- pure $ sendMessage message
+    let _ = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
+    continue state {props {canSendSuggestion = false}}
+  else continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
   _ <- pure $ performHapticFeedback unit

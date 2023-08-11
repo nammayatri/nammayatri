@@ -756,6 +756,7 @@ chatViewConfig state = let
       , white900 = Color.white900
       , black800 = Color.black800
       , black700 = Color.black700
+      , canSendSuggestion = state.props.canSendSuggestion
   }
   in chatViewConfig'
 
