@@ -70,9 +70,9 @@ view push state =
             , padding $ PaddingBottom 1
             , ellipsize true
             , accessibilityHint case item of
-                    WORK_TAG -> "Work Button, Select to book a ride"
-                    HOME_TAG -> "Home Button, Select to book a ride"
-                    _        -> "All Favourites Button Select to show all added favourites"
+                    WORK_TAG -> "Work Button Select To Book A Ride To Work "
+                    HOME_TAG -> "Home Button Select To Book A Ride To Home"
+                    _        -> "All Favourites Button Select To Show All Added Favourites"
             , text case item of
                     WORK_TAG -> getString WORK
                     HOME_TAG -> getString HOME

@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
-import Data.String (Pattern(..), split, length, take, drop)
+import Data.String (Pattern(..), split, length, take, drop, replaceAll, Replacement(..))
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
@@ -281,7 +281,7 @@ expiryTimeView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , accessibilityHint $ "O T P Is " <> state.data.otp
+              , accessibilityHint $ "O T P Is " <> (replaceAll (Pattern "") (Replacement " - ")  state.data.otp)
               , text $ getString OTP <> ":"
               , color Color.black700
               ] <> FontStyle.body4 TypoGraphy)
@@ -389,7 +389,7 @@ sosView push state =
         [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
-        , accessibilityHint $ "S O S Icon, Select to view S O S options"
+        , accessibilityHint $ "S.O.S Icon, Select to view S O S options"
         , onClick push $ const OpenEmergencyHelp
         ]
     ]
@@ -551,7 +551,7 @@ otpAndWaitView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , accessibilityHint $ "O T P Is" <> state.data.otp
+              , accessibilityHint $ "O T P Is" <>  (replaceAll (Pattern "") (Replacement " - ")  state.data.otp)
               , text $ getString OTP <> ":"
               , color state.data.config.quoteListModel.otpTitleColor
               ] <> FontStyle.body4 TypoGraphy)
@@ -881,7 +881,7 @@ driverDetailsView push state =
                         , weight 1.0
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
-                        , accessibilityHint $ "Vehicle number . " <> state.data.registrationNumber
+                        , accessibilityHint $ "Vehicle number " <> state.data.registrationNumber
                         , color Color.black
                         , gravity CENTER
                         ] <> FontStyle.body7 TypoGraphy
@@ -939,7 +939,7 @@ paymentMethodView push state title shouldShowIcon =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , accessibilityHint $ "Ride Fare, " <> state.data.config.currency <> show state.data.price <> "Pay by Cash or U P I"
+  , accessibilityHint $ "Ride Fare " <> state.data.config.currency <> show state.data.price <> "Pay by Cash or U P I"
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT

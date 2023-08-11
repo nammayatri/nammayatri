@@ -896,7 +896,8 @@ homeScreenTopIconView push state =
                     , height $ V 24
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
-                    , accessibilityHint "Menu_Icon Button"
+                    , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
+                    , accessibilityHint "Menu Button"
                     ]
                 ]
             , linearLayout
@@ -920,6 +921,7 @@ homeScreenTopIconView push state =
                 , height WRAP_CONTENT
                 , disableClickFeedback true
                 , onClick push (const $ OpenSearchLocation)
+                , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
                 , accessibilityHint "Pickup Location is Current Location. Button"
                 ]
                 [ textView
@@ -1028,6 +1030,7 @@ rateExperienceView state push =
               [ height $ V 30
               , width $ V 30
               , accessibilityHint (show item <> "star" )
+              , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
               , imageWithFallback if item <= state.data.ratingViewState.selectedRating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
                                       else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
               ]
@@ -1107,6 +1110,7 @@ completedRideDetails state push =
       ][  imageView
           [ height $ V 40
           , width $ V 40
+          , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
           , accessibilityHint "Contact Support"
           , imageWithFallback "ic_headphone_white,https://assets.juspay.in/nammayatri/images/user/ic_headphone_white.png"
           , onClick push $ const Support
@@ -1117,6 +1121,7 @@ completedRideDetails state push =
       , weight 1.0
       , orientation VERTICAL
       , gravity CENTER
+      , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
       , accessibilityHint $ "Ride Complete. Final Fare ₹"  <> show state.data.finalAmount
       ][  textView $
           [ width WRAP_CONTENT
@@ -1162,6 +1167,7 @@ completedRideDetails state push =
       , margin $ MarginTop 10
       , gravity CENTER_VERTICAL
       , onClick push $ const RideDetails
+      , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
       , accessibilityHint "Ride Details"
       ][  textView
           [ height WRAP_CONTENT
@@ -2367,7 +2373,7 @@ currentLocationView push state =
             , gravity CENTER_VERTICAL
             , cornerRadius 5.0
             , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
-            , accessibilityHint $ "Pickup location Editable Field . Pickup Location is " <> state.data.source
+            , accessibilityHint $ "Pickup Location is " <> state.data.source
             ]
             [ imageView
                 [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"

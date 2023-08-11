@@ -259,6 +259,7 @@ primaryButtonRequestRideConfig state =
         { textConfig
           { text = (getString REQUEST_RIDE)
           ,  color = state.data.config.primaryTextColor
+          , accessibilityHint = "Request Ride Button"
           }
         , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (Margin 0 32 0 0)
@@ -278,6 +279,7 @@ primaryButtonConfirmPickupConfig state =
         { textConfig
           { text = (getString CONFIRM_LOCATION)
           , color = state.data.config.primaryTextColor
+          , accessibilityHint = "Confirm Pickup Location Button"
           }
         , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (MarginTop 8)

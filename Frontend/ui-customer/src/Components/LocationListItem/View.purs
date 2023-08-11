@@ -121,7 +121,7 @@ titleView config =
     , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then config.tag else config.title
     , color Color.black800
     , lineHeight "18"
-    , accessibilityHint $ "Recent Destination " <> config.title <> " Button Select to book a ride to this location"
+    , accessibilityHint $ "Recent Destination " <> config.title <> " Button Select To Book A Ride To This Location"
     , maxLines 1
     , ellipsize true
     , padding (PaddingRight 20)
