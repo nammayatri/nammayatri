@@ -24,6 +24,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
+import Data.Maybe as Mb
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -33,6 +34,7 @@ data Action = OnButton1Click
             | OnImageClick
             | Tipbtnclick Int Int
             | DismissPopup
+            | DismisTextClick
 
 type Config = {
     primaryText :: TextConfig,
@@ -66,7 +68,9 @@ type Config = {
     tipSelected :: String,
     fareEstimateText :: String,
     tipSelectedText :: String,
-    backgroundColor  :: String
+    backgroundColor  :: String,
+    dismisText :: Mb.Maybe String,
+    topTitle :: Mb.Maybe String
 }
 
 type ContactViewConfig = {
@@ -138,6 +142,8 @@ config = {
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
+  , dismisText : Mb.Nothing
+  , topTitle : Mb.Nothing
   , primaryText : {
       text : "Text1",
       color : Color.black800,

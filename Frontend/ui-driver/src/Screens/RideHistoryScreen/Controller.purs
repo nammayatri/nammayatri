@@ -100,6 +100,7 @@ data ScreenOutput = GoBack
                     | GoToReferralScreen
                     | SelectedTab RideHistoryScreenState
                     | OpenPaymentHistoryScreen RideHistoryScreenState
+                    | SubscriptionScreen RideHistoryScreenState
 
 data Action = Dummy
             | OnFadeComplete String
@@ -155,6 +156,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    "Join" -> exit $ SubscriptionScreen state
     _ -> continue state
 
 eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
