@@ -22,8 +22,8 @@ import Kernel.Types.Id
 import Lib.Payment.Domain.Types.Common
 
 data PaymentOrderE e = PaymentOrder
-  { id :: Id PaymentOrder, -- can be same as ride.id
-    shortId :: ShortId PaymentOrder, -- can be same as ride.shortId
+  { id :: Id PaymentOrder,
+    shortId :: ShortId PaymentOrder,
     requestId :: Maybe Text,
     service :: Maybe Text,
     clientId :: Maybe Text,
@@ -42,6 +42,10 @@ data PaymentOrderE e = PaymentOrder
     clientAuthTokenExpiry :: UTCTime,
     getUpiDeepLinksOption :: Maybe Bool,
     environment :: Maybe Text,
+    createMandate :: Maybe Payment.MandateType,
+    mandateMaxAmount :: Maybe HighPrecMoney,
+    mandateStartDate :: Maybe UTCTime,
+    mandateEndDate :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -66,6 +70,10 @@ data PaymentOrderAPIEntity = PaymentOrderAPIEntity
     clientAuthTokenExpiry :: UTCTime,
     getUpiDeepLinksOption :: Maybe Bool,
     environment :: Maybe Text,
+    createMandate :: Maybe Payment.MandateType,
+    mandateMaxAmount :: Maybe HighPrecMoney,
+    mandateStartDate :: Maybe UTCTime,
+    mandateEndDate :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

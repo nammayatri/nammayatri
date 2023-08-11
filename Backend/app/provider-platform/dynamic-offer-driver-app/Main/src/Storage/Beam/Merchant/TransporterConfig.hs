@@ -61,6 +61,8 @@ data TransporterConfigT f = TransporterConfigT
     driverPaymentCycleDuration :: B.C f Seconds,
     driverPaymentCycleStartTime :: B.C f Seconds,
     driverPaymentReminderInterval :: B.C f Seconds,
+    driverAutoPayNotificationTime :: B.C f Seconds,
+    driverAutoPayExecutionTime :: B.C f Seconds,
     rcLimit :: B.C f Int,
     automaticRCActivationCutOff :: B.C f Seconds,
     timeDiffFromUtc :: B.C f Seconds,
@@ -68,6 +70,7 @@ data TransporterConfigT f = TransporterConfigT
     minLocationAccuracy :: B.C f Double,
     aadhaarVerificationRequired :: B.C f Bool,
     enableDashboardSms :: B.C f Bool,
+    subscriptionStartTime :: B.C f UTCTime,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

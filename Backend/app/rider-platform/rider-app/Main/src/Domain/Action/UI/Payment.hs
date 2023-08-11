@@ -30,6 +30,8 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
+import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import Kernel.Types.Common hiding (id)
@@ -69,21 +71,23 @@ createOrder (personId, merchantId) rideId = do
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let createOrderReq =
         Payment.CreateOrderReq
-          { orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
-            amount = totalFare,
+          { orderId = rideId.getId,
+            orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
+            amount = fromIntegral totalFare,
             customerId = person.id.getId,
             customerEmail,
             customerPhone,
-            paymentPageClientId = "yatrisathi",
             customerFirstName = person.firstName,
-            customerLastName = person.lastName
+            customerLastName = person.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderId = cast @DRide.Ride @DOrder.PaymentOrder rideId
       createOrderCall = Payment.createOrder merchantId -- api call
-  DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
+  DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
 
 -- order status -----------------------------------------------------
 

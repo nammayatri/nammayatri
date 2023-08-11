@@ -386,6 +386,17 @@ updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchba
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
+updateAutoPayStatus :: Maybe DriverAutoPayStatus -> Id Person.Driver -> SqlDB ()
+updateAutoPayStatus autoPayStatus driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationAutoPayStatus =. val autoPayStatus,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
 -- updateSubscription :: Bool -> Id Person.Driver -> SqlDB ()
 -- updateSubscription isSubscribed driverId = do
 --   now <- getCurrentTime

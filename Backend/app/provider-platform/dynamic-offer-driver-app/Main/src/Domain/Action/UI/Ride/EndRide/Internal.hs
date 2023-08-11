@@ -290,7 +290,7 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-  driverFee <- mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig
+  driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
   unless (totalDriverFee <= 0) $ do
     _ <- case lastDriverFee of
       Just ldFee ->
@@ -333,6 +333,7 @@ mkDriverFee ::
   ( MonadFlow m
   ) =>
   UTCTime ->
+  Id Merchant ->
   Id DP.Driver ->
   Maybe Money ->
   Money ->
@@ -341,9 +342,8 @@ mkDriverFee ::
   HighPrecMoney ->
   TransporterConfig ->
   m DF.DriverFee
-mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
+mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
   id <- generateGUID
-  shortId <- generateShortId
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
@@ -357,6 +357,7 @@ mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterC
         updatedAt = now,
         platformFee = DF.PlatformFee platformFee cgst sgst,
         totalEarnings = fromMaybe 0 rideFare,
+        feeType = DF.RECURRING_INVOICE,
         ..
       }
 

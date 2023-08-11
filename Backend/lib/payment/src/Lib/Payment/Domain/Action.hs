@@ -20,6 +20,8 @@ module Lib.Payment.Domain.Action
   )
 where
 
+import qualified Data.Text as T
+import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
@@ -35,9 +37,18 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 
-newtype PaymentStatusResp = PaymentStatusResp
-  { status :: Payment.TransactionStatus
-  }
+data PaymentStatusResp
+  = PaymentStatus
+      { status :: Payment.TransactionStatus
+      }
+  | MandatePaymentStatus
+      { status :: Payment.TransactionStatus,
+        mandateStatus :: Payment.MandateStatus,
+        mandateStartDate :: UTCTime,
+        mandateEndDate :: UTCTime,
+        mandateId :: Text,
+        mandateMaxAmount :: HighPrecMoney
+      }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- create order -----------------------------------------------------
@@ -49,17 +60,15 @@ createOrderService ::
   ) =>
   Id Merchant ->
   Id Person ->
-  Id DOrder.PaymentOrder ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m Payment.CreateOrderResp
-createOrderService merchantId personId orderId createOrderReq createOrderCall = do
-  -- mbExistingOrder <- runInReplica $ QOrder.findById orderId
-  mbExistingOrder <- QOrder.findById orderId
+createOrderService merchantId personId createOrderReq createOrderCall = do
+  mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId personId orderId createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId personId createOrderReq createOrderResp
       Esq.runTransaction $
         QOrder.create paymentOrder
       pure createOrderResp
@@ -105,7 +114,11 @@ buildSDKPayloadDetails req order = do
         customerPhone = Just req.customerPhone,
         customerEmail = Just req.customerEmail,
         orderId = Just order.shortId.getShortId,
-        description = order.description
+        description = order.description,
+        createMandate = order.createMandate,
+        mandateMaxAmount = show <$> order.mandateMaxAmount,
+        mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
+        mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
       }
 
 buildPaymentOrder ::
@@ -115,16 +128,15 @@ buildPaymentOrder ::
   ) =>
   Id Merchant ->
   Id Person ->
-  Id DOrder.PaymentOrder ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId personId orderId req resp = do
+buildPaymentOrder merchantId personId req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   pure
     DOrder.PaymentOrder
-      { id = orderId,
+      { id = Id req.orderId,
         shortId = ShortId req.orderShortId,
         paymentServiceOrderId = resp.id,
         requestId = resp.sdk_payload.requestId,
@@ -136,7 +148,7 @@ buildPaymentOrder merchantId personId orderId req resp = do
         personId,
         merchantId,
         paymentMerchantId = resp.sdk_payload.payload.merchantId,
-        amount = req.amount, -- FIXME resp.sdk_payload.payload.amount
+        amount = round req.amount,
         currency = resp.sdk_payload.payload.currency,
         status = resp.status,
         paymentLinks = fromMaybe (Payment.PaymentLinks Nothing Nothing Nothing) resp.payment_links,
@@ -144,6 +156,10 @@ buildPaymentOrder merchantId personId orderId req resp = do
         clientAuthTokenExpiry = resp.sdk_payload.payload.clientAuthTokenExpiry,
         getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
         environment = resp.sdk_payload.payload.environment,
+        createMandate = resp.sdk_payload.payload.createMandate,
+        mandateMaxAmount = read . T.unpack <$> resp.sdk_payload.payload.mandateMaxAmount,
+        mandateStartDate = posixSecondsToUTCTime . read . T.unpack <$> (resp.sdk_payload.payload.mandateStartDate),
+        mandateEndDate = posixSecondsToUTCTime . read . T.unpack <$> resp.sdk_payload.payload.mandateEndDate,
         createdAt = now,
         updatedAt = now
       }
@@ -165,15 +181,61 @@ orderStatusService personId orderId orderStatusCall = do
   unless (personId == order.personId) $ throwError NotAnExecutor
   let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
   orderStatusResp <- orderStatusCall orderStatusReq -- api call
-  updateOrderTransaction order orderStatusResp Nothing
-  return $ PaymentStatusResp {status = orderStatusResp.transactionStatus}
+  case orderStatusResp of
+    Payment.MandateOrderStatusResp {..} -> do
+      let orderTxn =
+            OrderTxn
+              { mandateStartDate = Just mandateStartDate,
+                mandateEndDate = Just mandateEndDate,
+                mandateId = Just mandateId,
+                mandateFrequency = Just mandateFrequency,
+                mandateMaxAmount = Just mandateMaxAmount,
+                mandateStatus = Just mandateStatus,
+                ..
+              }
+      updateOrderTransaction order orderTxn Nothing
+      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, ..}
+    Payment.OrderStatusResp {..} -> do
+      let orderTxn =
+            OrderTxn
+              { mandateStartDate = Nothing,
+                mandateEndDate = Nothing,
+                mandateId = Nothing,
+                mandateFrequency = Nothing,
+                mandateMaxAmount = Nothing,
+                mandateStatus = Nothing,
+                ..
+              }
+      updateOrderTransaction order orderTxn Nothing
+      return $ PaymentStatus {status = transactionStatus}
+    _ -> throwError $ InternalError "Unexpected Order Status Response."
+
+data OrderTxn = OrderTxn
+  { transactionUUID :: Maybe Text,
+    transactionStatusId :: Int,
+    transactionStatus :: Payment.TransactionStatus,
+    paymentMethodType :: Maybe Text,
+    paymentMethod :: Maybe Text,
+    respMessage :: Maybe Text,
+    respCode :: Maybe Text,
+    gatewayReferenceId :: Maybe Text,
+    amount :: HighPrecMoney,
+    currency :: Payment.Currency,
+    dateCreated :: Maybe UTCTime,
+    mandateStatus :: Maybe Payment.MandateStatus,
+    mandateStartDate :: Maybe UTCTime,
+    mandateEndDate :: Maybe UTCTime,
+    mandateId :: Maybe Text,
+    mandateFrequency :: Maybe Payment.MandateFrequency,
+    mandateMaxAmount :: Maybe HighPrecMoney
+  }
 
 updateOrderTransaction ::
   ( EsqDBReplicaFlow m r,
     EsqDBFlow m r
   ) =>
   DOrder.PaymentOrder ->
-  Payment.OrderStatusResp ->
+  OrderTxn ->
   Maybe Text ->
   m ()
 updateOrderTransaction order resp respDump = do
@@ -201,14 +263,20 @@ updateOrderTransaction order resp respDump = do
                         gatewayReferenceId = resp.gatewayReferenceId,
                         amount = resp.amount,
                         currency = resp.currency,
+                        mandateStatus = resp.mandateStatus,
+                        mandateStartDate = resp.mandateStartDate,
+                        mandateEndDate = resp.mandateEndDate,
+                        mandateId = resp.mandateId,
+                        mandateFrequency = resp.mandateFrequency,
+                        mandateMaxAmount = resp.mandateMaxAmount,
                         juspayResponse = respDump
                        }
       Esq.runTransaction $ do
         QTransaction.updateMultiple updTransaction
         when (order.status /= updOrder.status) $ QOrder.updateStatus updOrder
 
-buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> Payment.OrderStatusResp -> Maybe Text -> m DTransaction.PaymentTransaction
-buildPaymentTransaction order Payment.OrderStatusResp {..} respDump = do
+buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
+buildPaymentTransaction order OrderTxn {..} respDump = do
   uuid <- generateGUID
   now <- getCurrentTime
   pure
@@ -235,8 +303,31 @@ juspayWebhookService ::
   Text ->
   m AckResponse
 juspayWebhookService resp respDump = do
-  let orderShortId = ShortId resp.orderShortId
-  -- order <- runInReplica $ QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
-  order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
-  updateOrderTransaction order resp $ Just respDump
+  order <- runInReplica $ QOrder.findByShortId (ShortId resp.orderShortId) >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
+  case resp of
+    Payment.MandateOrderStatusResp {..} -> do
+      let orderTxn =
+            OrderTxn
+              { mandateStartDate = Just mandateStartDate,
+                mandateEndDate = Just mandateEndDate,
+                mandateId = Just mandateId,
+                mandateStatus = Just mandateStatus,
+                mandateFrequency = Just mandateFrequency,
+                mandateMaxAmount = Just mandateMaxAmount,
+                ..
+              }
+      updateOrderTransaction order orderTxn $ Just respDump
+    Payment.OrderStatusResp {..} -> do
+      let orderTxn =
+            OrderTxn
+              { mandateStartDate = Nothing,
+                mandateEndDate = Nothing,
+                mandateId = Nothing,
+                mandateStatus = Nothing,
+                mandateFrequency = Nothing,
+                mandateMaxAmount = Nothing,
+                ..
+              }
+      updateOrderTransaction order orderTxn $ Just respDump
+    _ -> return ()
   return Ack
