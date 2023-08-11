@@ -15,7 +15,7 @@
 
 module Screens.ReferralScreen.Controller where
 
-import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void, (<>), when, map, (-), (>))
+import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void, (<>), when, map, (-), (>), (/=))
 import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
 import Components.BottomNavBar as BottomNavBar
 import Components.GenericHeader as GenericHeader
@@ -39,6 +39,7 @@ import Data.Array (length) as DA
 import Data.Maybe (Maybe(..))
 import Services.API (LeaderBoardRes(..), DriversInfo(..))
 import Data.Maybe (fromMaybe)
+import Merchant.Utils(getMerchant, Merchant(..))
 import Screens.ReferralScreen.ScreenData as RSD
 
 
@@ -198,7 +199,7 @@ eval BackPressed state = exit $ GoBack
 eval RefreshScreen state = exit $ Refresh state
 
 eval EnableReferralFlow state = do
-  if (state.props.enableReferralFlowCount >= 5 ) then do
+  if (state.props.enableReferralFlowCount >= 5 && getMerchant unit /= YATRIPARTNER) then do
     continue state {props {stage = ReferralFlow}}
     else do
       continue state {props {enableReferralFlowCount = state.props.enableReferralFlowCount + 1}}

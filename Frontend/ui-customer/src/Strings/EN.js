@@ -263,6 +263,7 @@ const englishStrings = {
   "DAYTIME_CHARGES_APPLICABLE_AT_NIGHT": "x of daytime charges applicable at night from 10 PM to 5 AM",
   "NIGHT_TIMES_OF": "",
   "DAYTIME_CHARGES_APPLIED_AT_NIGHT": "x of daytime charges applied to fare at night (🌙) from 10 PM to 5 AM",
+  "ERNAKULAM_LIMIT_CHARGE": "Fare will be 1.5x if the pickup or destination lies outside Ernakulam corporation limits",
   "DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC": "* Driver may optionally request 10% of base fare (rounded to nearest Rs.10) to cover for traffic, chance of return trip etc.",
   "GOT_IT": "Got It!",
   "DAY_TIME_CHARGES": "Daytime Charges (5 AM to 10 PM)",

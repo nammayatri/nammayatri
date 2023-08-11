@@ -190,6 +190,18 @@ defaultRateCardView push config =
       , fontStyle $ FontStyle.regular LanguageStyle
       , padding $ PaddingHorizontal 20 20
       ]
+    , textView
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , color Color.black700
+      , text (getString ERNAKULAM_LIMIT_CHARGE)
+      , textSize FontSize.a_14
+      , lineHeight "16"
+      , visibility if (getMerchant FunctionCall) == YATRI then VISIBLE else GONE
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , padding $ PaddingHorizontal 20 20
+      , margin $ MarginTop 8
+      ]
     , imageView
       [ width MATCH_PARENT
       , height $ V 2 

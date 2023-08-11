@@ -58,7 +58,7 @@ const config = {
     "YOUR_FEEDBACK_HELPS_US"
     ],
 
-    "isReferralEnabled" : "false",
+    "isReferralEnabled" : "true",
     "showBookingPreference" : "false",
     "showRateCard" : "false",
     "showDashboard" : "false",

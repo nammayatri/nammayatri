@@ -948,7 +948,7 @@ qrScreen push state =
                   imageView
                     [ height $ V 49
                     , width $ V 120
-                    , imageUrl "ny_namma_yatri"
+                    , imageWithFallback "ny_ic_logo_banner, https://assets.juspay.in/beckn/yatri/driver/images/ny_ic_logo_banner.png"
                     ]
                 ]
             , linearLayout

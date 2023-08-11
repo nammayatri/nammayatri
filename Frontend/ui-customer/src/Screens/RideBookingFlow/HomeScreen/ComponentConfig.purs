@@ -668,7 +668,7 @@ rateCardConfig state =
         , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
-        , nightChargesApplicable = not ((HU.getMerchant FunctionCall) == HU.YATRI)
+        , nightChargesApplicable = state.data.selectedEstimatesObject.vehicleVariant == "AUTO_RICKSHAW"
         , rateCardArray = state.data.rateCard.rateCardArray
         , title = state.data.rateCard.title
         , driverAdditionsImage = state.data.rateCard.driverAdditionsImage
@@ -953,7 +953,7 @@ specialLocationConfig :: String -> String -> JB.MapRouteConfig
 specialLocationConfig srcIcon destIcon = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
-  , vehicleSizeTagIcon : (HU.getMerchantVechicleSize unit)
+  , vehicleSizeTagIcon : (HU.getVehicleSize unit)
 }
 
 updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker
