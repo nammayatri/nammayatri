@@ -213,7 +213,12 @@ view push state =
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
+      , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
+          Just ob -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig state ob) else linearLayout[visibility GONE][]
+          Nothing -> linearLayout[visibility GONE][]
   ]
+
+
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverMapsHeaderView push state =
@@ -512,7 +517,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background Color.darkMint
+                    , background Color.yellowText
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView

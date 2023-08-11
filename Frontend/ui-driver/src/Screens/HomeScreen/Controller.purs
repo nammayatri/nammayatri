@@ -39,7 +39,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, cleverTapCustomEvent)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -182,6 +182,7 @@ instance loggableAction :: Loggable Action where
     PaymentBannerAC act -> pure unit
     PaymentStatusAction _ -> pure unit
     RemovePaymentBanner -> pure unit
+    OfferPopupAC _ -> pure unit
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -205,6 +206,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
+                    | SubscriptionScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -256,6 +258,7 @@ data Action = NoAction
             | RateCardAC RateCard.Action
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
+            | OfferPopupAC PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -329,7 +332,13 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    "Join" -> exit $ SubscriptionScreen state
     _ -> continue state
+
+eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
+  _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
+  _ <- pure $ cleverTapCustomEvent "ny_driver_in_app_popup_join_now"
+  exit $ SubscriptionScreen state 
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let

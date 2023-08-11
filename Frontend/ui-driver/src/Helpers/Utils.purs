@@ -55,20 +55,21 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>))
+import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), show)
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import Data.Function.Uncurried (Fn4(..), runFn4)
+import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3)
 import Screens.Types (AllocationData, LeaderBoardWeek, YoutubeData, LeaderBoardDay)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
-import Services.API(PaymentPagePayload)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
+import Services.API (PaymentPagePayload, PromotionPopupConfig)
+import Storage (KeyStore)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -116,6 +117,12 @@ foreign import getPastDays :: Int -> Array LeaderBoardDay
 foreign import getPastWeeks :: Int -> Array LeaderBoardWeek
 foreign import getZoneTagConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 foreign import getPeriod :: String -> Period
+foreign import clampNumber :: Number -> Number -> Int -> Int
+foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
+
+
+getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
+getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 
 
 type Period
   = { period :: Int

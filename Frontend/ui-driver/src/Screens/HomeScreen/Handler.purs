@@ -27,7 +27,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
-import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Screens.Types (KeyboardModalType(..))
 import Data.Maybe (Maybe(..))
@@ -107,7 +107,9 @@ homeScreen = do
     AadhaarVerificationFlow updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
-    
+    SubscriptionScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV GoToSubscription)
 -- DTHS.GoToStart screenState -> do
 --       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
 --       _ <- pure $ spy "lat handler" startRideCurrentLat

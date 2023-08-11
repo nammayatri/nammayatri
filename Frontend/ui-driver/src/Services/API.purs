@@ -400,6 +400,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
     , subscribed            :: Boolean
+    , autoPayStatus         :: Maybe String  
     }
 
 
@@ -2011,7 +2012,11 @@ newtype PayPayload = PayPayload
     merchantId :: Maybe String,
     options_getUpiDeepLinks :: Maybe Boolean,
     orderId :: Maybe String,
-    returnUrl :: Maybe String
+    returnUrl :: Maybe String,
+    "options.createMandate" :: Maybe String,
+    "mandate.maxAmount" :: Maybe String,
+    "mandate.endDate" :: Maybe String,
+    "mandate.startDate" :: Maybe String
   }
 
 newtype PaymentLinks = PaymentLinks
@@ -2059,7 +2064,6 @@ instance standardEncodePaymentPagePayload :: StandardEncode PaymentPagePayload w
 instance showPaymentPagePayload :: Show PaymentPagePayload where show = genericShow
 instance decodePaymentPagePayload :: Decode PaymentPagePayload where decode = defaultDecode
 instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
-
 
 
 -- order status
@@ -2241,3 +2245,321 @@ instance standardEncodeUnVerifiedDataReq :: StandardEncode UnVerifiedDataReq whe
 instance showUnVerifiedDataReq :: Show UnVerifiedDataReq where show = genericShow
 instance decodeUnVerifiedDataReq :: Decode UnVerifiedDataReq  where decode = defaultDecode
 instance encodeUnVerifiedDataReq :: Encode UnVerifiedDataReq where encode = defaultEncode
+
+
+-------------------------------------------------- getUiPlans -------------------------------------
+
+data UiPlansReq = UiPlansReq String
+
+newtype UiPlansResp = UiPlansResp {
+  list :: Array PlanEntity,
+  subscriptionStartTime :: String
+}
+
+newtype PlanEntity = PlanEntity {
+  id :: String,
+  name :: String,
+  description :: String,
+  freeRideCount :: Int,
+  frequency :: String, -- DAILY | WEEKLY | MONTHLY | PER_RIDE
+  offers :: Array OfferEntity,
+  planFareBreakup :: Array PaymentBreakUp
+}
+
+newtype OfferEntity = OfferEntity {
+  title :: Maybe String,
+  description :: Maybe String,
+  tnc :: Maybe String
+}
+
+newtype PromotionPopupConfig = PromotionPopupConfig {
+  title :: String,
+  description :: String,
+  imageUrl :: String,
+  buttonText :: String,
+  heading :: String
+}
+
+derive instance genericPromotionPopupConfig :: Generic PromotionPopupConfig _
+derive instance newtypePromotionPopupConfig :: Newtype PromotionPopupConfig _
+instance standardEncodePromotionPopupConfig :: StandardEncode PromotionPopupConfig where standardEncode (PromotionPopupConfig res) = standardEncode res
+instance showPromotionPopupConfig :: Show PromotionPopupConfig where show = genericShow
+instance decodePromotionPopupConfig :: Decode PromotionPopupConfig where decode = defaultDecode
+instance encodePromotionPopupConfig :: Encode PromotionPopupConfig where encode = defaultEncode 
+
+instance makeUiPlansReq :: RestEndpoint UiPlansReq UiPlansResp where
+ makeRequest reqBody@(UiPlansReq dummy) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericUiPlansReq :: Generic UiPlansReq _
+instance standardEncodeUiPlansReq :: StandardEncode UiPlansReq where standardEncode (UiPlansReq dummy ) = standardEncode dummy
+instance showUiPlansReq :: Show UiPlansReq where show = genericShow
+instance decodeUiPlansReq :: Decode UiPlansReq where decode = defaultDecode
+instance encodeUiPlansReq :: Encode UiPlansReq where encode = defaultEncode
+
+
+derive instance genericUiPlansResp :: Generic UiPlansResp _
+derive instance newtypeUiPlansResp :: Newtype UiPlansResp _
+instance standardEncodeUiPlansResp :: StandardEncode UiPlansResp where standardEncode (UiPlansResp res) = standardEncode res
+instance showUiPlansResp :: Show UiPlansResp where show = genericShow
+instance decodeUiPlansResp :: Decode UiPlansResp where decode = defaultDecode
+instance encodeUiPlansResp :: Encode UiPlansResp where encode = defaultEncode 
+
+derive instance genericPlanEntity :: Generic PlanEntity _
+derive instance newtypePlanEntity :: Newtype PlanEntity _
+instance standardEncodePlanEntity :: StandardEncode PlanEntity where standardEncode (PlanEntity res) = standardEncode res
+instance showPlanEntity :: Show PlanEntity where show = genericShow
+instance decodePlanEntity :: Decode PlanEntity where decode = defaultDecode
+instance encodePlanEntity :: Encode PlanEntity where encode = defaultEncode
+
+derive instance genericOfferEntity :: Generic OfferEntity _
+derive instance newtypeOfferEntity :: Newtype OfferEntity _
+instance standardEncodeOfferEntity :: StandardEncode OfferEntity where standardEncode (OfferEntity res) = standardEncode res
+instance showOfferEntity :: Show OfferEntity where show = genericShow
+instance decodeOfferEntity :: Decode OfferEntity where decode = defaultDecode
+instance encodeOfferEntity :: Encode OfferEntity where encode = defaultEncode 
+
+
+
+-------------------------------------------------- SubscribePlan ------------------------------
+
+newtype SubscribePlanReq = SubscribePlanReq String
+
+newtype SubscribePlanResp = SubscribePlanResp {
+  orderResp :: CreateOrderRes,
+  status :: String,
+  orderId :: String
+}
+
+instance makeSubscribePlanReq :: RestEndpoint SubscribePlanReq SubscribePlanResp where
+    makeRequest reqBody@(SubscribePlanReq planId) headers = defaultMakeRequest POST (EP.subscribePlan planId) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericSubscribePlanReq :: Generic SubscribePlanReq _
+derive instance newtypeSubscribePlanReq :: Newtype SubscribePlanReq _
+instance standardEncodeSubscribePlanReq :: StandardEncode SubscribePlanReq where standardEncode (SubscribePlanReq body) = standardEncode body
+instance showSubscribePlanReq :: Show SubscribePlanReq where show = genericShow
+instance decodeSubscribePlanReq :: Decode SubscribePlanReq  where decode = defaultDecode
+instance encodeSubscribePlanReq :: Encode SubscribePlanReq where encode = defaultEncode
+
+derive instance genericSubscribePlanResp :: Generic SubscribePlanResp _
+derive instance newtypeSubscribePlanResp :: Newtype SubscribePlanResp _
+instance standardEncodeSubscribePlanResp :: StandardEncode SubscribePlanResp where standardEncode (SubscribePlanResp res) = standardEncode res
+instance showSubscribePlanResp :: Show SubscribePlanResp where show = genericShow
+instance decodeSubscribePlanResp :: Decode SubscribePlanResp where decode = defaultDecode
+instance encodeSubscribePlanResp :: Encode SubscribePlanResp where encode = defaultEncode
+
+
+--------------------------------------- PaymentDues -----------------------
+
+data PaymentDuesReq = PaymentDuesReq String
+
+newtype PaymentDuesResp = PaymentDuesResp {
+  maxAmount :: Int,
+  currentDue :: Int,
+  isLimitReached :: Boolean,
+  dues :: DuesEntity
+}
+
+newtype DuesEntity = DuesEntity {
+  id :: String,
+  date :: String,
+  amount :: Int
+}
+
+
+instance makePaymentDuesReq :: RestEndpoint PaymentDuesReq PaymentDuesResp where
+ makeRequest reqBody@(PaymentDuesReq dummy ) headers = defaultMakeRequest GET (EP.getUiPlans "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericPaymentDuesReq :: Generic PaymentDuesReq _
+instance standardEncodePaymentDuesReq :: StandardEncode PaymentDuesReq where standardEncode (PaymentDuesReq dummy ) = standardEncode dummy
+instance showPaymentDuesReq :: Show PaymentDuesReq where show = genericShow
+instance decodePaymentDuesReq :: Decode PaymentDuesReq where decode = defaultDecode
+instance encodePaymentDuesReq :: Encode PaymentDuesReq where encode = defaultEncode
+
+derive instance genericPaymentDuesResp :: Generic PaymentDuesResp _
+derive instance newtypePaymentDuesResp:: Newtype PaymentDuesResp _
+instance standardEncodePaymentDuesResp :: StandardEncode PaymentDuesResp where standardEncode (PaymentDuesResp res) = standardEncode res
+instance showPaymentDuesResp :: Show PaymentDuesResp where show = genericShow
+instance decodePaymentDuesResp :: Decode PaymentDuesResp where decode = defaultDecode
+instance encodePaymentDuesResp :: Encode PaymentDuesResp where encode = defaultEncode
+
+derive instance genericDuesEntity :: Generic DuesEntity _
+derive instance newtypeDuesEntity:: Newtype DuesEntity _
+instance standardEncodeDuesEntity :: StandardEncode DuesEntity where standardEncode (DuesEntity res) = standardEncode res
+instance showDuesEntity :: Show DuesEntity where show = genericShow
+instance decodeDuesEntity :: Decode DuesEntity where decode = defaultDecode
+instance encodeDuesEntity :: Encode DuesEntity where encode = defaultEncode
+
+
+------------------------------------------------- PauseMandate --------------------------------------
+
+data PauseMandateReq = PauseMandateReq String
+
+newtype PauseMandateResp = PauseMandateResp ApiSuccessResult
+
+instance makePauseMandateReq :: RestEndpoint PauseMandateReq PauseMandateResp where
+ makeRequest reqBody@(PauseMandateReq driverId) headers = defaultMakeRequest POST (EP.pauseMandate driverId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericPauseMandateReq :: Generic PauseMandateReq _
+instance standardEncodePauseMandateReq :: StandardEncode PauseMandateReq where standardEncode (PauseMandateReq dummy) = standardEncode dummy
+instance showPauseMandateReq :: Show PauseMandateReq where show = genericShow
+instance decodePauseMandateReq :: Decode PauseMandateReq where decode = defaultDecode
+instance encodePauseMandateReq :: Encode PauseMandateReq where encode = defaultEncode
+
+derive instance genericPauseMandateResp :: Generic PauseMandateResp _
+derive instance newtypePauseMandateResp :: Newtype PauseMandateResp _
+instance standardEncodePauseMandateResp :: StandardEncode PauseMandateResp where standardEncode (PauseMandateResp res) = standardEncode res
+instance showPauseMandateResp :: Show PauseMandateResp where show = genericShow
+instance decodePauseMandateResp :: Decode PauseMandateResp where decode = defaultDecode
+instance encodePauseMandateResp :: Encode PauseMandateResp where encode = defaultEncode 
+
+
+--------------------------------------------- ResumeMandate --------------------------------------------------
+
+data ResumeMandateReq = ResumeMandateReq String
+
+newtype ResumeMandateResp = ResumeMandateResp ApiSuccessResult
+
+instance makeResumeMandateReq :: RestEndpoint ResumeMandateReq ResumeMandateResp where
+ makeRequest reqBody@(ResumeMandateReq driverId) headers = defaultMakeRequest PUT (EP.resumeMandate driverId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericResumeMandateReq :: Generic ResumeMandateReq _
+instance standardEncodeResumeMandateReq :: StandardEncode ResumeMandateReq where standardEncode (ResumeMandateReq dummy) = standardEncode dummy
+instance showResumeMandateReq :: Show ResumeMandateReq where show = genericShow
+instance decodeResumeMandateReq :: Decode ResumeMandateReq where decode = defaultDecode
+instance encodeResumeMandateReq :: Encode ResumeMandateReq where encode = defaultEncode
+
+derive instance genericResumeMandateResp :: Generic ResumeMandateResp _
+derive instance newtypeResumeMandateResp :: Newtype ResumeMandateResp _
+instance standardEncodeResumeMandateResp :: StandardEncode ResumeMandateResp where standardEncode (ResumeMandateResp res) = standardEncode res
+instance showResumeMandateResp :: Show ResumeMandateResp where show = genericShow
+instance decodeResumeMandateResp :: Decode ResumeMandateResp where decode = defaultDecode
+instance encodeResumeMandateResp :: Encode ResumeMandateResp where encode = defaultEncode 
+
+
+--------------------------------------------- SuspendMandate --------------------------------------------------
+
+data SuspendMandateReq = SuspendMandateReq String
+
+newtype SuspendMandateResp = SuspendMandateResp ApiSuccessResult
+
+instance makeSuspendMandateReq :: RestEndpoint SuspendMandateReq SuspendMandateResp where
+ makeRequest reqBody@(SuspendMandateReq id) headers = defaultMakeRequest PUT (EP.suspendMandate id) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSuspendMandateReq :: Generic SuspendMandateReq _
+instance standardEncodeSuspendMandateReq :: StandardEncode SuspendMandateReq where standardEncode (SuspendMandateReq dummy) = standardEncode dummy
+instance showSuspendMandateReq :: Show SuspendMandateReq where show = genericShow
+instance decodeSuspendMandateReq :: Decode SuspendMandateReq where decode = defaultDecode
+instance encodeSuspendMandateReq :: Encode SuspendMandateReq where encode = defaultEncode
+
+derive instance genericSuspendMandateResp :: Generic SuspendMandateResp _
+derive instance newtypeSuspendMandateResp :: Newtype SuspendMandateResp _
+instance standardEncodeSuspendMandateResp :: StandardEncode SuspendMandateResp where standardEncode (SuspendMandateResp res) = standardEncode res
+instance showSuspendMandateResp :: Show SuspendMandateResp where show = genericShow
+instance decodeSuspendMandateResp :: Decode SuspendMandateResp where decode = defaultDecode
+instance encodeSuspendMandateResp :: Encode SuspendMandateResp where encode = defaultEncode 
+
+------------------------------------------ SelectPlan ------------------------------------------------------
+
+newtype SelectPlanReq = SelectPlanReq String
+
+newtype SelectPlanResp = SelectPlanResp ApiSuccessResult
+
+instance makeSelectPlanReq :: RestEndpoint SelectPlanReq SelectPlanResp where
+    makeRequest reqBody@(SelectPlanReq id) headers = defaultMakeRequest PUT (EP.selectPlan id) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericSelectPlanReq :: Generic SelectPlanReq _
+derive instance newtypeSelectPlanReq :: Newtype SelectPlanReq _
+instance standardEncodeSelectPlanReq :: StandardEncode SelectPlanReq where standardEncode (SelectPlanReq body) = standardEncode body
+instance showSelectPlanReq :: Show SelectPlanReq where show = genericShow
+instance decodeSelectPlanReq :: Decode SelectPlanReq  where decode = defaultDecode
+instance encodeSelectPlanReq :: Encode SelectPlanReq where encode = defaultEncode
+
+derive instance genericSelectPlanResp :: Generic SelectPlanResp _
+derive instance newtypeSelectPlanResp :: Newtype SelectPlanResp _
+instance standardEncodeSelectPlanResp :: StandardEncode SelectPlanResp where standardEncode (SelectPlanResp res) = standardEncode res
+instance showSelectPlanResp :: Show SelectPlanResp where show = genericShow
+instance decodeSelectPlanResp :: Decode SelectPlanResp where decode = defaultDecode
+instance encodeSelectPlanResp :: Encode SelectPlanResp where encode = defaultEncode
+
+----------------------------------------------- CancelAutoPay -----------------------------------------
+
+data CancelAutoPayReq = CancelAutoPayReq String
+
+newtype CancelAutoPayResp = CancelAutoPayResp ApiSuccessResult
+
+instance makeCancelAutoPayReq :: RestEndpoint CancelAutoPayReq CancelAutoPayResp where
+ makeRequest reqBody@(CancelAutoPayReq driverId) headers = defaultMakeRequest POST (EP.cancelAutoPay driverId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericCancelAutoPayReq :: Generic CancelAutoPayReq _
+instance standardEncodeCancelAutoPayReq :: StandardEncode CancelAutoPayReq where standardEncode (CancelAutoPayReq dummy) = standardEncode dummy
+instance showCancelAutoPayReq :: Show CancelAutoPayReq where show = genericShow
+instance decodeCancelAutoPayReq :: Decode CancelAutoPayReq where decode = defaultDecode
+instance encodeCancelAutoPayReq :: Encode CancelAutoPayReq where encode = defaultEncode
+
+derive instance genericCancelAutoPayResp :: Generic CancelAutoPayResp _
+derive instance newtypeCancelAutoPayResp :: Newtype CancelAutoPayResp _
+instance standardEncodeCancelAutoPayResp :: StandardEncode CancelAutoPayResp where standardEncode (CancelAutoPayResp res) = standardEncode res
+instance showCancelAutoPayResp :: Show CancelAutoPayResp where show = genericShow
+instance decodeCancelAutoPayResp :: Decode CancelAutoPayResp where decode = defaultDecode
+instance encodeCancelAutoPayResp :: Encode CancelAutoPayResp where encode = defaultEncode 
+
+---------------------------------------------- CurrentPlanAPI ---------------------------------------------------
+data GetCurrentPlanReq = GetCurrentPlanReq String
+
+newtype GetCurrentPlanResp = GetCurrentPlanResp {
+  currentPlanDetails :: PlanEntity,
+  mandateData :: Maybe MandateData
+}
+
+newtype MandateData = MandateData {
+  status :: String, --CREATED | ACTIVE | FAILURE | PAUSED | EXPIRED | REVOKED,
+  startDate :: String,
+  endDate :: String,
+  mandateId :: String,
+  payerVpa :: String,
+  frequency :: String, --ONETIME | DAILY | WEEKLY | FORTNIGHTLY | MONTHLY | BIMONTHLY | QUARTERLY | HALFYEARLY | YEARLY | ASPRESENTED
+  maxAmount :: Number,
+  totalPlanCreditLimit :: Number,
+  currentDues :: Number
+}
+
+instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq GetCurrentPlanResp where
+ makeRequest reqBody@(GetCurrentPlanReq driverId) headers = defaultMakeRequest GET (EP.getCurrentPlan driverId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericGetCurrentPlanReq :: Generic GetCurrentPlanReq _
+instance standardEncodeGetCurrentPlanReq :: StandardEncode GetCurrentPlanReq where standardEncode (GetCurrentPlanReq dummy ) = standardEncode dummy
+instance showGetCurrentPlanReq :: Show GetCurrentPlanReq where show = genericShow
+instance decodeGetCurrentPlanReq :: Decode GetCurrentPlanReq where decode = defaultDecode
+instance encodeGetCurrentPlanReq :: Encode GetCurrentPlanReq where encode = defaultEncode
+
+derive instance genericGetCurrentPlanResp :: Generic GetCurrentPlanResp _
+derive instance newtypeGetCurrentPlanResp :: Newtype GetCurrentPlanResp _
+instance standardEncodeGetCurrentPlanResp :: StandardEncode GetCurrentPlanResp where standardEncode (GetCurrentPlanResp res) = standardEncode res
+instance showGetCurrentPlanResp :: Show GetCurrentPlanResp where show = genericShow
+instance decodeGetCurrentPlanResp :: Decode GetCurrentPlanResp where decode = defaultDecode
+instance encodeGetCurrentPlanResp :: Encode GetCurrentPlanResp where encode = defaultEncode 
+
+derive instance genericMandateData :: Generic MandateData _
+derive instance newtypeMandateData:: Newtype MandateData _
+instance standardEncodeMandateData :: StandardEncode MandateData where standardEncode (MandateData res) = standardEncode res
+instance showMandateData :: Show MandateData where show = genericShow
+instance decodeMandateData :: Decode MandateData where decode = defaultDecode
+instance encodeMandateData :: Encode MandateData where encode = defaultEncode

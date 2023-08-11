@@ -15,42 +15,43 @@
 
 module Screens.HomeScreen.ComponentConfig where
 
-import Language.Strings (getString)
-import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map, (&&), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..), Padding(..))
-import Components.SelectListModal as SelectListModal
-import Components.Banner as Banner
 import Language.Strings
+
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App as CommonTypes
+import Components.Banner as Banner
 import Components.ChatView as ChatView
 import Components.InAppKeyboardModal as InAppKeyboardModal
+import Components.MakePaymentModal as MakePaymentModal
 import Components.PopUpModal as PopUpModal
-import Components.RideActionModal as RideActionModal
-import Components.StatsModel as StatsModel
+import Components.RateCard as RateCard
 import Components.RequestInfoCard as RequestInfoCard
+import Components.RideActionModal as RideActionModal
+import Components.SelectListModal as SelectListModal
+import Components.StatsModel as StatsModel
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
+import Debug (spy)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday)
+import Helpers.Utils (getMerchantVehicleSize)
 import Helpers.Utils as HU
+import JBridge as JB
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>))
+import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map, (&&), not)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..), Padding(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
+import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..))
 import Storage (KeyStore(..), getValueToLocalStore)
-import JBridge as JB
 import Styles.Colors as Color
-import Components.MakePaymentModal as MakePaymentModal
-import Components.RateCard as RateCard
-import Common.Types.App as CommonTypes
-import Services.API ( PaymentBreakUp(..))
-import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
-import Font.Style as FontStyle
-import Helpers.Utils (getMerchantVehicleSize)
-
 import Styles.Colors as Color
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -193,6 +194,37 @@ linkAadhaarPopupConfig state = let
     }
   }
   in popUpConfig'
+
+offerPopupConfig :: ST.HomeScreenState -> PromotionPopupConfig -> PopUpModal.Config
+offerPopupConfig state  (PromotionPopupConfig ob) = 
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    topTitle = Just ob.heading,
+    primaryText {
+      text = ob.title
+    , margin = Margin 16 24 16 4 },
+    secondaryText {
+      text = ob.description
+    , margin = MarginBottom 24},
+    option1 {
+      text = ob.buttonText-- "Join Now"
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "," <> ob.imageUrl
+    , visibility = VISIBLE
+    , height = V 178
+    , width = V 204
+    }
+}
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
 cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config
