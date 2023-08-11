@@ -479,7 +479,7 @@ const frenchStrings = {
   RIDE_TYPE : "Type de trajet",
   PLACE_CALL_REQUEST : "Faire une demande d'appel",
   RC_STATUS : "Statut RC",
-  RATED_BY : "Évalué par",
-  USERS : "UTILISATRICES",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "UTILISATRICES Évalué par",
   MONTHS : "Mois"
 }

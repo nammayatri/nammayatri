@@ -599,7 +599,7 @@ const tamilStrings = {
   PLACE_CALL_REQUEST : "Place Call Request",
   RC_STATUS : "RC நிலை",
   BOOKING_OPTIONS : "முன்பதிவு விருப்பங்கள்",
-  RATED_BY : "",
-  USERS : "பயனர்கள் மூலம் மதிப்பிடப்பட்டது",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "பயனர்கள் மூலம் மதிப்பிடப்பட்டது",
   MONTHS : "மாதங்கள்"
 }

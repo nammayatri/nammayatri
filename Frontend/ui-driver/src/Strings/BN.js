@@ -637,7 +637,7 @@ const bengaliStrings = {
 	RIDE_TYPE : "রাইড টাইপ",
 	PLACE_CALL_REQUEST : "স্থান কল অনুরোধ",
 	RC_STATUS : "আরসি স্ট্যাটাস",
-	RATED_BY : "দ্বারা রেট",
-	USERS : "ব্যবহারকারী",
+	RATED_BY_USERS1 : "",
+	RATED_BY_USERS2 : "ব্যবহারকারী দ্বারা রেট",
 	MONTHS : "মাস"
 }

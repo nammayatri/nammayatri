@@ -39,7 +39,6 @@ import Components.PrimaryEditText as PrimaryEditText
 import Prelude ((<>), (||),(&&),(==),(<), not, (>))
 import Engineering.Helpers.Commons as EHC
 import Data.String as DS
-import Data.String (length)
 import Data.Array as DA
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
@@ -47,7 +46,8 @@ import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude 
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
-import Data.Array (length)
+import Helpers.Utils (getPeriod)
+import MerchantConfig.Utils (getValueFromConfig)
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let 
@@ -392,3 +392,36 @@ deleteRcPopUpConfig state =
         }
   in
     popUpConfig'
+
+getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRailData
+getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
+  let
+    alive = getPeriod lastRegistered
+  in
+    ( if lateNightTrips > 0 then
+        [ { mainTxt: show lateNightTrips
+          , subTxt: getString LATE_NIGHT_TRIPS
+          }
+        ]
+      else
+        []
+    ) <> 
+    ( [ { mainTxt: if alive.periodType == "new" then "" else (show alive.period) <> " " <> alive.periodType
+          , subTxt: "on " <> getValueFromConfig "clientName"
+          }
+        ]
+    )<> 
+    ( if DA.length lang > 0 then
+            [ { mainTxt: show (DA.length lang)
+              , subTxt: getString LANGUAGES_SPOKEN
+              }
+            ]
+          else
+            []
+    )<>
+    (
+      [ { mainTxt: totalDistanceTravelled
+        , subTxt: getString TRAVELLED_ON_APP
+        }
+      ]
+    )

@@ -24,7 +24,8 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     , totalCompletedTrips: summary.totalCompletedTrips
     , totalUsersRated: response.totalUsersRated
     , rating: response.rating
-    , chipRailData: getChipRailArray response.driverSummary (fromMaybe [] response.languagesSpoken) (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2)
+    , lateNightTrips: summary.lateNightTrips
+    , lastRegistered: summary.lastRegistered
     , badges: [] -- TODO implement Badges
     , missedEarnings: missedOpp.missedEarnings
     , ridesCancelled: missedOpp.ridesCancelled
@@ -32,36 +33,3 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     , totalRidesAssigned: response.totalRidesAssigned
     , totalDistanceTravelled: (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2) <> "km"
     }
-
-getChipRailArray :: DriverSummary -> Array String -> String -> Array ChipRailData
-getChipRailArray (DriverSummary summary) lang totalDistanceTravelled =
-  let
-    alive = getPeriod summary.lastRegistered
-  in
-    ( if summary.lateNightTrips > 0 then
-        [ { mainTxt: show summary.lateNightTrips
-          , subTxt: getString LATE_NIGHT_TRIPS
-          }
-        ]
-      else
-        []
-    ) <> 
-    ( [ { mainTxt: if alive.periodType == "new" then "" else (show alive.period) <> " " <> alive.periodType
-          , subTxt: "on " <> getValueFromConfig "clientName"
-          }
-        ]
-    )<> 
-    ( if length lang > 0 then
-            [ { mainTxt: show (length lang)
-              , subTxt: getString LANGUAGES_SPOKEN
-              }
-            ]
-          else
-            []
-    )<>
-    (
-      [ { mainTxt: totalDistanceTravelled <>"km"
-        , subTxt: getString TRAVELLED_ON_APP
-        }
-      ]
-    )
