@@ -159,6 +159,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         body = notification_payload.get("body").toString();
                         if (notification_payload.has("imageUrl")) {
                             imageUrl = notification_payload.get("imageUrl").toString();
+                        } else if (notification_payload.has("icon")){
+                            imageUrl = notification_payload.get("icon").toString();
                         } else {
                             imageUrl = null;
                         }
@@ -322,6 +324,17 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                         case NotificationTypes.PAYMENT_PENDING:
                             showOverlayMessage(constructOverlayMessage(notification_payload));
+                            break;
+
+                        case NotificationTypes.JOIN_NAMMAYATRI :
+                            JSONObject jsonObject = new JSONObject();
+                            jsonObject.put("title",title);
+                            jsonObject.put("description",body);
+                            jsonObject.put("imageUrl",imageUrl);
+                            jsonObject.put("buttonText", entity_payload.has("buttonText") && !entity_payload.isNull("buttonText")? entity_payload.getString("buttonText") : "Okay");
+                            jsonObject.put("heading", entity_payload.has("heading") && !entity_payload.isNull("heading")? entity_payload.getString("heading") : "");
+                            sharedPref.edit().putString("SHOW_JOIN_NAMMAYATRI", jsonObject.toString()).apply();
+                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                             break;
 
                         default:
@@ -508,5 +521,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
         private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
         private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
+        private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
     }
 }

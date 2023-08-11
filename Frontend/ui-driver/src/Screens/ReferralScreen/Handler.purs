@@ -16,19 +16,19 @@
 module Screens.ReferralScreen.Handler where
 
 
-import Prelude (bind, pure, ($), (<$>), discard)
-import Engineering.Helpers.BackTrack (getState)
-import Screens.ReferralScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
+import Data.Maybe (isJust)
+import Engineering.Helpers.BackTrack (getState)
+import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Screens.ReferralScreen.Controller (ScreenOutput(..))
+import Screens.ReferralScreen.ScreenData as ReferralScreenData
+import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.ReferralScreen.View as ReferralScreen
-import Types.App (FlowBT, GlobalState(..), REFERRAL_SCREEN_OUTPUT(..), ScreenType(..))
-import Screens.ReferralScreen.ScreenData as ReferralScreenData
-import Types.ModifyScreenState (modifyScreenState)
-import Data.Maybe(isJust)
 import Screens.Types (ReferralType(..))
-import Screens.ReferralScreen.ScreenData as ReferralScreenData
+import Types.App (FlowBT, GlobalState(..), NAVIGATION_ACTIONS(..), REFERRAL_SCREEN_OUTPUT(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
@@ -54,3 +54,6 @@ referralScreen = do
     Refresh updatedState -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ REFRESH_LEADERBOARD)
+    SubscriptionScreen updatedState -> do
+      modifyScreenState $ ReferralScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REFERRAL_SCREEN_NAV GoToSubscription)
