@@ -1077,8 +1077,37 @@ requestInfoCardConfig _ = let
   }
   in requestInfoCardConfig'
 
-reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
-reportIssueOptions state =
+waitTimeInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+waitTimeInfoCardConfig _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString WAIT_TIMER
+    }
+  , primaryText {
+      text = getString HOW_LONG_DRIVER_WAITED_FOR_PICKUP,
+      padding = Padding 16 16 0 0
+    }
+  , secondaryText {
+      text = getString YOU_WILL_PAY_FOR_EVERY_MINUTE,
+      visibility = VISIBLE,
+      padding = PaddingLeft 16
+    }
+  , imageConfig {
+      imageUrl = "ny_ic_waiter," <> (getAssetStoreLink FunctionCall) <> "ny_ic_waiter.png",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 4 1 0
+    }
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20
+    }
+  }
+  in requestInfoCardConfig'
+
+reportIssueOptions :: Array OptionButtonList -- need to modify
+reportIssueOptions =
   [ { reasonCode: "DRIVER_WAS_NOT_READY_TO_GO"
     , description: getString DRIVER_WAS_NOT_READY_TO_GO
     , textBoxRequired : false

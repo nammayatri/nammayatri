@@ -583,6 +583,8 @@ type HomeScreenStateData =
   , ratingViewState :: RatingViewState
   , config :: AppConfig
   , logField :: Object Foreign
+  --,activeRideWaitTimeInfo :: Boolean
+  ,waitTimeInfo :: Boolean
   }
 
 type HomeScreenStateProps =

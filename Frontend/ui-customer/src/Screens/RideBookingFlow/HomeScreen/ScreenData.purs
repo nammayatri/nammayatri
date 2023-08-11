@@ -121,6 +121,7 @@ initData = {
     }
     , config : DC.config
     , logField : empty
+    , waitTimeInfo : false
     },
     props: {
       rideRequestFlow : false

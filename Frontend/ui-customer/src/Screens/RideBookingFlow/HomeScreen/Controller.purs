@@ -619,6 +619,7 @@ data Action = NoAction
             | TerminateApp
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
+            | OpenEmergencyHelp
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -894,7 +895,7 @@ eval (UpdateSource lat lng name) state = do
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
 
-eval LiveDashboardAction state = do
+eval (DriverInfoCardActionController (DriverInfoCardController.LiveDashboardAction)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_on_ride_live_stats"
   if os == "IOS" then do
       continueWithCmd state [do
@@ -1159,6 +1160,13 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) state = do
+  continue state{data{waitTimeInfo  = true }}
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data  {waitTimeInfo =false}}
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {waitTimeInfo =false} }
+
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
 eval (CancelSearchAction PopUpModal.OnButton1Click) state = continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
@@ -1175,7 +1183,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
   _ <- pure $ performHapticFeedback unit
   continue state { props { isLocationTracking = true } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = do
+eval (OpenEmergencyHelp) state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
