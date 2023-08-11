@@ -601,7 +601,7 @@ const kannadaStrings = {
   RIDE_TYPE : "ರೈಡ್ ಪ್ರಕಾರ",
   PLACE_CALL_REQUEST : "ಕರೆ ವಿನಂತಿಯನ್ನು ಇರಿಸಿ",
   RC_STATUS : "RC ಸ್ಥಿತಿ",
-  RATED_BY : "ಇವರಿಂದ ರೇಟ್ ಮಾಡಲಾಗಿದೆ",
-  USERS : "ಬಳಕೆದಾರರು",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "ಬಳಕೆದಾರರು ಇವರಿಂದ ರೇಟ್ ಮಾಡಲಾಗಿದೆ",
   MONTHS : "ತಿಂಗಳುಗಳು"
 }

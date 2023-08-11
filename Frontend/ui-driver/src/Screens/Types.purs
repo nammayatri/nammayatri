@@ -296,7 +296,8 @@ type AnalyticsData = {
   , totalCompletedTrips :: Int
   , totalUsersRated :: Int
   , rating :: Maybe Number
-  , chipRailData :: Array ChipRailData
+  , lateNightTrips :: Int
+  , lastRegistered :: String
   , badges :: Array Badge
   , missedEarnings :: Int
   , ridesCancelled :: Int

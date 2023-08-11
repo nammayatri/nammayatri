@@ -597,7 +597,7 @@ const mlStrings = {
   RIDE_TYPE : "റൈഡ് തരം",
   PLACE_CALL_REQUEST : "കോൾ അഭ്യർത്ഥന സ്ഥാപിക്കുക",
   RC_STATUS : "RC നില",
-  RATED_BY : "റേറ്റുചെയ്തത്",
-  USERS : "ഉപയോക്താക്കൾ",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "ഉപയോക്താക്കൾ റേറ്റുചെയ്തത്",
   MONTHS : "മാസങ്ങൾ"
 }
