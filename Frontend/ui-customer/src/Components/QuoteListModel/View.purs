@@ -37,7 +37,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -114,7 +114,7 @@ paymentView state =
           , text $ if (getPaymentMethod unit) == "cash" then (getString PAY_DRIVER_USING_CASH_OR_UPI) else (getString PAY_DRIVER_USING_WALLET)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
-          , accessibilityHint "Payment Method Cash or UPI"
+          , accessibilityHint "Payment Method Cash or U  P  I"
           ] <> FontStyle.body1 TypoGraphy
         ]
     ]
@@ -173,8 +173,9 @@ sourceDestinationView state push =
         , margin $ MarginLeft 12
         , weight 1.0
         , text state.source
+        , accessibilityImportance ENABLE
         , color state.appConfig.quoteListModel.textColor
-        , accessibilityHint $ "Pickup Location " <> state.destination
+        , accessibilityHint $ "Pickup Location is " <> state.source
         , ellipsize true
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
@@ -196,7 +197,8 @@ sourceDestinationView state push =
         , text state.destination
         , margin $ MarginLeft 12
         , color state.appConfig.quoteListModel.textColor
-        , accessibilityHint $ "Drop Location " <> state.destination
+        , accessibilityHint $ "Drop Location is " <> state.destination
+        , accessibilityImportance ENABLE
         , ellipsize true
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
@@ -225,6 +227,7 @@ findingRidesView state push =
   , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
   , margin $ MarginTop state.appConfig.quoteListModel.topMargin
   , clickable true
+  , accessibilityImportance DISABLE
   , margin $ MarginVertical state.appConfig.quoteListModel.topMargin $ if state.tipViewProps.onlyPrimaryText then 80 else if state.tipViewProps.isprimaryButtonVisible then 82 else  85
   , orientation VERTICAL
   ][
@@ -233,6 +236,7 @@ findingRidesView state push =
     , orientation VERTICAL
     , weight 1.0
     , gravity CENTER
+    , accessibilityImportance DISABLE
     ]
     [
       lottieAnimationView
@@ -241,6 +245,7 @@ findingRidesView state push =
                     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
                     pure unit)(const NoAction)
       , height $ V state.appConfig.quoteListModel.lottieHeight
+      , accessibilityImportance DISABLE
       , width $ V state.appConfig.quoteListModel.lottieWidth
       ]
     , textView 
@@ -249,6 +254,7 @@ findingRidesView state push =
       , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
       , textSize FontSize.a_17
       , margin $ MarginTop 22
+      , accessibilityImportance DISABLE
       , lineHeight "25"
       , fontStyle $ FontStyle.regular LanguageStyle
       ]
@@ -257,6 +263,7 @@ findingRidesView state push =
       , color "#7C7C7C"
       , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
       , textSize FontSize.a_17
+      , accessibilityImportance DISABLE
       , lineHeight "25"
       , fontStyle $ FontStyle.regular LanguageStyle
       ]

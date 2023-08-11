@@ -45,7 +45,7 @@ import Components.SettingSideBar as SettingSideBar
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!))
+import Data.Array (any, length, mapWithIndex, null, (!!), head)
 import Data.Either (Either(..))
 import Data.Int (toNumber, fromString, ceil)
 import Data.Lens ((^.))
@@ -70,7 +70,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibilityImportance, accessibilityFocusable, focusable)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -268,11 +268,14 @@ view push state =
             [ frameLayout
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
+                , accessibilityImportance ENABLE
+                , accessibilityFocusable true
                 , clickable true
                 ]
                 [ linearLayout
                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
+                    , accessibilityImportance DISABLE
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []
@@ -282,6 +285,7 @@ view push state =
                     , background Color.transparent
                     , padding (PaddingBottom if os == "IOS" then 20 else if showLabel then 70 else 34)
                     , gravity CENTER
+                    , accessibilityImportance DISABLE
                     , orientation VERTICAL
                     ]
                     [ textView
@@ -289,6 +293,7 @@ view push state =
                         , height WRAP_CONTENT
                         , background Color.black800
                         , color Color.white900
+                        , accessibilityImportance DISABLE
                         , text if DS.length state.props.defaultPickUpPoint > 30 then
                                   (DS.take 28 state.props.defaultPickUpPoint) <> "..."
                                else
@@ -301,6 +306,7 @@ view push state =
                     , imageView
                         [ width $ V 35
                         , height $ V 35
+                        , accessibilityImportance DISABLE
                         , imageWithFallback $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
                             true  ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_src_marker.png"
                             false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dest_marker.png"
@@ -570,6 +576,7 @@ recenterButtonView push state =
         , alignParentBottom "true,-1"
         , padding $ Padding 0 0 16 14
         , disableClickFeedback true
+        , accessibilityImportance DISABLE
         , margin if ((state.props.showlocUnserviceablePopUp) && state.props.currentStage == HomeScreen) then (MarginBottom (360 + safeMarginBottom)) else (Margin 0 0 0 0) --else if (state.props.currentStage == ConfirmingLocation) then (Margin ((screenWidth unit) - 66) 0 0 270) else(Margin ((screenWidth unit) - 66) 0 0 120)
         ]
         [ -- linearLayout
@@ -580,6 +587,7 @@ recenterButtonView push state =
           --   ][
           imageView
             [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
+            , accessibilityImportance DISABLE
             , onClick
                 ( \action -> do
                     _ <- push action
@@ -888,7 +896,7 @@ homeScreenTopIconView push state =
                     , height $ V 24
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
-                    , accessibilityHint "Menu Icon Button"
+                    , accessibilityHint "Menu_Icon Button"
                     ]
                 ]
             , linearLayout
@@ -902,6 +910,7 @@ homeScreenTopIconView push state =
                 , height $ V 16
                 , width $ V 16
                 , margin (Margin 5 5 5 5)
+                , accessibilityImportance DISABLE
                 , onClick push (const $ OpenSearchLocation)
                 , gravity BOTTOM
                 ]
@@ -911,6 +920,7 @@ homeScreenTopIconView push state =
                 , height WRAP_CONTENT
                 , disableClickFeedback true
                 , onClick push (const $ OpenSearchLocation)
+                , accessibilityHint "Pickup Location is Current Location. Button"
                 ]
                 [ textView
                     $ [ height WRAP_CONTENT
@@ -930,7 +940,6 @@ homeScreenTopIconView push state =
                       , color Color.black800
                       , gravity LEFT
                       , lineHeight "23"
-                      , accessibilityHint "Pickup Location is Current Location Button"
                       ]
                     <> FontStyle.body7 LanguageStyle
                 ]
@@ -1310,6 +1319,7 @@ topLeftIconView state push =
           [ imageView
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
               , height $ V 25
+              , accessibilityImportance DISABLE
               , clickable true
               , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
               , width $ V 25
@@ -1379,6 +1389,7 @@ suggestedPriceView push state =
           [ text $ getString REQUEST_AUTO_RIDE
           , textSize FontSize.a_22
           , color Color.black800
+          , accessibilityImportance DISABLE
           , gravity CENTER_HORIZONTAL
           , height WRAP_CONTENT
           , width MATCH_PARENT
@@ -1407,6 +1418,7 @@ suggestedPriceView push state =
             ][  textView
                 [ text $ if state.data.rateCard.additionalFare == 0 then state.data.config.currency <> (show state.data.suggestedAmount) else  state.data.config.currency <> (show state.data.suggestedAmount) <> "-" <> state.data.config.currency <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
                 , textSize FontSize.a_32
+                , accessibilityHint $ "FARE IS " <> (if state.data.rateCard.additionalFare == 0 then state.data.config.currency <> (show state.data.suggestedAmount) else  state.data.config.currency <> (show state.data.suggestedAmount) <> "To" <> state.data.config.currency <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)))
                 , color Color.black800
                 , margin $ MarginTop 8
                 , gravity CENTER_HORIZONTAL
@@ -1423,6 +1435,7 @@ suggestedPriceView push state =
                 , height $ V 40
                 , gravity BOTTOM
                 , margin (MarginTop 13)
+                , accessibilityImportance DISABLE
                 , visibility if (getValueFromConfig "showRateCard") == "true" then VISIBLE else GONE
                 , onClick (\action -> if (getValueFromConfig "showRateCard") == "true" then push action else pure unit ) $ const ShowRateCard
                 ]
@@ -1449,6 +1462,7 @@ suggestedPriceView push state =
                       , height WRAP_CONTENT
                       , gravity CENTER_HORIZONTAL
                       , onClick push $ const PreferencesDropDown
+                      , accessibilityImportance DISABLE
                       , margin (MarginBottom 8)
                       ][
                           textView
@@ -1456,6 +1470,7 @@ suggestedPriceView push state =
                           , width WRAP_CONTENT
                           , color Color.darkDescriptionText
                           , text $ getString BOOKING_PREFERENCE
+                          , accessibilityImportance DISABLE
                           , textSize FontSize.a_16
                           , fontStyle $ FontStyle.regular LanguageStyle
 
@@ -1464,6 +1479,7 @@ suggestedPriceView push state =
                           [ width $ V 10
                           , height $ V 10
                           , margin (Margin 9 8 0 0)
+                          , accessibilityImportance DISABLE
                           , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/user/ny_ic_down_arrow.png"
                           ]
                       ],
@@ -1563,6 +1579,7 @@ estimatedTimeAndDistanceView push state =
       [ text state.data.rideDistance
       , width MATCH_PARENT
       , gravity CENTER
+      , accessibilityHint $ "Estimated Ride Distance And Ride Duration Is " <> (fromMaybe "0" (head (DS.split (DS.Pattern " ") state.data.rideDistance))) <> (if any (_ == "km") (DS.split (DS.Pattern " ") state.data.rideDistance) then "Kilo Meters" else "Meters") <> " And " <> state.data.rideDuration
       , color Color.black650
       , height WRAP_CONTENT
       ] <> FontStyle.paragraphText LanguageStyle
@@ -1575,6 +1592,7 @@ estimatedTimeAndDistanceView push state =
       ][]
     , textView $
       [ text state.data.rideDuration
+      , accessibilityImportance DISABLE
       , width MATCH_PARENT
       , gravity CENTER
       , color Color.black650
@@ -1766,6 +1784,7 @@ confirmPickUpLocationView push state =
             ] [ textView $
                 [ text (getString CONFIRM_PICKUP_LOCATION)
                 , color Color.black800
+                , accessibilityImportance DISABLE
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -1916,6 +1935,7 @@ rideTrackingView push state =
                 , width MATCH_PARENT
                 , background Color.transparent
                 , sheetState COLLAPSED
+                , accessibilityHint "Bottom Sheet : Scrollable Element : Scroll up to expand for more ride actions"
                 , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 66
                              else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 52
                              else getPeakHeight state.props.currentStage
@@ -2347,7 +2367,7 @@ currentLocationView push state =
             , gravity CENTER_VERTICAL
             , cornerRadius 5.0
             , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
-            , accessibilityHint "Pickup location Editable Field"
+            , accessibilityHint $ "Pickup location Editable Field . Pickup Location is " <> state.data.source
             ]
             [ imageView
                 [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"

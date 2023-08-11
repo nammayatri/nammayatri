@@ -41,7 +41,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
@@ -65,6 +65,7 @@ view push state =
           [ height $ V ((screenHeight unit)/ 7)
           , width MATCH_PARENT
           , background state.homeScreenConfig.searchLocationConfig.searchLocationTheme
+          , accessibilityImportance DISABLE
           , clickable case state.isSearchLocation of 
               LocateOnMap -> false 
               _ -> true 
@@ -79,6 +80,7 @@ view push state =
                 LocateOnMap -> false
                 _ -> true
             , onClick push (const NoAction)
+            , accessibilityImportance DISABLE
             , width MATCH_PARENT
             , margin (MarginTop ((screenHeight unit) / 7))
             , padding (Padding 0 safeMarginTop 0 0)
@@ -98,6 +100,7 @@ view push state =
                   , width $ V 35
                   , onClick push (const GoBack)
                   , disableClickFeedback true
+                  , accessibilityHint "Back Button"
                   , margin (Margin 16 10 16 0)
                   , gravity CENTER
                   ]
@@ -280,6 +283,7 @@ sourceDestinationEditTextView state push =
                         _ <- push action
                         pure unit
                       )(const $ SourceClear)
+            , accessibilityHint "Clear Source Text Button"
             , visibility if state.source /= "" then VISIBLE else GONE
             ]
             [ imageView
@@ -346,6 +350,7 @@ sourceDestinationEditTextView state push =
             , padding (PaddingHorizontal 5 5)
             , visibility if state.destination /= "" then VISIBLE else GONE
             , onClick push (const $ DestinationClear)
+            , accessibilityHint "Clear Destination Text Button"
             ]
             [ imageView
                 [ height $ V 16

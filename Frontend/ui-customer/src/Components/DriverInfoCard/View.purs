@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -248,13 +248,14 @@ otpView push state =
         , width $ V 32
         , gravity CENTER
         , cornerRadius 4.0
+        , accessibilityImportance DISABLE
         , background state.data.config.quoteListModel.otpTextBackground
         , margin $ MarginLeft 7
         ][ textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
-            , accessibilityHint item
+            , accessibilityImportance DISABLE
             , color state.data.config.quoteListModel.otpTextColor
             ] <> FontStyle.h2 TypoGraphy)
         ]) $ split (Pattern "")  state.data.otp)
@@ -280,7 +281,7 @@ expiryTimeView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , accessibilityHint "O T P"
+              , accessibilityHint $ "O T P Is " <> state.data.otp
               , text $ getString OTP <> ":"
               , color Color.black700
               ] <> FontStyle.body4 TypoGraphy)
@@ -550,7 +551,7 @@ otpAndWaitView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , accessibilityHint "O T P"
+              , accessibilityHint $ "O T P Is" <> state.data.otp
               , text $ getString OTP <> ":"
               , color state.data.config.quoteListModel.otpTitleColor
               ] <> FontStyle.body4 TypoGraphy)
@@ -821,10 +822,7 @@ driverDetailsView push state =
                           "TAXI" -> (getString NON_AC_TAXI)
                           _ -> "")
           , color Color.black700
-          , accessibilityHint $ "Vehicle:" <> (state.data.vehicleDetails <> case state.data.vehicleVariant of 
-                          "TAXI_PLUS" -> "AC Taxi"
-                          "TAXI" -> "Non AC Taxi"
-                          _ -> "")
+          , accessibilityImportance DISABLE
           , width $ V ((screenWidth unit) /2 - 20)
           , maxLines 2
           , singleLine false
@@ -883,7 +881,7 @@ driverDetailsView push state =
                         , weight 1.0
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
-                        , accessibilityHint state.data.registrationNumber
+                        , accessibilityHint $ "Vehicle number . " <> state.data.registrationNumber
                         , color Color.black
                         , gravity CENTER
                         ] <> FontStyle.body7 TypoGraphy
@@ -914,10 +912,12 @@ ratingView push state =
   , gravity CENTER_VERTICAL
   , stroke  state.data.config.driverInfoConfig.ratingStroke
   , cornerRadius state.data.config.driverInfoConfig.ratingCornerRadius
+  , accessibilityImportance DISABLE
   ][  imageView
       [ imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png"
       , height $ V 13
       , width $ V 13
+      , accessibilityImportance DISABLE
       ]
     , textView (
       [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
@@ -926,6 +926,7 @@ ratingView push state =
       , margin (Margin 8 0 2 0)
       , width WRAP_CONTENT
       , height $ V 30
+      , accessibilityImportance DISABLE
       ] <> FontStyle.tags TypoGraphy)
     ]
 
