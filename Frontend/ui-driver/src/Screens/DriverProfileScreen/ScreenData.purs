@@ -57,8 +57,8 @@ initData = {
     inactiveRCArray : [],
     activeRCData : { rcStatus  : true
                   , rcDetails : { certificateNumber   : ""
-                                , vehicleColor : ""
-                                , vehicleModel : ""
+                                , vehicleColor : Nothing
+                                , vehicleModel : Nothing
                                 }
                   },
     openInactiveRCViewOrNotArray : [],
