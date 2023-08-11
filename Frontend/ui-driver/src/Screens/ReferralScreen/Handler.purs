@@ -29,11 +29,12 @@ import Types.ModifyScreenState (modifyScreenState)
 import Data.Maybe(isJust)
 import Screens.Types (ReferralType(..))
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
+import Merchant.Utils(getMerchant, Merchant(..))
 
 referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = LeaderBoard } }
+  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen
   case action of
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)

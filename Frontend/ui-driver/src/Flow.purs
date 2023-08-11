@@ -1056,6 +1056,11 @@ referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
   (GlobalState allState) <- getState
   let state = allState.referralScreen
+  let currStage = if getMerchant unit == YATRIPARTNER then do
+                    if isJust state.data.driverInfo.referralCode  then QRScreen
+                    else ComingSoonScreen
+                  else LeaderBoard
+  modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen {props{ stage = currStage}} )
   when (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) do
     let pastDates = getPastDays 7
         pastWeeks = getPastWeeks 4
