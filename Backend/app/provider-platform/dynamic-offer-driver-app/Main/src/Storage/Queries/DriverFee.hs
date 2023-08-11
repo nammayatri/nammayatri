@@ -206,35 +206,34 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
 
-updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
-updateStatus status driverFeeId now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverFeeStatus =. val status,
-        DriverFeeUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+-- updateStatusByIds :: DriverFeeStatus -> [Id DriverFee] -> UTCTime -> SqlDB ()
+-- updateStatusByIds status driverFeeId now = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverFeeStatus =. val status,
+--         DriverFeeUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverFeeTId `in_` valList (toKey <$> driverFeeId)
 
-updateStatusByIds :: DriverFeeStatus -> [Id DriverFee] -> UTCTime -> SqlDB ()
-updateStatusByIds status driverFeeId now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverFeeStatus =. val status,
-        DriverFeeUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverFeeTId `in_` valList (toKey <$> driverFeeId)
+updateStatusByIds :: (L.MonadFlow m, Log m) => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
+updateStatusByIds status driverFeeIds now =
+  updateWithKV
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
-findAllPendingAndDueDriverFeeByDriverId :: Transactionable m => Id Person -> m [DriverFee]
-findAllPendingAndDueDriverFeeByDriverId driverId = do
-  findAll $ do
-    driverFee <- from $ table @DriverFeeT
-    where_ $
-      driverFee ^. DriverFeeFeeType ==. val RECURRING_INVOICE
-        &&. (driverFee ^. DriverFeeStatus ==. val PAYMENT_PENDING ||. driverFee ^. DriverFeeStatus ==. val PAYMENT_OVERDUE)
-        &&. driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
-    return driverFee
+-- findAllPendingAndDueDriverFeeByDriverId :: Transactionable m => Id Person -> m [DriverFee]
+-- findAllPendingAndDueDriverFeeByDriverId driverId = do
+--   findAll $ do
+--     driverFee <- from $ table @DriverFeeT
+--     where_ $
+--       driverFee ^. DriverFeeFeeType ==. val RECURRING_INVOICE
+--         &&. (driverFee ^. DriverFeeStatus ==. val PAYMENT_PENDING ||. driverFee ^. DriverFeeStatus ==. val PAYMENT_OVERDUE)
+--         &&. driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
+--     return driverFee
+
+findAllPendingAndDueDriverFeeByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [DriverFee]
+findAllPendingAndDueDriverFeeByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Or [Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq (toKey driverId)]]
 
 -- updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
 -- updateStatus status driverFeeId now = do
