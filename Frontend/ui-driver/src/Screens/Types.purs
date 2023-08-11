@@ -274,7 +274,7 @@ type DriverProfileScreenData = {
   rcNumber :: String,
   isRCActive :: Boolean,
   openInactiveRCViewOrNotArray :: Array Int,
-  logField :: Object Foreign, 
+  logField :: Object Foreign,
   analyticsData :: AnalyticsData,
   fromHomeScreen :: Boolean
 }
@@ -286,8 +286,8 @@ type RcData = {
 
 type RcDetails = {
     certificateNumber :: String,
-    vehicleModel      :: String,
-    vehicleColor      :: String
+    vehicleModel      :: Maybe String,
+    vehicleColor      :: Maybe String
     }
 
 type AnalyticsData = {
@@ -356,14 +356,14 @@ data DriverProfileScreenType = DRIVER_DETAILS | VEHICLE_DETAILS | SETTINGS
 
 derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
 instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
-instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq 
+instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq
 
 
 data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME
 
 derive instance genericUpdateType :: Generic UpdateType _
 instance showUpdateType :: Show UpdateType where show = genericShow
-instance eqUpdateType :: Eq UpdateType where eq = genericEq 
+instance eqUpdateType :: Eq UpdateType where eq = genericEq
 
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
@@ -496,7 +496,7 @@ type RideHistoryScreenStateData = {
   , paymentHistory :: PaymentHistoryModelState
 }
 
-data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC 
+data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC
 
 derive instance genericEditRc :: Generic EditRc _
 instance eqEditRc :: Eq EditRc where eq = genericEq
@@ -521,10 +521,10 @@ type RideSelectionScreenState =
     selectedCategory :: CategoryListType
   }
 
-type VehicleDetails = { rcStatus :: Boolean 
+type VehicleDetails = { rcStatus :: Boolean
                 , rcDetails :: { certificateNumber  :: String
-                , vehicleModel :: String
-                , vehicleColor :: String
+                , vehicleModel :: Maybe String
+                , vehicleColor :: Maybe String
                 }}
 
 ------------------------------------------- ReferralScreenState -----------------------------------------

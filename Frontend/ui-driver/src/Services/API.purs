@@ -281,7 +281,7 @@ data EndRideRequest = EndRideRequest String EndRideReq
 newtype EndRideReq = EndRideReq
     {
       point :: Point,
-      numberOfDeviation :: Maybe Boolean 
+      numberOfDeviation :: Maybe Boolean
     }
 
 newtype EndRideResponse = EndRideResponse ApiSuccessResult
@@ -1724,8 +1724,8 @@ instance encodeDriversInfo :: Encode DriversInfo where encode = defaultEncode
 ------------------------------------------ currentDateAndTime --------------------------------------
 
 newtype CurrentDateAndTimeReq = CurrentDateAndTimeReq String
-newtype CurrentDateAndTimeRes =  CurrentDateAndTimeRes 
-  { 
+newtype CurrentDateAndTimeRes =  CurrentDateAndTimeRes
+  {
     timestamp :: Maybe Number
   }
 
@@ -1757,13 +1757,13 @@ newtype GetAllRcDataResp = GetAllRcDataResp (Array GetAllRcDataRecords)
 
 newtype GetAllRcDataRecords = GetAllRcDataRecords
     { rcActive  :: Boolean
-    , rcDetails :: VehicleDetails  
+    , rcDetails :: VehicleDetails
     }
 
 newtype VehicleDetails = VehicleDetails
-    { certificateNumber         :: String
-    , vehicleModel :: String
-    , vehicleColor :: String
+    { certificateNumber :: String
+    , vehicleModel :: Maybe String
+    , vehicleColor :: Maybe String
     }
 
 instance makeGetAllRcDataReq :: RestEndpoint GetAllRcDataReq GetAllRcDataResp where
@@ -1854,7 +1854,7 @@ data CallDriverToDriverReq = CallDriverToDriverReq String
 
 newtype CallDriverToDriverResp = CallDriverToDriverResp
     {
-     callId :: String 
+     callId :: String
     }
 
 instance makeGetCallDriverToDriverReq :: RestEndpoint CallDriverToDriverReq CallDriverToDriverResp where
@@ -2087,7 +2087,7 @@ derive instance newtypeOrderStatusRes :: Newtype OrderStatusRes _
 instance standardEncodeOrderStatusRes :: StandardEncode OrderStatusRes where standardEncode (OrderStatusRes res) = standardEncode res
 instance showOrderStatusRes :: Show OrderStatusRes where show = genericShow
 instance decodeOrderStatusRes :: Decode OrderStatusRes where decode = defaultDecode
-instance encodeOrderStatusRes :: Encode OrderStatusRes where encode = defaultEncode 
+instance encodeOrderStatusRes :: Encode OrderStatusRes where encode = defaultEncode
 
 -- payment history
 

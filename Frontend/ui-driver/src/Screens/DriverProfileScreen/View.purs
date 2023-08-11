@@ -130,10 +130,10 @@ screen initialState =
           pure unit
       pure $ pure unit
     )]
-  , eval : \state  action -> do
+  , eval : \action state -> do
       let _ = spy  "DriverProfileScreen action " action
       let _ = spy  "DriverProfileScreen state "  state
-      eval state action
+      eval action state
   }
 
 view  :: forall w. (Action -> Effect Unit)  -> ST.DriverProfileScreenState  -> PrestoDOM (Effect Unit) w
@@ -287,7 +287,7 @@ vehicleRcDetails push state =
     )
   ]
 
-getRcNumDetails :: Array ST.RcData -> Array {key :: String, idx :: Int, value :: String, action :: Action, model :: String, color :: String}
+getRcNumDetails :: Array ST.RcData -> Array {key :: String, idx :: Int, value :: String, action :: Action, model :: Maybe String, color :: Maybe String}
 getRcNumDetails config = do
   mapWithIndex (\index item -> {key : "RC", idx : index+1,  value : item.rcDetails.certificateNumber, action : NoAction, model : item.rcDetails.vehicleModel, color : item.rcDetails.vehicleColor}) config
 
@@ -483,7 +483,7 @@ addRcView state push =
       , alignParentBottom "true,-1"
       ][ PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state)]
 
-additionalRcsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { key :: String , idx :: Int, value ::  String , action :: Action, model :: String, color :: String} -> PrestoDOM (Effect Unit) w
+additionalRcsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { key :: String , idx :: Int, value ::  String , action :: Action, model :: Maybe String, color :: Maybe String} -> PrestoDOM (Effect Unit) w
 additionalRcsView state push config =
   linearLayout
   [ height WRAP_CONTENT
@@ -548,8 +548,8 @@ additionalRcsView state push config =
 
 getRcDetailsForInactiveRcs config  = [
     --{ key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
-    { key : (getString MODEL_NAME) , value : Just config.model, action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : Just config.color, action :NoAction , isEditable : false }
+    { key : (getString MODEL_NAME) , value : config.model, action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : config.color, action :NoAction , isEditable : false }
   , { key : "" , value : Just (getString EDIT_RC), action : UpdateRC config.value false , isEditable : false } ]
 
 
@@ -584,10 +584,10 @@ detailsViewForInactiveRcs state push config =
                 , weight 1.0
                 ][]
               , textView
-                [ text $ fromMaybe "Add" item.value
+                [ text $ fromMaybe "N/A" item.value
                 , textSize FontSize.a_14
                 , onClick push $ const item.action
-                , color if (isJust item.value) then (if item.value == Just (getString EDIT_RC) then Color.blue900 else Color.black900) else Color.blue900
+                , color if (isJust item.value) then (if item.value == Just (getString EDIT_RC) then Color.blue900 else Color.black900) else Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
             ] <> if item.isEditable && (isJust item.value) then [imageView
@@ -1085,8 +1085,8 @@ getRcDetails state = do
   <> (if config.rcStatus then
       [{ key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }]
      else [])
-  <>[{ key :(getString MODEL_NAME) , value : Just config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ]
+  <>[{ key :(getString MODEL_NAME) , value : config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ]
   <> (if not null state.data.rcDataArray then
       [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }]
     else [])
