@@ -33,6 +33,7 @@ module Domain.Action.UI.Driver
     DriverPhotoUploadReq (..),
     ResendAuth (..),
     DriverPaymentHistoryResp,
+    DriverDuesResp (..),
     MetaDataReq (..),
     getInformation,
     setActivity,
@@ -52,6 +53,7 @@ module Domain.Action.UI.Driver
     resendOtp,
     remove,
     getDriverPayments,
+    getDriverDues,
     DriverInfo.DriverMode,
     updateMetaData,
   )
@@ -144,6 +146,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverLocation as QDriverLocation
+import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -151,6 +154,7 @@ import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Plan as QPD
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import qualified Storage.Queries.Ride as QRide
@@ -191,6 +195,7 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
+    autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -224,6 +229,7 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
+    autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -508,7 +514,8 @@ createDriverDetails personId adminId merchantId = do
             blockedReason = Nothing,
             blockExpiryTime = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            autoPayStatus = Nothing
           }
   QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -591,6 +598,7 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         mode = driverInfo.mode,
+        autoPayStatus = driverInfo.autoPayStatus,
         clientVersion = person.clientVersion,
         bundleVersion = person.bundleVersion,
         gender = Just person.gender,
@@ -1383,3 +1391,45 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
             amount = sgst
           }
       ]
+
+data DriverDuesResp = DriverDuesResp
+  { dues :: [DriverDuesEntity],
+    totalDue :: HighPrecMoney,
+    overdueThreshold :: HighPrecMoney
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data DriverDuesEntity = DriverDuesEntity
+  { date :: UTCTime,
+    amount :: Money,
+    earnings :: Money,
+    offers :: [OfferEntity]
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data OfferEntity = OfferEntity
+  { title :: Maybe Text,
+    description :: Maybe Text,
+    tnc :: Maybe Text
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+getDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverDuesResp
+getDriverDues (personId, _merchantId) = do
+  driverPlan <- Esq.runInReplica $ QDPlan.findByDriverId personId >>= fromMaybeM (NoCurrentPlanForDriver personId.getId)
+  plan <- Esq.runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId driverPlan.planType >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
+  dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId personId
+  return $
+    DriverDuesResp
+      { dues = buildDriverDuesEntity <$> dueInvoices,
+        totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices,
+        overdueThreshold = plan.maxCreditLimit
+      }
+  where
+    buildDriverDuesEntity DDF.DriverFee {..} =
+      DriverDuesEntity
+        { date = createdAt,
+          amount = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst,
+          earnings = totalEarnings,
+          offers = []
+        }

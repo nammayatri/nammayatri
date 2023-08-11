@@ -26,16 +26,17 @@ import EulerHS.Prelude (Generic, Int, Text, ($))
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.DriverFeeStatus"
-
+derivePersistField "Domain.FeeType"
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     DriverFeeT sql=driver_fee
       id Text
-      shortId Text
+      merchantId MerchantTId
       driverId PersonTId
       totalEarnings Money
       govtCharges Money
@@ -49,6 +50,7 @@ mkPersist
       status Domain.DriverFeeStatus
       createdAt UTCTime
       updatedAt UTCTime
+      feeType Domain.FeeType
       Primary id
       deriving Generic
     |]
@@ -64,7 +66,7 @@ instance FromTType DriverFeeT Domain.DriverFee where
       Domain.DriverFee
         { id = Id id,
           driverId = cast $ fromKey driverId,
-          shortId = ShortId shortId,
+          merchantId = fromKey merchantId,
           platformFee = Domain.PlatformFee platformFee cgst sgst,
           ..
         }
@@ -73,8 +75,8 @@ instance ToTType DriverFeeT Domain.DriverFee where
   toTType Domain.DriverFee {..} =
     DriverFeeT
       { driverId = toKey $ cast driverId,
+        merchantId = toKey merchantId,
         id = getId id,
-        shortId = getShortId shortId,
         platformFee = platformFee.fee,
         cgst = platformFee.cgst,
         sgst = platformFee.sgst,

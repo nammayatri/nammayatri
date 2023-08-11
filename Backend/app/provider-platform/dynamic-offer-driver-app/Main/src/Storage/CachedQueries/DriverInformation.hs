@@ -87,6 +87,11 @@ updateSubscription isSubscribed driverId = do
   clearDriverInfoCache driverId
   Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
 
+updateAutoPayStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Maybe DriverAutoPayStatus -> Id Person.Driver -> m ()
+updateAutoPayStatus driverAutoPayStatus driverId = do
+  clearDriverInfoCache driverId
+  Esq.runTransaction $ Queries.updateAutoPayStatus driverAutoPayStatus driverId
+
 -- this function created because all queries wishfully should be in one transaction
 updateNotOnRideMultiple :: [Id Person.Driver] -> Esq.SqlDB ()
 updateNotOnRideMultiple = Queries.updateNotOnRideMultiple

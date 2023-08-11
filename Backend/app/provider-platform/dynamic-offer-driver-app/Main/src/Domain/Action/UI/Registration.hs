@@ -184,6 +184,7 @@ createDriverDetails personId merchantId = do
             verified = False,
             subscribed = True,
             paymentPending = False,
+            autoPayStatus = Nothing,
             referralCode = Nothing,
             lastEnabledOn = Nothing,
             canDowngradeToSedan = False,

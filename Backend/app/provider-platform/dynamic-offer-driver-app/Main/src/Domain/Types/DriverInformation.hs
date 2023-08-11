@@ -52,6 +52,26 @@ instance ToHttpApiData DriverMode where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
+data DriverAutoPayStatus
+  = ACTIVE
+  | SUSPENDED
+  | PAUSED_PSP
+  | CANCELLED_PSP
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (PrettyShow) via Showable DriverAutoPayStatus
+
+derivePersistField "DriverAutoPayStatus"
+
+instance FromHttpApiData DriverAutoPayStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData DriverAutoPayStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
 data DriverInformationE e = DriverInformation
   { driverId :: Id Person,
     adminId :: Maybe (Id Person),
@@ -71,6 +91,7 @@ data DriverInformationE e = DriverInformation
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverMode,
     aadhaarVerified :: Bool,
+    autoPayStatus :: Maybe DriverAutoPayStatus,
     blockedReason :: Maybe Text,
     blockExpiryTime :: Maybe UTCTime,
     createdAt :: UTCTime,

@@ -345,6 +345,17 @@ updateSubscription isSubscribed driverId = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateAutoPayStatus :: Maybe DriverAutoPayStatus -> Id Person.Driver -> SqlDB ()
+updateAutoPayStatus autoPayStatus driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationAutoPayStatus =. val autoPayStatus,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
 updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
 updateAadhaarVerifiedState personId isVerified = do
   now <- getCurrentTime

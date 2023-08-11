@@ -50,6 +50,7 @@ mkPersist
       canDowngradeToHatchback Bool
       canDowngradeToTaxi Bool
       mode Domain.DriverMode Maybe
+      autoPayStatus Domain.DriverAutoPayStatus Maybe
       aadhaarVerified Bool
       blockedReason Text Maybe
       blockExpiryTime UTCTime Maybe

@@ -138,6 +138,9 @@ type API =
                :> QueryParam "limit" Int
                :> QueryParam "offset" Int
                :> Get '[JSON] [DDriver.DriverPaymentHistoryResp]
+             :<|> "dues"
+               :> TokenAuth
+               :> Get '[JSON] DDriver.DriverDuesResp
          )
 
 handler :: FlowServer API
@@ -163,6 +166,7 @@ handler =
                       :<|> remove
                   )
              :<|> getDriverPayments
+             :<|> getDriverDues
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
@@ -226,3 +230,6 @@ remove = withFlowHandlerAPI . DDriver.remove
 
 getDriverPayments :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Day -> Maybe Day -> Maybe DriverFeeStatus -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverPaymentHistoryResp]
 getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset
+
+getDriverDues :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.DriverDuesResp
+getDriverDues = withFlowHandlerAPI . DDriver.getDriverDues
