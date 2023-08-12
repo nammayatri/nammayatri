@@ -31,6 +31,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.Merchant.TransporterConfig
 
@@ -431,4 +432,167 @@ notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchTryId = do
       FCMNotificationBody $
         unwords
           [ "Search request has been cancelled by customer"
+          ]
+
+notifyPaymentFailed ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id DOrder.PaymentOrder ->
+  m ()
+notifyPaymentFailed merchantId personId mbDeviceToken orderId = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.PAYMENT_FAILED
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.PaymentOrder,
+          fcmEntityIds = orderId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "Payment Failed!"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "Your payment attempt was unsuccessful."
+          ]
+
+notifyPaymentPending ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id DOrder.PaymentOrder ->
+  m ()
+notifyPaymentPending merchantId personId mbDeviceToken orderId = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.PAYMENT_PENDING
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.PaymentOrder,
+          fcmEntityIds = orderId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "Payment Pending!"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "To continue taking rides on Namma Yatri, clear you payment dues"
+          ]
+
+notifyPaymentSuccess ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id DOrder.PaymentOrder ->
+  m ()
+notifyPaymentSuccess merchantId personId mbDeviceToken orderId = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.PAYMENT_SUCCESS
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.PaymentOrder,
+          fcmEntityIds = orderId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "Payment Successful!"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "Your payment has been processed successfully. Start earning with Namma Yatri!"
+          ]
+
+notifyPaymentModeManual ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyPaymentModeManual merchantId personId mbDeviceToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.PAYMENT_MODE_MANUAL
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = personId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "Payment mode changed to manual"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "You have cancelled your UPI Autopay. You can clear your dues manually from the Plan page."
+          ]
+
+notifyLowAccountBalance ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyLowAccountBalance merchantId personId mbDeviceToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.LOW_ACCOUNT_BALANCE
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = personId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "Low Account Balance"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "Your Bank Account balance is low. Add money to enjoy uninterrupted rides."
           ]

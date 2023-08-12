@@ -56,7 +56,9 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
+import qualified Storage.Queries.Person as QP
 import Tools.Error
+import Tools.Notifications
 import qualified Tools.Payment as Payment
 
 -- create order -----------------------------------------------------
@@ -94,6 +96,7 @@ getStatus (personId, merchantId) orderId = do
         processMandateStatus mandateStatus mandateId
       DPayment.PaymentStatus _ -> do
         processPayment merchantId (cast order.personId) order.id
+  notifyIfPaymentFailed personId order.id order.status
   pure paymentStatus
 
 -- webhook ----------------------------------------------------------
@@ -120,12 +123,14 @@ juspayWebhookHandler merchantShortId authData value = do
               unless (transactionStatus /= Payment.CHARGED) $ do
                 order <- B.runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
                 processPayment merchantId (cast order.personId) order.id
+                notifyIfPaymentFailed (cast order.personId) order.id order.status
             Payment.MandateOrderStatusResp {..} -> do
               unless (transactionStatus /= Payment.CHARGED) $ do
                 order <- B.runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
                 processPayment merchantId (cast order.personId) order.id
                 processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount
                 processMandateStatus mandateStatus mandateId
+                notifyIfPaymentFailed (cast order.personId) order.id order.status
             Payment.MandateStatusResp {..} -> do
               processMandateStatus status mandateId
             Payment.BadStatusResp -> pure ()
@@ -134,6 +139,7 @@ juspayWebhookHandler merchantShortId authData value = do
 
 processPayment :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Flow ()
 processPayment merchantId driverId orderId = do
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -144,6 +150,13 @@ processPayment merchantId driverId orderId = do
     CDI.updateSubscription True (cast driverId)
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QDFS.clearPaymentStatus driverId driverInfo.active
+    notifyPaymentSuccess merchantId driverId driver.deviceToken orderId
+
+notifyIfPaymentFailed :: Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Flow ()
+notifyIfPaymentFailed driverId orderId orderStatus = do
+  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  when (orderStatus `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
+    notifyPaymentFailed driver.merchantId driver.id driver.deviceToken orderId
 
 processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Flow ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount = do
@@ -176,10 +189,13 @@ processMandateStatus mandateStatus mandateId = do
       CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
     driverPlan <- B.runInReplica $ QDP.findByMandateId (Id mandateId) >>= fromMaybeM (NoCurrentPlanForDriver mandateId)
+    driver <- B.runInReplica $ QP.findById driverPlan.driverId >>= fromMaybeM (PersonDoesNotExist driverPlan.driverId.getId)
     Redis.whenWithLockRedis (paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
       QM.updateStatus (Id mandateId) DM.INACTIVE
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
       CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
+      when (mandateStatus `elem` [Payment.PAUSED, Payment.REVOKED]) $
+        notifyPaymentModeManual driver.merchantId driver.id driver.deviceToken
   where
     castAutoPayStatus = \case
       Payment.CREATED -> Just DI.PENDING
