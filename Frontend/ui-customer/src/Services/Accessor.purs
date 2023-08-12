@@ -158,3 +158,6 @@ _source = lens (unwrap >>> _.source) (\oldRec newVal -> wrap ((unwrap oldRec) { 
 
 _destination :: forall a b c. Newtype a { destination :: b | c } => Lens' a b
 _destination = lens (unwrap >>> _.destination) (\oldRec newVal -> wrap ((unwrap oldRec) { destination = newVal }))
+
+_deviceToken :: forall a b c. Newtype a { deviceToken :: b | c } => Lens' a b
+_deviceToken = lens (unwrap >>> _.deviceToken) (\oldRec newVal -> wrap ((unwrap oldRec) { deviceToken = newVal }))
