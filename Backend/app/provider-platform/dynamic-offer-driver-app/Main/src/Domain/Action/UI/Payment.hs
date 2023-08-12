@@ -86,7 +86,6 @@ getStatus (personId, merchantId) orderId = do
       orderStatusCall = Payment.orderStatus merchantId -- api call
   paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
   order <- B.runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
-  processPayment merchantId (cast order.personId) orderId
   unless (order.status /= Payment.CHARGED) $ do
     case paymentStatus of
       DPayment.MandatePaymentStatus {..} -> do
