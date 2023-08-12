@@ -20,12 +20,16 @@ import Control.Applicative ((<|>))
 
 import qualified Data.Time as T
 import qualified Database.Beam as B
+-- import qualified Domain.Types.Ride as Ride
+
+-- import qualified Storage.Beam.Booking as BeamB
+
+-- import qualified Storage.Beam.Ride as BeamR
+import qualified Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
-import qualified Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
-import qualified EulerHS.Prelude as EP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
@@ -36,10 +40,8 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Version
 import qualified Sequelize as Se
-import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
-import qualified Storage.Beam.Ride as BeamR
 
 -- import Storage.Tabular.Booking
 -- import Storage.Tabular.Person
@@ -578,22 +580,43 @@ countCustomers (Id merchantId) = do
 --   groupBy $ booking ^. BookingRiderId
 --   pure (booking ^. BookingRiderId, count @Int $ ride ^. RideId)
 
+-- fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
+-- fetchRidesCount personId = do
+--   person <- findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq (getId personId), Se.Is BeamP.role $ Se.Eq USER]]
+--   if isNothing person
+--     then pure Nothing
+--     else do
+--       dbConf <- getMasterBeamConfig
+--       res <- L.runDB dbConf $
+--         L.findRows $
+--           B.select $
+--             B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+--               B.filter_'
+--                 ( \(booking, ride) ->
+--                     B.sqlBool_ (B.not_ (ride.status `B.in_` (B.val_ <$> [Ride.NEW, Ride.CANCELLED])))
+--                       B.&&?. booking.riderId B.==?. B.val_ (getId personId)
+--                 )
+--                 do
+--                   booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+--                   ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+--                   pure (booking', ride')
+--       pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
+
 fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
-        B.aggregate_ (\(booking, _) -> (B.group_ (BeamB.riderId booking), B.as_ @Int B.countAll_)) $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
           B.filter_'
-            (\(_, ride) -> B.sqlBool_ (B.not_ (ride.status `B.in_` (B.val_ <$> [Ride.NEW, Ride.CANCELLED]))))
+            ( \booking ->
+                B.sqlBool_ (booking.status `B.in_` (B.val_ <$> [Booking.COMPLETED, Booking.TRIP_ASSIGNED]))
+                  B.&&?. booking.riderId B.==?. B.val_ (getId personId)
+            )
             do
-              booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-              ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
-              pure (booking', ride')
-  person <- findOneWithKV [Se.Is BeamP.id $ Se.Eq (getId personId)]
-  let res' = either (const []) EP.id res
-  maybe (pure Nothing) (\p -> pure (snd <$> find (\r -> (getId p.id) == fst r) res')) person
+              B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+  pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
 
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
