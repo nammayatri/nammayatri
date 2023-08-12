@@ -86,8 +86,12 @@ getStatus (personId, merchantId) orderId = do
   processPayment merchantId (cast order.personId) orderId
   unless (order.status /= Payment.CHARGED) $ do
     case paymentStatus of
-      DPayment.MandatePaymentStatus {..} -> processMandate (cast order.personId) DM.ACTIVE mandateStartDate mandateEndDate mandateId mandateMaxAmount
-      _ -> pure ()
+      DPayment.MandatePaymentStatus {..} -> do
+        processPayment merchantId (cast order.personId) order.id
+        processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate mandateId mandateMaxAmount
+        processMandateStatus mandateStatus mandateId
+      DPayment.PaymentStatus _ -> do
+        processPayment merchantId (cast order.personId) order.id
   pure paymentStatus
 
 -- webhook ----------------------------------------------------------
@@ -142,12 +146,11 @@ processPayment merchantId driverId orderId = do
 
 processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Text -> HighPrecMoney -> Flow ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount = do
-  Redis.whenWithLockRedis (paymentProcessingLockKey mandateId) 60 $ do
+  Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     mbExistingMandate <- runInReplica $ QM.findById (Id mandateId)
     case mbExistingMandate of
       Just mandate -> Esq.runNoTransaction $ QM.updateStatus mandate.id mandateStatus
       Nothing -> Esq.runTransaction $ QM.create =<< mkMandate
-  Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     Esq.runTransaction $ QDP.updateMandateIdByDriverId driverId (Id mandateId)
   where
     mkMandate = do
@@ -165,20 +168,22 @@ processMandateStatus :: Payment.MandateStatus -> Text -> Flow ()
 processMandateStatus mandateStatus mandateId = do
   when (mandateStatus == Payment.ACTIVE) $ do
     driverPlan <- runInReplica $ QDP.findByMandateId (Id mandateId) >>= fromMaybeM (NoCurrentPlanForDriver mandateId)
-    Esq.runTransaction $ do
-      QM.updateStatus (Id mandateId) DM.ACTIVE
-      QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
-    CDI.updateSubscription True (cast driverPlan.driverId)
-    CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
+    Redis.whenWithLockRedis (paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
+      Esq.runTransaction $ do
+        QM.updateStatus (Id mandateId) DM.ACTIVE
+        QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
+      CDI.updateSubscription True (cast driverPlan.driverId)
+      CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
     driverPlan <- runInReplica $ QDP.findByMandateId (Id mandateId) >>= fromMaybeM (NoCurrentPlanForDriver mandateId)
-    Esq.runTransaction $ do
-      QM.updateStatus (Id mandateId) DM.INACTIVE
-      QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
-    CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
+    Redis.whenWithLockRedis (paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
+      Esq.runTransaction $ do
+        QM.updateStatus (Id mandateId) DM.INACTIVE
+        QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
+      CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
   where
     castAutoPayStatus = \case
-      Payment.CREATED -> Nothing
+      Payment.CREATED -> Just DI.PENDING
       Payment.ACTIVE -> Just DI.ACTIVE
       Payment.REVOKED -> Just DI.CANCELLED_PSP
       Payment.FAILURE -> Nothing
