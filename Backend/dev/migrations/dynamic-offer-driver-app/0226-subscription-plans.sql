@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_plan
     (   driver_id character(36) NOT NULL,
         plan_id character(36) NOT NULL,
         plan_type text NOT NULL,
-        mandate_id character(36),
+        mandate_id text,
         created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
@@ -60,7 +60,18 @@ INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequenc
     ('18911beb-28ba-456d-8cca-4d019461d2b0', 'favorit0-0000-0000-0000-00000favorit', 'AUTOPAY', 'DAILY', 'PERRIDE_3.5', 'DAILY PER RIDE' , 'Up to a maximum of ₹35 per day', 35, 1, true, 100, 1, 'SUBSCRIPTION'),
     ('a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'DAILY_25.0', 'DAILY UNLIMITED' , 'Enjoy UNLIMITED rides, every day!', 25, 1, true, 100, 1, 'SUBSCRIPTION'), -- Keep same in prod and master for daily unlimited plan, frontend has hardcoded
     ('a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d', 'favorit0-0000-0000-0000-00000favorit', 'AUTOPAY', 'DAILY', 'DAILY_25.0', 'DAILY UNLIMITED' , 'Enjoy UNLIMITED rides, every day!', 25, 1, true, 100, 1, 'SUBSCRIPTION');
-UPDATE atlas_driver_offer_bpp.merchant_service_config SET config_json = config_json || '{"clientId": "yatrisathi"}'::jsonb WHERE service_name = 'Payment_Juspay';
+UPDATE atlas_driver_offer_bpp.merchant_service_config
+    SET config_json =
+    json_build_object(
+        'apiKey', config_json ->> 'apiKey'
+        , 'returnUrl', config_json ->> 'returnUrl'
+        , 'url', config_json ->> 'url'
+        , 'merchantId', config_json ->> 'merchantId'
+        , 'clientId', 'yatrisathi'
+        , 'username', config_json ->> 'username'
+        , 'password', config_json ->> 'password'
+        )
+    WHERE merchant_service_config.service_name='Payment_Juspay';
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN create_mandate text;
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN mandate_max_amount integer;
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN mandate_start_date timestamp with time zone;

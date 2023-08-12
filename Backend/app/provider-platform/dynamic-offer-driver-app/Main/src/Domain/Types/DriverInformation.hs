@@ -53,7 +53,8 @@ instance ToHttpApiData DriverMode where
   toHeader = BSL.toStrict . encode
 
 data DriverAutoPayStatus
-  = ACTIVE
+  = PENDING
+  | ACTIVE
   | SUSPENDED
   | PAUSED_PSP
   | CANCELLED_PSP
