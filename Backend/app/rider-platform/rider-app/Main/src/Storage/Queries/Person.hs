@@ -434,6 +434,7 @@ findByReferralCode referralCode = findOneWithKV [Se.Is BeamP.referralCode (Se.Eq
 --     return person
 
 findBlockedByDeviceToken :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
+findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
 -- updateBlockedState :: Id Person -> Bool -> SqlDB ()

@@ -56,6 +56,9 @@ ALTER TABLE atlas_driver_offer_bpp.invoice OWNER TO atlas_driver_offer_bpp_user;
 -- This is to backfill existing 1 to 1 mapped yatri saathi entries of driver fees to invoice table
 INSERT INTO atlas_driver_offer_bpp.invoice (id, invoice_short_id, driver_fee_id) SELECT PO.id, PO.short_id, PO.id FROM atlas_driver_offer_bpp.payment_order AS PO INNER JOIN atlas_driver_offer_bpp.driver_fee AS DF ON DF.short_id = PO.short_id;
 
+-- run after release
+INSERT INTO atlas_driver_offer_bpp.invoice (id, invoice_short_id, driver_fee_id) SELECT PO.id, PO.short_id, PO.id FROM atlas_driver_offer_bpp.payment_order AS PO INNER JOIN atlas_driver_offer_bpp.driver_fee AS DF ON DF.short_id = PO.short_id on conflict do nothing;
+
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN auto_pay_status text;
 
 INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type) VALUES
@@ -74,6 +77,8 @@ ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN mandate_freque
 ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN mandate_status text;
 ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN mandate_start_date timestamp with time zone;
 ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN mandate_end_date timestamp with time zone;
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ALTER COLUMN short_id DROP NOT NULL;
 
 -------------------------------------------------------------------------------
 ---------------------------------- DROP ---------------------------------------
