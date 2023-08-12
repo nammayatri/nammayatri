@@ -37,21 +37,23 @@ import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
-import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
+import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>), (/=))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
 import Types.App (GlobalState, FlowBT, ScreenType(..))
 import Types.EndPoint as EP
 import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersion)
-import Data.Array ((!!), take)
+import Data.Array ((!!), take, any)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Services.Config as SC
+import Data.Lens ((^.))
 import Engineering.Helpers.Utils as EHU
+import Accessor (_deviceToken)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
-getHeaders _ isGzipCompressionEnabled = do
+getHeaders val isGzipCompressionEnabled = do
     regToken <- loadS $ show REGISTERATION_TOKEN
     pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
@@ -62,9 +64,10 @@ getHeaders _ isGzipCompressionEnabled = do
                         Nothing -> []
                         Just token -> [Header "token" token]
                       <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
+                      <> if val /= "" then [Header "x-f-token" val] else []
 
 getHeaders' :: String -> Boolean -> FlowBT String Headers
-getHeaders' _ isGzipCompressionEnabled = do
+getHeaders' val isGzipCompressionEnabled = do
     regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
     lift $ lift $ pure $ Headers $ [   Header "Content-Type" "application/json",
                         Header "x-client-version" (getValueToLocalStore VERSION_NAME),
@@ -75,6 +78,7 @@ getHeaders' _ isGzipCompressionEnabled = do
                         Nothing -> []
                         Just token -> [Header "token" token]
                       <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
+                      <> if val /= "" then [Header "x-f-token" val] else []
 
 
 
@@ -219,7 +223,7 @@ resendOTPBT token = do
 -------------------------------------------------------------VerifyTokenBT Function----------------------------------------------------------------------------------------------------
 verifyTokenBT :: VerifyTokenReq -> String -> FlowBT String VerifyTokenResp
 verifyTokenBT payload token = do
-    headers <- getHeaders' "" false
+    headers <- getHeaders' (payload ^. _deviceToken) false
     withAPIResultBT (EP.verifyToken token) (\x → x) errorHandler (lift $ lift $ callAPI headers (VerifyTokenRequest token payload))
     where
     errorHandler errorPayload = do
@@ -238,17 +242,21 @@ verifyTokenBT payload token = do
 
 -- verifyTokenBT :: VerifyTokenReq -> String -> FlowBT String VerifyTokenResp
 verifyToken payload token = do
-    headers <- getHeaders "" false
+    headers <- getHeaders (payload ^. _deviceToken) false
     withAPIResult (EP.verifyToken token) unwrapResponse $  callAPI headers (VerifyTokenRequest token payload)
     where
         unwrapResponse (x) = x
 
 makeVerifyOTPReq :: String -> String -> VerifyTokenReq
-makeVerifyOTPReq otp defaultId = VerifyTokenReq {
-      "otp": otp,
-      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then defaultId else (getValueToLocalNativeStore FCM_TOKEN),
-      "whatsappNotificationEnroll": OPT_IN
-    }
+makeVerifyOTPReq otp defaultId = 
+    let token = getValueToLocalNativeStore FCM_TOKEN
+        deviceToken = if any (_ == token) ["__failed", "", " ", "null", "(null)"] then defaultId <> token else token
+    in 
+        VerifyTokenReq {
+            "otp": otp,
+            "deviceToken": deviceToken,
+            "whatsappNotificationEnroll": OPT_IN
+        }
 
 -------------------------------------------------------------Logout BT Funtion---------------------------------------------------------------------------------------------------------
 

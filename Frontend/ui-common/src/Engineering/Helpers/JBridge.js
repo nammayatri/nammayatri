@@ -1554,7 +1554,7 @@ export const generateSessionId = function () {
     });
     return uuid;
   } catch (err) {
-    console.log("generateSessionId error " + err);
+    return Math.random().toString(16); 
   }
 }
 export const initialWebViewSetUp = function (cb) {
