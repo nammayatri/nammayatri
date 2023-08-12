@@ -136,7 +136,10 @@ transporterConfigTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
       rcLimit = B.fieldNamed "rc_limit",
-      automaticRCActivationCutOff = B.fieldNamed "automatic_r_c_activation_cut_off"
+      automaticRCActivationCutOff = B.fieldNamed "automatic_r_c_activation_cut_off",
+      driverAutoPayNotificationTime = B.fieldNamed "driver_auto_pay_notification_time",
+      driverAutoPayExecutionTime = B.fieldNamed "driver_auto_pay_execution_time",
+      subscriptionStartTime = B.fieldNamed "subscription_start_time"
     }
 
 instance Serialize TransporterConfig where

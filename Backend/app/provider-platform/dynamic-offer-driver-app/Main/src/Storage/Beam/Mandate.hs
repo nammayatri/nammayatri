@@ -66,9 +66,9 @@ mandateTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       status = B.fieldNamed "status",
-      startDate = B.fieldNamed "startDate",
-      endDate = B.fieldNamed "endDate",
-      maxAmount = B.fieldNamed "maxAmount",
+      startDate = B.fieldNamed "start_date",
+      endDate = B.fieldNamed "end_date",
+      maxAmount = B.fieldNamed "max_amount",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

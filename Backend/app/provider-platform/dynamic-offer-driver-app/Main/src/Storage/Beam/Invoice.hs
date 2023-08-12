@@ -53,8 +53,8 @@ invoiceTMod :: InvoiceT (B.FieldModification (B.TableField InvoiceT))
 invoiceTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      invoiceShortId = B.fieldNamed "invoiceShortId",
-      driverFeeId = B.fieldNamed "driverFeeId",
+      invoiceShortId = B.fieldNamed "invoice_short_id",
+      driverFeeId = B.fieldNamed "driver_fee_id",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
