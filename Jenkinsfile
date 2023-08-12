@@ -36,7 +36,7 @@ pipeline {
                             allOf {
                                 expression { 'x86_64-linux' == env.SYSTEM }
                                 anyOf {
-                                    branch 'main'; branch 'prodHotPush'; branch 'KVMaster';
+                                    branch 'main'; branch 'prodHotPush'; branch 'KVMasterPush';
                                 }
                             }
                         }
@@ -47,7 +47,7 @@ pipeline {
                     stage ('Cachix push') {
                         when {
                             anyOf {
-                                branch 'main'; branch 'prodHotPush'; branch 'KVMaster';
+                                branch 'main'; branch 'prodHotPush'; branch 'KVMasterPush';
                             }
                         }
                         steps {
