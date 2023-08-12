@@ -80,10 +80,10 @@ deriving stock instance Show DriverPlan
 driverPlanTMod :: DriverPlanT (B.FieldModification (B.TableField DriverPlanT))
 driverPlanTMod =
   B.tableModification
-    { driverId = B.fieldNamed "driverId",
-      planId = B.fieldNamed "planId",
-      planType = B.fieldNamed "planType",
-      mandateId = B.fieldNamed "mandateId",
+    { driverId = B.fieldNamed "driver_id",
+      planId = B.fieldNamed "plan_id",
+      planType = B.fieldNamed "plan_type",
+      mandateId = B.fieldNamed "mandate_id",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
