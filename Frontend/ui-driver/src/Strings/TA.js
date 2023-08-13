@@ -669,7 +669,7 @@ const tamilStrings = {
   NOT_PLANNING_TO_TAKE_RIDES : "சவாரி எடுக்கத் திட்டமிடவில்லையா?",
   RETRY_PAYMENT_STR : "பணம் செலுத்த மீண்டும் முயற்சிக்கவும்",
   PAUSE_AUTOPAY_STR : "தானாகச் செலுத்துவதை இடைநிறுத்து",
-  RESUME_AUTOPAY_STR : "தானாக செலுத்துவதை மீண்டும் தொடங்கு",
+  SETUP_AUTOPAY_STR : "தானாக செலுத்துவதை மீண்டும் தொடங்கு",
   VIEW_RIDE_DETAILS : "சவாரி விவரங்களைக் காண்க",
   ACCOUNT : "கணக்கு",
   AUTOPAY_IS_NOT_ENABLED_YET : "தானியங்கு கட்டணம் இன்னும் இயக்கப்படவில்லை!",

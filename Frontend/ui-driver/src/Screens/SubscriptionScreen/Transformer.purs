@@ -76,11 +76,11 @@ alternatePlansTransformer (UiPlansResp planResp) state = do
     }) alternatePlansArray
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
-getAutoPayDetailsList (MandateData mandateData) = 
-    [   {key : getString MAX_AMOUNT, val : show mandateData.maxAmount},
-        {key : getString FREQUENCY, val : toLower mandateData.frequency},
-        {key : getString STATRED_ON, val : convertUTCtoISC  mandateData.startDate "Do MMM YYYY"},
-        {key : getString EXPIRES_ON, val : convertUTCtoISC  mandateData.endDate "Do MMM YYYY"}
+getAutoPayDetailsList (MandateData mandateDetails) = 
+    [   {key : getString MAX_AMOUNT, val : "₹" <> show mandateDetails.maxAmount},
+        {key : getString FREQUENCY, val : toLower mandateDetails.frequency},
+        {key : getString STATRED_ON, val : convertUTCtoISC  mandateDetails.startDate "Do MMM YYYY"},
+        {key : getString EXPIRES_ON, val : convertUTCtoISC  mandateDetails.endDate "Do MMM YYYY"}
     ]
 
 getPspIcon :: String -> String 
