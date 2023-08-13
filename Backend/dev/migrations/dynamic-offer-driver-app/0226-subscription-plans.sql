@@ -65,8 +65,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN auto_pay_status
 INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type) VALUES
     ('a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'DAILY_25.0', 'DAILY UNLIMITED' , 'Enjoy UNLIMITED rides, every day!', 25, 1, true, 100, 1, 'SUBSCRIPTION'), -- Keep same in prod and master for daily unlimited plan, frontend has hardcoded
     ('a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d', 'favorit0-0000-0000-0000-00000favorit', 'AUTOPAY', 'DAILY', 'DAILY_25.0', 'DAILY UNLIMITED' , 'Enjoy UNLIMITED rides, every day!', 25, 1, true, 100, 1, 'SUBSCRIPTION'),
-    ('18911beb-28ba-456d-8cca-4d019461d2b0', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'PERRIDE_3.5', 'DAILY PER RIDE' , 'Up to a maximum of ₹35 per day', 35, 1, false, 100, 1, 'DEFAULT'),
-    ('18911beb-28ba-456d-8cca-4d019461d2b0', 'favorit0-0000-0000-0000-00000favorit', 'AUTOPAY', 'DAILY', 'PERRIDE_3.5', 'DAILY PER RIDE' , 'Up to a maximum of ₹35 per day', 35, 1, true, 100, 1, 'SUBSCRIPTION');
+    ('18911beb-28ba-456d-8cca-4d019461d2b0', 'favorit0-0000-0000-0000-00000favorit', 'MANUAL', 'DAILY', 'PERRIDE_3.5', 'DAILY PER RIDE' , 'Up to a maximum of ₹35 per day', 35, 1, false, 100, 0, 'DEFAULT'),
+    ('18911beb-28ba-456d-8cca-4d019461d2b0', 'favorit0-0000-0000-0000-00000favorit', 'AUTOPAY', 'DAILY', 'PERRIDE_3.5', 'DAILY PER RIDE' , 'Up to a maximum of ₹35 per day', 35, 1, true, 100, 0, 'SUBSCRIPTION');
 
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN create_mandate text;
 ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN mandate_max_amount integer;

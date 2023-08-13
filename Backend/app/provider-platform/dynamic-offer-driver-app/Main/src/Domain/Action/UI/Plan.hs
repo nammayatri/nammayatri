@@ -38,12 +38,12 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Plan as QPD
 import Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Plan as QPD
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
@@ -118,7 +118,7 @@ data MandateDetailsEntity = MandateDetails
 -- This API is for listing all the AUTO PAY plans
 planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow PlanListAPIRes
 planList (driverId, merchantId) _mbLimit _mbOffset = do
-  plans <- B.runInReplica $ QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
+  plans <- QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   plansList <- mapM (convertPlanToPlanEntity driverId) plans
   return $
@@ -132,7 +132,7 @@ currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
 currentPlan (driverId, _merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
-  plan <- B.runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
+  plan <- QPD.findByIdAndPaymentMode driverPlan.planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
   mandateDetailsEntity <- mkMandateDetailEntity driverPlan.mandateId
   currentPlanEntity <- convertPlanToPlanEntity driverId plan
   return CurrentPlanRes {currentPlanDetails = currentPlanEntity, mandateDetails = mandateDetailsEntity, autoPayStatus = driverInfo.autoPayStatus, subscribed = driverInfo.subscribed}
@@ -149,14 +149,14 @@ planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> Flow PlanS
 planSubscribe planId isDashboard (driverId, merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driverInfo.autoPayStatus `elem` [Nothing, Just DI.CANCELLED_PSP, Just DI.PAUSED_PSP, Just DI.PENDING]) $ throwError InvalidAutoPayStatus
-  plan <- B.runInReplica $ QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
+  plan <- QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
 
   when (driverInfo.autoPayStatus == Just DI.PAUSED_PSP) $ do
-    let mbMandateId = join . (.mandateId) <$> driverPlan
+    let mbMandateId = (.mandateId) =<< driverPlan
     whenJust mbMandateId $ \mandateId -> do
       fork "Cancelling paused Mandate" $ do
-        void $ Payment.mandateRevoke (Payment.MandateRevokeReq {mandateId})
+        void $ Payment.mandateRevoke merchantId (Payment.MandateRevokeReq {mandateId = mandateId.getId})
 
   unless (driverInfo.autoPayStatus == Just DI.PENDING) $ CDI.updateAutoPayStatus (Just DI.PENDING) (cast driverId)
   when (isNothing driverPlan) $ do
@@ -207,7 +207,7 @@ planSelect :: Id Plan -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 planSelect planId (driverId, _) = do
   void $ B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  void $ B.runInReplica $ QPD.findByIdAndPaymentMode planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound planId.getId)
+  void $ QPD.findByIdAndPaymentMode planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound planId.getId)
   QDPlan.updatePlanIdByDriverId driverId planId
   return Success
   where

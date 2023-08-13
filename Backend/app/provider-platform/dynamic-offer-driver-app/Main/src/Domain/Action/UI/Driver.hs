@@ -143,6 +143,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverLocation as QDriverLocation
@@ -154,7 +155,6 @@ import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Plan as QPD
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import qualified Storage.Queries.Ride as QRide
@@ -1454,7 +1454,7 @@ data OfferEntity = OfferEntity
 getDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverDuesResp
 getDriverDues (personId, _merchantId) = do
   driverPlan <- runInReplica $ QDPlan.findByDriverId personId >>= fromMaybeM (NoCurrentPlanForDriver personId.getId)
-  plan <- runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId driverPlan.planType >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
+  plan <- QPD.findByIdAndPaymentMode driverPlan.planId driverPlan.planType >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
   dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId personId
   return $
     DriverDuesResp

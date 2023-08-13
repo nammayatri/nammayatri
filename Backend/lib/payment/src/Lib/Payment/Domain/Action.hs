@@ -252,7 +252,7 @@ updateOrderTransaction order resp respDump = do
       transaction <- buildPaymentTransaction order resp respDump
       Esq.runTransaction $ do
         QTransaction.create transaction
-        when (order.status /= updOrder.status) $ QOrder.updateStatus updOrder
+        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
     Just transaction -> do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
@@ -273,8 +273,9 @@ updateOrderTransaction order resp respDump = do
                         juspayResponse = respDump
                        }
       Esq.runTransaction $ do
-        QTransaction.updateMultiple updTransaction
-        when (order.status /= updOrder.status) $ QOrder.updateStatus updOrder
+        -- Avoid updating status if already in CHARGED state to handle race conditions
+        when (transaction.status /= Payment.CHARGED) $ QTransaction.updateMultiple updTransaction
+        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
 
 buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
 buildPaymentTransaction order OrderTxn {..} respDump = do

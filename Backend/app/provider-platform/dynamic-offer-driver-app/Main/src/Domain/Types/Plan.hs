@@ -48,7 +48,7 @@ data Plan = Plan
     frequency :: Frequency,
     planType :: PlanType
   }
-  deriving (Generic, Show)
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 data RideCountBasedFeePolicy = RideCountBasedFeePolicy
   { baseRideCount :: Int,
