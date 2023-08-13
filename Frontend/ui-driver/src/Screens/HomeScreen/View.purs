@@ -517,7 +517,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background Color.yellowText
+                    , background Color.darkMint -- Color.yellowText TODO:: Later
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView

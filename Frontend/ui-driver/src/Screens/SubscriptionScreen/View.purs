@@ -252,10 +252,7 @@ refreshView push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
-  , onClick (\action -> do
-        _<- push action
-        pure unit
-        ) (const NoAction)
+  , onClick push $ const CheckPaymentStatus
   ]
   [ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus)]
     $ imageView
@@ -269,7 +266,6 @@ refreshView push state =
     , height WRAP_CONTENT
     , text (getString REFRESH_STR)
     , color Color.blueTextColor
-    , onClick push $ const CheckPaymentStatus
     ] <> FontStyle.body4 TypoGraphy
   ]
 
@@ -323,7 +319,7 @@ plansBottomView push state =
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
                                           "EN_US" -> "https://youtu.be/YfaO4eYyh_Y"
-                                          "KN_IN" -> " https://youtu.be/WlJ2TVSe6wo"
+                                          "KN_IN" -> "https://youtu.be/WlJ2TVSe6wo"
                                           _ -> "https://youtu.be/YfaO4eYyh_Y"
                         pure unit
                         ) (const NoAction)
@@ -474,7 +470,7 @@ myPlanBodyview push state =
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
                                           "EN_US" -> "https://youtu.be/YfaO4eYyh_Y"
-                                          "KN_IN" -> " https://youtu.be/WlJ2TVSe6wo"
+                                          "KN_IN" -> "https://youtu.be/WlJ2TVSe6wo"
                                           _ -> "https://youtu.be/YfaO4eYyh_Y"
                         pure unit
                         ) (const NoAction)
@@ -884,17 +880,17 @@ paymentMethodView push state =
   , linearLayout
     [ height $ V 4
     , width $ V 4
-    , background if state.autoPayStatus == ACTIVE_AUTOPAY then Color.green900 else Color.orange900
+    , background if state.mandateStatus == "active" then Color.green900 else Color.orange900
     , cornerRadius 12.0
     , visibility if state.paymentMethod == UPI_AUTOPAY then VISIBLE else GONE
     , margin $ MarginHorizontal 4 4
     ][]
   , textView
-    [ text if state.autoPayStatus == ACTIVE_AUTOPAY then "Active" else "Paused"
+    [ text state.mandateStatus
     , textSize FontSize.a_10
     , visibility if state.paymentMethod == UPI_AUTOPAY then VISIBLE else GONE
     , fontStyle $ FontStyle.medium LanguageStyle
-    , color if state.autoPayStatus == ACTIVE_AUTOPAY then Color.green900 else Color.orange900
+    , color if state.mandateStatus == "active" then Color.green900 else Color.orange900
     , padding $ PaddingBottom 3
     ]
   ]
@@ -1110,6 +1106,7 @@ autoPayDetailsView push state visibility' =
       , background Color.grey900
       , padding $ Padding 5 5 5 5
       , gravity CENTER
+      , visibility if state.data.myPlanData.mandateStatus == "active" then VISIBLE else GONE 
       ][ textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -1152,7 +1149,7 @@ autoPayPGView push state =
                   , width $ V 14
                   ]
               ]
-            , commonTV push ((getString ACCOUNT) <> state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT
+            , commonTV push (state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.paragraphText TypoGraphy) 0 LEFT
           ]
         , linearLayout
           [ height WRAP_CONTENT
@@ -1168,10 +1165,10 @@ autoPayPGView push state =
           , height WRAP_CONTENT
           , gravity RIGHT
           , cornerRadius 20.0
-          , padding $ Padding 7 7 7 7
-          , background "#1653BB6F"
-          , color Color.green900
-          , text "Active"
+          , padding $ Padding 10 7 10 7
+          , background if state.data.myPlanData.mandateStatus == "active" then "#1653BB6F" else Color.grey700
+          , color if state.data.myPlanData.mandateStatus == "active" then Color.green900 else Color.orange900
+          , text state.data.myPlanData.mandateStatus
           ] <> FontStyle.tags TypoGraphy
       ]
   ]

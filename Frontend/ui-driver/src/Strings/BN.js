@@ -707,7 +707,7 @@ const bengaliStrings = {
 	NOT_PLANNING_TO_TAKE_RIDES : "রাইড করার পরিকল্পনা করছেন না?",
 	RETRY_PAYMENT_STR : "পুনরায় অর্থপ্রদানের চেষ্টা করুন",
 	PAUSE_AUTOPAY_STR : "অটোপে বিরাম দিন",
-	RESUME_AUTOPAY_STR : "অটোপে আবার শুরু করুন",
+	SETUP_AUTOPAY_STR : "অটোপে আবার শুরু করুন",
   	VIEW_RIDE_DETAILS : "রাইডের বিবরণ দেখুন",
   	ACCOUNT : "অ্যাকাউন্ট",
 	AUTOPAY_IS_NOT_ENABLED_YET : "অটোপে এখনো সক্ষম করা হয়নি!",

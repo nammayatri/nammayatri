@@ -2263,7 +2263,9 @@ newtype PlanEntity = PlanEntity {
   freeRideCount :: Int,
   frequency :: String, -- DAILY | WEEKLY | MONTHLY | PER_RIDE
   offers :: Array OfferEntity,
-  planFareBreakup :: Array PaymentBreakUp
+  planFareBreakup :: Array PaymentBreakUp,
+  totalPlanCreditLimit :: Number,
+  currentDues :: Number
 }
 
 newtype OfferEntity = OfferEntity {
@@ -2524,7 +2526,7 @@ data GetCurrentPlanReq = GetCurrentPlanReq String
 
 newtype GetCurrentPlanResp = GetCurrentPlanResp {
   currentPlanDetails :: PlanEntity,
-  mandateData :: Maybe MandateData
+  mandateDetails :: Maybe MandateData
 }
 
 newtype MandateData = MandateData {
@@ -2534,9 +2536,9 @@ newtype MandateData = MandateData {
   mandateId :: String,
   payerVpa :: String,
   frequency :: String, --ONETIME | DAILY | WEEKLY | FORTNIGHTLY | MONTHLY | BIMONTHLY | QUARTERLY | HALFYEARLY | YEARLY | ASPRESENTED
-  maxAmount :: Number,
-  totalPlanCreditLimit :: Number,
-  currentDues :: Number
+  maxAmount :: Number
+  -- totalPlanCreditLimit :: Number,
+  -- currentDues :: Number
 }
 
 instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq GetCurrentPlanResp where

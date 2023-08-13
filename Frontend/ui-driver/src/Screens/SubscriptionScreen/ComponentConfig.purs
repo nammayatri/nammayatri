@@ -62,7 +62,7 @@ resumeAutopayButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 resumeAutopayButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString RESUME_AUTOPAY_STR) }
+      { textConfig{ text = (getString SETUP_AUTOPAY_STR) }
       , isClickable = true
       , alpha = if true then 1.0 else 0.6
       , height = (V 48)

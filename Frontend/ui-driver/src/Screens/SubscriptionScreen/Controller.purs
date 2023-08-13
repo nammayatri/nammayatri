@@ -7,6 +7,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
 import Data.Int as DI
 import Data.Maybe as Mb
+import Data.String (toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
@@ -17,7 +18,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (GetCurrentPlanResp(..), MandateData(..), PaymentBreakUp(..), UiPlansResp(..))
+import Services.API (GetCurrentPlanResp(..), MandateData(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
 
@@ -151,16 +152,20 @@ eval (LoadPlans plans) state = do
 
 eval (LoadMyPlans plans autoPayStatus ) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
+  let (PlanEntity planEntity) = currentPlanResp.currentPlanDetails
   let newState = state{ props{ showShimmer = false, subView = MyPlan }, data{myPlanData{planEntity = myPlanListTransformer plans, autoPayStatus = getAutopayStatus autoPayStatus}}}
-  case currentPlanResp.mandateData of 
+  case currentPlanResp.mandateDetails of 
     Mb.Nothing -> continue newState
-    Mb.Just (MandateData mandateData) -> continue newState 
-                                          {data {myPlanData {maxDueAmount = mandateData.totalPlanCreditLimit,
-                                          currentDueAmount = mandateData.currentDues
+    Mb.Just (MandateData mandateDetails) -> continue newState 
+                                          {data {myPlanData {
+                                          maxDueAmount = planEntity.totalPlanCreditLimit,
+                                          mandateStatus = toLower mandateDetails.status,
+                                          currentDueAmount = planEntity.currentDues
                                           }
-                                          , autoPayDetails {registeredPG = mandateData.payerVpa
-                                          , detailsList = getAutoPayDetailsList (MandateData mandateData)
-                                          , pspLogo = getPspIcon mandateData.payerVpa
+                                          , autoPayDetails {registeredPG = mandateDetails.payerVpa
+                                          , detailsList = getAutoPayDetailsList (MandateData mandateDetails)
+                                          , pspLogo = getPspIcon mandateDetails.payerVpa
+                                          , payerUpiId = mandateDetails.payerVpa
                                             }
                                           }}
 
