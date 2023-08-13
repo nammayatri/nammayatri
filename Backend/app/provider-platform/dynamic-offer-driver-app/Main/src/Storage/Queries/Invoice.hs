@@ -2,9 +2,10 @@
 
 module Storage.Queries.Invoice where
 
+import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
 import qualified EulerHS.Language as L
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
@@ -34,12 +35,15 @@ createMany = traverse_ create
 findAllByInvoiceId :: (L.MonadFlow m, Log m) => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 
+findByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
+findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
+
 instance FromTType' BeamI.Invoice Domain.Invoice where
   fromTType' BeamI.InvoiceT {..} = do
     pure $
       Just
         Invoice
-          { id = id,
+          { id = Id id,
             invoiceShortId = invoiceShortId,
             driverFeeId = Id driverFeeId,
             createdAt = createdAt,
@@ -49,7 +53,7 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
 instance ToTType' BeamI.Invoice Domain.Invoice where
   toTType' Invoice {..} = do
     BeamI.InvoiceT
-      { BeamI.id = id,
+      { BeamI.id = id.getId,
         BeamI.invoiceShortId = invoiceShortId,
         BeamI.driverFeeId = getId driverFeeId,
         BeamI.createdAt = createdAt,

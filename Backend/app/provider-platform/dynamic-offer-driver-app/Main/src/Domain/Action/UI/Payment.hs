@@ -65,7 +65,7 @@ import qualified Tools.Payment as Payment
 createOrder :: (Id DP.Person, Id DM.Merchant) -> Id DriverFee -> Flow Payment.CreateOrderResp
 createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- B.runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing Nothing -- To do rectify the last param based on invoice flow --
   return createOrderResp
 
 getOrder :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
@@ -92,7 +92,7 @@ getStatus (personId, merchantId) orderId = do
     case paymentStatus of
       DPayment.MandatePaymentStatus {..} -> do
         processPayment merchantId (cast order.personId) order.id
-        processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount
+        processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa
         processMandateStatus mandateStatus mandateId
       DPayment.PaymentStatus _ -> do
         processPayment merchantId (cast order.personId) order.id
@@ -128,7 +128,7 @@ juspayWebhookHandler merchantShortId authData value = do
               unless (transactionStatus /= Payment.CHARGED) $ do
                 order <- B.runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
                 processPayment merchantId (cast order.personId) order.id
-                processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount
+                processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa
                 processMandateStatus mandateStatus mandateId
                 notifyIfPaymentFailed (cast order.personId) order.id order.status
             Payment.MandateStatusResp {..} -> do
@@ -158,8 +158,8 @@ notifyIfPaymentFailed driverId orderId orderStatus = do
   when (orderStatus `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
     notifyPaymentFailed driver.merchantId driver.id driver.deviceToken orderId
 
-processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Flow ()
-processMandate driverId mandateStatus startDate endDate mandateId maxAmount = do
+processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Flow ()
+processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa = do
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     mbExistingMandate <- B.runInReplica $ QM.findById mandateId
     case mbExistingMandate of
@@ -175,6 +175,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount = do
             status = mandateStatus,
             createdAt = now,
             updatedAt = now,
+            payerVpa = payerVpa,
             ..
           }
 

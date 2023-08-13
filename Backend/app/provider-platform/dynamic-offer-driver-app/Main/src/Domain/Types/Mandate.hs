@@ -27,6 +27,7 @@ import Servant.API
 data Mandate = Mandate
   { id :: Id Mandate,
     status :: MandateStatus,
+    payerVpa :: Maybe Text,
     startDate :: UTCTime,
     endDate :: UTCTime,
     maxAmount :: HighPrecMoney,

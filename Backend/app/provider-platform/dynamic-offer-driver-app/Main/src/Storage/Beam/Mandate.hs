@@ -27,6 +27,7 @@ import Sequelize
 data MandateT f = MandateT
   { id :: B.C f Text,
     status :: B.C f Domain.MandateStatus,
+    payerVpa :: B.C f (Maybe Text),
     startDate :: B.C f UTCTime,
     endDate :: B.C f UTCTime,
     maxAmount :: B.C f HighPrecMoney,
@@ -67,6 +68,7 @@ mandateTMod =
     { id = B.fieldNamed "id",
       status = B.fieldNamed "status",
       startDate = B.fieldNamed "start_date",
+      payerVpa = B.fieldNamed "payer_vpa",
       endDate = B.fieldNamed "end_date",
       maxAmount = B.fieldNamed "max_amount",
       createdAt = B.fieldNamed "created_at",

@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
+import Kernel.Types.Time
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 
@@ -87,6 +88,9 @@ findPendingFeesByDriverId (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDF.dr
 
 findLatestFeeByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
 findLatestFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
+
+findLatestRegisterationFeeByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
+findLatestRegisterationFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId (Se.Eq driverId), Se.Is BeamDF.feeType (Se.Eq MANDATE_REGISTRATION), Se.Is BeamDF.status (Se.Eq PAYMENT_PENDING)]] (Se.Desc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
 
 -- pure $ case res of
 --   (x : _) -> Just x
@@ -233,7 +237,7 @@ updateStatusByIds status driverFeeIds now =
 --     return driverFee
 
 findAllPendingAndDueDriverFeeByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [DriverFee]
-findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Or [Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq driverId]]
+findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE, Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
 -- updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
 -- updateStatus status driverFeeId now = do
@@ -246,10 +250,17 @@ findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [S
 --     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
 
 updateStatus :: (L.MonadFlow m, Log m) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
-updateStatus status (Id driverFeeId) now =
+updateStatus status (Id driverFeeId) now = do
   updateOneWithKV
     [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+
+updateRegisterationFeeStatusByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => DriverFeeStatus -> Id Person -> m ()
+updateRegisterationFeeStatusByDriverId status (Id driverId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+    [Se.And [Se.Is BeamDF.driverId (Se.Eq driverId), Se.Is BeamDF.feeType (Se.Eq MANDATE_REGISTRATION), Se.Is BeamDF.status (Se.Eq PAYMENT_PENDING)]]
 
 -- updateCollectedPaymentStatus :: DriverFeeStatus -> Maybe Text -> Id DriverFee -> UTCTime -> SqlDB ()
 -- updateCollectedPaymentStatus status collectorId driverFeeId now = do

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.mandate
     (   id text NOT NULL PRIMARY KEY,
         max_amount integer NOT NULL,
         status text NOT NULL,
+        payer_vpa text NOT NULL,
         start_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
         end_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
         created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,

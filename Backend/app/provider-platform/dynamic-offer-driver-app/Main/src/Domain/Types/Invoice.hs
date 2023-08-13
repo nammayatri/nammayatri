@@ -6,7 +6,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 
 data Invoice = Invoice
-  { id :: Text,
+  { id :: Id Invoice,
     invoiceShortId :: Text,
     driverFeeId :: Id DF.DriverFee,
     createdAt :: UTCTime,
