@@ -92,7 +92,7 @@ planSelect merchantShortId driverId planId = do
 planSuspend :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler APISuccess
 planSuspend merchantShortId driverId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  DPlan.planSuspend (cast driverId, m.id)
+  DPlan.planSuspend True (cast driverId, m.id)
 
 planSubscribe :: ShortId DM.Merchant -> Id DP.Driver -> Id DPlan.Plan -> FlowHandler DTPlan.PlanSubscribeRes
 planSubscribe merchantShortId driverId planId = withFlowHandlerAPI $ do
