@@ -304,9 +304,11 @@ juspayWebhookService ::
   Text ->
   m AckResponse
 juspayWebhookService resp respDump = do
-  order <- QOrder.findByShortId (ShortId resp.orderShortId) >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
+  logInfo $ "Webhook response dump: " <> respDump
+  logInfo $ "Webhook response: " <> show resp
   case resp of
     Payment.MandateOrderStatusResp {..} -> do
+      order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       let orderTxn =
             OrderTxn
               { mandateStartDate = Just mandateStartDate,
@@ -319,6 +321,7 @@ juspayWebhookService resp respDump = do
               }
       updateOrderTransaction order orderTxn $ Just respDump
     Payment.OrderStatusResp {..} -> do
+      order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       let orderTxn =
             OrderTxn
               { mandateStartDate = Nothing,

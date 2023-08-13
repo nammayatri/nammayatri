@@ -38,6 +38,7 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -94,11 +95,11 @@ getStatus (personId, merchantId) orderId = do
   unless (order.status /= Payment.CHARGED) $ do
     case paymentStatus of
       DPayment.MandatePaymentStatus {..} -> do
-        processPayment merchantId (cast order.personId) order.id
+        processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
         processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa
         processMandateStatus mandateStatus mandateId
       DPayment.PaymentStatus _ -> do
-        processPayment merchantId (cast order.personId) order.id
+        processPayment merchantId (cast order.personId) order.id True
   notifyIfPaymentFailed personId order.id order.status
   pure paymentStatus
 
@@ -123,25 +124,25 @@ juspayWebhookHandler merchantShortId authData value = do
         Just osr -> do
           case osr of
             Payment.OrderStatusResp {..} -> do
+              order <- B.runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               unless (transactionStatus /= Payment.CHARGED) $ do
-                order <- B.runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-                processPayment merchantId (cast order.personId) order.id
-                notifyIfPaymentFailed (cast order.personId) order.id order.status
+                processPayment merchantId (cast order.personId) order.id True
+              notifyIfPaymentFailed (cast order.personId) order.id transactionStatus
             Payment.MandateOrderStatusResp {..} -> do
+              order <- B.runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               unless (transactionStatus /= Payment.CHARGED) $ do
-                order <- B.runInReplica $ QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-                processPayment merchantId (cast order.personId) order.id
+                processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
                 processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa
                 processMandateStatus mandateStatus mandateId
-                notifyIfPaymentFailed (cast order.personId) order.id order.status
+              notifyIfPaymentFailed (cast order.personId) order.id transactionStatus
             Payment.MandateStatusResp {..} -> do
               processMandateStatus status mandateId
             Payment.BadStatusResp -> pure ()
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
 
-processPayment :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Flow ()
-processPayment merchantId driverId orderId = do
+processPayment :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> Flow ()
+processPayment merchantId driverId orderId sendNotification = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
@@ -153,13 +154,31 @@ processPayment merchantId driverId orderId = do
     CDI.updateSubscription True (cast driverId)
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QDFS.clearPaymentStatus driverId driverInfo.active
-    notifyPaymentSuccess merchantId driverId driver.deviceToken orderId
+    when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
+
+notifyPaymentSuccessIfNotNotified :: DP.Person -> Id DOrder.PaymentOrder -> Flow ()
+notifyPaymentSuccessIfNotNotified driver orderId = do
+  let key = "driver-offer:SuccessNotif-" <> orderId.getId
+  sendNotificationIfNotSent key $ do
+    notifyPaymentSuccess driver.merchantId driver.id driver.deviceToken orderId
+
+shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
+shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
 notifyIfPaymentFailed :: Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Flow ()
 notifyIfPaymentFailed driverId orderId orderStatus = do
-  driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   when (orderStatus `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
-    notifyPaymentFailed driver.merchantId driver.id driver.deviceToken orderId
+    let key = "driver-offer:FailedNotif-" <> orderId.getId
+    sendNotificationIfNotSent key $ do
+      driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      notifyPaymentFailed driver.merchantId driver.id driver.deviceToken orderId
+
+sendNotificationIfNotSent :: Text -> Flow () -> Flow ()
+sendNotificationIfNotSent key actions = do
+  isNotificationSent <- fromMaybe False <$> Hedis.get key
+  unless isNotificationSent $ do
+    Hedis.setExp key True 86400 -- 24 hours
+    actions
 
 processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Flow ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa = do

@@ -87,7 +87,9 @@ data OfferEntity = OfferEntity
 
 data CurrentPlanRes = CurrentPlanRes
   { currentPlanDetails :: PlanEntity,
-    mandateDetails :: Maybe MandateDetailsEntity
+    mandateDetails :: Maybe MandateDetailsEntity,
+    autoPayStatus :: Maybe DI.DriverAutoPayStatus,
+    subscribed :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -132,7 +134,7 @@ currentPlan (driverId, _merchantId) = do
   plan <- B.runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
   mandateDetailsEntity <- mkMandateDetailEntity driverPlan.mandateId
   currentPlanEntity <- convertPlanToPlanEntity driverId plan
-  return CurrentPlanRes {currentPlanDetails = currentPlanEntity, mandateDetails = mandateDetailsEntity}
+  return CurrentPlanRes {currentPlanDetails = currentPlanEntity, mandateDetails = mandateDetailsEntity, autoPayStatus = driverInfo.autoPayStatus, subscribed = driverInfo.subscribed}
   where
     getDriverPaymentMode = \case
       Just DI.ACTIVE -> AUTOPAY
