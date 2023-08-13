@@ -129,41 +129,46 @@ instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
     fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> show fromLocationId)
     tl <- QBBL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> show toLocationId)
-    fp <- QueriesFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in booking for Id: " <> show fareParametersId)
+    fp <- QueriesFP.findById (Id fareParametersId)
     pUrl <- parseBaseUrl bapUri
-    pure $
-      Just
-        Booking
-          { id = Id id,
-            transactionId = transactionId,
-            quoteId = quoteId,
-            status = status,
-            bookingType = bookingType,
-            specialLocationTag = specialLocationTag,
-            specialZoneOtpCode = specialZoneOtpCode,
-            area = area,
-            providerId = Id providerId,
-            primaryExophone = primaryExophone,
-            bapId = bapId,
-            bapUri = pUrl,
-            bapCity = bapCity,
-            bapCountry = bapCountry,
-            startTime = startTime,
-            riderId = Id <$> riderId,
-            fromLocation = fl,
-            toLocation = tl,
-            vehicleVariant = vehicleVariant,
-            estimatedDistance = estimatedDistance,
-            maxEstimatedDistance = maxEstimatedDistance,
-            estimatedFare = estimatedFare,
-            estimatedDuration = estimatedDuration,
-            fareParams = fp,
-            paymentMethodId = Id <$> paymentMethodId,
-            riderName = riderName,
-            paymentUrl = paymentUrl,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
+    if isJust fp
+      then
+        pure $
+          Just
+            Booking
+              { id = Id id,
+                transactionId = transactionId,
+                quoteId = quoteId,
+                status = status,
+                bookingType = bookingType,
+                specialLocationTag = specialLocationTag,
+                specialZoneOtpCode = specialZoneOtpCode,
+                area = area,
+                providerId = Id providerId,
+                primaryExophone = primaryExophone,
+                bapId = bapId,
+                bapUri = pUrl,
+                bapCity = bapCity,
+                bapCountry = bapCountry,
+                startTime = startTime,
+                riderId = Id <$> riderId,
+                fromLocation = fl,
+                toLocation = tl,
+                vehicleVariant = vehicleVariant,
+                estimatedDistance = estimatedDistance,
+                maxEstimatedDistance = maxEstimatedDistance,
+                estimatedFare = estimatedFare,
+                estimatedDuration = estimatedDuration,
+                fareParams = fromJust fp, -- This fromJust is safe because of the check above.
+                paymentMethodId = Id <$> paymentMethodId,
+                riderName = riderName,
+                paymentUrl = paymentUrl,
+                createdAt = createdAt,
+                updatedAt = updatedAt
+              }
+      else do
+        logError $ "FareParameters not found for booking: " <> show id
+        pure Nothing
 
 instance ToTType' BeamB.Booking Booking where
   toTType' Booking {..} =
