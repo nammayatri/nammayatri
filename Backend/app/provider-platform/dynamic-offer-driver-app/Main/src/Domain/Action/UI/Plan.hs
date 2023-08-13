@@ -18,6 +18,7 @@ import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
+import Domain.Types.Mandate (MandateStatus)
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
@@ -36,6 +37,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as CDI
 import qualified Storage.Queries.DriverPlan as QDPlan
+import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Plan as QPD
@@ -61,7 +63,9 @@ data PlanEntity = PlanEntity
     freeRideCount :: Int,
     frequency :: Text,
     offers :: [OfferEntity],
-    paymentMode :: PaymentMode
+    paymentMode :: PaymentMode,
+    totalPlanCreditLimit :: Money,
+    currentDues :: Money
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -78,14 +82,26 @@ data OfferEntity = OfferEntity
   }
   deriving (Generic, ToJSON, ToSchema)
 
-newtype CurrentPlanRes = CurrentPlanRes
-  { currentPlanDetails :: PlanEntity
+data CurrentPlanRes = CurrentPlanRes
+  { currentPlanDetails :: PlanEntity,
+    mandateDetails :: Maybe MandateDetailsEntity
   }
   deriving (Generic, ToJSON, ToSchema)
 
 data PlanSubscribeRes = PlanSubscribeRes
   { orderId :: Id DOrder.PaymentOrder,
     orderResp :: Payment.CreateOrderResp
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+data MandateDetailsEntity = MandateDetails
+  { status :: MandateStatus,
+    startDate :: UTCTime,
+    endDate :: UTCTime,
+    mandateId :: Text,
+    payerVpa :: Maybe Text,
+    frequency :: Text,
+    maxAmount :: Money
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -111,8 +127,9 @@ currentPlan (driverId, _merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   plan <- B.runInReplica $ QPD.findByIdAndPaymentMode driverPlan.planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
+  mandateDetailsEntity <- mkMandateDetailEntity driverPlan.mandateId
   currentPlanEntity <- convertPlanToPlanEntity driverId plan
-  return CurrentPlanRes {currentPlanDetails = currentPlanEntity}
+  return CurrentPlanRes {currentPlanDetails = currentPlanEntity, mandateDetails = mandateDetailsEntity}
   where
     getDriverPaymentMode = \case
       Just DI.ACTIVE -> AUTOPAY
@@ -125,14 +142,15 @@ currentPlan (driverId, _merchantId) = do
 planSubscribe :: Id Plan -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribeRes
 planSubscribe planId (driverId, merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  unless (isNothing driverInfo.autoPayStatus || driverInfo.autoPayStatus == Just DI.CANCELLED_PSP) $ throwError InvalidAutoPayStatus
-  CDI.updateAutoPayStatus (Just DI.PENDING) (cast driverId)
+  unless (driverInfo.autoPayStatus `elem` [Nothing, Just DI.CANCELLED_PSP, Just DI.PENDING]) $ throwError InvalidAutoPayStatus
   plan <- B.runInReplica $ QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
+  unless (driverInfo.autoPayStatus == Just DI.PENDING) $ CDI.updateAutoPayStatus (Just DI.PENDING) (cast driverId)
   when (isNothing driverPlan) $ do
     newDriverPlan <- mkDriverPlan plan
     QDPlan.create newDriverPlan
   when (isJust driverPlan) $ do
+    unless (driverInfo.autoPayStatus == Just DI.PENDING && maybe False (\dp -> dp.planId == planId) driverPlan) $ QDF.updateRegisterationFeeStatusByDriverId DF.INACTIVE driverId
     QDPlan.updatePlanIdByDriverId driverId planId
   (createOrderResp, orderId) <- createMandateInvoiceAndOrder driverId merchantId plan
   return $
@@ -223,16 +241,25 @@ validateInActiveMandateExists driverId driverPlan = do
 createMandateInvoiceAndOrder :: Id SP.Person -> Id DM.Merchant -> Plan -> Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder driverId merchantId plan = do
   driverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
-  if not (null driverFees)
-    then SPayment.createOrder (driverId, merchantId) driverFees (Just mandateOrder)
-    else do
+  driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
+  let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverFees
+  case driverRegisterationFee of
+    Just registerFee -> do
+      invoice <- QINV.findByDriverFeeId registerFee.id
+      case invoice of
+        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverFees) (Just $ mandateOrder currentDues) (Just (inv.id, inv.invoiceShortId))
+        Nothing -> throwError $ InternalError "driverFee without invoice"
+    Nothing -> do
       driverFee <- mkDriverFee
       QDF.create driverFee
-      SPayment.createOrder (driverId, merchantId) [driverFee] (Just mandateOrder)
+      if not (null driverFees)
+        then SPayment.createOrder (driverId, merchantId) (driverFee : driverFees) (Just $ mandateOrder currentDues) Nothing
+        else do
+          SPayment.createOrder (driverId, merchantId) [driverFee] (Just $ mandateOrder currentDues) Nothing
   where
-    mandateOrder =
+    mandateOrder currentDues =
       SPayment.MandateOrder
-        { maxAmount = plan.maxAmount,
+        { maxAmount = max plan.maxAmount currentDues,
           _type = Payment.REQUIRED,
           frequency = Payment.ASPRESENTED
         }
@@ -260,6 +287,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
 
 convertPlanToPlanEntity :: Id SP.Person -> Plan -> Flow PlanEntity
 convertPlanToPlanEntity driverId plan@Plan {..} = do
+  dueInvoices <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   offers <- Payment.offerList merchantId =<< makeOfferReq
   let planFareBreakup = mkPlanFareBreakup offers.offerResp
   planBaseFrequcency <- case planBaseAmount of
@@ -272,6 +300,8 @@ convertPlanToPlanEntity driverId plan@Plan {..} = do
       { id = plan.id.getId,
         offers = makeOfferEntity <$> offers.offerResp,
         frequency = planBaseFrequcency,
+        currentDues = round . sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices,
+        totalPlanCreditLimit = round maxCreditLimit,
         ..
       }
   where
@@ -312,3 +342,21 @@ convertPlanToPlanEntity driverId plan@Plan {..} = do
         PlanFareBreakup {component = "DISCOUNTED_FEE", amount = discountAmount},
         PlanFareBreakup {component = "FINAL_FEE", amount = finalOrderAmount}
         ]
+
+mkMandateDetailEntity :: Maybe (Id DM.Mandate) -> Flow (Maybe MandateDetailsEntity)
+mkMandateDetailEntity mandateId = do
+  case mandateId of
+    Just id -> do
+      mandate <- B.runInReplica $ QM.findById id >>= fromMaybeM (MandateNotFound id.getId)
+      return $
+        Just
+          MandateDetails
+            { status = mandate.status,
+              startDate = mandate.startDate,
+              endDate = mandate.endDate,
+              mandateId = mandate.id.getId,
+              payerVpa = mandate.payerVpa,
+              frequency = "Aspresented",
+              maxAmount = round mandate.maxAmount
+            }
+    Nothing -> return Nothing

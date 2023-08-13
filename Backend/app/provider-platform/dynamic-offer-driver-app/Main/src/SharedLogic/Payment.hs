@@ -53,24 +53,26 @@ createOrder ::
   (Id DP.Person, Id DM.Merchant) ->
   [DriverFee] ->
   Maybe MandateOrder ->
+  Maybe (Id INV.Invoice, Text) ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId) driverFees mbMandateOrder = do
+createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
   unless (driver.id == driverId) $ throwError NotAnExecutor
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  invoiceId <- generateGUID
-  invoiceShortId <- generateShortId
+  genInvoiceId <- generateGUID
+  genShortInvoiceId <- generateShortId
   now <- getCurrentTime
   let driverEmail = fromMaybe "test@juspay.in" driver.email
+      (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) <$> driverFees
-      invoices = mkInvoiceAgainstDriverFee invoiceId invoiceShortId.getShortId now <$> driverFees
-  QIN.createMany invoices
+      invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now <$> driverFees
+  unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
         CreateOrderReq
-          { orderId = invoiceId,
-            orderShortId = invoiceShortId.getShortId,
+          { orderId = invoiceId.getId,
+            orderShortId = invoiceShortId,
             amount = amount,
             customerId = driver.id.getId,
             customerEmail = driverEmail,
@@ -85,12 +87,12 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder = do
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
       createOrderCall = Payment.createOrder merchantId -- api call
   createOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
-  return (createOrderRes, Id invoiceId)
+  return (createOrderRes, cast invoiceId)
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now driverFee =
   INV.Invoice
-    { id = id,
+    { id = Id id,
       invoiceShortId = shortId,
       driverFeeId = driverFee.id,
       updatedAt = now,
