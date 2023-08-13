@@ -65,7 +65,7 @@ planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> FlowHand
 planList (driverId, merchantId) mbLimit = withFlowHandlerAPI . DPlan.planList (driverId, merchantId) mbLimit
 
 planSuspend :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
-planSuspend = withFlowHandlerAPI . DPlan.planSuspend
+planSuspend = withFlowHandlerAPI . DPlan.planSuspend False
 
 planResume :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
 planResume = withFlowHandlerAPI . DPlan.planResume

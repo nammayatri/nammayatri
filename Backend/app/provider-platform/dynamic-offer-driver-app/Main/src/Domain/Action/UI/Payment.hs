@@ -195,8 +195,10 @@ processMandateStatus mandateStatus mandateId = do
       QM.updateStatus (Id mandateId) DM.INACTIVE
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
       CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
-      when (mandateStatus `elem` [Payment.PAUSED, Payment.REVOKED]) $
-        notifyPaymentModeManual driver.merchantId driver.id driver.deviceToken
+      when (mandateStatus == Payment.PAUSED) $
+        notifyPaymentModeManualOnPause driver.merchantId driver.id driver.deviceToken
+      when (mandateStatus == Payment.REVOKED) $
+        notifyPaymentModeManualOnCancel driver.merchantId driver.id driver.deviceToken
   where
     castAutoPayStatus = \case
       Payment.CREATED -> Just DI.PENDING

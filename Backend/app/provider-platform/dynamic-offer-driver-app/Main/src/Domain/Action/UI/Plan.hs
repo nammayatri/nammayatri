@@ -209,8 +209,8 @@ planSelect planId (driverId, _) = do
       _ -> MANUAL
 
 -- This API is to make Mandate Inactive and switch to Manual plan type from Autopay.
-planSuspend :: (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
-planSuspend (driverId, _merchantId) = do
+planSuspend :: Bool -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
+planSuspend isDashboard (driverId, _merchantId) = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driverInfo.autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
@@ -220,7 +220,7 @@ planSuspend (driverId, _merchantId) = do
     QM.updateStatus mandate.id DM.INACTIVE
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) MANUAL
     CDI.updateAutoPayStatus (Just DI.SUSPENDED) (cast driverId)
-  notifyPaymentModeManual _merchantId driverId driver.deviceToken
+  when isDashboard $ notifyPaymentModeManualOnSuspend _merchantId driverId driver.deviceToken
   return Success
 
 -- This API is to make Mandate Active and switch to Autopay plan type. If an only if an Auto Pay plan was paused/cancelled by driver from App.
