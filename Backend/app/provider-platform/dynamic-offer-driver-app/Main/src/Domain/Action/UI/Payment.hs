@@ -65,7 +65,8 @@ import qualified Tools.Payment as Payment
 createOrder :: (Id DP.Person, Id DM.Merchant) -> Id DriverFee -> Flow Payment.CreateOrderResp
 createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- B.runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing Nothing -- To do rectify the last param based on invoice flow --
+  invoice <- B.runInReplica $ QIN.findByDriverFeeId driverFee.id >>= fromMaybeM (InternalError $ "No Invoice for DriverFee " <> getId driverFeeId)
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing (Just (invoice.id, invoice.invoiceShortId))
   return createOrderResp
 
 getOrder :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
