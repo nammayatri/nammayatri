@@ -29,6 +29,7 @@ data MessageKey
   | ONBOARDING_YATRI_MESSAGE
   | BOOKING_MESSAGE
   | CASH_COLLECTED_MESSAGE
+  | SEND_PAYMENT_LINK
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage

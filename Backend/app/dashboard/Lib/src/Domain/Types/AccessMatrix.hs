@@ -147,13 +147,18 @@ data UserActionType
   | COLLECT_CASH
   | EXEMPT_CASH
   | CURRENT_ACTIVE_RIDE
+  | LIST_PLAN
+  | SELECT_PLAN
+  | SUSPEND_PLAN
+  | SUBSCRIBE_PLAN
+  | CURRENT_PLAN
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''ApiEntity]
