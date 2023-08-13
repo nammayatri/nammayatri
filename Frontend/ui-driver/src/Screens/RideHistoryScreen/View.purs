@@ -300,6 +300,7 @@ calendarView push state =
           , gravity CENTER
           , padding $ Padding 5 5 5 5
           , onClick push $ const OpenPaymentHistory
+          -- need to hide in nammayatri
           ][  textView
               $ [ height WRAP_CONTENT
                 , width WRAP_CONTENT

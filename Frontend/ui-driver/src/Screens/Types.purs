@@ -38,6 +38,7 @@ import Components.RecordAudioModel.Controller as RecordAudioModel
 import MerchantConfig.Types (AppConfig)
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Screens (ScreenName)
 
 type EditTextInLabelState =
  {
@@ -1486,7 +1487,8 @@ instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
 
 type GlobalProps = {
   aadhaarVerificationRequired :: Boolean,
-  driverInformation :: GetDriverInfoResp
+  driverInformation :: GetDriverInfoResp,
+  callScreen :: ScreenName
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
@@ -1563,7 +1565,8 @@ type MyPlanData = {
   switchAndSave :: Boolean,
   paymentMethodWarning :: Boolean,
   maxDueAmount :: Number,
-  currentDueAmount :: Number
+  currentDueAmount :: Number,
+  mandateStatus :: String
 }
 
 type MyPlanProps = {

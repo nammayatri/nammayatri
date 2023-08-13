@@ -549,7 +549,7 @@ const frenchStrings = {
   NOT_PLANNING_TO_TAKE_RIDES : "Vous ne prévoyez pas de faire des trajets ?",
   RETRY_PAYMENT_STR : "Réessayer le paiement",
   PAUSE_AUTOPAY_STR : "Suspendre le paiement automatique",
-  RESUME_AUTOPAY_STR : "Reprendre le paiement automatique",
+  SETUP_AUTOPAY_STR : "Reprendre le paiement automatique",
   VIEW_RIDE_DETAILS : "Afficher les détails du trajet",
   ACCOUNT : "Compte",
   AUTOPAY_IS_NOT_ENABLED_YET : "Le paiement automatique n'est pas encore activé !",

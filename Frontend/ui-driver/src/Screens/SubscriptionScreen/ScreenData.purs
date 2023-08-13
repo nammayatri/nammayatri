@@ -26,7 +26,8 @@ initData = {
             paymentMethodWarning : false,
             switchAndSave : false,
             maxDueAmount : 100.0,
-            currentDueAmount : 0.0
+            currentDueAmount : 0.0,
+            mandateStatus : ""
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,
