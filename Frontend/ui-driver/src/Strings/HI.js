@@ -699,7 +699,7 @@ const hindiStrings = {
   NOT_PLANNING_TO_TAKE_RIDES : "सवारी लेने की योजना नहीं बना रहे?",
   RETRY_PAYMENT_STR : "भुगतान का पुनः प्रयास करें",
   PAUSE_AUTOPAY_STR : "ऑटोपे रोकें",
-  RESUME_AUTOPAY_STR : "ऑटोपे फिर से शुरू करें",
+  SETUP_AUTOPAY_STR : "सेटअप ऑटोपे",
   VIEW_RIDE_DETAILS : "सवारी विवरण देखें",
   ACCOUNT : "खाता",
   AUTOPAY_IS_NOT_ENABLED_YET : "ऑटोपे अभी तक सक्षम नहीं है!",

@@ -701,7 +701,7 @@ const englishStrings = {
   NOT_PLANNING_TO_TAKE_RIDES : "Not planning to take rides?",
   RETRY_PAYMENT_STR : "Retry Payment",
   PAUSE_AUTOPAY_STR : "Pause AutoPay",
-  RESUME_AUTOPAY_STR : "Resume AutoPay",
+  SETUP_AUTOPAY_STR : "Setup AutoPay",
   VIEW_RIDE_DETAILS : "View Ride Details",
   ACCOUNT : "Account",
   AUTOPAY_IS_NOT_ENABLED_YET : "Autopay is not enabled yet!",

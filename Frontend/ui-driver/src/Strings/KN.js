@@ -671,7 +671,7 @@ const kannadaStrings = {
   NOT_PLANNING_TO_TAKE_RIDES : "ಸವಾರಿ ತೆಗೆದುಕೊಳ್ಳಲು ಯೋಜಿಸುತ್ತಿಲ್ಲವೇ?",
   RETRY_PAYMENT_STR : "ಪಾವತಿಯನ್ನು ಮರುಪ್ರಯತ್ನಿಸಿ",
   PAUSE_AUTOPAY_STR : "ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ವಿರಾಮಗೊಳಿಸಿ",
-  RESUME_AUTOPAY_STR : "ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಪುನರಾರಂಭಿಸಿ",
+  SETUP_AUTOPAY_STR : "ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಹೊಂದಿಸಿ",
   VIEW_RIDE_DETAILS : "ರೈಡ್ ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
   ACCOUNT : "ಖಾತೆ",
   AUTOPAY_IS_NOT_ENABLED_YET : "ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಇನ್ನೂ ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿಲ್ಲ!",
@@ -698,5 +698,6 @@ const kannadaStrings = {
   STATRED_ON : "ಆರಂಭಗೊಂಡಿದೆ",
   EXPIRES_ON : "ಅವಧಿ ಮುಕ್ತಾಯವಾಗುತ್ತದೆ",
   SWITCHED_PLAN : "ಬದಲಾದ ಯೋಜನೆ",
-  RESUME_AUTOPAY : "ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಪುನರಾರಂಭಿಸಲಾಗಿದೆ"
+  RESUME_AUTOPAY : "ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಪುನರಾರಂಭಿಸಲಾಗಿದೆ",
+  PAYMENT_PENDING : "ಪಾವತಿ ಬಾಕಿ ಇದೆ"
 }

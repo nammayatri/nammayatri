@@ -39,6 +39,8 @@ import Types.App (FlowBT, ScreenType(..))
 import JBridge as JBridge
 import Effect.Exception (error)
 import Data.Function.Uncurried (runFn2)
+import Screens (ScreenName(..)) as ScreenNames
+import Data.Array as DA
 
 main :: Event -> Effect Unit
 main event = do
@@ -46,10 +48,8 @@ main event = do
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true
     case resp of
-      Right _ -> pure $ printLog "printLog " "Success in main"
-      Left error -> do
-        _ <- pure $ printLog "printLog error in main" error
-        liftFlow $ main event
+      Right _ -> liftFlow $ main event
+      Left error -> liftFlow $ main event
   JBridge.storeMainFiberOb mainFiber
   pure unit
 
@@ -98,10 +98,10 @@ onConnectivityEvent triggertype = do
   pure unit
 
 updateEventData :: Event -> FlowBT String Unit
-updateEventData event =
+updateEventData event = do 
     case event.type of
-      "NEW_MESSAGE" -> do
-        modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ selectedNotification = Just event.data, deepLinkActivated = true })
+      "NEW_MESSAGE" -> modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ selectedNotification = Just event.data, deepLinkActivated = true })
+      "PAYMENT_MODE_MANUAL" -> modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {callScreen = ScreenNames.SUBSCRIPTION_SCREEN})
       _ -> pure unit
 
 

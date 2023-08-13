@@ -667,7 +667,7 @@ const mlStrings = {
   NOT_PLANNING_TO_TAKE_RIDES : "റൈഡുകൾ എടുക്കാൻ ആസൂത്രണം ചെയ്യുന്നില്ലേ?",
   RETRY_PAYMENT_STR : "പേയ്‌മെന്റ് വീണ്ടും ശ്രമിക്കുക",
   PAUSE_AUTOPAY_STR : "ഓട്ടോപേ താൽക്കാലികമായി നിർത്തുക",
-  RESUME_AUTOPAY_STR : "ഓട്ടോപേ പുനരാരംഭിക്കുക",
+  SETUP_AUTOPAY_STR : "ഓട്ടോപേ പുനരാരംഭിക്കുക",
   VIEW_RIDE_DETAILS : "റൈഡ് വിശദാംശങ്ങൾ കാണുക",
   ACCOUNT : "അക്കൗണ്ട്",
   AUTOPAY_IS_NOT_ENABLED_YET : "ഓട്ടോപേ ഇതുവരെ പ്രവർത്തനക്ഷമമാക്കിയിട്ടില്ല!",

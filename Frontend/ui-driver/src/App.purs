@@ -55,6 +55,7 @@ import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
+import Screens (ScreenName(..)) as ScreenNames
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -146,7 +147,8 @@ defaultGlobalState = GlobalState{
 defaultGlobalProps :: GlobalProps
 defaultGlobalProps = {
   aadhaarVerificationRequired : false,
-  driverInformation : DriverProfileScreenData.dummyDriverInfo
+  driverInformation : DriverProfileScreenData.dummyDriverInfo,
+  callScreen : ScreenNames.HOME_SCREEN
 }
 
 data ScreenType =
