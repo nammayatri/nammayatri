@@ -95,8 +95,8 @@ updateSubscription isSubscribed driverId = do
 
 updateAutoPayStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Maybe DriverAutoPayStatus -> Id Person.Driver -> m ()
 updateAutoPayStatus driverAutoPayStatus driverId = do
-  clearDriverInfoCache driverId
   void $ Queries.updateAutoPayStatus driverAutoPayStatus driverId
+  clearDriverInfoCache driverId
 
 -- this function created because all queries wishfully should be in one transaction
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m, Log m) => [Id Person.Driver] -> m ()

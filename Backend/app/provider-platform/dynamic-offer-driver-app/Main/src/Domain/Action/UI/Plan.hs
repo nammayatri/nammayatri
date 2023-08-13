@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Plan where
 
+import qualified Data.List as List
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
@@ -22,7 +23,7 @@ import Domain.Types.Mandate (MandateStatus)
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
-import Domain.Types.Plan
+import Domain.Types.Plan as P
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -35,9 +36,9 @@ import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverInformation as CDI
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
@@ -147,9 +148,16 @@ currentPlan (driverId, _merchantId) = do
 planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribeRes
 planSubscribe planId isDashboard (driverId, merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  unless (driverInfo.autoPayStatus `elem` [Nothing, Just DI.CANCELLED_PSP, Just DI.PENDING]) $ throwError InvalidAutoPayStatus
+  unless (driverInfo.autoPayStatus `elem` [Nothing, Just DI.CANCELLED_PSP, Just DI.PAUSED_PSP, Just DI.PENDING]) $ throwError InvalidAutoPayStatus
   plan <- B.runInReplica $ QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
+
+  when (driverInfo.autoPayStatus == Just DI.PAUSED_PSP) $ do
+    let mbMandateId = join . (.mandateId) <$> driverPlan
+    whenJust mbMandateId $ \mandateId -> do
+      fork "Cancelling paused Mandate" $ do
+        void $ Payment.mandateRevoke (Payment.MandateRevokeReq {mandateId})
+
   unless (driverInfo.autoPayStatus == Just DI.PENDING) $ CDI.updateAutoPayStatus (Just DI.PENDING) (cast driverId)
   when (isNothing driverPlan) $ do
     newDriverPlan <- mkDriverPlan plan
@@ -264,24 +272,26 @@ createMandateInvoiceAndOrder :: Id SP.Person -> Id DM.Merchant -> Plan -> Flow (
 createMandateInvoiceAndOrder driverId merchantId plan = do
   driverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
+  allPlans <- QPD.fetchAllPlan
+  let allPlansMaxAmount = List.maximum $ allPlans <&> (.maxAmount)
   let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverFees
   case driverRegisterationFee of
     Just registerFee -> do
       invoice <- QINV.findByDriverFeeId registerFee.id
       case invoice of
-        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverFees) (Just $ mandateOrder currentDues) (Just (inv.id, inv.invoiceShortId))
+        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverFees) (Just $ mandateOrder currentDues allPlansMaxAmount) (Just (inv.id, inv.invoiceShortId))
         Nothing -> throwError $ InternalError "driverFee without invoice"
     Nothing -> do
       driverFee <- mkDriverFee
       QDF.create driverFee
       if not (null driverFees)
-        then SPayment.createOrder (driverId, merchantId) (driverFee : driverFees) (Just $ mandateOrder currentDues) Nothing
+        then SPayment.createOrder (driverId, merchantId) (driverFee : driverFees) (Just $ mandateOrder currentDues allPlansMaxAmount) Nothing
         else do
-          SPayment.createOrder (driverId, merchantId) [driverFee] (Just $ mandateOrder currentDues) Nothing
+          SPayment.createOrder (driverId, merchantId) [driverFee] (Just $ mandateOrder currentDues allPlansMaxAmount) Nothing
   where
-    mandateOrder currentDues =
+    mandateOrder currentDues allPlansMaxAmount =
       SPayment.MandateOrder
-        { maxAmount = max plan.maxAmount currentDues,
+        { maxAmount = max allPlansMaxAmount currentDues,
           _type = Payment.REQUIRED,
           frequency = Payment.ASPRESENTED
         }

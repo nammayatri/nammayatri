@@ -39,6 +39,9 @@ create = createWithKV
 --       &&. plan ^. PlanPaymentMode ==. val paymentMode
 --   return plan
 
+fetchAllPlan :: (L.MonadFlow m, Log m) => m [Plan]
+fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
+
 findByIdAndPaymentMode :: (L.MonadFlow m, Log m) => Id Plan -> PaymentMode -> m (Maybe Plan)
 findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq planId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
 

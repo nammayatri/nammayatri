@@ -34,6 +34,9 @@ orderStatus = runWithServiceConfig Payment.orderStatus
 offerList :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
 offerList = runWithServiceConfig Payment.offerList
 
+mandateRevoke :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
+mandateRevoke = runWithServiceConfig Payment.mandateRevoke
+
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
