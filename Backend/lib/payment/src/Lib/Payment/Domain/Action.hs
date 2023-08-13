@@ -304,7 +304,7 @@ juspayWebhookService ::
   Text ->
   m AckResponse
 juspayWebhookService resp respDump = do
-  order <- runInReplica $ QOrder.findByShortId (ShortId resp.orderShortId) >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
+  order <- QOrder.findByShortId (ShortId resp.orderShortId) >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
   case resp of
     Payment.MandateOrderStatusResp {..} -> do
       let orderTxn =
