@@ -42,6 +42,7 @@ library
       API.Dashboard.Merchant
       API.Dashboard.Message
       API.Dashboard.Ride
+      API.Dashboard.Subscription
       API.Dashboard.Volunteer
       API.Internal
       API.Internal.Auth

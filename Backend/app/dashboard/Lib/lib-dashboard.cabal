@@ -114,6 +114,7 @@ library
     , bytestring
     , cryptonite
     , dashboard-helper-api
+    , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
     , http-types

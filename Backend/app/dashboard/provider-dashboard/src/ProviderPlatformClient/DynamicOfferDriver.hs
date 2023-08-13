@@ -32,7 +32,9 @@ import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscription
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -53,7 +55,8 @@ data DriverOfferAPIs = DriverOfferAPIs
     volunteer :: VolunteerAPIs,
     driverReferral :: DriverReferralAPIs,
     driverRegistration :: DriverRegistrationAPIs,
-    issue :: IssueAPIs
+    issue :: IssueAPIs,
+    subscription :: SubscriptionAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -170,10 +173,19 @@ data IssueAPIs = IssueAPIs
     issueFetchMedia :: Text -> Euler.EulerClient Text
   }
 
+data SubscriptionAPIs = SubscriptionAPIs
+  { planList :: Id Driver.Driver -> Euler.EulerClient Subscription.PlanListAPIRes,
+    planSelect :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient APISuccess,
+    planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,
+    currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes
+  }
+
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
+  let subscription = SubscriptionAPIs {..}
   let driverReferral = DriverReferralAPIs {..}
   let driverRegistration = DriverRegistrationAPIs {..}
   let bookings = BookingsAPIs {..}
@@ -185,6 +197,7 @@ mkDriverOfferAPIs merchantId token = do
   where
     driversClient
       :<|> ridesClient
+      :<|> subscriptionClient
       :<|> bookingsClient
       :<|> merchantClient
       :<|> messageClient
@@ -192,6 +205,12 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverRegistrationClient
       :<|> volunteerClient
       :<|> issueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+
+    planList
+      :<|> planSelect
+      :<|> planSuspend
+      :<|> planSubscribe
+      :<|> currentPlan = subscriptionClient
 
     driverDocumentsInfo
       :<|> driverAadhaarInfo

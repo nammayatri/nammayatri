@@ -26,6 +26,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
+import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
 import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
@@ -37,6 +38,7 @@ type API =
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> ( Driver.API
            :<|> Ride.API
+           :<|> Subscription.API
            :<|> Booking.API
            :<|> Merchant.API
            :<|> Message.API
@@ -50,6 +52,7 @@ handler :: FlowServer API
 handler merchantId =
   Driver.handler merchantId
     :<|> Ride.handler merchantId
+    :<|> Subscription.handler merchantId
     :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId
     :<|> Message.handler merchantId

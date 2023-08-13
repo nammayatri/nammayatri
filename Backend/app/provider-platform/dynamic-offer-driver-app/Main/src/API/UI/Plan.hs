@@ -74,7 +74,7 @@ currentPlan :: (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.CurrentPlanRe
 currentPlan = withFlowHandlerAPI . DPlan.currentPlan
 
 planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.PlanSubscribeRes
-planSubscribe planId = withFlowHandlerAPI . DPlan.planSubscribe planId
+planSubscribe planId = withFlowHandlerAPI . DPlan.planSubscribe planId False
 
 planSelect :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
 planSelect planId = withFlowHandlerAPI . DPlan.planSelect planId

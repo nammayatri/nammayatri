@@ -26,12 +26,14 @@ import Domain.Types.Plan
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import Storage.Queries.DriverFee as QDF
@@ -44,6 +46,7 @@ import qualified Storage.Queries.Plan as QPD
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
+import Tools.SMS as Sms hiding (Success)
 
 ---------------------------------------------------------------------------------------------------------
 --------------------------------------- Request & Response Types ----------------------------------------
@@ -53,7 +56,7 @@ data PlanListAPIRes = PlanListAPIRes
   { list :: [PlanEntity],
     subscriptionStartTime :: UTCTime
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data PlanEntity = PlanEntity
   { id :: Text,
@@ -67,32 +70,32 @@ data PlanEntity = PlanEntity
     totalPlanCreditLimit :: Money,
     currentDues :: Money
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data PlanFareBreakup = PlanFareBreakup
   { component :: Text,
     amount :: HighPrecMoney
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data OfferEntity = OfferEntity
   { title :: Maybe Text,
     description :: Maybe Text,
     tnc :: Maybe Text
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data CurrentPlanRes = CurrentPlanRes
   { currentPlanDetails :: PlanEntity,
     mandateDetails :: Maybe MandateDetailsEntity
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data PlanSubscribeRes = PlanSubscribeRes
   { orderId :: Id DOrder.PaymentOrder,
     orderResp :: Payment.CreateOrderResp
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data MandateDetailsEntity = MandateDetails
   { status :: MandateStatus,
@@ -103,7 +106,7 @@ data MandateDetailsEntity = MandateDetails
     frequency :: Text,
     maxAmount :: Money
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------------------------------------------------------
 --------------------------------------------- Controllers -----------------------------------------------
@@ -139,8 +142,8 @@ currentPlan (driverId, _merchantId) = do
       _ -> MANUAL
 
 -- This API is to create a mandate order if the driver has not subscribed to Mandate even once or has Cancelled Mandate from PSP App.
-planSubscribe :: Id Plan -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribeRes
-planSubscribe planId (driverId, merchantId) = do
+planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribeRes
+planSubscribe planId isDashboard (driverId, merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driverInfo.autoPayStatus `elem` [Nothing, Just DI.CANCELLED_PSP, Just DI.PENDING]) $ throwError InvalidAutoPayStatus
   plan <- B.runInReplica $ QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
@@ -153,6 +156,23 @@ planSubscribe planId (driverId, merchantId) = do
     unless (driverInfo.autoPayStatus == Just DI.PENDING && maybe False (\dp -> dp.planId == planId) driverPlan) $ QDF.updateRegisterationFeeStatusByDriverId DF.INACTIVE driverId
     QDPlan.updatePlanIdByDriverId driverId planId
   (createOrderResp, orderId) <- createMandateInvoiceAndOrder driverId merchantId plan
+  when isDashboard $ do
+    let mbPaymentLink = createOrderResp.payment_links
+    whenJust mbPaymentLink $ \paymentLinks -> do
+      let webPaymentLink = show paymentLinks.web
+      smsCfg <- asks (.smsCfg)
+      driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+      let phoneNumber = countryCode <> mobileNumber
+      message <-
+        MessageBuilder.buildSendPaymentLink merchantId $
+          MessageBuilder.BuildSendPaymentLinkReq
+            { paymentLink = webPaymentLink,
+              amount = show createOrderResp.sdk_payload.payload.amount
+            }
+      Sms.sendSMS merchantId (Sms.SendSMSReq message phoneNumber smsCfg.sender)
+        >>= Sms.checkSmsResult
   return $
     PlanSubscribeRes
       { orderId = orderId,

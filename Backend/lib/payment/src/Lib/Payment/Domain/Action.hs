@@ -195,7 +195,7 @@ orderStatusService personId orderId orderStatusCall = do
                 ..
               }
       updateOrderTransaction order orderTxn Nothing
-      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, payerVpa = payerVpa, ..}
+      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, ..}
     Payment.OrderStatusResp {..} -> do
       let orderTxn =
             OrderTxn
