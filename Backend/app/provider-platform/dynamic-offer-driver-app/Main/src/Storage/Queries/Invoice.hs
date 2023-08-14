@@ -36,8 +36,8 @@ createMany = traverse_ create
 findAllByInvoiceId :: (L.MonadFlow m, Log m) => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 
-findByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
-findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
+findByDriverFeeIdAndActiveStatus :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
+findByDriverFeeIdAndActiveStatus (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
 
 updateInvoiceStatusByInvoiceId :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Invoice -> Domain.InvoiceStatus -> m ()
 updateInvoiceStatusByInvoiceId invoiceId invoiceStatus = do
