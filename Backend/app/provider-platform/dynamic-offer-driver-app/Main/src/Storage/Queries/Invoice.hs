@@ -5,10 +5,11 @@ module Storage.Queries.Invoice where
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
 import qualified EulerHS.Language as L
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
+import Kernel.Types.Time
 import qualified Sequelize as Se
 import Storage.Beam.Invoice as BeamI hiding (Id)
 
@@ -36,7 +37,16 @@ findAllByInvoiceId :: (L.MonadFlow m, Log m) => Id Domain.Invoice -> m [Domain.I
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 
 findByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
-findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
+findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
+
+updateInvoiceStatusByInvoiceId :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Invoice -> Domain.InvoiceStatus -> m ()
+updateInvoiceStatusByInvoiceId invoiceId invoiceStatus = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.invoiceStatus invoiceStatus,
+      Se.Set BeamI.updatedAt now
+    ]
+    [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
 
 instance FromTType' BeamI.Invoice Domain.Invoice where
   fromTType' BeamI.InvoiceT {..} = do
@@ -46,6 +56,7 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
           { id = Id id,
             invoiceShortId = invoiceShortId,
             driverFeeId = Id driverFeeId,
+            invoiceStatus = invoiceStatus,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -56,6 +67,7 @@ instance ToTType' BeamI.Invoice Domain.Invoice where
       { BeamI.id = id.getId,
         BeamI.invoiceShortId = invoiceShortId,
         BeamI.driverFeeId = getId driverFeeId,
+        BeamI.invoiceStatus = invoiceStatus,
         BeamI.createdAt = createdAt,
         BeamI.updatedAt = updatedAt
       }
