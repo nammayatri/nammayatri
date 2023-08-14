@@ -14,14 +14,13 @@ pipeline {
                         // macOS.
                         branch 'main'
                         // TODO: remove this
-                        branch 'linux-arm'
                         changeRequest target: 'main'
                     }
                 }
                 axes {
                     axis {
                         name 'SYSTEM'
-                        values 'x86_64-linux', 'aarch64-linux' // , 'aarch64-darwin', 'x86_64-darwin'
+                        values 'x86_64-linux', 'aarch64-linux', 'aarch64-darwin', 'x86_64-darwin'
                     }
                 }
                 stages {
@@ -38,9 +37,9 @@ pipeline {
                     stage ('Docker image') {
                         when {
                             allOf {
-                                // expression { 'x86_64-linux' == env.SYSTEM }
+                                expression { 'x86_64-linux' == env.SYSTEM }
                                 anyOf {
-                                    branch 'main'; branch 'prodHotPush'; changeRequest target: 'main';
+                                    branch 'main'; branch 'prodHotPush';
                                 }
                             }
                         }
@@ -51,7 +50,7 @@ pipeline {
                     stage ('Cachix push') {
                         when {
                             anyOf {
-                                branch 'main'; branch 'prodHotPush'; changeRequest target: 'main';
+                                branch 'main'; branch 'prodHotPush';
                             }
                         }
                         steps {
