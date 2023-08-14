@@ -71,7 +71,7 @@ noChargesOfferConfig =
     gradient : [],
     hasImage : false,
     imageURL : "",
-    offerDescription : Just $ getString DAILY_PER_RIDE_DESC
+    offerDescription : Just $ "<b>" <> getString DAILY_PER_RIDE_DESC <> "</b>"
     }
 
 alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array PlanCardConfig
@@ -83,7 +83,7 @@ alternatePlansTransformer (UiPlansResp planResp) state = do
     title : planEntity.name ,
     description : if (planEntity.name == "DAILY PER RIDE") then (getString DAILY_PER_RIDE_DESC) else planEntity.description ,
     isSelected : false ,
-    offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+    offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
     priceBreakup : planEntity.planFareBreakup,
     frequency : planEntity.frequency,
     freeRideCount : planEntity.freeRideCount

@@ -2016,7 +2016,8 @@ newtype PayPayload = PayPayload
     "options.createMandate" :: Maybe String,
     "mandate.maxAmount" :: Maybe String,
     "mandate.endDate" :: Maybe String,
-    "mandate.startDate" :: Maybe String
+    "mandate.startDate" :: Maybe String,
+    language :: Maybe String
   }
 
 newtype PaymentLinks = PaymentLinks
@@ -2527,7 +2528,8 @@ data GetCurrentPlanReq = GetCurrentPlanReq String
 newtype GetCurrentPlanResp = GetCurrentPlanResp {
   currentPlanDetails :: PlanEntity,
   mandateDetails :: Maybe MandateData,
-  autoPayStatus :: Maybe String
+  autoPayStatus :: Maybe String,
+  orderId :: Maybe String
 }
 
 newtype MandateData = MandateData {

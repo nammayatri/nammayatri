@@ -1506,7 +1506,7 @@ type SubscriptionScreenData = {
   driverId :: String,
   paymentMode :: String,
   planId :: String,
-  orderId :: String,
+  orderId :: Maybe String,
   errorMessage :: String
 }
 

@@ -546,7 +546,7 @@ const mlStrings = {
   CALL_DRIVER_OR_CONTACT_SUPPORT : "ആർ‌സി നിർജ്ജീവമാക്കാൻ ഡ്രൈവറെ വിളിക്കുക അല്ലെങ്കിൽ ഡ്രൈവർക്ക് ലഭ്യമല്ലെങ്കിൽ പിന്തുണയുമായി ബന്ധപ്പെടുക",
   CALL_DRIVER : "ഡ്രൈവറെ വിളിക്കുക",
   SKIP : "ഒഴിവാക്കുക",
-  ACTIVE_RC : "സജീവമാണ്",
+  ACTIVE_STR : "സജീവമാണ്",
   INACTIVE_RC : "നിഷ്ക്രിയം",
   CONFIRMATION_FOR_DELETING_RC : "നിങ്ങളുടെ RC ഇല്ലാതാക്കണമെന്ന് തീർച്ചയാണോ",
   CONFIRMATION_FOR_DEACTIVATING_RC : "നിങ്ങളുടെ RC നിർജ്ജീവമാക്കണമെന്ന് തീർച്ചയാണോ- ",

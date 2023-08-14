@@ -544,7 +544,7 @@ const bengaliStrings = {
   CALL_DRIVER_OR_CONTACT_SUPPORT : "RC নিষ্ক্রিয় করতে ড্রাইভারকে কল করুন বা ড্রাইভারের সাথে যোগাযোগ করা সম্ভব না হলে সহায়তার সাথে যোগাযোগ করুন",
   CALL_DRIVER : "ড্রাইভারকে কল করুন",
   SKIP : "এড়িয়ে যান",
-  ACTIVE_RC : "সক্রিয়",
+  ACTIVE_STR : "সক্রিয়",
   INACTIVE_RC : "নিষ্ক্রিয়",
   CONFIRMATION_FOR_DELETING_RC : "আপনি কি নিশ্চিত যে আপনি আপনার RC মুছে ফেলতে চান?",
   CONFIRMATION_FOR_DEACTIVATING_RC : "আপনি কি নিশ্চিত যে আপনি আপনার RC নিষ্ক্রিয় করতে চান?- ",
