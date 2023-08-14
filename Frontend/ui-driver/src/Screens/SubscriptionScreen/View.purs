@@ -307,7 +307,7 @@ plansBottomView push state =
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          ][ commonTV push ((getString GET_FREE_TRAIL_UNTIL) <> state.data.joinPlanData.subscriptionStartDate <> " ✨") Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT
+          ][ commonTV push ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨") Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT
             , textView $
               [ weight 1.0
               , height WRAP_CONTENT
@@ -375,6 +375,7 @@ managePlanView push state visibility' =
      , alignParentBottom "true,-1"
      , background Color.grey700
      , stroke $ "1," <> Color.grey900
+     , visibility if state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
      ][ textView
         [ textFromHtml $ "<u>" <> (getString VIEW_AUTOPAY_DETAILS) <> "</u>"
         , textSize FontSize.a_12
@@ -539,21 +540,22 @@ planDescriptionView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        , margin $ MarginTop 8
         , visibility if (DA.length state.offers > 0) then VISIBLE else GONE
-        , margin $ MarginVertical 12 12
         ](map  (\item -> promoCodeView push item) state.offers)
        ]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , margin $ MarginBottom 16
       ](map (\item ->
           linearLayout
             ([ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , padding $ Padding 8 8 8 8
+            , margin $ MarginVertical 8 8
             , background Color.grey700  
             , cornerRadius 4.0
             ] <> case item.offerDescription of 
@@ -590,7 +592,7 @@ duesView push state =
      , margin $ MarginBottom 8
      ]
    , textView
-     [ text (getString YOUR_DUES_DESCRIPTION)
+     [ text $ getString if state.data.myPlanData.paymentMethod == UPI_AUTOPAY then YOUR_DUES_DESCRIPTION else YOUR_DUES_DESCRIPTION_MANUAL
      , textSize FontSize.a_12
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.black600
@@ -640,7 +642,7 @@ duesView push state =
            , color Color.black700
            ]             
         ]
-      , linearLayout
+      , relativeLayout
         [ height $ V 4
         , width MATCH_PARENT
         , orientation HORIZONTAL
@@ -654,7 +656,7 @@ duesView push state =
 
          , linearLayout
            [ height $ V 4
-           , width $ V (HU.clampNumber (state.data.myPlanData.maxDueAmount - state.data.myPlanData.currentDueAmount) state.data.myPlanData.maxDueAmount ((screenWidth unit) - 96))
+           , width $ V (HU.clampNumber state.data.myPlanData.maxDueAmount (state.data.myPlanData.maxDueAmount - state.data.myPlanData.currentDueAmount) ((screenWidth unit) - 96))
            , background Color.black700
            , cornerRadii $ Corners 4.0 false true true false 
            ][]
@@ -887,17 +889,17 @@ paymentMethodView push state =
   , linearLayout
     [ height $ V 4
     , width $ V 4
-    , background if state.mandateStatus == "active" then Color.green900 else Color.orange900
+    , background if state.paymentMethod == UPI_AUTOPAY then Color.green900 else Color.orange900
     , cornerRadius 12.0
     , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , margin $ MarginHorizontal 4 4
     ][]
   , textView
-    [ text state.mandateStatus
+    [ text $ getString ACTIVE_STR
     , textSize FontSize.a_10
     , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , fontStyle $ FontStyle.medium LanguageStyle
-    , color if state.mandateStatus == "active" then Color.green900 else Color.orange900
+    , color if state.paymentMethod == UPI_AUTOPAY then Color.green900 else Color.orange900
     , padding $ PaddingBottom 3
     ]
   ]
@@ -987,6 +989,7 @@ planCardView push state isSelected clickable' action =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , scrollBarX false
+      , margin $ MarginVertical 8 8
       , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       ][ linearLayout
         [ height WRAP_CONTENT
@@ -998,13 +1001,14 @@ planCardView push state isSelected clickable' action =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       ](map (\item ->
           linearLayout
             ([ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , padding $ Padding 8 8 8 8
-            , margin $ MarginVertical 8 8
+            , margin $ MarginTop if isSelected then 0 else 8
             , background Color.white900
             , cornerRadius 4.0
             ] <> case item.offerDescription of 
@@ -1329,3 +1333,9 @@ textView' push action txt txtColor style padding' margin' =
     <> case action of  
         Just value -> [onClick push $ const $ value]
         Nothing -> []
+
+languageSpecificTranslation :: String -> String -> String
+languageSpecificTranslation str variable = 
+  case getValueToLocalStore LANGUAGE_KEY of
+    "EN_US" -> str <> " " <> variable
+    _ -> variable <> " " <> str 

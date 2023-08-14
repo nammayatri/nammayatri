@@ -536,7 +536,7 @@ const hindiStrings = {
   CALL_DRIVER_OR_CONTACT_SUPPORT : "यदि ड्राइवर उपलब्ध नहीं है तो आरसी को निष्क्रिय करने के लिए ड्राइवर को कॉल करें या सहायता से संपर्क करें",
   CALL_DRIVER : "ड्राइवर को बुलाओ",
   SKIP : "छोडना",
-  ACTIVE_RC : "सक्रिय",
+  ACTIVE_STR : "सक्रिय",
   INACTIVE_RC : "निष्क्रिय",
   CONFIRMATION_FOR_DELETING_RC : "क्या आप वाकई अपनी आरसी हटाना चाहते हैं?",
   CONFIRMATION_FOR_DEACTIVATING_RC : "क्या आप वाकई अपनी आरसी को निष्क्रिय करना चाहते हैं?",
@@ -709,7 +709,7 @@ const hindiStrings = {
   REFRESH_STR : "ताज़ा करें",
   TRANSACTION_DETAILS : "लेनदेन विवरण",
   RIDE_DETAILS : "सवारी विवरण",
-  NAMMA_YATRI_PLANS : "हमारी यात्रा योजनाएँ",
+  NAMMA_YATRI_PLANS : "नम्मा यात्री प्लान्स",
   SWITCH_TO : "पर स्विच करें",
   PLEASE_TRY_AGAIN : "कृपया पुन: प्रयास करें",
   PLEASE_TRY_AGAIN : "कृपया पुनः प्रयास करें",
@@ -738,5 +738,9 @@ const hindiStrings = {
   DAILY_PER_RIDE_DESC : "31 अगस्त तक कोई शुल्क नहीं",
   FIRST_FREE_RIDE : "पहली मुफ़्त सवारी",
   JOIN_THE_UNLIMITED_PLAN : "अभी ₹1/दिन पर अनलिमिटेड प्लान से जुड़ें और 96% बचाएं!!",
-  MAYBE_LATER : "शायद बाद में"
+  MAYBE_LATER : "शायद बाद में",
+  YOUR_DUES_DESCRIPTION_MANUAL : "कृपया निर्बाध सवारी जारी रखने की सीमा तक पहुंचने से पहले अपना बकाया चुका दें। आप आसान, परेशानी मुक्त भुगतान के लिए <b>UPI ऑटोपे</b>भी सेट कर सकते हैं।",
+  DO_YOU_WANT_TO_CANCEL : "क्या आप रद्द करना चाहते हैं?",
+  DO_YOU_WANT_TO_CANCEL_DESC : "आप ऑटोपे रद्द करने वाले हैं।\nस्वचालित भुगतान फिर से शुरू करने के लिए आपको फिर से ऑटोपे सेट करना होगा।",
+  YOUR_PAYMENT_WAS_UNSUCCESSFUL : "आपका भुगतान प्रयास असफल रहा।"
 }

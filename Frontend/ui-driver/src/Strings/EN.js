@@ -534,7 +534,7 @@ const englishStrings = {
   CALL_DRIVER_OR_CONTACT_SUPPORT : "Call the driver to deactivate RC or contact support if driver is not reachable",
   CALL_DRIVER : "Call Driver",
   SKIP : "Skip",
-  ACTIVE_RC : "Active",
+  ACTIVE_STR : "Active",
   INACTIVE_RC : "Inactive",
   CONFIRMATION_FOR_DELETING_RC : "Are you sure you want to delete your RC",
   CONFIRMATION_FOR_DEACTIVATING_RC : "Are you sure you want to deactivate your RC- ",
@@ -641,6 +641,7 @@ const englishStrings = {
   MY_PLAN : "My Plan",
   YOUR_DUES : "Your Dues",
   YOUR_DUES_DESCRIPTION : "You have set up an autopay to clear your dues. We will automatically try to ensure that your dues are always paid on time.",
+  YOUR_DUES_DESCRIPTION_MANUAL : "Please clear your dues before it reaches the limit to continue uninterrupted rides. You can also <b>set up an UPI Autopay</b>for easier, hassle-free payments.",
   CURRENT_DUES : "Current Dues",
   YOUR_LIMIT : "Your Limit",
   DUE_DETAILS : "Due Details",
@@ -735,10 +736,12 @@ const englishStrings = {
   HALFYEARLY : "Half yearly",
   YEARLY : "Yearly",
   ASPRESENTED : "As and when presented",
-
   FIRST_FREE_RIDE : "First Free Ride",
   DAILY_PER_RIDE_DESC : "No charges till Aug 31",
   FIRST_FREE_RIDE : "First Free Ride",
   JOIN_THE_UNLIMITED_PLAN : "Join the UNLIMITED plan now at ₹1/day and save 96%!!",
-  MAYBE_LATER : "Maybe Later"
+  MAYBE_LATER : "Maybe Later",
+  DO_YOU_WANT_TO_CANCEL : "Do you want to cancel?",
+  DO_YOU_WANT_TO_CANCEL_DESC : "You are about to cancel Autopay.\nYou will have to set up autopay again to resume automatic payments.",
+  YOUR_PAYMENT_WAS_UNSUCCESSFUL : "Your payment attempt was unsuccessful."
 }

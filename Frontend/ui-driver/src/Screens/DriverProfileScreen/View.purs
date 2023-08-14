@@ -1080,7 +1080,7 @@ infoView state push =
 getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
 getRcDetails state = do
   let config = state.data.activeRCData
-  ([{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
+  ([{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_STR) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
   , { key : (getString REG_NUMBER) , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }]
   <> (if config.rcStatus then
       [{ key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }]
@@ -1234,7 +1234,7 @@ detailsListViewComponent state push config =
                 , color case item.value of
                           Nothing -> Color.blue900
                           Just val -> do
-                                      let isRcActive = val == (getString ACTIVE_RC)
+                                      let isRcActive = val == (getString ACTIVE_STR)
                                       let isRcInActive = val == (getString INACTIVE_RC)
                                       let isRCEdit = val == (getString EDIT_RC)
                                       if isRcActive then Color.green900 else if isRcInActive then Color.red else if isRCEdit then Color.blue900 else Color.black900
