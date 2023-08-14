@@ -51,7 +51,7 @@ pipeline {
                     stage ('Cachix push') {
                         when {
                             anyOf {
-                                branch 'main'; branch 'prodHotPush';
+                                branch 'main'; branch 'prodHotPush'; changeRequest target: 'main';
                             }
                         }
                         steps {
