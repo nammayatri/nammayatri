@@ -60,6 +60,7 @@ import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Resource.Constants (decodeAddress)
+import Screens (ScreenName(..)) as ScreenNames
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
@@ -76,7 +77,7 @@ import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), UpdatePopupType(..), PaymentMethod(..), AutoPayStatus(..))
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), UpdatePopupType(..), PaymentMethod(..), AutoPayStatus(..), SubscriptionSubview(..))
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
@@ -86,7 +87,6 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Screens (ScreenName(..)) as ScreenNames
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
@@ -1297,7 +1297,7 @@ myRidesScreenFlow = do
           modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistory}}})
         Left err -> pure unit
     RIDE_HISTORY_NAV GoToSubscription -> do
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
       subScriptionFlow
     RIDE_HISTORY_NAV _ -> myRidesScreenFlow
 
@@ -1456,7 +1456,7 @@ referralScreenFlow = do
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
     REFERRAL_SCREEN_NAV GoToSubscription -> do 
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
       subScriptionFlow
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
@@ -1908,7 +1908,7 @@ homeScreenFlow = do
     OPEN_PAYMENT_PAGE state -> paymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
       subScriptionFlow
     HOMESCREEN_NAV _ -> homeScreenFlow
     GO_TO_AADHAAR_VERIFICATION -> do
@@ -1970,7 +1970,7 @@ nyPaymentFlow planId = do
             PS.AUTHORIZATION_FAILED -> setPaymentStatus Failed finalPayload UPI_AUTOPAY
             PS.AUTHENTICATION_FAILED -> setPaymentStatus Failed finalPayload UPI_AUTOPAY
             PS.JUSPAY_DECLINED -> setPaymentStatus Failed finalPayload UPI_AUTOPAY
-            PS.NEW -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
+            PS.NEW -> pure unit
             PS.PENDING_VBV -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
             _ -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
         Left err -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
@@ -2286,7 +2286,7 @@ notificationFlow = do
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow
     NOTIFICATION_SCREEN_NAV GoToSubscription -> do
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
       subScriptionFlow
     NOTIFICATION_SCREEN_NAV _ -> notificationFlow
 

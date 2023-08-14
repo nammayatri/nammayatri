@@ -17,7 +17,7 @@ import PrestoDOM (Eval, continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, myPlanListTransformer, planListTransformer)
-import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
+import Screens.Types (AutoPayStatus(..), PaymentMethod(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), MandateData(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
@@ -159,7 +159,8 @@ eval (LoadMyPlans plans autoPayStatus ) state = do
                                               myPlanData {
                                                 maxDueAmount = planEntity.totalPlanCreditLimit,
                                                 mandateStatus = toLower mandateDetails.status,
-                                                currentDueAmount = planEntity.currentDues
+                                                currentDueAmount = planEntity.currentDues,
+                                                paymentMethod = if mandateDetails.status == "ACTIVE" then UPI_AUTOPAY else MANUAL
                                               }
                                             , autoPayDetails {
                                                 registeredPG = mandateDetails.payerVpa

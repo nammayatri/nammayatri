@@ -133,12 +133,12 @@ pupupModalConfig state = let
       , width = V 114
       , height = V 114
       },
-      secondaryText {
-        text = ""
-      , color = Color.black600
-      , margin = Margin 24 0 24 32
-      , visibility = GONE
-        },
+    secondaryText {
+      text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else ""
+      , color = Color.black700
+      , margin = Margin 16 12 16 40
+      , visibility = if state.props.popUpState == Mb.Just FailedPopup then VISIBLE else GONE
+      },
       option2 { visibility = false }
     }
   in popUpConf'
@@ -154,11 +154,11 @@ confirmCancelPopupConfig state = let
     , backgroundColor =  Color.black9000
     , backgroundClickable = false
     , primaryText {
-        text = "Do you want to cancel?"
+        text = getString DO_YOU_WANT_TO_CANCEL
       , margin = (Margin 16 24 16 0)
       },
       secondaryText {
-        text = "You are about to cancel Autopay.\nYou will have to set up autopay again to resume automatic payments."
+        text = getString DO_YOU_WANT_TO_CANCEL_DESC
       , color = Color.black700
       , margin = (Margin 16 12 16 40)
         },
