@@ -290,7 +290,7 @@ plansBottomView push state =
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
-              , width $ V $ getWidthFromPercent 70
+              , width $ V $ getWidthFromPercent 80
               , gravity LEFT
               , text (getString CHOOSE_YOUR_PLAN)
               , color Color.black800
@@ -309,7 +309,14 @@ plansBottomView push state =
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          ][ commonTV push ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨") Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT
+          ][ textView $
+              [ 
+              height WRAP_CONTENT
+              , width $ V $ getWidthFromPercent 70
+              , gravity LEFT
+              , text ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨")
+              , color Color.black800
+              ] <> FontStyle.body1 TypoGraphy 
             , textView $
               [ weight 1.0
               , height WRAP_CONTENT
