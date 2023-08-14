@@ -2537,7 +2537,7 @@ newtype MandateData = MandateData {
   startDate :: String,
   endDate :: String,
   mandateId :: String,
-  payerVpa :: String,
+  payerVpa :: Maybe String,
   frequency :: String, --ONETIME | DAILY | WEEKLY | FORTNIGHTLY | MONTHLY | BIMONTHLY | QUARTERLY | HALFYEARLY | YEARLY | ASPRESENTED
   maxAmount :: Number
   -- totalPlanCreditLimit :: Number,

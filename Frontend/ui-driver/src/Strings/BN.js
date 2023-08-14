@@ -733,5 +733,6 @@ const bengaliStrings = {
 	STATRED_ON : "শুরু হয়েছে",
 	EXPIRES_ON : "মেয়াদ শেষ হবে",
 	SWITCHED_PLAN : "সুইচড প্ল্যান",
-	RESUME_AUTOPAY : "পুনরায় স্বতঃপ্রদান শুরু হয়েছে"
+	RESUME_AUTOPAY : "পুনরায় স্বতঃপ্রদান শুরু হয়েছে",
+	PAYMENT_CANCELLED : "আপনি আপনার UPI অটোপে বাতিল করেছেন। আপনি আপনার বকেয়া ম্যানুয়ালি সাফ করতে পারেন"
 	}
