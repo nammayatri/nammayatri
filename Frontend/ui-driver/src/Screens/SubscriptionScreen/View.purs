@@ -12,9 +12,11 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (any, elem)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Int (toNumber, pow)
 import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
 import Data.String as DS
+import Data.Time.Duration (Seconds(..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
@@ -28,7 +30,7 @@ import JBridge (getWidthFromPercent)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (>), bind, pure, discard, void)
+import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<>), (==), (>), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
@@ -53,7 +55,9 @@ screen initialState globalState =
   , name: "SubscriptionScreen"
   , globalEvents: [(\push -> do
       void $ launchAff $ flowRunner defaultGlobalState $ loadData push LoadPlans LoadAlternatePlans LoadMyPlans ShowError initialState globalState
-      void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.orderId 4 5000.0 initialState push PaymentStatusAction
+      case initialState.data.orderId of 
+        Just id -> void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling id 7 2 1 initialState push PaymentStatusAction
+        Mb.Nothing -> pure unit
       pure (pure unit)
     )]
   , eval:
@@ -87,9 +91,9 @@ loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (Global
       Left err -> doAff do liftEffect $ push $ errorAction err
   else pure unit
 
-paymentStatusPooling :: forall action. String -> Int -> Number -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
-paymentStatusPooling orderId count delayDuration state push action = do
-  if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && (state.props.subView == JoinPlan) && count > 0 && orderId /= "" then do
+paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
+paymentStatusPooling orderId count base power state push action = do
+  if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && count > 0 && orderId /= "" then do
     orderStatus <- Remote.paymentOrderStatus orderId
     _ <- pure $ spy "polling inside paymentStatusPooling function" orderStatus
     case orderStatus of
@@ -98,8 +102,8 @@ paymentStatusPooling orderId count delayDuration state push action = do
             _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
             doAff do liftEffect $ push $ action resp.status
         else do
-            void $ delay $ Milliseconds delayDuration
-            paymentStatusPooling orderId (count - 1) delayDuration state push action
+            void $ delay $ Seconds $ toNumber $ pow base power
+            paymentStatusPooling orderId (count - 1) base (power+1) state push action
       Left err -> pure unit
     else pure unit
 
@@ -160,11 +164,10 @@ joinPlanView push state visibility' =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , background Color.blue600
-      ][  paymentPendingView push state
-       ,  imageView
+      ][  imageView
           [ width $ V 116
           , height $ V 368
-          , margin $ if (state.props.paymentStatus == Mb.Just Pending ) then MarginTop 60 else MarginTop 20
+          , margin $ MarginTop 20
           , imageWithFallback "ny_ic_ny_driver,"
           ]
         , enjoyBenefitsView push state
@@ -224,49 +227,69 @@ paymentPendingView push state =
   , orientation VERTICAL
   , background Color.yellow900
   , cornerRadii $ Corners 24.0 false false true true
-  , padding $ Padding 10 8 10 8
-  , visibility if state.props.paymentStatus == Mb.Just Pending then VISIBLE else GONE
-  ][ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      ][ textView
-          [ text (getString PAYMENT_PENDING_STR)
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , color Color.black800
-          , weight 1.0
-          ]
-        , refreshView push state
+  , padding $ Padding 16 12 16 12
+  , visibility if (state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing) then VISIBLE else GONE
+  ][  textView
+      [ text $ getString PAYMENT_PENDING_STR
+      , textSize FontSize.a_14
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      , color Color.black800
       ]
     , textView
-      [ text (getString PAYMENT_PENDING_DESC_STR)
+      [ text $ getString PAYMENT_PENDING_DESC_STR
       , textSize FontSize.a_12
       , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.black800
       ]
-  ]
-
-refreshView :: forall w . (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
-refreshView push state =
-  linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , orientation HORIZONTAL
-  , onClick push $ const CheckPaymentStatus
-  ]
-  [ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus)]
-    $ imageView
-    [ width $ V 20
-    , height $ V 20
-    , margin $ MarginRight 5
-    , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
-    ]
-  , textView $ 
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , text (getString REFRESH_STR)
-    , color Color.blueTextColor
-    ] <> FontStyle.body4 TypoGraphy
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 10
+      ][ linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , stroke $ "1," <> Color.blue900
+          , cornerRadius 24.0
+          , padding $ Padding 10 5 10 5
+          , onClick push $ const CheckPaymentStatus
+          , gravity CENTER
+          ][ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus)]
+              $ imageView
+              [ width $ V 16
+              , height $ V 16
+              , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
+              ]
+            , textView $ 
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text $ getString REFRESH_STR
+              , color Color.blue900
+              , margin $ MarginLeft 5
+              ] <> FontStyle.body4 TypoGraphy
+          ]
+        , linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , background Color.white900
+          , cornerRadius 24.0
+          , padding $ Padding 10 5 10 5
+          , margin $ MarginLeft 10
+          , gravity CENTER
+          , onClick push $ const RetryPaymentAC
+          ][ textView $ 
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text $ getString RETRY_PAYMENT_STR
+              , margin $ MarginRight 5
+              , color Color.blueTextColor
+              ] <> FontStyle.body4 TypoGraphy
+            , imageView
+              [ width $ V 12
+              , height $ V 12
+              , imageWithFallback $ "ny_ic_right_arrow_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_right_arrow_blue.png"
+              ]
+          ]
+      ]
   ]
 
 plansBottomView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
@@ -288,7 +311,7 @@ plansBottomView push state =
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
-              , width $ V $ getWidthFromPercent 70
+              , width $ V $ getWidthFromPercent 80
               , gravity LEFT
               , text (getString CHOOSE_YOUR_PLAN)
               , color Color.black800
@@ -307,7 +330,13 @@ plansBottomView push state =
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          ][ commonTV push ((getString GET_FREE_TRAIL_UNTIL) <> state.data.joinPlanData.subscriptionStartDate <> " ✨") Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT
+          ][ textView $
+              [ height WRAP_CONTENT
+              , width $ V $ getWidthFromPercent 70
+              , gravity LEFT
+              , text ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨")
+              , color Color.black800
+              ] <> FontStyle.body1 TypoGraphy 
             , textView $
               [ weight 1.0
               , height WRAP_CONTENT
@@ -339,7 +368,7 @@ plansBottomView push state =
               , width MATCH_PARENT
               , orientation VERTICAL
               ](map 
-                  (\item -> planCardView push item (item.id == (Mb.fromMaybe "" state.props.joinPlanProps.selectedPlan)) (state.props.paymentStatus /= Mb.Just Pending) ChoosePlan
+                  (\item -> planCardView push item (item.id == (Mb.fromMaybe "" state.props.joinPlanProps.selectedPlan)) true ChoosePlan
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -375,6 +404,7 @@ managePlanView push state visibility' =
      , alignParentBottom "true,-1"
      , background Color.grey700
      , stroke $ "1," <> Color.grey900
+     , visibility if state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
      ][ textView
         [ textFromHtml $ "<u>" <> (getString VIEW_AUTOPAY_DETAILS) <> "</u>"
         , textSize FontSize.a_12
@@ -397,6 +427,7 @@ myPlanView push state visibility' =
   , visibility if visibility' then VISIBLE else GONE
   , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
   ][ headerView push (getString PLAN) "" false -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
+   , paymentPendingView push state
    , myPlanBodyview push state
   ]
 
@@ -539,21 +570,22 @@ planDescriptionView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        , margin $ MarginTop 8
         , visibility if (DA.length state.offers > 0) then VISIBLE else GONE
-        , margin $ MarginVertical 12 12
         ](map  (\item -> promoCodeView push item) state.offers)
        ]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , margin $ MarginBottom 16
       ](map (\item ->
           linearLayout
             ([ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , padding $ Padding 8 8 8 8
+            , margin $ MarginVertical 8 8
             , background Color.grey700  
             , cornerRadius 4.0
             ] <> case item.offerDescription of 
@@ -590,7 +622,7 @@ duesView push state =
      , margin $ MarginBottom 8
      ]
    , textView
-     [ text (getString YOUR_DUES_DESCRIPTION)
+     [ text $ getString if state.data.myPlanData.mandateStatus == "active" then YOUR_DUES_DESCRIPTION else YOUR_DUES_DESCRIPTION_MANUAL
      , textSize FontSize.a_12
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.black600
@@ -640,7 +672,7 @@ duesView push state =
            , color Color.black700
            ]             
         ]
-      , linearLayout
+      , relativeLayout
         [ height $ V 4
         , width MATCH_PARENT
         , orientation HORIZONTAL
@@ -654,7 +686,7 @@ duesView push state =
 
          , linearLayout
            [ height $ V 4
-           , width $ V (HU.clampNumber (state.data.myPlanData.maxDueAmount - state.data.myPlanData.currentDueAmount) state.data.myPlanData.maxDueAmount ((screenWidth unit) - 96))
+           , width $ V (HU.clampNumber state.data.myPlanData.maxDueAmount (state.data.myPlanData.maxDueAmount - state.data.myPlanData.currentDueAmount) ((screenWidth unit) - 96))
            , background Color.black700
            , cornerRadii $ Corners 4.0 false true true false 
            ][]
@@ -893,7 +925,7 @@ paymentMethodView push state =
     , margin $ MarginHorizontal 4 4
     ][]
   , textView
-    [ text state.mandateStatus
+    [ text $ getString ACTIVE_STR
     , textSize FontSize.a_10
     , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , fontStyle $ FontStyle.medium LanguageStyle
@@ -987,6 +1019,7 @@ planCardView push state isSelected clickable' action =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , scrollBarX false
+      , margin $ MarginVertical 8 8
       , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       ][ linearLayout
         [ height WRAP_CONTENT
@@ -998,13 +1031,14 @@ planCardView push state isSelected clickable' action =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       ](map (\item ->
           linearLayout
             ([ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , padding $ Padding 8 8 8 8
-            , margin $ MarginVertical 8 8
+            , margin $ MarginTop if isSelected then 0 else 8
             , background Color.white900
             , cornerRadius 4.0
             ] <> case item.offerDescription of 
@@ -1329,3 +1363,9 @@ textView' push action txt txtColor style padding' margin' =
     <> case action of  
         Just value -> [onClick push $ const $ value]
         Nothing -> []
+
+languageSpecificTranslation :: String -> String -> String
+languageSpecificTranslation str variable = 
+  case getValueToLocalStore LANGUAGE_KEY of
+    "EN_US" -> str <> " " <> variable
+    _ -> variable <> " " <> str 

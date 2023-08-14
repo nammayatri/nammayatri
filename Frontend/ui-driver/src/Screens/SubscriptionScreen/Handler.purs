@@ -46,10 +46,13 @@ subscriptionScreen = do
     ResumeAutoPayPlan updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ RESUME_AUTOPAY updatedState)
-    CheckOrderStatus updatedState -> do
+    CheckOrderStatus updatedState orderId -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ CHECK_ORDER_STATUS updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHECK_ORDER_STATUS updatedState orderId)
     ScreenExit updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SCREEN_EXIT updatedState)
     Refresh -> App.BackT $ App.NoBack <$> (pure $ REFRESH_SUSCRIPTION)
+    RetryPayment updatedState planId -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RETRY_PAYMENT_AC updatedState planId)
