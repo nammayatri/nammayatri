@@ -2,41 +2,27 @@ module Screens.SubscriptionScreen.Transformer where
 
 import Prelude
 
-import Data.Array (cons)
+import Data.Array (cons, (!!), length)
 import Data.Array as DA
 import Data.List.Lazy (Pattern)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.Types (PlanCardConfig, PromoConfig, SubscriptionScreenState, KeyValType)
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PlanEntity(..), UiPlansResp(..))
+import Storage (getValueToLocalStore, KeyStore(..))
 
-planListTransformer :: UiPlansResp -> Array PlanCardConfig
-planListTransformer (UiPlansResp planResp) = do
-    let planEntityArray = planResp.list
-    let (plansplit) = DA.partition (\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray
-    let sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
-    map (\ (PlanEntity planEntity) -> {
-    id : planEntity.id ,
-    title : planEntity.name ,
-    description : planEntity.description ,
-    isSelected : false ,
-    offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
-    priceBreakup : planEntity.planFareBreakup,
-    frequency : planEntity.frequency,
-    freeRideCount : planEntity.freeRideCount
-    }) sortedPlanEntityList
 
 getPromoConfig :: Array OfferEntity -> Array PromoConfig
 getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {     
-    title : item.title ,
+    title : Just $ decodeOfferDescription (fromMaybe "" item.title) ,
     isGradient : true ,
     gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
     hasImage : true ,
     imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png" ,
-    offerDescription : item.description
+    offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description)
     }) offerEntityArr)
 
 myPlanListTransformer :: GetCurrentPlanResp -> PlanCardConfig
@@ -44,13 +30,47 @@ myPlanListTransformer (GetCurrentPlanResp getCurrentPlanResp) = do
     let (PlanEntity planEntity) = getCurrentPlanResp.currentPlanDetails
     {   id : planEntity.id ,
         title : planEntity.name ,
-        description : planEntity.description ,
+        description : planEntity.description,
         isSelected : false ,
         offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
         priceBreakup : planEntity.planFareBreakup,
         frequency : planEntity.frequency,
         freeRideCount : planEntity.freeRideCount
     }
+
+
+
+planListTransformer :: UiPlansResp -> Array PlanCardConfig
+planListTransformer (UiPlansResp planResp) =
+    let planEntityArray = planResp.list
+        plansplit = DA.partition (\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray
+        sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
+    in map (\ (PlanEntity planEntity) -> 
+        {
+            id : planEntity.id ,
+            title : planEntity.name ,
+            description : planEntity.description ,
+            isSelected : false ,
+            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+            priceBreakup : planEntity.planFareBreakup,
+            frequency : planEntity.frequency,
+            freeRideCount : planEntity.freeRideCount
+        }
+    ) sortedPlanEntityList
+
+decodeOfferDescription :: String -> String
+decodeOfferDescription str = do
+    let strArray = split (Pattern "-*$*-") str
+    fromMaybe "" (strArray !! (getLanguage (length strArray)))
+    where 
+        getLanguage len = do
+            case getValueToLocalStore LANGUAGE_KEY of 
+                "KN_IN" -> if len > 0 then 1 else 0
+                "HI_IN" -> if len > 1 then 2 else 0
+                "BN_IN" -> if len > 2 then 3 else 0
+                "ML_IN" -> if len > 3 then 4 else 0
+                _ -> 0
+    
 
 freeRideOfferConfig :: PromoConfig
 freeRideOfferConfig = 
@@ -75,19 +95,21 @@ noChargesOfferConfig =
     }
 
 alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array PlanCardConfig
-alternatePlansTransformer (UiPlansResp planResp) state = do
+alternatePlansTransformer (UiPlansResp planResp) state =
     let planEntityArray = planResp.list
-    let alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
-    map (\ (PlanEntity planEntity) -> {
-    id : planEntity.id ,
-    title : planEntity.name ,
-    description : if (planEntity.name == "DAILY PER RIDE") then (getString DAILY_PER_RIDE_DESC) else planEntity.description ,
-    isSelected : false ,
-    offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
-    priceBreakup : planEntity.planFareBreakup,
-    frequency : planEntity.frequency,
-    freeRideCount : planEntity.freeRideCount
-    }) alternatePlansArray
+        alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
+    in map (\ (PlanEntity planEntity) -> 
+        {   id : planEntity.id ,
+            title : planEntity.name ,
+            description : if (planEntity.name == "DAILY PER RIDE") then (getString DAILY_PER_RIDE_DESC) else planEntity.description ,
+            isSelected : false ,
+            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+            priceBreakup : planEntity.planFareBreakup,
+            frequency : planEntity.frequency,
+            freeRideCount : planEntity.freeRideCount
+        }
+    ) alternatePlansArray
+
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
 getAutoPayDetailsList (MandateData mandateDetails) = 

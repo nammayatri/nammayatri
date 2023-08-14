@@ -23,17 +23,14 @@ dummyPaymentListItem = [
     {paidDate : "String",
     rideTakenDate : "String",
     amount : "String",
-    paymentMethod : "String",
     paymentStatus : Success},
     {paidDate : "String",
     rideTakenDate : "String",
     amount : "String",
-    paymentMethod : "String",
     paymentStatus : Success},
     {paidDate : "String",
     rideTakenDate : "String",
     amount : "String",
-    paymentMethod : "String",
     paymentStatus : Success}
 ]
 

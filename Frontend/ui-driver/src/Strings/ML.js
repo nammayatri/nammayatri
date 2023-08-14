@@ -693,5 +693,6 @@ const mlStrings = {
   STATRED_ON : "ആരംഭിച്ചു",
   EXPIRES_ON : "കാലഹരണപ്പെടുന്നു",
   SWITCHED_PLAN : "സ്വിച്ച്ഡ് പ്ലാൻ",
-  RESUME_AUTOPAY : "ഓട്ടോപേ പുനരാരംഭിച്ചു"
+  RESUME_AUTOPAY : "ഓട്ടോപേ പുനരാരംഭിച്ചു",
+  PAYMENT_CANCELLED : "നിങ്ങൾ യുപിഐ ഓട്ടോപേ റദ്ദാക്കി. നിങ്ങൾക്ക് കുടിശ്ശിക സ്വമേധയാ ക്ലിയർ ചെയ്യാം"
 }

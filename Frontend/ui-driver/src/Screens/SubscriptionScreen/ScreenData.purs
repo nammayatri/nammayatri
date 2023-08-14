@@ -20,8 +20,7 @@ initData = {
         myPlanData : {
             dueItems : [],
             planEntity : dummyPlanConfig,
-            paymentMethod : UPI_AUTOPAY,
-            autoPayStatus : ACTIVE_AUTOPAY,
+            autoPayStatus : NO_AUTOPAY,
             lowAccountBalance : false,
             paymentMethodWarning : false,
             switchAndSave : false,
@@ -34,10 +33,9 @@ initData = {
             alternatePlans : []
         },
         autoPayDetails : {
-            registeredPG : "",
             isActive : false,
             detailsList : [],
-            payerUpiId : "",
+            payerUpiId : Mb.Nothing,
             pspLogo : ""
         }
     },

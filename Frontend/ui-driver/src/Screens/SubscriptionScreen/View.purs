@@ -13,7 +13,7 @@ import Data.Array (any, elem)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber, pow)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Data.Maybe as Mb
 import Data.String as DS
 import Data.Time.Duration (Seconds(..))
@@ -68,7 +68,7 @@ screen initialState globalState =
       )
   }
 
-loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> Maybe String -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
+loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
 loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (GlobalState globalState) = do
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
     let globalProp = globalState.globalProps
@@ -81,7 +81,7 @@ loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (Global
     else do
       currentPlan <- Remote.getCurrentPlan ""
       case currentPlan of
-        Right resp -> doAff do liftEffect $ push $ loadMyPlans resp driverInfo.autoPayStatus
+        Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
     pure unit
   else if state.props.subView == ManagePlan then do
@@ -404,7 +404,7 @@ managePlanView push state visibility' =
      , alignParentBottom "true,-1"
      , background Color.grey700
      , stroke $ "1," <> Color.grey900
-     , visibility if state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
+     , visibility if state.data.myPlanData.autoPayStatus `elem` [ACTIVE_AUTOPAY, PAUSED_PSP] then VISIBLE else GONE
      ][ textView
         [ textFromHtml $ "<u>" <> (getString VIEW_AUTOPAY_DETAILS) <> "</u>"
         , textSize FontSize.a_12
@@ -516,9 +516,10 @@ myPlanBodyview push state =
          , paymentMethodView push state.data.myPlanData
        ]
      , planDescriptionView push state.data.myPlanData.planEntity
-     , if state.data.myPlanData.lowAccountBalance then alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction else dummyView
-     , if state.data.myPlanData.switchAndSave then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction else dummyView
-     , if state.data.myPlanData.autoPayStatus == PAUSED_PSP then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction else dummyView
+     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP)
+     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP)
+     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance
+     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave
      , duesView push state
      , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING] then PrimaryButton.view (push <<< ResumeAutoPay) (resumeAutopayButtonConfig state) else dummyView
     ]
@@ -824,11 +825,12 @@ promoCodeView push state =
             Mb.Just txt -> [text txt]
   ]
 
-alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> String -> Action -> PrestoDOM (Effect Unit) w
-alertView push image primaryColor title description buttonText action = 
+alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> String -> Action -> Boolean -> PrestoDOM (Effect Unit) w
+alertView push image primaryColor title description buttonText action visible = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
+  , visibility if visible then VISIBLE else GONE
   , background Color.white900
   , stroke $ "1," <> Color.grey900
   , padding $ Padding 16 16 16 16
@@ -1182,7 +1184,7 @@ autoPayPGView push state =
           , height WRAP_CONTENT
           , orientation VERTICAL
           , margin $ MarginLeft 10
-          ][ linearLayout
+          ]([ linearLayout
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
@@ -1193,8 +1195,8 @@ autoPayPGView push state =
                   , width $ V 14
                   ]
               ]
-            , commonTV push (state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.paragraphText TypoGraphy) 0 LEFT
-          ]
+          ] <> if (isJust state.data.autoPayDetails.payerUpiId) then [commonTV push (fromMaybe "" state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.paragraphText TypoGraphy) 0 LEFT] else [])
+          
         , linearLayout
           [ height WRAP_CONTENT
           , weight 1.0
