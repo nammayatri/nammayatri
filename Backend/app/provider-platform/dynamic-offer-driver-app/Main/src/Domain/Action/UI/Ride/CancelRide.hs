@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as QDrLoc
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
@@ -81,17 +82,17 @@ data CancelRideReq = CancelRideReq
 
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
 
-driverCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m) => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+driverCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 driverCancelRideHandler shandle personId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
     cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
-dashboardCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m) => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+dashboardCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $
     cancelRideHandler shandle (DashboardRequestorId merchantId) rideId req
 
-cancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+cancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
@@ -110,15 +111,15 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
-          dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
+          dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId driver.merchantId
           when (isJust dghInfo.status) $ do
             dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
             driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
             QDGR.updateCancellationCount dghReqId (driverGoHomeReq.numCancellation + 1)
-            when (driverGoHomeReq.numCancellation == 1) $ do
+            whenM ((driverGoHomeReq.numCancellation ==) . subtract 1 . (.cancellationCnt) <$> CQGHC.findByMerchantId authPerson.merchantId) $ do
               -- config cnt - 1
-              logDebug "HERE inside < 2"
-              CQDGR.deactivateDriverGoHomeRequest driverId (Just DDGR.SUCCESS)
+              -- logDebug "HERE inside < 2"
+              CQDGR.deactivateDriverGoHomeRequest driver.merchantId driverId (Just DDGR.SUCCESS)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- findDriverLocationId driver.merchantId driverId
           -- booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

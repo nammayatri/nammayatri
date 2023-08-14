@@ -558,6 +558,7 @@ data DriverHomeLocationError
   | DriverHomeLocationLimitReached
   | DriverHomeLocationUpdateWhileActiveError
   | DriverHomeLocationDeleteWhileActiveError
+  | DriverHomeLocationUpdateBeforeTime
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverHomeLocationError
@@ -569,6 +570,7 @@ instance IsBaseError DriverHomeLocationError where
     DriverHomeLocationLimitReached -> Just "Driver home location limit already reached."
     DriverHomeLocationUpdateWhileActiveError -> Just "Cannot Update Driver Home Location while Go To feature is active."
     DriverHomeLocationDeleteWhileActiveError -> Just "Cannot Delete Driver Home Location while Go To feature is active."
+    DriverHomeLocationUpdateBeforeTime -> Just "Driver trying to update home location before time."
 
 instance IsHTTPError DriverHomeLocationError where
   toErrorCode = \case
@@ -577,12 +579,14 @@ instance IsHTTPError DriverHomeLocationError where
     DriverHomeLocationLimitReached -> "DRIVER_HOME_LOCATION_LIMIT_REACHED"
     DriverHomeLocationUpdateWhileActiveError -> "DRIVER_HOME_LOCATION_UPDATE_WHILE_ACTIVE_ERROR"
     DriverHomeLocationDeleteWhileActiveError -> "DRIVER_HOME_LOCATION_DELETE_WHILE_ACTIVE_ERROR"
+    DriverHomeLocationUpdateBeforeTime -> "DRIVER_HOME_LOCATION_UPDATE_BEFORE_TIME"
   toHttpCode = \case
     DriverHomeLocationNotFound _ -> E500
     DriverHomeLocationDoesNotExist _ -> E400
     DriverHomeLocationLimitReached -> E400
     DriverHomeLocationUpdateWhileActiveError -> E400
     DriverHomeLocationDeleteWhileActiveError -> E400
+    DriverHomeLocationUpdateBeforeTime -> E400
 
 instance IsAPIError DriverHomeLocationError
 
@@ -591,6 +595,8 @@ data DriverGoHomeRequestError
   | DriverGoHomeRequestErrorDoesNotExist Text
   | DriverGoHomeRequestDailyUsageLimitReached
   | DriverGoHomeRequestAlreadyActive
+  | GoHomeFeaturePermanentlyDisabled
+  | DriverCloseToHomeLocation
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverGoHomeRequestError
@@ -601,6 +607,8 @@ instance IsBaseError DriverGoHomeRequestError where
     DriverGoHomeRequestErrorDoesNotExist goHomeReqId -> Just $ "No driver GoHome request matches passed data \"<>" <> show goHomeReqId <> "\"."
     DriverGoHomeRequestDailyUsageLimitReached -> Just "GoHome feature daily usage limit reached."
     DriverGoHomeRequestAlreadyActive -> Just "GoHome feature is already active."
+    GoHomeFeaturePermanentlyDisabled -> Just "GoHome feature is permanently disabled."
+    DriverCloseToHomeLocation -> Just "Driver is close to home location."
 
 instance IsHTTPError DriverGoHomeRequestError where
   toErrorCode = \case
@@ -608,10 +616,14 @@ instance IsHTTPError DriverGoHomeRequestError where
     DriverGoHomeRequestErrorDoesNotExist _ -> "DRIVER_GO_HOME_REQUEST_DOES_NOT_EXIST"
     DriverGoHomeRequestDailyUsageLimitReached -> "DRIVER_GO_HOME_REQUEST_DAILY_USAGE_LIMIT_REACHED"
     DriverGoHomeRequestAlreadyActive -> "DRIVER_GO_HOME_REQUEST_ALREADY_ACTIVE"
+    GoHomeFeaturePermanentlyDisabled -> "GO_HOME_FEATURE_PERMANENTLY_DISABLED"
+    DriverCloseToHomeLocation -> "DRIVER_CLOSE_TO_HOME_LOCATION"
   toHttpCode = \case
     DriverGoHomeRequestErrorNotFound _ -> E500
     DriverGoHomeRequestErrorDoesNotExist _ -> E400
     DriverGoHomeRequestDailyUsageLimitReached -> E400
     DriverGoHomeRequestAlreadyActive -> E400
+    GoHomeFeaturePermanentlyDisabled -> E400
+    DriverCloseToHomeLocation -> E400
 
 instance IsAPIError DriverGoHomeRequestError

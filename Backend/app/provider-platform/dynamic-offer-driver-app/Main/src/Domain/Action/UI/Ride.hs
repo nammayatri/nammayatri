@@ -244,7 +244,7 @@ otpRideCreate driver otpCode booking = do
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
-  ghrId <- CGHR.getDriverGoHomeRequestInfo driver.id <&> (.driverGoHomeRequestId)
+  ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id booking.providerId) <&> (.driverGoHomeRequestId)
   ride <- buildRide otpCode driver.id (Just transporter.id) ghrId
   rideDetails <- buildRideDetails ride
   triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}

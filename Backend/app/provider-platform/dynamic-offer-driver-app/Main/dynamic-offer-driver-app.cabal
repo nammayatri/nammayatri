@@ -191,6 +191,7 @@ library
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.Geometry
+      Domain.Types.GoHomeConfig
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
       Domain.Types.Issue.IssueOption
@@ -308,6 +309,7 @@ library
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
       Storage.Beam.Geometry
+      Storage.Beam.GoHomeConfig
       Storage.Beam.Issue.Comment
       Storage.Beam.Issue.IssueCategory
       Storage.Beam.Issue.IssueOption
@@ -352,6 +354,7 @@ library
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
+      Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
@@ -415,6 +418,7 @@ library
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.Geometry
+      Storage.Queries.GoHomeConfig
       Storage.Queries.Instances.DriverInformation
       Storage.Queries.Instances.Person
       Storage.Queries.Issue.Comment

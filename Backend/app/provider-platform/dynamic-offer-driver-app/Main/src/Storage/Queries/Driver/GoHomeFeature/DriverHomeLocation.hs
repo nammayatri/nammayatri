@@ -67,7 +67,7 @@ deleteById (Kernel.Types.Id.Id driverHomeLocId) = deleteWithKV [Se.Is BeamDHL.id
 deleteByDriverId :: MonadFlow m => Id Driver -> m ()
 deleteByDriverId (Kernel.Types.Id.Id driverId) = deleteWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
 
-updateHomeLocationById :: MonadFlow m => Id Domain.DriverHomeLocation -> Domain.DriverHomeLocation -> m ()
+updateHomeLocationById :: MonadFlow m => Id Domain.DriverHomeLocation -> Domain.UpdateDriverHomeLocation -> m ()
 updateHomeLocationById homeLocationId driverHomeLocation = do
   now <- getCurrentTime
   updateOneWithKV

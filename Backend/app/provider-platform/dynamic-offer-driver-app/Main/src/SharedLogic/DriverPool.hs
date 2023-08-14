@@ -466,7 +466,8 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
               any (\wp -> getDistanceBetweenCoords (getCoordinates toLocation) wp <= driverPoolCfg.goHomeToLocationRadius) driverRoute.snappedWaypoints
           )
           driversRoutes
-      goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult merchant <$> driversOnWayToHome
+  logDebug $ "drivers on way to home" <> show driversOnWayToHome
+  let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult merchant <$> driversOnWayToHome
   let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
         Nothing -> goHomeDriverPoolWithActualDist
         Just threshold -> filter (filterFunc threshold) goHomeDriverPoolWithActualDist
@@ -479,7 +480,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
     getRoutesForAllDrivers drivers =
       forM drivers $ \driver -> do
         routes <-
-          Maps.getRoutes merchantId $
+          Maps.getTripRoutes merchantId $
             Maps.GetRoutesReq
               { waypoints = getCoordinates driver :| [getCoordinates toLocation],
                 mode = Just Maps.CAR,

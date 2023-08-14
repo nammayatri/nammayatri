@@ -43,6 +43,7 @@ import Kernel.Utils.SlidingWindowCounters
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Tools.Maps as Maps
@@ -94,9 +95,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       intelligentPoolConfig <- DIP.findByMerchantId searchReq.providerId >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDrivers <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       logDebug $ "Blocked Driver List-" <> show blockListedDrivers
-
+      isGoHomeFeatureEnabled <- CQGHC.findByMerchantId searchReq.providerId <&> (.enableGoHome)
       allNearbyGoHomeDrivers <-
-        if batchNum == 0
+        if batchNum == 0 && isGoHomeFeatureEnabled
           then calcGoHomeDriverPool
           else return []
       currentDriverPoolBatch <-

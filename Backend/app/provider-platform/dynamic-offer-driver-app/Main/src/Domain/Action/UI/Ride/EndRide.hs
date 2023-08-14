@@ -61,6 +61,7 @@ import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
@@ -202,16 +203,17 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           pure $ getCoordinates driverLocation
     CallBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
-  ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId
+  ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId
   when (isJust ghInfo.status) $ do
+    goHomeConfig <- CQGHC.findByMerchantId booking.providerId
     ghrId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") ghInfo.driverGoHomeRequestId
     driverGoHomeReq <- QDGR.findById ghrId >>= fromMaybeM (InternalError "DriverGoHomeRequest Not found")
     let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
     routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
     driverHomeDist <- fromMaybeM (InternalError "Could not get distance from google Directions API") (routesResp & ((.distance) . head)) --The default case should Ideally never happen unless Directions API fails to return distance.
-    if driverHomeDist.getMeters <= 3000 --config
-      then CQDGR.deactivateDriverGoHomeRequest driverId (Just DDGR.SUCCESS)
-      else CQDGR.resetDriverGoHomeRequest driverId
+    if driverHomeDist.getMeters <= goHomeConfig.destRadiusMeters --config
+      then CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId (Just DDGR.SUCCESS)
+      else CQDGR.resetDriverGoHomeRequest booking.providerId driverId
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
     withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint

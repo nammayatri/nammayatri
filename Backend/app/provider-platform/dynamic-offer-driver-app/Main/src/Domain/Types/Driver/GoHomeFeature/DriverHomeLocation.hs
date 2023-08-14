@@ -41,5 +41,12 @@ data DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
+data UpdateDriverHomeLocation = UpdateDriverHomeLocation
+  { lat :: Double,
+    lon :: Double,
+    address :: Text,
+    tag :: Text
+  }
+
 makeDriverHomeLocationAPIEntity :: DriverHomeLocation -> DriverHomeLocationAPIEntity
 makeDriverHomeLocationAPIEntity DriverHomeLocation {..} = DriverHomeLocationAPIEntity {..}

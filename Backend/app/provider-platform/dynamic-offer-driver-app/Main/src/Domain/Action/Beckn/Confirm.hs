@@ -126,7 +126,7 @@ handler transporter req quote = do
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          ghrId <- CGHR.getDriverGoHomeRequestInfo driver.id <&> (.driverGoHomeRequestId)
+          ghrId <- CGHR.getDriverGoHomeRequestInfo driver.id transporter.id <&> (.driverGoHomeRequestId)
           ride <- buildRide driver.id booking ghrId
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver

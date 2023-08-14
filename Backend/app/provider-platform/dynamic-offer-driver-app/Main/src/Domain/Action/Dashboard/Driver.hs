@@ -876,27 +876,22 @@ getDriverHomeLocation merchantShortId driverId = do
         }
 
 updateDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> Flow APISuccess
-updateDriverHomeLocation _ driverId req = do
-  QDHL.updateHomeLocationById (cast req.id) =<< buildDriverHomeLocationEntity
+updateDriverHomeLocation _ _ req = do
+  QDHL.updateHomeLocationById (cast req.id) buildDriverHomeLocationEntity
   return Success
   where
-    buildDriverHomeLocationEntity = do
-      now <- getCurrentTime
-      return $
-        DDHL.DriverHomeLocation
-          { id = cast req.id,
-            driverId = cast driverId,
-            address = req.address,
-            lat = req.lat,
-            lon = req.lon,
-            tag = req.tag,
-            createdAt = now,
-            updatedAt = now
-          }
+    buildDriverHomeLocationEntity =
+      DDHL.UpdateDriverHomeLocation
+        { address = req.address,
+          lat = req.lat,
+          lon = req.lon,
+          tag = req.tag
+        }
 
 incrementDriverGoToCount :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-incrementDriverGoToCount _ driverId = do
-  CQDGR.increaseDriverGoHomeRequestCount (cast driverId)
+incrementDriverGoToCount merchantShortId driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  CQDGR.increaseDriverGoHomeRequestCount merchant.id (cast driverId)
   return Success
 
 ---------------------------------------------------------------------
