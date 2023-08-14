@@ -139,7 +139,7 @@ instance
       headerName = fromString $ symbolVal (Proxy @header)
       headerName :: IsString a => a
       env = getEnvEntry ctx
-      getRSAPublicKey (Base64 key) = CryptoStore.readPubKeyFileFromMemory key
+      getRSAPublicKey (Base64 key) = CryptoStore.readPubKeyFileFromMemory $ B64.decodeLenient key
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv
 
