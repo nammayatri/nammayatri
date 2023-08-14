@@ -67,7 +67,7 @@ import qualified Tools.Payment as Payment
 createOrder :: (Id DP.Person, Id DM.Merchant) -> Id DriverFee -> Flow Payment.CreateOrderResp
 createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- B.runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  mbInvoice <- B.runInReplica $ QIN.findByDriverFeeId driverFee.id
+  mbInvoice <- B.runInReplica $ QIN.findByDriverFeeIdAndActiveStatus driverFee.id
   (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing (getIdAndShortId <$> mbInvoice) -- To do rectify the last param based on invoice flow --
   return createOrderResp
   where
@@ -96,7 +96,7 @@ getStatus (personId, merchantId) orderId = do
     case mOrder of -- handling backward compatibility case of jatri saathi
       Just _order -> return _order
       Nothing -> do
-        invoice <- QIN.findByDriverFeeId (cast orderId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+        invoice <- QIN.findByDriverFeeIdAndActiveStatus (cast orderId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
         QOrder.findById (cast invoice.id) >>= fromMaybeM (PaymentOrderNotFound invoice.id.getId)
 
   paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall

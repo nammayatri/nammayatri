@@ -277,7 +277,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
   let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverFees
   case driverRegisterationFee of
     Just registerFee -> do
-      invoice <- QINV.findByDriverFeeId registerFee.id
+      invoice <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
       case invoice of
         Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverFees) (Just $ mandateOrder currentDues allPlansMaxAmount) (Just (inv.id, inv.invoiceShortId))
         Nothing -> throwError $ InternalError "driverFee without invoice"
