@@ -9,7 +9,7 @@ import Components.BottomNavBar (navData)
 import Components.BottomNavBar as BottomNavBar
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (any)
+import Data.Array (any, elem)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
@@ -69,7 +69,7 @@ loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (Global
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
     let globalProp = globalState.globalProps
     let (GetDriverInfoResp driverInfo) = globalProp.driverInformation
-    if any ( _ == driverInfo.autoPayStatus )[Mb.Nothing, Just "CANCELLED_PSP", Just "PENDING"] then do --Need to check for PENDING
+    if any ( _ == driverInfo.autoPayStatus )[Mb.Nothing] then do --Need to check for PENDING
       uiPlans <- Remote.getUiPlans ""
       case uiPlans of
         Right resp -> doAff do liftEffect $ push $ loadPlans resp
@@ -487,9 +487,9 @@ myPlanBodyview push state =
      , planDescriptionView push state.data.myPlanData.planEntity
      , if state.data.myPlanData.lowAccountBalance then alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction else dummyView
      , if state.data.myPlanData.switchAndSave then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction else dummyView
-     , if state.data.myPlanData.paymentMethodWarning then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction else dummyView
+     , if state.data.myPlanData.autoPayStatus == PAUSED_PSP then alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction else dummyView
      , duesView push state
-     , if state.data.myPlanData.autoPayStatus == SUSPENDED then PrimaryButton.view (push <<< ResumeAutoPay) (resumeAutopayButtonConfig state) else dummyView
+     , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING] then PrimaryButton.view (push <<< ResumeAutoPay) (resumeAutopayButtonConfig state) else dummyView
     ]
   ]
 
@@ -874,11 +874,11 @@ paymentMethodView push state =
     [ width $ V 12
     , height $ V 12
     , margin (MarginRight 4)
-    , visibility if state.paymentMethod == UPI_AUTOPAY then VISIBLE else GONE
+    , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , imageWithFallback (getImageURL "ny_ic_upi_logo")
     ]
   , textView 
-    [ text if state.paymentMethod == UPI_AUTOPAY then "UPI Autopay" else "Manual Payment"
+    [ text if state.autoPayStatus == ACTIVE_AUTOPAY then "UPI Autopay" else "Manual Payment"
     , textSize FontSize.a_10
     , fontStyle $ FontStyle.medium LanguageStyle
     , color Color.black900
@@ -889,13 +889,13 @@ paymentMethodView push state =
     , width $ V 4
     , background if state.mandateStatus == "active" then Color.green900 else Color.orange900
     , cornerRadius 12.0
-    , visibility if state.paymentMethod == UPI_AUTOPAY then VISIBLE else GONE
+    , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , margin $ MarginHorizontal 4 4
     ][]
   , textView
     [ text state.mandateStatus
     , textSize FontSize.a_10
-    , visibility if state.paymentMethod == UPI_AUTOPAY then VISIBLE else GONE
+    , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , fontStyle $ FontStyle.medium LanguageStyle
     , color if state.mandateStatus == "active" then Color.green900 else Color.orange900
     , padding $ PaddingBottom 3
