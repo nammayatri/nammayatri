@@ -76,7 +76,7 @@ import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), UpdatePopupType(..), PaymentMethod(..))
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), UpdatePopupType(..), PaymentMethod(..), AutoPayStatus(..))
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
@@ -1962,7 +1962,6 @@ nyPaymentFlow planId = do
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
       setValueToLocalStore DISABLE_WIDGET "false"
       let _ = consumeBP unit
-      if (paymentPageOutput == "backpressed") then subScriptionFlow else pure unit-- backpressed FAIL
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId
       case orderStatus of
         Right (OrderStatusRes statusResp) ->
@@ -1974,7 +1973,7 @@ nyPaymentFlow planId = do
             PS.NEW -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
             PS.PENDING_VBV -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
             _ -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
-        Left err -> if paymentPageOutput == "charged" then setPaymentStatus Success finalPayload UPI_AUTOPAY else setPaymentStatus Pending finalPayload UPI_AUTOPAY --if API fails check with paymentPageOutput
+        Left err -> setPaymentStatus Pending finalPayload UPI_AUTOPAY
     Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
   subScriptionFlow
 
@@ -2134,19 +2133,24 @@ subScriptionFlow = do
           pure $ toast $ getString SWITCHED_PLAN
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
-    RESUME_AUTOPAY state -> do
-      void $ lift $ lift $ toggleLoader true
-      resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId -- Resume API
-      void $ lift $ lift $ toggleLoader false
-      case resumeMandate of 
-        Right resp -> do
-          getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
-          let (GlobalState defGlobalState) = defaultGlobalState
-          modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
-          pure $ toast $ getString RESUMED_AUTOPAY
-        Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-      subScriptionFlow
+    RESUME_AUTOPAY state ->
+      case state.data.myPlanData.autoPayStatus of
+        CANCELLED_PSP -> nyPaymentFlow state.data.planId
+        PAUSED_PSP -> nyPaymentFlow state.data.planId
+        PENDING -> nyPaymentFlow state.data.planId
+        _ -> do
+          void $ lift $ lift $ toggleLoader true
+          resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId -- Resume API
+          void $ lift $ lift $ toggleLoader false
+          case resumeMandate of 
+            Right resp -> do
+              getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+              modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
+              let (GlobalState defGlobalState) = defaultGlobalState
+              modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+              pure $ toast $ getString RESUMED_AUTOPAY
+            Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+          subScriptionFlow
     CHECK_ORDER_STATUS state -> do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus state.data.orderId
       case orderStatus of
