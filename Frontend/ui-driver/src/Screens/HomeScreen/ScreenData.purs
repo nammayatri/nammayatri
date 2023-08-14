@@ -133,6 +133,7 @@ initData = {
         showBonusInfo : false,
         timerRefresh : true,
         showlinkAadhaarPopup : false,
-        isChatOpened : false
+        isChatOpened : false,
+        showOffer : false
     }
 }

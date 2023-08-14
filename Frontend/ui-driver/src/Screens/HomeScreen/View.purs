@@ -214,8 +214,9 @@ view push state =
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
-          Just ob -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig state ob) else linearLayout[visibility GONE][]
+          Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
+      , if state.props.showOffer then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
   ]
 
 

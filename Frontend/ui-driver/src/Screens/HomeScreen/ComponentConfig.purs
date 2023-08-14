@@ -195,12 +195,12 @@ linkAadhaarPopupConfig state = let
   }
   in popUpConfig'
 
-offerPopupConfig :: ST.HomeScreenState -> PromotionPopupConfig -> PopUpModal.Config
-offerPopupConfig state  (PromotionPopupConfig ob) = 
+offerPopupConfig :: Boolean -> PromotionPopupConfig -> PopUpModal.Config
+offerPopupConfig isImageUrl  (PromotionPopupConfig ob) = 
   PopUpModal.config {
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 0 16 20 ,
+    buttonLayoutMargin = Margin 16 0 16 5 ,
     topTitle = Just ob.heading,
     primaryText {
       text = ob.title
@@ -219,11 +219,21 @@ offerPopupConfig state  (PromotionPopupConfig ob) =
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "," <> ob.imageUrl
+      imageUrl = if isImageUrl then "," <> ob.imageUrl else ob.imageUrl
     , visibility = VISIBLE
     , height = V 178
     , width = V 204
     }
+  , dismisText = Just $ getString MAYBE_LATER
+}
+
+offerConfigParams :: ST.HomeScreenState -> PromotionPopupConfig
+offerConfigParams state = PromotionPopupConfig $ {
+  title : getString LIMITED_TIME_OFFER,
+  description : getString JOIN_THE_UNLIMITED_PLAN,
+  imageUrl : "ny_ic_limited_time_offer,",
+  buttonText : getString JOIN_NOW,
+  heading : getString NAMMA_YATRI_PLANS
 }
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
