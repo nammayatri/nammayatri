@@ -38,9 +38,9 @@ pipeline {
                     stage ('Docker image') {
                         when {
                             allOf {
-                                expression { 'x86_64-linux' == env.SYSTEM }
+                                // expression { 'x86_64-linux' == env.SYSTEM }
                                 anyOf {
-                                    branch 'main'; branch 'prodHotPush';
+                                    branch 'main'; branch 'prodHotPush'; changeRequest target: 'main';
                                 }
                             }
                         }
