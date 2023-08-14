@@ -5,7 +5,7 @@
     ./nix/scripts.nix
     ./nix/run-mobility-stack.nix
     ./nix/arion-configuration.nix
-    # ./nix/osrm.nix
+    ./nix/osrm.nix
   ];
   perSystem = { config, self', pkgs, lib, ... }: {
     pre-commit.settings.imports = [
