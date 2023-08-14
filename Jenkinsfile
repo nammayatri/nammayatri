@@ -9,15 +9,17 @@ pipeline {
                 when {
                     anyOf {
                         expression { 'x86_64-linux' == env.SYSTEM }
-                        // Enable running macOS builds when on main branch, so
-                        // as to provide Nix cache for people on macOS.
+                        // Enable running macOS / Linux ARM builds when on main
+                        // branch
+                        // - macOS: Provide Nix cache to devs using macOS
+                        // - Linux ARM: For AWS graviton deployment
                         branch 'main'
                     }
                 }
                 axes {
                     axis {
                         name 'SYSTEM'
-                        values 'x86_64-linux', 'aarch64-darwin', 'x86_64-darwin'
+                        values 'x86_64-linux', 'aarch64-linux', 'aarch64-darwin', 'x86_64-darwin'
                     }
                 }
                 stages {
@@ -34,6 +36,8 @@ pipeline {
                     stage ('Docker image') {
                         when {
                             allOf {
+                                // TODO: Build for aarch64-linux
+                                // Requires https://github.com/juspay/jenkins-nix-ci/issues/32
                                 expression { 'x86_64-linux' == env.SYSTEM }
                                 anyOf {
                                     branch 'main'; branch 'prodHotPush';
