@@ -490,3 +490,6 @@ transparentBlue :: Color
 transparentBlue = "#100066FF"
 pink :: Color
 pink = "#FEF1E5"
+
+whatsAppOTPButtonColor :: Color 
+whatsAppOTPButtonColor  = "#F1F3F4"

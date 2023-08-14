@@ -67,7 +67,7 @@ whatsAppOTPButtonConfig state = let
       , isClickable = state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91")
       , alpha = if state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91") then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
-      , background = state.data.config.whatsappOTPButtonColor
+      , background = Color.whatsAppOTPButtonColor
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
       , stroke = ("1," <> Color.borderColorLight)
       , isSuffixImage = true
@@ -119,7 +119,7 @@ mobileNumberEditTextConfig state = let
       , type = "number"
       , height = V 54
       , margin = MarginTop 30
-      , showErrorLabel = (not state.props.isValidMobileNumber) && (not (DS.null state.data.mobileNumber))
+      , showErrorLabel = (not state.props.isValidMobileNumber)
       , errorLabel
         { text = (getString INVALID_MOBILE_NUMBER)
         }

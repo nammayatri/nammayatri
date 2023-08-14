@@ -16,6 +16,8 @@ import Effect (Effect (..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
+import Common.Types.App (MobileNumberValidatorResp(..))
+
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 
 foreign import loaderTextIOS :: EffectFn2 String String Unit
@@ -45,25 +47,27 @@ loaderText mainTxt subTxt = do
       _ <- modifyState (\(GlobalState state) -> GlobalState state{loaderOverlay{data{title = mainTxt, subTitle = subTxt}}})
       pure unit
 
-mobileNumberValidator :: String -> String -> String -> Boolean 
+mobileNumberValidator :: String -> String -> String -> MobileNumberValidatorResp 
 mobileNumberValidator country countryShortCode mobileNumber = 
-  case countryShortCode of 
-    "IN" -> (length mobileNumber == 10) && 
-            case (charAt 0 mobileNumber) of
-              Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then false
-                          else if a=='5' then
-                              if mobileNumber=="5000500050" then true else false 
-                                  else true 
-              Nothing -> true 
-    "FR" -> (length mobileNumber == 9) && 
-            case (charAt 0 mobileNumber) of 
-              Just a -> a == '6' || a == '7'
-              Nothing -> false
-    "BD" -> (length mobileNumber == 10) && 
-            case (charAt 0 mobileNumber) of 
-              Just a -> a == '1'
-              Nothing -> false
-    _ -> false 
+  let len = length mobileNumber
+      maxLen = mobileNumberMaxLength countryShortCode
+  in if len <=  maxLen then 
+      case countryShortCode of 
+        "IN" -> case (charAt 0 mobileNumber) of
+                  Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then Invalid
+                            else if a=='5' then if mobileNumber=="5000500050" then Valid else Invalid
+                                 else if len == maxLen then Valid else ValidPrefix 
+                  Nothing -> ValidPrefix 
+        "FR" -> case (charAt 0 mobileNumber) of 
+                  Just a -> if a == '6' || a == '7' then if len == maxLen then Valid else ValidPrefix
+                            else Invalid 
+                  Nothing -> ValidPrefix
+        "BD" -> case (charAt 0 mobileNumber) of 
+                  Just a -> if a == '1' then if len == maxLen then Valid else ValidPrefix 
+                            else Invalid
+                  Nothing -> ValidPrefix
+        _ -> Invalid
+    else MaxLengthExceeded
 
 mobileNumberMaxLength :: String -> Int 
 mobileNumberMaxLength countryShortCode = 
