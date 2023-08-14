@@ -403,7 +403,9 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       rd <- catMaybes <$> (mapM fromTType' (rideDetails))
       rdr <- catMaybes <$> (mapM fromTType' (riderDetails))
       pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr (DBooking.riderName <$> b) (liftA2 (-) (DR.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
-    Left _ -> pure []
+    Left err -> do
+      logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
+      pure []
   pure $ mkRideItem <$> res'
   where
     mkBookingStatusVal ride =

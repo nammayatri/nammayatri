@@ -34,6 +34,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.DriverInformation as CDI
@@ -87,8 +88,9 @@ data OfferEntity = OfferEntity
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data CurrentPlanRes = CurrentPlanRes
-  { currentPlanDetails :: PlanEntity,
+  { currentPlanDetails :: Maybe PlanEntity,
     mandateDetails :: Maybe MandateDetailsEntity,
+    orderId :: Maybe (Id DOrder.PaymentOrder),
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
     subscribed :: Bool
   }
@@ -131,11 +133,19 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
 currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
 currentPlan (driverId, _merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
-  plan <- QPD.findByIdAndPaymentMode driverPlan.planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
-  mandateDetailsEntity <- mkMandateDetailEntity driverPlan.mandateId
-  currentPlanEntity <- convertPlanToPlanEntity driverId plan
-  return CurrentPlanRes {currentPlanDetails = currentPlanEntity, mandateDetails = mandateDetailsEntity, autoPayStatus = driverInfo.autoPayStatus, subscribed = driverInfo.subscribed}
+  mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
+  mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
+  mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
+  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId >=> (pure . Just)) mPlan
+
+  orderId <-
+    if driverInfo.autoPayStatus == Just DI.PENDING
+      then do
+        mbOrder <- SOrder.findLatestByPersonId driverId.getId
+        return (mbOrder <&> (.id))
+      else return Nothing
+
+  return CurrentPlanRes {currentPlanDetails = currentPlanEntity, mandateDetails = mandateDetailsEntity, autoPayStatus = driverInfo.autoPayStatus, subscribed = driverInfo.subscribed, orderId}
   where
     getDriverPaymentMode = \case
       Just DI.ACTIVE -> AUTOPAY

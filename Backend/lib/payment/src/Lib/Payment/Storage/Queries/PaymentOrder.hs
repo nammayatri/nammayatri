@@ -31,6 +31,15 @@ findByShortId shortId =
     where_ $ order ^. PaymentOrderShortId ==. val (getShortId shortId)
     return order
 
+findLatestByPersonId :: Transactionable m => Text -> m (Maybe DOrder.PaymentOrder)
+findLatestByPersonId personId =
+  findOne $ do
+    order <- from $ table @PaymentOrderT
+    where_ $ order ^. PaymentOrderPersonId ==. val personId
+    orderBy [desc $ order ^. PaymentOrderCreatedAt]
+    limit 1
+    return order
+
 create :: DOrder.PaymentOrder -> SqlDB ()
 create = Esq.create
 
