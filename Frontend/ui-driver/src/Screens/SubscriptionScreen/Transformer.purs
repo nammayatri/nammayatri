@@ -2,6 +2,7 @@ module Screens.SubscriptionScreen.Transformer where
 
 import Prelude
 
+import Data.Array (cons)
 import Data.Array as DA
 import Data.List.Lazy (Pattern)
 import Data.Maybe (Maybe(..))
@@ -15,16 +16,18 @@ import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), P
 planListTransformer :: UiPlansResp -> Array PlanCardConfig
 planListTransformer (UiPlansResp planResp) = do
     let planEntityArray = planResp.list
+    let (plansplit) = DA.partition (\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray
+    let sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
     map (\ (PlanEntity planEntity) -> {
     id : planEntity.id ,
     title : planEntity.name ,
     description : planEntity.description ,
     isSelected : false ,
-    offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+    offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
     priceBreakup : planEntity.planFareBreakup,
     frequency : planEntity.frequency,
     freeRideCount : planEntity.freeRideCount
-    }) planEntityArray
+    }) sortedPlanEntityList
 
 getPromoConfig :: Array OfferEntity -> Array PromoConfig
 getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {     
@@ -43,7 +46,7 @@ myPlanListTransformer (GetCurrentPlanResp getCurrentPlanResp) = do
         title : planEntity.name ,
         description : planEntity.description ,
         isSelected : false ,
-        offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+        offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
         priceBreakup : planEntity.planFareBreakup,
         frequency : planEntity.frequency,
         freeRideCount : planEntity.freeRideCount
@@ -52,12 +55,23 @@ myPlanListTransformer (GetCurrentPlanResp getCurrentPlanResp) = do
 freeRideOfferConfig :: PromoConfig
 freeRideOfferConfig = 
     {  
-    title : Just "First Ride FREE",
+    title : Just $ getString FIRST_FREE_RIDE,
     isGradient : false,
     gradient : [],
     hasImage : false,
     imageURL : "",
     offerDescription : Nothing
+    }
+
+noChargesOfferConfig :: PromoConfig
+noChargesOfferConfig = 
+    {  
+    title : Nothing,
+    isGradient : false,
+    gradient : [],
+    hasImage : false,
+    imageURL : "",
+    offerDescription : Just $ getString DAILY_PER_RIDE_DESC
     }
 
 alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array PlanCardConfig
@@ -67,7 +81,7 @@ alternatePlansTransformer (UiPlansResp planResp) state = do
     map (\ (PlanEntity planEntity) -> {
     id : planEntity.id ,
     title : planEntity.name ,
-    description : planEntity.description ,
+    description : if (planEntity.name == "DAILY PER RIDE") then (getString DAILY_PER_RIDE_DESC) else planEntity.description ,
     isSelected : false ,
     offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else []) <> getPromoConfig planEntity.offers ,
     priceBreakup : planEntity.planFareBreakup,
@@ -78,7 +92,7 @@ alternatePlansTransformer (UiPlansResp planResp) state = do
 getAutoPayDetailsList :: MandateData -> Array KeyValType
 getAutoPayDetailsList (MandateData mandateDetails) = 
     [   {key : getString MAX_AMOUNT, val : "₹" <> show mandateDetails.maxAmount},
-        {key : getString FREQUENCY, val : toLower mandateDetails.frequency},
+        {key : getString FREQUENCY, val : getFrequencyText mandateDetails.frequency},
         {key : getString STATRED_ON, val : convertUTCtoISC  mandateDetails.startDate "Do MMM YYYY"},
         {key : getString EXPIRES_ON, val : convertUTCtoISC  mandateDetails.endDate "Do MMM YYYY"}
     ]
@@ -102,3 +116,26 @@ getPspIcon vpa = do
             "indus" -> "ny_ic_induspay,"
             "upi" -> "ny_ic_bhim,"
             _ -> "ny_ic_defaultpg,"
+
+getFrequencyText :: String -> String
+getFrequencyText constructor = 
+    case constructor of 
+        "ONETIME"  -> getString ONETIME
+        "DAILY" -> getString DAILY
+        "WEEKLY" -> getString WEEKLY
+        "FORTNIGHTLY" -> getString FORTNIGHTLY
+        "MONTHLY" -> getString MONTHLY
+        "BIMONTHLY"  -> getString BIMONTHLY
+        "QUARTERLY" -> getString QUARTERLY
+        "HALFYEARLY" -> getString HALFYEARLY
+        "YEARLY" -> getString YEARLY
+        "ASPRESENTED" -> getString ASPRESENTED
+        _ -> toLower constructor
+
+getSelectedId :: UiPlansResp -> Maybe String
+getSelectedId (UiPlansResp planResp) = do
+    let planEntityArray = planResp.list
+    let dailyPerRidePlan = (DA.find(\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray)
+    case dailyPerRidePlan of 
+        Just (PlanEntity plan) -> Just plan.id
+        Nothing -> Nothing

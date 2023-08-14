@@ -1020,8 +1020,8 @@ getCurrentPlan driverId = do
         unwrapResponse (x) = x
 
 
-subscribePlan :: String -> String  -> Flow GlobalState (Either ErrorResponse SubscribePlanResp)
-subscribePlan paymentMode planId = do
+subscribePlan :: String  -> Flow GlobalState (Either ErrorResponse SubscribePlanResp)
+subscribePlan planId = do
   headers <- getHeaders "" false
   withAPIResult (EP.subscribePlan planId) unwrapResponse $ callAPI headers $ (SubscribePlanReq planId)
   where

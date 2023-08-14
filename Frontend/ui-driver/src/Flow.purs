@@ -1505,7 +1505,9 @@ currentRideFlow = do
       notificationFlow
     Nothing -> pure unit
   case allState.globalProps.callScreen of
-    ScreenNames.SUBSCRIPTION_SCREEN -> subScriptionFlow
+    ScreenNames.SUBSCRIPTION_SCREEN -> do 
+      lift $ lift $ doAff do liftEffect hideSplash
+      subScriptionFlow
     _ -> pure unit
   setValueToLocalStore RIDE_STATUS_POLLING "False"
   let isRequestExpired = if (getValueToLocalNativeStore RIDE_REQUEST_TIME) == "__failed" then false
@@ -1630,21 +1632,17 @@ homeScreenFlow = do
                               void $ pure $ setCleverTapUserProp "Mode" currentMode
                               lift $ lift $ liftFlow $ stopLocationPollingAPI
                               setDriverStatusInLocal "false" (show $ getDriverStatusFromMode currentMode)
-                              _ <- pure $ spy "setting offline zxc " (getValueToLocalStore DRIVER_STATUS_N)
                               pure unit
                           _ ->        do
                                       void $ pure $ setCleverTapUserProp "Mode" currentMode
                                       setDriverStatusInLocal "true" (show $ getDriverStatusFromMode currentMode)
                                       lift $ lift $ liftFlow $ startLocationPollingAPI
-                                      _ <- pure $ spy "setting ONLINE/SILENT zxc " (getValueToLocalStore DRIVER_STATUS_N)
                                       pure unit
 
     Nothing -> do
                 setDriverStatusInLocal (show getDriverInfoResp.active) (show $ updateDriverStatus (getDriverInfoResp.active))
-                _ <- pure $ spy "setting ONLINE/SILENT zxc when mode is nothing" (getValueToLocalStore DRIVER_STATUS_N)
                 lift $ lift $ liftFlow $ if getDriverInfoResp.active then  startLocationPollingAPI else stopLocationPollingAPI
                 (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent] then "true" else "false") $ toUpper $ show (updateDriverStatus getDriverInfoResp.active)
-                _ <- pure $ spy "Checking respons for mode " resp
                 pure unit
 
 
@@ -1674,7 +1672,7 @@ homeScreenFlow = do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0 , currentTab = "COMPLETED"})
       myRidesScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> referralScreenFlow
-    DRIVER_AVAILABILITY_STATUS status -> do
+    DRIVER_AVAILABILITY_STATUS state status -> do
       _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
       _ <- setValueToLocalStore DRIVER_STATUS_N $ show status
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
@@ -1682,8 +1680,7 @@ homeScreenFlow = do
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false") $ toUpper $ show status
       _ <- setValueToLocalStore RIDE_T_FREQUENCY (if status == Online then "20000" else "30000")
       _ <- setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if any( _ == status)[Online, Silent] then "8.0" else "25.0")
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if any( _ == status)[Online, Silent] then true else false), driverStatusSet = status}})
-      _ <- pure $ spy "zxc updateActivity " status
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if any( _ == status)[Online, Silent] then true else false), driverStatusSet = status, showOffer = (status == Online && state.props.driverStatusSet == Offline && getDriverInfoResp.autoPayStatus == Nothing )}})
       homeScreenFlow
     GO_TO_HELP_AND_SUPPORT_SCREEN -> do
       let language = ( case getValueToLocalStore LANGUAGE_KEY of
@@ -1949,10 +1946,9 @@ dummyPayload = PaymentPagePayload {
     }
 }
 
-nyPaymentFlow :: {paymentMode :: String , planId :: String} -> FlowBT String Unit
-nyPaymentFlow paymentConfig = do
-  -- paymentPageOutput <- paymentPageUI dummyPayload
-  response <- lift $ lift $ Remote.subscribePlan paymentConfig.paymentMode paymentConfig.planId
+nyPaymentFlow :: String -> FlowBT String Unit
+nyPaymentFlow planId = do
+  response <- lift $ lift $ Remote.subscribePlan planId
   case response of
     Right (SubscribePlanResp listResp) -> do
       let (CreateOrderRes orderResp) = listResp.orderResp
@@ -2029,7 +2025,7 @@ setPaymentStatus paymentStatus (PayPayload payload) paymentMethod = do
           _ <- pure $ cleverTapCustomEvent "ny_driver_subscription_success"
           modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup, paymentStatus = Just paymentStatus }})
         Failed -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, paymentStatus = Just paymentStatus }})
-        Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {paymentStatus = Just paymentStatus}, data {orderId = fromMaybe "" payload.orderId}}) --, orderId = payload.orderId
+        Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {paymentStatus = Just paymentStatus, joinPlanProps {selectedPlan = Nothing}}, data {orderId = fromMaybe "" payload.orderId}}) --, orderId = payload.orderId
 
     MANUAL -> 
       case paymentStatus of
@@ -2100,8 +2096,7 @@ subScriptionFlow = do
       case state.props.joinPlanProps.selectedPlan of 
         Just selectedPlan -> do
           setValueToLocalStore DISABLE_WIDGET "true"
-          let joinPlanConfig = {paymentMode : state.props.joinPlanProps.paymentMode , planId: selectedPlan}
-          nyPaymentFlow joinPlanConfig
+          nyPaymentFlow selectedPlan
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> paymentHistoryFlow
     PAUSE_AUTOPAY state -> do

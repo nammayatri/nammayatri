@@ -54,7 +54,7 @@ homeScreen = do
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
     DriverAvailabilityStatus state status -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
-      App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS status)
+      App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS state status)
     StartRide state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       (Location startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
