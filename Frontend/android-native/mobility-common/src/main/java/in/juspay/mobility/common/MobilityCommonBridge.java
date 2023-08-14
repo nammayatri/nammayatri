@@ -195,6 +195,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
+        bridgeComponents.getJsCallback().addJsToWebView("window.JBridge.setAnalyticsHeader(JSON.stringify({\"x-client-id\": \"mobility\"}));");
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
     }
 
