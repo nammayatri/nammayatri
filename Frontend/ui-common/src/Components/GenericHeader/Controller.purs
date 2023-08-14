@@ -17,7 +17,7 @@ module Components.GenericHeader.Controller where
 
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), padding)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), Accessiblity(..), padding)
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Prelude ((<>))
@@ -48,6 +48,8 @@ type ImageConfig =
   , margin :: Margin
   , padding :: Padding
   , visibility :: Visibility
+  , accessibilityHint :: String
+  , accessibilityImportance :: Accessiblity
   }
 
 type TextConfig =
@@ -75,6 +77,8 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE
+    , accessibilityImportance : ENABLE
+    , accessibilityHint : "Back Button"
     }
   , textConfig : {
       text : ""
@@ -89,6 +93,8 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , visibility : GONE
+    , accessibilityImportance : DISABLE 
+    , accessibilityHint : ""
     }
 
 }
@@ -110,6 +116,8 @@ merchantConfig = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE
+    , accessibilityImportance : ENABLE 
+    , accessibilityHint : "Back Button"
     }
   , textConfig : {
       text : ""
@@ -124,6 +132,8 @@ merchantConfig = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , visibility : GONE
+    , accessibilityImportance : DISABLE 
+    , accessibilityHint : ""
     }
 
 }

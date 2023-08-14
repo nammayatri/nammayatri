@@ -233,7 +233,7 @@ starRatingView state push =
     ][ textView $
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
-        , accessibilityHint $ "Rate your Ride with " <> state.data.driverName
+        , accessibilityHint $ "Rate Your Ride With " <> state.data.driverName
         , text $ getString RATE_YOUR_RIDE_WITH <> state.data.driverName
         , color Color.black800
         , maxLines 2
@@ -253,7 +253,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 35
                               , width $ V 35
-                              , accessibilityHint ("start" <> show item)
+                              , accessibilityHint ("Star" <> show item)
                               , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])

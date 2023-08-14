@@ -103,7 +103,7 @@ postfixImageView push config =
     , gravity CENTER
     , padding (Padding 12 22 16 22)
     , onClick push $ const $ FavClick config
-    , accessibilityHint "Add Favourite Button, Select to add this location to favourite"
+    , accessibilityHint "Add Favourite Button - Select to add this location to favourite"
     , clickable (if config.postfixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then false else true)
     ][  imageView
         [ height $ V 20
@@ -121,7 +121,7 @@ titleView config =
     , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then config.tag else config.title
     , color Color.black800
     , lineHeight "18"
-    , accessibilityHint $ "Recent Destination " <> config.title <> " Button Select To Book A Ride To This Location"
+    , accessibilityHint $ "Recent Destination " <> config.title <> " Button : Select To Book A Ride To This Location"
     , maxLines 1
     , ellipsize true
     , padding (PaddingRight 20)

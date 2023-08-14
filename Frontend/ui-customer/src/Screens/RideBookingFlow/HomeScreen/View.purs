@@ -268,8 +268,6 @@ view push state =
             [ frameLayout
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
-                , accessibilityImportance ENABLE
-                , accessibilityFocusable true
                 , clickable true
                 ]
                 [ linearLayout
@@ -562,6 +560,7 @@ buttonLayoutParentView push state =
   , width MATCH_PARENT
   , alignParentBottom "true,-1"
   , orientation VERTICAL
+  , accessibilityFocusable false
   ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1111,7 +1110,7 @@ completedRideDetails state push =
           [ height $ V 40
           , width $ V 40
           , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
-          , accessibilityHint "Contact Support"
+          , accessibilityHint "Contact Support Button"
           , imageWithFallback "ic_headphone_white,https://assets.juspay.in/nammayatri/images/user/ic_headphone_white.png"
           , onClick push $ const Support
           ]
@@ -1168,7 +1167,7 @@ completedRideDetails state push =
       , gravity CENTER_VERTICAL
       , onClick push $ const RideDetails
       , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
-      , accessibilityHint "Ride Details"
+      , accessibilityHint "Ride Details Button"
       ][  textView
           [ height WRAP_CONTENT
           , text $ getString RIDE_DETAILS
@@ -1320,7 +1319,7 @@ topLeftIconView state push =
           , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain , RideCompleted, RideRating]) then GONE else VISIBLE
           , clickable true
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
-          , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back Button" else "Menu Icon Button"
+          , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back Button" else "Menu Button"
           ]
           [ imageView
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"

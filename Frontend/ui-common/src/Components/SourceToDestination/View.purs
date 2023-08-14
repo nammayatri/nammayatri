@@ -63,7 +63,7 @@ sourceLayout config =
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , margin config.sourceMargin
-  , accessibilityHint $ "Pickup Location, " <> config.sourceTextConfig.text
+  , accessibilityHint $ "Pickup Location is " <> config.sourceTextConfig.text
   ][  imageView
       [ width config.sourceImageConfig.width
       , height config.sourceImageConfig.height
@@ -122,7 +122,7 @@ destinationLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      , accessibilityHint $ "Drop Location, " <> config.destinationTextConfig.text
+      , accessibilityHint $ "Drop Location is " <> config.destinationTextConfig.text
       ][  textView $
           [ text config.destinationTextConfig.text
           , layoutGravity "center_vertical"

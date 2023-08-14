@@ -333,7 +333,7 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 4
-      , accessibilityHint "Share Ride"
+      , accessibilityHint "Share Ride Button"
       , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
       , onClick push $ const ShareRide
       ]
@@ -349,7 +349,7 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 12 10 10
-      , accessibilityHint "Contact Customer Support"
+      , accessibilityHint "Contact Customer Support Button"
       , onClick push $ const Support
       ]
   ]
@@ -366,7 +366,7 @@ locationTrackButton push state =
   , stroke $ "1,"<> Color.grey900
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
   , cornerRadius 20.0
-  , accessibilityHint "Track your ride"
+  , accessibilityHint "Track Your Ride Button"
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
   ][  imageView
@@ -389,7 +389,7 @@ sosView push state =
         [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
-        , accessibilityHint $ "S.O.S Icon, Select to view S O S options"
+        , accessibilityHint $ "S.O.S Button, Select to view S O S options"
         , onClick push $ const OpenEmergencyHelp
         ]
     ]
@@ -693,7 +693,7 @@ cancelRideLayout push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , padding $ Padding 5 5 5 5
-  , accessibilityHint "Cancel Ride"
+  , accessibilityHint "Cancel Ride Button"
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
   ][ textView (
@@ -759,7 +759,7 @@ contactView push state =
               , cornerRadius 20.0
               , background state.data.config.driverInfoConfig.callBackground
               , stroke state.data.config.driverInfoConfig.callButtonStroke
-              , accessibilityHint "Chat With Driver"
+              , accessibilityHint "Chat With Driver Button"
               , onClick (\action -> do
                   if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
                   else pure unit
@@ -881,7 +881,7 @@ driverDetailsView push state =
                         , weight 1.0
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
-                        , accessibilityHint $ "Vehicle number " <> state.data.registrationNumber
+                        , accessibilityHint $ "Vehicle number : " <> state.data.registrationNumber
                         , color Color.black
                         , gravity CENTER
                         ] <> FontStyle.body7 TypoGraphy
