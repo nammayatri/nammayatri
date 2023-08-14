@@ -2304,3 +2304,12 @@ setDriverStatusInLocal status mode = do
                                     setValueToLocalStore DRIVER_STATUS_N mode
                                     setValueToLocalNativeStore DRIVER_STATUS_N mode
 
+getPaymentPageLangKey :: String -> String 
+getPaymentPageLangKey key = case key of 
+  "EN_US" -> "english"
+  "KN_IN" -> "kannada"
+  "HI_IN" -> "hindi"
+  "ML_IN" -> "malayalam"
+  "BN_IN" -> "bengali"
+  "TA_IN" -> "tamil"
+  _       -> "english"

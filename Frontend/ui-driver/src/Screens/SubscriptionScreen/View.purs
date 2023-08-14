@@ -12,6 +12,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (any)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Int (toNumber, pow)
 import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
 import Data.String as DS
@@ -28,9 +29,10 @@ import JBridge (getWidthFromPercent)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (>), bind, pure, discard, void)
+import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<>), (==), (>), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
+import Data.Time.Duration (Seconds(..))
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
@@ -53,7 +55,7 @@ screen initialState globalState =
   , name: "SubscriptionScreen"
   , globalEvents: [(\push -> do
       void $ launchAff $ flowRunner defaultGlobalState $ loadData push LoadPlans LoadAlternatePlans LoadMyPlans ShowError initialState globalState
-      void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.orderId 4 5000.0 initialState push PaymentStatusAction
+      void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.orderId 4 2 0 initialState push PaymentStatusAction
       pure (pure unit)
     )]
   , eval:
@@ -87,8 +89,8 @@ loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (Global
       Left err -> doAff do liftEffect $ push $ errorAction err
   else pure unit
 
-paymentStatusPooling :: forall action. String -> Int -> Number -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
-paymentStatusPooling orderId count delayDuration state push action = do
+paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
+paymentStatusPooling orderId count base power state push action = do
   if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && (state.props.subView == JoinPlan) && count > 0 && orderId /= "" then do
     orderStatus <- Remote.paymentOrderStatus orderId
     _ <- pure $ spy "polling inside paymentStatusPooling function" orderStatus
@@ -98,8 +100,8 @@ paymentStatusPooling orderId count delayDuration state push action = do
             _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
             doAff do liftEffect $ push $ action resp.status
         else do
-            void $ delay $ Milliseconds delayDuration
-            paymentStatusPooling orderId (count - 1) delayDuration state push action
+            void $ delay $ Seconds $ toNumber $ pow base power
+            paymentStatusPooling orderId (count - 1) base (power+1) state push action
       Left err -> pure unit
     else pure unit
 
@@ -288,7 +290,7 @@ plansBottomView push state =
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
-              , width $ V $ getWidthFromPercent 70
+              , width $ V $ getWidthFromPercent 80
               , gravity LEFT
               , text (getString CHOOSE_YOUR_PLAN)
               , color Color.black800
@@ -307,14 +309,22 @@ plansBottomView push state =
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          ][ commonTV push ((getString GET_FREE_TRAIL_UNTIL) <> state.data.joinPlanData.subscriptionStartDate <> " ✨") Color.black800 (FontStyle.body1 TypoGraphy) 0 LEFT
+          ][ 
+            textView $
+              [ 
+              height WRAP_CONTENT
+              , width $ V $ getWidthFromPercent 70
+              , gravity LEFT
+              , text ((getString GET_FREE_TRAIL_UNTIL) <> state.data.joinPlanData.subscriptionStartDate <> " ✨")
+              , color Color.black800
+              ] <> FontStyle.body1 TypoGraphy 
             , textView $
-              [ weight 1.0
-              , height WRAP_CONTENT
-              , gravity RIGHT
-              , textFromHtml $ "<u>" <> (getString HOW_IT_WORKS) <> "</u>"
-              , color Color.blue900
-              , onClick (\action -> do
+              [  weight 1.0
+                , height WRAP_CONTENT
+                , gravity RIGHT
+                , textFromHtml $ "<u>" <> (getString HOW_IT_WORKS) <> "</u>"
+                , color Color.blue900
+                , onClick (\action -> do
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
