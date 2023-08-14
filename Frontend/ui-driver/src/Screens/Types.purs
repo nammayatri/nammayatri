@@ -1511,10 +1511,9 @@ type SubscriptionScreenData = {
 }
 
 type AutoPayDetails = {
-  registeredPG :: String ,
   isActive :: Boolean,
   detailsList :: Array KeyValType,
-  payerUpiId :: String,
+  payerUpiId :: Maybe String,
   pspLogo :: String
 }
 
@@ -1559,7 +1558,6 @@ type ManagePlanProps = {
 type MyPlanData = {
   dueItems :: Array DueItem,
   planEntity :: PlanCardConfig,
-  paymentMethod :: PaymentMethod,
   autoPayStatus :: AutoPayStatus,
   lowAccountBalance :: Boolean,
   switchAndSave :: Boolean,
@@ -1643,7 +1641,6 @@ type PaymentListItem = {
   paidDate :: String,
   rideTakenDate :: String,
   amount :: String,
-  paymentMethod :: String,
   paymentStatus :: Common.PaymentStatus
 }
 

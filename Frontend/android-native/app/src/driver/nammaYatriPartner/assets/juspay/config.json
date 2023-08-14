@@ -140,10 +140,10 @@
         "tracker": "https://assets.juspay.in/hyper/bundles/app/tracker/2.0.44/v1-tracker.zip"
       },
       "in.juspay.hyperpay": {
-        "configuration": "https://assets.juspay.in/hyper/configs/nammayatri/in.juspay.hyperpay/1.2.5/v1-configuration.zip",
+        "configuration": "https://assets.juspay.in/hyper/configs/nammayatri/in.juspay.hyperpay/1.3.9/v1-configuration.zip",
         "fonts": [],
         "icons": "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathi/configuration/1.20/v1-icons.zip",
-        "strings": "https://assets.juspay.in/hyper/configs/nammayatri/in.juspay.hyperpay/1.2.5/v1-strings.zip"
+        "strings": "https://assets.juspay.in/hyper/configs/nammayatri/in.juspay.hyperpay/1.3.9/v1-strings.zip"
       },
       "in.juspay.upiintent": {
         "config": "https://assets.juspay.in/juspay/payments/in.juspay.upiintent/release/v1-config.zip"

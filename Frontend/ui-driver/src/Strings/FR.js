@@ -575,5 +575,6 @@ const frenchStrings = {
   STATRED_ON : "Démarré le",
   EXPIRES_ON : "Expire le",
   SWITCHED_PLAN : "Changement de forfait",
-  RESUME_AUTOPAY : "Paiement automatique repris"
+  RESUME_AUTOPAY : "Paiement automatique repris",
+  PAYMENT_CANCELLED: "Vous avez annulé votre paiement automatique UPI. Vous pouvez effacer vos cotisations manuellement"
 }

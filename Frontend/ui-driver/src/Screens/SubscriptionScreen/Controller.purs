@@ -48,7 +48,7 @@ data Action = BackPressed
             | ViewAutopayDetails
             | ResumeAutoPay PrimaryButton.Action
             | LoadPlans UiPlansResp
-            | LoadMyPlans GetCurrentPlanResp (Mb.Maybe String)
+            | LoadMyPlans GetCurrentPlanResp
             | ShowError ErrorResponse
             | PaymentStatusAction APIPaymentStatus
             | CheckPaymentStatus 
@@ -150,23 +150,20 @@ eval (LoadPlans plans) state = do
       props{showShimmer = false, subView = JoinPlan,  
             joinPlanProps { selectedPlan = if (state.props.joinPlanProps.selectedPlan == Mb.Nothing) then getSelectedId plans else state.props.joinPlanProps.selectedPlan}} }
 
-eval (LoadMyPlans plans autoPayStatus ) state = do
+eval (LoadMyPlans plans) state =
   let (GetCurrentPlanResp currentPlanResp) = plans
-  let (PlanEntity planEntity) = currentPlanResp.currentPlanDetails
-  let newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ orderId = currentPlanResp.orderId, planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer plans, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
-  case currentPlanResp.mandateDetails of 
+      (PlanEntity planEntity) = currentPlanResp.currentPlanDetails
+      newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ orderId = currentPlanResp.orderId, planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer plans, maxDueAmount = planEntity.totalPlanCreditLimit, currentDueAmount = planEntity.currentDues, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
+  in case currentPlanResp.mandateDetails of 
     Mb.Nothing -> continue newState
     Mb.Just (MandateData mandateDetails) -> continue newState 
                                           {data {
                                               myPlanData {
-                                                maxDueAmount = planEntity.totalPlanCreditLimit,
-                                                mandateStatus = toLower mandateDetails.status,
-                                                currentDueAmount = planEntity.currentDues
+                                                mandateStatus = toLower mandateDetails.status
                                               }
                                             , autoPayDetails {
-                                                registeredPG = mandateDetails.payerVpa
-                                              , detailsList = getAutoPayDetailsList (MandateData mandateDetails)
-                                              , pspLogo = getPspIcon mandateDetails.payerVpa
+                                                detailsList = getAutoPayDetailsList (MandateData mandateDetails)
+                                              , pspLogo = getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
                                               , payerUpiId = mandateDetails.payerVpa
                                               }
                                             , planId = planEntity.id

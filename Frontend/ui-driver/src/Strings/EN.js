@@ -678,7 +678,7 @@ const englishStrings = {
   ZERO_COMMISION : "ZERO commission",
   EARN_TODAY_PAY_TOMORROW : "Earn Today, Pay Tomorrow",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "Pay only if you take rides",
-  PLAN : "Plans",
+  PLAN : "Plan",
   DAY : "Day",
   PLANS : "Plans",
   MANAGE_PLAN : "Manage Plan",
@@ -743,5 +743,6 @@ const englishStrings = {
   MAYBE_LATER : "Maybe Later",
   DO_YOU_WANT_TO_CANCEL : "Do you want to cancel?",
   DO_YOU_WANT_TO_CANCEL_DESC : "You are about to cancel Autopay.\nYou will have to set up autopay again to resume automatic payments.",
-  YOUR_PAYMENT_WAS_UNSUCCESSFUL : "Your payment attempt was unsuccessful."
+  YOUR_PAYMENT_WAS_UNSUCCESSFUL : "Your payment attempt was unsuccessful.",
+  PAYMENT_CANCELLED : "You have cancelled your UPI Autopay. You can clear your dues manually."
 }
