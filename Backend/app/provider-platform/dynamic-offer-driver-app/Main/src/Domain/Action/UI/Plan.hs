@@ -264,7 +264,7 @@ validateInActiveMandateExists driverId driverPlan = do
   case driverPlan.mandateId of
     Nothing -> throwError $ InActiveMandateDoNotExist driverId.getId
     Just mandateId -> do
-      mandate <- B.runInReplica $ QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
+      mandate <- QM.findById mandateId >>= fromMaybeM (MandateNotFound mandateId.getId)
       unless (mandate.status == DM.INACTIVE) $ throwError (InActiveMandateDoNotExist driverId.getId)
       return mandate
 

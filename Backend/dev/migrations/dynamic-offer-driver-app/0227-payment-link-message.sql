@@ -7,7 +7,7 @@ Please find the autopay mandate registration link below.
 {#paymentLink#}
 
 - Juspay'
-  FROM atlas_app.merchant AS T1
+  FROM atlas_driver_offer_bpp.merchant AS T1
 )
-INSERT INTO atlas_app.merchant_message (merchant_id, message_key, message)
+INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, message)
   (SELECT * FROM MerchantMessages);
