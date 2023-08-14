@@ -95,6 +95,7 @@ mkInvoiceAgainstDriverFee id shortId now driverFee =
     { id = Id id,
       invoiceShortId = shortId,
       driverFeeId = driverFee.id,
+      invoiceStatus = INV.ACTIVE_INVOICE,
       updatedAt = now,
       createdAt = now
     }

@@ -23,6 +23,7 @@ where
 
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
@@ -108,7 +109,7 @@ getStatus (personId, merchantId) orderId = do
         processMandateStatus mandateStatus mandateId
       DPayment.PaymentStatus _ -> do
         processPayment merchantId (cast order.personId) order.id True
-  notifyIfPaymentFailed personId order.id order.status
+  notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id order.status
   pure paymentStatus
 
 -- webhook ----------------------------------------------------------
@@ -135,14 +136,14 @@ juspayWebhookHandler merchantShortId authData value = do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               unless (transactionStatus /= Payment.CHARGED) $ do
                 processPayment merchantId (cast order.personId) order.id True
-              notifyIfPaymentFailed (cast order.personId) order.id transactionStatus
+              notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus
             Payment.MandateOrderStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               unless (transactionStatus /= Payment.CHARGED) $ do
                 processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
                 processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa
                 processMandateStatus mandateStatus mandateId
-              notifyIfPaymentFailed (cast order.personId) order.id transactionStatus
+              notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus
             Payment.MandateStatusResp {..} -> do
               processMandateStatus status mandateId
             Payment.BadStatusResp -> pure ()
@@ -162,6 +163,7 @@ processPayment merchantId driverId orderId sendNotification = do
     CDI.updateSubscription True (cast driverId)
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QDFS.clearPaymentStatus driverId driverInfo.active
+    QIN.updateInvoiceStatusByInvoiceId (cast orderId) INV.SUCCESS
     when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
 
 notifyPaymentSuccessIfNotNotified :: DP.Person -> Id DOrder.PaymentOrder -> Flow ()
@@ -173,9 +175,10 @@ notifyPaymentSuccessIfNotNotified driver orderId = do
 shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
-notifyIfPaymentFailed :: Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Flow ()
-notifyIfPaymentFailed driverId orderId orderStatus = do
+notifyAndUpdateInvoiceStatusIfPaymentFailed :: Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Flow ()
+notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus = do
   when (orderStatus `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
+    QIN.updateInvoiceStatusByInvoiceId (cast orderId) INV.FAILED
     let key = "driver-offer:FailedNotif-" <> orderId.getId
     sendNotificationIfNotSent key $ do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
