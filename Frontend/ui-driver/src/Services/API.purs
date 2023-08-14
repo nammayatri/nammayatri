@@ -2526,7 +2526,8 @@ data GetCurrentPlanReq = GetCurrentPlanReq String
 
 newtype GetCurrentPlanResp = GetCurrentPlanResp {
   currentPlanDetails :: PlanEntity,
-  mandateDetails :: Maybe MandateData
+  mandateDetails :: Maybe MandateData,
+  autoPayStatus :: Maybe String
 }
 
 newtype MandateData = MandateData {

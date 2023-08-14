@@ -151,21 +151,24 @@ eval (LoadPlans plans) state = do
 eval (LoadMyPlans plans autoPayStatus ) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
   let (PlanEntity planEntity) = currentPlanResp.currentPlanDetails
-  let newState = state{ props{ showShimmer = false, subView = MyPlan }, data{myPlanData{planEntity = myPlanListTransformer plans, autoPayStatus = getAutopayStatus autoPayStatus}}}
+  let newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer plans, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
   case currentPlanResp.mandateDetails of 
     Mb.Nothing -> continue newState
     Mb.Just (MandateData mandateDetails) -> continue newState 
-                                          {data {myPlanData {
-                                          maxDueAmount = planEntity.totalPlanCreditLimit,
-                                          mandateStatus = toLower mandateDetails.status,
-                                          currentDueAmount = planEntity.currentDues
+                                          {data {
+                                              myPlanData {
+                                                maxDueAmount = planEntity.totalPlanCreditLimit,
+                                                mandateStatus = toLower mandateDetails.status,
+                                                currentDueAmount = planEntity.currentDues
+                                              }
+                                            , autoPayDetails {
+                                                registeredPG = mandateDetails.payerVpa
+                                              , detailsList = getAutoPayDetailsList (MandateData mandateDetails)
+                                              , pspLogo = getPspIcon mandateDetails.payerVpa
+                                              , payerUpiId = mandateDetails.payerVpa
+                                              }
+                                            , planId = planEntity.id}
                                           }
-                                          , autoPayDetails {registeredPG = mandateDetails.payerVpa
-                                          , detailsList = getAutoPayDetailsList (MandateData mandateDetails)
-                                          , pspLogo = getPspIcon mandateDetails.payerVpa
-                                          , payerUpiId = mandateDetails.payerVpa
-                                            }
-                                          }}
 
 eval CheckPaymentStatus state = updateAndExit state { props{refreshPaymentStatus = true}} $ CheckOrderStatus state
 
@@ -201,4 +204,5 @@ getAutopayStatus autoPayStatus =
       "SUSPENDED" -> SUSPENDED --  call resume
       "PAUSED_PSP" -> PAUSED_PSP --  ask them to resume from PSP app
       "CANCELLED_PSP" ->  CANCELLED_PSP -- call subscribe
+      "PENDING" -> PENDING
       _ -> NO_AUTOPAY

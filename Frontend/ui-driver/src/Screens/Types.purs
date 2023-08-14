@@ -13,8 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types
-  where
+module Screens.Types where
 
 import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
@@ -1613,7 +1612,7 @@ derive instance genericPaymentMethod:: Generic PaymentMethod _
 instance showPaymentMethod:: Show PaymentMethod where show = genericShow
 instance eqPaymentMethod:: Eq PaymentMethod where eq = genericEq
 
-data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY
+data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING
 
 derive instance genericAutoPayStatus:: Generic AutoPayStatus _
 instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
