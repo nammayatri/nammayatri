@@ -132,7 +132,9 @@ window.onMerchantEvent = function (event, payload) {
       JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
       if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "NEW_MESSAGE" && parsedPayload.payload.notificationData.entity_ids) {
         purescript.main(makeEvent("NEW_MESSAGE", parsedPayload.payload.notificationData.entity_ids))();
-      }else {
+      }else if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "PAYMENT_MODE_MANUAL") {
+        purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))();
+      } else {
         purescript.main(makeEvent("", ""))();
       }
     }

@@ -34,7 +34,6 @@ data Action = OnButton1Click
             | OnImageClick
             | Tipbtnclick Int Int
             | DismissPopup
-            | DismisTextClick
 
 type Config = {
     primaryText :: TextConfig,

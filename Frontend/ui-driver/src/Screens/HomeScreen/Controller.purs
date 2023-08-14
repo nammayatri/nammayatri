@@ -338,7 +338,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
 eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   _ <- pure $ cleverTapCustomEvent "ny_driver_in_app_popup_join_now"
-  exit $ SubscriptionScreen state 
+  exit $ SubscriptionScreen state {props { showOffer = false }}
+
+eval (OfferPopupAC PopUpModal.DismissPopup) state = continue state {props { showOffer = false }}
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let

@@ -525,7 +525,6 @@ const frenchStrings = {
   ZERO_COMMISION : "ZERO commission",
   EARN_TODAY_PAY_TOMORROW : "Gagnez aujourd'hui, payez demain",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "Ne payez que si vous faites des trajets",
-  JOIN : "REJOINDRE",
   PLAN : "Plan",
   DAY : "Jour",
   PLANS : "Des plans",
