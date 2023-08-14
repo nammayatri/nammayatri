@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.invoice
     (   id character(36) NOT NULL,
         invoice_short_id text NOT NULL,
         driver_fee_id Text,
+        invoice_status Text,
         created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
         PRIMARY KEY(id, driver_fee_id)
