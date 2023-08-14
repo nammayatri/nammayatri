@@ -308,7 +308,7 @@ mapOptionsView push state =
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginVertical 5 5
-      ][ if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state else textView[]
+      ][ if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then navigateView push state else (textView[height $ V 0])
         , if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else locationTrackButton push state
       ]
     ]
@@ -418,7 +418,8 @@ messageNotificationView push state =
       , orientation HORIZONTAL
       , clickable true
       , onClick (\action -> do
-                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                  let delay = if os == "IOS" then 2000.0 else 5000.0
+                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
                   else pure unit
                   push action
                 ) (const MessageDriver)
@@ -749,7 +750,8 @@ contactView push state =
               , background state.data.config.driverInfoConfig.callBackground
               , stroke state.data.config.driverInfoConfig.callButtonStroke
               , onClick (\action -> do
-                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                  let delay = if os == "IOS" then 2000.0 else 5000.0
+                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
                   else pure unit
                   push action
               ) (const MessageDriver)

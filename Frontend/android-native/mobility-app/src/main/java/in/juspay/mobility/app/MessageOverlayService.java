@@ -184,15 +184,26 @@ public class MessageOverlayService extends Service implements View.OnClickListen
             startMainActivity();
         } else if (id == R.id.suggestion1) {
             if (suggestions != null) for (SendMessageCallBack cb : sendMessageCallBacks)
-                cb.sendMessage(suggestions_enabled.equals("true") ? suggestions.s1 : getSuggestionFromKey(suggestions.s1, "EN_US"));
+                sendMessage(cb, suggestions_enabled.equals("true") ? suggestions.s1 : getSuggestionFromKey(suggestions.s1, "EN_US"));
         } else if (id == R.id.suggestion2) {
             if (suggestions != null) for (SendMessageCallBack cb : sendMessageCallBacks)
-                cb.sendMessage(suggestions_enabled.equals("true") ? suggestions.s2 : getSuggestionFromKey(suggestions.s2, "EN_US"));
+                sendMessage(cb, suggestions_enabled.equals("true") ? suggestions.s2 : getSuggestionFromKey(suggestions.s2, "EN_US"));
         } else if (id == R.id.suggestion3) {
             if (suggestions != null) for (SendMessageCallBack cb : sendMessageCallBacks)
-                cb.sendMessage(suggestions_enabled.equals("true") ? suggestions.s3 : getSuggestionFromKey(suggestions.s3, "EN_US"));
+                sendMessage(cb, suggestions_enabled.equals("true") ? suggestions.s3 : getSuggestionFromKey(suggestions.s3, "EN_US"));
         }
         overlayView.setVisibility(View.GONE);
+    }
+
+    private void sendMessage(SendMessageCallBack cb, String message){
+        Thread thread = new Thread(() -> {
+            try {
+                cb.sendMessage(message);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "Error in sending a message" + e);
+            }
+        });
+        thread.start();
     }
 
     public Suggestions getDefaultSuggestions() {

@@ -392,8 +392,8 @@ export const datePicker = function (label)
 {return function (cb)
   {return function (action)
     {return function () {
-      var callback = callbackMapper.map(function (year, month, date) {
-        cb(action(year)(month)(date))();
+      var callback = callbackMapper.map(function (resp, year, month, date) {
+        cb(action(resp)(year)(month)(date))();
       });
       return window.JBridge.datePicker(callback,label);
       };
@@ -585,6 +585,7 @@ export const storeCallBackMessageUpdated = function (cb) {
                   }
                   cb(action (message) (sentBy) (timeStamp) (messagesSize))();
                 });
+                window.storeCallBackMessageUpdated = callback;
                 if(JBridge.storeCallBackMessageUpdated) {
                   JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
                 }
@@ -1441,7 +1442,7 @@ export const startLottieProcess = function (configObj) {
   if (JBridge.isFilePresentDeep) {
     lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
   } else {
-    lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+    lottieName = isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
   }
   try {
     if (window.__OS == "IOS") {
@@ -1453,6 +1454,14 @@ export const startLottieProcess = function (configObj) {
     return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType);
   }
 };
+
+function isFilePresent(fileName) {
+   if (window.__OS == "IOS") {
+      return JBridge.isFilePresent(fileName) == "0" ? false : true;
+   } else {
+      return JBridge.isFilePresent(fileName);
+   }
+}
 
 export const methodArgumentCount = function (functionName) {
   try {
@@ -1545,7 +1554,7 @@ export const generateSessionId = function () {
     });
     return uuid;
   } catch (err) {
-    console.log("generateSessionId error " + err);
+    return Math.random().toString(16); 
   }
 }
 export const initialWebViewSetUp = function (cb) {

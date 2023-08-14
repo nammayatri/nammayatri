@@ -248,10 +248,11 @@ dateOfBirth push state =
     , padding (Padding 20 16 16 16)
     , cornerRadius 4.0
     , stroke ("1," <> Color.borderGreyColor)
-    , onClick (\_ -> do
-                _ <- JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
-                pure unit
+    , onClick (\action -> do
+                _ <- push action
+                JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
           ) (const SelectDateOfBirthAction)
+    , clickable state.props.isDateClickable
     ][ linearLayout
       [ width MATCH_PARENT
         , height MATCH_PARENT

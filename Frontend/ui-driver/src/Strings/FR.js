@@ -16,7 +16,7 @@ const frenchStrings = {
   NEXT: "Suivant",
   T_C: "Conditions générales d'utilisation",
   ENTER_MOBILE_NUMBER: "Entrez votre numéro de mobile",
-  BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR: "En appuyant sur Suivant \ Na), vous assurez être volontaire à participer à cette phase de beta-test et que la responsabilité pénale de Juspay ne saurait être engagée",
+  BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "En cliquant sur Continuer, vous acceptez nos",
   ENTER_OTP: "Entrez votre code à usage unique",
   DIDNT_RECIEVE_OTP: "Vous n'avez pas reçu de code à usage unique?",
   RESEND_OTP: "Renvoyer un code à usage unique",
@@ -476,5 +476,10 @@ const frenchStrings = {
   FEE_PAYMENT_HISTORY : "Historique de paiement des frais",
   LANGUAGES_SPOKEN : "Langues parlées",
   VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements",
-  RIDE_TYPE : "Type de trajet"
+  RIDE_TYPE : "Type de trajet",
+  PLACE_CALL_REQUEST : "Faire une demande d'appel",
+  RC_STATUS : "Statut RC",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "UTILISATRICES Évalué par",
+  MONTHS : "Mois"
 }

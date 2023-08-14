@@ -34,7 +34,7 @@ import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (UploadDrivingLicenseState)
-import Services.Config (getSupportNumber)
+import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 
 
 instance showAction :: Show Action where
@@ -79,7 +79,7 @@ instance loggableAction :: Loggable Action where
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "reenter_dl_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "reenter_dl_number_text_focus_changed" "primary_edit_text"
     CallBackImageUpload str imageName imagePath -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "call_back_image_upload"
-    DatePicker (label) year month date -> do
+    DatePicker (label) resp year month date -> do
       if label == "DATE_OF_BIRTH" then trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "date_of_birth"
         else if label == "DATE_OF_ISSUE" then trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "date_of_issue"
           else trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "no_action"
@@ -107,7 +107,7 @@ data Action = BackPressed Boolean
             | CallBackImageUpload String String String
             | UploadFileAction String
             | UploadImage
-            | DatePicker String Int Int Int
+            | DatePicker String String Int Int Int
             | PrimaryEditTextActionController PrimaryEditText.Action 
             | PrimaryEditTextActionControllerReEnter PrimaryEditText.Action 
             | GenericMessageModalAction GenericMessageModal.Action
@@ -141,8 +141,10 @@ eval (TutorialModal manual) state = do
     _ -> continue state
 eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = continue state{props{openLicenseManual = false, openDateOfIssueManual = false}} 
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
-  _ <- liftEffect $ case getMerchant FunctionCall of
-    NAMMAYATRI -> openWhatsAppSupport "+918618963188"
+  let merchant = getMerchant FunctionCall
+  _ <- case merchant of
+    NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+    YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
   ]
@@ -160,11 +162,20 @@ eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clic
                                                           updateAndExit state {data {imageBack = image, imageNameBack = imageName}} $ ValidateImageAPICall $ state {data {imageBack = image, imageNameBack = imageName}}
                                                             else continue state
 
-eval (DatePicker (label) year month date) state = do
-  case label of
-    "DATE_OF_BIRTH" -> continue state {data = state.data { dob = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" , dobView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)}}
-    "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just $ (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" , dateOfIssueView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year), imageFront = "null"}} -- imageFront made null to handle fallback
-    _ -> continue state
+eval (DatePicker (label) resp year month date) state = do
+  let fullDate = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 
+  let dateView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
+  case resp of 
+    "SELECTED" -> case label of
+                    "DATE_OF_BIRTH" -> continue state {data = state.data { dob = fullDate, dobView = dateView }
+                                                        , props {isDateClickable = true }}
+                    "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}
+                                                        , props {isDateClickable = true }} 
+                    _ -> continue state { props {isDateClickable = true}}
+    _ -> continue state { props {isDateClickable = true}}
+eval SelectDateOfBirthAction state = continue state { props {isDateClickable = false}}
+
+eval SelectDateOfIssueAction state = continue state { props {isDateClickable = false}} 
 
 eval _ state = continue state
 

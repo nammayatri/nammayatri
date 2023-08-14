@@ -71,6 +71,8 @@ import Helpers.Utils (getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getValueFromConfig)
+import MerchantConfig.Utils as MU
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width)
@@ -120,7 +122,7 @@ screen initialState =
           summaryResponse <- Remote.driverProfileSummary ""
           profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq { })
           case summaryResponse, profileResponse of
-            Right summaryResp , Right profileResp -> do 
+            Right summaryResp , Right profileResp -> do
               liftFlow $ push $ DriverSummary summaryResp
               liftFlow $ push $ GetDriverInfoResponse profileResp
             _ , _ -> liftFlow $ push $ BackPressed
@@ -128,10 +130,10 @@ screen initialState =
           pure unit
       pure $ pure unit
     )]
-  , eval : \state  action -> do
+  , eval : \action state -> do
       let _ = spy  "DriverProfileScreen action " action
       let _ = spy  "DriverProfileScreen state "  state
-      eval state action
+      eval action state
   }
 
 view  :: forall w. (Action -> Effect Unit)  -> ST.DriverProfileScreenState  -> PrestoDOM (Effect Unit) w
@@ -154,7 +156,7 @@ view push state =
           , background Color.lightBlack900
           , visibility if state.props.logoutModalView == true then VISIBLE else GONE
           ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
-        , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView 
+        , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
         , if state.props.showGenderView || state.props.alternateNumberView then driverNumberGenderView state push else dummyTextView
         , if state.props.removeAlternateNumber then PopUpModal.view (push <<<  RemoveAlternateNumberAC) (removeAlternateNumberConfig state ) else dummyTextView
         , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
@@ -165,7 +167,7 @@ view push state =
 
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
-updateDetailsView state push = 
+updateDetailsView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -177,28 +179,28 @@ updateDetailsView state push =
         pure unit
         ) (const NoAction)
   ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , horizontalLineView 1 1.0 0 0 0 
+    , horizontalLineView 1 1.0 0 0 0
     , PrimaryEditText.view (push <<< PrimaryEditTextAC) (primaryEditTextConfig state)
     , linearLayout
       [ height MATCH_PARENT
-      , weight 1.0 
-      , gravity BOTTOM 
+      , weight 1.0
+      , gravity BOTTOM
       , margin $ MarginBottom 24
       ][ PrimaryButton.view (push <<< UpdateValueAC) (updateButtonConfig state)]
   ]
-  
+
 
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 
-profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-profileView push state = 
+profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+profileView push state =
   PrestoAnim.animationSet [Anim.fadeIn (not state.props.openSettings)] $
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , visibility $ if state.props.openSettings then GONE else VISIBLE
-  ][  headerView state push 
+  ][  headerView state push
     , scrollView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -214,10 +216,10 @@ profileView push state =
               , orientation VERTICAL
               , background Color.blue600
               , padding $ PaddingVertical 16 24
-              ][  tabView state push  
-                , tabImageView state push 
-                , infoView state push 
-                ] 
+              ][  tabView state push
+                , tabImageView state push
+                , infoView state push
+                ]
             , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state  -- TODO: Once APIs are deployed this code can be uncommented
             , if state.props.screenType == ST.DRIVER_DETAILS then additionalDetails push state else dummyTextView
             , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
@@ -226,15 +228,15 @@ profileView push state =
         ]
     ]
 
-        
+
 
 ------------------------------------------- HEADER VIEW -------------------------------------------------------------
 headerView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-headerView state push = 
+headerView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation HORIZONTAL 
+  , orientation HORIZONTAL
   , gravity BOTTOM
   , padding $ Padding 16 16 16 16
   ][ imageView
@@ -257,7 +259,7 @@ headerView state push =
       , onClick push $ const OpenSettings
       ][  imageView
           [ height $ V 20
-          , width $ V 20 
+          , width $ V 20
           , margin $ MarginRight 4
           , imageWithFallback "ic_settings,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
           ]
@@ -269,8 +271,8 @@ headerView state push =
       ]
   ]
 
-vehicleRcDetails :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-vehicleRcDetails push state = 
+vehicleRcDetails :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+vehicleRcDetails push state =
   linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
@@ -285,27 +287,27 @@ vehicleRcDetails push state =
     )
   ]
 
-getRcNumDetails :: Array ST.RcData -> Array {key :: String, idx :: Int, value :: String, action :: Action, model :: String, color :: String}
-getRcNumDetails config = do 
+getRcNumDetails :: Array ST.RcData -> Array {key :: String, idx :: Int, value :: String, action :: Action, model :: Maybe String, color :: Maybe String}
+getRcNumDetails config = do
   mapWithIndex (\index item -> {key : "RC", idx : index+1,  value : item.rcDetails.certificateNumber, action : NoAction, model : item.rcDetails.vehicleModel, color : item.rcDetails.vehicleColor}) config
 
 --------------------------------------------------- TAB VIEW -----------------------------------------------------
 tabView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tabView state push = 
+tabView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , cornerRadius 24.0 
+  , cornerRadius 24.0
   , margin $ MarginHorizontal 16 16
   , background Color.white900
   , padding $ Padding 6 6 6 6
   , gravity CENTER
   ][  textView
       [ height WRAP_CONTENT
-      , weight 1.0 
+      , weight 1.0
       , background if state.props.screenType == ST.DRIVER_DETAILS then Color.black900 else Color.white900
       , text (getString DRIVER_DETAILS)
-      , cornerRadius 24.0 
+      , cornerRadius 24.0
       , padding $ PaddingVertical 6 6
       , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
       , fontStyle $ FontStyle.medium LanguageStyle
@@ -314,9 +316,9 @@ tabView state push =
       ]
     , textView
       [ height WRAP_CONTENT
-      , weight 1.0 
+      , weight 1.0
       , gravity CENTER
-      , cornerRadius 24.0 
+      , cornerRadius 24.0
       , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
       , padding $ PaddingVertical 6 6
       , text (getString VEHICLE_DETAILS)
@@ -329,7 +331,7 @@ tabView state push =
 
 ------------------------------------------ TAB IMAGE VIEW ---------------------------------------------------------
 tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tabImageView state push = 
+tabImageView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -337,19 +339,19 @@ tabImageView state push =
   , padding $ PaddingVertical 32 32
   , background Color.blue600
   , orientation HORIZONTAL
-  ][  PrestoAnim.animationSet 
+  ][  PrestoAnim.animationSet
       [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
       , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
       ] $ imageView
           [ height $ V 88
-          , width $ V 88 
+          , width $ V 88
           , cornerRadius 44.0
           , margin $ MarginRight 10
           , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
           , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
-          , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png" --change the link once uploaded to asset
+          , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
           ]
-  ,  PrestoAnim.animationSet 
+  ,  PrestoAnim.animationSet
     [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
     , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
     ] $ linearLayout
@@ -360,7 +362,7 @@ tabImageView state push =
         , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
         , gravity CENTER
         , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
-        ][  imageView 
+        ][  imageView
             [ imageWithFallback if state.data.driverVehicleType == "AUTO_RICKSHAW" then "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" else "ny_ic_silhouette,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
             , height $ V 68
             , width $ V 68
@@ -370,15 +372,15 @@ tabImageView state push =
 
 ---------------------------------------------- DRIVER DETAILS VIEW ------------------------------------------------------------
 
-driverDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-driverDetailsView push state = 
+driverDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+driverDetailsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginHorizontal 16 16
   ][  driverAnalyticsView state push
-    , missedOpportunityView state push 
+    , missedOpportunityView state push
     , badgeLayoutView state  ]
 
 
@@ -387,19 +389,19 @@ driverDetailsView push state =
 
 ------------------------------------------- MISSED OPPORTUNITY VIEW -----------------------------------------
 
-missedOpportunityView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-missedOpportunityView state push  = 
+missedOpportunityView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+missedOpportunityView state push  =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation VERTICAL 
+  , orientation VERTICAL
   , margin $ Margin 0 40 0 0
-  ][  textView  
+  ][  textView
       [ text (getString MISSED_OPPORTUNITY)
       , margin $ Margin 0 0 16 4
       , textSize FontSize.a_16
-      , color Color.black 
-      , fontStyle $ FontStyle.medium LanguageStyle
+      , color Color.black900
+      , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
     , linearLayout
       [height WRAP_CONTENT
@@ -409,19 +411,19 @@ missedOpportunityView state push  =
   ]
 
 missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
-missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> " %"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> "%"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
   {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
     {key : (getString EARNINGS_MISSED), value : "₹" <>  show analyticsData.missedEarnings , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-driverAnalyticsView state push = 
+driverAnalyticsView state push =
   let analyticsData = state.data.analyticsData
   in linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation VERTICAL 
+  , orientation VERTICAL
   , margin $ Margin 0 40 0 0
-  ][  textView 
+  ][  textView
       [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString SUMMARY)
@@ -429,26 +431,35 @@ driverAnalyticsView state push =
         , color Color.black900
         , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
-    , linearLayout  
+    , let bonusActivated = getValueFromConfig "BONUS_EARNED" == "true"  in
+      linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , margin $ Margin 0 12 0 12
-      , background Color.blue600
+      , margin if bonusActivated then (MarginVertical 12 12) else (MarginVertical 4 12)
+      , background if bonusActivated then Color.blue600 else Color.transparent
       , cornerRadius 10.0
-      ][  infoTileView state {primaryText: "₹ " <> analyticsData.totalEarnings, subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
-        , linearLayout
-          [ height MATCH_PARENT
-          , width (V 1)
-          , margin (Margin 0 16 0 16)
-          , background Color.lightGreyShade
-          ][]
-        , infoTileView state {primaryText: "₹ " <> analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+      ][  if bonusActivated then
+            linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            ]
+            [
+              infoTileView state {primaryText: "₹ " <> analyticsData.totalEarnings, subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+            , linearLayout
+              [ height MATCH_PARENT
+              , width (V 1)
+              , margin (Margin 0 16 0 16)
+              , background Color.lightGreyShade
+              ][]
+            , infoTileView state {primaryText: "₹ " <> analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+            ]
+          else infoCard state push {key : (getString EARNED_ON_APP), value : "₹" <> analyticsData.totalEarnings , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
         ]
-      , linearLayout  
+      , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: "rated by " <> show analyticsData.totalUsersRated <> " users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
+        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: (getString RATED_BY_USERS1)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString RATED_BY_USERS2), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
           , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
@@ -459,12 +470,12 @@ driverAnalyticsView state push =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation HORIZONTAL
-            ] $ map (\item -> chipRailView item) state.data.analyticsData.chipRailData
+            ] $ map (\item -> chipRailView item) (getChipRailArray state.data.analyticsData.lateNightTrips state.data.analyticsData.lastRegistered state.data.languagesSpoken state.data.analyticsData.totalDistanceTravelled)
            ]
   ]
 
 
-addRcView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+addRcView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addRcView state push =
   linearLayout
       [ width MATCH_PARENT
@@ -472,8 +483,8 @@ addRcView state push =
       , alignParentBottom "true,-1"
       ][ PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state)]
 
-additionalRcsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { key :: String , idx :: Int, value ::  String , action :: Action, model :: String, color :: String} -> PrestoDOM (Effect Unit) w
-additionalRcsView state push config = 
+additionalRcsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> { key :: String , idx :: Int, value ::  String , action :: Action, model :: Maybe String, color :: Maybe String} -> PrestoDOM (Effect Unit) w
+additionalRcsView state push config =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -495,7 +506,7 @@ additionalRcsView state push config =
             , padding $ PaddingVertical 16 16
             ]([  textView
                 [ text config.key
-                , textSize FontSize.a_12 
+                , textSize FontSize.a_12
                 , color Color.black700
                 , fontStyle $ FontStyle.regular LanguageStyle
                 ]
@@ -507,7 +518,7 @@ additionalRcsView state push config =
                 [ text config.value
                 , textSize FontSize.a_14
                 , onClick push $ const config.action
-                , color Color.black900 
+                , color Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
             ] <>  [imageView
@@ -528,30 +539,30 @@ additionalRcsView state push config =
             , width MATCH_PARENT
             , visibility if elem config.idx state.data.openInactiveRCViewOrNotArray then VISIBLE else GONE
             ][
-                detailsViewForInactiveRcs state push { backgroundColor : Color.blue600 
-                        , lineColor : Color.white900 
-                        , arrayList :  getRcDetailsForInactiveRcs config                 
-                      } 
+                detailsViewForInactiveRcs state push { backgroundColor : Color.blue600
+                        , lineColor : Color.white900
+                        , arrayList :  getRcDetailsForInactiveRcs config
+                      }
             ]
         ]
 
-getRcDetailsForInactiveRcs config  = 
-  [ { key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
-  , { key : (getString MODEL_NAME) , value : Just config.model, action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : Just config.color, action :NoAction , isEditable : false } 
+getRcDetailsForInactiveRcs config  = [
+    --{ key : (getString TYPE) , value :Just  (getString AUTO_RICKSHAW) , action : NoAction , isEditable : false }
+    { key : (getString MODEL_NAME) , value : config.model, action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : config.color, action :NoAction , isEditable : false }
   , { key : "" , value : Just (getString EDIT_RC), action : UpdateRC config.value false , isEditable : false } ]
 
 
 
 detailsViewForInactiveRcs :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {backgroundColor :: String , lineColor :: String , arrayList :: Array { key :: String , value :: Maybe String , action :: Action , isEditable :: Boolean }} -> PrestoDOM (Effect Unit) w
-detailsViewForInactiveRcs state push config = 
+detailsViewForInactiveRcs state push config =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , background config.backgroundColor
   , orientation VERTICAL
   , cornerRadius 10.0
-  ](mapWithIndex(\ index item ->  
+  ](mapWithIndex(\ index item ->
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -564,7 +575,7 @@ detailsViewForInactiveRcs state push config =
             , padding $ PaddingVertical 16 16
             ]([  textView
                 [ text item.key
-                , textSize FontSize.a_12 
+                , textSize FontSize.a_12
                 , color Color.black700
                 , fontStyle $ FontStyle.regular LanguageStyle
                 ]
@@ -573,10 +584,10 @@ detailsViewForInactiveRcs state push config =
                 , weight 1.0
                 ][]
               , textView
-                [ text $ fromMaybe "Add" item.value
+                [ text $ fromMaybe "N/A" item.value
                 , textSize FontSize.a_14
                 , onClick push $ const item.action
-                , color if (isJust item.value) then (if item.value == Just (getString EDIT_RC) then Color.blue900 else Color.black900) else Color.blue900
+                , color if (isJust item.value) then (if item.value == Just (getString EDIT_RC) then Color.blue900 else Color.black900) else Color.black900
                 , fontStyle $ FontStyle.semiBold LanguageStyle
                 ]
             ] <> if item.isEditable && (isJust item.value) then [imageView
@@ -595,7 +606,7 @@ detailsViewForInactiveRcs state push config =
         ) (config.arrayList))
 ------------------------------ CHIP RAIL LAYOUT ---------------------------------------------
 chipRailView :: forall w. ST.ChipRailData -> PrestoDOM (Effect Unit) w
-chipRailView item = 
+chipRailView item =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -625,16 +636,16 @@ chipRailView item =
 ------------------------------ BADGE LAYOUT ---------------------------------------------
 
 badgeLayoutView :: forall w. ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
-badgeLayoutView state = 
+badgeLayoutView state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation VERTICAL 
+  , orientation VERTICAL
   , margin $ MarginTop 40
   , visibility if null state.data.analyticsData.badges then GONE else VISIBLE
-  ][  textView 
+  ][  textView
       [ text (getString BADGES)
-      , textSize FontSize.a_16 
+      , textSize FontSize.a_16
       , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.black900
       ]
@@ -654,7 +665,7 @@ badgeLayoutView state =
 ------------------------------------------------------- BADGE VIEW -------------------------------------------------------------
 
 badgeView :: forall w. {badgeImage :: String, primaryText :: String, subText :: String} -> PrestoDOM (Effect Unit) w
-badgeView state = 
+badgeView state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -668,7 +679,7 @@ badgeView state =
       , height $ V 100
       , imageWithFallback state.badgeImage
       ]
-    , textView  
+    , textView
         [ text state.primaryText
         , layoutGravity "center_horizontal"
         , textSize FontSize.a_16
@@ -676,7 +687,7 @@ badgeView state =
         , fontStyle $ FontStyle.bold LanguageStyle
         , height WRAP_CONTENT
         ]
-    , textView  
+    , textView
         [ text state.subText
         , layoutGravity "center_horizontal"
         , textSize FontSize.a_14
@@ -720,30 +731,31 @@ getBadgeData state = [{badgeImage: "ny_ic_five_star_badge,https://assets.juspay.
                       ]
 
 --------------------------------------- VEHICLE DETAILS VIEW ------------------------------------------------------------
-vehicleDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-vehicleDetailsView push state = 
+vehicleDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+vehicleDetailsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation VERTICAL 
+  , orientation VERTICAL
   , margin $ MarginHorizontal 16 16
-  ][  vehicleAnalyticsView push state
+  , visibility GONE
+  ][  --vehicleAnalyticsView push state
    ]
 
 
 --------------------------------------- VEHICLE ANALYTICS VIEW ------------------------------------------------------------
-vehicleAnalyticsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-vehicleAnalyticsView push state = 
+vehicleAnalyticsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+vehicleAnalyticsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation VERTICAL 
+  , orientation VERTICAL
   , margin $ Margin 0 24 0 0
-  ][  textView  
+  ][  textView
       [ text (getString SUMMARY)
       , margin $ Margin 0 0 16 12
       , textSize FontSize.a_16
-      , color Color.black 
+      , color Color.black
       , fontStyle $ FontStyle.medium LanguageStyle
       ]
     , linearLayout
@@ -754,19 +766,19 @@ vehicleAnalyticsView push state =
   ]
 
 --------------------------------------- ADDITIONAL DETAILS VIEW ------------------------------------------------------------
-additionalDetails :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
-additionalDetails push state = 
-  linearLayout  
+additionalDetails :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+additionalDetails push state =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , margin $ Margin 16 40 16 0
   , orientation VERTICAL
-  ]([  textView  
+  ]([  textView
       [ text if state.props.screenType == ST.DRIVER_DETAILS then (getString ABOUT_ME) else (getString ABOUT_VEHICLE)
       , margin $ Margin 0 0 0 12
       , textSize FontSize.a_16
-      , color Color.black 
-      , fontStyle $ FontStyle.medium LanguageStyle
+      , color Color.black900
+      , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
   ] <> [detailsListViewComponent state push {  backgroundColor : Color.blue600
                               , separatorColor : Color.white900
@@ -801,7 +813,7 @@ driverNumberGenderView state push=
     , textSize if state.props.showGenderView then FontSize.a_16 else FontSize.a_12
     ]
   , if state.props.showGenderView then genderProfileLayoutView state push else alternateNumberLayoutView state push
-  , linearLayout 
+  , linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , margin $ MarginBottom 10
@@ -821,12 +833,12 @@ driverNumberGenderView state push=
 ---------------------------- GENDER PROFILE VIEW ----------------------------------
 
 genderProfileLayoutView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-genderProfileLayoutView state push = 
+genderProfileLayoutView state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  ][ 
+  ][
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -837,11 +849,11 @@ genderProfileLayoutView state push =
 
 ------------------------------------------------------ ALTERNATE NUMBER VIEW ----------------------------------------------------
 alternateNumberLayoutView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-alternateNumberLayoutView state push = 
+alternateNumberLayoutView state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][ 
+  ][
     if state.data.alterNumberEditableText then
       linearLayout[
         width MATCH_PARENT
@@ -867,7 +879,7 @@ alternateNumberLayoutView state push =
           , width WRAP_CONTENT
           , text $ getString EDIT
           , color Color.blue900
-          , onClick push $ const $ EditNumberText 
+          , onClick push $ const $ EditNumberText
           ],
           textView[
             height WRAP_CONTENT
@@ -875,15 +887,20 @@ alternateNumberLayoutView state push =
           , text $ getString REMOVE
           , color Color.blue900
           , margin $ MarginHorizontal 10 10
-          , onClick push $ const $ RemoveAlterNumber 
+          , onClick push $ const $ RemoveAlterNumber
           ]
         ]
       ]
-    else 
+    else
       linearLayout [
         height WRAP_CONTENT,
-        width MATCH_PARENT
-      ] 
+        width MATCH_PARENT,
+        afterRender (\action -> do
+        _ <- push action
+        _ <- JB.requestKeyboardShow (EHC.getNewIDWithTag "alternateMobileNumber")
+        pure unit
+        ) (const AfterRender)
+      ]
       [PrimaryEditText.view (push <<< PrimaryEditTextActionController) (alternatePrimaryEditTextConfig state)]
   ]
 
@@ -915,8 +932,8 @@ showLiveStatsDashboard push state =
 
 --------------------------------------------------- SETTINGS VIEW ------------------------------------------
 settingsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
-settingsView state push = 
-  PrestoAnim.animationSet [Anim.fadeIn (state.props.openSettings)]$ 
+settingsView state push =
+  PrestoAnim.animationSet [Anim.fadeIn (state.props.openSettings)]$
   linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
@@ -924,9 +941,9 @@ settingsView state push =
   , visibility $ if state.props.openSettings then VISIBLE else GONE
   ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
   , linearLayout
-    [ height $ V 1 
+    [ height $ V 1
     , width MATCH_PARENT
-    , background Color.grey900 
+    , background Color.grey900
     ][]
   , profileOptionsLayout state push ]
 
@@ -1000,7 +1017,7 @@ profileOptionsLayout state push =
 
 ----------------------------------------------- UPDATE LANGUAGE VIEW ------------------------------------------------------------------
 updateLanguageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
-updateLanguageView state push = 
+updateLanguageView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -1013,13 +1030,13 @@ updateLanguageView state push =
 
 ---------------------------------------------- LANGUAGES SPOKEN VIEW -----------------------------------------------------------------
 languagesSpokenView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
-languagesSpokenView state push = 
+languagesSpokenView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  ][ 
-      textView 
+  ][
+      textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString SELECT_THE_LANGUAGES_YOU_CAN_SPEAK)
@@ -1033,7 +1050,7 @@ languagesSpokenView state push =
 -------------------------------------------------- PRIMARY BUTTONS -----------------------------------------------------------------
 
 primaryButtons :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
-primaryButtons state push = 
+primaryButtons state push =
   linearLayout
   [ orientation HORIZONTAL
   , height MATCH_PARENT
@@ -1047,35 +1064,37 @@ primaryButtons state push =
 
 ---------------------------------------- INFOVIEW COMPONENT ------------------------------------------------
 infoView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-infoView state push = 
+infoView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginHorizontal 16 16
-  ][ detailsListViewComponent state push { 
-                              backgroundColor : Color.white900 
-                            , separatorColor : Color.grey700 
-                            , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then (driverDetailsArray state) 
+  ][ detailsListViewComponent state push {
+                              backgroundColor : Color.white900
+                            , separatorColor : Color.grey700
+                            , arrayList :  if state.props.screenType == ST.DRIVER_DETAILS then (driverDetailsArray state)
                                            else (getRcDetails state)
                             }
     ]
 getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
-getRcDetails state = do 
+getRcDetails state = do
   let config = state.data.activeRCData
-  [{ key : "RC Status" , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
-  , { key : "Reg. Number" , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }
-  , { key : "Type" , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }
-  , { key : "Model Name" , value : Just config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
-  , { key : "Colour" , value : Just config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ] <> 
-    if not null state.data.rcDataArray then 
-      [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }] 
-    else []
-
+  ([{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
+  , { key : (getString REG_NUMBER) , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }]
+  <> (if config.rcStatus then
+      [{ key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }]
+     else [])
+  <>[{ key :(getString MODEL_NAME) , value : config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ]
+  <> (if not null state.data.rcDataArray then
+      [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }]
+    else [])
+  )
 
 ----------------------------------------------- INFO TILE VIEW COMPONENT -------------------------------------------------------
 infoTileView :: forall w. ST.DriverProfileScreenState -> {primaryText :: String, subText :: String, postImgVisibility :: Boolean, seperatorView :: Boolean, margin :: Margin } -> PrestoDOM (Effect Unit) w
-infoTileView state config = 
+infoTileView state config =
   (addAnimation state) $ linearLayout
     [ weight 1.0
     , height WRAP_CONTENT
@@ -1089,7 +1108,7 @@ infoTileView state config =
           , height WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-          ][  textView 
+          ][  textView
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text config.primaryText
@@ -1101,9 +1120,9 @@ infoTileView state config =
             , linearLayout
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , margin $ MarginLeft 9 
+                , margin $ MarginLeft 9
                 , visibility if config.postImgVisibility then VISIBLE else GONE
-                ](mapWithIndex (\index item -> 
+                ](mapWithIndex (\index item ->
                     linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -1115,7 +1134,7 @@ infoTileView state config =
                         ]
                     ]) [1.0,2.0,3.0,4.0,5.0])
           ]
-      , textView 
+      , textView
         ([ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text config.subText
@@ -1165,18 +1184,18 @@ showMenuButtonView state push genderName genderType=
   ]
 
 ---------------------------------------------------- DETAILS LIST VIEW COMPONENT --------------------------------------------------
-detailsListViewComponent :: forall w. 
-  ST.DriverProfileScreenState -> 
-  (Action -> Effect Unit) -> 
-    {backgroundColor :: String 
-    , separatorColor :: String 
+detailsListViewComponent :: forall w.
+  ST.DriverProfileScreenState ->
+  (Action -> Effect Unit) ->
+    {backgroundColor :: String
+    , separatorColor :: String
     , arrayList :: Array (
-                    { key :: String 
-                    , value :: Maybe String 
-                    , action :: Action 
-                    , isEditable :: Boolean }) } -> 
+                    { key :: String
+                    , value :: Maybe String
+                    , action :: Action
+                    , isEditable :: Boolean }) } ->
   PrestoDOM (Effect Unit) w
-detailsListViewComponent state push config = 
+detailsListViewComponent state push config =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1184,7 +1203,7 @@ detailsListViewComponent state push config =
   , margin $ Margin 0 0 0 0
   , orientation VERTICAL
   , cornerRadius 10.0
-  ](mapWithIndex(\ index item ->  
+  ](mapWithIndex(\ index item ->
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -1200,7 +1219,7 @@ detailsListViewComponent state push config =
             , padding $ PaddingVertical 16 16
             ]([  textView
                 [ text item.key
-                , textSize FontSize.a_12 
+                , textSize FontSize.a_12
                 , color Color.black700
                 , fontStyle $ FontStyle.regular LanguageStyle
                 ]
@@ -1212,9 +1231,9 @@ detailsListViewComponent state push config =
                 [ text $ fromMaybe (getString ADD) item.value
                 , textSize FontSize.a_14
                 , onClick push $ const item.action
-                , color case item.value of 
-                          Nothing -> Color.blue900 
-                          Just val -> do 
+                , color case item.value of
+                          Nothing -> Color.blue900
+                          Just val -> do
                                       let isRcActive = val == (getString ACTIVE_RC)
                                       let isRcInActive = val == (getString INACTIVE_RC)
                                       let isRCEdit = val == (getString EDIT_RC)
@@ -1238,12 +1257,12 @@ detailsListViewComponent state push config =
         ) (config.arrayList))
 
 ----------------------------------------------- INFO CARD COMPONENT ---------------------------------------------------------------
-infoCard :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {key :: String, value :: String , value1 :: String , infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , valueColor :: String, action :: Action } -> PrestoDOM (Effect Unit) w 
-infoCard state push config = 
+infoCard :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {key :: String, value :: String , value1 :: String , infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , valueColor :: String, action :: Action } -> PrestoDOM (Effect Unit) w
+infoCard state push config =
   linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding $ Padding 16 16 16 16 
+  , padding $ Padding 16 16 16 16
   , margin $ MarginTop 8
   , cornerRadius 10.0
   , background Color.blue600
@@ -1257,7 +1276,7 @@ infoCard state push config =
       [ text config.key
       , textSize FontSize.a_12
       , fontStyle $ FontStyle.regular LanguageStyle
-      , color Color.black700 
+      , color Color.black700
       ]
     , imageView
       [ imageWithFallback config.infoImageUrl
@@ -1269,7 +1288,7 @@ infoCard state push config =
     , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
-      , gravity RIGHT 
+      , gravity RIGHT
       , orientation HORIZONTAL
       ][  textView
           [ text config.value
@@ -1303,38 +1322,38 @@ infoCard state push config =
 ------------------------------------------ ANIMATION -----------------------------------------------------
 
 addAnimation :: forall w. ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
-addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
+addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.VEHICLE_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)]
 
 scaleUpConfig :: Boolean -> AnimConfig.AnimConfig
-scaleUpConfig ifAnim = 
-  let 
+scaleUpConfig ifAnim =
+  let
     config = AnimConfig.animConfig
-    animConfig' = 
+    animConfig' =
       config
-        { duration = 400 
-        , toScaleX = 1.0 
-        , toScaleY = 1.0 
+        { duration = 400
+        , toScaleX = 1.0
+        , toScaleY = 1.0
         , fromScaleY = 0.5
         , fromScaleX = 0.5
         , ifAnim = ifAnim
         }
-  in 
+  in
     animConfig'
 
 scaleDownConfig :: Boolean -> AnimConfig.AnimConfig
-scaleDownConfig ifAnim = 
-  let 
+scaleDownConfig ifAnim =
+  let
     config = AnimConfig.animConfig
-    animConfig' = 
+    animConfig' =
       config
-        { duration = 400 
+        { duration = 400
         , toScaleX = 0.5
-        , toScaleY = 0.5 
+        , toScaleY = 0.5
         , fromScaleY = 1.0
         , fromScaleX = 1.0
         , ifAnim = ifAnim
         }
-  in 
+  in
     animConfig'
 
 ---------------------------------------------- Data ARRAY -----------------------------------------------------
@@ -1370,20 +1389,20 @@ vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , 
   , { key : (getString NAME) , value : Nothing , action : UpdateValue ST.VEHICLE_NAME , isEditable : true }]
 
 driverAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean}
-driverAboutMeArray state =  [{ key : (getString LANGUAGES) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true }
+driverAboutMeArray state =  [{ key : (getString LANGUAGES_SPOKEN) , value : ((getLanguagesSpoken ( map(\item -> (getLangFromVal item)) (state.data.languagesSpoken)) )) , action : UpdateValue ST.LANGUAGE , isEditable : true }
   -- , { key : (getString HOMETOWN) , value : Nothing , action : UpdateValue ST.HOME_TOWN , isEditable : true }
   ]
 
 
-getLanguagesSpoken :: Array String -> Maybe String 
-getLanguagesSpoken languages = 
+getLanguagesSpoken :: Array String -> Maybe String
+getLanguagesSpoken languages =
   if (length languages >2) then Just $ (intercalate ", " (take 2 languages)) <> "+1"
     else if (length languages > 0) then Just (intercalate ", " languages)
     else Nothing
 
-getLangFromVal :: String -> String 
-getLangFromVal value = 
-  case value of 
+getLangFromVal :: String -> String
+getLangFromVal value =
+  case value of
       "EN_US" -> "English"
       "HI_IN" -> "Hindi"
       "TA_IN" -> "Tamil"
@@ -1420,6 +1439,7 @@ rcEditPopUpView push state =
     , background Color.black9000
     , alignParentBottom "true,-1"
     , clickable true
+    , onClick push (const RemoveEditRC)
     ]
     ([ linearLayout
         [ height WRAP_CONTENT
@@ -1503,7 +1523,8 @@ trackingCardRcEditView push state item =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , textSize FontSize.a_18
-        , text item.text 
+        , fontStyle $ FontStyle.medium LanguageStyle
+        , text item.text
         , color $ if item.type == ST.DELETING_RC then Color.red else Color.black800
         ]
     , linearLayout
@@ -1557,6 +1578,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
     , background Color.black9000
     , alignParentBottom "true,-1"
     , clickable true
+    , onClick push (const SkipActiveRc)
     ]
     ([ linearLayout
         [ height WRAP_CONTENT
@@ -1574,7 +1596,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
               [ text $ "RC - " <> state.data.rcNumber <> (getString ACTIVE_RC_ON_ANOTHER_DRIVER)
               , fontStyle $ FontStyle.bold LanguageStyle
               , height WRAP_CONTENT
-              , color Color.black9000
+              , color Color.black800
               , textSize FontSize.a_18
               , padding $ Padding 10 0 10 0
               , margin $ Margin 4 0 4 4
@@ -1597,7 +1619,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
               , height WRAP_CONTENT
               , color Color.black700
               , textSize FontSize.a_14
-              , padding $ PaddingHorizontal 8 8 
+              , padding $ PaddingHorizontal 8 8
               , margin $ Margin 4 0 4 4
               , gravity CENTER
               ]
@@ -1624,7 +1646,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
                 )
                 (activeRcOnAnotherDriverProfilePopUpData state)
             )
-            , linearLayout 
+            , linearLayout
             [
               height WRAP_CONTENT
             , width MATCH_PARENT
@@ -1635,7 +1657,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
             ][
               textView
               $
-              [ text $ (getString CANCEL) 
+              [ text $ (getString CANCEL)
               , height WRAP_CONTENT
               , color Color.black700
               , textSize FontSize.a_16
@@ -1674,7 +1696,8 @@ trackingCardRcActiveOnAnotherDriverProfileView push state item =
         , width WRAP_CONTENT
         , textSize FontSize.a_16
         , text item.text
-        , color $ Color.black900 
+        , color $ Color.black900
+        , fontStyle $ FontStyle.medium LanguageStyle
         ]
         ,linearLayout[
           width MATCH_PARENT,

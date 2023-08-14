@@ -39,7 +39,6 @@ import Components.PrimaryEditText as PrimaryEditText
 import Prelude ((<>), (||),(&&),(==),(<), not, (>))
 import Engineering.Helpers.Commons as EHC
 import Data.String as DS
-import Data.String (length)
 import Data.Array as DA
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
@@ -47,7 +46,8 @@ import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude 
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
-import Data.Array (length)
+import Helpers.Utils (getPeriod)
+import MerchantConfig.Utils (getValueFromConfig)
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let 
@@ -292,7 +292,7 @@ activateAndDeactivateRcPopUpConfig push state =
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , optionButtonOrientation = "VERTICAL"
-        , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black600}
+        , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black700}
         , option1 {
           text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE) 
         , width = MATCH_PARENT
@@ -306,10 +306,8 @@ activateAndDeactivateRcPopUpConfig push state =
           , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
-          , margin = MarginTop 14
           , color = Color.black650
-          , padding = (Padding 0 0 0 0)
-
+          , margin = (MarginBottom 16)
           }
         }
   in
@@ -330,7 +328,7 @@ callDriverPopUpConfig push state =
         , optionButtonOrientation = "VERTICAL"
         , secondaryText { text = (getString CONNECT_CALL_ANONYMOUSLY), color = Color.black600}
         , option1 {
-          text = (getString PLACE_CALL)
+          text = (getString PLACE_CALL_REQUEST)
         , width = MATCH_PARENT
         , color = Color.yellow900
         , strokeColor = Color.black900
@@ -375,24 +373,55 @@ deleteRcPopUpConfig state =
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , optionButtonOrientation = "VERTICAL"
-        , secondaryText { text = (getString CONFIRMATION_FOR_DELETING_RC) <>"- " <> state.data.vehicleRegNumber <> "?" , color = Color.black600}
+        , secondaryText { text = (getString CONFIRMATION_FOR_DELETING_RC) <>"- " <> state.data.vehicleRegNumber <> "?" , color = Color.black700}
         , option1 {
           text = (getString YES_DELETE)
         , width = MATCH_PARENT
         , color = Color.white900
         , strokeColor = Color.red 
         , background = Color.red
-        , padding = (Padding 0 10 0 10)
         }
         , option2 {
             text = (getString CANCEL)
           , width = MATCH_PARENT
           , background = Color.white900
           , strokeColor = Color.white900
-          , margin = MarginTop 14
           , color = Color.black650
-          , padding = (Padding 0 0 0 0)
+          , margin = (MarginBottom 16)
           }
         }
   in
     popUpConfig'
+
+getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRailData
+getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
+  let
+    alive = getPeriod lastRegistered
+  in
+    ( if lateNightTrips > 0 then
+        [ { mainTxt: show lateNightTrips
+          , subTxt: getString LATE_NIGHT_TRIPS
+          }
+        ]
+      else
+        []
+    ) <> 
+    ( [ { mainTxt: if alive.periodType == "new" then "" else (show alive.period) <> " " <> alive.periodType
+          , subTxt: "on " <> getValueFromConfig "clientName"
+          }
+        ]
+    )<> 
+    ( if DA.length lang > 0 then
+            [ { mainTxt: show (DA.length lang)
+              , subTxt: getString LANGUAGES_SPOKEN
+              }
+            ]
+          else
+            []
+    )<>
+    (
+      [ { mainTxt: totalDistanceTravelled
+        , subTxt: getString TRAVELLED_ON_APP
+        }
+      ]
+    )

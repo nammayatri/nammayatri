@@ -18,23 +18,28 @@ module Components.SettingSideBar.View where
 import Common.Types.App
 
 import Animation (translateInXSidebarAnim, translateOutXSidebarAnim)
+import Common.Types.App (LazyCheck(..))
 import Components.SettingSideBar.Controller (Action(..), SettingSideBarState, Status(..), Tag(..), Item)
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
 import Data.Maybe (Maybe(..))
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Data.Array as DA
+import Screens.Types (Stage(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -89,7 +94,7 @@ settingsView state push =
   ](map (\item -> 
         case item of
         "MyRides" -> settingsMenuView {imageUrl : "ic_past_rides," <> (getAssetStoreLink FunctionCall) <> "ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
-        "Favorites" -> settingsMenuView {imageUrl : "ic_fav," <> (getAssetStoreLink FunctionCall) <> "ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
+        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : "ic_fav," <> (getAssetStoreLink FunctionCall) <> "ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
         "EmergencyContacts" ->  if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
                                 else settingsMenuView {imageUrl : "ny_ic_emergency_contacts," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
         "HelpAndSupport" -> settingsMenuView {imageUrl : "ic_help," <> (getAssetStoreLink FunctionCall) <> "ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
@@ -191,7 +196,7 @@ profileView state push =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text ("+91 " <> (getValueToLocalStore MOBILE_NUMBER))
+          , text ((getValueToLocalStore COUNTRY_CODE) <> " " <> (getValueToLocalStore MOBILE_NUMBER))
           , color state.appConfig.profileName
           ] <> FontStyle.paragraphText TypoGraphy
         , linearLayout[

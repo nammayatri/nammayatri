@@ -20,7 +20,7 @@ const hindiStrings = {
   WHICH_LANGUAGE_DO_YOU_PREFER: "आप कौन सी भाषा पसंद करते हैं",
   T_C: "उपयोग की शर्ते प्राइवेसि पॉलिसी",
   ENTER_MOBILE_NUMBER: "मोबाइल नंबर दर्ज करें",
-  BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR: "जारी रखने पर क्लिक करके\nए) आप इस बात से सहमत हैं कि आप बीटा परीक्षण के इच्छुक प्रतिभागी हैं और जुसपे का किसी भी संबंध में आपके खिलाफ कोई दायित्व नहीं होगा",
+  BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "जारी रखें पर क्लिक करके, आप हमारी बात से सहमत हैं",
   ENTER_OTP: "ओटीपी दर्ज करें",
   DIDNT_RECIEVE_OTP: "ओटीपी प्राप्त नहीं हुआ ?",
   RESEND_OTP: "ओटीपी पुनः भेजें",
@@ -551,6 +551,7 @@ const hindiStrings = {
   REMOVED : "निकाला गया",
   IS_ACTIVE_NOW : " अभी सक्रिय है.",
   DEACTIVATED : "निष्क्रिय",
+  LANGUAGE_UPDATED : "भाषा अद्यतन",
   SINGLE_RC_CANNOT_BE_DELETED : "एकल आरसी को हटाया नहीं जा सकता",
   CANCELLATION_RATE : "रद्दीकरण दर",
   RIDES_CANCELLED : "रद्द की गई सवारी", 
@@ -622,7 +623,13 @@ const hindiStrings = {
   DOWNLOAD_STATEMENT : "स्टेटमेंट डाउनलोड करें",
   SELECT_A_DATE_RANGE : "विवरण डाउनलोड करने के लिए एक तिथि सीमा चुनें",
   FEE_PAYMENT_HISTORY : "शुल्क भुगतान इतिहास",
+  LANGUAGES_SPOKEN: "भाषा मैं बोल सकता हूँ",
   LANGUAGES_स्पोकन : "बोली जाने वाली भाषाएँ",
   VIEW_PAYMENT_HISTORY : "भुगतान इतिहास देखें",
-  RIDE_TYPE : "सवारी का प्रकार"
+  RIDE_TYPE : "सवारी का प्रकार",
+  PLACE_CALL_REQUEST : "कॉल अनुरोध करें",
+  RC_STATUS : "आरसी स्थिति",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "उपयोगकर्ताओं द्वारा मूल्यांकित",
+  MONTHS : "महीने"
 }

@@ -597,6 +597,7 @@ const malayalamStrings = {
   "NON_AC_TAXI": "എസി ടാക്സി ഇല്ല",
   "ASKED_FOR_EXTRA_FARE": "അധിക പണം ആവശ്യപ്പെട്ടു",
   "AUTO_RICKSHAW" : "ഓട്ടോ റിക്ഷ",
-  "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "നിങ്ങൾ ഞങ്ങളോട് പറയാൻ ആഗ്രഹിക്കുന്ന എന്തെങ്കിലും? (ഓപ്ഷണൽ)"
-
+  "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "നിങ്ങൾ ഞങ്ങളോട് പറയാൻ ആഗ്രഹിക്കുന്ന എന്തെങ്കിലും? (ഓപ്ഷണൽ)",
+  "GET_OTP_VIA_WHATSAPP" : "വാട്ട്‌സ്ആപ്പ് വഴി OTP നേടുക",
+  "OR" : "അഥവാ"
 }

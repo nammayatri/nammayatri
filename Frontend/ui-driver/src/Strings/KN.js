@@ -21,7 +21,7 @@ const kannadaStrings = {
   NEXT: "ಮುಂದೆ",
   T_C: "ಬಳಕೆಯ ನಿಯಮಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿ",
   ENTER_MOBILE_NUMBER: "ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
-  BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR: "ಮುಂದೆ ಟ್ಯಾಪ್ ಮಾಡುವ ಮೂಲಕ\nಎ) ನೀವು ಬೀಟಾ ಪರೀಕ್ಷೆಯಲ್ಲಿ ಭಾಗವಹಿಸಲು ಸಿದ್ಧರಿದ್ದೀರಿ ಎಂದು ನೀವು ಒಪ್ಪುತ್ತೀರಿ ಮತ್ತು ಜಸ್ಪೇ ನಿಮ್ಮ ವಿರುದ್ಧ ಯಾವುದೇ ಹೊಣೆಗಾರಿಕೆಯನ್ನು ಹೊಂದಿರುವುದಿಲ್ಲ",
+  BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "ಮುಂದುವರಿಸು ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ, ನೀವು ನಮ್ಮ ಸಮ್ಮತಿಸುತ್ತೀರಿ",
   ENTER_OTP: "OTP ನಮೂದಿಸಿ",
   DIDNT_RECIEVE_OTP: "OTP ಸ್ವೀಕರಿಸಲಿಲ್ಲವೇ?",
   RESEND_OTP: "OTP ಅನ್ನು ಮರುಕಳುಹಿಸಿ",
@@ -548,6 +548,7 @@ const kannadaStrings = {
   REMOVED : "ತೆಗೆದುಹಾಕಲಾಗಿದೆ",
   IS_ACTIVE_NOW : " ಈಗ ಸಕ್ರಿಯವಾಗಿದೆ.",
   DEACTIVATED : "ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ",
+  LANGUAGE_UPDATED : "ಭಾಷೆಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ",
   SINGLE_RC_CANNOT_BE_DELETED : "ಏಕ RC ಅನ್ನು ಅಳಿಸಲಾಗುವುದಿಲ್ಲ",
   CANCELLATION_RATE : "ರದ್ದತಿ ದರ",
   RIDES_CANCELLED : " ರದ್ದಾದ ಸವಾರಿಗಳು",
@@ -597,5 +598,10 @@ const kannadaStrings = {
   FEE_PAYMENT_HISTORY : "ಶುಲ್ಕ ಪಾವತಿ ಇತಿಹಾಸ",
   LANGUAGES_SPOKEN : "ಮಾತನಾಡುವ ಭಾಷೆಗಳು",
   VIEW_PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸವನ್ನು ವೀಕ್ಷಿಸಿ",
-  RIDE_TYPE : "ರೈಡ್ ಪ್ರಕಾರ"
+  RIDE_TYPE : "ರೈಡ್ ಪ್ರಕಾರ",
+  PLACE_CALL_REQUEST : "ಕರೆ ವಿನಂತಿಯನ್ನು ಇರಿಸಿ",
+  RC_STATUS : "RC ಸ್ಥಿತಿ",
+  RATED_BY_USERS1 : "",
+  RATED_BY_USERS2 : "ಬಳಕೆದಾರರು ಇವರಿಂದ ರೇಟ್ ಮಾಡಲಾಗಿದೆ",
+  MONTHS : "ತಿಂಗಳುಗಳು"
 }

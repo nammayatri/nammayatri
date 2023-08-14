@@ -63,6 +63,7 @@ import Screens.Types as ST
 import Services.Backend as Remote
 import Storage (getValueToLocalStore)
 import Styles.Colors as Color
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Types.App (defaultGlobalState)
 
 
@@ -300,6 +301,7 @@ calendarView push state =
           , gravity CENTER
           , padding $ Padding 5 5 5 5
           , onClick push $ const OpenPaymentHistory
+          , visibility $ if getMerchant FunctionCall == YATRISATHI then VISIBLE else GONE
           ][  textView
               $ [ height WRAP_CONTENT
                 , width WRAP_CONTENT

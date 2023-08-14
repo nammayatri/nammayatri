@@ -44,15 +44,15 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Utils(loaderText, toggleLoader)
+import Engineering.Helpers.Utils(loaderText, toggleLoader, getAppConfig)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText,convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
 import Foreign.Class (class Encode, encode, decode)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime, withinTimeRange)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig, getAppConfig)
+import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
@@ -97,7 +97,6 @@ baseAppFlow baseFlow = do
     checkDateAndTime 
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
-    setValueToLocalNativeStore NEGOTIATION_UNIT if (getMerchant FunctionCall == YATRI) then "20" else "10"
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
@@ -297,6 +296,7 @@ getDriverInfoFlow = do
       let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
       void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
       setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
+      setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant
       case getDriverInfoResp.blocked of
         Just value -> void $ pure $ setCleverTapUserProp "Blocked" (show $ value)
         Nothing -> pure unit
@@ -833,9 +833,14 @@ driverProfileFlow = do
              pure $ toast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           driverProfileFlow
     GO_TO_DELETE_RC state -> do 
-      _ <- Remote.deleteRcBT (Remote.deleteRcReq state.data.rcNumber)
-      pure $ toast $ "RC-"<>state.data.rcNumber<>" "<> (getString REMOVED)
-      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false, screenType = ST.VEHICLE_DETAILS}})
+      resp <- lift $ lift $ Remote.deleteRc (Remote.deleteRcReq state.data.rcNumber)
+      case resp of
+        Right res-> do 
+          pure $ toast $ "RC-"<>state.data.rcNumber<>" "<> (getString REMOVED)
+          modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false, screenType = ST.VEHICLE_DETAILS}})
+        Left error-> do
+          pure $ toast $ decodeErrorMessage error.response.errorMessage
+          modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS}})
       driverProfileFlow
     ADD_RC state -> do 
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
@@ -1029,7 +1034,7 @@ driverProfileFlow = do
       driverProfileFlow
     UPDATE_LANGUAGES language -> do
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
-          requiredData = initialData{languagesSpoken = language}
+          requiredData = initialData{languagesSpoken = Just language}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { props {updateLanguages = false}})
       driverProfileFlow
@@ -1540,9 +1545,9 @@ updateDriverStatus status = do
     else if status then Online
       else Offline
 
-checkDriverPaymentStatus :: Boolean -> FlowBT String Unit
-checkDriverPaymentStatus paymentPending = when
-  (paymentPending &&
+checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
+checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
+  (getDriverInfoResp.paymentPending &&
     (getValueToLocalStore SHOW_PAYMENT_MODAL) /= "false" &&
     not any ( _ == true )[isLocalStageOn RideAccepted, isLocalStageOn RideStarted, isLocalStageOn ChatWithCustomer]
     ) do
@@ -1559,7 +1564,8 @@ checkDriverPaymentStatus paymentPending = when
               date = convertUTCtoISC paymentDetailsEntity.date "Do MMM YYYY",
               driverFeeId = paymentDetailsEntity.driverFeeId,
               chargesBreakup = paymentDetailsEntity.chargesBreakup,
-              dateObj = paymentDetailsEntity.date
+              dateObj = paymentDetailsEntity.date,
+              laterButtonVisibility = getDriverInfoResp.subscribed
               }}})
           Nothing -> do
             overDueResp <- lift $ lift $ Remote.getPaymentHistory "" "" (Just "PAYMENT_OVERDUE")
@@ -1575,7 +1581,8 @@ checkDriverPaymentStatus paymentPending = when
                       date = convertUTCtoISC paymentDetailsEntity.date "Do MMM YYYY",
                       driverFeeId = paymentDetailsEntity.driverFeeId,
                       chargesBreakup = paymentDetailsEntity.chargesBreakup,
-                      dateObj = paymentDetailsEntity.date
+                      dateObj = paymentDetailsEntity.date,
+                      laterButtonVisibility = getDriverInfoResp.subscribed
                       }}})
                   Nothing -> pure unit
               Left error -> pure unit
@@ -1596,7 +1603,7 @@ homeScreenFlow = do
   getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
   let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
   let (OrganizationInfo organization) = getDriverInfoResp.organization
-  checkDriverPaymentStatus getDriverInfoResp.paymentPending
+  checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp)
   let showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName

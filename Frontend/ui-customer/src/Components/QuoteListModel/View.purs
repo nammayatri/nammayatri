@@ -219,7 +219,6 @@ findingRidesView state push =
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
   , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
-  , margin $ MarginTop state.appConfig.quoteListModel.topMargin
   , clickable true
   , margin $ MarginVertical state.appConfig.quoteListModel.topMargin $ if state.tipViewProps.onlyPrimaryText then 80 else if state.tipViewProps.isprimaryButtonVisible then 82 else  85
   , orientation VERTICAL
@@ -478,7 +477,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 161
-        , imageWithFallback $ "ny_ic_no_quotes_color," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_color.png"
+        , imageWithFallback $ "ny_ic_no_quotes," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes.png"
         ]
       , textView $
         [ height WRAP_CONTENT

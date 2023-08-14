@@ -156,7 +156,8 @@ type AddVehicleDetailsScreenProps =  {
   limitExceedModal :: Boolean,
   errorVisibility :: Boolean,
   openRegistrationDateManual :: Boolean,
-  addRcFromProfile :: Boolean
+  addRcFromProfile :: Boolean,
+  isDateClickable :: Boolean
  }
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
@@ -194,6 +195,7 @@ type UploadDrivingLicenseStateProps = {
   , openGenericMessageModal :: Boolean
   , errorVisibility :: Boolean
   , openDateOfIssueManual :: Boolean
+  , isDateClickable :: Boolean
 }
 
  -- ############################################################# RegistrationScreen ################################################################################
@@ -272,7 +274,7 @@ type DriverProfileScreenData = {
   rcNumber :: String,
   isRCActive :: Boolean,
   openInactiveRCViewOrNotArray :: Array Int,
-  logField :: Object Foreign, 
+  logField :: Object Foreign,
   analyticsData :: AnalyticsData,
   fromHomeScreen :: Boolean
 }
@@ -284,8 +286,8 @@ type RcData = {
 
 type RcDetails = {
     certificateNumber :: String,
-    vehicleModel      :: String,
-    vehicleColor      :: String
+    vehicleModel      :: Maybe String,
+    vehicleColor      :: Maybe String
     }
 
 type AnalyticsData = {
@@ -294,7 +296,8 @@ type AnalyticsData = {
   , totalCompletedTrips :: Int
   , totalUsersRated :: Int
   , rating :: Maybe Number
-  , chipRailData :: Array ChipRailData
+  , lateNightTrips :: Int
+  , lastRegistered :: String
   , badges :: Array Badge
   , missedEarnings :: Int
   , ridesCancelled :: Int
@@ -354,14 +357,14 @@ data DriverProfileScreenType = DRIVER_DETAILS | VEHICLE_DETAILS | SETTINGS
 
 derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
 instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
-instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq 
+instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq
 
 
 data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME
 
 derive instance genericUpdateType :: Generic UpdateType _
 instance showUpdateType :: Show UpdateType where show = genericShow
-instance eqUpdateType :: Eq UpdateType where eq = genericEq 
+instance eqUpdateType :: Eq UpdateType where eq = genericEq
 
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
@@ -494,7 +497,7 @@ type RideHistoryScreenStateData = {
   , paymentHistory :: PaymentHistoryModelState
 }
 
-data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC 
+data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC
 
 derive instance genericEditRc :: Generic EditRc _
 instance eqEditRc :: Eq EditRc where eq = genericEq
@@ -519,10 +522,10 @@ type RideSelectionScreenState =
     selectedCategory :: CategoryListType
   }
 
-type VehicleDetails = { rcStatus :: Boolean 
+type VehicleDetails = { rcStatus :: Boolean
                 , rcDetails :: { certificateNumber  :: String
-                , vehicleModel :: String
-                , vehicleColor :: String
+                , vehicleModel :: Maybe String
+                , vehicleColor :: Maybe String
                 }}
 
 ------------------------------------------- ReferralScreenState -----------------------------------------
@@ -772,7 +775,8 @@ type PaymentState = {
   showBannerImage :: Boolean,
   chargesBreakup :: Array PaymentBreakUp,
   blockedDueToPayment :: Boolean,
-  dateObj :: String
+  dateObj :: String,
+  laterButtonVisibility :: Boolean
 }
 
 type CancelRidePopUpData = {
@@ -1471,6 +1475,7 @@ type EnterAadhaarNumberScreenStateProps = {
 , showErrorAadhaar :: Boolean
 , fromHomeScreen :: Boolean
 , showLogoutPopup :: Boolean
+, isDateClickable :: Boolean
 }
 
 data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails

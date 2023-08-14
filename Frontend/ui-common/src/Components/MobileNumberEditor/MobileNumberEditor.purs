@@ -12,28 +12,8 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Screens.AadhaarVerificationScreen.ScreenData where
 
-import Screens.Types (AadhaarStage(..), AadhaarVerificationScreenState)
+module Components.MobileNumberEditor (module Reexport)where
 
-initData :: AadhaarVerificationScreenState
-initData =
-  { data:
-      { aadhaarNumber: ""
-      , timer: ""
-      , otp : ""
-      , driverName : ""
-      , driverGender : ""
-      , driverDob : ""
-      }
-  , props:
-      { btnActive: false
-      , isValid: false
-      , resendEnabled: false
-      , currentStage : EnterAadhaar
-      , showErrorAadhaar : false
-      , fromHomeScreen : false
-      , showLogoutPopup : false
-      , isDateClickable : true
-      }
-  }
+import Components.MobileNumberEditor.View as Reexport
+import Components.MobileNumberEditor.Controller as Reexport

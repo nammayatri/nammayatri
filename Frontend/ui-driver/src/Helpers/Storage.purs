@@ -92,6 +92,7 @@ data KeyStore = USER_NAME
                 | MAX_LIMIT_TO_STORE_LOCATION_PT_NOT
                 | SHOW_PAYMENT_MODAL
                 | PAYMENT_STATUS_POOLING
+                | NEGOTIATION_UNIT_CABS
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

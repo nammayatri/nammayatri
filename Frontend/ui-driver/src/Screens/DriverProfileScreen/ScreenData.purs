@@ -17,13 +17,13 @@ module Screens.DriverProfileScreen.ScreenData where
 
 import Data.Maybe
 
-import Data.Generic.Rep (class Generic)
-import Data.Eq.Generic (genericEq)
-import Language.Types (STR(..)) as STR
-import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..))
-import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Common.Types.App (CheckBoxOptions, LazyCheck(..))
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
+import MerchantConfig.Utils (getValueFromConfig)
+import Prelude (class Eq, unit, (<>), (==), (||), (/=))
+import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..))
 
 initData :: DriverProfileScreenState
 initData = {
@@ -57,8 +57,8 @@ initData = {
     inactiveRCArray : [],
     activeRCData : { rcStatus  : true
                   , rcDetails : { certificateNumber   : ""
-                                , vehicleColor : ""
-                                , vehicleModel : ""
+                                , vehicleColor : Nothing
+                                , vehicleModel : Nothing
                                 }
                   },
     openInactiveRCViewOrNotArray : [],
@@ -71,7 +71,8 @@ initData = {
       , totalCompletedTrips : 0
       , totalUsersRated : 0
       , rating : Just 0.0
-      , chipRailData : []
+      , lateNightTrips : 0
+      , lastRegistered : ""
       , badges : []
       , missedEarnings : 0
       , ridesCancelled : 0
@@ -104,7 +105,7 @@ initData = {
     activeRcIndex : 0,
     deleteRcView : false,
     alreadyActive : false,
-    callDriver : true,
+    callDriver : false,
     openRcView : false,
     detailsUpdationType : Nothing,
     btnActive : false
@@ -121,12 +122,11 @@ type Listtype =
       menuOptions :: MenuOptions
     }
 
-
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
   [ { value : "EN_US"
     , text : "English"
-    , subText : ""
+    , subText : getValueFromConfig "engilshInNative"
     , isSelected : false
     }
   , { value: "KN_IN"
@@ -149,4 +149,10 @@ languagesChoices =
     , subText : "Telugu"
     , isSelected : false
     }
+  , { value: "BN_IN"
+    , text: "বাংলা"
+    , subText : "Bangla"
+    , isSelected : false
+    }
   ]
+

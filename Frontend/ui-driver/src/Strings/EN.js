@@ -21,7 +21,7 @@ const englishStrings = {
   NEXT: "Next",
   T_C: "Terms & Conditions",
   ENTER_MOBILE_NUMBER: "Enter Mobile Number",
-  BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR: "By tapping next\na) You agree that you are willing participant of the beta testing and Juspay shall have no liability against you in any respect",
+  BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "By clicking Continue, you agree to our",
   ENTER_OTP: "Enter OTP",
   DIDNT_RECIEVE_OTP: "Didn't recieve OTP?",
   RESEND_OTP: "Resend OTP",
@@ -549,6 +549,7 @@ const englishStrings = {
   REMOVED : "Removed",
   IS_ACTIVE_NOW : " is active now.",
   DEACTIVATED : "Deactivated",
+  LANGUAGE_UPDATED : "Language Updated",
   SINGLE_RC_CANNOT_BE_DELETED : "Single RC cannot be deleted",
   CANCELLATION_RATE : "Cancellation Rate",
   RIDES_CANCELLED : "Rides Cancelled", 
@@ -627,5 +628,10 @@ const englishStrings = {
   FEE_PAYMENT_HISTORY : "Fee payment history",
   LANGUAGES_SPOKEN : "Languages spoken",
   VIEW_PAYMENT_HISTORY : "View payment history",
-  RIDE_TYPE : "Ride Type"
+  RIDE_TYPE : "Ride Type",
+  PLACE_CALL_REQUEST : "Place Call Request",
+  RC_STATUS : "Rc Status",
+  RATED_BY_USERS1 : "Rated By",
+  RATED_BY_USERS2 : "Users",
+  MONTHS : "Months"
 }

@@ -15,7 +15,7 @@
 
 module Screens.UploadDrivingLicenseScreen.View where
 
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<))
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen,Visibility(..), afterRender, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, weight, width, layoutGravity, alpha, singleLine, visibility, scrollBarY, textFromHtml, imageWithFallback)
 import PrestoDOM.Types.DomAttributes as PTD
 import PrestoDOM.Properties as PP
@@ -36,7 +36,7 @@ import Components.GenericMessageModal as GenericMessageModal
 import Effect.Class (liftEffect)
 import Data.Maybe
 import Log (printLog)
-import Data.String as DS
+import Data.String as DS 
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
@@ -203,7 +203,7 @@ reEnterLicenceNumber state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text (getString SAME_REENTERED_DL_MESSAGE)
-      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then VISIBLE else GONE
+      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && not (DS.null state.data.reEnterDriverLicenseNumber)) then VISIBLE else GONE
       , color Color.red
       , margin (MarginBottom 10)
       ]
@@ -399,9 +399,10 @@ dateOfBirth push state =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , onClick (\action -> do
-                        _ <- JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
-                        pure unit
+                        _ <- push action
+                        JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
                       ) (const SelectDateOfBirthAction)
+        , clickable state.props.isDateClickable 
       ][ textView
         ([ text if state.data.dob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
         , color if (state.data.dob == "") then Color.darkGrey else Color.greyTextColor
@@ -441,9 +442,10 @@ dateOfIssue push state =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , onClick (\action -> do
-                        _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
-                        pure unit
+                        _ <- push action 
+                        JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
                       ) $ const SelectDateOfIssueAction
+        , clickable state.props.isDateClickable
       ][ textView $
         [ text if state.data.dateOfIssue == Just "" then (getString SELECT_DATE_OF_ISSUE) else state.data.dateOfIssueView
         , color if state.data.dateOfIssue == Just "" then Color.darkGrey else Color.greyTextColor

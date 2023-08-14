@@ -74,9 +74,9 @@ data KeyStore
   | TIP_VIEW_DATA
   | FARE_ESTIMATE_DATA
   | MESSAGES_DELAY
-  | DEVICE_UUID
   | LAST_LOGIN
   | SELECTED_VARIANT
+  | COUNTRY_CODE
 
 derive instance genericKeyStore :: Generic KeyStore _
 

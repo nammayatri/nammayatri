@@ -58,8 +58,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Utils (Merchant(..), getAppConfig, getMerchant, getValueFromConfig)
-import MerchantConfig.Utils (getAppConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import Engineering.Helpers.Utils (getAppConfig)
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<))
@@ -496,7 +496,8 @@ chooseLanguageScreenFlow = do
 
 updateCustomerVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateCustomerVersion dbClientVersion dbBundleVersion = do
-  if (isJust dbClientVersion && isJust dbBundleVersion) then do
+  if (isJust dbClientVersion 
+  && isJust dbBundleVersion) then do
     let versionName = getValueToLocalStore VERSION_NAME
         bundle = getValueToLocalStore BUNDLE_VERSION
         Version clientVersion = stringToVersion versionName
@@ -526,8 +527,8 @@ enterMobileNumberScreenFlow = do
     GoToAccountSetUp state -> do
             void $ lift $ lift $ loaderText (getString VERIFYING_OTP) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
             void $ lift $ lift $ toggleLoader true
-            id <- (getDeviceUUID "generated_")
-            (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp id) state.data.tokenId
+            let generatedID = "generated_" <> (generateSessionId unit)
+            (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp generatedID) state.data.tokenId
             case resp of
               Right resp -> do
                     _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_verify_otp"
@@ -563,8 +564,9 @@ enterMobileNumberScreenFlow = do
                 enterMobileNumberScreenFlow
     GoToOTP state -> do
             setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
-            void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
-            (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber)
+            setValueToLocalStore COUNTRY_CODE (state.data.countryObj.countryCode)
+            void $ pure $ setCleverTapUserData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
+            (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode)
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts}, props {enterOTP = true,resendEnable = false}})
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{number = state.data.mobileNumber}}})
             enterMobileNumberScreenFlow
@@ -576,15 +578,6 @@ enterMobileNumberScreenFlow = do
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data {timer = 30 }, props {enterOTP = false,resendEnable = false}})
             enterMobileNumberScreenFlow
     GoToWelcomeScreen state -> welcomeScreenFlow
-
-getDeviceUUID :: String -> FlowBT String String
-getDeviceUUID prefix =
-    if ( getValueToLocalStore DEVICE_UUID == "__failed" || getValueToLocalStore DEVICE_UUID == "(null)")
-        then do
-            let id = prefix <> (generateSessionId unit)
-            setValueToLocalStore DEVICE_UUID id
-            pure id
-        else pure $ getValueToLocalStore DEVICE_UUID
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
@@ -1361,6 +1354,7 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false, openReportIssue = false} }})
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data{selectedItem{rideEndTime = state.data.rideRatingState.rideEndTime, rideStartTime = state.data.rideRatingState.rideStartTime}}})
       tripDetailsScreenFlow Home
     _ -> homeScreenFlow
 
@@ -1531,7 +1525,7 @@ helpAndSupportScreenFlow = do
       modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen {data{bookingId = bookingId'}})
       contactUsScreenFlow
     GO_TO_TRIP_DETAILS state -> do
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, vehicleVariant = state.data.vehicleVariant, selectedItem {faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating},date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, vehicleVariant = state.data.vehicleVariant, selectedItem {faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating, shortRideId = state.data.tripId},date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
       tripDetailsScreenFlow HelpAndSupport
     VIEW_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen { data{offsetValue = 0}})

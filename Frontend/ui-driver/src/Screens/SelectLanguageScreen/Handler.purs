@@ -23,7 +23,7 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.SelectLanguageScreen.View as SelectLanguageScreen
 import Types.App (GlobalState(..), FlowBT, SELECT_LANGUAGE_SCREEN_OUTPUT(..))
-import MerchantConfig.Utils (getAppConfig)
+import Engineering.Helpers.Utils (getAppConfig)
 
 selectLanguageScreen :: FlowBT String SELECT_LANGUAGE_SCREEN_OUTPUT
 selectLanguageScreen = do

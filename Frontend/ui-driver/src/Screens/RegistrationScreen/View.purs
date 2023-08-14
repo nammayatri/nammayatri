@@ -67,7 +67,6 @@ view push state =
     , padding (Padding 16 16 16 0)
     , margin (MarginTop 20)
     , visibility VISIBLE
-    , onClick push (const BackPressed)
     , weight 1.0
     ][ imageView
         [ width ( V 20 )

@@ -49,6 +49,7 @@ type AppConfig =
   , showGenderBanner :: Boolean
   , enableMockLocation :: Boolean
   , specialLocationView :: Boolean
+  , whatsappOTPButtonColor :: String
   } 
 
 type QuoteListItemConfig = {
