@@ -243,8 +243,8 @@ view push state =
             , height WRAP_CONTENT
             , gravity CENTER
             , margin $ MarginTop 5
-            , padding $ Padding 5 5 5 5
-            , onClick push $ const DismisTextClick
+            , padding $ Padding 5 5 5 10
+            , onClick push $ const DismissPopup
             ] <> (case state.dismisText of
                     Just txt -> [text txt]
                     Nothing -> [visibility GONE]) 

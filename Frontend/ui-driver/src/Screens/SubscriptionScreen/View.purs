@@ -325,16 +325,21 @@ plansBottomView push state =
                         ) (const NoAction)
               ] <> FontStyle.body1 TypoGraphy
           ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height $ V 1
+          , background Color.grey700
+          , margin $ MarginVertical 10 10
+          ][]
         , scrollView
           [ width MATCH_PARENT
           , weight 1.0
-          , margin $ MarginTop 10
           ][ linearLayout
               [ weight 1.0
               , width MATCH_PARENT
               , orientation VERTICAL
               ](map 
-                  (\item -> planCardView push item (item.id == (Mb.fromMaybe "" state.props.joinPlanProps.selectedPlan)) ChoosePlan
+                  (\item -> planCardView push item (item.id == (Mb.fromMaybe "" state.props.joinPlanProps.selectedPlan)) (state.props.paymentStatus /= Mb.Just Pending) ChoosePlan
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -461,9 +466,10 @@ myPlanBodyview push state =
             , padding $ PaddingBottom 5
             ]
           , imageView
-            [ width $ V 16
-            , height $ V 16
+            [ width $ V 20
+            , height $ V 20
             , margin (MarginLeft 4)
+            , padding $ Padding 2 2 2 2
             , imageWithFallback (getImageURL "ny_ic_warning_blue")
             , onClick (\action -> do
                         _<- push action
@@ -766,6 +772,7 @@ promoCodeView push state =
   , background Color.white900
   , margin $ MarginRight 4
   , gravity CENTER_VERTICAL
+  , visibility if state.title == Nothing then GONE else VISIBLE
   ]<> if state.isGradient then [gradient (Linear 90.0 state.gradient)] else [])
    [ imageView
      [ width $ V 12
@@ -915,7 +922,7 @@ managePlanBodyView push state =
         , color Color.black700
         , margin $ MarginBottom 12
         ]
-      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlan) SelectPlan
+      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlan) true SelectPlan
       , textView
         [ text (getString ALTERNATE_PLAN)
         , textSize FontSize.a_12
@@ -928,14 +935,16 @@ managePlanBodyView push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         ](map(
-             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlan) SelectPlan)
+             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlan) true SelectPlan)
              ) state.data.managePlanData.alternatePlans)
       , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
      ]
    ]
 
-planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> (String -> Action)-> PrestoDOM (Effect Unit) w
-planCardView push state isSelected action =
+planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (String -> Action)-> PrestoDOM (Effect Unit) w
+planCardView push state isSelected clickable' action =
+  -- PrestoAnim.animationSet                TODO :: Animations
+  -- [ translateInXForwardAnim true] $
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -945,6 +954,7 @@ planCardView push state isSelected action =
   , cornerRadius 8.0
   , orientation VERTICAL
   , margin $ MarginBottom 16
+  , clickable clickable'
   , onClick push $ const $ action state.id
   ][ linearLayout
      [ height WRAP_CONTENT
@@ -977,12 +987,11 @@ planCardView push state isSelected action =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , scrollBarX false
+      , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
       ][ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , visibility if isSelected && (DA.length state.offers > 0) then VISIBLE else GONE
-        , margin $ MarginVertical 12 12
         ](map  (\item -> promoCodeView push item) state.offers)
        ]
     , linearLayout
@@ -995,6 +1004,7 @@ planCardView push state isSelected action =
             , width MATCH_PARENT
             , orientation VERTICAL
             , padding $ Padding 8 8 8 8
+            , margin $ MarginVertical 8 8
             , background Color.white900
             , cornerRadius 4.0
             ] <> case item.offerDescription of 
@@ -1296,6 +1306,7 @@ planPriceView fares frequency =
                                                                     _ -> getString DAY
       , textSize FontSize.a_16
       , fontStyle $ FontStyle.bold LanguageStyle
+      , margin $ MarginLeft 3
       , color Color.black800
       ]
    ]

@@ -95,7 +95,6 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
-      PopUpModal.DismisTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismiss_text_click"
     ActivateOrDeactivateRcPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "on_goback"
       PopUpModal.OnButton2Click -> do
@@ -107,7 +106,6 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
-      PopUpModal.DismisTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismiss_text_click"
     DeleteRcPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "on_goback"
       PopUpModal.OnButton2Click -> do
@@ -119,7 +117,6 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
-      PopUpModal.DismisTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismiss_text_click"
     CallDriverPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "on_goback"
       PopUpModal.OnButton2Click -> do
@@ -131,7 +128,6 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
-      PopUpModal.DismisTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismiss_text_click"
     PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "primary_button" "go_home_or_submit"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "primary_button" "no_action"
@@ -163,7 +159,6 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
-      PopUpModal.DismisTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismiss_text_click"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_selection"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickBack text) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_back"
     InAppKeyboardModalOtp (InAppKeyboardModal.BackPressed) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_backpressed"

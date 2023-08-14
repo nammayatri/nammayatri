@@ -677,8 +677,7 @@ const englishStrings = {
   ZERO_COMMISION : "ZERO commission",
   EARN_TODAY_PAY_TOMORROW : "Earn Today, Pay Tomorrow",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "Pay only if you take rides",
-  JOIN : "Join",
-  PLAN : "Plan",
+  PLAN : "Plans",
   DAY : "Day",
   PLANS : "Plans",
   MANAGE_PLAN : "Manage Plan",
@@ -727,5 +726,19 @@ const englishStrings = {
   STATRED_ON : "Started On",
   EXPIRES_ON : "Expires On",
   SWITCHED_PLAN : "Switched plan",
-  RESUME_AUTOPAY : "Resumed autopay"
+  RESUME_AUTOPAY : "Resumed autopay",
+  ONETIME : "One time",
+  FORTNIGHTLY : "Fortnightly",
+  MONTHLY : "Monthly",
+  BIMONTHLY : "Bimonthly",
+  QUARTERLY : "Quarterly",
+  HALFYEARLY : "Half yearly",
+  YEARLY : "Yearly",
+  ASPRESENTED : "As and when presented",
+
+  FIRST_FREE_RIDE : "First Free Ride",
+  DAILY_PER_RIDE_DESC : "No charges till Aug 31",
+  FIRST_FREE_RIDE : "First Free Ride",
+  JOIN_THE_UNLIMITED_PLAN : "Join the UNLIMITED plan now at ₹1/day and save 96%!!",
+  MAYBE_LATER : "Maybe Later"
 }

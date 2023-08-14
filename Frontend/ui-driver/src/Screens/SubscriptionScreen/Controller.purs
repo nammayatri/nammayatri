@@ -16,7 +16,7 @@ import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), MandateData(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
@@ -112,9 +112,6 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
                   Mb.Just CancelAutoPay -> exit $ CancelAutoPayPlan state -- CancelAutoPay API
                   Mb.Nothing -> continue state
 
--- eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = continue state {props {popUpState = Mb.Nothing}}
-              
-eval (PopUpModalAC (PopUpModal.DismisTextClick)) state = continue state
 
 eval (ConfirmCancelPopup (PopUpModal.OnButton1Click)) state = continue state { props { confirmCancel = false}}
 
@@ -145,10 +142,11 @@ eval ViewPaymentHistory state = exit $ PaymentHistory state
 
 eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
-  continue state {data {joinPlanData {
-    allPlans = planListTransformer plans,
-    subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")
-    }}, props{showShimmer = false, subView = JoinPlan} }
+  continue state {
+      data{ joinPlanData {allPlans = planListTransformer plans,
+                            subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
+      props{showShimmer = false, subView = JoinPlan,  
+            joinPlanProps { selectedPlan = if (state.props.joinPlanProps.selectedPlan == Mb.Nothing) then getSelectedId plans else state.props.joinPlanProps.selectedPlan}} }
 
 eval (LoadMyPlans plans autoPayStatus ) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
