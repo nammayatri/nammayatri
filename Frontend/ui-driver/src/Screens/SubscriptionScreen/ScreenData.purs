@@ -11,7 +11,7 @@ initData = {
         driverId : "",
         paymentMode : "",
         planId : "",
-        orderId : "",
+        orderId : Mb.Nothing,
         errorMessage : "",
         joinPlanData : {
             allPlans : [],

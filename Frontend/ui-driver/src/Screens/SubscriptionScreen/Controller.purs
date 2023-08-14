@@ -17,7 +17,7 @@ import PrestoDOM (Eval, continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, myPlanListTransformer, planListTransformer)
-import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
+import Screens.Types (AutoPayStatus(..), PaymentMethod(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), MandateData(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
@@ -55,6 +55,7 @@ data Action = BackPressed
             | LoadAlternatePlans UiPlansResp
             | ConfirmCancelPopup PopUpModal.Action
             | TryAgainButtonAC PrimaryButton.Action
+            | RetryPaymentAC
 
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
@@ -67,9 +68,10 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | CancelAutoPayPlan SubscriptionScreenState
                     | SwitchCurrentPlan SubscriptionScreenState
                     | ResumeAutoPayPlan SubscriptionScreenState
-                    | CheckOrderStatus SubscriptionScreenState
+                    | CheckOrderStatus SubscriptionScreenState String
                     | ScreenExit SubscriptionScreenState
                     | Refresh
+                    | RetryPayment SubscriptionScreenState String
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
@@ -151,7 +153,7 @@ eval (LoadPlans plans) state = do
 eval (LoadMyPlans plans autoPayStatus ) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
   let (PlanEntity planEntity) = currentPlanResp.currentPlanDetails
-  let newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer plans, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
+  let newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ orderId = currentPlanResp.orderId, planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer plans, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
   case currentPlanResp.mandateDetails of 
     Mb.Nothing -> continue newState
     Mb.Just (MandateData mandateDetails) -> continue newState 
@@ -167,16 +169,22 @@ eval (LoadMyPlans plans autoPayStatus ) state = do
                                               , pspLogo = getPspIcon mandateDetails.payerVpa
                                               , payerUpiId = mandateDetails.payerVpa
                                               }
-                                            , planId = planEntity.id}
+                                            , planId = planEntity.id
+                                            }
                                           }
 
-eval CheckPaymentStatus state = updateAndExit state { props{refreshPaymentStatus = true}} $ CheckOrderStatus state
+eval CheckPaymentStatus state = case state.data.orderId of
+  Mb.Just id -> updateAndExit state { props{refreshPaymentStatus = true}} $ CheckOrderStatus state id
+  Mb.Nothing -> continue state
 
 eval (ShowError errorPayload )state = continue state{props{showError = true, showShimmer = false}, data { errorMessage = getCorrespondingErrorMessage errorPayload}}
 
 eval (LoadAlternatePlans plansArray) state = continue state { data { managePlanData { alternatePlans = alternatePlansTransformer plansArray state}}, props {subView = ManagePlan, showShimmer = false}}
 
 eval (TryAgainButtonAC PrimaryButton.OnClick) state = updateAndExit state { props{showShimmer = true}} $ Refresh
+
+eval RetryPaymentAC state = if state.data.myPlanData.planEntity.id == "" then continue state else
+  exit $ RetryPayment state state.data.myPlanData.planEntity.id
 
 eval _ state = continue state
 

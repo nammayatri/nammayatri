@@ -533,7 +533,7 @@ const kannadaStrings = {
   CALL_DRIVER_OR_CONTACT_SUPPORT : "RC ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲು ಚಾಲಕನಿಗೆ ಕರೆ ಮಾಡಿ ಅಥವಾ ಚಾಲಕವನ್ನು ತಲುಪಲು ಸಾಧ್ಯವಾಗದಿದ್ದರೆ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ",
   CALL_DRIVER : "ಚಾಲಕನಿಗೆ ಕರೆ ಮಾಡಿ",
   SKIP : "ಬಿಟ್ಟುಬಿಡಿ",
-  ACTIVE_RC : "ಸಕ್ರಿಯ",
+  ACTIVE_STR : "ಸಕ್ರಿಯ",
   INACTIVE_RC : "ನಿಷ್ಕ್ರಿಯ",
   CONFIRMATION_FOR_DELETING_RC : "ನಿಮ್ಮ RC ಅನ್ನು ಅಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ",
   CONFIRMATION_FOR_DEACTIVATING_RC : "ನಿಮ್ಮ RC ಅನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ- ",
@@ -678,7 +678,7 @@ const kannadaStrings = {
   ENABLE_AUTOPAY_NOW : "ಈಗ ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
   PAYMENT_PENDING_STR : "ಪಾವತಿ ಬಾಕಿಯಿದೆ!",
   PAYMENT_PENDING_DESC_STR : "ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲಾಗುತ್ತಿದೆ.\nನವೀಕರಣ ಇದ್ದಾಗ ನಾವು ನಿಮಗೆ ತಿಳಿಸುತ್ತೇವೆ.",
-  REFRESH_STR : "ರಿಫ್ರೆಶ್",
+  REFRESH_STR : "ಸ್ಥಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಿ",
   TRANSACTION_DETAILS : "ವಹಿವಾಟು ವಿವರಗಳು",
   RIDE_DETAILS : "ಸವಾರಿ ವಿವರಗಳು",
   NAMMA_YATRI_PLANS : "ನಮ್ಮ ಯಾತ್ರಿ ಪ್ಲಾನ್ ಗಳು",
@@ -711,5 +711,9 @@ const kannadaStrings = {
   DAILY_PER_RIDE_DESC : "ಆಗಸ್ಟ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕವಿಲ್ಲ",
   FIRST_FREE_RIDE : "ಮೊದಲ ಉಚಿತ ಸವಾರಿ",
   JOIN_THE_UNLIMITED_PLAN : "ಈಗಲೇ ₹1/ದಿನಕ್ಕೆ UNLIMITED ಯೋಜನೆಗೆ ಸೇರಿ ಮತ್ತು 96% ಉಳಿಸಿ!!",
-  MAYBE_LATER : "ಬಹುಶಃ ನಂತರ"
+  MAYBE_LATER : "ಬಹುಶಃ ನಂತರ",
+  YOUR_DUES_DESCRIPTION_MANUAL : "ತಡೆರಹಿತ ರೈಡ್‌ಗಳನ್ನು ಮುಂದುವರಿಸಲು ಮಿತಿಯನ್ನು ತಲುಪುವ ಮೊದಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ. ನೀವು ಸುಲಭವಾಗಿ, ತೊಂದರೆ-ಮುಕ್ತ ಪಾವತಿಗಳಿಗಾಗಿ <b>UPI ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಹೊಂದಿಸಬಹುದು</b>.",
+  DO_YOU_WANT_TO_CANCEL : "ನೀವು ರದ್ದುಗೊಳಿಸಲು ಬಯಸುವಿರಾ?",
+  DO_YOU_WANT_TO_CANCEL_DESC : "ನೀವು ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ರದ್ದುಗೊಳಿಸಲಿರುವಿರಿ.\nಸ್ವಯಂಚಾಲಿತ ಪಾವತಿಗಳನ್ನು ಪುನರಾರಂಭಿಸಲು ನೀವು ಮತ್ತೆ ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಹೊಂದಿಸಬೇಕಾಗುತ್ತದೆ.",
+  YOUR_PAYMENT_WAS_UNSUCCESSFUL : "ನಿಮ್ಮ ಪಾವತಿಯ ಪ್ರಯತ್ನವು ವಿಫಲವಾಗಿದೆ."
 }
