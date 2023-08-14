@@ -48,18 +48,18 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.invoice
     (   id character(36) NOT NULL,
         invoice_short_id text NOT NULL,
         driver_fee_id Text,
-        invoice_status Text,
         created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
         PRIMARY KEY(id, driver_fee_id)
     );
 ALTER TABLE atlas_driver_offer_bpp.invoice OWNER TO atlas_driver_offer_bpp_user;
 
+ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN invoice_status Text NOT NULL DEFAULT 'ACTIVE_INVOICE';
 -- This is to backfill existing 1 to 1 mapped yatri saathi entries of driver fees to invoice table
-INSERT INTO atlas_driver_offer_bpp.invoice (id, invoice_short_id, driver_fee_id) SELECT PO.id, PO.short_id, PO.id FROM atlas_driver_offer_bpp.payment_order AS PO INNER JOIN atlas_driver_offer_bpp.driver_fee AS DF ON DF.short_id = PO.short_id;
+INSERT INTO atlas_driver_offer_bpp.invoice (id, invoice_short_id, driver_fee_id,invoice_status) SELECT PO.id, PO.short_id, PO.id,'SUCCESS' FROM atlas_driver_offer_bpp.payment_order AS PO INNER JOIN atlas_driver_offer_bpp.driver_fee AS DF ON DF.short_id = PO.short_id;
 
 -- run after release
-INSERT INTO atlas_driver_offer_bpp.invoice (id, invoice_short_id, driver_fee_id) SELECT PO.id, PO.short_id, PO.id FROM atlas_driver_offer_bpp.payment_order AS PO INNER JOIN atlas_driver_offer_bpp.driver_fee AS DF ON DF.short_id = PO.short_id on conflict do nothing;
+INSERT INTO atlas_driver_offer_bpp.invoice (id, invoice_short_id, driver_fee_id,invoice_status) SELECT PO.id, PO.short_id, PO.id,'SUCCESS' FROM atlas_driver_offer_bpp.payment_order AS PO INNER JOIN atlas_driver_offer_bpp.driver_fee AS DF ON DF.short_id = PO.short_id on conflict do nothing;
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN auto_pay_status text;
 
