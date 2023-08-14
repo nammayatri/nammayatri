@@ -106,6 +106,8 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
+        // TODO Send proper clientID once it is whitelisted
+        bridgeComponents.getJsCallback().addJsToWebView("window.JBridge.setAnalyticsHeader(JSON.stringify({\"x-client-id\": \"nammayatri\"}));");
         if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
             CallBack callBack = new CallBack() {
                 @Override
