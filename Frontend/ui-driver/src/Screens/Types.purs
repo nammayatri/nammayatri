@@ -1585,6 +1585,7 @@ type PlanCardConfig = {
   , priceBreakup :: Array PaymentBreakUp
   , frequency :: String
   , freeRideCount :: Int
+  , showOffer :: Boolean
 }
 
 type PromoConfig = {

@@ -311,7 +311,7 @@ plansBottomView push state =
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
-              , width $ V $ getWidthFromPercent 80
+              , width $ V $ getWidthFromPercent 70
               , gravity LEFT
               , text (getString CHOOSE_YOUR_PLAN)
               , color Color.black800
@@ -347,9 +347,9 @@ plansBottomView push state =
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
-                                          "EN_US" -> "https://youtu.be/YfaO4eYyh_Y"
+                                          "EN_US" -> "https://youtu.be/eln85zQ3EK4"
                                           "KN_IN" -> "https://youtu.be/WlJ2TVSe6wo"
-                                          _ -> "https://youtu.be/YfaO4eYyh_Y"
+                                          _ -> "https://youtu.be/eln85zQ3EK4"
                         pure unit
                         ) (const NoAction)
               ] <> FontStyle.body1 TypoGraphy
@@ -1015,7 +1015,7 @@ planCardView push state isSelected clickable' action =
          , color Color.black600
          , weight 1.0
          ]
-       , offerCountView (DA.length state.offers) isSelected
+       , if state.showOffer then offerCountView (DA.length state.offers) isSelected else linearLayout[visibility GONE][]
        ]
     , horizontalScrollView 
       [ height WRAP_CONTENT

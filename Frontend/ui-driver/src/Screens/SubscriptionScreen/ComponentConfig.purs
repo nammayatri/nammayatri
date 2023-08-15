@@ -75,9 +75,8 @@ joinPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 joinPlanButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = if state.props.paymentStatus == Mb.Just Pending then getString PAYMENT_PENDING else
-                              case (getSelectedJoiningPlan state) of 
-                                Mb.Just value -> ((getString PLANS)<> " " <> value <> " " <> (getString PLAN)) 
+      { textConfig{ text = case (getSelectedJoiningPlan state) of 
+                                Mb.Just value -> ( "Join " <> value <> " Plan") 
                                 Mb.Nothing -> (getString TAP_A_PLAN_TO_VIEW_DETAILS) }
       , isClickable = if state.props.joinPlanProps.selectedPlan /= Mb.Nothing && state.props.paymentStatus /= Mb.Just Pending then true else false
       , alpha = if state.props.joinPlanProps.selectedPlan /=Mb.Nothing && state.props.paymentStatus /= Mb.Just Pending then 1.0 else 0.6

@@ -80,4 +80,5 @@ dummyPlanConfig =
     , priceBreakup : []
     , frequency : ""
     , freeRideCount : 1
+    , showOffer : true
 }
