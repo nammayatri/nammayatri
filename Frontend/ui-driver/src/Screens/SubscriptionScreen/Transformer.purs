@@ -64,11 +64,11 @@ decodeOfferDescription str = do
     fromMaybe "" (strArray !! (getLanguage (length strArray)))
     where 
         getLanguage len = do
-            case getValueToLocalStore LANGUAGE_KEY of 
-                "KN_IN" -> if len > 0 then 1 else 0
-                "HI_IN" -> if len > 1 then 2 else 0
-                "BN_IN" -> if len > 2 then 3 else 0
-                "ML_IN" -> if len > 3 then 4 else 0
+            case getValueToLocalStore LANGUAGE_KEY of
+                "KN_IN" | len > 1 -> 1
+                "HI_IN" | len > 2 -> 2
+                "BN_IN" | len > 3 -> 3
+                "ML_IN" | len > 4 -> 4
                 _ -> 0
     
 
