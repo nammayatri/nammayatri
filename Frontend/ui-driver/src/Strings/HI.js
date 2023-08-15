@@ -743,5 +743,11 @@ const hindiStrings = {
   DO_YOU_WANT_TO_CANCEL : "क्या आप रद्द करना चाहते हैं?",
   DO_YOU_WANT_TO_CANCEL_DESC : "आप ऑटोपे रद्द करने वाले हैं।\nस्वचालित भुगतान फिर से शुरू करने के लिए आपको फिर से ऑटोपे सेट करना होगा।",
   YOUR_PAYMENT_WAS_UNSUCCESSFUL : "आपका भुगतान प्रयास असफल रहा।",
-  PAYMENT_CANCELLED : "आपने अपना UPI ऑटोपे रद्द कर दिया है. आप अपना बकाया मैन्युअल रूप से चुका सकते हैं"
+  PAYMENT_CANCELLED : "आपने अपना UPI ऑटोपे रद्द कर दिया है. आप अपना बकाया मैन्युअल रूप से चुका सकते हैं",
+  UPI_AUTOPAY_S : "UPI ऑटोपे",
+	MANUAL_PAYMENT : "मैन्युअल भुगतान",
+  DAILY_UNLIMITED : "दैनिक असीमित",
+  DAILY_PER_RIDE : "दैनिक प्रति सवारी",
+  DAILY_UNLIMITED_PLAN_DESC : "हर दिन असीमित सवारी का आनंद लें",
+  DAILY_PER_RIDE_PLAN_DESC : "प्रति दिन अधिकतम ₹35 तक"
 }

@@ -2,6 +2,7 @@ module Screens.SubscriptionScreen.Transformer where
 
 import Prelude
 
+import Common.Types.App (LazyCheck(..))
 import Data.Array (cons, (!!), length)
 import Data.Array as DA
 import Data.List.Lazy (Pattern)
@@ -14,6 +15,18 @@ import Screens.Types (PlanCardConfig, PromoConfig, SubscriptionScreenState, KeyV
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 
+type PlanData = {
+    title :: String,
+    description :: String
+}
+
+getMultiLanguagePlanData :: Boolean -> PlanData -> PlanData
+getMultiLanguagePlanData isLocalized planData = do
+    if isLocalized then planData
+    else do
+        case planData.title of 
+            "DAILY UNLIMITED" ->  {title : getString DAILY_UNLIMITED, description : getString DAILY_UNLIMITED_PLAN_DESC}
+            _                 ->  {title : getString DAILY_PER_RIDE, description : getString DAILY_PER_RIDE_PLAN_DESC} 
 
 getPromoConfig :: Array OfferEntity -> Array PromoConfig
 getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {     
@@ -28,11 +41,13 @@ getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {
 myPlanListTransformer :: GetCurrentPlanResp -> PlanCardConfig
 myPlanListTransformer (GetCurrentPlanResp getCurrentPlanResp) = do 
     let (PlanEntity planEntity) = getCurrentPlanResp.currentPlanDetails
+    let isLocalized = fromMaybe false getCurrentPlanResp.isLocalized 
+    let planData = getMultiLanguagePlanData isLocalized {title : planEntity.name, description : planEntity.description}
     {   id : planEntity.id ,
-        title : planEntity.name ,
-        description : planEntity.description,
+        title : planData.title ,
+        description : planData.description,
         isSelected : false ,
-        offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+        offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig Language] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig Language] else []) <> getPromoConfig planEntity.offers ,
         priceBreakup : planEntity.planFareBreakup,
         frequency : planEntity.frequency,
         freeRideCount : planEntity.freeRideCount,
@@ -46,13 +61,15 @@ planListTransformer (UiPlansResp planResp) =
     let planEntityArray = planResp.list
         plansplit = DA.partition (\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray
         sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
-    in map (\ (PlanEntity planEntity) -> 
+        isLocalized = fromMaybe false planResp.isLocalized 
+    in map (\ (PlanEntity planEntity) -> do
+        let planData = getMultiLanguagePlanData isLocalized {title : planEntity.name, description : planEntity.description}
         {
             id : planEntity.id ,
-            title : planEntity.name ,
-            description : planEntity.description ,
+            title : planData.title ,
+            description : planData.description ,
             isSelected : false ,
-            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig Language] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig Language] else []) <> getPromoConfig planEntity.offers ,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
             freeRideCount : planEntity.freeRideCount,
@@ -74,8 +91,8 @@ decodeOfferDescription str = do
                 _ -> 0
     
 
-freeRideOfferConfig :: PromoConfig
-freeRideOfferConfig = 
+freeRideOfferConfig :: LazyCheck -> PromoConfig
+freeRideOfferConfig lazy = 
     {  
     title : Just $ getString FIRST_FREE_RIDE,
     isGradient : false,
@@ -85,8 +102,8 @@ freeRideOfferConfig =
     offerDescription : Nothing
     }
 
-noChargesOfferConfig :: PromoConfig
-noChargesOfferConfig = 
+noChargesOfferConfig :: LazyCheck -> PromoConfig
+noChargesOfferConfig lazy= 
     {  
     title : Nothing,
     isGradient : false,
@@ -100,12 +117,14 @@ alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array Pla
 alternatePlansTransformer (UiPlansResp planResp) state =
     let planEntityArray = planResp.list
         alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
-    in map (\ (PlanEntity planEntity) -> 
+        isLocalized = fromMaybe false planResp.isLocalized
+    in map (\ (PlanEntity planEntity) -> do
+        let planData = getMultiLanguagePlanData isLocalized {title : planEntity.name, description : planEntity.description}
         {   id : planEntity.id ,
-            title : planEntity.name ,
-            description : planEntity.description ,
+            title : planData.title ,
+            description : planData.description ,
             isSelected : false ,
-            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig Language] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig Language] else []) <> getPromoConfig planEntity.offers ,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
             freeRideCount : planEntity.freeRideCount,

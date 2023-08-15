@@ -576,5 +576,11 @@ const frenchStrings = {
   EXPIRES_ON : "Expire le",
   SWITCHED_PLAN : "Changement de forfait",
   RESUME_AUTOPAY : "Paiement automatique repris",
-  PAYMENT_CANCELLED: "Vous avez annulé votre paiement automatique UPI. Vous pouvez effacer vos cotisations manuellement"
+  PAYMENT_CANCELLED: "Vous avez annulé votre paiement automatique UPI. Vous pouvez effacer vos cotisations manuellement",
+  UPI_AUTOPAY_S : "UPI Paiement automatique",
+	MANUAL_PAYMENT : "Paiement manuel",
+  DAILY_UNLIMITED : "quotidiennement illimité",
+  DAILY_PER_RIDE : "quotidiennement par trajet",
+  DAILY_UNLIMITED_PLAN_DESC : "Profitez de trajets illimités, tous les jours",
+  DAILY_PER_RIDE_PLAN_DESC : "Jusqu'à un maximum de ₹35 par jour"
 }

@@ -734,5 +734,11 @@ const bengaliStrings = {
 	EXPIRES_ON : "মেয়াদ শেষ হবে",
 	SWITCHED_PLAN : "সুইচড প্ল্যান",
 	RESUME_AUTOPAY : "পুনরায় স্বতঃপ্রদান শুরু হয়েছে",
-	PAYMENT_CANCELLED : "আপনি আপনার UPI অটোপে বাতিল করেছেন। আপনি আপনার বকেয়া ম্যানুয়ালি সাফ করতে পারেন"
+	PAYMENT_CANCELLED : "আপনি আপনার UPI অটোপে বাতিল করেছেন। আপনি আপনার বকেয়া ম্যানুয়ালি সাফ করতে পারেন",
+	UPI_AUTOPAY_S : "UPI অটোপে",
+	MANUAL_PAYMENT : "ম্যানুয়াল পেমেন্ট",
+	DAILY_UNLIMITED : "দৈনিক সীমাহীন",
+    DAILY_PER_RIDE : "প্রতি যাত্রায় প্রতিদিন",
+    DAILY_UNLIMITED_PLAN_DESC : "প্রতিদিন সীমাহীন রাইড উপভোগ করুন",
+    DAILY_PER_RIDE_PLAN_DESC : "প্রতিদিন সর্বোচ্চ ₹35 পর্যন্ত"
 	}
