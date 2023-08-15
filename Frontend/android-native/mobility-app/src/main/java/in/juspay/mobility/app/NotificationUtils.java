@@ -51,6 +51,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONException;
@@ -575,6 +576,13 @@ public class NotificationUtils {
                     default : return NO_VARIANT;
                 }
             default:return NO_VARIANT;
+        }
+    }
+
+    public static void cleverTapCustomEvent(String event, Context context) {
+        CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+        if (clevertapDefaultInstance != null){
+            clevertapDefaultInstance.pushEvent(event);
         }
     }
 }
