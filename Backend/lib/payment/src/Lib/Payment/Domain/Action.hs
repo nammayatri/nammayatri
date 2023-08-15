@@ -171,8 +171,8 @@ buildPaymentOrder merchantId personId req resp = do
         environment = resp.sdk_payload.payload.environment,
         createMandate = resp.sdk_payload.payload.createMandate,
         mandateMaxAmount = read . T.unpack <$> resp.sdk_payload.payload.mandateMaxAmount,
-        mandateStartDate = posixSecondsToUTCTime . read . T.unpack <$> (resp.sdk_payload.payload.mandateStartDate),
-        mandateEndDate = posixSecondsToUTCTime . read . T.unpack <$> resp.sdk_payload.payload.mandateEndDate,
+        mandateStartDate = posixSecondsToUTCTime . fromIntegral <$> ((read . T.unpack =<< (resp.sdk_payload.payload.mandateStartDate)) :: Maybe Int),
+        mandateEndDate = posixSecondsToUTCTime . fromIntegral <$> ((read . T.unpack =<< (resp.sdk_payload.payload.mandateStartDate)) :: Maybe Int),
         createdAt = now,
         updatedAt = now
       }
@@ -258,13 +258,13 @@ updateOrderTransaction order resp respDump = do
       Just transactionUUID -> QTransaction.findByTxnUUID transactionUUID
       -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
       Nothing -> QTransaction.findNewTransactionByOrderId order.id
-  let updOrder = order{status = resp.transactionStatus}
+  let updOrder = order{status = resp.transactionStatus, mandateStartDate = resp.mandateStartDate, mandateEndDate = resp.mandateEndDate}
   case mbTransaction of
     Nothing -> do
       transaction <- buildPaymentTransaction order resp respDump
       Esq.runTransaction $ do
         QTransaction.create transaction
-        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndMandateDates updOrder
     Just transaction -> do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
@@ -287,7 +287,7 @@ updateOrderTransaction order resp respDump = do
       Esq.runTransaction $ do
         -- Avoid updating status if already in CHARGED state to handle race conditions
         when (transaction.status /= Payment.CHARGED) $ QTransaction.updateMultiple updTransaction
-        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndMandateDates updOrder
 
 buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
 buildPaymentTransaction order OrderTxn {..} respDump = do
