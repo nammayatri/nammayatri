@@ -466,7 +466,7 @@ const hindiStrings = {
   MAKE_YOURSELF_AVAILABLE_FOR : "निम्नलिखित के लिए स्वयं को उपलब्ध कराएं",
   SELECT_YOUR_GENDER: "अपना लिंग चुनें",
   FEMALE: "महिला",
-  MALE: "नर",
+  MALE: "पुरुष",
   PREFER_NOT_TO_SAY: "चुप रहना पसंद करूंगा",
   GENDER : "लिंग",
   SET_NOW : "अभी सेट करें",

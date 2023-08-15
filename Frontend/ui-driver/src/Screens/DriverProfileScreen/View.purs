@@ -1085,8 +1085,8 @@ getRcDetails state = do
   <> (if config.rcStatus then
       [{ key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }]
      else [])
-  <>[{ key :(getString MODEL_NAME) , value : config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ]
+  <>[{ key :(getString MODEL_NAME) , value : if config.rcStatus then config.rcDetails.vehicleModel else Just "NA", action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : if config.rcStatus then config.rcDetails.vehicleColor else Just "NA", action :NoAction , isEditable : false } ]
   <> (if not null state.data.rcDataArray then
       [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }]
     else [])
@@ -1396,7 +1396,7 @@ driverAboutMeArray state =  [{ key : (getString LANGUAGES_SPOKEN) , value : ((ge
 
 getLanguagesSpoken :: Array String -> Maybe String
 getLanguagesSpoken languages =
-  if (length languages >2) then Just $ (intercalate ", " (take 2 languages)) <> "+1"
+  if (length languages >2) then Just $ (intercalate ", " (take 2 languages)) <> " +" <> show (length languages - 2)
     else if (length languages > 0) then Just (intercalate ", " languages)
     else Nothing
 
