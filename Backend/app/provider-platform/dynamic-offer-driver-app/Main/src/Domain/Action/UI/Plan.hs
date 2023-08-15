@@ -29,6 +29,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -40,11 +41,13 @@ import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Plan as QPD
+import qualified Storage.CachedQueries.PlanTranslation as CQPTD
 import Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
@@ -56,7 +59,8 @@ import Tools.SMS as Sms hiding (Success)
 
 data PlanListAPIRes = PlanListAPIRes
   { list :: [PlanEntity],
-    subscriptionStartTime :: UTCTime
+    subscriptionStartTime :: UTCTime,
+    isLocalized :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -126,7 +130,8 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
   return $
     PlanListAPIRes
       { list = plansList,
-        subscriptionStartTime = transporterConfig.subscriptionStartTime
+        subscriptionStartTime = transporterConfig.subscriptionStartTime,
+        isLocalized = Just True
       }
 
 -- This API is for listing current driver plan
@@ -334,6 +339,10 @@ convertPlanToPlanEntity driverId plan@Plan {..} = do
   dueInvoices <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   offers <- Payment.offerList merchantId =<< makeOfferReq
   let planFareBreakup = mkPlanFareBreakup offers.offerResp
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  mbtranslation <- CQPTD.findByPlanIdAndLanguage plan.id (fromMaybe ENGLISH driver.language)
+  let translatedName = maybe plan.name (.name) mbtranslation
+  let translatedDescription = maybe plan.description (.description) mbtranslation
   planBaseFrequcency <- case planBaseAmount of
     PERRIDE_BASE _ -> return "PER_RIDE"
     DAILY_BASE _ -> return "DAILY"
@@ -344,6 +353,8 @@ convertPlanToPlanEntity driverId plan@Plan {..} = do
       { id = plan.id.getId,
         offers = makeOfferEntity <$> offers.offerResp,
         frequency = planBaseFrequcency,
+        name = translatedName,
+        description = translatedDescription,
         currentDues = round . sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices,
         totalPlanCreditLimit = round maxCreditLimit,
         ..
