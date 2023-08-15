@@ -694,5 +694,11 @@ const mlStrings = {
   EXPIRES_ON : "കാലഹരണപ്പെടുന്നു",
   SWITCHED_PLAN : "സ്വിച്ച്ഡ് പ്ലാൻ",
   RESUME_AUTOPAY : "ഓട്ടോപേ പുനരാരംഭിച്ചു",
-  PAYMENT_CANCELLED : "നിങ്ങൾ യുപിഐ ഓട്ടോപേ റദ്ദാക്കി. നിങ്ങൾക്ക് കുടിശ്ശിക സ്വമേധയാ ക്ലിയർ ചെയ്യാം"
+  PAYMENT_CANCELLED : "നിങ്ങൾ യുപിഐ ഓട്ടോപേ റദ്ദാക്കി. നിങ്ങൾക്ക് കുടിശ്ശിക സ്വമേധയാ ക്ലിയർ ചെയ്യാം",
+  UPI_AUTOPAY_S : "UPI സ്വയമേവ പണമടയ്ക്കുക",
+	MANUAL_PAYMENT : "മാനുവൽ പേയ്മെന്റ്",
+  DAILY_UNLIMITED : "ദിവസേന അൺലിമിറ്റഡ്",
+  DAILY_PER_RIDE : "ദിവസേന ഓരോ റൈഡിനും",
+  DAILY_UNLIMITED_PLAN_DESC : "എല്ലാ ദിവസവും പരിധിയില്ലാത്ത റൈഡുകൾ ആസ്വദിക്കൂ",
+  DAILY_PER_RIDE_PLAN_DESC : "പ്രതിദിനം പരമാവധി ₹35 വരെ"
 }

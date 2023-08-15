@@ -148,7 +148,7 @@ paymentList push state =
                     , margin (MarginRight 4)
                     , imageWithFallback "ny_ic_upi_logo,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_upi_logo.png"
                     ]
-                  , commonTV push (if state.props.autoPayHistory then "UPI Autopay" else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
+                  , commonTV push (if state.props.autoPayHistory then (getString UPI_AUTOPAY_S) else "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER
                   ]
                 ]
             ]

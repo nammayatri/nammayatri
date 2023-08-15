@@ -347,9 +347,9 @@ plansBottomView push state =
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
-                                          "EN_US" -> "https://youtu.be/eln85zQ3EK4"
-                                          "KN_IN" -> "https://youtu.be/WlJ2TVSe6wo"
-                                          _ -> "https://youtu.be/eln85zQ3EK4"
+                                          "EN_US" -> "https://youtu.be/3I3adSdYeX8"
+                                          "KN_IN" -> "https://youtu.be/3I3adSdYeX8"
+                                          _ -> "https://youtu.be/3I3adSdYeX8"
                         pure unit
                         ) (const NoAction)
               ] <> FontStyle.body1 TypoGraphy
@@ -506,9 +506,9 @@ myPlanBodyview push state =
                         _<- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
-                                          "EN_US" -> "https://youtu.be/YfaO4eYyh_Y"
-                                          "KN_IN" -> "https://youtu.be/WlJ2TVSe6wo"
-                                          _ -> "https://youtu.be/YfaO4eYyh_Y"
+                                          "EN_US" -> "https://youtu.be/3I3adSdYeX8"
+                                          "KN_IN" -> "https://youtu.be/3I3adSdYeX8"
+                                          _ -> "https://youtu.be/3I3adSdYeX8"
                         pure unit
                         ) (const NoAction)
             ]
@@ -912,7 +912,7 @@ paymentMethodView push state =
     , imageWithFallback (getImageURL "ny_ic_upi_logo")
     ]
   , textView 
-    [ text if state.autoPayStatus == ACTIVE_AUTOPAY then "UPI Autopay" else "Manual Payment"
+    [ text if state.autoPayStatus == ACTIVE_AUTOPAY then (getString UPI_AUTOPAY_S) else (getString MANUAL_PAYMENT)
     , textSize FontSize.a_10
     , fontStyle $ FontStyle.medium LanguageStyle
     , color Color.black900
