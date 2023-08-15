@@ -86,8 +86,12 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = d
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
       createOrderCall = Payment.createOrder merchantId -- api call
-  createOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
-  return (createOrderRes, cast invoiceId)
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
+  case mCreateOrderRes of
+    Just createOrderRes -> return (createOrderRes, cast invoiceId)
+    Nothing -> do
+      QIN.updateInvoiceStatusByInvoiceId invoiceId INV.EXPIRED
+      createOrder (driverId, merchantId) driverFees mbMandateOrder Nothing -- call same function with no existing order
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now driverFee =

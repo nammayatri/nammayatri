@@ -62,7 +62,13 @@ findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 --     return driverFee
 
 findPendingFeesByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
-findPendingFeesByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamDF.id $ Se.Eq driverFeeId, Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]]]
+findPendingFeesByDriverFeeId (Id driverFeeId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDF.id $ Se.Eq driverFeeId,
+          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]
+        ]
+    ]
 
 -- findPendingFeesByDriverId :: Transactionable m => Id Driver -> m (Maybe DriverFee)
 -- findPendingFeesByDriverId driverId = do
@@ -74,7 +80,14 @@ findPendingFeesByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.And [Se.Is Bea
 --     return driverFee
 
 findPendingFeesByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
-findPendingFeesByDriverId (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]]]
+findPendingFeesByDriverId (Id driverId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
+        ]
+    ]
 
 -- findLatestFeeByDriverId :: Transactionable m => Id Driver -> m (Maybe DriverFee)
 -- findLatestFeeByDriverId driverId = do
@@ -87,10 +100,27 @@ findPendingFeesByDriverId (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDF.dr
 --     return driverFee
 
 findLatestFeeByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
-findLatestFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
+findLatestFeeByDriverId (Id driverId) =
+  findAllWithOptionsKV
+    [Se.Is BeamDF.driverId $ Se.Eq driverId]
+    (Se.Desc BeamDF.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 findLatestRegisterationFeeByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
-findLatestRegisterationFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId (Se.Eq driverId), Se.Is BeamDF.feeType (Se.Eq MANDATE_REGISTRATION), Se.Is BeamDF.status (Se.Eq PAYMENT_PENDING)]] (Se.Desc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
+findLatestRegisterationFeeByDriverId (Id driverId) =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId (Se.Eq driverId),
+          Se.Is BeamDF.feeType (Se.Eq MANDATE_REGISTRATION),
+          Se.Is BeamDF.status (Se.Eq PAYMENT_PENDING)
+        ]
+    ]
+    (Se.Desc BeamDF.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 -- pure $ case res of
 --   (x : _) -> Just x
@@ -108,7 +138,17 @@ findLatestRegisterationFeeByDriverId (Id driverId) = findAllWithOptionsKV [Se.An
 --     return driverFee
 
 findOldestFeeByStatus :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
-findOldestFeeByStatus (Id driverId) status = findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing <&> listToMaybe
+findOldestFeeByStatus (Id driverId) status =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.status $ Se.Eq status
+        ]
+    ]
+    (Se.Asc BeamDF.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 -- findFeesInRangeWithStatus :: Transactionable m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
 -- findFeesInRangeWithStatus startTime endTime status = do
@@ -121,7 +161,15 @@ findOldestFeeByStatus (Id driverId) status = findAllWithOptionsKV [Se.And [Se.Is
 --     return driverFee
 
 findFeesInRangeWithStatus :: (L.MonadFlow m, Log m) => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
-findFeesInRangeWithStatus startTime endTime status = findAllWithKV [Se.And [Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime, Se.Is BeamDF.status $ Se.Eq status]]
+findFeesInRangeWithStatus startTime endTime status =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.status $ Se.Eq status,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
+        ]
+    ]
 
 -- findWindowsWithStatus :: Transactionable m => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
 -- findWindowsWithStatus driverId startTime endTime mbStatus limitVal offsetVal = do
@@ -139,7 +187,14 @@ findFeesInRangeWithStatus startTime endTime status = findAllWithKV [Se.And [Se.I
 findWindowsWithStatus :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
 findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVal =
   findAllWithOptionsKV
-    [Se.And $ [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime] <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]]
+    [ Se.And $
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
+        ]
+          <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]
+    ]
     (Se.Desc BeamDF.createdAt)
     (Just limitVal)
     (Just offsetVal)
@@ -156,7 +211,15 @@ findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVa
 --     return driverFee
 
 findOngoingAfterEndTime :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
-findOngoingAfterEndTime (Id driverId) now = findOneWithKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
+findOngoingAfterEndTime (Id driverId) now =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.status $ Se.Eq ONGOING,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq now,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
+        ]
+    ]
 
 findUnpaidAfterPayBy :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
 findUnpaidAfterPayBy (Id driverId) now =
@@ -164,7 +227,8 @@ findUnpaidAfterPayBy (Id driverId) now =
     [ Se.And
         [ Se.Is BeamDF.driverId $ Se.Eq driverId,
           Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
-          Se.Is BeamDF.payBy $ Se.LessThanOrEq now
+          Se.Is BeamDF.payBy $ Se.LessThanOrEq now,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
         ]
     ]
 

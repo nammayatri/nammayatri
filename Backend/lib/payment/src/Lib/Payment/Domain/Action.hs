@@ -63,7 +63,7 @@ createOrderService ::
   Id Person ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
-  m Payment.CreateOrderResp
+  m (Maybe Payment.CreateOrderResp)
 createOrderService merchantId personId createOrderReq createOrderCall = do
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
@@ -72,17 +72,29 @@ createOrderService merchantId personId createOrderReq createOrderCall = do
       paymentOrder <- buildPaymentOrder merchantId personId createOrderReq createOrderResp
       Esq.runTransaction $
         QOrder.create paymentOrder
-      pure createOrderResp
+      return $ Just createOrderResp
     Just existingOrder -> do
-      sdk_payload <- buildSDKPayload createOrderReq existingOrder
-      pure
-        Payment.CreateOrderResp
-          { status = existingOrder.status,
-            id = existingOrder.paymentServiceOrderId,
-            order_id = existingOrder.shortId.getShortId,
-            payment_links = Just existingOrder.paymentLinks,
-            sdk_payload
-          }
+      isOrderExpired <- checkIfExpired existingOrder.clientAuthTokenExpiry
+      if isOrderExpired
+        then do
+          Esq.runTransaction $ QOrder.updateStatusToExpired existingOrder.id
+          return Nothing
+        else do
+          sdk_payload <- buildSDKPayload createOrderReq existingOrder
+          return $
+            Just $
+              Payment.CreateOrderResp
+                { status = existingOrder.status,
+                  id = existingOrder.paymentServiceOrderId,
+                  order_id = existingOrder.shortId.getShortId,
+                  payment_links = Just existingOrder.paymentLinks,
+                  sdk_payload
+                }
+  where
+    checkIfExpired expiry = do
+      now <- getCurrentTime
+      let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
+      return (expiry < addUTCTime buffer now)
 
 buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m Juspay.SDKPayload
 buildSDKPayload req order = do

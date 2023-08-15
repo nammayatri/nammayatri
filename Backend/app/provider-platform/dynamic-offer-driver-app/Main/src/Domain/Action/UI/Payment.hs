@@ -68,7 +68,7 @@ createOrder :: (Id DP.Person, Id DM.Merchant) -> Id DriverFee -> Flow Payment.Cr
 createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- B.runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
   mbInvoice <- B.runInReplica $ QIN.findByDriverFeeIdAndActiveStatus driverFee.id
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing (getIdAndShortId <$> mbInvoice) -- To do rectify the last param based on invoice flow --
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing (getIdAndShortId <$> mbInvoice)
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
