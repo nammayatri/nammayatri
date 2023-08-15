@@ -42,6 +42,7 @@ import qualified Domain.Types.Vehicle as DVeh
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -317,11 +318,12 @@ otpRideCreate driver otpCode booking = do
       vehicle <-
         QVeh.findById ride.driverId
           >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      number <- mapM encrypt =<< mapM decrypt driver.mobileNumber -- TEMPORARY Fix until beam fromTType' bug is resolved
       return
         DRD.RideDetails
           { id = ride.id,
             driverName = driver.firstName,
-            driverNumber = driver.mobileNumber,
+            driverNumber = number,
             driverCountryCode = driver.mobileCountryCode,
             vehicleNumber = vehicle.registrationNo,
             vehicleColor = Just vehicle.color,
