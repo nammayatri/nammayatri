@@ -744,5 +744,11 @@ const englishStrings = {
   DO_YOU_WANT_TO_CANCEL : "Do you want to cancel?",
   DO_YOU_WANT_TO_CANCEL_DESC : "You are about to cancel Autopay.\nYou will have to set up autopay again to resume automatic payments.",
   YOUR_PAYMENT_WAS_UNSUCCESSFUL : "Your payment attempt was unsuccessful.",
-  PAYMENT_CANCELLED : "You have cancelled your UPI Autopay. You can clear your dues manually."
+  PAYMENT_CANCELLED : "You have cancelled your UPI Autopay. You can clear your dues manually.",
+  UPI_AUTOPAY_S : "UPI Autopay",
+	MANUAL_PAYMENT : "Manual Payment",
+  DAILY_UNLIMITED : "DAILY UNLIMITED",
+  DAILY_PER_RIDE : "DAILY PER RIDE",
+  DAILY_UNLIMITED_PLAN_DESC : "Enjoy UNLIMITED rides, every day",
+  DAILY_PER_RIDE_PLAN_DESC : "Up to a maximum of ₹35 per day"
 }

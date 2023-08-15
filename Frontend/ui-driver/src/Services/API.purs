@@ -2254,7 +2254,8 @@ data UiPlansReq = UiPlansReq String
 
 newtype UiPlansResp = UiPlansResp {
   list :: Array PlanEntity,
-  subscriptionStartTime :: String
+  subscriptionStartTime :: String,
+  isLocalized :: Maybe Boolean
 }
 
 newtype PlanEntity = PlanEntity {
@@ -2529,7 +2530,8 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   currentPlanDetails :: PlanEntity,
   mandateDetails :: Maybe MandateData,
   autoPayStatus :: Maybe String,
-  orderId :: Maybe String
+  orderId :: Maybe String,
+  isLocalized :: Maybe Boolean
 }
 
 newtype MandateData = MandateData {
