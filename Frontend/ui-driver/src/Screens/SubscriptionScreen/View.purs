@@ -225,19 +225,19 @@ paymentPendingView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , background Color.yellow900
+  , background Color.yellow800
   , cornerRadii $ Corners 24.0 false false true true
   , padding $ Padding 16 12 16 12
   , visibility if (state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing) then VISIBLE else GONE
   ][  textView
       [ text $ getString PAYMENT_PENDING_STR
-      , textSize FontSize.a_14
+      , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
       , fontStyle $ FontStyle.semiBold LanguageStyle
       , color Color.black800
       ]
     , textView
       [ text $ getString PAYMENT_PENDING_DESC_STR
-      , textSize FontSize.a_12
+      , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
       , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.black800
       ]
@@ -270,7 +270,7 @@ paymentPendingView push state =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , background Color.white900
+          , background Color.blue800
           , cornerRadius 24.0
           , padding $ Padding 10 5 10 5
           , margin $ MarginLeft 10
@@ -281,12 +281,12 @@ paymentPendingView push state =
               , height WRAP_CONTENT
               , text $ getString RETRY_PAYMENT_STR
               , margin $ MarginRight 5
-              , color Color.blueTextColor
+              , color Color.white900
               ] <> FontStyle.body4 TypoGraphy
             , imageView
-              [ width $ V 12
-              , height $ V 12
-              , imageWithFallback $ "ny_ic_right_arrow_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_right_arrow_blue.png"
+              [ width $ V 16
+              , height $ V 16
+              , imageWithFallback $ "ic_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_right_arrow_blue.png"
               ]
           ]
       ]
@@ -407,7 +407,7 @@ managePlanView push state visibility' =
      , visibility if state.data.myPlanData.autoPayStatus `elem` [ACTIVE_AUTOPAY, PAUSED_PSP] then VISIBLE else GONE
      ][ textView
         [ textFromHtml $ "<u>" <> (getString VIEW_AUTOPAY_DETAILS) <> "</u>"
-        , textSize FontSize.a_12
+        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12 -- Added these in multiple places to check performance as well
         , padding $ Padding 5 5 5 5
         , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.black800
@@ -451,7 +451,7 @@ headerView push title actionText backbutton =
      ]
    , textView
      [ text title
-     , textSize FontSize.a_18
+     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_16 else FontSize.a_18
      , fontStyle $ FontStyle.semiBold LanguageStyle
      , color Color.darkDescriptionText
      , padding $ PaddingBottom 4
@@ -459,7 +459,7 @@ headerView push title actionText backbutton =
      ]
    , textView
      [ textFromHtml actionText
-     , textSize FontSize.a_12
+     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
      , visibility if (DS.length actionText > 0) then VISIBLE else GONE
      , fontStyle $ FontStyle.medium LanguageStyle
      , onClick push $ const HeaderRightClick
@@ -491,7 +491,7 @@ myPlanBodyview push state =
           , weight 1.0
           ][ textView 
             [ text (getString MY_PLAN)
-            , textSize FontSize.a_20
+            , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_18 else FontSize.a_20
             , fontStyle $ FontStyle.bold LanguageStyle
             , color Color.black800
             , padding $ PaddingBottom 5
@@ -544,7 +544,7 @@ planDescriptionView push state =
      , margin $ MarginBottom 5
      ][ textView
         [ text state.title
-        , textSize FontSize.a_14
+        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
         , weight 1.0
         , fontStyle $ FontStyle.bold LanguageStyle
         , color Color.black700
@@ -557,7 +557,7 @@ planDescriptionView push state =
       , gravity CENTER_VERTICAL
       ][ textView
          [ text state.description
-         , textSize FontSize.a_12
+         , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
          , fontStyle $ FontStyle.medium LanguageStyle
          , color Color.black600
          , weight 1.0
@@ -593,7 +593,7 @@ planDescriptionView push state =
                   Mb.Just desc -> [text desc, visibility VISIBLE]
                   Mb.Nothing -> [visibility GONE])
             [ textView
-              [ textSize FontSize.a_12
+              [ textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
               , textFromHtml $ Mb.fromMaybe "" item.offerDescription
               , fontStyle $ FontStyle.regular LanguageStyle
               , color Color.black600
@@ -617,14 +617,14 @@ duesView push state =
   , margin $ Margin 16 16 16 0
   ][ textView
      [ text (getString YOUR_DUES)
-     , textSize FontSize.a_14
+     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
      , fontStyle $ FontStyle.semiBold LanguageStyle
      , color Color.black800
      , margin $ MarginBottom 8
      ]
    , textView
-     [ text $ getString if state.data.myPlanData.mandateStatus == "active" then YOUR_DUES_DESCRIPTION else YOUR_DUES_DESCRIPTION_MANUAL
-     , textSize FontSize.a_12
+     [ textFromHtml $ getString if state.data.myPlanData.mandateStatus == "active" then YOUR_DUES_DESCRIPTION else YOUR_DUES_DESCRIPTION_MANUAL
+     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.black600
      , margin $ MarginBottom 16
@@ -643,14 +643,14 @@ duesView push state =
         , gravity CENTER_VERTICAL
         ][ textView
            [ text (getString CURRENT_DUES)
-           , textSize FontSize.a_12
+           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
            , fontStyle $ FontStyle.medium LanguageStyle
            , color Color.black600
            , weight 1.0
            ] 
          , textView
            [ text (getString YOUR_LIMIT)
-           , textSize FontSize.a_12
+           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
            , fontStyle $ FontStyle.medium LanguageStyle
            , color Color.black600
            ]              
@@ -661,14 +661,14 @@ duesView push state =
         , gravity CENTER_VERTICAL
         ][ textView
            [ text $  "₹" <> show state.data.myPlanData.currentDueAmount
-           , textSize FontSize.a_18
+           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_16 else FontSize.a_18
            , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.blue800
            , weight 1.0
            ] 
          , textView
            [ text $ "₹" <>  show state.data.myPlanData.maxDueAmount
-           , textSize FontSize.a_18
+           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_16 else FontSize.a_18
            , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.black700
            ]             
@@ -708,7 +708,7 @@ duesView push state =
         , onClick push $ const $ ToggleDueDetails
         ] [ textView
              [ text (getString DUE_DETAILS)
-             , textSize FontSize.a_12
+             , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
              , fontStyle $ FontStyle.medium LanguageStyle
              , color Color.black800
              , weight 1.0
@@ -730,14 +730,14 @@ duesView push state =
           , visibility if state.props.myPlanProps.isDuesExpanded then VISIBLE else GONE
           ][ textView
              [ text (getString TRIP_DATE)
-             , textSize FontSize.a_12
+             , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
              , fontStyle $ FontStyle.medium LanguageStyle
              , color Color.black600
              , weight 1.0
              ]
            , textView
              [ text (getString AMOUNT)
-             , textSize FontSize.a_12
+             , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
              , fontStyle $ FontStyle.medium LanguageStyle
              , color Color.black600
              ]
@@ -757,14 +757,14 @@ duesView push state =
               , margin $ MarginBottom 8
               ][ textView
                  [ text item.tripDate
-                 , textSize FontSize.a_12
+                 , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
                  , fontStyle $ FontStyle.medium LanguageStyle
                  , color Color.black600
                  , weight 1.0
                  ]
                , textView
                  [ text item.amount
-                 , textSize FontSize.a_12
+                 , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
                  , fontStyle $ FontStyle.medium LanguageStyle
                  , color Color.black600
                  ]
@@ -784,7 +784,7 @@ duesView push state =
           ][textView
             [ textFromHtml $ "<u>" <> (getString VIEW_DUE_DETAILS) <> "</u>"
             , color Color.black650
-            , textSize FontSize.a_14
+            , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
             , fontStyle $ FontStyle.medium LanguageStyle
             , padding $ PaddingBottom 3
             ] 
@@ -850,7 +850,7 @@ alertView push image primaryColor title description buttonText action visible =
         ]
       , textView
         [ text title
-        , textSize FontSize.a_14
+        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color primaryColor
         , padding $ PaddingBottom 3
@@ -858,7 +858,7 @@ alertView push image primaryColor title description buttonText action visible =
       ] 
    , textView
      [ text description
-     , textSize FontSize.a_12
+     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.black600
      , margin $ if buttonText /= "" then MarginBottom 12 else MarginBottom 0
@@ -879,7 +879,7 @@ arrowButtonView push title arrowVisibility action =
      , onClick push $ const $ action
      ][ textView
         [ text title
-        , textSize FontSize.a_14
+        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue800
         , margin (MarginRight 4)
@@ -951,7 +951,7 @@ managePlanBodyView push state =
      , orientation VERTICAL
      ][ textView
         [ text (getString CURRENT_PLAN)
-        , textSize FontSize.a_12
+        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.black700
         , margin $ MarginBottom 12
@@ -959,7 +959,7 @@ managePlanBodyView push state =
       , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlan) true SelectPlan
       , textView
         [ text (getString ALTERNATE_PLAN)
-        , textSize FontSize.a_12
+        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.black700
         , margin $ MarginVertical 32 12 
@@ -997,7 +997,7 @@ planCardView push state isSelected clickable' action =
      , margin $ MarginBottom 5
      ][ textView
         [ text state.title
-        , textSize FontSize.a_14
+        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
         , weight 1.0
         , fontStyle $ (if isSelected then FontStyle.bold else FontStyle.semiBold) LanguageStyle
         , color if isSelected then Color.blue900 else Color.black700
@@ -1010,7 +1010,7 @@ planCardView push state isSelected clickable' action =
       , gravity CENTER_VERTICAL
       ][ textView
          [ text state.description
-         , textSize FontSize.a_12
+         , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
          , fontStyle $ FontStyle.medium LanguageStyle
          , color Color.black600
          , weight 1.0
@@ -1047,7 +1047,7 @@ planCardView push state isSelected clickable' action =
                   Mb.Just desc -> [text desc, visibility if isSelected then VISIBLE else GONE]
                   Mb.Nothing -> [visibility GONE])
             [ textView
-              [ textSize FontSize.a_12
+              [ textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
               , textFromHtml $ Mb.fromMaybe "" item.offerDescription
               , fontStyle $ FontStyle.regular LanguageStyle
               , color Color.black600
@@ -1241,7 +1241,7 @@ errorView push state =
         , commonTV push (getString WE_MIGHT_BE_LOST) Color.black900 (FontStyle.h2 TypoGraphy) 0 CENTER
         , textView $ 
           [ textFromHtml $ (getString EXEPERIENCING_ERROR) <> " " <> state.data.errorMessage <> " \n" <> (getString PLEASE_TRY_AGAIN)
-          , textSize FontSize.a_14
+          , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
           , color Color.black700
           ] <> FontStyle.paragraphText TypoGraphy
       ]
@@ -1340,7 +1340,7 @@ planPriceView fares frequency =
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY
-      , textSize FontSize.a_16
+      , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_14 else FontSize.a_16
       , fontStyle $ FontStyle.bold LanguageStyle
       , margin $ MarginLeft 3
       , color Color.black800
