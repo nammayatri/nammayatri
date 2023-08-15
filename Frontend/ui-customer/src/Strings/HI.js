@@ -411,7 +411,7 @@ const hindiStrings = {
   "HOW_DO_YOU_IDENTIFY_YOURSELF": "आप अपने आप को कैसे पहचानते हैं?",
   "SELECT_YOUR_GENDER": "अपना लिंग चुनें",
   "FEMALE": "महिला",
-  "MALE": "नर",
+  "MALE": "पुरुष",
   "PREFER_NOT_TO_SAY": "चुप रहना पसंद करूंगा",
   "EMAIL_ID": "ईमेल आईडी",
   "SET_NOW": "अभी सेट करें",
