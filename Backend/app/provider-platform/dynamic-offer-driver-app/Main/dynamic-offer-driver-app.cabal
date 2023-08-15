@@ -219,6 +219,7 @@ library
       Domain.Types.MetaData
       Domain.Types.Person
       Domain.Types.Plan
+      Domain.Types.PlanTranslation
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -341,6 +342,7 @@ library
       Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Person
       Storage.Beam.Plan
+      Storage.Beam.PlanTranslation
       Storage.Beam.QuoteSpecialZone
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
@@ -377,6 +379,7 @@ library
       Storage.CachedQueries.Merchant.OnboardingDocumentConfig
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.Plan
+      Storage.CachedQueries.PlanTranslation
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
@@ -444,6 +447,7 @@ library
       Storage.Queries.MetaData
       Storage.Queries.Person
       Storage.Queries.Plan
+      Storage.Queries.PlanTranslation
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
