@@ -35,7 +35,8 @@ myPlanListTransformer (GetCurrentPlanResp getCurrentPlanResp) = do
         offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
         priceBreakup : planEntity.planFareBreakup,
         frequency : planEntity.frequency,
-        freeRideCount : planEntity.freeRideCount
+        freeRideCount : planEntity.freeRideCount,
+        showOffer : planEntity.name /= "DAILY PER RIDE"
     }
 
 
@@ -54,7 +55,8 @@ planListTransformer (UiPlansResp planResp) =
             offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
-            freeRideCount : planEntity.freeRideCount
+            freeRideCount : planEntity.freeRideCount,
+            showOffer : planEntity.name /= "DAILY PER RIDE"
         }
     ) sortedPlanEntityList
 
@@ -101,12 +103,13 @@ alternatePlansTransformer (UiPlansResp planResp) state =
     in map (\ (PlanEntity planEntity) -> 
         {   id : planEntity.id ,
             title : planEntity.name ,
-            description : if (planEntity.name == "DAILY PER RIDE") then (getString DAILY_PER_RIDE_DESC) else planEntity.description ,
+            description : planEntity.description ,
             isSelected : false ,
-            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else []) <> getPromoConfig planEntity.offers ,
+            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig] else []) <> getPromoConfig planEntity.offers ,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
-            freeRideCount : planEntity.freeRideCount
+            freeRideCount : planEntity.freeRideCount,
+            showOffer : planEntity.name /= "DAILY PER RIDE"
         }
     ) alternatePlansArray
 
