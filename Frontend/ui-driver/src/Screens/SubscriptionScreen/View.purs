@@ -673,23 +673,24 @@ duesView push state =
            , color Color.black700
            ]             
         ]
-      , relativeLayout
+      , linearLayout -- TODO: Temp fix
         [ height $ V 4
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , margin $ MarginTop 8
         ][ linearLayout
            [ height $ V 4
-           , width $ V (HU.clampNumber state.data.myPlanData.currentDueAmount state.data.myPlanData.maxDueAmount ((screenWidth unit) - 100))
+           , width $ V (screenWidth unit)
            , background Color.blue800
            , cornerRadii $ Corners 4.0 true false false true
+           , visibility GONE
            ][]
 
          , linearLayout
            [ height $ V 4
-           , width $ V (HU.clampNumber state.data.myPlanData.maxDueAmount (state.data.myPlanData.maxDueAmount - state.data.myPlanData.currentDueAmount) ((screenWidth unit) - 96))
-           , background Color.black700
+           , width $ V (screenWidth unit)
            , cornerRadii $ Corners 4.0 false true true false 
+           , visibility VISIBLE
            ][]
         ]
      ]
