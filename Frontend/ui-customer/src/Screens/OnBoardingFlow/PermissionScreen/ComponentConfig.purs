@@ -34,7 +34,7 @@ errorModalConfig = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ic_offline,https://assets.juspay.in/beckn/merchantcommon/images/ic_offline.png"
+        imageUrl = "ny_ic_offline,https://assets.juspay.in/nammayatri/images/common/ny_ic_offline.png"
       , height = V 124
       , width = V 124
       , margin = (MarginBottom 32)

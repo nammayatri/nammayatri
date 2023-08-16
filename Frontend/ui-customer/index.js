@@ -240,6 +240,8 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
+  } else if (event == "onInternetChanged") {
+    purescript.onConnectivityEvent("INTERNET_ACTION")();
   }
 }
 
