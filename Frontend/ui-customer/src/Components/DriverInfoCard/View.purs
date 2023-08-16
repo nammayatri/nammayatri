@@ -598,8 +598,8 @@ otpAndWaitView push state =
       ]
   ]
 
-waitTimeView2 :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-waitTimeView2 push state =
+waitTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+waitTimeView push state =
   linearLayout
   [ orientation HORIZONTAL
   , width MATCH_PARENT
@@ -611,7 +611,7 @@ waitTimeView2 push state =
   , visibility case state.props.currentSearchResultType == QUOTES of
       true -> VISIBLE
       false -> if (state.props.currentStage) == RideStarted then GONE else if state.data.driverArrived then VISIBLE else GONE
-  ][ waitTimeView push state
+  ][ waitTimeDetails push state
   , linearLayout
     [ height $ V 27
       , width $ V 1
@@ -638,7 +638,7 @@ waitTimeView2 push state =
          ][imageView
             [ height $ V 14
             , width  $ V 14
-            , imageWithFallback "ny_ic2_info_blue,user/nammaYatri/res/drawable/ny_ic2_info_blue.png"
+            , imageWithFallback $ "ny_ic_info_blue_large," <> (getAssetStoreLink FunctionCall) <> "ny_ic_info_blue_large.png"
             ]
           , textView $ 
             [ height WRAP_CONTENT
@@ -654,8 +654,8 @@ waitTimeView2 push state =
       ]
   ]
 
-waitTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-waitTimeView push state =
+waitTimeDetails:: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+waitTimeDetails push state =
  PrestoAnim.animationSet [ fadeIn state.data.driverArrived ] $
  linearLayout
   [ width WRAP_CONTENT
@@ -760,7 +760,7 @@ driverInfoView push state =
               ][]
               , if state.props.currentSearchResultType == QUOTES  then headerTextView push state else contactView push state
               , otpAndWaitView push state
-              , waitTimeView2 push state
+              , waitTimeView push state
               ,if state.props.currentStage == RideStarted then distanceView push state else linearLayout[][]
               , separator (Margin 16 (if(state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility) then 16 else 0) 16 0) (V 1) Color.grey900 $ ((state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.data.config.nyBrandingVisibility) || (state.props.currentStage == RideAccepted && not state.data.config.showPickUpandDrop)
               , driverDetailsView push state
@@ -818,7 +818,7 @@ cancelRideLayout push state =
   ][ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
-     , text $ getString CANCEL_RID
+     , text $ getString CANCEL_RIDE
      , alpha $ if (getMerchant FunctionCall) == MOBILITY_PM then 0.54 else 1.0
      ] <> FontStyle.subHeading1 TypoGraphy)
    ]
@@ -951,7 +951,7 @@ driverDetailsView push state =
             ][ imageView
                 [ height $ V 18
                 , width $ V 18
-                , imageWithFallback $ "ic_message_filled, user/nammaYatri/res/drawable/ic_message_filled.png"
+                , imageWithFallback $ "ic_message_filled," <> (getAssetStoreLink FunctionCall) <> "ic_message_filled.png"
                 ]
             ]
             ,linearLayout
@@ -966,7 +966,7 @@ driverDetailsView push state =
               imageView
                 [ height $ V 18
                 , width $ V 18
-                , imageWithFallback $ "ic_phone_filled, user/nammaYatri/res/drawable/ic_phone_filled.png"
+                , imageWithFallback $ "ic_phone_filled, " <> (getAssetStoreLink FunctionCall) <> "ic_phone_filled.png"
                 , onClick push (const CallDriver)
                 ]
             ]
