@@ -516,7 +516,7 @@ updateCustomerVersion dbClientVersion dbBundleVersion = do
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
   liftFlowBT $ hideLoader -- Removed initial choose langauge screen
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+  if(getValueToLocalStore LANGUAGE_KEY == "__failed") then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage" else pure unit
   void $ lift $ lift $ toggleLoader false
   config <- getAppConfig
   modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {data {config =  config }})

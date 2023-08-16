@@ -580,5 +580,9 @@ const kannadaStrings = {
   "AC_TAXI" : "AC ಟ್ಯಾಕ್ಸಿ",
   "NON_AC_TAXI" : "ನಾನ್ ಎಸಿ ಟ್ಯಾಕ್ಸಿ",
   "GET_OTP_VIA_WHATSAPP" : "WhatsApp ಮೂಲಕ OTP ಪಡೆಯಿರಿ",
-  "OR" : "ಅಥವಾ"
+  "OR" : "ಅಥವಾ",
+  "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(ಚಾಲಕ ಇದು ನೀವೇ ಎಂದು ಖಚಿತಪಡಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ)",
+  "LETS_GET_YOU_TRIP_READY" : "ನಿಮ್ಮನ್ನು ಪ್ರವಾಸಕ್ಕೆ ಸಿದ್ಧಗೊಳಿಸೋಣ!",
+  "GOT_AN_OTP" : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
+  "JUST_ONE_LAST_THING" : "ಕೇವಲ ಒಂದು ಕೊನೆಯ ವಿಷಯ"
 }

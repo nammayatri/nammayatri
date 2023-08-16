@@ -33,7 +33,7 @@ const hindiStrings = {
   "SET_UP_YOUR_ACCOUNT": "अपना खाता स्थापित करें",
   "CONTINUE": "जारी रखें",
   "ENTER_YOUR_NAME": "अपना नाम दर्ज करें",
-  "  FULL_NAME": "पूरा नाम",
+  "FULL_NAME": "पूरा नाम",
   "EMAIL": "ईमेल",
   "WELCOME_TEXT": "नम्मा यात्री में आपका स्वागत है",
   "PLEASE_CHOOSE_YOUR_PREFERRED_LANGUAGE_TO_CONTINUE": "जारी रखने के लिए कृपया अपनी पसंदीदा भाषा चुनें।",
@@ -584,5 +584,9 @@ const hindiStrings = {
   "AC_TAXI" : "एसी टैक्सी",
   "NON_AC_TAXI" : "नॉन-एसी टैक्सी",
   "GET_OTP_VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से ओटीपी प्राप्त करें",
-  "OR" : "या"
+  "OR" : "या",
+  "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(ड्राइवर को यह पुष्टि करने में मदद करता है कि यह आप ही हैं)",
+  "LETS_GET_YOU_TRIP_READY" : "आइए हम आपको यात्रा के लिए तैयार करें!",
+  "GOT_AN_OTP" : "एक OTP मिला?",
+  "JUST_ONE_LAST_THING" : "बस एक आखिरी चीज़"
 }
