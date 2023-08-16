@@ -15,34 +15,21 @@
 module Tools.SMS
   ( module Reexport,
     sendSMS,
-    sendBookingOTPMessage,
-    DashboardMessageType,
   )
 where
 
-import qualified Domain.Types.Booking as DRB
-import Domain.Types.Booking.Type (BookingDetails (OneWaySpecialZoneDetails))
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import qualified Domain.Types.Person as DP
-import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
 import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
-import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.MessageBuilder as MessageBuilder
-import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
+import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics
 
@@ -64,47 +51,3 @@ sendSMS merchantId = Sms.sendSMS handler
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
-
-data DashboardMessageType = BOOKING_OTP deriving (Show, Generic, Eq)
-
-sendBookingOTPMessage ::
-  ( EsqDBReplicaFlow m r,
-    HasCacheConfig r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
-    EncFlow m r,
-    Redis.HedisFlow m r
-  ) =>
-  Id Merchant ->
-  Id DP.Person ->
-  Id DRB.Booking ->
-  m ()
-sendBookingOTPMessage merchantId personId bookingId = do
-  -- merchant access check
-  merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  if merchantConfig.enableDashboardSms
-    then do
-      customer <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      -- customer <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
-      -- booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
-      smsCfg <- asks (.smsCfg)
-      mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      let countryCode = fromMaybe "+91" customer.mobileCountryCode
-      let phoneNumber = countryCode <> mobileNumber
-          sender = smsCfg.sender
-      mbotp <- case booking.bookingDetails of
-        OneWaySpecialZoneDetails b -> return b.otpCode
-        _ -> pure Nothing
-      let amount = booking.estimatedTotalFare
-      whenJust mbotp \otp -> do
-        message <-
-          MessageBuilder.buildSendBookingOTPMessage merchantId $
-            MessageBuilder.BuildSendBookingOTPMessageReq
-              { otp = show otp,
-                amount = show amount
-              }
-        sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
-        pure ()
-    else do
-      logInfo "Merchant not configured to send dashboard sms"
