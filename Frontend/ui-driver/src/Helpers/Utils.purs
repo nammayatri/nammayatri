@@ -55,11 +55,12 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), show)
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), show)
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3)
+import Effect.Uncurried (EffectFn1(..))
 import Screens.Types (AllocationData, LeaderBoardWeek, YoutubeData, LeaderBoardDay)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
@@ -300,7 +301,7 @@ type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 
 foreign import startPP :: MicroAPPInvokeSignature
 
-foreign import consumeBP :: Unit -> Unit
+foreign import consumeBP :: EffectFn1 Unit Unit
 
 paymentPageUI :: PaymentPagePayload -> FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
@@ -309,3 +310,6 @@ getNegotiationUnit :: String -> String
 getNegotiationUnit varient = case varient of
   "AUTO_RICKSHAW" -> "10"
   _ -> "20"
+  
+getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
+getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min

@@ -12,7 +12,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (any, elem)
 import Data.Array as DA
 import Data.Either (Either(..))
-import Data.Int (toNumber, pow)
+import Data.Int (toNumber, pow, ceil)
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Data.Maybe as Mb
 import Data.String as DS
@@ -24,7 +24,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getImageUrl, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getImageUrl, getValueBtwRange)
 import Helpers.Utils as HU
 import JBridge (getWidthFromPercent)
 import JBridge as JB
@@ -673,24 +673,22 @@ duesView push state =
            , color Color.black700
            ]             
         ]
-      , linearLayout -- TODO: Temp fix
+      , relativeLayout
         [ height $ V 4
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , margin $ MarginTop 8
         ][ linearLayout
            [ height $ V 4
-           , width $ V (screenWidth unit)
-           , background Color.blue800
-           , cornerRadii $ Corners 4.0 true false false true
-           , visibility GONE
+           , width $ V $ (screenWidth unit) - 100
+           , background Color.black700
+           , cornerRadius 4.0
            ][]
-
          , linearLayout
            [ height $ V 4
-           , width $ V (screenWidth unit)
-           , cornerRadii $ Corners 4.0 false true true false 
-           , visibility VISIBLE
+           , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.currentDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 100)
+           , background Color.blue800
+           , cornerRadius 4.0
            ][]
         ]
      ]
