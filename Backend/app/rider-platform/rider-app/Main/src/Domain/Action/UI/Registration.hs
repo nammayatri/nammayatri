@@ -38,6 +38,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.Person.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
@@ -68,6 +69,7 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Person.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
@@ -449,9 +451,11 @@ getRegistrationTokenE tokenId =
 createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId
+  createPersonStats <- makePersonStats person
   -- DB.runTransaction $ do
   _ <- Person.create person
   _ <- QDFS.create $ makeIdlePersonFlowStatus person
+  _ <- QPS.create createPersonStats
   pure person
   where
     makeIdlePersonFlowStatus person =
@@ -460,6 +464,23 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
           flowStatus = DPFS.IDLE,
           updatedAt = person.updatedAt
         }
+    makePersonStats :: MonadTime m => SP.Person -> m DPS.PersonStats
+    makePersonStats person = do
+      now <- getCurrentTime
+      return
+        DPS.PersonStats
+          { personId = person.id,
+            userCancelledRides = 0,
+            driverCancelledRides = 0,
+            completedRides = 0,
+            weekendRides = 0,
+            weekdayRides = 0,
+            offPeakRides = 0,
+            eveningPeakRides = 0,
+            morningPeakRides = 0,
+            weekendPeakRides = 0,
+            updatedAt = now
+          }
 
 checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =

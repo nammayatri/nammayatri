@@ -12,10 +12,31 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Main (main) where
+module API.UI.PersonStats
+  ( API,
+    handler,
+  )
+where
 
-import "kafka-consumers" App (startKafkaConsumer)
-import Prelude
+import qualified Domain.Action.UI.PersonStats as DPersonStats
+import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Person as Person
+import Environment
+import EulerHS.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Servant
+import Tools.Auth
 
-main :: IO ()
-main = startKafkaConsumer
+type API =
+  "personStats"
+    :> ( TokenAuth
+           :> Get '[JSON] DPersonStats.PersonStatsRes
+       )
+
+handler :: FlowServer API
+handler =
+  getPersonStats
+
+getPersonStats :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DPersonStats.PersonStatsRes
+getPersonStats = withFlowHandlerAPI . DPersonStats.getPersonStats

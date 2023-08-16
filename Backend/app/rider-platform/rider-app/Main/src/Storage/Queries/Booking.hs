@@ -487,6 +487,16 @@ findStuckBookings (Id merchantId) bookingIds now =
 --       ]
 --     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
 
+findAllCancelledBookingIdsByRider :: (L.MonadFlow m, Log m) => Id Person -> m [Id Booking]
+findAllCancelledBookingIdsByRider (Id riderId) =
+  findAllWithDb
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq riderId,
+          Se.Is BeamB.status $ Se.Eq CANCELLED
+        ]
+    ]
+    <&> (Domain.id <$>)
+
 cancelBookings :: (L.MonadFlow m, MonadTime m, Log m) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
   updateWithKV
