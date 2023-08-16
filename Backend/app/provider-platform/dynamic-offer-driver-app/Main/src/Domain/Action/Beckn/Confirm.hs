@@ -302,12 +302,12 @@ buildRideDetails ride driver = do
   vehicle <-
     QVeh.findById ride.driverId
       >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  number <- mapM encrypt =<< mapM decrypt driver.mobileNumber -- TEMPORARY Fix until beam bug is resolved
+  -- number <- mapM encrypt =<< mapM decrypt driver.mobileNumber -- TEMPORARY Fix until beam bug is resolved
   return
     SRD.RideDetails
       { id = ride.id,
         driverName = driver.firstName,
-        driverNumber = number,
+        driverNumber = driver.mobileNumber,
         driverCountryCode = driver.mobileCountryCode,
         vehicleNumber = vehicle.registrationNo,
         vehicleColor = Just vehicle.color,
