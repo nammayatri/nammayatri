@@ -771,9 +771,6 @@ dummyCancelReason =  {
         , subtext : Nothing
         }
 
-getValueFromRange :: Int -> Int -> Int -> Int -> Int  -> Int
-getValueFromRange inMin inMax outMin outMax percent = (percent - inMin) * (outMax - outMin + 1) / (inMax - inMin + 1) + outMin
-
 checkNotificationType :: String -> ST.NotificationType -> Boolean
 checkNotificationType currentNotification requiredNotification = (show requiredNotification) == currentNotification
 

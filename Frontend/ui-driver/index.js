@@ -9,12 +9,6 @@ const refreshThreshold = 120;
 console.warn("Hello World");
 loadConfig();
 
-var jpConsumingBackpress = {
-  event: "jp_consuming_backpress",
-  payload: { jp_consuming_backpress: true }
-}
-JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
-
 window.isObject = function (object) {
   return (typeof object == "object");
 }
@@ -248,6 +242,11 @@ function callInitiateResult () {
     , errorMessage: ""
     , errorCode: ""
   }
+  var jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: true }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 

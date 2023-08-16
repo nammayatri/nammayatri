@@ -87,6 +87,7 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
+import Effect.Uncurried (runEffectFn1)
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
@@ -114,6 +115,7 @@ baseAppFlow baseFlow = do
       void $ pure $ setCleverTapUserProp "App Version" versionName
       void $ pure $ setCleverTapUserProp "Bundle version" bundle
       void $ pure $ setCleverTapUserProp "Platform" os
+      liftFlowBT $ runEffectFn1 consumeBP unit
       setValueToLocalStore VERSION_NAME versionName
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
@@ -1963,7 +1965,7 @@ nyPaymentFlow planId = do
       paymentPageOutput <- paymentPageUI sdkPayload
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
       setValueToLocalStore DISABLE_WIDGET "false"
-      let _ = consumeBP unit
+      liftFlowBT $ runEffectFn1 consumeBP unit
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId
       case orderStatus of
         Right (OrderStatusRes statusResp) ->
@@ -1995,7 +1997,7 @@ paymentFlow = do
       setValueToLocalStore DISABLE_WIDGET "true"
       paymentPageOutput <- paymentPageUI listResp.sdk_payload
       setValueToLocalStore DISABLE_WIDGET "false"
-      let _ = consumeBP unit
+      liftFlowBT $ runEffectFn1 consumeBP unit
       if (paymentPageOutput == "backpressed") then homeScreenFlow else pure unit-- backpressed FAIL
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus homeScreenState.data.paymentState.driverFeeId
       case orderStatus of
