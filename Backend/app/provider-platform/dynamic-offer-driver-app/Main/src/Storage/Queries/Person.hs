@@ -629,7 +629,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
               sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
               hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
               taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+              taxiResult = getResult TAXI $ variant == TAXI || ((variant == TAXI_PLUS || variant == SUV || variant == SEDAN || variant == HATCHBACK) && canDowngradeToTaxi)
           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
         Just poolVariant -> getResult poolVariant True
       where
@@ -652,7 +652,7 @@ buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} 
                && (vehicle.variant == SUV || vehicle.variant == SEDAN)
            Just TAXI ->
              info.canDowngradeToTaxi
-               && vehicle.variant == TAXI_PLUS
+               && (vehicle.variant == TAXI_PLUS || vehicle.variant == HATCHBACK || vehicle.variant == SEDAN || vehicle.variant == SUV)
            _ -> False
        )
     then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, dist, location.lat, location.lon, vehicle.variant, info.mode)
@@ -751,7 +751,7 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
               sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
               hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
               taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+              taxiResult = getResult TAXI $ variant == TAXI || ((variant == TAXI_PLUS || variant == SUV || variant == SEDAN || variant == HATCHBACK) && canDowngradeToTaxi)
           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
         Just poolVariant -> getResult poolVariant True
       where
@@ -808,7 +808,7 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
                       && (vehicle.variant == SUV || vehicle.variant == SEDAN)
                   Just TAXI ->
                     info.canDowngradeToTaxi
-                      && vehicle.variant == TAXI_PLUS
+                      && (vehicle.variant == TAXI_PLUS || vehicle.variant == SEDAN || vehicle.variant == HATCHBACK || vehicle.variant == SUV)
                   _ -> False
               )
        )

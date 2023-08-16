@@ -26,6 +26,9 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     getAllLinkedRCs,
     LinkedRC (..),
     DeleteRCReq (..),
+    activateRC,
+    validateRCActivation,
+    convertTextToUTC,
   )
 where
 

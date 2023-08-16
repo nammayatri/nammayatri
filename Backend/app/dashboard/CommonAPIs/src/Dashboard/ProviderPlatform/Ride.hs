@@ -397,3 +397,23 @@ data DriverEdaKafka = DriverEdaKafka
 
 instance HideSecrets RideRouteRes where
   hideSecrets = identity
+
+---------------------------------------------------------
+-- Booking with driver phone number and vehicle number ---------------------------------------
+
+type BookingWithVehicleNumberAndPhoneAPI =
+  "booking"
+    :> "withVehicleNumberAndPhone"
+    :> ReqBody '[JSON] BookingWithVehicleAndPhoneReq
+    :> Post '[JSON] APISuccess
+
+data BookingWithVehicleAndPhoneReq = BookingWithVehicleAndPhoneReq
+  { vehicleNumber :: Text,
+    phoneNumber :: Text,
+    countryCode :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BookingWithVehicleAndPhoneReq where
+  hideSecrets = identity

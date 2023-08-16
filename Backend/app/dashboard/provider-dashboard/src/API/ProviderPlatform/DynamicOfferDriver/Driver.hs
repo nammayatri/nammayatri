@@ -63,7 +63,7 @@ type API =
            :<|> UpdateDriverNameAPI
            :<|> SetRCStatusAPI
            :<|> DeleteRCAPI
-           :<|> ClearOnRideStuckDrivers
+           :<|> ClearOnRideStuckDriversAPI
            --
        )
 
@@ -175,9 +175,9 @@ type UpdateDriverNameAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_NAME
     :> Common.UpdateDriverNameAPI
 
-type ClearOnRideStuckDrivers =
+type ClearOnRideStuckDriversAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS
-    :> Common.ClearOnRideStuckDrivers
+    :> Common.ClearOnRideStuckDriversAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
