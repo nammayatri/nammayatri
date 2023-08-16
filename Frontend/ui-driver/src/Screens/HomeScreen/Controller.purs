@@ -278,9 +278,10 @@ eval BackPressed state = do
                   else if state.data.paymentState.showRateCard then
                     continue state { data { paymentState{ showRateCard = false } } }
                       else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
-                        else do
-                          _ <- pure $ minimizeApp ""
-                          continue state
+                        else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
+                          else do
+                            _ <- pure $ minimizeApp ""
+                            continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
@@ -629,6 +630,8 @@ eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment 
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
 
+eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
+
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"
   continue state { props = state.props{showGenderBanner = false}}
@@ -642,7 +645,7 @@ eval (PaymentStatusAction status) state =
                   bannerTitle = getString YOUR_PREVIOUS_PAYMENT_IS_PENDING,
                   bannerTitleColor = Color.dustyRed,
                   banneActionText = getString CONTACT_SUPPORT,
-                  bannerImage = "ny_ic_payment_falied_banner," }}}
+                  bannerImage = "ny_ic_payment_failed_banner," }}}
 
 eval _ state = continue state
 
