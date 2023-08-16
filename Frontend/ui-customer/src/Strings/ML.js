@@ -599,5 +599,9 @@ const malayalamStrings = {
   "ASKED_FOR_EXTRA_FARE": "അധിക പണം ആവശ്യപ്പെട്ടു",
   "AUTO_RICKSHAW" : "ഓട്ടോ റിക്ഷ",
   "GET_OTP_VIA_WHATSAPP" : "വാട്ട്‌സ്ആപ്പ് വഴി OTP നേടുക",
-  "OR" : "അഥവാ"
+  "OR" : "അഥവാ",
+  "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(ഇത് നിങ്ങളാണെന്ന് സ്ഥിരീകരിക്കാൻ ഡ്രൈവറെ സഹായിക്കുന്നു)",
+  "LETS_GET_YOU_TRIP_READY" : "നിങ്ങളെ യാത്ര-തയ്യാറാക്കാം!",
+  "GOT_AN_OTP" : "ഒരു OTP കിട്ടിയോ?",
+  "JUST_ONE_LAST_THING" : "അവസാനമായി ഒരു കാര്യം മാത്രം"
 }

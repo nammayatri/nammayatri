@@ -601,5 +601,9 @@ const bengaliStrings = {
   "AC_TAXI": "AC ট্যাক্সি",
   "NON_AC_TAXI": "কোন এসি ট্যাক্সি নেই",
   "GET_OTP_VIA_WHATSAPP" : "হোয়াটসঅ্যাপের মাধ্যমে ওটিপি পান",
-  "OR" : "বা"
+  "OR" : "বা",
+  "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(ড্রাইভার নিশ্চিত করতে সাহায্য করে যে এটি আপনিই)",
+  "LETS_GET_YOU_TRIP_READY" : "চলুন আপনাকে ভ্রমণের জন্য প্রস্তুত করি!",
+  "GOT_AN_OTP" : "একটি OTP পেয়েছেন?",
+  "JUST_ONE_LAST_THING" : "শুধু একটি শেষ জিনিস"
 }

@@ -492,5 +492,9 @@ export function getStringValue(key) {
     "AC_TAXI" : "AC Taxi",
     "NON_AC_TAXI" : "Taxi non climatisé",
     "GET_OTP_VIA_WHATSAPP" : "Obtenez OTP via WhatsApp",
-    "OR" : "ou"
+    "OR" : "ou",
+    "HELPS_DRIVER_CONFIRM_ITS_YOU": "(Aide le conducteur à confirmer qu'il s'agit bien de vous)",
+    "LETS_GET_YOU_TRIP_READY": "Préparons-nous pour le voyage!",
+    "GOT_AN_OTP": "Vous avez un OTP?",
+    "JUST_ONE_LAST_THING": "Juste une dernière chose"
   }

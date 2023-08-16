@@ -584,5 +584,9 @@ const englishStrings = {
   "AC_TAXI" : "AC Taxi",
   "NON_AC_TAXI" : "Non AC Taxi",
   "GET_OTP_VIA_WHATSAPP" : "Get OTP via WhatsApp",
-  "OR" : "Or"
+  "OR" : "Or",
+  "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(Helps driver confirm it is you)",
+  "LETS_GET_YOU_TRIP_READY" : "Let’s get you trip-ready!", 
+  "GOT_AN_OTP" : "Got an OTP?",
+  "JUST_ONE_LAST_THING" : "Just one last thing"
 }
