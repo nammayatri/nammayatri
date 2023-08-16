@@ -72,8 +72,10 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
 import Tools.Metrics
@@ -458,19 +460,27 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   randomDriverPool <- liftIO $ take driverPoolCfg.driverBatchSize <$> Rnd.randomizeList driversWithLessThanNParallelRequests
+  logDebug $ "random driver pool" <> show randomDriverPool
   driversRoutes <- getRoutesForAllDrivers randomDriverPool
   merchant <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
   let driversOnWayToHome =
         filter
           ( \(_, driverRoute) ->
-              any (\wp -> getDistanceBetweenCoords (getCoordinates toLocation) wp <= driverPoolCfg.goHomeToLocationRadius) driverRoute.snappedWaypoints
+              any (\wp -> getDistanceBetweenCoords (getCoordinates toLocation) wp <= driverPoolCfg.goHomeToLocationRadius) driverRoute.points
           )
           driversRoutes
-  logDebug $ "drivers on way to home" <> show driversOnWayToHome
+  -- logDebug $ "drivers Routes : " <> show driversRoutes
+  -- logDebug $ "rad :" <> show driverPoolCfg.goHomeToLocationRadius
+  -- logDebug $ "drivers on way to home" <> show driversOnWayToHome
+  -- logDebug $ "To Location :" <> show (getCoordinates toLocation)
+  -- logDebug $ "Dist b/w wp :" <> show (map (\ (_,driverRoute) -> map (getDistanceBetweenCoords (getCoordinates toLocation)) driverRoute.points) driversRoutes)
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult merchant <$> driversOnWayToHome
-  let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
-        Nothing -> goHomeDriverPoolWithActualDist
-        Just threshold -> filter (filterFunc threshold) goHomeDriverPoolWithActualDist
+  filtDriverPoolWithActualDist <- case driverPoolCfg.actualDistanceThreshold of
+    Nothing -> return goHomeDriverPoolWithActualDist
+    Just threshold -> do
+      logDebug $ "Threshold :" <> show threshold
+      -- logDebug $ "go home driver pool ACT DIST" <> show goHomeDriverPoolWithActualDist
+      return $ filter (filterFunc threshold) goHomeDriverPoolWithActualDist
   logDebug $ "secondly filtered go home driver pool" <> show filtDriverPoolWithActualDist
   return filtDriverPoolWithActualDist
   where
@@ -479,10 +489,12 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
 
     getRoutesForAllDrivers drivers =
       forM drivers $ \driver -> do
+        ghrId <- CQDGR.getDriverGoHomeRequestInfo driver.driverId merchantId <&> (.driverGoHomeRequestId) >>= fromMaybeM (InternalError "Driver Go Home Request ID Not found")
+        dghReq <- QDGR.findById ghrId >>= fromMaybeM (InternalError "Driver go home request not found.")
         routes <-
-          Maps.getTripRoutes merchantId $
+          Maps.getRoutes merchantId $
             Maps.GetRoutesReq
-              { waypoints = getCoordinates driver :| [getCoordinates toLocation],
+              { waypoints = getCoordinates driver :| [getCoordinates dghReq],
                 mode = Just Maps.CAR,
                 calcPoints = True
               }
@@ -492,7 +504,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
     makeDriverPoolWithActualDistResult merchant (driverPoolRes, driverRoute) = do
       DriverPoolWithActualDistResult
         { driverPoolResult = makeDriverPoolResult driverPoolRes,
-          actualDistanceToPickup = fromMaybe 0 driverRoute.distance,
+          actualDistanceToPickup = driverPoolRes.distanceToDriver, --fromMaybe 0 driverRoute.distance,
           actualDurationToPickup = fromMaybe 0 driverRoute.duration,
           intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing merchant.defaultPopupDelay,
           isPartOfIntelligentPool = False,
