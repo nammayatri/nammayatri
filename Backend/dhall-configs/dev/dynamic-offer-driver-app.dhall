@@ -136,9 +136,9 @@ let kafkaProducerCfg =
       }
 
 let tables =
-      { enableKVForWriteAlso = [] : List Text
+      { enableKVForWriteAlso =
+          [] : List { nameOfTable : Text, percentEnable : Natural }
       , enableKVForRead = [] : List Text
-      , tableAllocation = 100 : Natural
       }
 
 let registryMap =
