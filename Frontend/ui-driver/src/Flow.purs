@@ -1299,7 +1299,7 @@ myRidesScreenFlow = do
           modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistory}}})
         Left err -> pure unit
     RIDE_HISTORY_NAV GoToSubscription -> do
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
       subScriptionFlow
     RIDE_HISTORY_NAV _ -> myRidesScreenFlow
 
@@ -1458,7 +1458,7 @@ referralScreenFlow = do
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
     REFERRAL_SCREEN_NAV GoToSubscription -> do 
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
       subScriptionFlow
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
@@ -1910,7 +1910,7 @@ homeScreenFlow = do
     OPEN_PAYMENT_PAGE state -> paymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
       subScriptionFlow
     HOMESCREEN_NAV _ -> homeScreenFlow
     GO_TO_AADHAAR_VERIFICATION -> do
@@ -2103,14 +2103,6 @@ subScriptionFlow = do
           nyPaymentFlow selectedPlan
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> paymentHistoryFlow
-    PAUSE_AUTOPAY state -> do
-      void $ lift $ lift $ toggleLoader true
-      pauseMandateResp <- lift $ lift $ Remote.pauseMandate state.data.driverId -- Pause API
-      void $ lift $ lift $ toggleLoader false
-      case pauseMandateResp of 
-        Right resp -> modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState)
-        Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-      subScriptionFlow 
     CANCEL_AUTOPAY state -> do
       void $ lift $ lift $ toggleLoader true
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId -- Cancel API
@@ -2161,15 +2153,9 @@ subScriptionFlow = do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
       case orderStatus of
         Right (OrderStatusRes statusResp) -> do
-          if statusResp.status == PS.CHARGED then do
-            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-            modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
-            let (GlobalState defGlobalState) = defaultGlobalState
-            modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
-            subScriptionFlow
-          else do
-            let status = if any (_ == statusResp.status) [PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Failed else Pending
-            modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{paymentStatus = Just status}})
+            let status = if statusResp.status == PS.CHARGED then Success else if any (_ == statusResp.status) [PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Failed else Pending
+                popupState = if status == Success then Just SuccessPopup else if status == Failed then Just FailedPopup else Nothing
+            modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{paymentStatus = Just status, popUpState = popupState}})
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     REFRESH_SUSCRIPTION -> do
@@ -2292,7 +2278,7 @@ notificationFlow = do
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow
     NOTIFICATION_SCREEN_NAV GoToSubscription -> do
-      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView}})
+      modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
       subScriptionFlow
     NOTIFICATION_SCREEN_NAV _ -> notificationFlow
 
