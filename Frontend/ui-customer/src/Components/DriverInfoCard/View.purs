@@ -951,7 +951,7 @@ driverDetailsView push state =
             ][ imageView
                 [ height $ V 18
                 , width $ V 18
-                , imageWithFallback $ "ic_message_filled," <> (getAssetStoreLink FunctionCall) <> "ic_message_filled.png"
+                , imageWithFallback $ if state.props.unReadMessages then "ic_message_filled_notified," <> (getAssetStoreLink FunctionCall) <> "ic_message_filled_notified.png" else "ic_message_filled," <> (getAssetStoreLink FunctionCall) <> "ic_message_filled.png" 
                 ]
             ]
             ,linearLayout
