@@ -66,6 +66,9 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
 import Data.Time.Format.ISO8601 (iso8601Show)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
+
+import Domain.Action.UI.DriverReferral
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DDF
 import Domain.Types.DriverInformation (DriverInformation)
@@ -97,8 +100,6 @@ import EulerHS.Prelude hiding (id, state)
 import EulerHS.Types (base64Encode)
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
--- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
-
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -1279,7 +1280,7 @@ verifyAuth ::
   (Id SP.Person, Id DM.Merchant) ->
   DriverAlternateNumberOtpReq ->
   Flow APISuccess
-verifyAuth (personId, _) req = do
+verifyAuth (personId, merchantId) req = do
   Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
     runRequestValidation validateAuthVerifyReq req
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -1289,6 +1290,10 @@ verifyAuth (personId, _) req = do
     when verified $ throwError $ AuthBlocked "Already verified."
     altMobNo <- Redis.get (makeAlternatePhoneNumberKey personId) >>= fromMaybeM (InvalidRequest "Alternate Number not found")
     val <- Redis.get (makeAlternateNumberOtpKey personId)
+
+    fork "generating the referral code for driver" $ do
+      void $ generateReferralCode (personId, merchantId)
+
     authValueHash <- case val of
       Nothing -> throwError $ InternalError "Auth not found"
       Just a -> return a

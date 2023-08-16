@@ -1,9 +1,15 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use newtype instead of data" #-}
 module Domain.Action.UI.DriverReferral
   ( createDriverReferral,
     ReferralLinkReq (..),
+    generateReferralCode,
+    GenerateReferralCodeRes (..),
   )
 where
 
+import qualified Data.Text as T
 import qualified Domain.Types.DriverReferral as D
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
@@ -16,6 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import qualified Storage.CachedQueries.DriverReferral as CQD
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverReferral as QRD
 import Tools.Error
@@ -23,6 +30,11 @@ import Tools.Error
 data ReferralLinkReq = ReferralLinkReq
   { referralCode :: Text,
     referralLinkPassword :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype GenerateReferralCodeRes = GenerateReferralCodeRes
+  { referralCode :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -65,3 +77,47 @@ createDriverReferral (driverId, merchantId) isDashboard ReferralLinkReq {..} = d
             driverId = cast driverId,
             linkedAt = now
           }
+
+generateReferralCode ::
+  ( HasCacheConfig r,
+    Redis.HedisFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    MonadTime m
+  ) =>
+  (Id SP.Person, Id DM.Merchant) ->
+  m GenerateReferralCodeRes
+generateReferralCode (driverId, _) = do
+  mbReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
+
+  case mbReferralCodeWithDriver of
+    Just driverReferral -> pure $ GenerateReferralCodeRes driverReferral.referralCode.getId
+    Nothing -> do
+      Redis.whenWithLockRedis makeLastRefferalCodeKey 60 $ do
+        lastrefferalCode <- CQD.getLastRefferalCode
+        let refferalCodeNumber = read (T.unpack (lastrefferalCode.getId)) :: Integer
+        let referralCode' = T.pack $ formatReferralCode (show (refferalCodeNumber + 1))
+        driverRefferalRecord <- mkDriverRefferalType referralCode'
+        void (QRD.create driverRefferalRecord)
+
+      mbReferralRecord <- B.runInReplica $ QRD.findById driverId
+      case mbReferralRecord of
+        Just record -> pure $ GenerateReferralCodeRes record.referralCode.getId
+        Nothing -> throwError DriverReferralCodeNotGenerated
+  where
+    mkDriverRefferalType rc = do
+      now <- getCurrentTime
+      pure $
+        D.DriverReferral
+          { referralCode = Id rc,
+            driverId = cast driverId,
+            linkedAt = now
+          }
+    formatReferralCode rc =
+      let len = length rc
+          zerosToAdd = max 0 (6 - len)
+       in replicate zerosToAdd '0' ++ rc
+
+makeLastRefferalCodeKey :: Text
+makeLastRefferalCodeKey = "driver-offer:CachedQueries:DriverReferral:Id-getLastRefferalCode"

@@ -24,6 +24,11 @@ data LeaderBoardType
   | DAILY
   deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show, Ord, Eq)
 
+data DriverLeaderBoardType
+  = RIDE
+  | REFERRAL
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
 data LeaderBoardConfigs = LeaderBoardConfigs
   { id :: Id LeaderBoardConfigs,
     leaderBoardType :: LeaderBoardType,

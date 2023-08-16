@@ -359,6 +359,7 @@ library
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.DriverInformation
+      Storage.CachedQueries.DriverReferral
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct

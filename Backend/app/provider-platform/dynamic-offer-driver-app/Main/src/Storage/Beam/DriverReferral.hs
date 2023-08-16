@@ -24,6 +24,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -65,6 +66,12 @@ driverReferralTMod =
       driverId = B.fieldNamed "driver_id",
       linkedAt = B.fieldNamed "linked_at"
     }
+
+driverReferralTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverReferralT)
+driverReferralTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "driver_referral"
+    <> B.modifyTableFields driverReferralTMod
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

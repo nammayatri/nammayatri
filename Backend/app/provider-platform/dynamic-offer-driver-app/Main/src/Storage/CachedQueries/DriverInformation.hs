@@ -132,6 +132,12 @@ addReferralCode personId code = do
 countDrivers :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
 countDrivers = Queries.countDrivers
 
+totalDrivers :: (CacheFlow m r, L.MonadFlow m) => Id Merchant -> m (Int, Int)
+totalDrivers merchantId =
+  Hedis.withCrossAppRedis (Hedis.safeGet makeTotalDriverKey) >>= \case
+    Just a -> pure a
+    Nothing -> cacheByTotalDriverKey /=<< Queries.countDrivers merchantId
+
 updateDowngradingOptions :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> Bool -> Bool -> m ()
 updateDowngradingOptions = Queries.updateDowngradingOptions
 
@@ -147,3 +153,11 @@ cacheDriverInformation driverId driverInfo = do
 
 makeDriverInformationIdKey :: Id Person.Driver -> Text
 makeDriverInformationIdKey id = "driver-offer:CachedQueries:DriverInformation:DriverId-" <> id.getId
+
+makeTotalDriverKey :: Text
+makeTotalDriverKey = "driver-offer:CachedQueries:TotalDrivers"
+
+cacheByTotalDriverKey :: (CacheFlow m r) => (Int, Int) -> m ()
+cacheByTotalDriverKey totalNumberOfDrivers = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp makeTotalDriverKey totalNumberOfDrivers expTime

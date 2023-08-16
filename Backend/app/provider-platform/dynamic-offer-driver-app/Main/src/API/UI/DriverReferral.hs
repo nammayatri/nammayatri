@@ -17,11 +17,18 @@ type API =
            :> TokenAuth
            :> ReqBody '[JSON] Domain.ReferralLinkReq
            :> Post '[JSON] APISuccess
+           :<|> "generateReferralCode"
+             :> TokenAuth
+             :> Post '[JSON] Domain.GenerateReferralCodeRes
        )
 
 handler :: FlowServer API
 handler =
   createDriverReferral
+    :<|> generateReferralCode
 
 createDriverReferral :: (Id SP.Person, Id DM.Merchant) -> Domain.ReferralLinkReq -> FlowHandler APISuccess
 createDriverReferral (driverId, merchantId) = withFlowHandlerAPI . Domain.createDriverReferral (driverId, merchantId) False
+
+generateReferralCode :: (Id SP.Person, Id DM.Merchant) -> FlowHandler Domain.GenerateReferralCodeRes
+generateReferralCode = withFlowHandlerAPI . Domain.generateReferralCode
