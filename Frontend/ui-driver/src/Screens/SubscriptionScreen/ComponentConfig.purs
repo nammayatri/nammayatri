@@ -50,11 +50,10 @@ switchPlanButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = ((getString SWITCH_TO)<> " " <> (getSelectedAlternatePlan state) <> " " <> (getString PLAN)) }
-      , isClickable = if state.data.myPlanData.planEntity.id == state.props.managePlanProps.selectedPlan then false else true
-      , alpha = if state.data.myPlanData.planEntity.id == state.props.managePlanProps.selectedPlan then 0.6 else 1.0
       , height = (V 48)
       , cornerRadius = 8.0
       , margin = (Margin 0 16 0 16)
+      , visibility = if state.data.myPlanData.planEntity.id == state.props.managePlanProps.selectedPlan then GONE else VISIBLE
       }
   in primaryButtonConfig'
 
