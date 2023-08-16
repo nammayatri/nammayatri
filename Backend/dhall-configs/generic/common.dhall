@@ -32,7 +32,7 @@ let loggerConfig =
       , prettyPrinting = False
       }
 
-let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE >
+let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS >
 
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 

@@ -17,8 +17,12 @@ module App (startKafkaConsumer) where
 import qualified Consumer.Flow as CF
 import Data.Function
 import Environment
+import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Runtime as L
+import qualified EulerHS.Runtime as R
 import qualified Kafka.Consumer as Consumer
+import Kernel.Beam.Connection.Flow (prepareConnectionRider)
+import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Prelude
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
@@ -31,15 +35,27 @@ startKafkaConsumer = do
   configFile <- CF.getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
-  flowRt' <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
-  managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
-  let flowRt = flowRt' {L._httpClientManagers = managers}
-  startConsumerWithEnv flowRt appEnv
+  startConsumerWithEnv appCfg appEnv
 
-startConsumerWithEnv :: L.FlowRuntime -> AppEnv -> IO ()
-startConsumerWithEnv flowRt appEnv@AppEnv {..} = do
+startConsumerWithEnv :: AppCfg -> AppEnv -> IO ()
+startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
   kafkaConsumer <- newKafkaConsumer
-  CF.runConsumer flowRt appEnv consumerType kafkaConsumer
+  let loggerRuntime = L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig
+  R.withFlowRuntime (Just loggerRuntime) $ \flowRt' -> do
+    managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
+    let flowRt = flowRt' {L._httpClientManagers = managers}
+    runFlow
+      flowRt
+      ( prepareConnectionRider
+          ( ConnectionConfigRider
+              { esqDBCfg = appCfg.esqDBCfg,
+                esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                hedisClusterCfg = appCfg.hedisClusterCfg
+              }
+          )
+          appCfg.tables
+      )
+    CF.runConsumer flowRt appEnv consumerType kafkaConsumer
   where
     newKafkaConsumer =
       either (error . ("Unable to open a kafka consumer: " <>) . show) id

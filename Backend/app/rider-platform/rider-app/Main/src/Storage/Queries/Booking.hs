@@ -246,8 +246,8 @@ findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
       offset' = fmap fromIntegral $ mbOffset <|> Just 0
   findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
 
--- findCountByRideIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
--- findCountByRideIdAndStatus personId status = do
+-- findCountByRiderIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
+-- findCountByRiderIdAndStatus personId status = do
 --   mkCount <$> do
 --     Esq.findAll $ do
 --       messageReport <- from $ table @BookingT
@@ -259,11 +259,11 @@ findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
--- findCountByRideIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
--- findCountByRideIdAndStatus (Id personId) status = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
+-- findCountByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
+-- findCountByRiderIdAndStatus (Id personId) status = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
 
-findCountByRideIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
-findCountByRideIdAndStatus (Id personId) status = do
+findCountByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
+findCountByRiderIdAndStatus (Id personId) status = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
@@ -486,6 +486,16 @@ findStuckBookings (Id merchantId) bookingIds now =
 --         BookingUpdatedAt =. val now
 --       ]
 --     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+
+findAllCancelledBookingIdsByRider :: (L.MonadFlow m, Log m) => Id Person -> m [Id Booking]
+findAllCancelledBookingIdsByRider (Id riderId) =
+  findAllWithDb
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq riderId,
+          Se.Is BeamB.status $ Se.Eq CANCELLED
+        ]
+    ]
+    <&> (Domain.id <$>)
 
 cancelBookings :: (L.MonadFlow m, MonadTime m, Log m) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =

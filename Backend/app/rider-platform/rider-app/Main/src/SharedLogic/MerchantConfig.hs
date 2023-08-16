@@ -99,8 +99,8 @@ getTotalRidesCount riderId = Redis.withNonCriticalCrossAppRedis $ do
   case mbTotalCount of
     Just totalCount -> pure totalCount
     Nothing -> do
-      totalCount <- B.runInReplica $ QB.findCountByRideIdAndStatus riderId BT.COMPLETED
-      -- totalCount <- QB.findCountByRideIdAndStatus riderId BT.COMPLETED
+      totalCount <- B.runInReplica $ QB.findCountByRiderIdAndStatus riderId BT.COMPLETED
+      -- totalCount <- QB.findCountByRiderIdAndStatus riderId BT.COMPLETED
       Redis.setExp key totalCount 14400
       pure totalCount
 

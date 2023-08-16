@@ -121,6 +121,20 @@ findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq pers
 --       ]
 --     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
 
+-- findLatestSearchRequest :: Transactionable m => Id Person -> m (Maybe SearchRequest)
+-- findLatestSearchRequest riderId = Esq.buildDType $ do
+--   fullSearchRequestT <- Esq.findOne' $ do
+--     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+--     Esq.where_ $
+--       searchRequest ^. SearchRequestRiderId ==. val (toKey riderId)
+--     Esq.limit 1
+--     Esq.orderBy [Esq.desc $ searchRequest ^. SearchRequestCreatedAt]
+--     return (searchRequest, sFromLoc, mbSToLoc)
+--   pure $ extractSolidType @SearchRequest <$> fullSearchRequestT
+
+findLatestSearchRequest :: MonadFlow m => Id Person -> m (Maybe SearchRequest)
+findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderId $ Se.Eq riderId] (Se.Desc BeamSR.createdAt) (Just 1) Nothing <&> listToMaybe
+
 updateCustomerExtraFeeAndPaymentMethod :: (L.MonadFlow m, Log m) => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m ()
 updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId =
   updateOneWithKV

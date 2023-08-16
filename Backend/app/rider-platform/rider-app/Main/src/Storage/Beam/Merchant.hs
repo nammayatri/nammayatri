@@ -44,6 +44,7 @@ import Kernel.Types.Base64
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
+import Kernel.Utils.Common (Seconds)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
@@ -127,6 +128,7 @@ data MerchantT f = MerchantT
     signatureExpiry :: B.C f Int,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime,
+    timeDiffFromUtc :: B.C f Seconds,
     dirCacheSlot :: B.C f [Domain.Slot]
   }
   deriving (Generic, B.Beamable)
@@ -199,6 +201,7 @@ merchantTMod =
       signatureExpiry = B.fieldNamed "signature_expiry",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at",
+      timeDiffFromUtc = B.fieldNamed "time_diff_from_utc",
       dirCacheSlot = B.fieldNamed "dir_cache_slot"
     }
 

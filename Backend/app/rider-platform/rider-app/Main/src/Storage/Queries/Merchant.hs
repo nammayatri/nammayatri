@@ -120,6 +120,7 @@ instance FromTType' BeamM.Merchant Merchant where
             cipherText = cipherText,
             signatureExpiry = signatureExpiry,
             createdAt = createdAt,
+            timeDiffFromUtc = timeDiffFromUtc,
             updatedAt = updatedAt,
             dirCacheSlot = dirCacheSlot
           }
@@ -149,5 +150,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.signatureExpiry = signatureExpiry,
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
+        BeamM.timeDiffFromUtc = timeDiffFromUtc,
         BeamM.dirCacheSlot = dirCacheSlot
       }

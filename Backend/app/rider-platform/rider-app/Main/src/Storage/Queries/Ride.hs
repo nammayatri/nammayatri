@@ -155,6 +155,9 @@ findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 findByBPPRideId :: (L.MonadFlow m, Log m) => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
 
+findAllCompletedRides :: MonadFlow m => m [Ride]
+findAllCompletedRides = findAllWithKV [Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]
+
 -- updateMultiple :: Id Ride -> Ride -> SqlDB ()
 -- updateMultiple rideId ride = do
 --   now <- getCurrentTime
@@ -218,6 +221,25 @@ findAllByRBId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.
 --         RideUpdatedAt =. val now
 --       ]
 --     where_ $ tbl ^. RideTId ==. val (toKey rideId)
+
+findLatestCompletedRide :: MonadFlow m => Id Person -> m (Maybe Ride)
+findLatestCompletedRide riderId = do
+  -- Esq.findOne $ do
+  --   (ride :& booking) <-
+  --     from $
+  --       table @RideT
+  --         `innerJoin` table @BookingT
+  --           `Esq.on` ( \(ride :& booking) ->
+  --                        ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+  --                    )
+  --   Esq.where_ $
+  --     ride ^. RideStatus ==. val COMPLETED
+  --       &&. booking ^. BookingRiderId ==. val (toKey riderId)
+  --   Esq.limit 1
+  --   Esq.orderBy [Esq.desc $ ride ^. RideCreatedAt]
+  --   return ride
+  booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
+  findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking)] (Se.Desc BeamR.createdAt) Nothing Nothing <&> listToMaybe
 
 updateDriverArrival :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> m ()
 updateDriverArrival rideId = do
@@ -573,3 +595,46 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.updatedAt = updatedAt,
         BeamR.driverMobileCountryCode = driverMobileCountryCode
       }
+
+countRidesByRiderId :: MonadFlow m => Id Person -> m Int
+countRidesByRiderId riderId = do
+  -- mkCount <$> do
+  --   Esq.findAll $ do
+  --     (ride :& booking) <-
+  --       from $
+  --         table @RideT
+  --           `innerJoin` table @BookingT
+  --             `Esq.on` ( \(ride :& booking) ->
+  --                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+  --                      )
+  --     where_ $
+  --       ride ^. RideStatus ==. val Ride.COMPLETED
+  --         &&. booking ^. BookingRiderId ==. val (toKey riderId)
+  --     return (countRows :: SqlExpr (Esq.Value Int))
+  -- where
+  --   mkCount [counter] = counter
+  --   mkCount _ = 0
+  booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
+  findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] <&> length
+
+countRidesFromDateToNowByRiderId :: MonadFlow m => Id Person -> UTCTime -> m Int
+countRidesFromDateToNowByRiderId riderId date = do
+  -- mkCount <$> do
+  --   Esq.findAll $ do
+  --     (ride :& booking) <-
+  --       from $
+  --         table @RideT
+  --           `innerJoin` table @BookingT
+  --             `Esq.on` ( \(ride :& booking) ->
+  --                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+  --                      )
+  --     where_ $
+  --       ride ^. RideStatus ==. val Ride.COMPLETED
+  --         &&. booking ^. BookingRiderId ==. val (toKey riderId)
+  --         &&. ride ^. RideCreatedAt >. val date
+  --     return (countRows :: SqlExpr (Esq.Value Int))
+  -- where
+  --   mkCount [counter] = counter
+  --   mkCount _ = 0
+  booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
+  findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED, Se.Is BeamR.createdAt $ Se.GreaterThan date]] <&> length

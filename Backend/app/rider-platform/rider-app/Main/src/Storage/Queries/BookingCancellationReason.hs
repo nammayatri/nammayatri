@@ -15,6 +15,7 @@
 
 module Storage.Queries.BookingCancellationReason where
 
+import qualified Database.Beam as B
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
 import qualified EulerHS.Language as L
@@ -25,6 +26,7 @@ import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
+import qualified Storage.Beam.Common as BeamCommon
 
 create :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
 create = createWithKV
@@ -69,6 +71,32 @@ upsert cancellationReason = do
         ]
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
+
+-- countCancelledBookingsByBookingIds :: Transactionable m => [Id Booking] -> CancellationSource -> m Int
+-- countCancelledBookingsByBookingIds bookingIds cancellationSource = do
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       bookingCancellationReason <- from $ table @BookingCancellationReasonT
+--       where_ $
+--         bookingCancellationReason ^. BookingCancellationReasonSource ==. val cancellationSource
+--           &&. bookingCancellationReason ^. BookingCancellationReasonBookingId `in_` valList (toKey <$> bookingIds)
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
+
+countCancelledBookingsByBookingIds :: (L.MonadFlow m, Log m) => [Id Booking] -> CancellationSource -> m Int
+countCancelledBookingsByBookingIds bookingIds cancellationSource = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_
+            (\BeamBCR.BookingCancellationReasonT {..} -> bookingId `B.in_` (B.val_ . getId <$> bookingIds) B.&&. (source B.==. B.val_ cancellationSource))
+            do
+              B.all_ (BeamCommon.bookingCancellationReason BeamCommon.atlasDB)
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
 instance FromTType' BeamBCR.BookingCancellationReason BookingCancellationReason where
   fromTType' BeamBCR.BookingCancellationReasonT {..} = do
