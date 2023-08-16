@@ -148,6 +148,7 @@ data DriverError
   | DriverAccountBlocked
   | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
+  | DriverNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -158,6 +159,7 @@ instance IsBaseError DriverError where
   toMessage DriverAccountBlocked = Just "Driver account has been blocked."
   toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
+  toMessage (DriverNotFound phoneNo) = Just $ "No Driver is found Registered  with this phone number = " <> phoneNo
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -166,12 +168,14 @@ instance IsHTTPError DriverError where
     DriverAccountBlocked -> "DRIVER_ACCOUNT_BLOCKED"
     DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
+    DriverNotFound _ -> "DRIVER_NOT_FOUND"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E500
     DriverAccountBlocked -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
+    DriverNotFound _ -> E403
 
 instance IsAPIError DriverError
 

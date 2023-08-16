@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.Ride
     multipleRideSync,
     rideRoute,
     currentActiveRide,
+    bookingWithVehicleNumberAndPhone,
   )
 where
 
@@ -27,14 +28,17 @@ import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
 import qualified Data.Time as Time
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
+import Domain.Types.DriverOnboarding.DriverRCAssociation
+import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Beam.Functions
@@ -44,6 +48,7 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
 import qualified Kernel.Storage.Clickhouse.Types as CH
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -52,7 +57,10 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -331,3 +339,36 @@ currentActiveRide _ vehicleNumber = do
   pure rideId
 
 ---------------------------------------------------------------------
+
+bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> Flow APISuccess
+bookingWithVehicleNumberAndPhone merchantShortId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  phoneNumberHash <- getDbHash req.phoneNumber
+  person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
+  mblinkedVehicle <- VQuery.findById person.id
+  now <- getCurrentTime
+  case mblinkedVehicle of
+    Just vehicle -> do
+      unless (vehicle.registrationNo == req.vehicleNumber) $ do
+        tryLinkinRC person.id merchant.id now
+    Nothing -> do
+      tryLinkinRC person.id merchant.id now
+  return Success
+  where
+    tryLinkinRC personId merchantId now = do
+      vehicleRC <- RCQuery.findLastVehicleRCWrapper req.vehicleNumber >>= fromMaybeM VehicleIsNotRegistered
+      mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id personId
+      case mRCAssociation of
+        Just assoc -> do
+          when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
+            createRCAssociation personId vehicleRC
+        Nothing -> createRCAssociation personId vehicleRC
+      let rcStatusReq =
+            DomainRC.RCStatusReq
+              { rcNo = req.vehicleNumber,
+                isActivate = True
+              }
+      void $ DomainRC.linkRCStatus (personId, merchantId) rcStatusReq
+    createRCAssociation driverId rc = do
+      driverRCAssoc <- makeRCAssociation driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      DAQuery.create driverRCAssoc

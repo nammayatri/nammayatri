@@ -724,15 +724,16 @@ updateDriver (personId, _) req = do
         Just vehicle -> do
           when
             ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI || vehicle.variant == SV.HATCHBACK)
+                && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
+            )
+            $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
+          when
+            ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI)
                 && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
             )
             $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
           when (vehicle.variant == SV.SEDAN && (req.canDowngradeToSedan == Just True)) $
             throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
-          when (vehicle.variant == SV.SEDAN && (req.canDowngradeToTaxi == Just True)) $
-            throwError $ InvalidRequest "Driver with sedan can't downgrade to Taxi"
-          when (vehicle.variant == SV.SUV && (req.canDowngradeToTaxi == Just True)) $
-            throwError $ InvalidRequest "Driver with SUV can't downgrade to Taxi"
           when (vehicle.variant == SV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
             throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
         Nothing ->

@@ -38,6 +38,7 @@ data DriverOnboardingError
   | ActiveRCNotFound
   | RCVehicleOnRide
   | RCActiveOnOtherAccount
+  | VehicleIsNotRegistered
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
   deriving (Generic, Eq, Show, Read, IsBecknAPIError, ToSchema, ToJSON, FromJSON)
@@ -65,6 +66,7 @@ instance IsBaseError DriverOnboardingError where
     RCLimitReached limit -> Just $ "Linked RC limit exceed. Can't link more than " <> show limit <> " RCs."
     RCNotFound rcNo -> Just $ "Vehicle Registration Certificate with registration number " <> rcNo <> " not found."
     ActiveRCNotFound -> Just "Vehicle Registration Certificate is not active with any driver."
+    VehicleIsNotRegistered -> Just " Vehicle is not Registered "
     RCVehicleOnRide -> Just "Vehicle on ride. Please try again later."
     RCActiveOnOtherAccount -> Just "RC active on another driver account."
 
@@ -89,6 +91,7 @@ instance IsHTTPError DriverOnboardingError where
     RCLimitReached _ -> "MAXIMUM_RC_LIMIT_REACHED"
     RCNotFound _ -> "RC_NOT_FOUND"
     ActiveRCNotFound -> "ACTIVE_RC_NOT_FOUND"
+    VehicleIsNotRegistered -> "VEHICLE_IS_NOT_REGISTERED"
     RCVehicleOnRide -> "RC_Vehicle_ON_RIDE"
     RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
   toHttpCode = \case
@@ -111,6 +114,7 @@ instance IsHTTPError DriverOnboardingError where
     RCLimitReached _ -> E400
     RCNotFound _ -> E400
     ActiveRCNotFound -> E400
+    VehicleIsNotRegistered -> E400
     RCVehicleOnRide -> E400
     RCActiveOnOtherAccount -> E400
 

@@ -34,6 +34,7 @@ data RideEndpoint
   | MultipleRideCancelEndpoint
   | MultipleRideEndEndpoint
   | MultipleRideSyncEndpoint
+  | BookingWithVehicleNumberAndPhoneEndpoint
   deriving (Show, Read)
 
 derivePersistField "RideEndpoint"
