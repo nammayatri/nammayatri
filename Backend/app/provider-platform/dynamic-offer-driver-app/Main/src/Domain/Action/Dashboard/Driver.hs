@@ -56,7 +56,7 @@ import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverOnboarding.DriverLicense
-import Domain.Types.DriverOnboarding.DriverRCAssociation (DriverRCAssociation (..))
+import Domain.Types.DriverOnboarding.DriverRCAssociation
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.Image (Image)
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
@@ -893,5 +893,3 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
       AV.create aadhaarEntity
   CQDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success
-
----------------------------------------------------------------------

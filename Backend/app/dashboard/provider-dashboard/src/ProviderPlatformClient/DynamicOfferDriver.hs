@@ -101,7 +101,8 @@ data RidesAPIs = RidesAPIs
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     rideSync :: Id Ride.Ride -> Euler.EulerClient Ride.RideSyncRes,
     multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncRes,
-    rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes
+    rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes,
+    bookingWithVehicleNumberAndPhone :: Ride.BookingWithVehicleAndPhoneReq -> Euler.EulerClient APISuccess
   }
 
 data BookingsAPIs = BookingsAPIs
@@ -251,7 +252,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> rideInfo
       :<|> rideSync
       :<|> multipleRideSync
-      :<|> rideRoute = ridesClient
+      :<|> rideRoute
+      :<|> bookingWithVehicleNumberAndPhone = ridesClient
 
     stuckBookingsCancel
       :<|> multipleBookingSync = bookingsClient

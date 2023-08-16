@@ -53,7 +53,7 @@ type API =
            :<|> Common.UpdateDriverNameAPI
            :<|> Common.SetRCStatusAPI
            :<|> Common.DeleteRCAPI
-           :<|> Common.ClearOnRideStuckDrivers
+           :<|> Common.ClearOnRideStuckDriversAPI
        )
 
 -- driver cash collection api ----------------------------------------
