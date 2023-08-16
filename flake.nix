@@ -16,6 +16,9 @@
 
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
     easy-purescript-nix.flake = false;
+
+    haskell-flake.url = "github:srid/haskell-flake/type-app";
+    common.inputs.haskell-flake.follows = "haskell-flake";
   };
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {

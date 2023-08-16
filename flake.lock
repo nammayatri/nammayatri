@@ -206,7 +206,9 @@
         "cachix-push": "cachix-push",
         "flake-parts": "flake-parts",
         "flake-root": "flake-root",
-        "haskell-flake": "haskell-flake",
+        "haskell-flake": [
+          "haskell-flake"
+        ],
         "mission-control": "mission-control",
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
@@ -927,15 +929,16 @@
     },
     "haskell-flake": {
       "locked": {
-        "lastModified": 1685469326,
-        "narHash": "sha256-esxJLsGexI/J6Fc32tJd2p3K5IOBZSCHgFvegjIpc+0=",
+        "lastModified": 1692146494,
+        "narHash": "sha256-2ny6HszU38vjlLwha9dvbb4398TzEH/Vx5cbvmNS4AY=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "996f5c2cdc67285c4990df378976f9dbf26f8401",
+        "rev": "8331a2bf1623d34fb741238f264f232342dbb2b9",
         "type": "github"
       },
       "original": {
         "owner": "srid",
+        "ref": "type-app",
         "repo": "haskell-flake",
         "type": "github"
       }
@@ -2075,6 +2078,7 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "easy-purescript-nix": "easy-purescript-nix",
+        "haskell-flake": "haskell-flake",
         "osrm-pbf": "osrm-pbf",
         "shared-kernel": "shared-kernel"
       }
