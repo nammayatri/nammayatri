@@ -135,7 +135,7 @@ verifyDashboard incomingToken = do
 decryptAES128 :: (MonadThrow m, Log m) => Maybe Base64 -> Text -> m Text
 decryptAES128 Nothing encryptedText = return encryptedText
 decryptAES128 (Just (Base64 cipherText)) encryptedText = do
-  aes <- fromMaybeM (InternalError "Failed to decode CipherText") $ maybeCryptoError (cipherInit cipherText :: CryptoFailable AES128)
+  aes <- fromMaybeM (InternalError "Failed to decode CipherText") $ maybeCryptoError (cipherInit $ Base64.decodeLenient cipherText :: CryptoFailable AES128)
   let (nonce, remaining) = BS.splitAt 12 $ Base64.decodeLenient $ TE.encodeUtf8 encryptedText
       (encrypted, authTag) = BS.splitAt (BS.length remaining - 16) remaining
   aeadState <- fromMaybeM (InternalError "Failed to initialize AEAD cipher") $ maybeCryptoError (aeadInit AEAD_GCM aes (nonce :: ByteString) :: CryptoFailable (AEAD AES128))
