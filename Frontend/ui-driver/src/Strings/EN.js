@@ -708,7 +708,7 @@ const englishStrings = {
   ENABLE_AUTOPAY_DESC : "Enable Autopay now to start hassle-free payments!",
   ENABLE_AUTOPAY_NOW : "Enable Autopay Now",
   PAYMENT_PENDING_STR : "Payment Pending!",
-  PAYMENT_PENDING_DESC_STR : "Your payment is being processed.\nWe will let you know when there is an update.",
+  PAYMENT_PENDING_DESC_STR : "We will let you know when there is an update or you can try again. We will refund in case of multiple debits",
   REFRESH_STR : "Check Status",
   TRANSACTION_DETAILS : "Transaction Details",
   RIDE_DETAILS : "Ride Details",

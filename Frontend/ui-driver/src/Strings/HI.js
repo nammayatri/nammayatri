@@ -705,7 +705,7 @@ const hindiStrings = {
   ENABLE_AUTOPAY_DESC : "परेशानी मुक्त भुगतान शुरू करने के लिए अभी ऑटोपे सक्षम करें!",
   ENABLE_AUTOPAY_NOW : "अभी ऑटोपे सक्षम करें",
   PAYMENT_PENDING_STR : "भुगतान लंबित!",
-  PAYMENT_PENDING_DESC_STR : "आपका भुगतान संसाधित किया जा रहा है।\nकोई अपडेट होने पर हम आपको बताएंगे।",
+  PAYMENT_PENDING_DESC_STR : "कोई अपडेट होने पर हम आपको बताएंगे या आप पुनः प्रयास कर सकते हैं। हम एकाधिक डेबिट के मामले में धनवापसी करेंगे",
   REFRESH_STR : "स्थिति जाँचिए",
   TRANSACTION_DETAILS : "लेनदेन विवरण",
   RIDE_DETAILS : "सवारी विवरण",

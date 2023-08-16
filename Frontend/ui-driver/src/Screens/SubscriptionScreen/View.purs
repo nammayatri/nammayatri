@@ -272,12 +272,12 @@ paymentPendingView push state =
           , height WRAP_CONTENT
           , background Color.blue800
           , cornerRadius 24.0
-          , padding $ Padding 10 5 10 5
+          , padding $ Padding 10 5 10 6
           , margin $ MarginLeft 10
           , gravity CENTER
           , onClick push $ const RetryPaymentAC
           ][ textView $ 
-              [ width WRAP_CONTENT
+              [ weight 1.0
               , height WRAP_CONTENT
               , text $ getString RETRY_PAYMENT_STR
               , margin $ MarginRight 5

@@ -2399,32 +2399,6 @@ instance showDuesEntity :: Show DuesEntity where show = genericShow
 instance decodeDuesEntity :: Decode DuesEntity where decode = defaultDecode
 instance encodeDuesEntity :: Encode DuesEntity where encode = defaultEncode
 
-
-------------------------------------------------- PauseMandate --------------------------------------
-
-data PauseMandateReq = PauseMandateReq String
-
-newtype PauseMandateResp = PauseMandateResp ApiSuccessResult
-
-instance makePauseMandateReq :: RestEndpoint PauseMandateReq PauseMandateResp where
- makeRequest reqBody@(PauseMandateReq driverId) headers = defaultMakeRequest POST (EP.pauseMandate driverId) headers reqBody Nothing
- decodeResponse = decodeJSON
- encodeRequest req = standardEncode req
-
-derive instance genericPauseMandateReq :: Generic PauseMandateReq _
-instance standardEncodePauseMandateReq :: StandardEncode PauseMandateReq where standardEncode (PauseMandateReq dummy) = standardEncode dummy
-instance showPauseMandateReq :: Show PauseMandateReq where show = genericShow
-instance decodePauseMandateReq :: Decode PauseMandateReq where decode = defaultDecode
-instance encodePauseMandateReq :: Encode PauseMandateReq where encode = defaultEncode
-
-derive instance genericPauseMandateResp :: Generic PauseMandateResp _
-derive instance newtypePauseMandateResp :: Newtype PauseMandateResp _
-instance standardEncodePauseMandateResp :: StandardEncode PauseMandateResp where standardEncode (PauseMandateResp res) = standardEncode res
-instance showPauseMandateResp :: Show PauseMandateResp where show = genericShow
-instance decodePauseMandateResp :: Decode PauseMandateResp where decode = defaultDecode
-instance encodePauseMandateResp :: Encode PauseMandateResp where encode = defaultEncode 
-
-
 --------------------------------------------- ResumeMandate --------------------------------------------------
 
 data ResumeMandateReq = ResumeMandateReq String
@@ -2499,30 +2473,6 @@ instance showSelectPlanResp :: Show SelectPlanResp where show = genericShow
 instance decodeSelectPlanResp :: Decode SelectPlanResp where decode = defaultDecode
 instance encodeSelectPlanResp :: Encode SelectPlanResp where encode = defaultEncode
 
------------------------------------------------ CancelAutoPay -----------------------------------------
-
-data CancelAutoPayReq = CancelAutoPayReq String
-
-newtype CancelAutoPayResp = CancelAutoPayResp ApiSuccessResult
-
-instance makeCancelAutoPayReq :: RestEndpoint CancelAutoPayReq CancelAutoPayResp where
- makeRequest reqBody@(CancelAutoPayReq driverId) headers = defaultMakeRequest POST (EP.cancelAutoPay driverId) headers reqBody Nothing
- decodeResponse = decodeJSON
- encodeRequest req = standardEncode req
-
-derive instance genericCancelAutoPayReq :: Generic CancelAutoPayReq _
-instance standardEncodeCancelAutoPayReq :: StandardEncode CancelAutoPayReq where standardEncode (CancelAutoPayReq dummy) = standardEncode dummy
-instance showCancelAutoPayReq :: Show CancelAutoPayReq where show = genericShow
-instance decodeCancelAutoPayReq :: Decode CancelAutoPayReq where decode = defaultDecode
-instance encodeCancelAutoPayReq :: Encode CancelAutoPayReq where encode = defaultEncode
-
-derive instance genericCancelAutoPayResp :: Generic CancelAutoPayResp _
-derive instance newtypeCancelAutoPayResp :: Newtype CancelAutoPayResp _
-instance standardEncodeCancelAutoPayResp :: StandardEncode CancelAutoPayResp where standardEncode (CancelAutoPayResp res) = standardEncode res
-instance showCancelAutoPayResp :: Show CancelAutoPayResp where show = genericShow
-instance decodeCancelAutoPayResp :: Decode CancelAutoPayResp where decode = defaultDecode
-instance encodeCancelAutoPayResp :: Encode CancelAutoPayResp where encode = defaultEncode 
-
 ---------------------------------------------- CurrentPlanAPI ---------------------------------------------------
 data GetCurrentPlanReq = GetCurrentPlanReq String
 
@@ -2535,15 +2485,13 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
 }
 
 newtype MandateData = MandateData {
-  status :: String, --CREATED | ACTIVE | FAILURE | PAUSED | EXPIRED | REVOKED,
+  status :: String, --CREATED | ACTIVE | FAILURE | PAUSED | EXPIRED | REVOKED
   startDate :: String,
   endDate :: String,
   mandateId :: String,
   payerVpa :: Maybe String,
-  frequency :: String, --ONETIME | DAILY | WEEKLY | FORTNIGHTLY | MONTHLY | BIMONTHLY | QUARTERLY | HALFYEARLY | YEARLY | ASPRESENTED
+  frequency :: String,
   maxAmount :: Number
-  -- totalPlanCreditLimit :: Number,
-  -- currentDues :: Number
 }
 
 instance makeGetCurrentPlanReq :: RestEndpoint GetCurrentPlanReq GetCurrentPlanResp where

@@ -64,7 +64,6 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | Alerts SubscriptionScreenState
                     | JoinPlanExit SubscriptionScreenState
                     | PaymentHistory SubscriptionScreenState
-                    | PauseAutoPay SubscriptionScreenState
                     | CancelAutoPayPlan SubscriptionScreenState
                     | SwitchCurrentPlan SubscriptionScreenState
                     | ResumeAutoPayPlan SubscriptionScreenState

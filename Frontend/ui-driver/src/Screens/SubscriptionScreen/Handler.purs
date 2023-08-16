@@ -34,9 +34,6 @@ subscriptionScreen = do
     PaymentHistory updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GOTO_PAYMENT_HISTORY updatedState)
-    PauseAutoPay updatedState -> do
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ PAUSE_AUTOPAY updatedState)
     CancelAutoPayPlan updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CANCEL_AUTOPAY updatedState)

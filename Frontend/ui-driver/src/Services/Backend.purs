@@ -1048,20 +1048,6 @@ resumeMandate driverId = do
     where
         unwrapResponse (x) = x
 
-pauseMandate :: String -> Flow GlobalState (Either ErrorResponse PauseMandateResp)
-pauseMandate driverId = do
-    headers <- getHeaders "" false
-    withAPIResult (EP.pauseMandate driverId) unwrapResponse $ callAPI headers (PauseMandateReq driverId)
-    where
-        unwrapResponse (x) = x
-
-cancelAutoPay :: String -> Flow GlobalState (Either ErrorResponse CancelAutoPayResp)
-cancelAutoPay driverId = do
-    headers <- getHeaders "" false
-    withAPIResult (EP.cancelAutoPay driverId) unwrapResponse $ callAPI headers (CancelAutoPayReq driverId)
-    where
-        unwrapResponse (x) = x
-
 suspendMandate :: String -> Flow GlobalState (Either ErrorResponse SuspendMandateResp)
 suspendMandate _ = do
     headers <- getHeaders "" false
