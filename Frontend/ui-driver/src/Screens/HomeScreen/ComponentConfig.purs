@@ -183,7 +183,8 @@ linkAadhaarPopupConfig state = let
     option2 {
       visibility = false
     },
-    backgroundClickable = false,
+    backgroundClickable = true,
+    dismissPopup = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
