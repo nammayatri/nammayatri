@@ -1533,7 +1533,8 @@ type SubscriptionScreenProps = {
   showError :: Boolean,
   showShimmer :: Boolean,
   refreshPaymentStatus :: Boolean,
-  confirmCancel :: Boolean
+  confirmCancel :: Boolean,
+  isSelectedLangTamil :: Boolean
 }
 
 type JoinPlanData = {
