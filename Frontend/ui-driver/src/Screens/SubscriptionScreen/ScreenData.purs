@@ -40,6 +40,7 @@ initData = {
         }
     },
     props : {
+        isSelectedLangTamil : false,
         subView : NoSubView,
         popUpState : Mb.Nothing,
         paymentStatus : Mb.Nothing,

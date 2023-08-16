@@ -159,7 +159,7 @@ joinPlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  ][ headerView push (getString NAMMA_YATRI_PLANS) "" false
+  ][ headerView push (getString NAMMA_YATRI_PLANS) "" false state.props.isSelectedLangTamil
     , relativeLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -231,13 +231,13 @@ paymentPendingView push state =
   , visibility if (state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing) then VISIBLE else GONE
   ][  textView
       [ text $ getString PAYMENT_PENDING_STR
-      , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+      , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
       , fontStyle $ FontStyle.semiBold LanguageStyle
       , color Color.black800
       ]
     , textView
       [ text $ getString PAYMENT_PENDING_DESC_STR
-      , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+      , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
       , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.black800
       ]
@@ -368,7 +368,7 @@ plansBottomView push state =
               , width MATCH_PARENT
               , orientation VERTICAL
               ](map 
-                  (\item -> planCardView push item (item.id == (Mb.fromMaybe "" state.props.joinPlanProps.selectedPlan)) true ChoosePlan
+                  (\item -> planCardView push item (item.id == (Mb.fromMaybe "" state.props.joinPlanProps.selectedPlan)) true ChoosePlan state.props.isSelectedLangTamil
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -395,7 +395,7 @@ managePlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  ][ headerView push (getString MANAGE_PLAN) "" true
+  ][ headerView push (getString MANAGE_PLAN) "" true state.props.isSelectedLangTamil
    , managePlanBodyView push state
    , linearLayout
      [ height $ V 45
@@ -407,7 +407,7 @@ managePlanView push state visibility' =
      , visibility if state.data.myPlanData.autoPayStatus `elem` [ACTIVE_AUTOPAY, PAUSED_PSP] then VISIBLE else GONE
      ][ textView
         [ textFromHtml $ "<u>" <> (getString VIEW_AUTOPAY_DETAILS) <> "</u>"
-        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12 -- Added these in multiple places to check performance as well
+        , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
         , padding $ Padding 5 5 5 5
         , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.black800
@@ -426,13 +426,13 @@ myPlanView push state visibility' =
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
   , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
-  ][ headerView push (getString PLAN) "" false -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
+  ][ headerView push (getString PLAN) "" false state.props.isSelectedLangTamil -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
    , paymentPendingView push state
    , myPlanBodyview push state
   ]
 
-headerView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> PrestoDOM (Effect Unit) w 
-headerView push title actionText backbutton =
+headerView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
+headerView push title actionText backbutton isSelectedLangTamil =
   linearLayout
   [ height $ V 55
   , width MATCH_PARENT
@@ -451,7 +451,7 @@ headerView push title actionText backbutton =
      ]
    , textView
      [ text title
-     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_16 else FontSize.a_18
+     , textSize if isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
      , fontStyle $ FontStyle.semiBold LanguageStyle
      , color Color.darkDescriptionText
      , padding $ PaddingBottom 4
@@ -459,7 +459,7 @@ headerView push title actionText backbutton =
      ]
    , textView
      [ textFromHtml actionText
-     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+     , textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
      , visibility if (DS.length actionText > 0) then VISIBLE else GONE
      , fontStyle $ FontStyle.medium LanguageStyle
      , onClick push $ const HeaderRightClick
@@ -491,7 +491,7 @@ myPlanBodyview push state =
           , weight 1.0
           ][ textView 
             [ text (getString MY_PLAN)
-            , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_18 else FontSize.a_20
+            , textSize if state.props.isSelectedLangTamil then FontSize.a_18 else FontSize.a_20
             , fontStyle $ FontStyle.bold LanguageStyle
             , color Color.black800
             , padding $ PaddingBottom 5
@@ -515,19 +515,19 @@ myPlanBodyview push state =
            ]
          , paymentMethodView push state.data.myPlanData
        ]
-     , planDescriptionView push state.data.myPlanData.planEntity
-     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP)
-     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP)
-     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance
-     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave
+     , planDescriptionView push state.data.myPlanData.planEntity state.props.isSelectedLangTamil
+     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil
+     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP) state.props.isSelectedLangTamil
+     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance state.props.isSelectedLangTamil
+     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil
      , duesView push state
      , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING] then PrimaryButton.view (push <<< ResumeAutoPay) (resumeAutopayButtonConfig state) else dummyView
     ]
   ]
 
 
-planDescriptionView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> PrestoDOM (Effect Unit) w 
-planDescriptionView push state = 
+planDescriptionView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> PrestoDOM (Effect Unit) w 
+planDescriptionView push state isSelectedLangTamil = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -544,12 +544,12 @@ planDescriptionView push state =
      , margin $ MarginBottom 5
      ][ textView
         [ text state.title
-        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+        , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
         , weight 1.0
         , fontStyle $ FontStyle.bold LanguageStyle
         , color Color.black700
         ]
-      , planPriceView state.priceBreakup state.frequency
+      , planPriceView state.priceBreakup state.frequency isSelectedLangTamil
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -557,7 +557,7 @@ planDescriptionView push state =
       , gravity CENTER_VERTICAL
       ][ textView
          [ text state.description
-         , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+         , textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
          , fontStyle $ FontStyle.medium LanguageStyle
          , color Color.black600
          , weight 1.0
@@ -593,7 +593,7 @@ planDescriptionView push state =
                   Mb.Just desc -> [text desc, visibility VISIBLE]
                   Mb.Nothing -> [visibility GONE])
             [ textView
-              [ textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+              [ textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
               , textFromHtml $ Mb.fromMaybe "" item.offerDescription
               , fontStyle $ FontStyle.regular LanguageStyle
               , color Color.black600
@@ -601,7 +601,7 @@ planDescriptionView push state =
               ]
             ]
          )state.offers)
-     , arrowButtonView push (getString MANAGE_PLAN) true GotoManagePlan
+     , arrowButtonView push (getString MANAGE_PLAN) true GotoManagePlan isSelectedLangTamil
   ]
 
 duesView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
@@ -617,14 +617,14 @@ duesView push state =
   , margin $ Margin 16 16 16 0
   ][ textView
      [ text (getString YOUR_DUES)
-     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+     , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
      , fontStyle $ FontStyle.semiBold LanguageStyle
      , color Color.black800
      , margin $ MarginBottom 8
      ]
    , textView
      [ textFromHtml $ getString if state.data.myPlanData.mandateStatus == "active" then YOUR_DUES_DESCRIPTION else YOUR_DUES_DESCRIPTION_MANUAL
-     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+     , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.black600
      , margin $ MarginBottom 16
@@ -643,14 +643,14 @@ duesView push state =
         , gravity CENTER_VERTICAL
         ][ textView
            [ text (getString CURRENT_DUES)
-           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+           , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
            , fontStyle $ FontStyle.medium LanguageStyle
            , color Color.black600
            , weight 1.0
            ] 
          , textView
            [ text (getString YOUR_LIMIT)
-           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+           , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
            , fontStyle $ FontStyle.medium LanguageStyle
            , color Color.black600
            ]              
@@ -661,14 +661,14 @@ duesView push state =
         , gravity CENTER_VERTICAL
         ][ textView
            [ text $  "₹" <> show state.data.myPlanData.currentDueAmount
-           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_16 else FontSize.a_18
+           , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
            , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.blue800
            , weight 1.0
            ] 
          , textView
            [ text $ "₹" <>  show state.data.myPlanData.maxDueAmount
-           , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_16 else FontSize.a_18
+           , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
            , fontStyle $ FontStyle.bold LanguageStyle
            , color Color.black700
            ]             
@@ -709,7 +709,7 @@ duesView push state =
         , onClick push $ const $ ToggleDueDetails
         ] [ textView
              [ text (getString DUE_DETAILS)
-             , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+             , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
              , fontStyle $ FontStyle.medium LanguageStyle
              , color Color.black800
              , weight 1.0
@@ -731,14 +731,14 @@ duesView push state =
           , visibility if state.props.myPlanProps.isDuesExpanded then VISIBLE else GONE
           ][ textView
              [ text (getString TRIP_DATE)
-             , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+             , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
              , fontStyle $ FontStyle.medium LanguageStyle
              , color Color.black600
              , weight 1.0
              ]
            , textView
              [ text (getString AMOUNT)
-             , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+             , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
              , fontStyle $ FontStyle.medium LanguageStyle
              , color Color.black600
              ]
@@ -758,14 +758,14 @@ duesView push state =
               , margin $ MarginBottom 8
               ][ textView
                  [ text item.tripDate
-                 , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+                 , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
                  , fontStyle $ FontStyle.medium LanguageStyle
                  , color Color.black600
                  , weight 1.0
                  ]
                , textView
                  [ text item.amount
-                 , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+                 , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
                  , fontStyle $ FontStyle.medium LanguageStyle
                  , color Color.black600
                  ]
@@ -785,14 +785,14 @@ duesView push state =
           ][textView
             [ textFromHtml $ "<u>" <> (getString VIEW_DUE_DETAILS) <> "</u>"
             , color Color.black650
-            , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+            , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
             , fontStyle $ FontStyle.medium LanguageStyle
             , padding $ PaddingBottom 3
             ] 
            ]
       ] 
    , if false then PrimaryButton.view (push <<< ClearDue) (clearDueButtonConfig state) else dummyView
-   , if false then arrowButtonView push (getString SETUP_AUTOPAY) false NoAction else dummyView
+   , if false then arrowButtonView push (getString SETUP_AUTOPAY) false NoAction state.props.isSelectedLangTamil else dummyView
   ]
 
 promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
@@ -826,8 +826,8 @@ promoCodeView push state =
             Mb.Just txt -> [text txt]
   ]
 
-alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> String -> Action -> Boolean -> PrestoDOM (Effect Unit) w
-alertView push image primaryColor title description buttonText action visible = 
+alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> String -> Action -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+alertView push image primaryColor title description buttonText action visible isSelectedLangTamil = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -851,7 +851,7 @@ alertView push image primaryColor title description buttonText action visible =
         ]
       , textView
         [ text title
-        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+        , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color primaryColor
         , padding $ PaddingBottom 3
@@ -859,16 +859,16 @@ alertView push image primaryColor title description buttonText action visible =
       ] 
    , textView
      [ text description
-     , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+     , textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.black600
      , margin $ if buttonText /= "" then MarginBottom 12 else MarginBottom 0
      ]
-   , if buttonText /= "" then arrowButtonView push buttonText true action else dummyView
+   , if buttonText /= "" then arrowButtonView push buttonText true action isSelectedLangTamil else dummyView
   ]
 
-arrowButtonView :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Action -> PrestoDOM (Effect Unit) w
-arrowButtonView push title arrowVisibility action = 
+arrowButtonView :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Action -> Boolean -> PrestoDOM (Effect Unit) w
+arrowButtonView push title arrowVisibility action isSelectedLangTamil = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -880,7 +880,7 @@ arrowButtonView push title arrowVisibility action =
      , onClick push $ const $ action
      ][ textView
         [ text title
-        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+        , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue800
         , margin (MarginRight 4)
@@ -952,15 +952,15 @@ managePlanBodyView push state =
      , orientation VERTICAL
      ][ textView
         [ text (getString CURRENT_PLAN)
-        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+        , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.black700
         , margin $ MarginBottom 12
         ]
-      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlan) true SelectPlan
+      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlan) true SelectPlan state.props.isSelectedLangTamil
       , textView
         [ text (getString ALTERNATE_PLAN)
-        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+        , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.black700
         , margin $ MarginVertical 32 12 
@@ -970,14 +970,14 @@ managePlanBodyView push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         ](map(
-             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlan) true SelectPlan)
+             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlan) true SelectPlan state.props.isSelectedLangTamil)
              ) state.data.managePlanData.alternatePlans)
       , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
      ]
    ]
 
-planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (String -> Action)-> PrestoDOM (Effect Unit) w
-planCardView push state isSelected clickable' action =
+planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (String -> Action) -> Boolean -> PrestoDOM (Effect Unit) w
+planCardView push state isSelected clickable' action isSelectedLangTamil =
   -- PrestoAnim.animationSet                TODO :: Animations
   -- [ translateInXForwardAnim true] $
   linearLayout
@@ -998,12 +998,12 @@ planCardView push state isSelected clickable' action =
      , margin $ MarginBottom 5
      ][ textView
         [ text state.title
-        , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+        , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
         , weight 1.0
         , fontStyle $ (if isSelected then FontStyle.bold else FontStyle.semiBold) LanguageStyle
         , color if isSelected then Color.blue900 else Color.black700
         ]
-      , planPriceView state.priceBreakup state.frequency
+      , planPriceView state.priceBreakup state.frequency isSelectedLangTamil
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -1011,7 +1011,7 @@ planCardView push state isSelected clickable' action =
       , gravity CENTER_VERTICAL
       ][ textView
          [ text state.description
-         , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+         , textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
          , fontStyle $ FontStyle.medium LanguageStyle
          , color Color.black600
          , weight 1.0
@@ -1048,7 +1048,7 @@ planCardView push state isSelected clickable' action =
                   Mb.Just desc -> [text desc, visibility if isSelected then VISIBLE else GONE]
                   Mb.Nothing -> [visibility GONE])
             [ textView
-              [ textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_10 else FontSize.a_12
+              [ textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
               , textFromHtml $ Mb.fromMaybe "" item.offerDescription
               , fontStyle $ FontStyle.regular LanguageStyle
               , color Color.black600
@@ -1106,7 +1106,7 @@ autoPayDetailsView push state visibility' =
      [ height MATCH_PARENT
      , width MATCH_PARENT
      , orientation VERTICAL
-     ][ headerView push (getString AUTOPAY_DETAILS) "" true
+     ][ headerView push (getString AUTOPAY_DETAILS) "" true state.props.isSelectedLangTamil
       , autoPayPGView push state
       , scrollView
         [ height WRAP_CONTENT
@@ -1242,7 +1242,7 @@ errorView push state =
         , commonTV push (getString WE_MIGHT_BE_LOST) Color.black900 (FontStyle.h2 TypoGraphy) 0 CENTER
         , textView $ 
           [ textFromHtml $ (getString EXEPERIENCING_ERROR) <> " " <> state.data.errorMessage <> " \n" <> (getString PLEASE_TRY_AGAIN)
-          , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+          , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
           , color Color.black700
           ] <> FontStyle.paragraphText TypoGraphy
       ]
@@ -1326,8 +1326,8 @@ sfl height' =
         ][]
     ]
 
-planPriceView :: forall w. Array PaymentBreakUp -> String -> PrestoDOM (Effect Unit) w
-planPriceView fares frequency =
+planPriceView :: forall w. Array PaymentBreakUp -> String -> Boolean -> PrestoDOM (Effect Unit) w
+planPriceView fares frequency isSelectedLangTamil =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -1341,7 +1341,7 @@ planPriceView fares frequency =
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY
-      , textSize if (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN" then FontSize.a_14 else FontSize.a_16
+      , textSize if isSelectedLangTamil then FontSize.a_14 else FontSize.a_16
       , fontStyle $ FontStyle.bold LanguageStyle
       , margin $ MarginLeft 3
       , color Color.black800
