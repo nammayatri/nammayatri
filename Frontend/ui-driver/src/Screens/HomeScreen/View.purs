@@ -213,6 +213,7 @@ view push state =
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
+      , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
