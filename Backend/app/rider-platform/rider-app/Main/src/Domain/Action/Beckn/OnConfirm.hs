@@ -22,12 +22,20 @@ where
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
+import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption (decrypt)
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.MessageBuilder as MessageBuilder
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.SMS as Sms
 
 data OnConfirmReq = OnConfirmReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -40,11 +48,30 @@ data ValidatedOnConfirmReq = ValidatedOnConfirmReq
     booking :: DRB.Booking
   }
 
-onConfirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => ValidatedOnConfirmReq -> m ()
+onConfirm :: (EncFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => ValidatedOnConfirmReq -> m ()
 onConfirm ValidatedOnConfirmReq {..} = do
-  whenJust specialZoneOtp $ \otp ->
+  whenJust specialZoneOtp $ \otp -> do
     -- DB.runTransaction $ do
     void $ QRB.updateOtpCodeBookingId booking.id otp
+    fork "sending Booking confirmed dasboard sms" $ do
+      merchantConfig <- QMSUC.findByMerchantId booking.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound booking.merchantId.getId)
+      if merchantConfig.enableDashboardSms
+        then do
+          customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+          mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+          smsCfg <- asks (.smsCfg)
+          let countryCode = fromMaybe "+91" customer.mobileCountryCode
+          let phoneNumber = countryCode <> mobileNumber
+              sender = smsCfg.sender
+          message <-
+            MessageBuilder.buildSendBookingOTPMessage booking.merchantId $
+              MessageBuilder.BuildSendBookingOTPMessageReq
+                { otp = show otp,
+                  amount = show booking.estimatedTotalFare
+                }
+          Sms.sendSMS booking.merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        else do
+          logInfo "Merchant not configured to send dashboard sms"
   -- DB.runTransaction $ do
   void $ QRB.updateStatus booking.id DRB.CONFIRMED
 
