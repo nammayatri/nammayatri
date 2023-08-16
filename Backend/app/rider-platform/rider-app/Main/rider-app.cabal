@@ -65,6 +65,7 @@ library
       API.UI.HotSpot
       API.UI.Maps
       API.UI.Payment
+      API.UI.PersonStats
       API.UI.Profile
       API.UI.Quote
       API.UI.Registration
@@ -128,6 +129,7 @@ library
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
+      Domain.Action.UI.PersonStats
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
       Domain.Action.UI.Registration
@@ -178,6 +180,7 @@ library
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
+      Domain.Types.Person.PersonStats
       Domain.Types.Quote
       Domain.Types.RegistrationToken
       Domain.Types.RentalSlab
@@ -203,6 +206,7 @@ library
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.Person
       SharedLogic.PublicTransport
       Storage.Beam.AppInstalls
       Storage.Beam.BlackListOrg
@@ -236,6 +240,7 @@ library
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonFlowStatus
+      Storage.Beam.Person.PersonStats
       Storage.Beam.Quote
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalSlab
@@ -292,6 +297,7 @@ library
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
+      Storage.Queries.Person.PersonStats
       Storage.Queries.Quote
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalSlab

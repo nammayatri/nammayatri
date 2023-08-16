@@ -82,6 +82,19 @@ findByLatLonAndRiderId personId LatLong {..} = findOneWithKV [Se.And [Se.Is Beam
 --     saveReqLocation <- from $ table @SavedReqLocationT
 --     where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))
 
+-- countAllByRiderId :: Transactionable m => Id Person -> m Int
+-- countAllByRiderId perId =
+--   fromMaybe 0
+--     <$> Esq.findAll
+--       ( do
+--           saveReqLocation <- from $ table @SavedReqLocationT
+--           where_ $ saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
+--           return (countRows :: SqlExpr (Esq.Value Int))
+--       )
+
+countAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m Int
+countAllByRiderId perId = findAllWithKV [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)] <&> length
+
 deleteAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteAllByRiderId personId = deleteWithKV [Se.Is BeamSRL.riderId (Se.Eq (getId personId))]
 

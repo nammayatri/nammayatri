@@ -22,6 +22,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
+import Kernel.Utils.Time (Seconds)
 
 data MerchantD (s :: UsageSafety) = Merchant
   { id :: Id Merchant,
@@ -44,7 +45,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     signatureExpiry :: Int,
     dirCacheSlot :: [Slot],
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    timeDiffFromUtc :: Seconds
   }
   deriving (Generic, Show)
 

@@ -9,6 +9,7 @@ module Storage.Beam.Common where
 import qualified Database.Beam as B
 import GHC.Generics (Generic)
 import Storage.Beam.Booking
+import Storage.Beam.BookingCancellationReason
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry as BeamG
 import Storage.Beam.Person
@@ -22,7 +23,8 @@ atlasDB =
         geometry = geometryTable,
         booking = bookingTable,
         ride = rideTable,
-        person = personTable
+        person = personTable,
+        bookingCancellationReason = bookingCancellationReasonTable
       }
 
 data AtlasDB f = AtlasDB
@@ -30,6 +32,7 @@ data AtlasDB f = AtlasDB
     geometry :: f (B.TableEntity GeometryT),
     booking :: f (B.TableEntity BookingT),
     ride :: f (B.TableEntity RideT),
-    person :: f (B.TableEntity PersonT)
+    person :: f (B.TableEntity PersonT),
+    bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT)
   }
   deriving (Generic, B.Database be)
