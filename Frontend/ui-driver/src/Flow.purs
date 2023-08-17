@@ -106,34 +106,36 @@ baseAppFlow baseFlow = do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         getDriverInfoFlow
       else loginFlow
-    where
-    cacheAppParameters :: Int -> FlowBT String Unit
-    cacheAppParameters versionCode = do
-      let bundle = bundleVersion unit
-          driverId = (getValueToLocalStore DRIVER_ID)
-      versionName <- lift $ lift $ liftFlow $ getVersionName
-      void $ pure $ setCleverTapUserProp "App Version" versionName
-      void $ pure $ setCleverTapUserProp "Bundle version" bundle
-      void $ pure $ setCleverTapUserProp "Platform" os
-      setValueToLocalStore VERSION_NAME versionName
-      setValueToLocalStore BUNDLE_VERSION bundle
-      setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-      setValueToLocalStore RIDE_REQUEST_BUFFER "-3"
-      setValueToLocalStore SUGGESTIONS_ENABLED "false"
-      setValueToLocalStore IS_BANNER_ACTIVE "True"
-      setValueToLocalStore MESSAGES_DELAY "5000"
-      setValueToLocalStore SHOW_PAYMENT_MODAL "true"
-      setValueToLocalNativeStore BUNDLE_VERSION bundle
-      setValueToLocalNativeStore GPS_METHOD "CURRENT"
-      setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
-      setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
-      when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
-        setValueToLocalStore SESSION_ID (generateSessionId unit)
-      if(driverId == "__failed") then void $ lift $ lift $ setLogField "driver_id" $ encode ("null")
-        else void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
-      void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)
-      void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
-      void $ lift $ lift $ setLogField "platform" $ encode (os)
+
+
+cacheAppParameters :: Int -> FlowBT String Unit
+cacheAppParameters versionCode = do
+    let bundle = bundleVersion unit
+        driverId = (getValueToLocalStore DRIVER_ID)
+    versionName <- lift $ lift $ liftFlow $ getVersionName
+    void $ pure $ setCleverTapUserProp "App Version" versionName
+    void $ pure $ setCleverTapUserProp "Bundle version" bundle
+    void $ pure $ setCleverTapUserProp "Platform" os
+    setValueToLocalStore VERSION_NAME versionName
+    setValueToLocalStore BUNDLE_VERSION bundle
+    setValueToLocalStore BASE_URL (getBaseUrl "dummy")
+    setValueToLocalStore RIDE_REQUEST_BUFFER "-3"
+    setValueToLocalStore SUGGESTIONS_ENABLED "false"
+    setValueToLocalStore IS_BANNER_ACTIVE "True"
+    setValueToLocalStore MESSAGES_DELAY "5000"
+    setValueToLocalStore SHOW_PAYMENT_MODAL "true"
+    setValueToLocalNativeStore BUNDLE_VERSION bundle
+    setValueToLocalNativeStore GPS_METHOD "CURRENT"
+    setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
+    setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
+    setValueToLocalStore DISABLE_WIDGET "false"
+    when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
+      setValueToLocalStore SESSION_ID (generateSessionId unit)
+    if(driverId == "__failed") then void $ lift $ lift $ setLogField "driver_id" $ encode ("null")
+      else void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
+    void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)
+    void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
+    void $ lift $ lift $ setLogField "platform" $ encode (os)
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
@@ -188,6 +190,8 @@ loginFlow :: FlowBT String Unit
 loginFlow = do
   lift $ lift $ doAff do liftEffect hideSplash
   _ <- pure $ spy "before hideSplash" ""
+  versionCode <- lift $ lift $ liftFlow $ getVersionCode
+  cacheAppParameters versionCode
   runInternetCondition
   void $ pure $ setCleverTapUserProp "Preferred Language" $ getValueFromConfig "defaultLanguage"
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"

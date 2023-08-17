@@ -108,23 +108,6 @@ public class MainActivity extends AppCompatActivity {
             if (key != null && key.equals("LANGUAGE_KEY")) {
                 MobilityCommonBridge.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
             }
-            if (key != null && key.equals("REGISTERATION_TOKEN")) {
-                String token = sharedPreferences.getString("REGISTERATION_TOKEN", "null");
-                if (token.equals("__failed")) {
-                    final PackageManager pm = getApplicationContext().getPackageManager();
-                    final Intent intent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
-                    try {
-                        if (activity != null) {
-                            activity.finishAffinity();// Finishes all activities.
-                            activity.startActivity(intent);
-                        } else {
-                            sharedPreferences.edit().clear().apply();
-                        }
-                    } catch (NullPointerException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
             // Update Driver status in Local Storage
             if (key != null && key.equals("DRIVER_STATUS")) {
                 String status = sharedPreferences.getString("DRIVER_STATUS", "null");

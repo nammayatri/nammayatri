@@ -1271,8 +1271,28 @@ export const isInternetAvailable = function (unit) {
 };
 
 export const factoryResetApp = function (str) {
-  console.log("HERE IN RESET ===--->>")
-  JBridge.factoryResetApp()
+  try {
+    if (JBridge.clearStorageFile){
+      var arr = ["MERCHANT_ID", "DEVICE_DETAILS", "ACTIVITY_STATUS", "BASE_URL", "USED_DAYS_COUNT", "id", "DEVICE_RAM", "DEVICE_RESOLUTION", "DEVICE_SIZE", "FCM_TOKEN"];
+      var objectArr = [];
+      for (var i = 0; i < arr.length; i++) {
+        let obj = {};
+        obj[i] = getKeyInSharedPrefKeys(arr[i]);
+        objectArr.push(obj);
+      }
+      console.log("Restored values", objectArr);
+      JBridge.clearStorageFile("godel");
+      for (var i = 0; i < objectArr.length; i++) {
+        var object = objectArr[i]
+        console.log(arr[i], object[i]);
+        JBridge.setInSharedPrefs(arr[i], object[i]);
+      }
+    } else {
+      JBridge.factoryResetApp();
+    }
+  } catch(e){
+    console.log("Error occured ", e);
+  }
 }
 
 export const uploadFile = function (unit) {
