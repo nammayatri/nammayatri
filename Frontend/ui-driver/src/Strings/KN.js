@@ -544,7 +544,6 @@ const kannadaStrings = {
   YES_ACTIVATE : "ಹೌದು, ಸಕ್ರಿಯಗೊಳಿಸಿ",
   YES_DEACTIVATE : "ಹೌದು, ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ",
   THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC : "ಇದು ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಸಕ್ರಿಯವಾಗಿರುವ RC ಅನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸುತ್ತದೆ.",
-  PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER : "ನಾವು ನಿಮ್ಮನ್ನು ಡ್ರೈವರ್‌ನೊಂದಿಗೆ ಸಂಪರ್ಕಿಸುವವರೆಗೆ ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ",
   REMOVED : "ತೆಗೆದುಹಾಕಲಾಗಿದೆ",
   IS_ACTIVE_NOW : " ಈಗ ಸಕ್ರಿಯವಾಗಿದೆ.",
   DEACTIVATED : "ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ",

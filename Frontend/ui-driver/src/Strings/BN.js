@@ -555,7 +555,6 @@ const bengaliStrings = {
   YES_ACTIVATE : "হ্যাঁ, সক্রিয় করুন",
   YES_DEACTIVATE : "হ্যাঁ, নিষ্ক্রিয় করুন",
   THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC : "এটি আপনার বর্তমানে সক্রিয় RC নিষ্ক্রিয় করবে।",
-  PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER : "অনুগ্রহ করে অপেক্ষা করুন যতক্ষণ না আমরা আপনাকে ড্রাইভারের সাথে সংযোগ করি",
   REMOVED : "সরানো হয়েছে",
   IS_ACTIVE_NOW : " এখন সক্রিয়.",
   DEACTIVATED : "নিষ্ক্রিয়",
@@ -640,5 +639,7 @@ const bengaliStrings = {
 	RATED_BY_USERS1 : "",
 	RATED_BY_USERS2 : "ব্যবহারকারী দ্বারা রেট",
 	MONTHS : "মাস",
+	ENTER_AADHAAR_DETAILS : "আধার বিবরণ লিখুন",
+	CALL_REQUEST_HAS_BEEN_PLACED : "আপনার কলের অনুরোধ করা হয়েছে",
 	RC_ADDED_SUCCESSFULLY : "নিবন্ধন শংসাপত্র সফলভাবে যোগ করা হয়েছে"
 }
