@@ -13,20 +13,18 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.CancellationReason where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize as Se
 
 data CancellationReasonT f = CancellationReasonT
@@ -43,20 +41,7 @@ instance B.Table CancellationReasonT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . reasonCode
 
-instance ModelMeta CancellationReasonT where
-  modelFieldModification = cancellationReasonTMod
-  modelTableName = "cancellation_reason"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type CancellationReason = CancellationReasonT Identity
-
-instance FromJSON CancellationReason where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON CancellationReason where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show CancellationReason
 
 cancellationReasonTMod :: CancellationReasonT (B.FieldModification (B.TableField CancellationReasonT))
 cancellationReasonTMod =
@@ -67,19 +52,6 @@ cancellationReasonTMod =
       priority = B.fieldNamed "priority"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-cancellationReasonToHSModifiers :: M.Map Text (A.Value -> A.Value)
-cancellationReasonToHSModifiers =
-  M.empty
-
-cancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
-cancellationReasonToPSModifiers =
-  M.empty
-
-instance Serialize CancellationReason where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''CancellationReasonT ['reasonCode] [])
+
+$(mkTableInstances ''CancellationReasonT "cancellation_reason" "atlas_driver_offer_bpp")

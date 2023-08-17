@@ -13,27 +13,24 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BookingCancellationReason where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.BookingCancellationReason as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.CancellationSource where
@@ -69,26 +66,7 @@ instance B.Table BookingCancellationReasonT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . bookingId
 
-instance ModelMeta BookingCancellationReasonT where
-  modelFieldModification = bookingCancellationReasonTMod
-  modelTableName = "booking_cancellation_reason"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
-bookingCancellationReasonTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BookingCancellationReasonT)
-bookingCancellationReasonTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "booking_cancellation_reason"
-    <> B.modifyTableFields bookingCancellationReasonTMod
-
 type BookingCancellationReason = BookingCancellationReasonT Identity
-
-instance FromJSON BookingCancellationReason where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON BookingCancellationReason where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show BookingCancellationReason
 
 bookingCancellationReasonTMod :: BookingCancellationReasonT (B.FieldModification (B.TableField BookingCancellationReasonT))
 bookingCancellationReasonTMod =
@@ -105,19 +83,6 @@ bookingCancellationReasonTMod =
       driverDistToPickup = B.fieldNamed "driver_dist_to_pickup"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-bookingCancellationReasonToHSModifiers :: M.Map Text (A.Value -> A.Value)
-bookingCancellationReasonToHSModifiers =
-  M.empty
-
-bookingCancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
-bookingCancellationReasonToPSModifiers =
-  M.empty
-
-instance Serialize BookingCancellationReason where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''BookingCancellationReasonT ['bookingId] [['rideId]])
+
+$(mkTableInstances ''BookingCancellationReasonT "booking_cancellation_reason" "atlas_driver_offer_bpp")

@@ -13,21 +13,19 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Issue.Comment where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data CommentT f = CommentT
@@ -45,20 +43,7 @@ instance B.Table CommentT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta CommentT where
-  modelFieldModification = commentTMod
-  modelTableName = "comment"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Comment = CommentT Identity
-
-instance FromJSON Comment where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Comment where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Comment
 
 commentTMod :: CommentT (B.FieldModification (B.TableField CommentT))
 commentTMod =
@@ -70,19 +55,6 @@ commentTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize Comment where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-commentToHSModifiers :: M.Map Text (A.Value -> A.Value)
-commentToHSModifiers =
-  M.empty
-
-commentToPSModifiers :: M.Map Text (A.Value -> A.Value)
-commentToPSModifiers =
-  M.empty
-
 $(enableKVPG ''CommentT ['id] [['issueReportId]])
+
+$(mkTableInstances ''CommentT "comment" "atlas_driver_offer_bpp")

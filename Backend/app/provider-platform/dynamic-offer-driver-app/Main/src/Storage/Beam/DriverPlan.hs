@@ -16,13 +16,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverPlan where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -33,10 +31,10 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data DriverPlanT f = DriverPlanT
@@ -54,26 +52,18 @@ instance FromBackendRow Postgres DPlan.PaymentMode
 instance FromField DPlan.PaymentMode where
   fromField = fromFieldEnum
 
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DPlan.PaymentMode where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DPlan.PaymentMode
+
 instance B.Table DriverPlanT where
   data PrimaryKey DriverPlanT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta DriverPlanT where
-  modelFieldModification = driverPlanTMod
-  modelTableName = "driver_plan"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverPlan = DriverPlanT Identity
-
-instance FromJSON DriverPlan where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverPlan where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverPlan
 
 driverPlanTMod :: DriverPlanT (B.FieldModification (B.TableField DriverPlanT))
 driverPlanTMod =
@@ -86,24 +76,5 @@ driverPlanTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize DriverPlan where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverPlanToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverPlanToHSModifiers =
-  M.empty
-
-driverPlanToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverPlanToPSModifiers =
-  M.empty
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DPlan.PaymentMode where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DPlan.PaymentMode
-
 $(enableKVPG ''DriverPlanT ['driverId] [])
+$(mkTableInstances ''DriverPlanT "driver_plan" "atlas_driver_offer_bpp")

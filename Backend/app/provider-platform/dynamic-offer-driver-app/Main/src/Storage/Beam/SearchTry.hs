@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchTry where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -31,10 +29,10 @@ import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.SearchTryStatus where
@@ -90,20 +88,7 @@ instance B.Table SearchTryT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SearchTryT where
-  modelFieldModification = searchTryTMod
-  modelTableName = "search_try"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type SearchTry = SearchTryT Identity
-
-instance FromJSON SearchTry where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SearchTry where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SearchTry
 
 searchTryTMod :: SearchTryT (B.FieldModification (B.TableField SearchTryT))
 searchTryTMod =
@@ -125,19 +110,6 @@ searchTryTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-searchTryToHSModifiers :: M.Map Text (A.Value -> A.Value)
-searchTryToHSModifiers =
-  M.empty
-
-searchTryToPSModifiers :: M.Map Text (A.Value -> A.Value)
-searchTryToPSModifiers =
-  M.empty
-
-instance Serialize SearchTry where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''SearchTryT ['id] [['requestId]])
+
+$(mkTableInstances ''SearchTryT "search_try" "atlas_driver_offer_bpp")

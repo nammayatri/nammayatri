@@ -13,13 +13,12 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FareParameters where
 
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -31,10 +30,10 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.FareParameters as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance IsString Centesimal where
@@ -70,26 +69,13 @@ instance B.Table FareParametersT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FareParametersT where
-  modelFieldModification = fareParametersTMod
-  modelTableName = "fare_parameters"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FareParameters = FareParametersT Identity
-
-instance FromJSON FareParameters where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FareParameters where
-  toJSON = A.genericToJSON A.defaultOptions
 
 instance FromJSON Domain.FareParametersType where
   parseJSON = A.genericParseJSON A.defaultOptions
 
 instance ToJSON Domain.FareParametersType where
   toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FareParameters
 
 deriving stock instance Ord Domain.FareParametersType
 
@@ -110,19 +96,6 @@ fareParametersTMod =
       nightShiftCharge = B.fieldNamed "night_shift_charge"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-fareParametersToHSModifiers :: M.Map Text (A.Value -> A.Value)
-fareParametersToHSModifiers =
-  M.empty
-
-fareParametersToPSModifiers :: M.Map Text (A.Value -> A.Value)
-fareParametersToPSModifiers =
-  M.empty
-
-instance Serialize FareParameters where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''FareParametersT ['id] [])
+
+$(mkTableInstances ''FareParametersT "fare_parameters" "atlas_driver_offer_bpp")

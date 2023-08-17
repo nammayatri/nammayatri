@@ -36,12 +36,12 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Common hiding (id)
 import Lib.Schema
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 fromFieldPoint ::
@@ -80,8 +80,8 @@ data DriverLocationT f = DriverLocationT
   }
   deriving (Generic, B.Beamable)
 
-dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
-dLocationTable =
+driverLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
+driverLocationTable =
   B.setEntitySchema (Just getLocationSchemaName)
     <> B.setEntityName "driver_location"
     <> B.modifyTableFields driverLocationTMod

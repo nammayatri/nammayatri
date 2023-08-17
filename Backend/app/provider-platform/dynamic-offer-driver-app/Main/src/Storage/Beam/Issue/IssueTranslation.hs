@@ -13,22 +13,20 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Issue.IssueTranslation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance IsString Language where
@@ -48,20 +46,7 @@ instance B.Table IssueTranslationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta IssueTranslationT where
-  modelFieldModification = issueTranslationTMod
-  modelTableName = "issue_translation"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type IssueTranslation = IssueTranslationT Identity
-
-instance FromJSON IssueTranslation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON IssueTranslation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show IssueTranslation
 
 issueTranslationTMod :: IssueTranslationT (B.FieldModification (B.TableField IssueTranslationT))
 issueTranslationTMod =
@@ -72,19 +57,6 @@ issueTranslationTMod =
       language = B.fieldNamed "language"
     }
 
-instance Serialize IssueTranslation where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-issueTranslationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-issueTranslationToHSModifiers =
-  M.empty
-
-issueTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-issueTranslationToPSModifiers =
-  M.empty
-
 $(enableKVPG ''IssueTranslationT ['id] [['language]])
+
+$(mkTableInstances ''IssueTranslationT "issue_translation" "atlas_driver_offer_bpp")
