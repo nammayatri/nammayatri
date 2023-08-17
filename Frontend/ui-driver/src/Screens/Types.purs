@@ -13,8 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types
-  where
+module Screens.Types where
 
 import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
@@ -31,13 +30,14 @@ import Prelude (class Eq, class Show )
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
-import Services.API (Route, Status, MediaType, PaymentBreakUp)
+import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import MerchantConfig.Types (AppConfig)
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Screens (ScreenName)
 
 type EditTextInLabelState =
  {
@@ -875,7 +875,8 @@ type HomeScreenProps =  {
   timerRefresh :: Boolean,
   showlinkAadhaarPopup :: Boolean,
   isChatOpened :: Boolean,
-  showAadharPopUp :: Boolean
+  showAadharPopUp :: Boolean,
+  showOffer :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
@@ -1424,6 +1425,7 @@ type RankCardData = {
   , rank :: Int
   , rides :: Int
 }
+
 type AcknowledgementScreenState = {
   data :: AcknowledgementScreenData,
   props :: AcknowledgementScreenProps
@@ -1485,5 +1487,181 @@ derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
 
 type GlobalProps = {
-  aadhaarVerificationRequired :: Boolean
+  aadhaarVerificationRequired :: Boolean,
+  driverInformation :: GetDriverInfoResp,
+  callScreen :: ScreenName
 }
+
+--------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
+
+type SubscriptionScreenState = {
+  data :: SubscriptionScreenData,
+  props :: SubscriptionScreenProps
+}
+
+type SubscriptionScreenData = {
+  myPlanData :: MyPlanData,
+  managePlanData :: ManagePlanData,
+  joinPlanData :: JoinPlanData,
+  autoPayDetails :: AutoPayDetails,
+  driverId :: String,
+  paymentMode :: String,
+  planId :: String,
+  orderId :: Maybe String,
+  errorMessage :: String
+}
+
+type AutoPayDetails = {
+  isActive :: Boolean,
+  detailsList :: Array KeyValType,
+  payerUpiId :: Maybe String,
+  pspLogo :: String
+}
+
+type KeyValType = {
+  key :: String,
+  val :: String
+}
+
+type SubscriptionScreenProps = {
+  subView :: SubscriptionSubview,
+  myPlanProps :: MyPlanProps,
+  managePlanProps :: ManagePlanProps,
+  joinPlanProps :: JoinPlanProps,
+  popUpState :: Maybe SubscribePopupType,
+  paymentStatus :: Maybe Common.PaymentStatus,
+  resumeBtnVisibility :: Boolean,
+  showError :: Boolean,
+  showShimmer :: Boolean,
+  refreshPaymentStatus :: Boolean,
+  confirmCancel :: Boolean,
+  isSelectedLangTamil :: Boolean
+}
+
+type JoinPlanData = {
+  allPlans :: Array PlanCardConfig,
+  subscriptionStartDate :: String
+}
+
+type JoinPlanProps = {
+  selectedPlan :: Maybe String,
+  paymentMode :: String
+}
+
+type ManagePlanData = {
+  currentPlan :: PlanCardConfig,
+  alternatePlans :: Array PlanCardConfig
+}
+
+type ManagePlanProps = {
+  selectedPlan :: String
+}
+
+type MyPlanData = {
+  dueItems :: Array DueItem,
+  planEntity :: PlanCardConfig,
+  autoPayStatus :: AutoPayStatus,
+  lowAccountBalance :: Boolean,
+  switchAndSave :: Boolean,
+  paymentMethodWarning :: Boolean,
+  maxDueAmount :: Number,
+  currentDueAmount :: Number,
+  mandateStatus :: String
+}
+
+type MyPlanProps = {
+  isDuesExpanded :: Boolean
+}
+
+type DueItem = {
+  tripDate :: String,
+  amount :: String
+}
+
+type PlanCardConfig = {
+    id :: String
+  , title :: String
+  , description :: String
+  , isSelected :: Boolean
+  , offers :: Array PromoConfig
+  , priceBreakup :: Array PaymentBreakUp
+  , frequency :: String
+  , freeRideCount :: Int
+  , showOffer :: Boolean
+}
+
+type PromoConfig = {
+    title :: Maybe String
+  , isGradient :: Boolean
+  , gradient :: Array String
+  , hasImage :: Boolean
+  , imageURL :: String
+  , offerDescription :: Maybe String
+}
+
+data PaymentMethod = UPI_AUTOPAY | MANUAL
+
+data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay
+
+derive instance genericSubscribePopupType :: Generic SubscribePopupType _
+instance showSubscribePopupType :: Show SubscribePopupType where show = genericShow
+instance eqSubscribePopupType :: Eq SubscribePopupType where eq = genericEq
+instance decodeSubscribePopupType :: Decode SubscribePopupType where decode = defaultEnumDecode
+instance encodeSubscribePopupType :: Encode SubscribePopupType where encode = defaultEnumEncode
+
+derive instance genericPaymentMethod:: Generic PaymentMethod _
+instance showPaymentMethod:: Show PaymentMethod where show = genericShow
+instance eqPaymentMethod:: Eq PaymentMethod where eq = genericEq
+
+data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING
+
+derive instance genericAutoPayStatus:: Generic AutoPayStatus _
+instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
+instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
+
+data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | NoSubView
+
+derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
+instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow
+instance eqSubscriptionSubview :: Eq SubscriptionSubview where eq = genericEq
+instance decodeSubscriptionSubview :: Decode SubscriptionSubview where decode = defaultEnumDecode
+instance encodeSubscriptionSubview :: Encode SubscriptionSubview where encode = defaultEnumEncode
+
+
+---------------------------------------------------- PaymentHistoryScreen ----------------------------------
+
+type PaymentHistoryScreenState = {
+  data :: PaymentHistoryScreenData,
+  props :: PaymentHistoryScreenProps
+}
+
+type PaymentHistoryScreenData = {
+  paymentListItem :: Array PaymentListItem,
+  transactionListItem :: Array TransactionListItem,
+  manualPaymentRidesListItem :: Array TransactionListItem
+}
+type PaymentListItem = {
+  paidDate :: String,
+  rideTakenDate :: String,
+  amount :: String,
+  paymentStatus :: Common.PaymentStatus
+}
+
+type TransactionListItem = {
+  key :: String,
+  title :: String,
+  val :: String
+}
+
+type PaymentHistoryScreenProps = {
+  subView :: PaymentHistorySubview,
+  autoPayHistory :: Boolean
+}
+
+data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails
+
+derive instance genericPaymentHistorySubview :: Generic PaymentHistorySubview _
+instance showPaymentHistorySubview :: Show PaymentHistorySubview where show = genericShow
+instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where eq = genericEq
+instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where decode = defaultEnumDecode
+instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where encode = defaultEnumEncode

@@ -119,10 +119,10 @@ translateFullYAnimWithDurationConfig duration = animConfig {
 
 rotateAnimConfig :: Boolean -> AnimConfig
 rotateAnimConfig rotate = animConfig {
-  fromRotation = 0
-, toRotation = 360
+  fromRotation = 360
+, toRotation = 0
 , delay = 0
-, duration = 1000
+, duration = 800
 , ifAnim = rotate
 }
 

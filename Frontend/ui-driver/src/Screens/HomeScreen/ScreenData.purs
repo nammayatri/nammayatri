@@ -134,6 +134,7 @@ initData = {
         timerRefresh : true,
         showlinkAadhaarPopup : false,
         isChatOpened : false,
-        showAadharPopUp : true
+        showAadharPopUp : true,
+        showOffer : false
     }
 }

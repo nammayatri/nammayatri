@@ -189,7 +189,7 @@ subHeading2 typography = [
 
 body1 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body1 typography = [
-  textSize FontSize.a_14
+  textSize $ if (getLanguageFromLocalStore unit) == "TA_IN" then FontSize.a_12 else FontSize.a_14
 , lineHeight "18"
 ] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 

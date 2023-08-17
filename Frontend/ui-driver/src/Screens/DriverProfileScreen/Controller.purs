@@ -281,7 +281,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (UpdateValue value) state = do
   case value of
-    LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}}
+    LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}, data {languageList = updateLanguageList state state.data.languagesSpoken}}
     VEHICLE_AGE -> continue state {props{ detailsUpdationType = Just VEHICLE_AGE}}
     VEHICLE_NAME -> continue state{props {detailsUpdationType = Just VEHICLE_NAME}}
     _ -> continue state
@@ -580,4 +580,4 @@ updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBox
 updateLanguageList state language =
   map (\item -> if (any (_ == item.value)) language
                   then item{isSelected = true}
-                  else item) (state.data.languageList)
+                  else item{isSelected = false}) (state.data.languageList)
