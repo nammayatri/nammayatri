@@ -545,7 +545,6 @@ const englishStrings = {
   YES_ACTIVATE : "Yes, Activate",
   YES_DEACTIVATE : "Yes, Deactivate",
   THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC : "This will deactivate your currently active RC.",
-  PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER : "Please wait while we connect you with driver",
   REMOVED : "Removed",
   IS_ACTIVE_NOW : " is active now.",
   DEACTIVATED : "Deactivated",
@@ -634,5 +633,6 @@ const englishStrings = {
   RATED_BY_USERS1 : "Rated By",
   RATED_BY_USERS2 : "Users",
   MONTHS : "Months",
+  CALL_REQUEST_HAS_BEEN_PLACED : "Your call request has been placed",
   RC_ADDED_SUCCESSFULLY : "RC added Successfully"
 }

@@ -33,6 +33,7 @@ import Data.String as DS
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag,setText)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings)
@@ -237,7 +238,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
                                 else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
-                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit GoBack else continue $ state { props{ alternateNumberView = false}}
+                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit GoBack else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
                                 else if state.props.alreadyActive then continue $ state {props { alreadyActive = false}}
                                 else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
                                 else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}
@@ -337,7 +338,7 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
   else continue state{ props { openSettings = false }}
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit GoBack else continue state {props{showGenderView=false, alternateNumberView=false}}
+eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit GoBack else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
@@ -382,14 +383,17 @@ eval EditNumberText state = do
    pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    continue state
   else
-    continue state {data{alterNumberEditableText=false}, props{numberExistError=false, isEditAlternateMobile = true, checkAlternateNumber = true, mNumberEdtFocused = false}}
+    continueWithCmd state {data{alterNumberEditableText=false}, props{numberExistError=false, isEditAlternateMobile = true, checkAlternateNumber = true, mNumberEdtFocused = false}}[do
+        _ <- pure $ setText (getNewIDWithTag "alternateMobileNumber") (fromMaybe "" state.data.driverAlternateNumber)
+        pure NoAction
+    ]
 
 eval RemoveAlterNumber state = continue state {props = state.props {removeAlternateNumber = true}}
 
 eval (RemoveAlternateNumberAC (PopUpModal.OnButton1Click)) state = continue state {props{ removeAlternateNumber = false}}
 
 eval (RemoveAlternateNumberAC (PopUpModal.OnButton2Click)) state =
-  exit (RemoveAlternateNumber state {props{removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true}})
+  exit (RemoveAlternateNumber state {props{removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true},data{driverEditAlternateMobile = Nothing}})
 
 eval ( CheckBoxClick genderType ) state = do
   continue state{data{genderTypeSelect = getGenderValue genderType}}
