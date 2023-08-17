@@ -14,20 +14,18 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BapMetadata where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data BapMetadataT f = BapMetadataT
@@ -43,20 +41,7 @@ instance B.Table BapMetadataT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta BapMetadataT where
-  modelFieldModification = bapMetadataTMod
-  modelTableName = "bap_metadata"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type BapMetadata = BapMetadataT Identity
-
-instance FromJSON BapMetadata where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON BapMetadata where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show BapMetadata
 
 bapMetadataTMod :: BapMetadataT (B.FieldModification (B.TableField BapMetadataT))
 bapMetadataTMod =
@@ -66,27 +51,6 @@ bapMetadataTMod =
       logoUrl = B.fieldNamed "logo_url"
     }
 
-defaultBapMetadata :: BapMetadata
-defaultBapMetadata =
-  BapMetadataT
-    { id = "",
-      name = "",
-      logoUrl = ""
-    }
-
-instance Serialize BapMetadata where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-bapMetadataToHSModifiers :: M.Map Text (A.Value -> A.Value)
-bapMetadataToHSModifiers =
-  M.empty
-
-bapMetadataToPSModifiers :: M.Map Text (A.Value -> A.Value)
-bapMetadataToPSModifiers =
-  M.empty
-
 $(enableKVPG ''BapMetadataT ['id] [])
+
+$(mkTableInstances ''BapMetadataT "bap_metadata" "atlas_driver_offer_bpp")

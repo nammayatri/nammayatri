@@ -13,23 +13,21 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.RestrictedExtraFare where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance IsString Vehicle.Variant where
@@ -50,20 +48,7 @@ instance B.Table RestrictedExtraFareT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RestrictedExtraFareT where
-  modelFieldModification = restrictedExtraFareTMod
-  modelTableName = "restricted_extra_fare"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type RestrictedExtraFare = RestrictedExtraFareT Identity
-
-instance FromJSON RestrictedExtraFare where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON RestrictedExtraFare where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show RestrictedExtraFare
 
 restrictedExtraFareTMod :: RestrictedExtraFareT (B.FieldModification (B.TableField RestrictedExtraFareT))
 restrictedExtraFareTMod =
@@ -75,19 +60,6 @@ restrictedExtraFareTMod =
       driverMaxExtraFare = B.fieldNamed "driver_max_extra_fare"
     }
 
-instance Serialize RestrictedExtraFare where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-restrictedExtraFareToHSModifiers :: M.Map Text (A.Value -> A.Value)
-restrictedExtraFareToHSModifiers =
-  M.empty
-
-restrictedExtraFareToPSModifiers :: M.Map Text (A.Value -> A.Value)
-restrictedExtraFareToPSModifiers =
-  M.empty
-
 $(enableKVPG ''RestrictedExtraFareT ['id] [])
+
+$(mkTableInstances ''RestrictedExtraFareT "restricted_extra_fare" "atlas_driver_offer_bpp")

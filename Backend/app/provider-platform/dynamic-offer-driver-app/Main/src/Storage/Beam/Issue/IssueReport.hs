@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Issue.IssueReport where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -32,10 +30,10 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Issue.IssueReport as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.IssueStatus where
@@ -74,20 +72,7 @@ instance B.Table IssueReportT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta IssueReportT where
-  modelFieldModification = issueReportTMod
-  modelTableName = "issue_report"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type IssueReport = IssueReportT Identity
-
-instance FromJSON IssueReport where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON IssueReport where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show IssueReport
 
 issueReportTMod :: IssueReportT (B.FieldModification (B.TableField IssueReportT))
 issueReportTMod =
@@ -107,19 +92,5 @@ issueReportTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize IssueReport where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-issueReportToHSModifiers :: M.Map Text (A.Value -> A.Value)
-issueReportToHSModifiers =
-  M.empty
-
-issueReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
-issueReportToPSModifiers =
-  M.empty
-
 $(enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId], ['ticketId]])
+$(mkTableInstances ''IssueReportT "issue_report" "atlas_driver_offer_bpp")

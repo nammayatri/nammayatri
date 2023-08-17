@@ -14,21 +14,19 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.AadhaarOtpReq where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data AadhaarOtpReqT f = AadhaarOtpReqT
@@ -48,20 +46,7 @@ instance B.Table AadhaarOtpReqT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta AadhaarOtpReqT where
-  modelFieldModification = aadhaarOtpReqTMod
-  modelTableName = "aadhaar_otp_req"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type AadhaarOtpReq = AadhaarOtpReqT Identity
-
-instance FromJSON AadhaarOtpReq where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON AadhaarOtpReq where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show AadhaarOtpReq
 
 aadhaarOtpReqTMod :: AadhaarOtpReqT (B.FieldModification (B.TableField AadhaarOtpReqT))
 aadhaarOtpReqTMod =
@@ -75,19 +60,6 @@ aadhaarOtpReqTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize AadhaarOtpReq where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-aadhaarOtpReqToHSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpReqToHSModifiers =
-  M.empty
-
-aadhaarOtpReqToPSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpReqToPSModifiers =
-  M.empty
-
 $(enableKVPG ''AadhaarOtpReqT ['id] [['driverId]])
+
+$(mkTableInstances ''AadhaarOtpReqT "aadhaar_otp_req" "atlas_driver_offer_bpp")

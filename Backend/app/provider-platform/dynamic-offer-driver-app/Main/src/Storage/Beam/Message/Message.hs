@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Message.Message where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize hiding (label)
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -28,15 +26,14 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Message.Message as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data MessageT f = MessageT
@@ -60,24 +57,7 @@ instance B.Table MessageT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta MessageT where
-  modelFieldModification = messageTMod
-  modelTableName = "message"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
-messageTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity MessageT)
-messageTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "message"
-    <> B.modifyTableFields messageTMod
-
 type Message = MessageT Identity
-
-instance FromJSON Message where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Message where
-  toJSON = A.genericToJSON A.defaultOptions
 
 instance FromField Domain.MessageType where
   fromField = fromFieldEnum
@@ -88,8 +68,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MessageType 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageType
 
 instance FromBackendRow Postgres Domain.MessageType
-
-deriving stock instance Show Message
 
 deriving stock instance Ord Domain.MessageType
 
@@ -114,19 +92,6 @@ messageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-messageToHSModifiers :: M.Map Text (A.Value -> A.Value)
-messageToHSModifiers =
-  M.empty
-
-messageToPSModifiers :: M.Map Text (A.Value -> A.Value)
-messageToPSModifiers =
-  M.empty
-
-instance Serialize Message where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''MessageT ['id] [['merchantId]]) -- DON'T Enable for KV
+
+$(mkTableInstances ''MessageT "message" "atlas_driver_offer_bpp")

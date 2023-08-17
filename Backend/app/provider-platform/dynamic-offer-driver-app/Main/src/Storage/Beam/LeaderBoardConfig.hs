@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.LeaderBoardConfig where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -32,10 +30,10 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.LeaderBoardConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.LeaderBoardType where
@@ -69,20 +67,7 @@ instance B.Table LeaderBoardConfigsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta LeaderBoardConfigsT where
-  modelFieldModification = leaderBoardConfigsTMod
-  modelTableName = "leader_board_configs"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
-
-instance FromJSON LeaderBoardConfigs where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON LeaderBoardConfigs where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show LeaderBoardConfigs
 
 leaderBoardConfigsTMod :: LeaderBoardConfigsT (B.FieldModification (B.TableField LeaderBoardConfigsT))
 leaderBoardConfigsTMod =
@@ -97,19 +82,6 @@ leaderBoardConfigsTMod =
       merchantId = B.fieldNamed "merchant_id"
     }
 
-instance Serialize LeaderBoardConfigs where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-leaderBoardConfigsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-leaderBoardConfigsToHSModifiers =
-  M.empty
-
-leaderBoardConfigsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-leaderBoardConfigsToPSModifiers =
-  M.empty
-
 $(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId]])
+
+$(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs" "atlas_driver_offer_bpp")

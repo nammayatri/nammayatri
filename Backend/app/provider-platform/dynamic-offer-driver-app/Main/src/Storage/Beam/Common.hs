@@ -36,8 +36,8 @@ atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { driverLocation = dLocationTable,
-        exophone = dExophone,
+      { driverLocation = driverLocationTable,
+        exophone = exophoneTable,
         geometry = geometryTable,
         vehicle = vehicleTable,
         operatingCity = operatingCityTable,
@@ -45,13 +45,13 @@ atlasDB =
         person = personTable,
         driverLicense = driverLicenseTable,
         idfyVerification = idfyVerificationTable,
-        driverRCAssociation = driverRCAssociationTable,
+        driverRCAssociation = driverRcAssociationTable,
         vehicleRegistrationCertificate = vehicleRegistrationCertificateTable,
-        driverInformation = dInformationTable,
+        driverInformation = driverInformationTable,
         booking = bookingTable,
         ride = rideTable,
         rideDetails = rideDetailsTable,
-        rDetails = rDetailsTable,
+        rDetails = riderDetailsTable,
         callStatus = callStatusTable,
         quoteSpecialZone = quoteSpecialZoneTable,
         messageReport = messageReportTable,

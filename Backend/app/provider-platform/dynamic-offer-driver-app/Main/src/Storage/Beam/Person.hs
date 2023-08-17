@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Person where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -29,11 +27,11 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Person as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken (..))
 import Kernel.External.Types (Language)
@@ -41,7 +39,6 @@ import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField OptApiMethods where
@@ -144,26 +141,7 @@ instance B.Table PersonT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta PersonT where
-  modelFieldModification = personTMod
-  modelTableName = "person"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Person = PersonT Identity
-
-personTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
-personTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "person"
-    <> B.modifyTableFields personTMod
-
-instance FromJSON Person where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Person where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Person
 
 deriving stock instance Ord Domain.Role
 
@@ -212,19 +190,6 @@ personTMod =
       faceImageId = B.fieldNamed "face_image_id"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-personToHSModifiers :: M.Map Text (A.Value -> A.Value)
-personToHSModifiers =
-  M.empty
-
-personToPSModifiers :: M.Map Text (A.Value -> A.Value)
-personToPSModifiers =
-  M.empty
-
-instance Serialize Person where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''PersonT ['id] [['merchantId]]) -- DON'T Enable for KV
+
+$(mkTableInstances ''PersonT "person" "atlas_driver_offer_bpp")

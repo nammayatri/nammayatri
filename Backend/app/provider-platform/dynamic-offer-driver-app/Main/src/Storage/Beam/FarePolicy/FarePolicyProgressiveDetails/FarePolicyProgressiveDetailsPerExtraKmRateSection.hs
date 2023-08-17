@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -27,11 +25,11 @@ import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize as Se
 
 instance IsString Vehicle.Variant where
@@ -51,22 +49,9 @@ instance B.Table FarePolicyProgressiveDetailsPerExtraKmRateSectionT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . farePolicyId
 
-instance ModelMeta FarePolicyProgressiveDetailsPerExtraKmRateSectionT where
-  modelFieldModification = farePolicyProgressiveDetailsPerExtraKmRateSectionTMod
-  modelTableName = "fare_policy_progressive_details_per_extra_km_rate_section"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDetailsPerExtraKmRateSectionT Identity
 
 type FullFarePolicyProgressiveDetailsPerExtraKmRateSection = (KTI.Id Domain.FarePolicy, Domain.FPProgressiveDetailsPerExtraKmRateSection)
-
-instance FromJSON FarePolicyProgressiveDetailsPerExtraKmRateSection where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FarePolicyProgressiveDetailsPerExtraKmRateSection where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FarePolicyProgressiveDetailsPerExtraKmRateSection
 
 farePolicyProgressiveDetailsPerExtraKmRateSectionTMod :: FarePolicyProgressiveDetailsPerExtraKmRateSectionT (B.FieldModification (B.TableField FarePolicyProgressiveDetailsPerExtraKmRateSectionT))
 farePolicyProgressiveDetailsPerExtraKmRateSectionTMod =
@@ -77,19 +62,6 @@ farePolicyProgressiveDetailsPerExtraKmRateSectionTMod =
       perExtraKmRate = B.fieldNamed "per_extra_km_rate"
     }
 
-instance Serialize FarePolicyProgressiveDetailsPerExtraKmRateSection where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-farePolicyProgressiveDetailsPerExtraKmRateSectionToHSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicyProgressiveDetailsPerExtraKmRateSectionToHSModifiers =
-  M.empty
-
-farePolicyProgressiveDetailsPerExtraKmRateSectionToPSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicyProgressiveDetailsPerExtraKmRateSectionToPSModifiers =
-  M.empty
-
 $(enableKVPG ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT ['farePolicyId] [])
+
+$(mkTableInstances ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT "fare_policy_progressive_details_per_extra_km_rate_section" "atlas_driver_offer_bpp")

@@ -13,21 +13,19 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequest.SearchReqLocation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data SearchReqLocationT f = SearchReqLocationT
@@ -54,20 +52,7 @@ instance B.Table SearchReqLocationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SearchReqLocationT where
-  modelFieldModification = searchReqLocationTMod
-  modelTableName = "search_request_location"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type SearchReqLocation = SearchReqLocationT Identity
-
-instance FromJSON SearchReqLocation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SearchReqLocation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SearchReqLocation
 
 searchReqLocationTMod :: SearchReqLocationT (B.FieldModification (B.TableField SearchReqLocationT))
 searchReqLocationTMod =
@@ -88,19 +73,6 @@ searchReqLocationTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize SearchReqLocation where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-searchReqLocationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-searchReqLocationToHSModifiers =
-  M.empty
-
-searchReqLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-searchReqLocationToPSModifiers =
-  M.empty
-
 $(enableKVPG ''SearchReqLocationT ['id] [])
+
+$(mkTableInstances ''SearchReqLocationT "search_request_location" "atlas_driver_offer_bpp")

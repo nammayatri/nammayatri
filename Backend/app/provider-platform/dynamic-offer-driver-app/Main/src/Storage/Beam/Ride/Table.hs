@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Ride.Table where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -28,15 +26,14 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Ride as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.RideStatus where
@@ -86,26 +83,7 @@ instance B.Table RideT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RideT where
-  modelFieldModification = rideTMod
-  modelTableName = "ride"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Ride = RideT Identity
-
-rideTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideT)
-rideTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "ride"
-    <> B.modifyTableFields rideTMod
-
-instance FromJSON Ride where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Ride where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Ride
 
 rideTMod :: RideT (B.FieldModification (B.TableField RideT))
 rideTMod =
@@ -136,19 +114,6 @@ rideTMod =
       numberOfDeviation = B.fieldNamed "number_of_deviation"
     }
 
-instance Serialize Ride where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-rideToHSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToHSModifiers =
-  M.empty
-
-rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
-rideToPSModifiers =
-  M.empty
-
 $(enableKVPG ''RideT ['id] [['bookingId]])
+
+$(mkTableInstances ''RideT "ride" "atlas_driver_offer_bpp")

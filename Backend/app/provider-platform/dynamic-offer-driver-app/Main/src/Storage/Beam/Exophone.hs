@@ -13,16 +13,13 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use newtype instead of data" #-}
-
 module Storage.Beam.Exophone where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -31,15 +28,14 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Exophone as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.ExophoneType where
@@ -64,32 +60,13 @@ data ExophoneT f = ExophoneT
   }
   deriving (Generic, B.Beamable)
 
-dExophone :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ExophoneT)
-dExophone =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "exophone"
-    <> B.modifyTableFields exophoneTMod
-
 instance B.Table ExophoneT where
   data PrimaryKey ExophoneT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta ExophoneT where
-  modelFieldModification = exophoneTMod
-  modelTableName = "exophone"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Exophone = ExophoneT Identity
-
-instance FromJSON Exophone where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Exophone where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Exophone
 
 exophoneTMod :: ExophoneT (B.FieldModification (B.TableField ExophoneT))
 exophoneTMod =
@@ -104,19 +81,6 @@ exophoneTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-exophoneToHSModifiers :: M.Map Text (A.Value -> A.Value)
-exophoneToHSModifiers =
-  M.empty
-
-exophoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
-exophoneToPSModifiers =
-  M.empty
-
-instance Serialize Exophone where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])
+
+$(mkTableInstances ''ExophoneT "exophone" "atlas_driver_offer_bpp")
