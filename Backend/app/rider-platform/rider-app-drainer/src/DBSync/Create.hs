@@ -14,7 +14,6 @@ import Utils.Utils
 
 runCreateCommands :: Show b => [(CreateDBCommand, b)] -> ReaderT Env EL.Flow [Either [KVDBStreamEntryID] [KVDBStreamEntryID]]
 runCreateCommands cmds = do
-  -- pgSQLDBConf <- Config.getEulerPgDbConf
   dbConf <- fromJust <$> L.getOption KBT.PsqlDbCfg
   runCreate dbConf ("AppInstalls" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (AppInstallsObject obj), val) <- cmds]
     |::| runCreate dbConf ("BlackListOrg" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BlackListOrgObject obj), val) <- cmds]
@@ -68,29 +67,22 @@ runCreateCommands cmds = do
       if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
 
     runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
-      -- t1 <- EL.getCurrentDateInMillis
-      -- cpuT1 <- EL.runIO getCPUTime
       res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates
-      -- t2 <- EL.getCurrentDateInMillis
-      -- cpuT2 <- EL.runIO getCPUTime
-      case (res, index) of -- Ignore duplicate entry
+      case (res, index) of
         (Right _, _) -> do
-          -- EL.logInfoV ("Drainer Info" :: Text) $ createDBLogEntry model "CREATE" (t2 - t1) (cpuT2 - cpuT1) dbObjects -- Logging group latencies
           pure [Right entryIds]
         (Left (ET.DBError (ET.SQLError (ET.MysqlError (ET.MysqlSqlError 1062 err))) _), _) -> do
           EL.logInfo ("DUPLICATE_ENTRY" :: Text) ("Got duplicate entry for model: " <> model <> ", Error message: " <> err)
           void $ publishDBSyncMetric $ Event.DuplicateEntryCreate model
-          -- Is retry delay needed here? :/
-          runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries True -- Should retry count be increased here? :/
+          runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries True
         (Left (ET.DBError (ET.SQLError (ET.PostgresError (ET.PostgresSqlError ("23505" :: Text) _ errMsg _ _))) _), _) -> do
           EL.logInfo ("DUPLICATE_ENTRY" :: Text) ("Got duplicate entry for model: " <> model <> ", Error message: " <> errMsg)
           void $ publishDBSyncMetric $ Event.DuplicateEntryCreate model
-          -- Is retry delay needed here? :/
-          runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries True -- Should retry count be increased here? :/
+          runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries True
         (Left _, y) | y < maxRetries -> do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" model
           EL.runIO $ delay =<< getRetryDelay
-          runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds (index + 1) maxRetries ignoreDuplicates -- Should we pass the same ignoreDuplicates or should we pass False here.
+          runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds (index + 1) maxRetries ignoreDuplicates
         (Left x, _) -> do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" model
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)

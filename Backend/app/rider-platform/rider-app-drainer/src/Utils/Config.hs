@@ -3,11 +3,8 @@ module Utils.Config where
 import Constants as C
 import Data.Text
 import EulerHS.Prelude
-import Types.Config
 import Types.DBSync
 import Utils.Redis
-
--- import Prelude
 
 getDBSyncConfig :: Flow (Either Text DBSyncConfig)
 getDBSyncConfig = runExceptT $ do

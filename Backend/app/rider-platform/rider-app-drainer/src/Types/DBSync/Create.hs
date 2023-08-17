@@ -47,7 +47,6 @@ import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
 import qualified "rider-app" Storage.Beam.Webengage as Webengage
 
--- -- Create Object
 data DBCreateObject
   = AppInstallsObject AppInstalls.AppInstalls
   | BlackListOrgObject BlackListOrg.BlackListOrg
@@ -92,10 +91,6 @@ data DBCreateObject
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | HotSpotConfigObject HotSpotConfig.HotSpotConfig
   deriving (Generic, FromJSON, ToJSON, Show)
-
--- -- Convert database storage types into DBObject types
--- -- which are part of a command and can be deserialized.
--- modelName (TxnOfferInfoObject _                 ) = "TxnOfferInfo"
 
 modelName :: DBCreateObject -> Text
 modelName (AppInstallsObject _) = "AppInstalls"
