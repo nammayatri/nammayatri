@@ -544,7 +544,6 @@ const tamilStrings = {
   YES_ACTIVATE : "ஆம், செயல்படுத்து",
   YES_DEACTIVATE : "ஆம், செயலிழக்கச் செய்",
   THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC : "இது தற்போது செயலில் உள்ள உங்கள் RC ஐ செயலிழக்கச் செய்யும்.",
-  PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER : "நாங்கள் உங்களை டிரைவருடன் இணைக்கும் வரை காத்திருக்கவும்",
   REMOVED : "அகற்றப்பட்டது",
   IS_ACTIVE_NOW : " இப்போது செயலில் உள்ளது.",
   DEACTIVATED : "செயலிழக்கப்பட்டது",
@@ -602,5 +601,7 @@ const tamilStrings = {
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "பயனர்கள் மூலம் மதிப்பிடப்பட்டது",
   MONTHS : "மாதங்கள்",
+  ENTER_AADHAAR_DETAILS : "ஆதார் விவரங்களை உள்ளிடவும்",
+  CALL_REQUEST_HAS_BEEN_PLACED : "உங்கள் அழைப்பு கோரிக்கை வைக்கப்பட்டுள்ளது",
   RC_ADDED_SUCCESSFULLY : "பதிவுச் சான்றிதழ் வெற்றிகரமாக சேர்க்கப்பட்டது"
 }

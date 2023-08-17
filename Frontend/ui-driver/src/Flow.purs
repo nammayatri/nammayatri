@@ -866,7 +866,7 @@ driverProfileFlow = do
     GO_TO_CALL_DRIVER state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       _ <- Remote.callDriverToDriverBT  state.data.rcNumber
-      pure $ toast $ (getString PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER)
+      pure $ toast $ (getString CALL_REQUEST_HAS_BEEN_PLACED)
       driverProfileFlow
 
 

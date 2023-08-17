@@ -547,7 +547,6 @@ const hindiStrings = {
   YES_ACTIVATE : "हाँ, सक्रिय करें",
   YES_DEACTIVATE : "हाँ, निष्क्रिय करें",
   THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC : "यह आपकी वर्तमान में सक्रिय आरसी को निष्क्रिय कर देगा.",
-  PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER : "कृपया प्रतीक्षा करें जब तक हम आपको ड्राइवर से कनेक्ट कर रहे हैं",
   REMOVED : "निकाला गया",
   IS_ACTIVE_NOW : " अभी सक्रिय है.",
   DEACTIVATED : "निष्क्रिय",
@@ -632,5 +631,7 @@ const hindiStrings = {
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "उपयोगकर्ताओं द्वारा मूल्यांकित",
   MONTHS : "महीने",
+  ENTER_AADHAAR_DETAILS : "आधार विवरण दर्ज करें",
+  CALL_REQUEST_HAS_BEEN_PLACED : "आपका कॉल अनुरोध रख दिया गया है",
   RC_ADDED_SUCCESSFULLY : "पंजीकरण प्रमाणपत्र सफलतापूर्वक जोड़ा गया"
 }
