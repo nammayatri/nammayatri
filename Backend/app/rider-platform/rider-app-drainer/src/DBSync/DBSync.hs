@@ -1,11 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
--- {-# LANGUAGE TypeApplications    #-}
-
 module DBSync.DBSync where
 
-import qualified Config.Config as Config
 import qualified Config.Env as Env
 import qualified Constants as C
 import Control.Monad.Trans.Except
@@ -22,9 +19,7 @@ import qualified Database.Redis as R
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
--- import GHC.Float (int2Double)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
-import Types.Config
 import Types.DBSync
 import qualified Types.Event as Event
 import Utils.Config
@@ -35,11 +30,6 @@ import Utils.Utils
 
 peekDBCommand :: Text -> Integer -> Flow (Either ET.KVDBReply (Maybe [(EL.KVDBStreamEntryID, [(Text, ByteString)])]))
 peekDBCommand dbStreamKey count = do
-  -- streamLen <- RQ.getRedisStreamLength dbStreamKey
-  -- case streamLen of
-  --   Right v -> void $ publishDBSyncMetric $ Event.DBSyncStreamLength dbStreamKey (int2Double $ fromIntegral v)
-  --   Left err -> EL.logError ("PEEK_STREAM_LENGTH_ERROR" :: Text) $ ("Error while checking stream length: " :: Text) <> show err
-  {- Either Error (Maybe (Array Entry)) -}
   dbReadResponse <-
     ((find (\x -> decodeToText (R.stream x) == dbStreamKey) =<<) <$>)
       <$> RQ.readValueFromRedisStream dbStreamKey (EL.EntryID $ EL.KVDBStreamEntryID 0 0) count
@@ -48,8 +38,6 @@ peekDBCommand dbStreamKey count = do
     parseReadStreams = (>>= (\(R.XReadResponse _ entries) -> Just $ entryToTuple <$> entries))
     entryToTuple (R.StreamsRecord recordId items) = (parseStreamEntryId recordId, first decodeToText <$> items)
 
--- Try to Parse to DBCommand
--- If the key is dirty which means its already been pushed to mysql, then we will discard other we return the parsed DBCommand
 parseDBCommand :: Text -> (EL.KVDBStreamEntryID, [(Text, ByteString)]) -> Flow (Maybe (EL.KVDBStreamEntryID, DBCommand, ByteString))
 parseDBCommand dbStreamKey entries =
   case entries of
@@ -100,7 +88,6 @@ parseDBCommand dbStreamKey entries =
            in (mbAction, mbModel)
         _ -> (Nothing, Nothing)
 
--- Add Retry Logic For Redis Drop
 dropDBCommand :: Text -> EL.KVDBStreamEntryID -> Flow ()
 dropDBCommand dbStreamKey entryId = do
   count <- RQ.deleteStreamValue dbStreamKey [entryId]
@@ -116,17 +103,12 @@ dropDBCommand dbStreamKey entryId = do
 runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
-  {- run bulk-inserts parallel -}
+
   (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
-  -- void $
-  --   if null cSucc
-  --     then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Create" 0
-  --     else pureRightExceptT $ traverse_ (publishDrainLatency "Create") cSucc
-  {- drop successful inserts from stream -}
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) cSucc
-  {- fail if any insert fails -}
+
   void $
     if not (null cFail)
       then do
@@ -140,16 +122,11 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             EL.logError ("CREATE FAILED: Force Sync is not enabled, so stopping the drainer" :: Text) (show cFail :: Text)
             throwE (length cSucc)
       else pure (length cSucc)
-  {- run updates parallel -}
+
   (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
-  -- void $
-  --   if null uSucc
-  --     then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Update" 0
-  --     else pureRightExceptT $ traverse_ (publishDrainLatency "Update") uSucc
-  {- drop successful updates from stream -}
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) uSucc
-  {- fail if any update fails -}
+
   void $
     if not (null uFail)
       then do
@@ -163,16 +140,11 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             EL.logError ("UPDATE FAILED: Force Sync is not enabled, so stopping the drainer" :: Text) (show uFail :: Text)
             throwE (length cSucc + length uSucc)
       else pure (length cSucc + length uSucc)
-  {- run deletes parallel -}
+
   (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
-  -- void $
-  --   if null dSucc
-  --     then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Delete" 0
-  --     else pureRightExceptT $ traverse_ (publishDrainLatency "Delete") dSucc
-  {- drop successful deletes from stream -}
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) dSucc
-  {- fail if any delete fails -}
+
   if not (null dFail)
     then do
       if isForcePushEnabled
@@ -195,9 +167,8 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
 
 process :: Text -> Integer -> Flow Int
 process dbStreamKey count = do
-  {- TODO: Need To write CPU Latencies -}
   beforeProcess <- EL.getCurrentDateInMillis
-  {- read command if available from stream -}
+
   commands <- peekDBCommand dbStreamKey count
   case commands of
     Left err -> do
@@ -205,23 +176,14 @@ process dbStreamKey count = do
       EL.logInfo ("PEEK_DB_COMMAND_ERROR" :: Text) $ show err
       pure 0
     Right Nothing -> do
-      -- void $ publishDBSyncMetric $ Event.QueryBatchSize (int2Double 0)
-      -- EL.logInfo ("DB_SYNC_PROCESS_TIME" :: Text) (show (0 :: Integer))
-      -- void $ publishDBSyncMetric $ Event.QueryBatchProcessTime (int2Double 0)
       pure 0
     Right (Just c) -> do
       successCount <- run c
-      {- Let's try to decode and run the commands -}
-      -- afterProcess <- EL.getCurrentDateInMillis
-      -- EL.logInfo ("DB_SYNC_PROCESS_TIME" :: Text) (show $ afterProcess - beforeProcess)
-      -- void $ publishDBSyncMetric $ Event.QueryBatchProcessTime (int2Double (afterProcess - beforeProcess))
-      {- time taken to process batch -}
       pure successCount
   where
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries
-      -- void $ publishDBSyncMetric $ Event.QueryBatchSize (int2Double $ length entries)
       let createEntries = mapMaybe filterCreateCommands commands
           updateEntries = mapMaybe filterUpdateCommands commands
           deleteEntries = mapMaybe filterDeleteCommands commands
@@ -233,15 +195,6 @@ process dbStreamKey count = do
           pure cnt
         Right cnt -> pure cnt
 
--- spawnDrainerThread :: Int -> R.FlowRuntime -> Env -> IO ()
--- spawnDrainerThread 0 _ _ = pure ()
--- spawnDrainerThread count flowRt env = do
---   ctx <- IORef.newIORef mempty
---   newCounter <- IORef.newIORef 0
---   let newFlowRt = changeLogContextAndResetCounter ctx flowRt newCounter
---   void $ forkIO $ R.runFlow newFlowRt (runReaderT startDBSync env)
---   spawnDrainerThread (count - 1) flowRt env
-
 startDBSync :: Flow ()
 startDBSync = do
   sessionId <- EL.runIO genSessionId
@@ -250,13 +203,10 @@ startDBSync = do
   void $ EL.runIO $ installHandler sigINT (Catch $ onSigINT readinessFlag) Nothing
   void $ EL.runIO $ installHandler sigTERM (Catch $ onSigTERM readinessFlag) Nothing
 
-  threadPerPodCount <- EL.runIO Env.getThreadPerPodCount
-  EL.logDebugT "THREAD_PER_POD_COUNT" (show threadPerPodCount)
-
   eitherConfig <- getDBSyncConfig
   syncConfig <- case eitherConfig of
     Right c -> pure c
-    Left _ -> {-(EL.info ("Could not read config: " <> show err)) *> -} pure Config.defaultDBSyncConfig
+    Left _ -> {-(EL.info ("Could not read config: " <> show err)) *> -} pure Env.defaultDBSyncConfig
   EL.logInfo ("Empty retry: " :: Text) (show $ _emptyRetry syncConfig)
   EL.logInfo ("Rate limit number: " :: Text) (show $ _rateLimitN syncConfig)
   EL.logInfo ("Rate limit window: " :: Text) (show $ _rateLimitWindow syncConfig)

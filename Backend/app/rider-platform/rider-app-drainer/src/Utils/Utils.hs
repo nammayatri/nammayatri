@@ -14,7 +14,6 @@ import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Language as EL
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
--- import GHC.Float (int2Double)
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
 import Types.DBSync
@@ -87,20 +86,9 @@ tryRateLimiter n window history now count =
    in (history', if length history' < n then 0 else waitMs)
 
 publishDBSyncMetric :: DBSyncMetric -> Flow ()
--- publishDBSyncMetric _ = pure ()
 publishDBSyncMetric metric = do
   environment <- ask
   L.runIO $ pubDBSyncMetric (_counterHandles environment) metric
-
--- environment <- ask
--- L.runIO $ pubDBSyncMetric (_counterHandles environment) metric
-
--- publishDrainLatency :: Text -> L.KVDBStreamEntryID -> Flow ()
--- publishDrainLatency action (L.KVDBStreamEntryID id _) = do
---   time <- L.getCurrentDateInMillis
---   let latency = int2Double time - int2Double (fromIntegral id)
---   L.logInfo (("LATENCY: " :: Text) <> action) (show latency)
---   void $ publishDBSyncMetric $ QueryDrainLatency action latency
 
 decodeToText :: ByteString -> Text
 decodeToText = DTE.decodeUtf8With DTE.lenientDecode
