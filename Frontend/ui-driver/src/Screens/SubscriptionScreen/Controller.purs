@@ -36,7 +36,7 @@ data Action = BackPressed
             | ClearDue PrimaryButton.Action
             | SwitchPlan PrimaryButton.Action
             | JoinPlanAC PrimaryButton.Action
-            | GotoManagePlan
+            | ManagePlanAC
             | SelectPlan String
             | ChoosePlan String
             | ToggleDueDetails
@@ -68,7 +68,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | SwitchCurrentPlan SubscriptionScreenState
                     | ResumeAutoPayPlan SubscriptionScreenState
                     | CheckOrderStatus SubscriptionScreenState String
-                    | ScreenExit SubscriptionScreenState
+                    | GotoManagePlan SubscriptionScreenState
                     | Refresh
                     | RetryPayment SubscriptionScreenState String
 
@@ -90,9 +90,9 @@ eval (SwitchPlan PrimaryButton.OnClick) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_switch_plan_clicked"
   updateAndExit state { props{showShimmer = true}} $ SwitchCurrentPlan state { props{showShimmer = true}}
 
-eval GotoManagePlan state = do
+eval ManagePlanAC state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
-  updateAndExit state { props{showShimmer = true}} $ ScreenExit state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlan = state.data.myPlanData.planEntity.id } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
+  updateAndExit state { props{showShimmer = true}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlan = state.data.myPlanData.planEntity.id } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
 eval (SelectPlan planID ) state = continue state {props {managePlanProps {selectedPlan = planID}}}
 

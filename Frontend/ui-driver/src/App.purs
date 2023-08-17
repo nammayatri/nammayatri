@@ -347,7 +347,7 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | SWITCH_PLAN SubscriptionScreenState
                                   | RESUME_AUTOPAY SubscriptionScreenState
                                   | CHECK_ORDER_STATUS SubscriptionScreenState String
-                                  | SCREEN_EXIT SubscriptionScreenState
+                                  | GO_TO_MANAGE_PLAN SubscriptionScreenState
                                   | REFRESH_SUSCRIPTION
                                   | RETRY_PAYMENT_AC SubscriptionScreenState String
 

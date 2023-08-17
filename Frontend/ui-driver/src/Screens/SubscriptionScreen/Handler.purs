@@ -46,9 +46,9 @@ subscriptionScreen = do
     CheckOrderStatus updatedState orderId -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHECK_ORDER_STATUS updatedState orderId)
-    ScreenExit updatedState -> do
+    GotoManagePlan updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ SCREEN_EXIT updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_MANAGE_PLAN updatedState)
     Refresh -> App.BackT $ App.NoBack <$> (pure $ REFRESH_SUSCRIPTION)
     RetryPayment updatedState planId -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
