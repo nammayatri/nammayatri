@@ -210,7 +210,7 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
       text = ob.description
     , margin = MarginBottom 24},
     option1 {
-      text = ob.buttonText-- "Join Now"
+      text = getString JOIN_NOW
     , background = Color.black900
     , color = Color.yellow900
     },

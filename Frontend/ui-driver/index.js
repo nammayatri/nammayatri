@@ -5,7 +5,7 @@ require('core-js');
 window.session_id = guid();
 window.version = __VERSION__;
 let previousDateObject = new Date();
-const refreshThreshold = 120;
+const refreshThreshold = 300;
 console.warn("Hello World");
 loadConfig();
 
