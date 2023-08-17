@@ -78,7 +78,8 @@ instance FromTType' BeamM.Mandate Domain.Mandate where
             maxAmount = maxAmount,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            payerVpa = payerVpa
+            payerVpa = payerVpa,
+            payerApp = payerApp
           }
 
 instance ToTType' BeamM.Mandate Domain.Mandate where
@@ -91,5 +92,6 @@ instance ToTType' BeamM.Mandate Domain.Mandate where
         BeamM.maxAmount = maxAmount,
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
-        BeamM.payerVpa = payerVpa
+        BeamM.payerVpa = payerVpa,
+        BeamM.payerApp = payerApp
       }

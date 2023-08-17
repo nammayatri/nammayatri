@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.mandate
         updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
 ALTER TABLE atlas_driver_offer_bpp.mandate OWNER TO atlas_driver_offer_bpp_user;
+ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN payer_app Text;
+
 
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.plan
     (   id character(36) NOT NULL,
