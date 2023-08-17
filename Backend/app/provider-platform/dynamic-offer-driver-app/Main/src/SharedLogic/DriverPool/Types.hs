@@ -13,7 +13,10 @@
 -}
 
 module SharedLogic.DriverPool.Types
-  ( DriverPoolResult (..),
+  ( PoolCalculationStage (..),
+    CalculateGoHomeDriverPoolReq (..),
+    GoHomeDriverPoolResult (..),
+    DriverPoolResult (..),
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
     PoolRadiusStep,
@@ -22,7 +25,9 @@ module SharedLogic.DriverPool.Types
 where
 
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
+import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
@@ -34,7 +39,31 @@ import Tools.Maps as Google
 
 type PoolBatchNum = Int
 
-type PoolRadiusStep = Int
+type PoolRadiusStep = Meters
+
+data PoolCalculationStage = Estimate | DriverSelection
+
+data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
+  { poolStage :: PoolCalculationStage,
+    driverPoolCfg :: DriverPoolConfig,
+    variant :: Maybe Vehicle.Variant,
+    fromLocation :: a,
+    toLocation :: a,
+    merchantId :: Id DM.Merchant
+  }
+
+data GoHomeDriverPoolResult = GoHomeDriverPoolResult
+  { driverId :: Id Driver,
+    language :: Maybe Maps.Language,
+    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
+    distanceToPickup :: Meters,
+    -- durationToPickup :: Seconds,
+    variant :: Vehicle.Variant,
+    lat :: Double,
+    lon :: Double,
+    mode :: Maybe DI.DriverMode
+  }
+  deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
