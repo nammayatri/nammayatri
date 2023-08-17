@@ -58,9 +58,9 @@ let availabilityTimeWindowOption =
 let cacheConfig = { configsExpTime = +86400 }
 
 let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
+      { enableKVForWriteAlso = [] : List Text
       , enableKVForRead = [] : List Text
+      , tableAllocation = 100 : Natural
       }
 
 in  { hedisCfg
