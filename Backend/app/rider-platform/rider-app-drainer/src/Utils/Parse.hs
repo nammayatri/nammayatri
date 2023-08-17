@@ -109,7 +109,7 @@ decodeTerm = \case
         (operation, mValue) <- getSingleKeyValue obj
         case (operation, mValue) of
           ("$in", Just value) -> do
-            case value of -- TODO Use actual In clause here
+            case value of
               A.Array vecList -> do
                 let inList = V.toList vecList
                 clauseList <- mapM (\v -> (parseFieldAndGetClause @be @table) v keyCamel) inList
@@ -117,7 +117,7 @@ decodeTerm = \case
               _ -> fail "Expecting list - Decoding failed at term $in"
           ("$gt", Just value) -> do
             (EKT.TermWrap column fieldValue) <- (parseFieldAndGetClause @be @table) value keyCamel
-            -- (column, fieldValue) <- getFieldAndValue value keyCamel
+
             return $ Is column (GreaterThan fieldValue)
           ("$gte", Just value) -> do
             (EKT.TermWrap column fieldValue) <- (parseFieldAndGetClause @be @table) value keyCamel
@@ -129,8 +129,7 @@ decodeTerm = \case
             (EKT.TermWrap column fieldValue) <- (parseFieldAndGetClause @be @table) value keyCamel
             return $ Is column (LessThanOrEq fieldValue)
           ("$notIn", Just value) -> do
-            -- (\(Is col term) -> Is col (Not term)) <$> decodeTerm (A.object [keyCamel A..= A.object ["$in" A..= value]])
-            case value of -- TODO Use actual Not In
+            case value of
               A.Array vecList -> do
                 let inList = V.toList vecList
                 clauseList <- mapM (\v -> (parseFieldAndGetClause @be @table) v keyCamel) inList
@@ -142,7 +141,6 @@ decodeTerm = \case
           ("$not", Just value) -> (\(Is col term) -> Is col (Not term)) <$> decodeTerm (A.object [keyCamel A..= value])
           _ -> fail "Expecting term constructor - Error decoding term"
       Just value -> do
-        -- Eq case {"id","1234"}
         (EKT.TermWrap column fieldValue) <- (parseFieldAndGetClause @be @table) value keyCamel
         return $ Is column (Eq fieldValue)
       _ -> fail "Expecting term object - Error decoding term"
