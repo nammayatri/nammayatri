@@ -557,7 +557,6 @@ const mlStrings = {
   YES_ACTIVATE : "അതെ, സജീവമാക്കുക",
   YES_DEACTIVATE : "അതെ, നിർജ്ജീവമാക്കുക",
   THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC : "ഇത് നിങ്ങളുടെ നിലവിൽ സജീവമായ RC നിർജ്ജീവമാക്കും.",
-  PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER : "ഞങ്ങൾ നിങ്ങളെ ഡ്രൈവറുമായി ബന്ധിപ്പിക്കുന്നത് വരെ കാത്തിരിക്കുക",
   REMOVED : "നീക്കം ചെയ്തു",
   IS_ACTIVE_NOW : " ഇപ്പോൾ സജീവമാണ്.",
   DEACTIVATED : "നിർജ്ജീവമാക്കി",
