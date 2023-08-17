@@ -34,6 +34,7 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.Types (NotificationService)
@@ -42,7 +43,6 @@ import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 fromFieldSmsService ::

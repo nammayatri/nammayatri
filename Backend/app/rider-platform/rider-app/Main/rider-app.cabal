@@ -196,7 +196,6 @@ library
       Environment
       Lib.Mesh
       Lib.Utils
-      Lib.UtilsTH
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
