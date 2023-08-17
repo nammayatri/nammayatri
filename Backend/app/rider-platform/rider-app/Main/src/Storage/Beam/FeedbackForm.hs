@@ -30,9 +30,9 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.FeedbackForm as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.Category where

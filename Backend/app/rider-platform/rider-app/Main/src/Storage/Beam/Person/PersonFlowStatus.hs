@@ -32,11 +32,11 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Person.PersonFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Text (encodeToText)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.FlowStatus where
