@@ -38,6 +38,7 @@ import qualified Database.Beam.Backend as BeamBackend
 import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -92,6 +93,9 @@ findAllRidesByDriverId ::
   Id Person ->
   m [Ride]
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
+
+findSuccRideByGoHomeRequestId :: (L.MonadFlow m, Log m) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
+findSuccRideByGoHomeRequestId (Id ghrId) = findOneWithKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] -- To Be added
 
 findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
@@ -556,7 +560,8 @@ instance FromTType' BeamR.Ride Ride where
             distanceCalculationFailed = distanceCalculationFailed,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            numberOfDeviation = numberOfDeviation
+            numberOfDeviation = numberOfDeviation,
+            driverGoHomeRequestId = Id <$> driverGoHomeRequestId
           }
 
 instance ToTType' BeamR.Ride Ride where
@@ -585,5 +590,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.distanceCalculationFailed = distanceCalculationFailed,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
-        BeamR.numberOfDeviation = numberOfDeviation
+        BeamR.numberOfDeviation = numberOfDeviation,
+        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId
       }

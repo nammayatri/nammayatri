@@ -15,6 +15,7 @@ import GHC.Generics (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
+import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLocation
 import Storage.Beam.DriverOnboarding.DriverLicense
@@ -62,7 +63,8 @@ atlasDB =
         bookingCancellationReason = bookingCancellationReasonTable,
         rating = ratingTable,
         message = messageTable,
-        messageTranslation = messageTranslationTable
+        messageTranslation = messageTranslationTable,
+        driverGoHomeRequest = driverGoHomeRequestTable
       }
 
 data AtlasDB f = AtlasDB
@@ -88,6 +90,7 @@ data AtlasDB f = AtlasDB
     bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),
     rating :: f (B.TableEntity RatingT),
     message :: f (B.TableEntity MessageT),
-    messageTranslation :: f (B.TableEntity MessageTranslationT)
+    messageTranslation :: f (B.TableEntity MessageTranslationT),
+    driverGoHomeRequest :: f (B.TableEntity DriverGoHomeRequestT)
   }
   deriving (Generic, B.Database be)
