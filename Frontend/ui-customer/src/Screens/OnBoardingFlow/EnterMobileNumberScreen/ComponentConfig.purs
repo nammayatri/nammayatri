@@ -65,7 +65,7 @@ whatsAppOTPButtonConfig state = let
       , isClickable = state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91")
       , alpha = if state.props.btnActiveMobileNumber && (state.data.countryObj.countryCode /= "+91") then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
-      , background = state.data.config.whatsappOTPButtonColor
+      , background = Color.aliceBlue
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
       , stroke = ("1," <> Color.borderColorLight)
       , isSuffixImage = true
