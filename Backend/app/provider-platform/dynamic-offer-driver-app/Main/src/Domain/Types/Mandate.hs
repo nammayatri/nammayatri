@@ -31,6 +31,7 @@ data Mandate = Mandate
     startDate :: UTCTime,
     endDate :: UTCTime,
     maxAmount :: HighPrecMoney,
+    payerApp :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

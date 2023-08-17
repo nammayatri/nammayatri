@@ -17,6 +17,8 @@ module Lib.Payment.Domain.Action
     createOrderService,
     orderStatusService,
     juspayWebhookService,
+    createNotificationService,
+    createExecutionService,
   )
 where
 
@@ -48,7 +50,8 @@ data PaymentStatusResp
         mandateEndDate :: UTCTime,
         mandateId :: Text,
         mandateMaxAmount :: HighPrecMoney,
-        payerVpa :: Maybe Text
+        payerVpa :: Maybe Text,
+        payerApp :: Maybe Text
       }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -207,7 +210,7 @@ orderStatusService personId orderId orderStatusCall = do
                 ..
               }
       updateOrderTransaction order orderTxn Nothing
-      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, ..}
+      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, payerApp = orderStatusResp.upi <&> (.payer_app), ..}
     Payment.OrderStatusResp {..} -> do
       let orderTxn =
             OrderTxn
@@ -348,3 +351,29 @@ juspayWebhookService resp respDump = do
       updateOrderTransaction order orderTxn $ Just respDump
     _ -> return ()
   return Ack
+
+--- notification api ----------
+
+createNotificationService ::
+  ( EncFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Payment.MandateNotificationReq ->
+  (Payment.MandateNotificationReq -> m Payment.MandateNotificationRes) ->
+  m Payment.MandateNotificationRes
+createNotificationService req notificationCall = do
+  notificationCall req
+
+----- execution api --------
+
+createExecutionService ::
+  ( EncFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Payment.MandateExecutionReq ->
+  (Payment.MandateExecutionReq -> m Payment.MandateExecutionRes) ->
+  m Payment.MandateExecutionRes
+createExecutionService req executionCall = do
+  executionCall req

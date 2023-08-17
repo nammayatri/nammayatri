@@ -264,11 +264,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1687365764,
-        "narHash": "sha256-T67Dr9TvZYfXEOuFPfdDnNKTc1Kqy6xyhFjXEXHu1Dc=",
+        "lastModified": 1685470074,
+        "narHash": "sha256-0vdewKY4Vmx476Qg5qd2voyuL7ZssqOUlQeNJCuvs3Q=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "5f16f3ebf64a4523eb8c1b20dadcb65cef5146ab",
+        "rev": "9b0393630068e688795bedd46c49df1a0bbc7c0a",
         "type": "github"
       },
       "original": {
@@ -2246,11 +2246,11 @@
     },
     "process-compose-flake_2": {
       "locked": {
-        "lastModified": 1687298948,
-        "narHash": "sha256-7Lu4/odCkkwrzR8Mo+3D+URv4oLap8WWLESzi/75eb0=",
+        "lastModified": 1680797953,
+        "narHash": "sha256-lFYbfId1IX6jh/wUf+gt3LyvE9HblS4hcBQcougSzX0=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "5bdb90b85642901cf9a5dccfe8c907091c261604",
+        "rev": "aee1b8d126a5efe5945513eb2fb343f3d68dca4b",
         "type": "github"
       },
       "original": {
@@ -2360,11 +2360,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1692255744,
-        "narHash": "sha256-yS3RnwOScHzSJTHeU6z2GXhqFKFruFpxjpnPS2+j49Y=",
+        "lastModified": 1692289737,
+        "narHash": "sha256-HfQ1+zwBl7dLixDoJ0GY7v8KyrhevaEaAgMXAzB+jHw=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "4bedc9b34e5d5aa3fb9de1f036fca99dcee7d72d",
+        "rev": "31f30dd28a54f4ab40922764ba07c049843839dc",
         "type": "github"
       },
       "original": {
