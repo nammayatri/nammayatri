@@ -2164,7 +2164,9 @@ subScriptionFlow = do
       let (GlobalState defGlobalState) = defaultGlobalState
       modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
       subScriptionFlow
-    SCREEN_EXIT state -> subScriptionFlow
+    GO_TO_MANAGE_PLAN state -> do
+      modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{subView = ManagePlan}})
+      subScriptionFlow
     _ -> subScriptionFlow
 
 constructLatLong :: String -> String -> Location

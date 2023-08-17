@@ -21,7 +21,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, screenWidth)
+import Engineering.Helpers.Commons (flowRunner, screenHeight, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getImageUrl, getValueBtwRange)
@@ -183,11 +183,10 @@ enjoyBenefitsView push state =
     , height MATCH_PARENT
     , gravity RIGHT
     , orientation VERTICAL
-    , margin $ Margin 116 30 10 0
+    , margin $ Margin 116 (screenHeight unit / 30) 10 0
     ][  linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , margin $ if true then MarginTop 45 else MarginTop 15
         , orientation VERTICAL
         ][ commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.subHeading2 TypoGraphy) 0 LEFT
           , linearLayout
@@ -601,7 +600,7 @@ planDescriptionView push state isSelectedLangTamil =
               ]
             ]
          )state.offers)
-     , arrowButtonView push (getString MANAGE_PLAN) true GotoManagePlan isSelectedLangTamil
+     , arrowButtonView push (getString MANAGE_PLAN) true ManagePlanAC isSelectedLangTamil
   ]
 
 duesView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
