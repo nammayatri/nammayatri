@@ -61,6 +61,7 @@ data ScreenOutput
   | GoToReferralScreen
   | GoToProfileScreen
   | GoToCurrentRideFlow
+  | SubscriptionScreen NotificationsScreenState
 
 data Action
   = OnFadeComplete String
@@ -241,6 +242,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit $ GoToReferralScreen
+    "Join" -> do 
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ SubscriptionScreen state
     _ -> continue state
 
 eval _ state = continue state

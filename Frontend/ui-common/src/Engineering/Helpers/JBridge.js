@@ -1752,3 +1752,9 @@ export const  horizontalScrollToPos = function (id, childId, focus) {
   function between(x, min, max) {
     return x >= min && x <= max;
   }
+
+  export const askNotificationPermission = function () {
+    if (window.JBridge.requestNotificationPermission){
+      return window.JBridge.requestNotificationPermission();
+    }
+  }
