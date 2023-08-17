@@ -318,12 +318,11 @@ otpRideCreate driver otpCode booking = do
       vehicle <-
         QVeh.findById ride.driverId
           >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-      number <- mapM encrypt =<< mapM decrypt driver.mobileNumber -- TEMPORARY Fix until beam fromTType' bug is resolved
       return
         DRD.RideDetails
           { id = ride.id,
             driverName = driver.firstName,
-            driverNumber = number,
+            driverNumber = driver.mobileNumber,
             driverCountryCode = driver.mobileCountryCode,
             vehicleNumber = vehicle.registrationNo,
             vehicleColor = Just vehicle.color,
