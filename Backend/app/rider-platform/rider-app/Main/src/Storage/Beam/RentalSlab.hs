@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
@@ -26,7 +27,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Database.PostgreSQL.Simple.FromField (FromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -35,11 +36,10 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
-instance FromField Hours where
-  fromField = fromFieldEnum
+deriving newtype instance FromField Hours
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Hours where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Hours where
+  sqlValueSyntax = sqlValueSyntax . getHours
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Hours
 
@@ -48,11 +48,10 @@ instance FromBackendRow Postgres Hours
 instance IsString Hours where
   fromString = show
 
-instance FromField Kilometers where
-  fromField = fromFieldEnum
+deriving newtype instance FromField Kilometers
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Kilometers where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Kilometers where
+  sqlValueSyntax = sqlValueSyntax . getKilometers
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Kilometers
 
