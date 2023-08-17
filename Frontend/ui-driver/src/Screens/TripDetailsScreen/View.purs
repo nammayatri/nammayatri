@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
 import Language.Types (STR(..))
 import Language.Strings (getString)
-import Prelude (Unit, const, not, show, unit, ($), (*), (/), (<<<), (<>), (==))
+import Prelude (Unit, const, not, show, unit, ($), (*), (/), (<<<), (<>), (==), (&&))
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, alignParentBottom, relativeLayout, afterRender, onBackPressed, imageWithFallback)
 import Screens.Types as ST
@@ -36,7 +36,7 @@ import Screens.TripDetailsScreen.ComponentConfig
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
-import MerchantConfig.Utils(getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -163,7 +163,8 @@ tripDetailsView state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-          [ imageWithFallback $ "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"
+          [ imageWithFallback $ if (state.data.vehicleType == "AUTO_RICKSHAW" && getMerchant FunctionCall == YATRI) then "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
+                                else "ic_vehicle_front," <> (getAssetStoreLink FunctionCall) <> "ic_vehicle_front.png"
           , width (V 36)
           , height (V 36)
           ]

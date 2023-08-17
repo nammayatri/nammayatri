@@ -279,8 +279,8 @@ getVehicleImage variant = do
           Just ST.SEDAN -> "ic_sedan,"<> url <>"ic_sedan.png"
           Just ST.SUV -> "ic_suv,"<> url <>"ic_suv.png"
           Just ST.HATCHBACK -> "ic_hatchback,"<> url <>"ic_hatchback.png"
-          Just ST.AUTO_RICKSHAW -> "ic_vehicle_side,"<> url <>"ic_auto_side_view.png"
-          _ -> "ic_sedan,"<> url <>"ic_sedan.png"
+          Just ST.AUTO_RICKSHAW -> "ny_ic_auto_quote_list,"<> url <>"ic_auto_side_view.png"
+          _ -> "ic_sedan_non_ac,"<> url <>"ic_sedan_non_ac.png"
 
 getVehicleCapacity :: String -> String 
 getVehicleCapacity variant = case getMerchant FunctionCall of
@@ -294,5 +294,6 @@ getVehicleCapacity variant = case getMerchant FunctionCall of
           _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
   YATRI -> case fetchVehicleVariant variant of
           Just ST.SUV -> "6 " <> (getString SEATS)
+          Just ST.AUTO_RICKSHAW -> "3 " <> (getString SEATS)
           _ -> "4 " <> (getString SEATS)
   _ ->    ""

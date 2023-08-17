@@ -50,4 +50,5 @@ commonConfig =
         , djd: "sdvs"
         , internationalNumberEnabled : false
         , callOptions : ["ANONYMOUS"]
+        , autoVariantEnabled : true
         }

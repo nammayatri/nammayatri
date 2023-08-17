@@ -44,4 +44,5 @@ type QuoteListModelState = {
   , findingRidesAgain :: Boolean
   , progress :: Number
   , appConfig :: AppConfig
+  , vehicleVariant :: String
 }

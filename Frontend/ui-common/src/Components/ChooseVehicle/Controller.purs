@@ -27,6 +27,7 @@ type Config
     , basePrice :: Int
     , showInfo :: Boolean
     , searchResultType :: SearchType
+    , isBookingOption :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -53,4 +54,5 @@ config =
   , basePrice : 0 
   , showInfo : false
   , searchResultType : QUOTES
+  , isBookingOption : false
   }

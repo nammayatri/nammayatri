@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:background="@color/white"
+    android:background="@drawable/ny_ic_splash_bg"
     android:id="@+id/splash">
 
     <LinearLayout
@@ -27,23 +27,12 @@
                 android:gravity="center">
 
                 <ImageView
-                    android:layout_width="161dp"
-                    android:layout_height="90dp"
+                    android:layout_width="229dp"
+                    android:layout_height="122dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_yatri_logo" />
             </LinearLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:fontFamily="@font/plus_jakarta_sans_bold"
-                android:gravity="center"
-                android:paddingHorizontal="70dp"
-                android:paddingTop="75dp"
-                android:text="Partner App"
-                android:textColor="@color/Black900"
-                android:textSize="16sp" />
         </RelativeLayout>
     </LinearLayout>
 
@@ -59,7 +48,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:orientation="horizontal">
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Backed By"
+                android:textSize="12sp"
+                android:lineHeight="15dp"
+                android:layout_marginBottom="8dp"
+                android:textColor= "@color/Black500"
+                android:fontFamily="@font/plus_jakartasans_medium"/>
 
             <ImageView
                 android:layout_width="231dp"

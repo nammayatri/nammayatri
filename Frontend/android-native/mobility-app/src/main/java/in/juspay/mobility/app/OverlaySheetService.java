@@ -211,7 +211,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             updateTipView(holder, model);
 
-            if (key != null && key.equals("yatrisathiprovider")) {
+            if (key != null && (key.equals("yatrisathiprovider") || key.equals("yatriprovider"))) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
@@ -566,8 +566,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             layoutParams.rightMargin = 12;
             merchantLogoIcon.setLayoutParams(layoutParams);
             merchantLogo.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT , ViewGroup.LayoutParams.WRAP_CONTENT ));
-        } else if (key != null && key.equals("yatripartner")) {
-            merchantLogo.setText("Yatri Partner");
+        } else if (key != null && key.equals("yatriprovider")) {
+            merchantLogo.setText("Yatri Driver");
         } else if (key != null && key.equals("passcultureprovider")) {
             merchantLogo.setText("Alliance Taxis");
         }
