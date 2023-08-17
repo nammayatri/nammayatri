@@ -49,6 +49,7 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY","FIREBASE"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
+    "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app",
     "quoteListItemConfig": {
       "primaryButtonCorner": 8.0,
       "expiresColor" : "#E55454",
