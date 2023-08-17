@@ -750,7 +750,11 @@ homeScreenFlow = do
         void $ lift $ lift $ toggleLoader true
         (GlobalState newState) <- getState
         let state = newState.homeScreen
-
+        if (state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0) then do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{isSearchLocation = SearchLocation, isSource = Just true, currentStage = SearchLocationModel}})
+          pure $ toast "Not able to fetch the current location, please select manually"
+          homeScreenFlow
+        else pure unit
         case state.props.isSource of
           Just true -> do
             (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp (state.props.sourcePlaceId) (state.props.sourceLat) (state.props.sourceLong) (if state.props.isSource == Just false then dummyLocationListItemState else item)
