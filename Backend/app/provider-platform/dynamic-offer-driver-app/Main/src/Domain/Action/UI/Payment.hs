@@ -105,7 +105,7 @@ getStatus (personId, merchantId) orderId = do
     DPayment.MandatePaymentStatus {..} -> do
       unless (order.status /= Payment.CHARGED) $ do
         processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
-      processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa
+      processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa payerApp
       processMandateStatus mandateStatus mandateId
     DPayment.PaymentStatus _ -> do
       unless (order.status /= Payment.CHARGED) $ do
@@ -142,7 +142,7 @@ juspayWebhookHandler merchantShortId authData value = do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               unless (transactionStatus /= Payment.CHARGED) $ do
                 processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
-              processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa
+              processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa (upi <&> (.payer_app))
               processMandateStatus mandateStatus mandateId
               notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus
             Payment.MandateStatusResp {..} -> do
@@ -192,8 +192,8 @@ sendNotificationIfNotSent key actions = do
     Hedis.setExp key True 86400 -- 24 hours
     actions
 
-processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Flow ()
-processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa = do
+processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Text -> Flow ()
+processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa payerApp = do
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     mbExistingMandate <- QM.findById mandateId
     case mbExistingMandate of
@@ -210,6 +210,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
             createdAt = now,
             updatedAt = now,
             payerVpa = payerVpa,
+            payerApp = payerApp,
             ..
           }
 
