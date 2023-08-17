@@ -1340,7 +1340,8 @@ myRidesScreenFlow = do
       destination = selectedCard.destination,
       totalAmount = selectedCard.total_amount,
       distance = selectedCard.rideDistance,
-      status = selectedCard.status
+      status = selectedCard.status,
+      vehicleType = selectedCard.vehicleType
       }})
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow

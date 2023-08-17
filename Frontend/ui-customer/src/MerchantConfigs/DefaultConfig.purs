@@ -121,4 +121,5 @@ config =
   , internationalNumberEnabled : false
   , dashboardUrl : "https://nammayatri.in/open/"
   , callOptions : ["ANONYMOUS"]
+  , autoVariantEnabled : true
   }

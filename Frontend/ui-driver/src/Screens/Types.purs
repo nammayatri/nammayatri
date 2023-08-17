@@ -602,7 +602,8 @@ type IndividualRideCardState =
     id :: String,
     updatedAt :: String,
     source :: String,
-    destination :: String
+    destination :: String,
+    vehicleType :: String
   }
 
 
@@ -963,7 +964,8 @@ type TripDetailsScreenData =
     totalAmount :: Int,
     paymentMode :: PaymentMode,
     distance :: String,
-    status :: String
+    status :: String,
+    vehicleType :: String
   }
 
 type TripDetailsScreenProps =

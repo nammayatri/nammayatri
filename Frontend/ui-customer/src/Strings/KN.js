@@ -587,5 +587,6 @@ const kannadaStrings = {
   "LETS_GET_YOU_TRIP_READY" : "ನಿಮ್ಮನ್ನು ಪ್ರವಾಸಕ್ಕೆ ಸಿದ್ಧಗೊಳಿಸೋಣ!",
   "GOT_AN_OTP" : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
   "JUST_ONE_LAST_THING" : "ಕೇವಲ ಒಂದು ಕೊನೆಯ ವಿಷಯ",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ",
+  "AUTO_RICKSHAW" : "ಆಟೋ ರಿಕ್ಷಾ"
 }

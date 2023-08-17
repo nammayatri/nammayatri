@@ -781,7 +781,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
                         int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
-                        upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
+                        upsertMarker(sourceMarker,String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f);
                         animateCamera(lat,lng,20.0f, ZoomType.ZOOM);
                         return;
                     }
@@ -969,6 +969,7 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void removeAllPolylines(String str) {
         ExecutorManager.runOnMainThread(() -> {
+            removeMarker("ic_auto_nav_on_map");
             removeMarker("ny_ic_vehicle_nav_on_map");
             removeMarker("ny_ic_src_marker");
             removeMarker("ny_ic_dest_marker");

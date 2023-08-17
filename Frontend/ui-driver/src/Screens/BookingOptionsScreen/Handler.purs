@@ -17,5 +17,5 @@ bookingOptions = do
   case action of
     SelectCab updatedState -> do
       _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ SELECT_CAB updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SELECT_CAB updatedState)
     GoBack -> App.BackT $ pure App.GoBack

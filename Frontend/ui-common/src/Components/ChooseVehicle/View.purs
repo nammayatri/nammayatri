@@ -38,9 +38,9 @@ view push config =
           , width $ V 60
           ]
         , linearLayout
-          [ width WRAP_CONTENT
+          [ width $ if config.isBookingOption then MATCH_PARENT else WRAP_CONTENT
           , height WRAP_CONTENT
-          , orientation VERTICAL
+          , orientation $ if config.isBookingOption then HORIZONTAL else VERTICAL
           ][ vehicleDetailsView push config
            , if config.isCheckBox || config.searchResultType == QUOTES then capacityView push config else priceDetailsView push config
           ]
@@ -64,7 +64,7 @@ vehicleDetailsView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , orientation HORIZONTAL
+    , orientation $ if config.isBookingOption then VERTICAL else HORIZONTAL
     , padding $ PaddingLeft 8
     ]
     [ textView
@@ -92,12 +92,13 @@ vehicleDetailsView push config =
           , cornerRadius 2.5
           , background Color.black600
           , margin (Margin 5 12 0 0)
+          , visibility if config.isBookingOption then GONE else VISIBLE
           ][]
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
-            , margin (Margin 5 5 0 0)
+            , margin $ if config.isBookingOption then (Margin 0 0 0 0) else (Margin 5 5 0 0)
             ]
             [ textView
                 $ [ width WRAP_CONTENT
@@ -116,9 +117,10 @@ priceDetailsView push config = do
   let basePrice = config.basePrice 
   linearLayout
     [ height MATCH_PARENT
-    , width WRAP_CONTENT
+    , width $ if config.isBookingOption then MATCH_PARENT else WRAP_CONTENT
     , orientation HORIZONTAL
     , padding $ PaddingLeft 8
+    , gravity $ if config.isBookingOption then RIGHT else LEFT
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -134,6 +136,7 @@ priceDetailsView push config = do
         , margin $ Margin 4 6 0 0
         , visibility if config.showInfo then VISIBLE else GONE
         , onClick push $ const $ ShowRateCard config.vehicleVariant
+        , visibility if config.isBookingOption then GONE else VISIBLE
         ]
     ]
 

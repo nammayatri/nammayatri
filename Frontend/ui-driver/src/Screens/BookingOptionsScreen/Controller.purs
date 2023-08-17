@@ -42,6 +42,7 @@ downgradeOptionsConfig vehicles vehicleType =
     { vehicleImage = getVehicleImage vehicleType
     , isCheckBox = true
     , vehicleVariant = vehicleType
+    , isBookingOption = true
     , capacity = getVehicleCapacity vehicleType Nothing
     , isSelected = (fromMaybe dummyVehicleP $ (filter (\item -> item.vehicleName == vehicleType) vehicles) !! 0 ).isSelected
     }

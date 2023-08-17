@@ -2231,7 +2231,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               srcLon = (resp ^. _lon)
               dstLat = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
               dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-              markers = if (isLocalStageOn RideAccepted) || (isLocalStageOn ChatWithDriver) then (driverTracking "" ) else (rideTracking "")
+              markers = if (isLocalStageOn RideAccepted) || (isLocalStageOn ChatWithDriver) then (driverTracking state.data.driverInfoCardState.vehicleVariant) else (rideTracking state.data.driverInfoCardState.vehicleVariant)
               sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
               destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
               specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
@@ -2275,7 +2275,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                     specialLocationConfig "" sourceSpecialTagIcon
                                                   else
                                                     specialLocationConfig "" destSpecialTagIcon
-                        liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state) specialLocationTag
+                        liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state) markers.srcMarker specialLocationTag
                         _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                         void $ delay $ Milliseconds duration
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState

@@ -616,8 +616,8 @@ rateCardConfig state =
         , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
         , description = if state.data.rateCard.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
-        , driverAdditionsImage = if (MU.getMerchant FunctionCall == MU.YATRI) then "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" 
-                                                                              else "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+        , driverAdditionsImage = if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
+                                   else "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" 
         , applicableCharges = if state.data.rateCard.nightCharges then (getString NIGHT_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                                  else (getString DAY_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = case MU.getMerchant FunctionCall of
@@ -671,6 +671,12 @@ yatriRateCardList vehicleVariant state = do
                    , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , val :"₹40 / km"}
                    , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
                    , { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
+
+    "AUTO_RICKSHAW"  -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 1.5 km" else "1.5 km " <> (getString MIN_FARE_UPTO) , val : "₹30"}
+                        , { key : (getString RATE_ABOVE_MIN_FARE), val : "₹15 / km"}
+                        , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                        , { key : (getString DRIVER_ADDITIONS) , val : "10% of the base fare"}]
+
     _ -> []
 
 getVehicleTitle :: String -> String 
@@ -679,6 +685,7 @@ getVehicleTitle vehicle =
     "HATCHBACK" -> (getString HATCHBACK)
     "SUV" -> (getString SUV)
     "SEDAN" -> (getString SEDAN)
+    "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     _ -> "") <> " - " <> (getString RATE_CARD)
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
@@ -862,6 +869,7 @@ quoteListModelViewState state = { source: state.data.source
                             , findingRidesAgain : state.props.findingRidesAgain
                             , progress : state.props.findingQuotesProgress
                             , appConfig : state.data.config
+                            , vehicleVariant : state.data.selectedEstimatesObject.vehicleVariant
                             }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig

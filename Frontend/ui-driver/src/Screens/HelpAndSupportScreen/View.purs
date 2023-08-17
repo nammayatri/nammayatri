@@ -159,7 +159,7 @@ reportAnIssueHeader state push leftText =
  , padding (Padding 15 10 10 10)
  , background Color.lightGreyBlue
  ][ textView $
-    [ width $ V (3 * screenWidth unit / 5)
+    [ width WRAP_CONTENT
     , height MATCH_PARENT
     , text leftText
     , gravity CENTER_VERTICAL

@@ -21,6 +21,7 @@ window.getMerchantConfig = function () {
     "showRateCard": "false",
     "showDashboard": "false",
     "enableShareRide": "false",
+    "autoVariantEnabled": false,
     "shareAppTitle" : "Share Yatri Sathi!",
     "shareAppContent" : "Hey there!\n\n Download Yatri Sathi now! \n" + getAppLink(window.__OS),
     "DOCUMENT_LINK": "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",

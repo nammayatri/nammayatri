@@ -261,7 +261,8 @@ rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     id : ride.shortRideId,
     updatedAt : ride.updatedAt,
     source : (decodeAddress (ride.fromLocation) false),
-    destination : (decodeAddress (ride.toLocation) false)
+    destination : (decodeAddress (ride.toLocation) false),
+    vehicleType : ride.vehicleVariant
 
 }) list )
 
@@ -290,5 +291,6 @@ dummyCard =  {
     id : "",
     updatedAt : "",
     source : "",
-    destination : ""
+    destination : "",
+    vehicleType : ""
   }

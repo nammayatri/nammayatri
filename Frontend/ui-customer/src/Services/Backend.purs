@@ -728,14 +728,18 @@ type Markers = {
 }
 
 driverTracking :: String -> Markers
-driverTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
+driverTracking variant = {
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" 
+                else if variant == "AUTO_RICKSHAW" then "ic_auto_nav_on_map"
+                else "ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
-rideTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
+rideTracking variant = {
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" 
+                else if variant == "AUTO_RICKSHAW" then "ic_auto_nav_on_map"
+                else "ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 

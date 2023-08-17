@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name" translatable="false">Yatri Partner</string>
-    <string name="client_id" translatable="false">open-kochi</string>
-    <string name="service" translatable="false">yatripartner</string>
-    <string name="bodyText" translatable="false">Yatri Partner collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>
+    <string name="app_name" translatable="false">Yatri Driver</string>
+    <string name="client_id" translatable="false">yatriprovider</string>
+    <string name="service" translatable="false">yatriprovider</string>
+    <string name="bodyText" translatable="false">Yatri Driver collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>
     <string name="dev_port" translatable="false">8083</string>
     <string name="merchant_id" translatable="false">yatri</string>
 </resources>

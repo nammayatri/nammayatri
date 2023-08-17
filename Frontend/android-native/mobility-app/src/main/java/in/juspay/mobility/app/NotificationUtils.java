@@ -567,7 +567,7 @@ public class NotificationUtils {
                 }
             case "nammayatriprovider" : return NO_VARIANT;
 
-            case "yatripartner" :
+            case "yatriprovider" :
                 switch (variant){
                     case "SEDAN" : return  "Sedan";
                     case "HATCHBACK" : return "Hatchback";

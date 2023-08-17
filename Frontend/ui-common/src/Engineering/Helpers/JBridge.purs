@@ -115,7 +115,7 @@ foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
 foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
-foreign import updateRoute :: Locations -> String -> String -> MapRouteConfig -> Effect Unit
+foreign import updateRoute :: Locations -> String -> String -> String -> MapRouteConfig -> Effect Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
 -- -- foreign import showAndDrawRoute :: String -> String -> String -> Locations -> Effect Int
 -- foreign import addMarkers :: Markers -> Effect Unit

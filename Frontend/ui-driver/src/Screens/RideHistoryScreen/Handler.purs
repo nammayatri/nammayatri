@@ -89,6 +89,7 @@ rideHistoryItem = {
     id : "",
     updatedAt : "",
     source : "",
-    destination : ""
+    destination : "",
+    vehicleType : ""
 }
 

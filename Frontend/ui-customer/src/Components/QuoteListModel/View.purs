@@ -32,6 +32,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod)
 import Helpers.Utils (getPreviousVersion)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -257,7 +258,7 @@ findingRidesView state push =
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = if (state.appConfig.autoVariantEnabled && state.vehicleVariant == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text_auto.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
                     pure unit)(const NoAction)
       , height $ V state.appConfig.quoteListModel.lottieHeight
       , accessibility DISABLE
