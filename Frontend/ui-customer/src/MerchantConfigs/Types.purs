@@ -50,6 +50,7 @@ type AppConfig =
   , enableMockLocation :: Boolean
   , specialLocationView :: Boolean
   , internationalNumberEnabled :: Boolean
+  , dashboardUrl :: String
   } 
 
 type QuoteListItemConfig = {

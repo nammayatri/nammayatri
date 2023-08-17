@@ -32,6 +32,7 @@ window.getMerchantConfig = function () {
       "estimateConfirmText": "Request a NammaYatri Ride",
       "autoConfirmingLoaderColor": "#00B8F5",
       "quoteListModelBackground": "#F5F9FE",
+      "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app",
       "quoteListItemConfig": {
           "primaryButtonCorner": 8.0,
           "expiresColor": "#EB5757",

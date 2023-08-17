@@ -169,6 +169,7 @@ window.getMerchantConfig = function () {
   , "navigationAppConfig" : {
     "query" : "https://waze.com/ul?ll=%f,%f"
   , "packageName" : "com.waze"
+  , "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app"
 }
   })
 }

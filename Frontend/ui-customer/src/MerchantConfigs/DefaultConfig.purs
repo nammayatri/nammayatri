@@ -118,4 +118,5 @@ config =
   , enableMockLocation : false
   , specialLocationView : false
   , internationalNumberEnabled : false
+  , dashboardUrl : "https://nammayatri.in/open/"
   }

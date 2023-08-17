@@ -380,7 +380,7 @@ showLiveStatsDashboard push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "webview")
-      , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.4")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
+      , url (getValueFromConfig "dashboardUrl")
       ]]
 
 driverCallPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
