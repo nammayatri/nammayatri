@@ -57,7 +57,7 @@ _:
         image-api-helper-exe = { };
         kafka-consumers-exe = {
           environment = {
-            CONSUMER_TYPE = "AVAILABILITY_TIME";
+            CONSUMER_TYPE = "BROADCAST_MESSAGE";
           };
         };
         mock-fcm-exe = { };
