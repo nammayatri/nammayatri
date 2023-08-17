@@ -23,8 +23,8 @@ import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types (Language (ENGLISH))
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -65,8 +65,10 @@ newtype MessageReplyReq = MessageReplyReq {reply :: Text}
 
 messageList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow [MessageAPIEntityResponse]
 messageList (driverId, _) mbLimit mbOffset = do
-  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
-  messageDetails <- Esq.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
+  person <- B.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+  -- person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  messageDetails <- B.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
+  -- messageDetails <- MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
   mapM makeMessageAPIEntity messageDetails
   where
     makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
@@ -89,11 +91,9 @@ messageList (driverId, _) mbLimit mbOffset = do
 
 getMessage :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow MessageAPIEntityResponse
 getMessage (driverId, _) messageId = do
-  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
-  messageDetails <-
-    Esq.runInReplica $
-      MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language)
-        >>= fromMaybeM (InvalidRequest "Message not found")
+  person <- B.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+  -- person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  messageDetails <- B.runInReplica $ MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language) >>= fromMaybeM (InvalidRequest "Message not found")
   makeMessageAPIEntity messageDetails
   where
     makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
@@ -116,31 +116,36 @@ getMessage (driverId, _) messageId = do
 
 fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> Flow Text
 fetchMedia (driverId, _) filePath = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   S3.get $ T.unpack filePath
 
 messageSeen :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
 messageSeen (driverId, _) messageId = do
-  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
-  Esq.runTransaction $ do
-    when (not messageDetails.readStatus) $ MQ.updateMessageViewCount messageId 1
-    MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
+  messageDetails <- B.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  -- messageDetails <- MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  -- Esq.runTransaction $ do
+  when (not messageDetails.readStatus) $ MQ.updateMessageViewCount messageId 1
+  _ <- MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
   return Success
 
 messageLiked :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
 messageLiked (driverId, _) messageId = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  messageDetails <- B.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  -- messageDetails <- MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
   unless (messageDetails.readStatus) $
     throwError $ InvalidRequest "Message is not seen"
   let val = if messageDetails.likeStatus then (-1) else 1
-  Esq.runTransaction $ do
-    when messageDetails.readStatus $ MQ.updateMessageLikeCount messageId val
-    MRQ.updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId (cast driverId)
+  -- Esq.runTransaction $ do
+  when messageDetails.readStatus $ MQ.updateMessageLikeCount messageId val
+  MRQ.updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId (cast driverId)
   return Success
 
 messageResponse :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess
 messageResponse (driverId, _) messageId MessageReplyReq {..} = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True (Just reply)
+  _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  -- _ <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  _ <- MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True (Just reply)
   return Success

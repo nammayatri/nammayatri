@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant.MerchantMessage
   {-# WARNING
@@ -20,13 +21,41 @@ module Storage.Queries.Merchant.MerchantMessage
 where
 
 import Domain.Types.Merchant as DOrg
-import Domain.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
+-- import Domain.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
+import Domain.Types.Merchant.MerchantMessage
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (findById)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Merchant.MerchantMessage ()
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 
-findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
-findByMerchantIdAndMessageKey merchantId messageKey =
-  Esq.findById (merchantId, messageKey)
+-- findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
+-- findByMerchantIdAndMessageKey merchantId messageKey =
+--   Esq.findById (merchantId, messageKey)
+
+findByMerchantIdAndMessageKey :: (L.MonadFlow m, Log m) => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantIdAndMessageKey (Id merchantId) messageKey = findOneWithKV [Se.And [Se.Is BeamMM.merchantId $ Se.Eq merchantId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
+
+instance FromTType' BeamMM.MerchantMessage MerchantMessage where
+  fromTType' BeamMM.MerchantMessageT {..} = do
+    pure $
+      Just
+        MerchantMessage
+          { merchantId = Id merchantId,
+            messageKey = messageKey,
+            message = message,
+            updatedAt = updatedAt,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamMM.MerchantMessage MerchantMessage where
+  toTType' MerchantMessage {..} = do
+    BeamMM.MerchantMessageT
+      { BeamMM.merchantId = getId merchantId,
+        BeamMM.messageKey = messageKey,
+        BeamMM.message = message,
+        BeamMM.updatedAt = updatedAt,
+        BeamMM.createdAt = createdAt
+      }

@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,6 +12,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Person.PersonFlowStatus
   ( FlowStatus (..),
@@ -30,6 +33,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
+deriving stock instance Ord Maps.LatLong
+
 data FlowStatus
   = IDLE
   | SEARCHING

@@ -11,20 +11,67 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Estimate where
 
 import Domain.Types.Estimate as Domain
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Estimate ()
+import Kernel.Types.Logging
+import qualified Sequelize as Se
+import qualified Storage.Beam.Estimate as BeamE
 
-create :: Estimate -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => Domain.Estimate -> m ()
+create = createWithKV
 
-createMany :: [Estimate] -> SqlDB ()
-createMany = Esq.createMany
+createMany :: (L.MonadFlow m, Log m) => [Estimate] -> m ()
+createMany = traverse_ create
 
-findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
+findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
+
+instance FromTType' BeamE.Estimate Estimate where
+  fromTType' BeamE.EstimateT {..} = do
+    pure $
+      Just
+        Estimate
+          { id = Id id,
+            requestId = Id requestId,
+            vehicleVariant = vehicleVariant,
+            minFare = minFare,
+            maxFare = maxFare,
+            estimateBreakupList = estimateBreakupList,
+            nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart' <*> nightShiftEnd',
+            waitingCharges = WaitingCharges waitingChargePerMin waitingOrPickupCharges,
+            specialLocationTag = specialLocationTag,
+            createdAt = createdAt
+          }
+    where
+      nightShiftStart' = case nightShiftStart of
+        (Just (BeamE.TimeOfDayText nightShiftStart'')) -> Just nightShiftStart''
+        Nothing -> Nothing
+      nightShiftEnd' = case nightShiftEnd of
+        (Just (BeamE.TimeOfDayText nightShiftEnd'')) -> Just nightShiftEnd''
+        Nothing -> Nothing
+
+instance ToTType' BeamE.Estimate Estimate where
+  toTType' Estimate {..} = do
+    BeamE.EstimateT
+      { id = getId id,
+        requestId = getId requestId,
+        vehicleVariant = vehicleVariant,
+        minFare = minFare,
+        maxFare = maxFare,
+        estimateBreakupList = estimateBreakupList,
+        nightShiftCharge = nightShiftCharge <$> nightShiftInfo,
+        oldNightShiftCharge = oldNightShiftCharge <$> nightShiftInfo,
+        nightShiftStart = BeamE.TimeOfDayText . nightShiftStart <$> nightShiftInfo,
+        nightShiftEnd = BeamE.TimeOfDayText . nightShiftEnd <$> nightShiftInfo,
+        waitingChargePerMin = waitingChargePerMin waitingCharges,
+        waitingOrPickupCharges = waitingOrPickupCharges waitingCharges,
+        specialLocationTag = specialLocationTag,
+        createdAt = createdAt
+      }

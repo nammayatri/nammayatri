@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FareProduct
   {-# WARNING
@@ -20,37 +21,85 @@ module Storage.Queries.FareProduct
 where
 
 import Domain.Types.FareProduct
+import qualified Domain.Types.FareProduct as Domain
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle.Variant (Variant (..))
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.FareProduct
+import Kernel.Types.Logging
+import qualified Sequelize as Se
+import qualified Storage.Beam.FareProduct as BeamFP
+
+-- findAllFareProductForVariants ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   Domain.Area ->
+--   m [Domain.FareProduct]
+-- findAllFareProductForVariants merchantId area =
+--   Esq.findAll $ do
+--     fareProduct <- from $ table @FareProductT
+--       fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
+--         &&. fareProduct ^. FareProductArea ==. val area
+--     return fareProduct
 
 findAllFareProductForVariants ::
-  Transactionable m =>
+  (L.MonadFlow m, Log m) =>
   Id Merchant ->
-  Area ->
-  m [FareProduct]
-findAllFareProductForVariants merchantId area =
-  Esq.findAll $ do
-    fareProduct <- from $ table @FareProductT
-    where_ $
-      fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
-        &&. fareProduct ^. FareProductArea ==. val area
-    return fareProduct
+  Domain.Area ->
+  m [Domain.FareProduct]
+findAllFareProductForVariants (Id merchantId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.area $ Se.Eq area]]
+
+-- findByMerchantVariantArea ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   Variant ->
+--   Domain.Area ->
+--   m (Maybe Domain.FareProduct)
+-- findByMerchantVariantArea merchantId vehicleVariant area =
+--   Esq.findOne $ do
+--     fareProduct <- from $ table @FareProductT
+--       fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
+--         &&. fareProduct ^. FareProductArea ==. val area
+--         &&. fareProduct ^. FareProductVehicleVariant ==. val vehicleVariant
+--     return fareProduct
 
 findByMerchantVariantArea ::
-  Transactionable m =>
+  (L.MonadFlow m, Log m) =>
   Id Merchant ->
   Variant ->
-  Area ->
-  m (Maybe FareProduct)
-findByMerchantVariantArea merchantId vehicleVariant area =
-  Esq.findOne $ do
-    fareProduct <- from $ table @FareProductT
-    where_ $
-      fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
-        &&. fareProduct ^. FareProductArea ==. val area
-        &&. fareProduct ^. FareProductVehicleVariant ==. val vehicleVariant
-    return fareProduct
+  Domain.Area ->
+  m (Maybe Domain.FareProduct)
+findByMerchantVariantArea (Id merchantId) vehicleVariant area =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantId $ Se.Eq merchantId,
+          Se.Is BeamFP.area $ Se.Eq area,
+          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant
+        ]
+    ]
+
+instance ToTType' BeamFP.FareProduct FareProduct where
+  toTType' FareProduct {..} = do
+    BeamFP.FareProductT
+      { BeamFP.id = getId id,
+        merchantId = getId merchantId,
+        farePolicyId = getId farePolicyId,
+        vehicleVariant = vehicleVariant,
+        area = area,
+        flow = flow
+      }
+
+instance FromTType' BeamFP.FareProduct FareProduct where
+  fromTType' BeamFP.FareProductT {..} = do
+    pure $
+      Just
+        Domain.FareProduct
+          { id = Id id,
+            merchantId = Id merchantId,
+            farePolicyId = Id farePolicyId,
+            vehicleVariant = vehicleVariant,
+            area = area,
+            flow = flow
+          }

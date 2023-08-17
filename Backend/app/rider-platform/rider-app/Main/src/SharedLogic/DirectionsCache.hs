@@ -21,7 +21,6 @@ import Domain.Types.Merchant (Slot)
 import qualified Domain.Types.Merchant as Merchant
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Types.Error (MerchantError (MerchantNotFound))
 import Kernel.Types.Id
@@ -61,7 +60,8 @@ callDirectionsApi merchantId req originGeoHash destGeoHash timeSlot = do
     else do
       let (cachedResp : _) = resp
       directionsCache <- convertToDirCache originGeoHash destGeoHash timeSlot cachedResp
-      Esq.runTransaction $ DQ.create directionsCache
+      -- Esq.runTransaction $ DQ.create directionsCache
+      DQ.create directionsCache
       DCC.cacheDirectionsResponse directionsCache
       return resp
 

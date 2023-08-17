@@ -15,11 +15,17 @@
 
 module Domain.Types.DriverOnboarding.IdfyVerification where
 
+import Database.Beam (FromBackendRow)
+import qualified Database.Beam as B
+import Database.Beam.Backend (BeamSqlBackend, HasSqlValueSyntax, autoSqlValueSyntax, sqlValueSyntax)
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person
 import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data VerificationStatus = PENDING | VALID | INVALID
@@ -27,6 +33,16 @@ data VerificationStatus = PENDING | VALID | INVALID
 
 data ImageExtractionValidation = Success | Skipped | Failed
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
+
+instance FromField VerificationStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be VerificationStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be VerificationStatus
+
+instance FromBackendRow Postgres VerificationStatus
 
 data IdfyVerificationE e = IdfyVerification
   { id :: Id IdfyVerification,

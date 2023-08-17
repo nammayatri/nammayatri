@@ -47,6 +47,7 @@ type API =
            :<|> RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> MultipleRideSyncAPI
+           :<|> TicketRideListAPI
        )
 
 type RideListAPI = Common.RideListAPI
@@ -67,6 +68,10 @@ type MultipleRideSyncAPI =
   ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_RIDE_SYNC
     :> Common.MultipleRideSyncAPI
 
+type TicketRideListAPI =
+  ApiAuth 'APP_BACKEND 'RIDES 'TICKET_RIDE_LIST_API
+    :> Common.TicketRideListAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
@@ -75,6 +80,7 @@ handler merchantId =
     :<|> rideInfo merchantId
     :<|> multipleRideCancel merchantId
     :<|> multipleRideSync merchantId
+    :<|> ticketRideList merchantId
 
 rideInfoHitsCountKey :: Id Common.Ride -> Text
 rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
@@ -149,3 +155,10 @@ multipleRideSync merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.MultipleRideSyncEndpoint apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rides.multipleRideSync) req
+
+ticketRideList :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
+ticketRideList merchantShortId apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.TicketRideListEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRiderApp checkedMerchantId (.rides.ticketRideList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

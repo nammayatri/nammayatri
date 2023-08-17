@@ -25,6 +25,7 @@ data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
     ( Show,
       Eq,
       Read,
+      Ord,
       Generic,
       ToJSON,
       FromJSON,

@@ -28,7 +28,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis (HedisFlow)
@@ -98,6 +97,8 @@ cancel req merchant booking = do
   -- let merchantId' = booking.providerId
   -- unless (merchantId' == merchantId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
+  whenJust mbRide $ \ride' -> do
+    void $ QDI.updateOnRide (cast ride'.driverId) False
   bookingCR <- buildBookingCancellationReason
   case mbRide of
     Just ride -> do
@@ -105,18 +106,16 @@ cancel req merchant booking = do
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
     Nothing -> do
       logDebug "No ride found for the booking."
-  Esq.runTransaction $ do
-    QBCR.upsert bookingCR
-    QRB.updateStatus booking.id SRB.CANCELLED
-    whenJust mbRide $ \ride -> do
-      QRide.updateStatus ride.id SRide.CANCELLED
-      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
-    whenJust mbRide $ \ride -> do
-      QDI.updateOnRide (cast ride.driverId) False
+  -- Esq.runTransaction $ do
+  QBCR.upsert bookingCR
+  _ <- QRB.updateStatus booking.id SRB.CANCELLED
+  whenJust mbRide $ \ride -> do
+    _ <- QRide.updateStatus ride.id SRide.CANCELLED
+    driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
-    DLoc.updateOnRideCacheForCancelledOrEndRide (cast ride.driverId) booking.providerId
+    void (DLoc.updateOnRideCacheForCancelledOrEndRide (cast ride.driverId) booking.providerId)
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
@@ -157,10 +156,9 @@ cancelSearch merchantId req searchRequestId = do
   CS.whenSearchTryCancellable searchTry.id $ do
     driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
     logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
-    DB.runTransaction $ do
-      QST.cancelActiveTriesByRequestId searchRequestId
-      QSRD.setInactiveBySRId searchRequestId
-      QDQ.setInactiveBySRId searchRequestId
+    _ <- QST.cancelActiveTriesByRequestId searchRequestId
+    _ <- QSRD.setInactiveBySRId searchRequestId
+    _ <- QDQ.setInactiveBySRId searchRequestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
       Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId

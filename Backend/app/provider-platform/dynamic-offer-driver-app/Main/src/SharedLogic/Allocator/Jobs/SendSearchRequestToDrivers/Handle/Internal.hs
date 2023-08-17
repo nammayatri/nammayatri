@@ -26,7 +26,7 @@ where
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchTry as DST
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -99,4 +99,5 @@ createRescheduleTime singleBatchProcessTime lastProcTime = do
   return $ fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime
 
 cancelSearchTry :: (EsqDBFlow m r) => Id SearchTry -> m ()
-cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED
+-- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED
+cancelSearchTry searchTryId = QST.updateStatus searchTryId DST.CANCELLED

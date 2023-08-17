@@ -1,0 +1,10 @@
+ALTER TABLE atlas_app.payment_order ADD COLUMN create_mandate text;
+ALTER TABLE atlas_app.payment_order ADD COLUMN mandate_max_amount integer;
+ALTER TABLE atlas_app.payment_order ADD COLUMN mandate_start_date timestamp with time zone;
+ALTER TABLE atlas_app.payment_order ADD COLUMN mandate_end_date timestamp with time zone;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN mandate_id text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN mandate_max_amount integer;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN mandate_frequency text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN mandate_status text;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN mandate_start_date timestamp with time zone;
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN mandate_end_date timestamp with time zone;

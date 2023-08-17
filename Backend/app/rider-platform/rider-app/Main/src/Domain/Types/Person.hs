@@ -33,7 +33,7 @@ import Servant.API
 data Role
   = USER
   | CUSTOMER_SUPPORT
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
+  deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
 
 instance FromHttpApiData Role where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -47,7 +47,7 @@ instance ToHttpApiData Role where
 
 -------------------------------------------------------------------------------------------
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON)
 
 instance FromHttpApiData IdentifierType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -61,7 +61,7 @@ instance ToHttpApiData IdentifierType where
 
 --------------------------------------------------------------------------------------------------
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8

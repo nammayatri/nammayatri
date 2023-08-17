@@ -11,54 +11,93 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.SearchRequest where
 
 import Domain.Types.SearchRequest as Domain
+import qualified EulerHS.Language as L
+-- import Kernel.Storage.Esqueleto as Esq
+
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Storage.Tabular.SearchRequest
-import Storage.Tabular.SearchRequest.SearchReqLocation
+import Kernel.Utils.Common
+import qualified Sequelize as Se
+import qualified Storage.Beam.SearchRequest as BeamSR
+import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
-create :: SearchRequest -> SqlDB ()
-create dsReq = withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-  Esq.create' fromLoc
-  Esq.create' toLoc
-  Esq.create' sReq
+createDSReq :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
+createDSReq = createWithKV
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-      pure (sReq, sFromLoc, sToLoc)
+create :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
+create dsReq = QSRL.create dsReq.fromLocation >> QSRL.create dsReq.toLocation >> createDSReq dsReq
 
-findByTransactionId ::
-  (Transactionable m) =>
-  Text ->
-  m (Maybe (Id SearchRequest))
-findByTransactionId transactionId = do
-  findOne $ do
-    searchReqT <- from $ table @SearchRequestT
-    where_ $
-      searchReqT ^. SearchRequestTransactionId ==. val transactionId
-    return $ searchReqT ^. SearchRequestTId
+findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
+findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
+
+getRequestIdfromTransactionId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe (Id SearchRequest))
+getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSR.transactionId $ Se.Eq tId] <&> fmap Domain.id
+
+findByTransactionId :: (L.MonadFlow m, Log m) => Text -> m (Maybe (Id SearchRequest))
+findByTransactionId transactionId = findOneWithKV [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]] <&> (Domain.id <$>)
 
 updateAutoAssign ::
+  (L.MonadFlow m, Log m) =>
   Id SearchRequest ->
   Bool ->
-  SqlDB ()
-updateAutoAssign searchRequestId autoAssignedEnabled = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled)
-      ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
+  m ()
+updateAutoAssign searchRequestId autoAssignedEnabled =
+  updateOneWithKV
+    [Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled]
+    [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
+
+instance FromTType' BeamSR.SearchRequest SearchRequest where
+  fromTType' BeamSR.SearchRequestT {..} = do
+    fl <- QSRL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in SearchRequest for fromLocationId:" <> show fromLocationId)
+    tl <- QSRL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in SearchRequest for toLocationId:" <> show toLocationId)
+    pUrl <- parseBaseUrl bapUri
+    pure $
+      Just
+        SearchRequest
+          { id = Id id,
+            transactionId = transactionId,
+            providerId = Id providerId,
+            fromLocation = fl,
+            toLocation = tl,
+            area = area,
+            bapId = bapId,
+            bapUri = pUrl,
+            bapCity = bapCity,
+            bapCountry = bapCountry,
+            estimatedDistance = estimatedDistance,
+            estimatedDuration = estimatedDuration,
+            customerLanguage = customerLanguage,
+            device = device,
+            createdAt = createdAt,
+            specialLocationTag = specialLocationTag,
+            autoAssignEnabled = autoAssignEnabled
+          }
+
+instance ToTType' BeamSR.SearchRequest SearchRequest where
+  toTType' SearchRequest {..} = do
+    BeamSR.SearchRequestT
+      { BeamSR.id = getId id,
+        BeamSR.transactionId = transactionId,
+        BeamSR.providerId = getId providerId,
+        BeamSR.fromLocationId = getId fromLocation.id,
+        BeamSR.toLocationId = getId toLocation.id,
+        BeamSR.area = area,
+        BeamSR.bapId = bapId,
+        BeamSR.bapUri = showBaseUrl bapUri,
+        BeamSR.bapCity = bapCity,
+        BeamSR.bapCountry = bapCountry,
+        BeamSR.estimatedDistance = estimatedDistance,
+        BeamSR.estimatedDuration = estimatedDuration,
+        BeamSR.customerLanguage = customerLanguage,
+        BeamSR.device = device,
+        BeamSR.createdAt = createdAt,
+        BeamSR.autoAssignEnabled = autoAssignEnabled,
+        BeamSR.specialLocationTag = specialLocationTag
+      }

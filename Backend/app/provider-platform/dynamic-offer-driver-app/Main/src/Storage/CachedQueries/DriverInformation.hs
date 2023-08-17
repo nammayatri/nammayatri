@@ -19,85 +19,96 @@ module Storage.CachedQueries.DriverInformation where
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
+import qualified Storage.Queries.Person as QueriesPerson
 
-create :: DriverInformation -> Esq.SqlDB ()
+create :: (L.MonadFlow m, Log m) => DriverInformation -> m ()
 create = Queries.create
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
+findById :: (CacheFlow m r, L.MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeDriverInformationIdKey id) >>= \case
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 
-updateActivity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
+updateActivity :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
 updateActivity driverId isActive mode = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateActivity driverId isActive mode
+  Queries.updateActivity driverId isActive mode
 
-updateEnabledState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateEnabledState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
 updateEnabledState driverId isEnabled = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateEnabledState driverId isEnabled
+  Queries.updateEnabledState driverId isEnabled
 
-updateAadhaarVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateAadhaarVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
 updateAadhaarVerifiedState driverId isVerified = do
   clearDriverInfoCache driverId
-  Esq.runNoTransaction $ Queries.updateAadhaarVerifiedState driverId isVerified
+  -- Esq.runNoTransaction $ Queries.updateAadhaarVerifiedState driverId isVerified
+  void $ Queries.updateAadhaarVerifiedState driverId isVerified
 
-updateEnabledVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Bool -> m ()
+updateEnabledVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Bool -> m ()
 updateEnabledVerifiedState driverId isEnabled isVerified = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateEnabledVerifiedState driverId isEnabled isVerified
+  Queries.updateEnabledVerifiedState driverId isEnabled isVerified
 
-updateBlockedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateBlockedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
 updateBlockedState driverId isBlocked = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateBlockedState driverId isBlocked
+  Queries.updateBlockedState driverId isBlocked
 
 updateDynamicBlockedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> m ()
 updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked = do
-  Esq.runNoTransaction $ Queries.updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked
+  -- Esq.runNoTransaction $ Queries.updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked
+  Queries.updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked
   clearDriverInfoCache driverId
 
-verifyAndEnableDriver :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m ()
+verifyAndEnableDriver :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> m ()
 verifyAndEnableDriver driverId = do
   clearDriverInfoCache (cast driverId)
-  Esq.runTransaction $ Queries.verifyAndEnableDriver driverId
+  Queries.verifyAndEnableDriver driverId
 
-updateOnRide :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateOnRide :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
 updateOnRide driverId onRide = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateOnRide driverId onRide
+  Queries.updateOnRide driverId onRide
 
-updatePendingPayment :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
+updatePendingPayment :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
 updatePendingPayment isPending driverId = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updatePendingPayment isPending driverId
+  -- Esq.runTransaction $ Queries.updatePendingPayment isPending driverId
+  void $ Queries.updatePendingPayment isPending driverId
 
-updateSubscription :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
+updateSubscription :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed driverId = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
+  -- Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
+  void $ Queries.updateSubscription isSubscribed driverId
+
+updateAutoPayStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Maybe DriverAutoPayStatus -> Id Person.Driver -> m ()
+updateAutoPayStatus driverAutoPayStatus driverId = do
+  void $ Queries.updateAutoPayStatus driverAutoPayStatus driverId
+  clearDriverInfoCache driverId
 
 -- this function created because all queries wishfully should be in one transaction
-updateNotOnRideMultiple :: [Id Person.Driver] -> Esq.SqlDB ()
+updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m, Log m) => [Id Person.Driver] -> m ()
 updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
 
 deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
 deleteById driverId = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.deleteById driverId
+  Queries.deleteById driverId
 
 findAllWithLimitOffsetByMerchantId ::
-  (Esq.Transactionable m, EsqDBReplicaFlow m r) =>
+  (Esq.Transactionable m, Esq.EsqDBReplicaFlow m r) =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
@@ -106,18 +117,22 @@ findAllWithLimitOffsetByMerchantId ::
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId = Queries.findAllWithLimitOffsetByMerchantId
 
-getDriversWithOutdatedLocationsToMakeInactive :: (Esq.Transactionable m, EsqLocRepDBFlow m r) => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
+-- Shifted this to person.hs as seen below because of cyclic dependency.
+-- getDriversWithOutdatedLocationsToMakeInactive :: Esq.Transactionable m => UTCTime -> m [Person]
+-- getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
 
-addReferralCode :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
+getDriversWithOutdatedLocationsToMakeInactive :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive = QueriesPerson.getDriversWithOutdatedLocationsToMakeInactive
+
+addReferralCode :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
 addReferralCode personId code = do
   clearDriverInfoCache (cast personId)
-  Esq.runTransaction $ Queries.addReferralCode personId code
+  Queries.addReferralCode personId code
 
-countDrivers :: Esq.Transactionable m => Id Merchant -> m (Int, Int)
+countDrivers :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
 countDrivers = Queries.countDrivers
 
-updateDowngradingOptions :: Id Person -> Bool -> Bool -> Bool -> Esq.SqlDB ()
+updateDowngradingOptions :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> Bool -> Bool -> m ()
 updateDowngradingOptions = Queries.updateDowngradingOptions
 
 --------- Caching logic -------------------

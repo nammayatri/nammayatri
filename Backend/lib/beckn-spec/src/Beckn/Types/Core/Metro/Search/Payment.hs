@@ -25,7 +25,7 @@ import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
 import Data.HashMap.Strict (delete)
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (State, (.=))
+import EulerHS.Prelude hiding (State)
 import Kernel.Types.App (BaseUrl)
 import Kernel.Types.Beckn.DecimalValue (DecimalValue)
 import Kernel.Utils.Example

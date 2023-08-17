@@ -77,11 +77,11 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       }
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  Esq.runTransaction $ do
-    QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
-    QSRD.createMany searchRequestsForDrivers
+  -- Esq.runTransaction $ do
+  _ <- QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  _ <- QSRD.createMany searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
-    Esq.runNoTransaction $ QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
+    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language

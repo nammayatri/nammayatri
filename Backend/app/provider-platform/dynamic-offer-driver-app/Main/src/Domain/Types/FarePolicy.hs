@@ -14,6 +14,12 @@
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
+-- import qualified Data.List.NonEmpty as NE
+-- import Data.Ord
+-- import qualified Database.Beam as B
+-- import Database.Beam.Backend
+-- import Database.Beam.Postgres
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
@@ -23,6 +29,8 @@ import Domain.Types.Vehicle.Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
+
+-- import Lib.Utils
 
 data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
@@ -65,7 +73,7 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data FarePolicyType = Progressive | Slabs deriving (Show, Read)
+data FarePolicyType = Progressive | Slabs deriving (Show, Read, Generic)
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
@@ -91,3 +99,7 @@ data FullFarePolicy = FullFarePolicy
 farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FarePolicy -> FullFarePolicy
 farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
   FullFarePolicy {..}
+
+type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
+
+type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)

@@ -24,7 +24,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.IO (unsafePerformIO)
 import HSpec
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id (Id (Id))
@@ -183,10 +183,9 @@ resetCustomer token = runAppFlow "" $ do
   activeBookings <- BQB.findByRiderIdAndStatus (Id regToken.entityId) BDB.activeBookingStatus
   forM_ activeBookings $ \activeBooking -> do
     rides <- BQRide.findActiveByRBId activeBooking.id
-    Esq.runTransaction $ do
-      BQB.updateStatus activeBooking.id BDB.CANCELLED
-      void . forM rides $ \ride ->
-        BQRide.updateStatus ride.id BDRide.CANCELLED
+    _ <- BQB.updateStatus activeBooking.id BDB.CANCELLED
+    void . forM rides $ \ride ->
+      BQRide.updateStatus ride.id BDRide.CANCELLED
 
 beforeAndAfter_ :: IO () -> SpecWith a -> SpecWith a
 beforeAndAfter_ f = after_ f . before_ f

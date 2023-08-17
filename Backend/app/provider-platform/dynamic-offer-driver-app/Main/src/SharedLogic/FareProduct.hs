@@ -11,6 +11,7 @@ module SharedLogic.FareProduct where
 
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -35,7 +36,8 @@ getPickupSpecialLocation ::
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
 getPickupSpecialLocation merchantId pickupSpecialLocation = do
-  pickupSpecialLocationPriority <- Esq.runInReplica $ QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId pickupSpecialLocation.category
+  pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId pickupSpecialLocation.category
+  -- pickupSpecialLocationPriority <- QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId pickupSpecialLocation.category
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::
@@ -44,7 +46,8 @@ getDropSpecialLocation ::
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
 getDropSpecialLocation merchantId dropSpecialLocation = do
-  dropSpecialLocationPriority <- Esq.runInReplica $ QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
+  dropSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
+  -- dropSpecialLocationPriority <- QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
 getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FareProducts
@@ -54,10 +57,10 @@ getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
     (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
       if pickupPriority > dropPriority
-        then getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag (show pickupSpecialLocation.category) (show dropSpecialLocation.category) "Drop"
-        else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag (show pickupSpecialLocation.category) (show dropSpecialLocation.category) "Pickup"
-    (Just (pickupSpecialLocation, _), Nothing) -> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag (show pickupSpecialLocation.category) "None" "Pickup"
-    (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag "None" (show dropSpecialLocation.category) "Drop"
+        then getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Drop"
+        else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Pickup"
+    (Just (pickupSpecialLocation, _), Nothing) -> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category "None" "Pickup"
+    (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag "None" dropSpecialLocation.category "Drop"
     (Nothing, Nothing) -> getDefaultFareProducts
   where
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do

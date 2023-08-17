@@ -39,7 +39,6 @@ import HSpec
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
@@ -138,14 +137,14 @@ resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do
   rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True) Nothing Nothing
   activeQuotes <- TDQ.findActiveQuotesByDriverId (cast driver.driverId) 99999
-  Esq.runTransaction $ do
-    void . forM rides $ \(ride, booking) -> do
-      TQRide.updateStatus ride.id TRide.CANCELLED
-      TQRB.updateStatus booking.id TRB.CANCELLED
-    void . forM activeQuotes $ \activeQuote ->
-      TDQ.setInactiveBySTId activeQuote.searchTryId
-    QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
-    QTDrInfo.updateOnRide (cast driver.driverId) False
+  -- Esq.runTransaction $ do
+  _ <- forM rides $ \(ride, booking) -> do
+    _ <- TQRide.updateStatus ride.id TRide.CANCELLED
+    void $ TQRB.updateStatus booking.id TRB.CANCELLED
+  _ <- forM activeQuotes $ \activeQuote ->
+    TDQ.setInactiveBySTId activeQuote.searchTryId
+  void $ QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
+  void $ QTDrInfo.updateOnRide (cast driver.driverId) False
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
@@ -374,10 +373,10 @@ withFakeBapUrl :: TRB.Booking -> ClientsM () -> ClientsM ()
 withFakeBapUrl booking action = do
   liftIO $
     runARDUFlow "fake bap url" $ do
-      Esq.runTransaction $
-        Queries.updateBapUrlWithFake booking.id
+      -- Esq.runTransaction $
+      Queries.updateBapUrlWithFake booking.id
   action
   liftIO $
     runARDUFlow "update bap url" $ do
-      Esq.runTransaction $
-        Queries.updateBapUrl booking.bapUri booking.id
+      -- Esq.runTransaction $
+      Queries.updateBapUrl booking.bapUri booking.id

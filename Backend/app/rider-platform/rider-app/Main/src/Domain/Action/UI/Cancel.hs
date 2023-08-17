@@ -32,9 +32,9 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
@@ -89,7 +89,8 @@ cancel bookingId _ req = do
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-  mRide <- Esq.runInReplica $ QR.findActiveByRBId booking.id
+  mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
+  -- mRide <- QR.findActiveByRBId booking.id
   cancellationReason <-
     case mRide of
       Just ride -> do
@@ -102,7 +103,8 @@ cancel bookingId _ req = do
             logTagInfo "DriverLocationFetchFailed" $ show err
             buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
       Nothing -> buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
-  DB.runTransaction $ QBCR.upsert cancellationReason
+  -- DB.runTransaction $ QBCR.upsert cancellationReason
+  QBCR.upsert cancellationReason
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -149,7 +151,8 @@ mkDomainCancelSearch personId estimateId = do
   where
     buildCancelReq estId sendToBpp estStatus = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      person <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      -- person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       let searchRequestId = estimate.requestId
       pure
@@ -170,15 +173,19 @@ cancelSearch ::
   CancelSearch ->
   m ()
 cancelSearch personId dcr = do
-  if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
-    then Esq.runTransaction $ do
-      Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-      QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
-      QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
-    else do
-      Esq.runTransaction $ do
-        Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-        QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+  _ <-
+    if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
+      then -- then Esq.runTransaction $ do
+      do
+        -- Esq.runTransaction $
+        _ <- QPFS.updateStatus personId DPFS.IDLE
+        void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
+        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+      else do
+        -- Esq.runTransaction $ do
+        -- Esq.runTransaction $
+        _ <- QPFS.updateStatus personId DPFS.IDLE
+        void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
         QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
   QPFS.clearCache personId
 

@@ -68,12 +68,14 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , euler-hs
     , mobility-core
     , record-dot-preprocessor
     , record-hasfield
     , servant-server
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
 
 executable mock-rider-platform-exe
@@ -122,6 +124,7 @@ executable mock-rider-platform-exe
     , base >=4.7 && <5
     , beckn-spec
     , bytestring
+    , euler-hs
     , mobility-core
     , mock-rider-platform
     , record-dot-preprocessor
@@ -129,4 +132,5 @@ executable mock-rider-platform-exe
     , servant-server
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010

@@ -11,86 +11,112 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.SearchTry where
 
+import qualified Database.Beam.Query ()
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.SearchTry
+import qualified Sequelize as Se
+import qualified Storage.Beam.SearchTry as BeamST
 
-create :: SearchTry -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => SearchTry -> m ()
+create = createWithKV
 
-findById :: Transactionable m => Id SearchTry -> m (Maybe SearchTry)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id SearchTry -> m (Maybe SearchTry)
+findById (Id searchTry) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTry]
 
 findLastByRequestId ::
-  (Transactionable m) =>
+  (L.MonadFlow m, Log m) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findLastByRequestId searchReqId = do
-  Esq.findOne $ do
-    searchTryT <- from $ table @SearchTryT
-    where_ $
-      searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
-    Esq.orderBy [Esq.desc $ searchTryT ^. SearchTrySearchRepeatCounter]
-    Esq.limit 1
-    return searchTryT
+findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 findActiveTryByRequestId ::
-  (Transactionable m) =>
+  (L.MonadFlow m, Log m) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findActiveTryByRequestId searchReqId = do
-  Esq.findOne $ do
-    searchTryT <- from $ table @SearchTryT
-    where_ $
-      searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
-        &&. searchTryT ^. SearchTryStatus ==. val ACTIVE
-    Esq.orderBy [Esq.desc $ searchTryT ^. SearchTrySearchRepeatCounter]
-    Esq.limit 1
-    return searchTryT
+findActiveTryByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.And [Se.Is BeamST.requestId $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 cancelActiveTriesByRequestId ::
+  (L.MonadFlow m, MonadTime m, Log m) =>
   Id SearchRequest ->
-  SqlDB ()
-cancelActiveTriesByRequestId searchId = do
+  m ()
+cancelActiveTriesByRequestId (Id searchId) = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchTryUpdatedAt =. val now,
-        SearchTryStatus =. val CANCELLED
-      ]
-    where_ $
-      tbl ^. SearchTryRequestId ==. val (toKey searchId)
-        &&. tbl ^. SearchTryStatus ==. val ACTIVE
+  updateWithKV
+    [ Se.Set BeamST.status CANCELLED,
+      Se.Set BeamST.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamST.requestId $ Se.Eq searchId,
+          Se.Is BeamST.status $ Se.Eq ACTIVE
+        ]
+    ]
 
 updateStatus ::
+  (L.MonadFlow m, MonadTime m, Log m) =>
   Id SearchTry ->
   SearchTryStatus ->
-  SqlDB ()
-updateStatus searchId status_ = do
+  m ()
+updateStatus (Id searchId) status_ = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchTryUpdatedAt =. val now,
-        SearchTryStatus =. val status_
-      ]
-    where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
+  updateOneWithKV
+    [ Se.Set BeamST.status status_,
+      Se.Set BeamST.updatedAt now
+    ]
+    [Se.Is BeamST.id $ Se.Eq searchId]
 
 getSearchTryStatusAndValidTill ::
-  (Transactionable m) =>
+  (L.MonadFlow m, Log m) =>
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
-getSearchTryStatusAndValidTill searchRequestId = do
-  findOne $ do
-    searchT <- from $ table @SearchTryT
-    where_ $
-      searchT ^. SearchTryTId ==. val (toKey searchRequestId)
-    return (searchT ^. SearchTryValidTill, searchT ^. SearchTryStatus)
+getSearchTryStatusAndValidTill (Id searchTryId) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTryId] <&> fmap (\st -> (Domain.validTill st, Domain.status st))
+
+instance FromTType' BeamST.SearchTry SearchTry where
+  fromTType' BeamST.SearchTryT {..} = do
+    pure $
+      Just
+        SearchTry
+          { id = Id id,
+            requestId = Id requestId,
+            estimateId = Id estimateId,
+            merchantId = Id <$> merchantId,
+            messageId = messageId,
+            startTime = startTime,
+            validTill = validTill,
+            vehicleVariant = vehicleVariant,
+            baseFare = baseFare,
+            customerExtraFee = customerExtraFee,
+            status = status,
+            searchRepeatCounter = searchRepeatCounter,
+            searchRepeatType = searchRepeatType,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamST.SearchTry SearchTry where
+  toTType' SearchTry {..} = do
+    BeamST.SearchTryT
+      { id = getId id,
+        requestId = getId requestId,
+        estimateId = getId estimateId,
+        merchantId = getId <$> merchantId,
+        messageId = messageId,
+        startTime = startTime,
+        validTill = validTill,
+        vehicleVariant = vehicleVariant,
+        baseFare = baseFare,
+        customerExtraFee = customerExtraFee,
+        status = status,
+        searchRepeatCounter = searchRepeatCounter,
+        searchRepeatType = searchRepeatType,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }

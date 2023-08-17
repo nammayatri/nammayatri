@@ -11,33 +11,56 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Message.MessageTranslation where
 
+import qualified Data.Time as T
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageTranslation
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Message.MessageTranslation
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 
-create :: MessageTranslation -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => MessageTranslation -> m ()
+create = createWithKV
 
-findByMessageIdAndLanguage :: Transactionable m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
-findByMessageIdAndLanguage messageId language =
-  Esq.findOne $ do
-    messageTranslation <- from $ table @MessageTranslationT
-    where_ $
-      messageTranslation ^. MessageTranslationTId ==. val (toKey (messageId, language))
-    return messageTranslation
+createMany :: (L.MonadFlow m, Log m) => [MessageTranslation] -> m ()
+createMany = traverse_ createWithKV
 
-findByMessageId :: Transactionable m => Id Msg.Message -> m [MessageTranslation]
-findByMessageId messageId =
-  Esq.findAll $ do
-    messageTranslations <- from $ table @MessageTranslationT
-    where_ $
-      messageTranslations ^. MessageTranslationMessageId ==. val (toKey messageId)
-    return messageTranslations
+findByMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
+findByMessageIdAndLanguage (Id messageId) language = findOneWithKV [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
+
+findByMessageId :: (L.MonadFlow m, Log m) => Id Msg.Message -> m [MessageTranslation]
+findByMessageId (Id messageId) = findAllWithKV [Se.Is BeamMT.messageId $ Se.Eq messageId]
+
+instance FromTType' BeamMT.MessageTranslation MessageTranslation where
+  fromTType' BeamMT.MessageTranslationT {..} = do
+    pure $
+      Just
+        MessageTranslation
+          { messageId = Id messageId,
+            language = language,
+            title = title,
+            label = label,
+            description = description,
+            shortDescription = shortDescription,
+            createdAt = T.localTimeToUTC T.utc createdAt
+          }
+
+instance ToTType' BeamMT.MessageTranslation MessageTranslation where
+  toTType' MessageTranslation {..} = do
+    BeamMT.MessageTranslationT
+      { BeamMT.messageId = getId messageId,
+        BeamMT.language = language,
+        BeamMT.title = title,
+        BeamMT.label = label,
+        BeamMT.description = description,
+        BeamMT.shortDescription = shortDescription,
+        BeamMT.createdAt = T.utcToLocalTime T.utc createdAt
+      }

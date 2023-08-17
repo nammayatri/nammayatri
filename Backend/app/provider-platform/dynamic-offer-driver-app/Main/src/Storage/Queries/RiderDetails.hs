@@ -11,87 +11,91 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.RiderDetails where
 
 import Domain.Types.DriverReferral
 import Domain.Types.Merchant
 import Domain.Types.Person
-import Domain.Types.RiderDetails
+import Domain.Types.RiderDetails as DRDD
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Storage.Tabular.RiderDetails
+import qualified Sequelize as Se
+import qualified Storage.Beam.RiderDetails as BeamRD
 
-create :: RiderDetails -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DRDD.RiderDetails -> m ()
+create = createWithKV
 
--- TODO :: write cached query for this
-findById ::
-  Transactionable m =>
-  Id RiderDetails ->
-  m (Maybe RiderDetails)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id RiderDetails -> m (Maybe RiderDetails)
+findById (Id riderDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
 
-findByMobileNumberAndMerchant ::
-  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
-  Text ->
-  Id Merchant ->
-  m (Maybe RiderDetails)
-findByMobileNumberAndMerchant mobileNumber_ merchantId = do
+findByMobileNumberAndMerchant :: (L.MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberAndMerchant mobileNumber_ (Id merchantId) = do
   mobileNumberDbHash <- getDbHash mobileNumber_
-  Esq.findOne $ do
-    riderDetails <- from $ table @RiderDetailsT
-    where_ $
-      riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
-        &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
-    return riderDetails
+  findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
-updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
-updateHasTakenValidRide riderId = do
+updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m, Log m) => Id RiderDetails -> m ()
+updateHasTakenValidRide (Id riderId) = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RiderDetailsHasTakenValidRide =. val True,
-        RiderDetailsUpdatedAt =. val now,
-        RiderDetailsHasTakenValidRideAt =. val (Just now)
-      ]
-    where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.hasTakenValidRide True,
+      Se.Set BeamRD.hasTakenValidRideAt (Just now),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
 
-findAllReferredByDriverId :: Transactionable m => Id Person -> m [RiderDetails]
-findAllReferredByDriverId driverId = do
-  Esq.findAll $ do
-    riderDetails <- from $ table @RiderDetailsT
-    where_ $ riderDetails ^. RiderDetailsReferredByDriver ==. val (Just $ toKey driverId)
-    return riderDetails
+findAllReferredByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [RiderDetails]
+findAllReferredByDriverId (Id driverId) = findAllWithDb [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
 
-findByMobileNumberHashAndMerchant :: Transactionable m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
-findByMobileNumberHashAndMerchant mobileNumberDbHash merchantId = do
-  Esq.findOne $ do
-    riderDetails <- from $ table @RiderDetailsT
-    where_ $
-      riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
-        &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
-    return riderDetails
+findByMobileNumberHashAndMerchant :: (L.MonadFlow m, Log m) => DbHash -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
-updateReferralInfo ::
-  DbHash ->
-  Id Merchant ->
-  Id DriverReferral ->
-  Id Person ->
-  SqlDB ()
+updateReferralInfo :: (L.MonadFlow m, MonadTime m, Log m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m ()
 updateReferralInfo customerNumberHash merchantId referralId driverId = do
   now <- getCurrentTime
-  Esq.update $ \rd -> do
-    set
-      rd
-      [ RiderDetailsReferralCode =. val (Just $ toKey referralId),
-        RiderDetailsReferredByDriver =. val (Just $ toKey driverId),
-        RiderDetailsReferredAt =. val (Just now)
-      ]
-    where_ $
-      rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
-        &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)
+  updateWithKV
+    [ Se.Set BeamRD.referralCode (Just $ getId referralId),
+      Se.Set BeamRD.referredByDriver (Just $ getId driverId),
+      Se.Set BeamRD.referredAt (Just now)
+    ]
+    [Se.And [Se.Is BeamRD.mobileNumberHash (Se.Eq customerNumberHash), Se.Is BeamRD.merchantId (Se.Eq $ getId merchantId)]]
+
+instance FromTType' BeamRD.RiderDetails RiderDetails where
+  fromTType' BeamRD.RiderDetailsT {..} = do
+    pure $
+      Just
+        RiderDetails
+          { id = Id id,
+            mobileCountryCode = mobileCountryCode,
+            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            referralCode = Id <$> referralCode,
+            referredByDriver = Id <$> referredByDriver,
+            referredAt = referredAt,
+            hasTakenValidRide = hasTakenValidRide,
+            hasTakenValidRideAt = hasTakenValidRideAt,
+            merchantId = Id merchantId
+          }
+
+instance ToTType' BeamRD.RiderDetails RiderDetails where
+  toTType' RiderDetails {..} = do
+    BeamRD.RiderDetailsT
+      { BeamRD.id = getId id,
+        BeamRD.mobileCountryCode = mobileCountryCode,
+        BeamRD.mobileNumberEncrypted = unEncrypted mobileNumber.encrypted,
+        BeamRD.mobileNumberHash = mobileNumber.hash,
+        BeamRD.createdAt = createdAt,
+        BeamRD.updatedAt = updatedAt,
+        BeamRD.referralCode = getId <$> referralCode,
+        BeamRD.referredByDriver = getId <$> referredByDriver,
+        BeamRD.referredAt = referredAt,
+        BeamRD.hasTakenValidRide = hasTakenValidRide,
+        BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
+        BeamRD.merchantId = getId merchantId
+      }

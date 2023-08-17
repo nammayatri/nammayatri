@@ -23,6 +23,7 @@ import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
 import qualified API.Dashboard.Ride as Ride
+import qualified API.Dashboard.Subscription as Subscription
 import qualified API.Dashboard.Volunteer as Volunteer
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -41,6 +42,7 @@ type API' =
   DashboardTokenAuth
     :> ( Driver.API
            :<|> Ride.API
+           :<|> Subscription.API
            :<|> Booking.API
            :<|> Merchant.API
            :<|> Message.API
@@ -55,6 +57,7 @@ handler =
   ( \merchantId _dashboard ->
       Driver.handler merchantId
         :<|> Ride.handler merchantId
+        :<|> Subscription.handler merchantId
         :<|> Booking.handler merchantId
         :<|> Merchant.handler merchantId
         :<|> Message.handler merchantId

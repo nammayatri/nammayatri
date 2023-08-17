@@ -21,6 +21,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedService.Common as Reexport
+import Text.Read (read)
 
 type IssueCreateAPI =
   ReqBody '[JSON] IssueReportReq
@@ -62,7 +63,7 @@ data IssueReportDriverListItem = IssueReportDriverListItem
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data IssueStatus = NEW | INPROGRESS | RESOLVED
+data IssueStatus = OPEN | PENDING | RESOLVED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

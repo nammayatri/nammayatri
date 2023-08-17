@@ -73,9 +73,14 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-postgres
+    , bytestring
     , containers
+    , euler-hs
     , exceptions
     , mobility-core
+    , postgresql-simple
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield

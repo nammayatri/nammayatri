@@ -21,7 +21,6 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -43,17 +42,16 @@ handler req ride = do
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
       feedbackDetails = req.feedbackDetails
-  case rating of
+  _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
       newRating <- buildRating ride.id driverId ratingValue feedbackDetails
-      Esq.runTransaction $ QRating.create newRating
+      QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      Esq.runTransaction $ do
-        QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
   calculateAverageRating driverId
 
 calculateAverageRating ::
@@ -71,7 +69,7 @@ calculateAverageRating personId = do
   when (ratingCount >= minimumDriverRatesCount) $ do
     let newAverage = ratingsSum / fromIntegral ratingCount
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
-    Esq.runTransaction $ QP.updateAverageRating personId newAverage
+    void $ QP.updateAverageRating personId newAverage
 
 buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> m DRating.Rating
 buildRating rideId driverId ratingValue feedbackDetails = do

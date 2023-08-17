@@ -23,7 +23,7 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import EulerHS.Prelude hiding (State, (.=))
+import EulerHS.Prelude hiding (State)
 import qualified Kernel.Prelude as P hiding (show)
 
 data TagGroup = TagGroup

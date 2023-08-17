@@ -27,6 +27,7 @@ library
       Consumer.AvailabilityTime.Storage.Tables
       Consumer.AvailabilityTime.Types
       Consumer.BroadcastMessage.Processor
+      Consumer.CustomerStats.Processor
       Consumer.Flow
       Environment
   other-modules:
@@ -87,7 +88,9 @@ library
     , persistent-postgresql
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , servant-server
+    , sessionizer-metrics
     , streamly
     , template-haskell
     , text
@@ -155,6 +158,7 @@ executable kafka-consumers-exe
     , record-dot-preprocessor
     , record-hasfield
     , servant-server
+    , sessionizer-metrics
     , streamly
     , template-haskell
     , text

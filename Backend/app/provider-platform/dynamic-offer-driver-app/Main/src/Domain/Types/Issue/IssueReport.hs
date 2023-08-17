@@ -27,8 +27,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 
 data IssueStatus
-  = NEW
-  | INPROGRESS
+  = OPEN
+  | PENDING
   | RESOLVED
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
 
@@ -43,6 +43,7 @@ data IssueReport = IssueReport
     optionId :: Maybe (Id D.IssueOption),
     deleted :: Bool,
     mediaFiles :: [Id D.MediaFile],
+    ticketId :: Maybe Text, -- third party id
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

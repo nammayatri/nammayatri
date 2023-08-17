@@ -11,54 +11,61 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Driver.DriverFlowStatus where
 
-import Domain.Types.Driver.DriverFlowStatus (isPaymentOverdue)
+import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
+-- import EulerHS.KVConnector.Types (MeshConfig (..))
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Storage.Tabular.Driver.DriverFlowStatus
+import qualified Sequelize as Se
+import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 
-create :: DDFS.DriverFlowStatus -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DDFS.DriverFlowStatus -> m ()
+create = createWithKV
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @DriverFlowStatusT
+deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById (Id driverId) = deleteWithKV [Se.Is BeamDFS.personId (Se.Eq driverId)]
 
-getStatus ::
-  (Transactionable m) =>
-  Id Person ->
-  m (Maybe DDFS.FlowStatus)
-getStatus personId = do
-  findOne $ do
-    driverFlowStatus <- from $ table @DriverFlowStatusT
-    where_ $
-      driverFlowStatus ^. DriverFlowStatusTId ==. val (toKey personId)
-    return $ driverFlowStatus ^. DriverFlowStatusFlowStatus
+getStatus :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DDFS.FlowStatus)
+getStatus (Id personId) = findOneWithKV [Se.Is BeamDFS.personId $ Se.Eq personId] <&> (DDFS.flowStatus <$>)
 
-clearPaymentStatus :: Id Person -> Bool -> SqlDB ()
-clearPaymentStatus personId isActive = do
-  let status = if isActive then DDFS.ACTIVE else DDFS.IDLE
-  updateStatus' False personId status
+clearPaymentStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> m ()
+clearPaymentStatus personId isActive = updateStatus' False personId (if isActive then DDFS.ACTIVE else DDFS.IDLE)
 
-updateStatus :: Id Person -> DDFS.FlowStatus -> SqlDB ()
+updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> DDFS.FlowStatus -> m ()
 updateStatus = updateStatus' True
 
-updateStatus' :: Bool -> Id Person -> DDFS.FlowStatus -> SqlDB ()
+updateStatus' :: (L.MonadFlow m, MonadTime m, Log m) => Bool -> Id Person -> DDFS.FlowStatus -> m ()
 updateStatus' checkForPayment personId flowStatus = do
-  driverStatus <- getStatus personId
-  case driverStatus of
-    Nothing -> pure ()
-    Just ds -> when (not checkForPayment || not (isPaymentOverdue ds)) $ do
+  getStatus personId >>= \case
+    Just ds | not checkForPayment || not (isPaymentOverdue ds) -> do
       now <- getCurrentTime
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          [ DriverFlowStatusUpdatedAt =. val now,
-            DriverFlowStatusFlowStatus =. val flowStatus
-          ]
-        where_ $ tbl ^. DriverFlowStatusTId ==. val (toKey personId)
+      updateOneWithKV
+        [Se.Set BeamDFS.flowStatus flowStatus, Se.Set BeamDFS.updatedAt now]
+        [Se.Is BeamDFS.personId $ Se.Eq (getId personId)]
+    _ -> pure ()
+
+instance FromTType' BeamDFS.DriverFlowStatus DriverFlowStatus where
+  fromTType' BeamDFS.DriverFlowStatusT {..} = do
+    pure $
+      Just
+        DriverFlowStatus
+          { personId = Id personId,
+            flowStatus = flowStatus,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamDFS.DriverFlowStatus DriverFlowStatus where
+  toTType' DriverFlowStatus {..} = do
+    BeamDFS.DriverFlowStatusT
+      { BeamDFS.personId = getId personId,
+        BeamDFS.flowStatus = flowStatus,
+        BeamDFS.updatedAt = updatedAt
+      }

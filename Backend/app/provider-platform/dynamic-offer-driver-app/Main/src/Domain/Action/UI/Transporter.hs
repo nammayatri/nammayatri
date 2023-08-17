@@ -24,8 +24,8 @@ where
 import Control.Applicative
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
+import qualified EulerHS.Language as L
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id (Id (..))
 import Kernel.Types.Predicate
@@ -57,7 +57,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m, MonadTime m) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin merchantId req = do
   unless (merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
@@ -69,7 +69,7 @@ updateTransporter admin merchantId req = do
             DM.description = (req.description) <|> (org.description),
             DM.enabled = fromMaybe (org.enabled) (req.enabled)
            }
-  Esq.runTransaction $ CQM.update updOrg
+  _ <- CQM.update updOrg
   CQM.clearCache updOrg
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
   return $ DM.makeMerchantAPIEntity updOrg

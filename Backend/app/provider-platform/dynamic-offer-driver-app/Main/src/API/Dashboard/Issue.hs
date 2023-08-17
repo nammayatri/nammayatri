@@ -18,6 +18,7 @@ type API =
            :<|> Common.IssueUpdateByUserAPI
            :<|> Common.IssueAddCommentByUserAPI
            :<|> Common.IssueFetchMediaAPI
+           :<|> Common.TicketStatusCallBackAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -28,6 +29,7 @@ handler merchantId =
     :<|> issueUpdate merchantId
     :<|> issueAddComment merchantId
     :<|> issueFetchMedia merchantId
+    :<|> ticketStatusCallBack merchantId
 
 issueCategoryList ::
   ShortId DM.Merchant ->
@@ -66,3 +68,6 @@ issueAddComment merchantShortId issueReportId = withFlowHandlerAPI . DIssue.issu
 
 issueFetchMedia :: ShortId DM.Merchant -> Text -> FlowHandler Text
 issueFetchMedia merchantShortId = withFlowHandlerAPI . DIssue.issueFetchMedia merchantShortId
+
+ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack merchantShortId = withFlowHandlerAPI . DIssue.ticketStatusCallBack merchantShortId

@@ -11,25 +11,59 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Geometry where
 
+import Data.Either
+import qualified Database.Beam as B
 import Domain.Types.Geometry
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Geometry
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id (Id (..))
+import Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.Geometry as BeamG
 
-findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
-findGeometriesContaining gps regions =
-  Esq.findAll $ do
-    geometry <- from $ table @GeometryT
-    where_ $
-      geometry ^. GeometryRegion `in_` valList regions
-        &&. containsPoint (gps.lon, gps.lat)
-    return geometry
+-- findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
+-- findGeometriesContaining gps regions =
+--   Esq.findAll $ do
+--     geometry <- from $ table @GeometryT
+--     where_ $
+--       geometry ^. GeometryRegion `in_` valList regions
+--         &&. containsPoint (gps.lon, gps.lat)
+--     return geometry
 
-someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
+findGeometriesContaining :: (L.MonadFlow m, Log m) => LatLong -> [Text] -> m [Geometry]
+findGeometriesContaining gps regions = do
+  dbConf <- getMasterBeamConfig
+  geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+
+-- someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
+-- someGeometriesContain gps regions = do
+--   geometries <- findGeometriesContaining gps regions
+--   pure $ not $ null geometries
+
+someGeometriesContain :: (L.MonadFlow m, Log m) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
+
+instance FromTType' BeamG.Geometry Geometry where
+  fromTType' BeamG.GeometryT {..} = do
+    pure $
+      Just
+        Geometry
+          { id = Id id,
+            region = region
+          }
+
+instance ToTType' BeamG.Geometry Geometry where
+  toTType' Geometry {..} =
+    BeamG.GeometryT
+      { BeamG.id = getId id,
+        BeamG.region = region
+      }

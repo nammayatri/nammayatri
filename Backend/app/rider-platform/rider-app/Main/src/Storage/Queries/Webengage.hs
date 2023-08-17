@@ -11,24 +11,62 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Webengage where
 
 import Domain.Types.Webengage
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Webengage
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.Webengage as BeamW
 
-create :: Webengage -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => Webengage -> m ()
+create = createWithKV
 
-findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
+-- findById = Esq.findById
 
-findByInfoMsgId :: Transactionable m => Text -> m (Maybe Webengage)
-findByInfoMsgId infoMessageId =
-  Esq.findOne $ do
-    webengage <- from $ table @WebengageT
-    where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
-    return webengage
+findById :: (L.MonadFlow m, Log m) => Id Webengage -> m (Maybe Webengage)
+findById webengageId = findOneWithKV [Se.Is BeamW.id $ Se.Eq (getId webengageId)]
+
+-- findByInfoMsgId :: Transactionable m => Text -> m (Maybe Webengage)
+-- findByInfoMsgId infoMessageId =
+--   Esq.findOne $ do
+--     webengage <- from $ table @WebengageT
+--     where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
+--     return webengage
+
+findByInfoMsgId :: (L.MonadFlow m, Log m) => Text -> m (Maybe Webengage)
+findByInfoMsgId infoMessageId = findOneWithKV [Se.Is BeamW.infoMessageId $ Se.Eq infoMessageId]
+
+instance FromTType' BeamW.Webengage Webengage where
+  fromTType' BeamW.WebengageT {..} = do
+    pure $
+      Just
+        Webengage
+          { id = Id id,
+            version = version,
+            contentTemplateId = contentTemplateId,
+            principalEntityId = principalEntityId,
+            infoMessageId = infoMessageId,
+            webMessageId = webMessageId,
+            toNumber = toNumber,
+            status = status
+          }
+
+instance ToTType' BeamW.Webengage Webengage where
+  toTType' Webengage {..} = do
+    BeamW.WebengageT
+      { BeamW.id = getId id,
+        BeamW.version = version,
+        BeamW.contentTemplateId = contentTemplateId,
+        BeamW.principalEntityId = principalEntityId,
+        BeamW.infoMessageId = infoMessageId,
+        BeamW.webMessageId = webMessageId,
+        BeamW.toNumber = toNumber,
+        BeamW.status = status
+      }

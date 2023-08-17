@@ -185,7 +185,7 @@ callBecknAPIWithSignature ::
   BaseUrl ->
   req ->
   m res
-callBecknAPIWithSignature a = callBecknAPI (Just $ getHttpManagerKey a) Nothing
+callBecknAPIWithSignature a = callBecknAPI (Just $ Euler.ManagerSelector (getHttpManagerKey a)) Nothing
 
 callBecknAPIWithSignatureMetro ::
   ( MonadFlow m,

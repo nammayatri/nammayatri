@@ -46,6 +46,12 @@ mkPersist
       statusId Int
       status Payment.TransactionStatus
       juspayResponse Text Maybe
+      mandateStatus Payment.MandateStatus Maybe
+      mandateStartDate UTCTime Maybe
+      mandateEndDate UTCTime Maybe
+      mandateId Text Maybe
+      mandateFrequency Payment.MandateFrequency Maybe
+      mandateMaxAmount HighPrecMoney Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

@@ -25,7 +25,7 @@ import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
 data BPPQuote
 
 data DriverOfferStatus = ACTIVE | INACTIVE
-  deriving (Generic, Show, Read)
+  deriving (Generic, Show, Read, ToJSON, FromJSON, Eq)
   deriving (PrettyShow) via Showable DriverOfferStatus
 
 data DriverOffer = DriverOffer

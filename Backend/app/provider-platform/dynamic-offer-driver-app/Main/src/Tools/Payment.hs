@@ -12,19 +12,10 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Payment
-  ( module Reexport,
-    createOrder,
-    orderStatus,
-  )
-where
+module Tools.Payment where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Kernel.External.Payment.Interface as Reexport hiding
-  ( createOrder,
-    orderStatus,
-  )
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -39,6 +30,12 @@ createOrder = runWithServiceConfig Payment.createOrder
 
 orderStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfig Payment.orderStatus
+
+offerList :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
+offerList = runWithServiceConfig Payment.offerList
+
+mandateRevoke :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
+mandateRevoke = runWithServiceConfig Payment.mandateRevoke
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>

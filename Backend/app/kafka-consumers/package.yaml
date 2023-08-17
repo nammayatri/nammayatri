@@ -74,6 +74,7 @@ dependencies:
   - hedis
   - esqueleto
   - template-haskell
+  - sessionizer-metrics
 
 ghc-options:
   - -Wall
@@ -91,6 +92,7 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - dynamic-offer-driver-app
+    - rider-app
 
 executables:
   kafka-consumers-exe:

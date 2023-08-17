@@ -11,30 +11,74 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.MetaData where
 
 import Domain.Types.MetaData
 import Domain.Types.Person
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.MetaData
+import qualified Sequelize as Se
+import qualified Storage.Beam.MetaData as BeamMD
 
-create :: MetaData -> SqlDB ()
-create = Esq.create
+-- create :: MetaData -> SqlDB ()
+-- create = Esq.create
 
-updateMetaData :: Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> SqlDB ()
+create :: (L.MonadFlow m, Log m) => MetaData -> m ()
+create = createWithKV
+
+-- updateMetaData :: Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> SqlDB ()
+-- updateMetaData personId device deviceOS deviceDateTime appPermissions = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ MetaDataDevice =. val device,
+--         MetaDataDeviceOS =. val deviceOS,
+--         MetaDataDeviceDateTime =. val deviceDateTime,
+--         MetaDataAppPermissions =. val appPermissions,
+--         MetaDataUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. MetaDataDriverId ==. val
+
+updateMetaData :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> m ()
 updateMetaData personId device deviceOS deviceDateTime appPermissions = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ MetaDataDevice =. val device,
-        MetaDataDeviceOS =. val deviceOS,
-        MetaDataDeviceDateTime =. val deviceDateTime,
-        MetaDataAppPermissions =. val appPermissions,
-        MetaDataUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. MetaDataDriverId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamMD.device device,
+      Se.Set BeamMD.deviceOS deviceOS,
+      Se.Set BeamMD.deviceDateTime deviceDateTime,
+      Se.Set BeamMD.appPermissions appPermissions,
+      Se.Set BeamMD.updatedAt now
+    ]
+    [Se.Is BeamMD.driverId $ Se.Eq $ getId personId]
+
+instance FromTType' BeamMD.MetaData MetaData where
+  fromTType' BeamMD.MetaDataT {..} = do
+    pure $
+      Just
+        MetaData
+          { driverId = Id driverId,
+            device = device,
+            deviceOS = deviceOS,
+            deviceDateTime = deviceDateTime,
+            appPermissions = appPermissions,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamMD.MetaData MetaData where
+  toTType' MetaData {..} = do
+    BeamMD.MetaDataT
+      { BeamMD.driverId = getId driverId,
+        BeamMD.device = device,
+        BeamMD.deviceOS = deviceOS,
+        BeamMD.deviceDateTime = deviceDateTime,
+        BeamMD.appPermissions = appPermissions,
+        BeamMD.createdAt = createdAt,
+        BeamMD.updatedAt = updatedAt
+      }

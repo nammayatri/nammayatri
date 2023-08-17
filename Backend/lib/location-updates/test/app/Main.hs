@@ -54,6 +54,6 @@ hideLogging cfg =
   cfg{loggerConfig =
         cfg.loggerConfig
           & #logToConsole .~ False
-          & #logRawSql .~ False
+          & #logRawSql .~ True
           & #logToFile .~ True
      }

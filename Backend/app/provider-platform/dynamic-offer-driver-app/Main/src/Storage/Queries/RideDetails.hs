@@ -11,21 +11,54 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.RideDetails where
 
 import qualified Domain.Types.Ride as SR
-import Domain.Types.RideDetails
+import Domain.Types.RideDetails as DRD
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.RideDetails ()
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.RideDetails as BeamRD
 
-create :: RideDetails -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DRD.RideDetails -> m ()
+create = createWithKV
 
-findById ::
-  Transactionable m =>
-  Id SR.Ride ->
-  m (Maybe RideDetails)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id SR.Ride -> m (Maybe RideDetails)
+findById (Id rideDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
+
+instance FromTType' BeamRD.RideDetails RideDetails where
+  fromTType' BeamRD.RideDetailsT {..} = do
+    pure $
+      Just
+        RideDetails
+          { id = Id id,
+            driverName = driverName,
+            driverNumber = EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash,
+            driverCountryCode = driverCountryCode,
+            vehicleNumber = vehicleNumber,
+            vehicleColor = vehicleColor,
+            vehicleVariant = vehicleVariant,
+            vehicleModel = vehicleModel,
+            vehicleClass = vehicleClass
+          }
+
+instance ToTType' BeamRD.RideDetails RideDetails where
+  toTType' RideDetails {..} = do
+    BeamRD.RideDetailsT
+      { BeamRD.id = getId id,
+        BeamRD.driverName = driverName,
+        BeamRD.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
+        BeamRD.driverNumberHash = driverNumber <&> (.hash),
+        BeamRD.driverCountryCode = driverCountryCode,
+        BeamRD.vehicleNumber = vehicleNumber,
+        BeamRD.vehicleColor = vehicleColor,
+        BeamRD.vehicleVariant = vehicleVariant,
+        BeamRD.vehicleModel = vehicleModel,
+        BeamRD.vehicleClass = vehicleClass
+      }

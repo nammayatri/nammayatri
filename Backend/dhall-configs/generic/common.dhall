@@ -7,6 +7,8 @@ let PeriodType = < Minutes | Hours | Days | Months | Years >
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
 
+let KafkaCompression = < NO_COMPRESSION | GZIP | SNAPPY | LZ4 >
+
 let S3AwsConfig =
       { accessKeyId : Text
       , secretAccessKey : Text
@@ -26,11 +28,11 @@ let loggerConfig =
       { level = LogLevel.DEBUG
       , logToFile = False
       , logToConsole = True
-      , logRawSql = False
+      , logRawSql = True
       , prettyPrinting = False
       }
 
-let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE >
+let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS >
 
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 
@@ -73,6 +75,7 @@ in  { smsSessionConfig
     , S3Config
     , periodType = PeriodType
     , consumerType = ConsumerType
+    , kafkaCompression = KafkaCompression
     , kafkaConfig
     , streamConfig
     , eventStreamNameType

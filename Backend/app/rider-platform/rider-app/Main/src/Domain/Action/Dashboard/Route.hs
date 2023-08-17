@@ -20,11 +20,11 @@ import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as Ride
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -37,8 +37,10 @@ mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Fl
 mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
   merchant <- QMerchant.findByShortId shortMerchantId >>= fromMaybeM (MerchantDoesNotExist shortMerchantId.getShortId)
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
         DRB.OneWayDetails details -> Just details.toLocation

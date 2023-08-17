@@ -51,16 +51,21 @@ default-extensions:
 
 dependencies:
   - base >= 4.7 && < 5
+  - beam-core
+  - beam-postgres
+  - bytestring
   - record-dot-preprocessor
   - record-hasfield
   - text
   - time
   - aeson
+  - euler-hs
   - exceptions
   - containers
   - transformers
   - unliftio
   - unliftio-core
+  - postgresql-simple
   - prometheus-client
   - servant-server
   - singletons

@@ -12,29 +12,67 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Booking.BookingLocation where
 
 import Domain.Types.Booking.BookingLocation
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.Booking.BookingLocation
+import qualified Sequelize as Se
+import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 
-updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
-updateAddress blId LocationAddress {..} = do
+create :: (L.MonadFlow m, Log m) => BookingLocation -> m ()
+create = createWithKV
+
+findById :: (L.MonadFlow m, Log m) => Id BookingLocation -> m (Maybe BookingLocation)
+findById (Id bookingLocationId) = findOneWithKV [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
+
+updateAddress :: (L.MonadFlow m, MonadTime m, Log m) => Id BookingLocation -> LocationAddress -> m ()
+updateAddress (Id blId) LocationAddress {..} = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingLocationStreet =. val street,
-        BookingLocationCity =. val city,
-        BookingLocationState =. val state,
-        BookingLocationCountry =. val country,
-        BookingLocationBuilding =. val building,
-        BookingLocationAreaCode =. val areaCode,
-        BookingLocationArea =. val area,
-        BookingLocationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
+  updateOneWithKV
+    [ Se.Set BeamBL.street street,
+      Se.Set BeamBL.city city,
+      Se.Set BeamBL.state state,
+      Se.Set BeamBL.country country,
+      Se.Set BeamBL.building building,
+      Se.Set BeamBL.areaCode areaCode,
+      Se.Set BeamBL.area area,
+      Se.Set BeamBL.updatedAt now
+    ]
+    [Se.Is BeamBL.id (Se.Eq blId)]
+
+instance FromTType' BeamBL.BookingLocation BookingLocation where
+  fromTType' BeamBL.BookingLocationT {..} = do
+    pure $
+      Just
+        BookingLocation
+          { id = Id id,
+            lat = lat,
+            lon = lon,
+            address = LocationAddress street door city state country building areaCode area,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamBL.BookingLocation BookingLocation where
+  toTType' BookingLocation {..} = do
+    BeamBL.BookingLocationT
+      { BeamBL.id = getId id,
+        BeamBL.lat = lat,
+        BeamBL.lon = lon,
+        BeamBL.street = (street :: LocationAddress -> Maybe Text) address,
+        BeamBL.door = (door :: LocationAddress -> Maybe Text) address,
+        BeamBL.city = (city :: LocationAddress -> Maybe Text) address,
+        BeamBL.state = (state :: LocationAddress -> Maybe Text) address,
+        BeamBL.country = (country :: LocationAddress -> Maybe Text) address,
+        BeamBL.building = (building :: LocationAddress -> Maybe Text) address,
+        BeamBL.areaCode = (areaCode :: LocationAddress -> Maybe Text) address,
+        BeamBL.area = (area :: LocationAddress -> Maybe Text) address,
+        BeamBL.createdAt = createdAt,
+        BeamBL.updatedAt = updatedAt
+      }

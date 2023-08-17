@@ -27,7 +27,8 @@ import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Kernel.Storage.Esqueleto (runTransaction)
+import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -36,9 +37,11 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
+import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.CallbackRequest as QCallback
 import qualified Storage.Queries.Issues as Queries
 import qualified Storage.Queries.Person as QP
+import Tools.Ticket
 
 data Issue = Issue
   { reason :: Text,
@@ -68,12 +71,15 @@ validateSendIssueReq SendIssueReq {..} =
 
 type SendIssueRes = APISuccess
 
-sendIssue :: EsqDBFlow m r => Id Person.Person -> SendIssueReq -> m SendIssueRes
+sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> SendIssueReq -> m SendIssueRes
 sendIssue personId request = do
   runRequestValidation validateSendIssueReq request
   newIssue <- buildDBIssue personId request
-  runTransaction $
-    Queries.insertIssue newIssue
+  Queries.insertIssue newIssue
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  phoneNumber <- mapM decrypt person.mobileNumber
+  ticketResponse <- createTicket person.merchantId (mkTicket newIssue person phoneNumber)
+  Queries.updateTicketId newIssue.id ticketResponse.ticketId
   return Success
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
@@ -88,16 +94,33 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         contactEmail = contactEmail,
         reason = issue.reason,
         description = issue.description,
+        ticketId = Nothing, -- third party id
+        status = DIssue.OPEN,
         createdAt = time,
         updatedAt = time
       }
+
+mkTicket :: DIssue.Issue -> Person.Person -> Maybe Text -> Ticket.CreateTicketReq
+mkTicket issue person phoneNumber =
+  Ticket.CreateTicketReq
+    { category = "Driver Related",
+      subCategory = Just issue.reason,
+      issueId = Just issue.id.getId,
+      issueDescription = issue.description,
+      mediaFiles = Nothing,
+      name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
+      phoneNo = phoneNumber,
+      personId = person.id.getId,
+      classification = Ticket.CUSTOMER,
+      rideDescription = Nothing
+    }
 
 callbackRequest :: EsqDBFlow m r => Id Person.Person -> m APISuccess
 callbackRequest personId = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   newCallbackRequest <- buildCallbackRequest person
-  runTransaction $
-    QCallback.create newCallbackRequest
+  -- runTransaction $
+  _ <- QCallback.create newCallbackRequest
   return Success
 
 buildCallbackRequest :: MonadFlow m => Person.Person -> m DCallback.CallbackRequest

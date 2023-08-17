@@ -65,7 +65,8 @@ callMapsApi merchantId req geoHashPrecisionValue = do
             MIT.ByLatLong (Maps.LatLong lat lon) -> (lat, lon)
             _ -> (element.location.lat, element.location.lon)
       placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
-      Esq.runTransaction $ CM.create placeNameCache
+      --Esq.runTransaction $ CM.create placeNameCache
+      _ <- CM.create placeNameCache
       case (placeNameCache.placeId, placeNameCache.geoHash) of
         (Just placeId, Just geoHash) -> do
           CM.cachedPlaceByPlaceId placeId [placeNameCache]

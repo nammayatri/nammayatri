@@ -16,6 +16,7 @@ module Mobility.ARDU.SuccessFlow where
 
 import Common
 import qualified Data.List.NonEmpty as NE
+import Data.Maybe (fromJust)
 import EulerHS.Prelude
 import HSpec
 import Kernel.Prelude (roundToIntegral)

@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,12 +12,21 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# HLINT ignore "Use tuple-section" #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Maybe as Mb
+-- import qualified Storage.Queries.DriverInformation as QueriesDI
+
+import qualified Database.Beam as B
+import Database.Beam.Postgres hiding ((++.))
+import qualified Database.Beam.Query ()
 import qualified Domain.Types.Booking as Booking
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
@@ -25,43 +35,49 @@ import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.MediaFile
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
-import Domain.Types.Ride as Ride
+import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps as Maps
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
-import Storage.Queries.DriverQuote (baseDriverQuoteQuery)
-import Storage.Queries.FullEntityBuilders (buildFullBooking, buildFullDriverQuote)
-import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
-import Storage.Tabular.DriverInformation
-import Storage.Tabular.DriverLocation
-import Storage.Tabular.DriverOnboarding.DriverLicense
-import Storage.Tabular.DriverOnboarding.DriverRCAssociation
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
-import Storage.Tabular.DriverQuote
-import Storage.Tabular.Person as TPerson
-import Storage.Tabular.Ride
-import Storage.Tabular.Vehicle as Vehicle
+import Kernel.Utils.Version
+import qualified Sequelize as Se
+import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Beam.Booking.BookingLocation as BeamBL
+import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
+import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
+import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
+import qualified Storage.Beam.DriverQuote as BeamDQ
+import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Beam.Ride.Table as BeamR
+import qualified Storage.Beam.Vehicle as BeamV
+import Storage.Queries.Booking ()
+import qualified Storage.Queries.DriverLocation as QueriesDL
+import qualified Storage.Queries.DriverOnboarding.DriverLicense ()
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
+import Storage.Queries.DriverQuote ()
+import Storage.Queries.Instances.DriverInformation ()
+import Storage.Queries.Ride ()
+import Storage.Queries.Vehicle ()
 
-create :: Person -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => Person.Person -> m ()
+create = createWithKV
 
-findById ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe Person)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
 data FullDriver = FullDriver
   { person :: Person,
@@ -74,7 +90,7 @@ mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriv
 mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDriversWithInfoAndVehicle ::
-  Transactionable m =>
+  (L.MonadFlow m, Log m) =>
   Id Merchant ->
   Int ->
   Int ->
@@ -86,55 +102,91 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
 findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
-  Esq.findAll $ do
-    person :& info :& mbVeh <-
-      from $
-        table @PersonT
-          `innerJoin` table @DriverInformationT
-            `Esq.on` ( \(person :& driverInfo) ->
-                         person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-                     )
-          `leftJoin` table @VehicleT
-            `Esq.on` ( \(person :& _ :& mbVehicle) ->
-                         just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
-                     )
-    where_ $
-      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-        &&. person ^. PersonRole ==. val Person.DRIVER
-        &&. maybe (val True) (\vehicleNumber -> mbVeh ?. VehicleRegistrationNo `Esq.like` just (val vehicleNumber)) mbVehicleNumberSearchString
-        &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
-        &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
-        &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
-        &&. maybe (val True) (\subscribed -> info ^. DriverInformationSubscribed ==. val subscribed) mbSubscribed
-        &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
-    limit $ fromIntegral limitVal
-    offset $ fromIntegral offsetVal
-    pure (person, info, mbVeh)
+  dbConf <- getMasterBeamConfig
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (fromIntegral limitVal) $
+          B.offset_ (fromIntegral offsetVal) $
+            B.filter_'
+              ( \(person, driverInfo, vehicle) ->
+                  person.merchantId B.==?. B.val_ (getId merchantId)
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\subscribed -> driverInfo.subscribed B.==?. B.val_ subscribed) mbSubscribed
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchPhoneDBHash
+              )
+              do
+                person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
+                driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
+                vehicle <- B.leftJoin_' (B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)) (\veh' -> BeamP.id person B.==?. BeamV.driverId veh')
+                pure (person, driverInfo, vehicle)
+  case result of
+    Right x -> do
+      let persons = fmap fst' x
+          driverInfos = fmap snd' x
+          vehicles = fmap thd' x
+      p <- catMaybes <$> mapM fromTType' persons
+      di <- catMaybes <$> mapM fromTType' driverInfos
+      v <- mapM (maybe (pure Nothing) fromTType') vehicles
+      pure $ zip3 p di v
+    Left _ -> pure []
+  where
+    fst' (x, _, _) = x
+    snd' (_, y, _) = y
+    thd' (_, _, z) = z
 
--- countDrivers :: Transactionable m => Id Merchant -> m Int
--- countDrivers merchantId =
---   mkCount <$> do
---     Esq.findAll $ do
---       person <- from $ table @PersonT
---       where_ $
---         person ^. PersonMerchantId ==. val (toKey merchantId)
---           &&. person ^. PersonRole ==. val Person.DRIVER
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
+getDriversList ::
+  (L.MonadFlow m, Log m) =>
+  [DriverInformation] ->
+  m [Person]
+getDriversList driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personsKeys]
+  where
+    personsKeys = getId <$> fetchDriverIDsFromInfo driverInfos
+
+getDriversByIdIn :: (L.MonadFlow m, Log m) => [Id Person] -> m [Person]
+getDriversByIdIn personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
+
+getDriverInformations ::
+  (L.MonadFlow m, Log m) =>
+  [DriverLocation] ->
+  m [DriverInformation]
+getDriverInformations driverLocations =
+  findAllWithKV
+    [ Se.And
+        ( [Se.Is BeamDI.active $ Se.Eq True]
+            <> [Se.Is BeamDI.driverId $ Se.In personKeys]
+        )
+    ]
+  where
+    personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
+
+getDriversWithOutdatedLocationsToMakeInactive :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive before = do
+  driverLocations <- QueriesDL.getDriverLocations before
+  driverInfos <- getDriverInformations driverLocations
+  getDriversList driverInfos
+
+getDriversWithOutdatedLocationsToMakeInactive' :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive' before = do
+  driverLocations <- QueriesDL.getDriverLocations before
+  driverInfos <- getDriverInfos driverLocations
+  drivers <- getDriversList driverInfos
+  logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
+  return drivers
 
 findAllDriversByIdsFirstNameAsc ::
-  (Transactionable m, Functor m, EsqLocRepDBFlow m r, EsqDBReplicaFlow m r) =>
+  (Functor m, MonadFlow m) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
 findAllDriversByIdsFirstNameAsc merchantId driverIds = do
-  driverLocs <- getDriverLocs driverIds merchantId
+  driverLocs <- QueriesDL.getDriverLocs driverIds merchantId
   driverInfos <- getDriverInfos driverLocs
   vehicle <- getVehicles driverInfos
   drivers <- getDrivers vehicle
-  logDebug $ "FindAllDriversByIdsFirstNameAsc - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vec:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   return (linkArrays driverLocs driverInfos vehicle drivers)
 
 linkArrays :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> [FullDriver]
@@ -171,172 +223,65 @@ buildFullDriver personHashMap vehicleHashMap driverInfoHashMap location = do
   info <- HashMap.lookup driverId' driverInfoHashMap
   Just $ mkFullDriver (person, location, info, vehicle)
 
-getDriverLocs ::
-  (Transactionable m, EsqLocRepDBFlow m r, MonadFlow m) =>
-  [Id Person] ->
-  Id Merchant ->
-  m [DriverLocation]
-getDriverLocs driverIds merchantId = do
-  runInLocReplica $
-    Esq.findAll $ do
-      driverLocs <- from $ table @DriverLocationT
-      where_ $
-        driverLocs ^. DriverLocationDriverId `in_` valList personsKeys
-          &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-      return driverLocs
-  where
-    personsKeys = toKey . cast <$> driverIds
-
 getDriverInfos ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (L.MonadFlow m, Log m) =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocs = do
-  runInReplica $
-    Esq.findAll $ do
-      driverInfos <- from $ table @DriverInformationT
-      where_ $
-        driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
-      return driverInfos
+  findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
   where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
+    personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
 
-getOnRideStuckDriverIds :: Transactionable m => m [DriverInformation]
+getOnRideStuckDriverIds :: (L.MonadFlow m, Log m) => m [DriverInformation]
 getOnRideStuckDriverIds = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationOnRide ==. val True
-        &&. not_ (driverInfos ^. DriverInformationDriverId `in_` rideSubQuery)
-    return driverInfos
-  where
-    rideSubQuery = subList_select $ do
-      r <- from $ table @RideT
-      where_ (r ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW])
-      pure (r ^. RideDriverId)
+  driverIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.driverId <$>)
+  findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
 
 getVehicles ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
   m [Vehicle]
-getVehicles driverInfo = do
-  runInReplica $
-    Esq.findAll $ do
-      vehicles <- from $ table @VehicleT
-      where_ $
-        vehicles ^. VehicleDriverId `in_` valList personsKeys
-      return vehicles
+getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
   where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
+    personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
 getDrivers ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (L.MonadFlow m, Log m) =>
   [Vehicle] ->
   m [Person]
-getDrivers vehicles = do
-  runInReplica $
-    Esq.findAll $ do
-      persons <- from $ table @PersonT
-      where_ $
-        persons ^. PersonTId `in_` valList personsKeys
-          &&. persons ^. PersonRole ==. val Person.DRIVER
-      return persons
+getDrivers vehicles = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In personKeys, Se.Is BeamP.role $ Se.Eq Person.DRIVER]]
   where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromVehicle vehicles
-
-getDriversByIdIn ::
-  Transactionable m =>
-  [Id Person] ->
-  m [Person]
-getDriversByIdIn driverIds = do
-  Esq.findAll $ do
-    persons <- from $ table @PersonT
-    where_ $
-      persons ^. PersonTId `in_` valList personIds
-    return persons
-  where
-    personIds = toKey . cast <$> driverIds
-
-getDriversWithMerchID ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
-  Id Merchant ->
-  m [Person]
-getDriversWithMerchID merchantId = do
-  runInReplica $
-    Esq.findAll $ do
-      persons <- from $ table @PersonT
-      where_ $
-        persons ^. PersonMerchantId ==. val (toKey merchantId)
-          &&. persons ^. PersonRole ==. val Person.DRIVER
-      return persons
+    personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
 getDriverQuote ::
-  Transactionable m =>
+  (L.MonadFlow m, Log m) =>
   [Person] ->
   m [DriverQuote]
 getDriverQuote persons =
-  buildDType $ do
-    res <- Esq.findAll' $ do
-      (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
-      where_ $
-        dQuote ^. DriverQuoteDriverId `in_` valList personsKeys
-          &&. dQuote ^. DriverQuoteStatus ==. val DriverQuote.Active
-      pure (dQuote, farePars)
-    catMaybes <$> mapM buildFullDriverQuote res
+  findAllWithKV
+    [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
+    ]
   where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromPersons persons
+    personKeys = getId <$> fetchDriverIDsFromPersons persons
 
 getBookingInfo ::
-  Transactionable m =>
+  (L.MonadFlow m, Log m) =>
   [DriverQuote] ->
   m [Booking.Booking]
-getBookingInfo driverQuote = buildDType $ do
-  res <-
-    Esq.findAll' $ do
-      booking <- from $ table @BookingT
-      where_ $
-        booking ^. BookingQuoteId `in_` valList personsKeys
-          &&. booking ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
-      return booking
-  catMaybes <$> mapM buildFullBooking res
+getBookingInfo driverQuote =
+  findAllWithKV
+    [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
+    ]
   where
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
 
 getBookingLocs ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (L.MonadFlow m, Log m) =>
   [Booking.Booking] ->
   m [BookingLocation]
-getBookingLocs bookings = do
-  runInReplica $
-    Esq.findAll $ do
-      bookingLoc <- from $ table @BookingLocationT
-      where_ $
-        bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
-      return bookingLoc
+getBookingLocs bookings = findAllWithKV [Se.Is BeamBL.id $ Se.In bookingKeys]
   where
-    toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
-
-getDriverLocsFromMerchId ::
-  (Transactionable m, MonadTime m, EsqLocRepDBFlow m r) =>
-  Maybe Seconds ->
-  LatLong ->
-  Int ->
-  Id Merchant ->
-  m [DriverLocation]
-getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId = do
-  now <- getCurrentTime
-  runInLocReplica $
-    Esq.findAll $ do
-      driverLoc <- from $ table @DriverLocationT
-      where_ $
-        driverLoc ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-          &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                  ||. (driverLoc ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-              )
-          &&. buildRadiusWithin (driverLoc ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
-      orderBy [asc (driverLoc ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
-      return driverLoc
+    bookingKeys = getId <$> fetchToLocationIDFromBooking bookings
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
@@ -362,6 +307,24 @@ fetchDriverIDsFromVehicle = map (.driverId)
 fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
 fetchDriverIDsTextFromQuote = map (.driverId.getId)
 
+findAllDriverInformationWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
+findAllDriverInformationWithSeConditions = findAllWithKV
+
+findAllVehiclesWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamV.VehicleT] -> m [Vehicle]
+findAllVehiclesWithSeConditions = findAllWithKV
+
+findAllBookingsWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking.Booking]
+findAllBookingsWithSeConditions = findAllWithKV
+
+findAllDriverQuoteWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDQ.DriverQuoteT] -> m [DriverQuote]
+findAllDriverQuoteWithSeConditions = findAllWithKV
+
+findAllPersonWithSeConditionsNameAsc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
+findAllPersonWithSeConditionsNameAsc conditions = findAllWithOptionsKV conditions (Se.Asc BeamP.firstName) Nothing Nothing
+
+findAllPersonWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
+findAllPersonWithSeConditions = findAllWithKV
+
 data DriverWithRidesCount = DriverWithRidesCount
   { person :: Person,
     info :: DriverInformation,
@@ -372,251 +335,194 @@ data DriverWithRidesCount = DriverWithRidesCount
 mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
 mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
 
-fetchDriverInfoWithRidesCount :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
 fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
   mbDriverInfo <- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash
   addRidesCount `mapM` mbDriverInfo
   where
-    addRidesCount :: Transactionable m => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
+    addRidesCount :: L.MonadFlow m => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
     addRidesCount (person, info, vehicle) = do
-      ridesCount <-
-        Esq.findOne $ do
-          ride <- from $ table @RideT
-          where_ $
-            ride ^. RideDriverId ==. val (toKey person.id)
-              &&. not_ (ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
-          groupBy $ ride ^. RideDriverId
-          return (count @Int $ ride ^. RideId)
-      return $ mkDriverWithRidesCount (person, info, vehicle, ridesCount)
+      dbConf <- getMasterBeamConfig
+      resp <-
+        L.runDB dbConf $
+          L.findRow $
+            B.select $
+              B.aggregate_ (\ride -> (B.group_ (BeamR.driverId ride), B.as_ @Int B.countAll_)) $
+                B.filter_' (\(BeamR.RideT {driverId, status}) -> driverId B.==?. B.val_ (getId person.id) B.&&?. B.sqlNot_ (B.sqlBool_ (B.in_ status $ B.val_ <$> [Ride.NEW, Ride.CANCELLED]))) $
+                  B.all_ (BeamCommon.ride BeamCommon.atlasDB)
+      let ridesCount = either (const (Just 0)) (snd <$>) resp
+      pure (mkDriverWithRidesCount (person, info, vehicle, ridesCount))
 
-fetchDriverInfo :: (Transactionable m, MonadTime m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
-fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash =
-  Esq.findOne $ do
-    person :& driverInfo :& mbVehicle :& mbDriverLicense :& _mbRcAssoc :& mbRegCert <-
-      from $
-        table @PersonT
-          `innerJoin` table @DriverInformationT
-          `Esq.on` ( \(person :& driverInfo) ->
-                       person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-                   )
-          `leftJoin` table @VehicleT
-          `Esq.on` ( \(person :& _ :& mbVehicle) ->
-                       just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
-                   )
-          `leftJoin` table @DriverLicenseT
-          `Esq.on` ( \(person :& _ :& _ :& mbDriverLicense) ->
-                       joinOnlyWhenJust mbDlNumberHash $ just (person ^. PersonTId) ==. mbDriverLicense ?. DriverLicenseDriverId
-                   )
-          `leftJoin` table @DriverRCAssociationT
-          `Esq.on` ( \(person :& _ :& _ :& _ :& mbRcAssoc) ->
-                       joinOnlyWhenJust mbRcNumberHash $
-                         do
-                           just (person ^. PersonTId) ==. mbRcAssoc ?. DriverRCAssociationDriverId
-                           &&. just (val True) ==. mbRcAssoc ?. DriverRCAssociationIsRcActive
-                   )
-          `leftJoin` table @VehicleRegistrationCertificateT
-          `Esq.on` ( \(_ :& _ :& _ :& _ :& mbRcAssoc :& mbRegCert) ->
-                       joinOnlyWhenJust mbRcNumberHash $
-                         mbRcAssoc ?. DriverRCAssociationRcId ==. mbRegCert ?. VehicleRegistrationCertificateTId
-                   )
-    where_ $
-      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-        &&. person ^. PersonRole ==. val Person.DRIVER
-        &&. whenJust_
-          mbMobileNumberDbHashWithCode
-          ( \(mobileNumberDbHash, mobileCountryCode) ->
-              person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
-                &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
-                        ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberDbHash)
-                    )
+fetchDriverInfo :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
+fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
+  dbConf <- getMasterBeamConfig
+  now <- getCurrentTime
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \(person, driverInfo, vehicle, driverLicense, driverRCAssociation, vehicleRegistrationCertificate) ->
+              person.merchantId B.==?. B.val_ merchantId
+                B.&&?. person.role B.==?. B.val_ Person.DRIVER
+                B.&&?. maybe
+                  (B.sqlBool_ $ B.val_ True)
+                  ( \(mobileNumberDbHash, mobileCountryCode) ->
+                      person.mobileCountryCode B.==?. B.val_ (Just mobileCountryCode)
+                        B.&&?. (person.mobileNumberHash B.==?. B.val_ (Just mobileNumberDbHash) B.||?. person.alternateMobileNumberHash B.==?. B.val_ (Just mobileNumberDbHash))
+                  )
+                  mbMobileNumberDbHashWithCode
+                B.&&?. B.sqlBool_ (joinOnlyWhenJustTrue mbVehicleNumber (vehicle.registrationNo B.==. B.val_ mbVehicleNumber))
+                B.&&?. B.sqlBool_ (joinOnlyWhenJustTrue mbDlNumberHash (driverLicense.licenseNumberHash B.==. B.val_ mbDlNumberHash))
+                B.&&?. B.sqlBool_ (joinOnlyWhenJustTrue mbRcNumberHash (vehicleRegistrationCertificate.certificateNumberHash B.==. B.val_ mbRcNumberHash))
           )
-        &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
-        &&. whenJust_ mbDlNumberHash (\dlNumberHash -> mbDriverLicense ?. DriverLicenseLicenseNumberHash ==. just (val dlNumberHash))
-        &&. whenJust_ mbRcNumberHash (\rcNumberHash -> mbRegCert ?. VehicleRegistrationCertificateCertificateNumberHash ==. just (val rcNumberHash))
-    pure (person, driverInfo, mbVehicle)
+          do
+            person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
+            driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
+            vehicle <- B.leftJoin_' (B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)) (\veh' -> BeamP.id person B.==?. BeamV.driverId veh')
+            driverLicense <- B.leftJoin_' (B.all_ (BeamCommon.driverLicense BeamCommon.atlasDB)) (\dl' -> B.sqlBool_ $ joinOnlyWhenJustFalse mbDlNumberHash (BeamP.id person B.==. BeamDL.driverId dl'))
+            driverRCAssociation <- B.leftJoin_' (B.all_ (BeamCommon.driverRCAssociation BeamCommon.atlasDB)) (\drca' -> B.sqlBool_ $ joinOnlyWhenJustFalse mbRcNumberHash (BeamP.id person B.==. BeamDRCA.driverId drca' B.&&. (B.just_ (B.val_ now) B.<. BeamDRCA.associatedTill drca')))
+            vehicleRegistrationCertificate <- B.leftJoin_' (B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)) (\vrc' -> B.sqlBool_ $ joinOnlyWhenJustFalse mbRcNumberHash (BeamP.id person B.==. BeamVRC.id vrc'))
+            pure (person, driverInfo, vehicle, driverLicense, driverRCAssociation, vehicleRegistrationCertificate)
+  res' <- case result of
+    Right x -> do
+      let persons = fmap fst' x
+          driverInfos = fmap snd' x
+          vehicles = fmap thd' x
+      p <- catMaybes <$> mapM fromTType' persons
+      di <- catMaybes <$> mapM fromTType' driverInfos
+      v <- mapM (maybe (pure Nothing) fromTType') vehicles
+      pure $ zip3 p di v
+    Left _ -> pure []
+  pure $ listToMaybe res'
   where
-    -- used only for dl and rc entites, because they are not required for final result, only for filters
-    joinOnlyWhenJust mbFilter cond = maybe (val False) (const cond) mbFilter
+    fst' (x, _, _, _, _, _) = x
+    snd' (_, x, _, _, _, _) = x
+    thd' (_, _, x, _, _, _) = x
+    joinOnlyWhenJustFalse mbFilter cond = maybe (B.val_ False) (const cond) mbFilter
+    joinOnlyWhenJustTrue mbFilter cond = maybe (B.val_ True) (const cond) mbFilter
 
-findByIdAndRoleAndMerchantId ::
-  Transactionable m =>
-  Id Person ->
-  Person.Role ->
-  Id Merchant ->
-  m (Maybe Person)
-findByIdAndRoleAndMerchantId pid role_ merchantId =
-  Esq.findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonTId ==. val (toKey pid)
-        &&. person ^. PersonRole ==. val role_
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+findByIdAndRoleAndMerchantId :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
+findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findAllByMerchantId ::
-  Transactionable m =>
-  [Person.Role] ->
-  Id Merchant ->
-  m [Person]
-findAllByMerchantId roles merchantId =
-  Esq.findAll $ do
-    person <- from $ table @PersonT
-    where_ $
-      (person ^. PersonRole `in_` valList roles ||. val (null roles))
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+findAllByMerchantId :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
+findAllByMerchantId roles (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
 
-findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
-findAdminsByMerchantId merchantId =
-  Esq.findAll $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. person ^. PersonRole ==. val Person.ADMIN
-    return person
+findAdminsByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
+findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
-findByMobileNumberAndMerchant ::
-  (Transactionable m) =>
-  Text ->
-  DbHash ->
-  Id Merchant ->
-  m (Maybe Person)
-findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId = do
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
-                ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberHash)
-            )
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+findByMobileNumberAndMerchant :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId,
+          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
+        ]
+    ]
 
-findByIdentifierAndMerchant ::
-  Transactionable m =>
-  Id Merchant ->
-  Text ->
-  m (Maybe Person)
-findByIdentifierAndMerchant merchantId identifier_ =
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonIdentifier ==. val (Just identifier_)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+findByIdentifierAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByIdentifierAndMerchant (Id merchantId) identifier_ = findOneWithKV [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByEmailAndMerchant ::
-  Transactionable m =>
-  Id Merchant ->
-  Text ->
-  m (Maybe Person)
-findByEmailAndMerchant merchantId email_ =
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmail ==. val (Just email_)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+findByEmailAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByEmailAndMerchant (Id merchantId) email_ = findOneWithKV [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByRoleAndMobileNumberAndMerchantId ::
-  (Transactionable m, EncFlow m r) =>
-  Role ->
-  Text ->
-  Text ->
-  Id Merchant ->
-  m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantId = do
-  mobileNumberDbHash <- getDbHash mobileNumber_
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonRole ==. val role_
-        &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id merchantId) = do
+  mobileNumberDbHash <- getDbHash mobileNumber
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.role $ Se.Eq role_,
+          Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]
 
-personDriverTable ::
-  From
-    ( Table PersonT
-        :& Table DriverInformationT
-    )
-personDriverTable =
-  table @PersonT
-    `innerJoin` table @DriverInformationT
-    `Esq.on` ( \(person :& driver) ->
-                 person ^. PersonTId ==. driver ^. DriverInformationDriverId
-                   &&. Esq.not_ (driver ^. DriverInformationBlocked)
-             )
+-- personDriverTable ::
+--   From
+--     ( Table PersonT
+--         :& Table DriverInformationT
+--     )
+-- personDriverTable =
+--   table @PersonT
+--     `innerJoin` table @DriverInformationT
+--     `Esq.on` ( \(person :& driver) ->
+--                  person ^. PersonTId ==. driver ^. DriverInformationDriverId
+--                    &&. Esq.not_ (driver ^. DriverInformationBlocked)
+--              )
 
-findAllDriverIdExceptProvided :: Transactionable m => Id Merchant -> [Id Driver] -> m [Id Driver]
-findAllDriverIdExceptProvided merchantId driverIdsToBeExcluded = do
-  res <- Esq.findAll $ do
-    (person :& driver) <- from personDriverTable
-    where_ $
-      person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. not_ ((driver ^. DriverInformationDriverId) `Esq.in_` valList (map (toKey . driverIdToPersonId) driverIdsToBeExcluded))
-        &&. driver ^. DriverInformationVerified
-        &&. driver ^. DriverInformationEnabled
-    return $ driver ^. DriverInformationDriverId
-  pure $ personIdToDrivrId <$> res
+findAllDriverIdExceptProvided :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
+  dbConf <- getMasterBeamConfig
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \(person, driverInfo) ->
+              person.merchantId B.==?. B.val_ merchantId
+                B.&&?. driverInfo.verified B.==?. B.val_ True
+                B.&&?. driverInfo.enabled B.==?. B.val_ True
+                B.&&?. driverInfo.blocked B.==?. B.val_ False
+                B.&&?. B.sqlBool_ (B.not_ (driverInfo.driverId `B.in_` (B.val_ . getId <$> driverIdsToBeExcluded)))
+          )
+          do
+            person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
+            driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
+            pure (person, driverInfo)
+  case result of
+    Right x -> do
+      let persons = fmap fst x
+      p <- catMaybes <$> mapM fromTType' persons
+      pure (personIdToDrivrId . (Person.id :: PersonE e -> Id Person) <$> p)
+    Left _ -> pure []
   where
     personIdToDrivrId :: Id Person -> Id Driver
     personIdToDrivrId = cast
 
-    driverIdToPersonId :: Id Driver -> Id Person
-    driverIdToPersonId = cast
-
-updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
-updateMerchantIdAndMakeAdmin personId merchantId = do
+updateMerchantIdAndMakeAdmin :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Id Merchant -> m ()
+updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonMerchantId =. val (toKey merchantId),
-        PersonRole =. val Person.ADMIN,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamP.merchantId merchantId,
+      Se.Set BeamP.role Person.ADMIN,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updateName :: Id Person -> Text -> SqlDB ()
-updateName personId name = do
+updateName :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Text -> m ()
+updateName (Id personId) name = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonFirstName =. val name,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamP.firstName name,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonRec :: Id Person -> Person -> SqlDB ()
-updatePersonRec personId person = do
+updatePersonRec :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
+updatePersonRec (Id personId) person = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonFirstName =. val (person.firstName),
-        PersonMiddleName =. val (person.middleName),
-        PersonLastName =. val (person.lastName),
-        PersonRole =. val (person.role),
-        PersonGender =. val (person.gender),
-        PersonEmail =. val (person.email),
-        PersonHometown =. val (person.hometown),
-        PersonLanguagesSpoken =. val (PostgresList <$> person.languagesSpoken),
-        PersonIdentifier =. val (person.identifier),
-        PersonRating =. val (person.rating),
-        PersonLanguage =. val (person.language),
-        PersonDeviceToken =. val (person.deviceToken),
-        PersonMerchantId =. val (toKey person.merchantId),
-        PersonDescription =. val (person.description),
-        PersonUpdatedAt =. val now,
-        PersonClientVersion =. val (versionToText <$> person.clientVersion),
-        PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamP.firstName $ person.firstName,
+      Se.Set BeamP.middleName $ person.middleName,
+      Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.role $ person.role,
+      Se.Set BeamP.gender $ person.gender,
+      Se.Set BeamP.email $ person.email,
+      Se.Set BeamP.hometown $ person.hometown,
+      Se.Set BeamP.languagesSpoken $ person.languagesSpoken,
+      Se.Set BeamP.identifier $ person.identifier,
+      Se.Set BeamP.rating $ person.rating,
+      Se.Set BeamP.language $ person.language,
+      Se.Set BeamP.deviceToken $ person.deviceToken,
+      Se.Set BeamP.merchantId $ getId person.merchantId,
+      Se.Set BeamP.description $ person.description,
+      Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
+      Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
+updatePersonVersions :: (L.MonadFlow m, MonadTime m, Log m) => Person -> Maybe Version -> Maybe Version -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
@@ -624,77 +530,63 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
       now <- getCurrentTime
       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          [ PersonUpdatedAt =. val now,
-            PersonClientVersion =. val mbClientVersionText,
-            PersonBundleVersion =. val mbBundleVersionText
-          ]
-        where_ $
-          tbl ^. PersonTId ==. val (toKey person.id)
+      updateOneWithKV
+        [ Se.Set BeamP.clientVersion mbClientVersionText,
+          Se.Set BeamP.bundleVersion mbBundleVersionText,
+          Se.Set BeamP.updatedAt now
+        ]
+        [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
-updateDeviceToken personId mbDeviceToken = do
+updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe FCMRecipientToken -> m ()
+updateDeviceToken (Id personId) mbDeviceToken = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonDeviceToken =. val mbDeviceToken,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamP.deviceToken mbDeviceToken,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
-updateWhatsappNotificationEnrollStatus personId enrollStatus = do
+updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
+updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updateMobileNumberAndCode :: Person -> SqlDB ()
+updateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do
-  let personT = toTType person
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonMobileCountryCode =. val (TPerson.mobileCountryCode personT),
-        PersonMobileNumberEncrypted =. val (TPerson.mobileNumberEncrypted personT),
-        PersonMobileNumberHash =. val (TPerson.mobileNumberHash personT),
-        PersonUnencryptedMobileNumber =. val (TPerson.unencryptedMobileNumber personT),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+  updateOneWithKV
+    [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
+      Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
+      Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
+      Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-setIsNewFalse :: Id Person -> SqlDB ()
-setIsNewFalse personId = do
+setIsNewFalse :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
+setIsNewFalse (Id personId) = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonIsNew =. val False,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamP.isNew False,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @PersonT
+deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
 
-updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
-updateAverageRating personId newAverageRating = do
+updateAverageRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Centesimal -> m ()
+updateAverageRating (Id personId) newAverageRating = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonRating =. val (Just newAverageRating),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateOneWithKV
+    [ Se.Set BeamP.rating (Just newAverageRating),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
@@ -710,7 +602,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (Transactionable m, MonadTime m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
+  (MonadTime m, L.MonadFlow m, Log m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -720,13 +612,12 @@ getNearestDrivers ::
   m [NearestDriversResult]
 getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
   res <- do
-    driverLocs <- getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
+    driverLocs <- QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
     driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
     vehicle <- getVehiclesWithCond driverInfos
     drivers <- getDrivers vehicle
-    logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
     return (linkArrayList driverLocs driverInfos vehicle drivers LatLong {..} mbVariant)
-  logDebug $ "GetNearestDrivers Result:- " <> show (length res)
+
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode) -> [NearestDriversResult]
@@ -738,7 +629,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
               sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
               hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
               taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+              taxiResult = getResult TAXI $ variant == TAXI || ((variant == TAXI_PLUS || variant == SUV || variant == SEDAN || variant == HATCHBACK) && canDowngradeToTaxi)
           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
         Just poolVariant -> getResult poolVariant True
       where
@@ -761,66 +652,55 @@ buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} 
                && (vehicle.variant == SUV || vehicle.variant == SEDAN)
            Just TAXI ->
              info.canDowngradeToTaxi
-               && vehicle.variant == TAXI_PLUS
+               && (vehicle.variant == TAXI_PLUS || vehicle.variant == HATCHBACK || vehicle.variant == SEDAN || vehicle.variant == SUV)
            _ -> False
        )
     then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, dist, location.lat, location.lon, vehicle.variant, info.mode)
     else Nothing
 
 getDriverLocsWithCond ::
-  (Transactionable m, MonadTime m, EsqLocRepDBFlow m r) =>
+  (MonadFlow m, MonadTime m) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
   Int ->
   m [DriverLocation]
-getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
-  now <- getCurrentTime
-  runInLocReplica $
-    Esq.findAll $ do
-      driverLocs <- from $ table @DriverLocationT
-      where_ $
-        driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-          &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                  ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-              )
-          &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
-      orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
-      return driverLocs
+getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
 
-getDriverInfosWithCond ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
-  [DriverLocation] ->
-  Bool ->
-  Bool ->
-  m [DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
-  runInReplica $
-    Esq.findAll $ do
-      driverInfos <- from $ table @DriverInformationT
-      where_ $
-        driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
-          &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
-          &&. (if onlyNotOnRide then not_ (driverInfos ^. DriverInformationOnRide) else if onlyOnRide then driverInfos ^. DriverInformationOnRide else val True)
-          &&. not_ (driverInfos ^. DriverInformationBlocked)
-          &&. (driverInfos ^. DriverInformationSubscribed)
-      return driverInfos
+getDriverInfosWithCond :: (L.MonadFlow m, Log m) => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
+            Se.Or
+              [ Se.And
+                  [ Se.Is BeamDI.mode $ Se.Eq Nothing,
+                    Se.Is BeamDI.active $ Se.Eq True
+                  ],
+                Se.And
+                  [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
+                    Se.Or
+                      [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
+                        Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
+                      ]
+                  ]
+              ],
+            Se.Is BeamDI.blocked $ Se.Eq False,
+            Se.Is BeamDI.subscribed $ Se.Eq True
+          ]
+            <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
+        )
+    ]
   where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
+    personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
 
 getVehiclesWithCond ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
   m [Vehicle]
-getVehiclesWithCond driverInfo = do
-  runInReplica $
-    Esq.findAll $ do
-      vehicles <- from $ table @VehicleT
-      where_ $
-        vehicles ^. VehicleDriverId `in_` valList personsKeys
-      return vehicles
+getVehiclesWithCond driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personsKeys]
   where
-    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
+    personsKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
@@ -839,7 +719,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (Transactionable m, MonadTime m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
+  (MonadTime m, L.MonadFlow m, Log m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -850,16 +730,16 @@ getNearestDriversCurrentlyOnRide ::
 getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
   let onRideRadius = fromIntegral (radiusMeters - reduceRadiusValue) :: Double
   res <- do
-    driverLocs <- getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
+    driverLocs <- QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
     driverInfos <- getDriverInfosWithCond driverLocs False True
     vehicles <- getVehicles driverInfos
     drivers <- getDrivers vehicles
     driverQuote <- getDriverQuote drivers
     bookingInfo <- getBookingInfo driverQuote
     bookingLocation <- getBookingLocs bookingInfo
-    logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
+
     return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
-  logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
+
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
@@ -871,7 +751,7 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
               sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
               hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
               taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+              taxiResult = getResult TAXI $ variant == TAXI || ((variant == TAXI_PLUS || variant == SUV || variant == SEDAN || variant == HATCHBACK) && canDowngradeToTaxi)
           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
         Just poolVariant -> getResult poolVariant True
       where
@@ -928,31 +808,111 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
                       && (vehicle.variant == SUV || vehicle.variant == SEDAN)
                   Just TAXI ->
                     info.canDowngradeToTaxi
-                      && vehicle.variant == TAXI_PLUS
+                      && (vehicle.variant == TAXI_PLUS || vehicle.variant == SEDAN || vehicle.variant == HATCHBACK || vehicle.variant == SUV)
                   _ -> False
               )
        )
     then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
     else Nothing
 
-updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
+updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
-  let personT = toTType person
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonAlternateMobileNumberEncrypted =. val (TPerson.alternateMobileNumberEncrypted personT),
-        PersonUnencryptedAlternateMobileNumber =. val (TPerson.unencryptedAlternateMobileNumber personT),
-        PersonAlternateMobileNumberHash =. val (TPerson.alternateMobileNumberHash personT),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+  updateOneWithKV
+    [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
+      Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
+      Se.Set BeamP.alternateMobileNumberHash (person.alternateMobileNumber <&> (.hash)),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
-updateMediaId driverId faceImageId =
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [PersonFaceImageId =. val (toKey <$> faceImageId)]
-    where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)
+findAllPersonWithDriverInfos :: (L.MonadFlow m, Log m) => [DriverInformation] -> Id Merchant -> m [Person]
+findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In (getId . DriverInfo.driverId <$> dInfos), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
+
+-- updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
+-- updateMediaId driverId faceImageId =
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [PersonFaceImageId =. val (toKey <$> faceImageId)]
+--     where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)
+
+updateMediaId :: (MonadFlow m) => Id Person -> Maybe (Id MediaFile) -> m ()
+updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
+
+instance FromTType' BeamP.Person Person where
+  fromTType' :: (MonadThrow m, L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
+  fromTType' BeamP.PersonT {..} = do
+    bundleVersion' <- forM bundleVersion readVersion
+    clientVersion' <- forM clientVersion readVersion
+    pure $
+      Just
+        Person
+          { id = Id id,
+            firstName = firstName,
+            middleName = middleName,
+            lastName = lastName,
+            role = role,
+            gender = gender,
+            hometown = hometown,
+            languagesSpoken = languagesSpoken,
+            identifierType = identifierType,
+            email = email,
+            unencryptedMobileNumber = unencryptedMobileNumber,
+            mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+            onboardedFromDashboard = onboardedFromDashboard,
+            mobileCountryCode = mobileCountryCode,
+            passwordHash = passwordHash,
+            identifier = identifier,
+            rating = rating,
+            isNew = isNew,
+            merchantId = Id merchantId,
+            deviceToken = deviceToken,
+            whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+            language = language,
+            description = description,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            bundleVersion = bundleVersion',
+            clientVersion = clientVersion',
+            unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+            faceImageId = Id <$> faceImageId,
+            alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
+          }
+
+instance ToTType' BeamP.Person Person where
+  toTType' Person {..} = do
+    BeamP.PersonT
+      { BeamP.id = getId id,
+        BeamP.firstName = firstName,
+        BeamP.middleName = middleName,
+        BeamP.lastName = lastName,
+        BeamP.role = role,
+        BeamP.gender = gender,
+        BeamP.hometown = hometown,
+        BeamP.languagesSpoken = languagesSpoken,
+        BeamP.identifierType = identifierType,
+        BeamP.email = email,
+        BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
+        BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+        BeamP.onboardedFromDashboard = onboardedFromDashboard,
+        BeamP.mobileNumberHash = mobileNumber <&> (.hash),
+        BeamP.mobileCountryCode = mobileCountryCode,
+        BeamP.passwordHash = passwordHash,
+        BeamP.identifier = identifier,
+        BeamP.rating = rating,
+        BeamP.isNew = isNew,
+        BeamP.merchantId = getId merchantId,
+        BeamP.deviceToken = deviceToken,
+        BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+        BeamP.language = language,
+        BeamP.description = description,
+        BeamP.createdAt = createdAt,
+        BeamP.updatedAt = updatedAt,
+        BeamP.bundleVersion = versionToText <$> bundleVersion,
+        BeamP.clientVersion = versionToText <$> clientVersion,
+        BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+        BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+        BeamP.faceImageId = getId <$> faceImageId,
+        BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
+      }

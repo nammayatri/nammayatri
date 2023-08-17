@@ -52,7 +52,7 @@ import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -93,15 +93,16 @@ merchantUpdate merchantShortId req = do
       throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
     pure allExophones
 
-  Esq.runTransaction $ do
-    CQM.update updMerchant
-    whenJust req.exoPhones \exophones -> do
-      CQExophone.deleteByMerchantId merchant.id
-      forM_ exophones $ \exophoneReq -> do
-        exophone <- buildExophone merchant.id now exophoneReq
-        CQExophone.create exophone
-    whenJust req.fcmConfig $
-      \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
+  -- Esq.runTransaction $ do
+  _ <- CQM.update updMerchant
+  whenJust req.exoPhones \exophones -> do
+    CQExophone.deleteByMerchantId merchant.id
+    forM_ exophones $ \exophoneReq -> do
+      exophone <- buildExophone merchant.id now exophoneReq
+      CQExophone.create exophone
+  -- Esq.runTransaction $ do
+  whenJust req.fcmConfig $
+    \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
 
   CQM.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
@@ -180,8 +181,8 @@ merchantCommonConfigUpdate merchantShortId req = do
                driverPaymentReminderInterval = maybe config.driverPaymentReminderInterval (.value) req.driverPaymentReminderInterval,
                timeDiffFromUtc = maybe config.timeDiffFromUtc (.value) req.timeDiffFromUtc
               }
-  Esq.runTransaction $ do
-    CQTC.update updConfig
+  -- Esq.runTransaction $ do
+  _ <- CQTC.update updConfig
   CQTC.clearCache merchant.id
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
   pure Success
@@ -233,8 +234,8 @@ driverPoolConfigUpdate merchantShortId tripDistance req = do
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
                distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
               }
-  Esq.runTransaction $ do
-    CQDPC.update updConfig
+  -- Esq.runTransaction $ do
+  _ <- CQDPC.update updConfig
   CQDPC.clearCache merchant.id
   logTagInfo "dashboard -> driverPoolConfigUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
   pure Success
@@ -259,8 +260,8 @@ driverPoolConfigCreate merchantShortId tripDistance req = do
   mbConfig <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchant.id.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id tripDistance req
-  Esq.runTransaction $ do
-    CQDPC.create newConfig
+  -- Esq.runTransaction $ do
+  _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchant.id
   logTagInfo "dashboard -> driverPoolConfigCreate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
@@ -319,8 +320,8 @@ driverIntelligentPoolConfigUpdate merchantShortId req = do
                locationUpdateSampleTime = maybe config.locationUpdateSampleTime (.value) req.locationUpdateSampleTime,
                defaultDriverSpeed = maybe config.defaultDriverSpeed (.value) req.defaultDriverSpeed
               }
-  Esq.runTransaction $ do
-    CQDIPC.update updConfig
+  -- Esq.runTransaction $ do
+  _ <- CQDIPC.update updConfig
   CQDIPC.clearCache merchant.id
   logTagInfo "dashboard -> driverIntelligentPoolConfigUpdate : " (show merchant.id)
   pure Success
@@ -394,8 +395,7 @@ onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
                rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix
               }
-  Esq.runTransaction $ do
-    CQODC.update updConfig
+  _ <- CQODC.update updConfig
   CQODC.clearCache merchant.id
   logTagInfo "dashboard -> onboardingDocumentConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
@@ -446,8 +446,7 @@ onboardingDocumentConfigCreate merchantShortId reqDocumentType req = do
   mbConfig <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType
   whenJust mbConfig $ \_ -> throwError (OnboardingDocumentConfigAlreadyExists merchant.id.getId $ show documentType)
   newConfig <- buildOnboardingDocumentConfig merchant.id documentType req
-  Esq.runTransaction $ do
-    CQODC.create newConfig
+  _ <- CQODC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQODC.clearCache merchant.id
   logTagInfo "dashboard -> onboardingDocumentConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
@@ -481,8 +480,8 @@ mapsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
@@ -497,8 +496,8 @@ smsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
@@ -548,8 +547,8 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
                                    autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
-  Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success
@@ -575,8 +574,8 @@ smsServiceUsageConfigUpdate merchantShortId req = do
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
-  Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success
@@ -591,8 +590,8 @@ verificationServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
   serviceConfig <- DMSC.VerificationServiceConfig <$> Common.buildVerificationServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
   pure Success
@@ -604,7 +603,7 @@ createFPDriverExtraFee _ farePolicyId startDistance req = do
   mbFarePolicy <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance
   whenJust mbFarePolicy $ \_ -> throwError $ InvalidRequest "Fare policy with the same id and startDistance already exists"
   farePolicyDetails <- buildFarePolicy farePolicyId startDistance req
-  Esq.runTransaction $ QFPEFB.create farePolicyDetails
+  _ <- QFPEFB.create farePolicyDetails
   CQFP.clearCacheById farePolicyId
   pure Success
   where
@@ -621,6 +620,6 @@ createFPDriverExtraFee _ farePolicyId startDistance req = do
 updateFPDriverExtraFee :: ShortId DM.Merchant -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
 updateFPDriverExtraFee _ farePolicyId startDistance req = do
   _ <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy with given id and startDistance not found")
-  Esq.runTransaction $ QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
+  _ <- QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
   CQFP.clearCacheById farePolicyId
   pure Success

@@ -16,10 +16,15 @@ module App where
 
 import AWS.S3
 import qualified App.Server as App
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Environment
+import EulerHS.Interpreters (runFlow)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
+import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Verification.Interface.Idfy
@@ -33,6 +38,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
+import Network.HTTP.Client as Http
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -62,11 +68,22 @@ runDynamicOfferDriverApp' appCfg = do
           & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    runFlow
+      flowRt
+      ( prepareConnectionDriver
+          ConnectionConfigDriver
+            { esqDBCfg = appCfg.esqDBCfg,
+              esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+              hedisClusterCfg = appCfg.hedisClusterCfg,
+              locationDbCfg = appCfg.esqLocationDBCfg,
+              locationDbReplicaCfg = appCfg.esqLocationDBRepCfg
+            }
+          appCfg.tables
+      )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-
         logInfo "Setting up for signature auth..."
         allProviders <-
           try Storage.loadAllProviders
@@ -86,3 +103,9 @@ runDynamicOfferDriverApp' appCfg = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+
+convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
+convertToHashMap = HashMap.fromList . map convert . Map.toList
+  where
+    convert (k, v) = (toText' k, v)
+    toText' = T.pack

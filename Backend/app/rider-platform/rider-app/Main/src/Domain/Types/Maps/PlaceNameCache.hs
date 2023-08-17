@@ -36,5 +36,5 @@ data AddressResp = AddressResp
     shortName :: Text,
     types :: [Text]
   }
-  deriving stock (Generic, Show, Read)
+  deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

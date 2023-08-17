@@ -68,6 +68,7 @@ dependencies:
   - esqueleto
   - template-haskell
   - containers
+  - unordered-containers
 
 ghc-options:
   - -Wall
