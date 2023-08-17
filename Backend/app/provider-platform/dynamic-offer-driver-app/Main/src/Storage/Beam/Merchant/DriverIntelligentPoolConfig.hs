@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
@@ -20,8 +21,6 @@ module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
 -- import Data.ByteString.Lazy (toStrict)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -34,12 +33,12 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 fromFieldSWC ::
@@ -96,20 +95,7 @@ instance B.Table DriverIntelligentPoolConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . merchantId
 
-instance ModelMeta DriverIntelligentPoolConfigT where
-  modelFieldModification = driverIntelligentPoolConfigTMod
-  modelTableName = "driver_intelligent_pool_config"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigT Identity
-
-instance FromJSON DriverIntelligentPoolConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverIntelligentPoolConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverIntelligentPoolConfig
 
 deriving stock instance Ord SWC.SlidingWindowOptions
 
@@ -140,19 +126,6 @@ driverIntelligentPoolConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize DriverIntelligentPoolConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverIntelligentPoolConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverIntelligentPoolConfigToHSModifiers =
-  M.empty
-
-driverIntelligentPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverIntelligentPoolConfigToPSModifiers =
-  M.empty
-
 $(enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])
+
+$(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config" "atlas_driver_offer_bpp")

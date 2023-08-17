@@ -13,22 +13,20 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.PlanTranslation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance IsString Language where
@@ -48,20 +46,7 @@ instance B.Table PlanTranslationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . planId
 
-instance ModelMeta PlanTranslationT where
-  modelFieldModification = planTranslationTMod
-  modelTableName = "plan_translation"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type PlanTranslation = PlanTranslationT Identity
-
-instance FromJSON PlanTranslation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON PlanTranslation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show PlanTranslation
 
 planTranslationTMod :: PlanTranslationT (B.FieldModification (B.TableField PlanTranslationT))
 planTranslationTMod =
@@ -72,19 +57,5 @@ planTranslationTMod =
       description = B.fieldNamed "description"
     }
 
-instance Serialize PlanTranslation where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-planTranslationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-planTranslationToHSModifiers =
-  M.empty
-
-planTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-planTranslationToPSModifiers =
-  M.empty
-
 $(enableKVPG ''PlanTranslationT ['planId] [['language]])
+$(mkTableInstances ''PlanTranslationT "plan_translation" "atlas_driver_offer_bpp")

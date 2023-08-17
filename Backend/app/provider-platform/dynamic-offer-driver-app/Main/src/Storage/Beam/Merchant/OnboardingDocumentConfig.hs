@@ -14,13 +14,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.OnboardingDocumentConfig where
 
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -33,11 +32,12 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
-import Kernel.Prelude hiding (Generic)
 -- import Kernel.Types.Common hiding (id)
+
+import Kernel.Beam.Lib.UtilsTH
+import Kernel.Prelude hiding (Generic)
 import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 -- instance FromField Domain.VehicleClassCheckType where
@@ -72,20 +72,7 @@ instance B.Table OnboardingDocumentConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id <$> merchantId <*> documentType
 
-instance ModelMeta OnboardingDocumentConfigT where
-  modelFieldModification = onboardingDocumentConfigTMod
-  modelTableName = "onboarding_document_configs"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
-
-instance FromJSON OnboardingDocumentConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON OnboardingDocumentConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show OnboardingDocumentConfig
 
 getConfigJSON :: Domain.SupportedVehicleClasses -> Text
 getConfigJSON = \case
@@ -106,19 +93,6 @@ onboardingDocumentConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize OnboardingDocumentConfig where
-  put = error "undefined"
-  get = error "undefined"
+$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [])
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-onboardingDocumentConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-onboardingDocumentConfigToHSModifiers =
-  M.empty
-
-onboardingDocumentConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-onboardingDocumentConfigToPSModifiers =
-  M.empty
-
-$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [['merchantId]])
+$(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs" "atlas_driver_offer_bpp")

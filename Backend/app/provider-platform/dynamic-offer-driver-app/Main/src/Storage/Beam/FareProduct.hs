@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FareProduct where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -32,10 +30,10 @@ import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.FlowType where
@@ -60,24 +58,11 @@ instance B.Table FareProductT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FareProductT where
-  modelFieldModification = fareProductTMod
-  modelTableName = "fare_product"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FareProduct = FareProductT Identity
-
-instance FromJSON FareProduct where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FareProduct where
-  toJSON = A.genericToJSON A.defaultOptions
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FlowType
 
 instance FromBackendRow Postgres Domain.FlowType
-
-deriving stock instance Show FareProduct
 
 fareProductTMod :: FareProductT (B.FieldModification (B.TableField FareProductT))
 fareProductTMod =
@@ -90,19 +75,6 @@ fareProductTMod =
       flow = B.fieldNamed "flow"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
+$(enableKVPG ''FareProductT ['id] [['merchantId]])
 
-fareProductToHSModifiers :: M.Map Text (A.Value -> A.Value)
-fareProductToHSModifiers =
-  M.empty
-
-fareProductToPSModifiers :: M.Map Text (A.Value -> A.Value)
-fareProductToPSModifiers =
-  M.empty
-
-instance Serialize FareProduct where
-  put = error "undefined"
-  get = error "undefined"
-
-$(enableKVPG ''FareProductT ['id] [['merchantId, 'area]])
+$(mkTableInstances ''FareProductT "fare_product" "atlas_driver_offer_bpp")

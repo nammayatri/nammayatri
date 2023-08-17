@@ -241,7 +241,6 @@ library
       Lib.Mesh
       Lib.Schema
       Lib.Utils
-      Lib.UtilsTH
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers

@@ -13,24 +13,21 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.RiderDetails where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data RiderDetailsT f = RiderDetailsT
@@ -55,26 +52,7 @@ instance B.Table RiderDetailsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RiderDetailsT where
-  modelFieldModification = riderDetailsTMod
-  modelTableName = "rider_details"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type RiderDetails = RiderDetailsT Identity
-
-rDetailsTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RiderDetailsT)
-rDetailsTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "rider_details"
-    <> B.modifyTableFields riderDetailsTMod
-
-instance FromJSON RiderDetails where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON RiderDetails where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show RiderDetails
 
 riderDetailsTMod :: RiderDetailsT (B.FieldModification (B.TableField RiderDetailsT))
 riderDetailsTMod =
@@ -93,19 +71,6 @@ riderDetailsTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
+$(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash], ['referredByDriver]])
 
-riderDetailsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-riderDetailsToHSModifiers =
-  M.empty
-
-riderDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-riderDetailsToPSModifiers =
-  M.empty
-
-instance Serialize RiderDetails where
-  put = error "undefined"
-  get = error "undefined"
-
-$(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash, 'merchantId]])
+$(mkTableInstances ''RiderDetailsT "rider_details" "atlas_driver_offer_bpp")

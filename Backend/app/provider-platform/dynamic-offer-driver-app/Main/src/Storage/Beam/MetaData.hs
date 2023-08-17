@@ -14,21 +14,19 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.MetaData where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data MetaDataT f = MetaDataT
@@ -48,20 +46,7 @@ instance B.Table MetaDataT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta MetaDataT where
-  modelFieldModification = metaDataTMod
-  modelTableName = "meta_data"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type MetaData = MetaDataT Identity
-
-instance FromJSON MetaData where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MetaData where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MetaData
 
 metaDataTMod :: MetaDataT (B.FieldModification (B.TableField MetaDataT))
 metaDataTMod =
@@ -75,32 +60,6 @@ metaDataTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
--- defaultMetaData :: MetaData
--- defaultMetaData =
---   MetaDataT
---     {
---       driverId = "",
---       device = Nothing,
---       deviceOS = Nothing,
---       deviceDateTime = Nothing,
---       appPermissions = Nothing,
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
-
-instance Serialize MetaData where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-metaDataToHSModifiers :: M.Map Text (A.Value -> A.Value)
-metaDataToHSModifiers =
-  M.empty
-
-metaDataToPSModifiers :: M.Map Text (A.Value -> A.Value)
-metaDataToPSModifiers =
-  M.empty
-
 $(enableKVPG ''MetaDataT ['driverId] [])
+
+$(mkTableInstances ''MetaDataT "meta_data" "atlas_driver_offer_bpp")

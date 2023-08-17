@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.MediaFile where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -32,40 +30,11 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.MediaFile as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
-
-data MediaFileT f = MediaFileT
-  { id :: B.C f Text,
-    fileType :: B.C f Domain.MediaType,
-    url :: B.C f Text,
-    createdAt :: B.C f Time.LocalTime
-  }
-  deriving (Generic, B.Beamable)
-
-instance B.Table MediaFileT where
-  data PrimaryKey MediaFileT f
-    = Id (B.C f Text)
-    deriving (Generic, B.Beamable)
-  primaryKey = Id . id
-
-instance ModelMeta MediaFileT where
-  modelFieldModification = mediaFileTMod
-  modelTableName = "media_file"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
-type MediaFile = MediaFileT Identity
-
-instance FromJSON MediaFile where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MediaFile where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MediaFile
 
 instance FromField Domain.MediaType where
   fromField = fromFieldEnum
@@ -81,6 +50,25 @@ instance FromBackendRow Postgres Domain.MediaType
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MediaType where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance IsString Domain.MediaType where
+  fromString = show
+
+data MediaFileT f = MediaFileT
+  { id :: B.C f Text,
+    fileType :: B.C f Domain.MediaType,
+    url :: B.C f Text,
+    createdAt :: B.C f Time.LocalTime
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table MediaFileT where
+  data PrimaryKey MediaFileT f
+    = Id (B.C f Text)
+    deriving (Generic, B.Beamable)
+  primaryKey = Id . id
+
+type MediaFile = MediaFileT Identity
+
 mediaFileTMod :: MediaFileT (B.FieldModification (B.TableField MediaFileT))
 mediaFileTMod =
   B.tableModification
@@ -90,22 +78,6 @@ mediaFileTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-mediaFileToHSModifiers :: M.Map Text (A.Value -> A.Value)
-mediaFileToHSModifiers =
-  M.empty
-
-mediaFileToPSModifiers :: M.Map Text (A.Value -> A.Value)
-mediaFileToPSModifiers =
-  M.empty
-
-instance IsString Domain.MediaType where
-  fromString = show
-
-instance Serialize MediaFile where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''MediaFileT ['id] [])
+
+$(mkTableInstances ''MediaFileT "media_file" "atlas_driver_offer_bpp")

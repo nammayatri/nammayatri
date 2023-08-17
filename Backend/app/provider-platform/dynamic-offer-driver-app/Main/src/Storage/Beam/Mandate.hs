@@ -2,13 +2,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Mandate where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -18,10 +16,10 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Mandate as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import EulerHS.Prelude (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (HighPrecMoney, fromFieldEnum)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data MandateT f = MandateT
@@ -42,25 +40,19 @@ instance B.Table MandateT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta MandateT where
-  modelFieldModification = mandateTMod
-  modelTableName = "mandate"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Mandate = MandateT Identity
-
-instance FromJSON Mandate where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Mandate where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Mandate
 
 instance FromBackendRow Postgres Domain.MandateStatus
 
 instance FromField Domain.MandateStatus where
   fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MandateStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+deriving stock instance Ord Domain.MandateStatus
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MandateStatus
 
 mandateTMod :: MandateT (B.FieldModification (B.TableField MandateT))
 mandateTMod =
@@ -75,26 +67,5 @@ mandateTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize Mandate where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-mandateToHSModifiers :: M.Map Text (A.Value -> A.Value)
-mandateToHSModifiers =
-  M.empty
-
-mandateToPSModifiers :: M.Map Text (A.Value -> A.Value)
-mandateToPSModifiers =
-  M.empty
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MandateStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-deriving stock instance Ord Domain.MandateStatus
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MandateStatus
-
 $(enableKVPG ''MandateT ['id] [])
+$(mkTableInstances ''MandateT "mandate" "atlas_driver_offer_bpp")

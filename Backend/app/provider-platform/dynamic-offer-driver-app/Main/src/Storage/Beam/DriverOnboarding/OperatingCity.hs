@@ -13,22 +13,19 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.OperatingCity where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data OperatingCityT f = OperatingCityT
@@ -47,26 +44,7 @@ instance B.Table OperatingCityT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta OperatingCityT where
-  modelFieldModification = operatingCityTMod
-  modelTableName = "operating_city"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type OperatingCity = OperatingCityT Identity
-
-operatingCityTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity OperatingCityT)
-operatingCityTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "operating_city"
-    <> B.modifyTableFields operatingCityTMod
-
-instance FromJSON OperatingCity where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON OperatingCity where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show OperatingCity
 
 operatingCityTMod :: OperatingCityT (B.FieldModification (B.TableField OperatingCityT))
 operatingCityTMod =
@@ -79,19 +57,6 @@ operatingCityTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize OperatingCity where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-operatingCityToHSModifiers :: M.Map Text (A.Value -> A.Value)
-operatingCityToHSModifiers =
-  M.empty
-
-operatingCityToPSModifiers :: M.Map Text (A.Value -> A.Value)
-operatingCityToPSModifiers =
-  M.empty
-
 $(enableKVPG ''OperatingCityT ['id] [['merchantId], ['cityName]])
+
+$(mkTableInstances ''OperatingCityT "operating_city" "atlas_driver_offer_bpp")

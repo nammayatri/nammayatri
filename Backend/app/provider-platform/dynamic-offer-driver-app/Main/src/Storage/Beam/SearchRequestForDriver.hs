@@ -13,13 +13,12 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequestForDriver where
 
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -34,10 +33,10 @@ import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.DriverSearchRequestStatus where
@@ -110,26 +109,13 @@ instance B.Table SearchRequestForDriverT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta SearchRequestForDriverT where
-  modelFieldModification = searchRequestForDriverTMod
-  modelTableName = "search_request_for_driver"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type SearchRequestForDriver = SearchRequestForDriverT Identity
-
-instance FromJSON SearchRequestForDriver where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON SearchRequestForDriver where
-  toJSON = A.genericToJSON A.defaultOptions
 
 instance FromJSON Domain.DriverSearchRequestStatus where
   parseJSON = A.genericParseJSON A.defaultOptions
 
 instance ToJSON Domain.DriverSearchRequestStatus where
   toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show SearchRequestForDriver
 
 deriving stock instance Ord Domain.DriverSearchRequestStatus
 
@@ -168,19 +154,6 @@ searchRequestForDriverTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-searchRequestForDriverToHSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestForDriverToHSModifiers =
-  M.empty
-
-searchRequestForDriverToPSModifiers :: M.Map Text (A.Value -> A.Value)
-searchRequestForDriverToPSModifiers =
-  M.empty
-
-instance Serialize SearchRequestForDriver where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''SearchRequestForDriverT ['id] [['driverId], ['searchTryId], ['requestId]])
+
+$(mkTableInstances ''SearchRequestForDriverT "search_request_for_driver" "atlas_driver_offer_bpp")
