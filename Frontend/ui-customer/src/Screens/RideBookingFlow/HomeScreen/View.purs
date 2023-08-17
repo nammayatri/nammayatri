@@ -1951,7 +1951,7 @@ lottieLoaderView state push =
     , height $ V 96
     , width $ V 96
     ]
-
+ 
 getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 getEstimate action flowStatusAction count duration push state = do
   if (isLocalStageOn FindingEstimate) || (isLocalStageOn TryAgain) then
