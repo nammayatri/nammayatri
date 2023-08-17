@@ -22,10 +22,7 @@ module Lib.Tabular.SpecialLocationPriority where
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import qualified Lib.Types.SpecialLocation as SpecialLocation
 import qualified Lib.Types.SpecialLocationPriority as Domain
-
-derivePersistField "SpecialLocation.Category"
 
 mkPersist
   defaultSqlSettings
@@ -33,7 +30,7 @@ mkPersist
     SpecialLocationPriorityT sql=special_location_priority
       id Text
       merchantId Text
-      category SpecialLocation.Category
+      category Text
       pickupPriority Int
       dropPriority Int
 

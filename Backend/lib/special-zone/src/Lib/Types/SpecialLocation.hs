@@ -18,29 +18,10 @@ import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
 
-data Category
-  = SureShoppingMall
-  | SureMetro
-  | SureAirport
-  | SureSchool
-  | SureHospital
-  | SureStation
-  | SureBlockedAreaForAutos
-  | SureBlockedArea
-  | UnSureShoppingMall
-  | UnSureMetro
-  | UnSureAirport
-  | UnSureSchool
-  | UnSureHospital
-  | UnSureStation
-  | UnSureBlockedAreaForAutos
-  | UnSureBlockedArea
-  deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
-
 data SpecialLocation = SpecialLocation
   { id :: Id SpecialLocation,
     locationName :: Text,
-    category :: Category,
+    category :: Text,
     gates :: [GatesInfo],
     createdAt :: UTCTime
   }

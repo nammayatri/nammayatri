@@ -17,13 +17,12 @@ module Lib.Queries.SpecialLocationPriority where
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Lib.Tabular.SpecialLocationPriority
-import qualified Lib.Types.SpecialLocation as SpecialLocationD
 import qualified Lib.Types.SpecialLocationPriority as SpecialLocationPriorityD
 
 findByMerchantIdAndCategory ::
   Transactionable m =>
   Text ->
-  SpecialLocationD.Category ->
+  Text ->
   m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
 findByMerchantIdAndCategory merchantId category =
   Esq.findOne $ do
