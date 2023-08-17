@@ -564,6 +564,7 @@ data SubscriptionError
   | InActiveMandateDoNotExist Text
   | InvalidPaymentMode
   | NoCurrentPlanForDriver Text
+  | NoDriverPlanForMandate Text
   | InvalidAutoPayStatus
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -573,10 +574,11 @@ instance IsBaseError SubscriptionError where
   toMessage = \case
     PlanNotFound planId -> Just $ "Plan with planId \"" <> show planId <> "\"not found."
     MandateNotFound mandateId -> Just $ "Mandate with mandateId \"" <> show mandateId <> "\"not found."
-    ActiveMandateExists driverId -> Just $ "mandate already exists for driverId\"" <> show driverId <> "\""
-    ActiveMandateDoNotExist driverId -> Just $ "no mandate exist for driverId\"" <> show driverId <> "\""
-    InActiveMandateDoNotExist driverId -> Just $ "no inactive mandate exist for driverId\"" <> show driverId <> "\""
-    NoCurrentPlanForDriver driverId -> Just $ "No plan exists for driverId\"" <> show driverId <> "\""
+    ActiveMandateExists driverId -> Just $ "mandate already exists for driverId \"" <> show driverId <> "\""
+    ActiveMandateDoNotExist driverId -> Just $ "no mandate exist for driverId \"" <> show driverId <> "\""
+    InActiveMandateDoNotExist driverId -> Just $ "no inactive mandate exist for driverId \"" <> show driverId <> "\""
+    NoCurrentPlanForDriver driverId -> Just $ "No plan exists for driverId \"" <> show driverId <> "\""
+    NoDriverPlanForMandate mandateId -> Just $ "No plan exists for mandateId \"" <> show mandateId <> "\""
     InvalidPaymentMode -> Just "Invalid payment method"
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
 
@@ -588,6 +590,7 @@ instance IsHTTPError SubscriptionError where
     ActiveMandateDoNotExist _ -> "NO_ACTIVE_MANDATE_EXIST"
     InActiveMandateDoNotExist _ -> "NO_INACTIVE_MANDATE_EXIST"
     NoCurrentPlanForDriver _ -> "NO_PLAN_FOR_DRIVER"
+    NoDriverPlanForMandate _ -> "NO_DRIVER_PLAN_FOR_MANDATE"
     InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
   toHttpCode = \case
@@ -599,5 +602,6 @@ instance IsHTTPError SubscriptionError where
     InvalidPaymentMode -> E400
     InvalidAutoPayStatus -> E400
     NoCurrentPlanForDriver _ -> E500
+    NoDriverPlanForMandate _ -> E500
 
 instance IsAPIError SubscriptionError
