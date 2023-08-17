@@ -33,6 +33,7 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Merchant
       API.ProviderPlatform.DynamicOfferDriver.Message
       API.ProviderPlatform.DynamicOfferDriver.Ride
+      API.ProviderPlatform.DynamicOfferDriver.Subscription
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
@@ -105,6 +106,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
 
 executable provider-dashboard-exe
@@ -173,4 +175,5 @@ executable provider-dashboard-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010

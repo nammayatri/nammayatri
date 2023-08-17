@@ -23,6 +23,7 @@ import qualified "rider-app" API.Dashboard.RideBooking.Registration as CR
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified "rider-app" API.UI.Search as SH
 import qualified Dashboard.Common.Booking as Booking
+import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
@@ -94,7 +95,8 @@ data RidesAPIs = RidesAPIs
     tripRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
-    multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncResp
+    multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncResp,
+    ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
   }
 
 data RideBookingAPIs = RideBookingAPIs
@@ -161,8 +163,9 @@ newtype CancelBookingAPIs = CancelBookingAPIs
   { cancelBooking :: Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> Euler.EulerClient APISuccess
   }
 
-newtype ListIssueAPIs = ListIssueAPIs
-  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes
+data ListIssueAPIs = ListIssueAPIs
+  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes,
+    ticketStatusCallBack :: Common.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
@@ -206,7 +209,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> tripRoute
       :<|> rideInfo
       :<|> multipleRideCancel
-      :<|> multipleRideSync = ridesClient
+      :<|> multipleRideSync
+      :<|> ticketRideList = ridesClient
 
     registrationClient
       :<|> profileClient
@@ -257,7 +261,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate = merchantClient
 
-    listIssue = issueClient
+    listIssue
+      :<|> ticketStatusCallBack = issueClient
 
 callRiderApp ::
   forall m r b c.

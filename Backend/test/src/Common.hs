@@ -20,6 +20,7 @@ import qualified Data.Aeson as J
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.UTF8 as B
+import Data.Maybe (fromJust)
 import Data.Time.Clock.POSIX
 import qualified "rider-app" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude

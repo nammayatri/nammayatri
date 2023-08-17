@@ -9,7 +9,7 @@ let transporter = ./dynamic-offer-driver-app.dhall
 let schedulerConfig =
       { loggerConfig =
               common.loggerConfig
-          //  { logRawSql = False
+          //  { logRawSql = True
               , logFilePath = "/tmp/driver-offer-scheduler.log"
               , prettyPrinting = True
               }

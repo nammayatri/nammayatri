@@ -670,7 +670,7 @@ instance HideSecrets UpdateDriverNameReq where
 ---------------------------------------------------------
 -- Get Route driver ids ---------------------------------------
 
-type ClearOnRideStuckDrivers =
+type ClearOnRideStuckDriversAPI =
   "clearStuck"
     :> "onRide"
     :> Get '[JSON] ClearOnRideStuckDriversRes

@@ -19,7 +19,7 @@ import Domain.Types.Vehicle (Variant)
 import Kernel.Prelude
 import Kernel.Types.Id
 
-data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show)
+data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show, Ord, Eq)
 
 data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
 

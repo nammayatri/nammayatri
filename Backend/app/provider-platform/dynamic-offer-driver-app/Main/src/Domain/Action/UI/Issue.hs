@@ -4,8 +4,9 @@ module Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
-import Data.Text as T hiding (map)
+import Data.Text as T hiding (map, null)
 import Data.Time.Format.ISO8601 (iso8601Show)
+import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Issue.IssueCategory as D
 import qualified Domain.Types.Issue.IssueOption as D
 import qualified Domain.Types.Issue.IssueReport as D
@@ -13,15 +14,18 @@ import qualified Domain.Types.Issue.IssueTranslation as D
 import qualified Domain.Types.MediaFile as D
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
+import Domain.Types.Ride as Ride
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
+import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption (decrypt)
+import Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -30,17 +34,19 @@ import qualified Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified Storage.CachedQueries.Issue.IssueReport as CQIR
 import qualified Storage.CachedQueries.MediaFile as CQMF
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Issue.IssueReport as QIR
 import qualified Storage.Queries.MediaFile as QMF
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Tools.Ticket
 
 toCommonIssueStatus :: D.IssueStatus -> Common.IssueStatus
 toCommonIssueStatus = \case
-  D.NEW -> Common.NEW
-  D.INPROGRESS -> Common.INPROGRESS
+  D.OPEN -> Common.OPEN
+  D.PENDING -> Common.PENDING
   D.RESOLVED -> Common.RESOLVED
 
 getLanguage :: Id SP.Person -> Maybe Language -> Flow Language
@@ -49,7 +55,8 @@ getLanguage driverId mbLanguage = do
     if isJust mbLanguage
       then return mbLanguage
       else runMaybeT $ do
-        driverDetail <- MaybeT . Esq.runInReplica $ QP.findById driverId
+        driverDetail <- MaybeT . B.runInReplica $ QP.findById driverId
+        -- driverDetail <- MaybeT $ QP.findById driverId
         MaybeT $ pure driverDetail.language
   return $ fromMaybe ENGLISH extractLanguage
 
@@ -115,7 +122,7 @@ createFilePath driverId fileType validatedFileExtention = do
 createMediaEntry :: Text -> Common.FileType -> Flow Common.IssueMediaUploadRes
 createMediaEntry url fileType = do
   fileEntity <- mkFile url
-  Esq.runTransaction $ QMF.create fileEntity
+  _ <- QMF.create fileEntity
   return $ Common.IssueMediaUploadRes {fileId = cast $ fileEntity.id}
   where
     mapToMediaFileType = \case
@@ -161,16 +168,23 @@ fetchMedia _driverId filePath =
   S3.get $ T.unpack filePath
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Common.IssueReportReq -> Flow Common.IssueReportRes
-createIssueReport (driverId, _) Common.IssueReportReq {..} = do
-  void $ CQIC.findById (cast categoryId) >>= fromMaybeM (IssueCategoryDoNotExist categoryId.getId)
-  whenJust optionId $ \justOptionId ->
-    void $ CQIO.findByIdAndCategoryId (cast justOptionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
-  whenJust rideId $ \justRideId ->
-    void $ Esq.runInReplica (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
+createIssueReport (driverId, merchantId) Common.IssueReportReq {..} = do
+  category <- CQIC.findById (cast categoryId) >>= fromMaybeM (IssueCategoryDoNotExist categoryId.getId)
+  mbOption <- forM optionId \justOptionId -> do
+    CQIO.findByIdAndCategoryId (cast justOptionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
+  mbRide <- forM rideId \justRideId -> do
+    B.runInReplica (QRide.findById $ cast justRideId) >>= fromMaybeM (RideNotFound justRideId.getId)
   forM_ mediaFiles $ \mediaFile ->
     void $ CQMF.findById (cast mediaFile) >>= fromMaybeM (FileDoNotExist mediaFile.getId)
+  let castedMediaFiles = map cast mediaFiles
+  files <- QMF.findAllIn castedMediaFiles
+  let mediaFileUrls = map (.url) files
   issueReport <- mkIssueReport
-  Esq.runTransaction $ QIR.create issueReport
+  _ <- QIR.create issueReport
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  ticket <- buildTicket issueReport category mbOption mbRide merchant.shortId mediaFileUrls
+  ticketResponse <- createTicket merchantId ticket
+  QIR.updateTicketId issueReport.id ticketResponse.ticketId
   CQIR.invalidateIssueReportCache Nothing (Just driverId)
   pure $ Common.IssueReportRes {issueReportId = cast issueReport.id}
   where
@@ -186,12 +200,62 @@ createIssueReport (driverId, _) Common.IssueReportReq {..} = do
             categoryId = cast categoryId,
             mediaFiles = cast <$> mediaFiles,
             assignee = Nothing,
-            status = D.NEW,
+            status = D.OPEN,
             deleted = False,
+            ticketId = Nothing,
             createdAt = now,
             updatedAt = now,
             description
           }
+
+    buildTicket :: D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride.Ride -> ShortId DM.Merchant -> [Text] -> Flow TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide merchantShortId mediaFileUrls = do
+      info <- forM mbRide (buildRideInfo merchantShortId)
+      person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      phoneNumber <- mapM decrypt person.mobileNumber
+      return $
+        TIT.CreateTicketReq
+          { category = category.category,
+            subCategory = (.option) <$> mbOption,
+            issueId = Just issue.id.getId,
+            issueDescription = description,
+            mediaFiles = Just mediaFileUrls,
+            name = Just $ person.firstName <> " " <> fromMaybe "" person.lastName,
+            phoneNo = phoneNumber,
+            personId = person.id.getId,
+            classification = TIT.DRIVER,
+            rideDescription = info
+          }
+
+    buildRideInfo merchantShortId ride = do
+      res <- DRide.rideInfo merchantShortId (cast ride.id)
+      return
+        TIT.RideInfo
+          { rideShortId = ride.shortId.getShortId,
+            customerName = res.customerName,
+            customerPhoneNo = Just res.customerPhoneNo,
+            driverName = Just res.driverName,
+            driverPhoneNo = res.driverPhoneNo,
+            vehicleNo = res.vehicleNo,
+            status = show res.bookingStatus,
+            rideCreatedAt = ride.createdAt,
+            pickupLocation = mkAddress res.customerPickupLocation,
+            dropLocation = mkAddress <$> res.customerDropLocation,
+            fare = res.actualFare
+          }
+
+    fromMaybeEmpty = fromMaybe ""
+
+    mkAddress details =
+      T.unwords
+        [ fromMaybeEmpty details.street,
+          fromMaybeEmpty details.building,
+          fromMaybeEmpty details.area,
+          fromMaybeEmpty details.city,
+          fromMaybeEmpty details.state,
+          fromMaybeEmpty details.country,
+          fromMaybeEmpty details.areaCode
+        ]
 
 issueInfo :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Flow Common.IssueInfoRes
 issueInfo issueReportId (driverId, _) mbLanguage = do
@@ -232,16 +296,17 @@ updateIssueOption :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Commo
 updateIssueOption issueReportId (driverId, _) Common.IssueUpdateReq {..} = do
   void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   void $ CQIO.findByIdAndCategoryId (cast optionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid optionId.getId categoryId.getId)
-  Esq.runTransaction $ QIR.updateOption issueReportId (cast optionId)
+  _ <- QIR.updateOption issueReportId (cast optionId)
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just driverId)
   pure Success
 
 deleteIssue :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 deleteIssue issueReportId (driverId, _) = do
-  unlessM (Esq.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
+  unlessM (B.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
+    -- unlessM (QIR.isSafeToDelete issueReportId driverId) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this driver.")
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  Esq.runTransaction $ QIR.updateAsDeleted issueReportId
+  _ <- QIR.updateAsDeleted issueReportId
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just driverId)
   CQMF.invalidateMediaFileCache issueReport.mediaFiles (Just issueReportId)
   pure Success

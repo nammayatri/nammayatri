@@ -103,6 +103,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
 
 executable rider-dashboard-exe
@@ -168,4 +169,5 @@ executable rider-dashboard-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010

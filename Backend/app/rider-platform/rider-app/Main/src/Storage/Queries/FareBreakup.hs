@@ -11,23 +11,55 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FareBreakup where
 
 import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Common
 import Kernel.Types.Id
-import Storage.Tabular.FarePolicy.FareBreakup
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 
-createMany :: [FareBreakup] -> SqlDB ()
-createMany = Esq.createMany
+-- createMany :: [FareBreakup] -> SqlDB ()
+-- createMany = Esq.createMany
 
-findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
-findAllByBookingId bookingId =
-  findAll $ do
-    fareBreakup <- from $ table @FareBreakupT
-    where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
-    return fareBreakup
+create :: (L.MonadFlow m, Log m) => FareBreakup -> m ()
+create = createWithKV
+
+createMany :: (L.MonadFlow m, Log m) => [FareBreakup] -> m ()
+createMany = traverse_ create
+
+-- findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
+-- findAllByBookingId bookingId =
+--   findAll $ do
+--     fareBreakup <- from $ table @FareBreakupT
+--     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
+--     return fareBreakup
+
+findAllByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
+findAllByBookingId bookingId = findAllWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
+
+instance FromTType' BeamFB.FareBreakup FareBreakup where
+  fromTType' BeamFB.FareBreakupT {..} = do
+    pure $
+      Just
+        FareBreakup
+          { id = Id id,
+            bookingId = Id bookingId,
+            description = description,
+            amount = amount
+          }
+
+instance ToTType' BeamFB.FareBreakup FareBreakup where
+  toTType' FareBreakup {..} = do
+    BeamFB.FareBreakupT
+      { BeamFB.id = getId id,
+        BeamFB.bookingId = getId bookingId,
+        BeamFB.description = description,
+        BeamFB.amount = amount
+      }

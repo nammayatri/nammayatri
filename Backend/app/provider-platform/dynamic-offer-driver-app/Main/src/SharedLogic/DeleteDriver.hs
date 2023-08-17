@@ -19,8 +19,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+-- import qualified Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -64,25 +64,26 @@ deleteDriver merchantShortId reqDriverId = do
 
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession reqDriverId
-  Esq.runTransaction $ do
-    QIV.deleteByPersonId reqDriverId
-    QImage.deleteByPersonId reqDriverId
-    QDriverLicense.deleteByDriverId reqDriverId
-    QRCAssociation.deleteByDriverId reqDriverId
-    QDriverQuote.deleteByDriverId reqDriverId
-    QSearchReqForDriver.deleteByDriverId reqDriverId
-    QDriverStats.deleteById (cast reqDriverId)
-    QR.deleteByPersonId reqDriverId
-    QVehicle.deleteById reqDriverId
-    QDriverInfo.deleteById (cast reqDriverId)
-    QDriverFlowStatus.deleteById reqDriverId
-    QMessage.deleteByPersonId reqDriverId
-    QIssueReport.deleteByPersonId reqDriverId
-    AadhaarOtp.deleteByPersonIdForGenerate reqDriverId
-    AadhaarOtp.deleteByPersonIdForVerify reqDriverId
-    AV.deleteByPersonId reqDriverId
-    QPerson.deleteById reqDriverId
-  runInLocationDB $ QDriverLocation.deleteById reqDriverId
+  -- Esq.runTransaction $ do
+  QIV.deleteByPersonId reqDriverId
+  QImage.deleteByPersonId reqDriverId
+  QDriverLicense.deleteByDriverId reqDriverId
+  QRCAssociation.deleteByDriverId reqDriverId
+  QDriverQuote.deleteByDriverId reqDriverId
+  QSearchReqForDriver.deleteByDriverId reqDriverId
+  QDriverStats.deleteById (cast reqDriverId)
+  QR.deleteByPersonId reqDriverId
+  QVehicle.deleteById reqDriverId
+  QDriverInfo.deleteById (cast reqDriverId)
+  QDriverFlowStatus.deleteById reqDriverId
+  QMessage.deleteByPersonId reqDriverId
+  QIssueReport.deleteByPersonId reqDriverId
+  AadhaarOtp.deleteByPersonIdForGenerate reqDriverId
+  AadhaarOtp.deleteByPersonIdForVerify reqDriverId
+  AV.deleteByPersonId reqDriverId
+  QPerson.deleteById reqDriverId
+  -- runInLocationDB $ QDriverLocation.deleteById reqDriverId
+  QDriverLocation.deleteById reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
   CQIR.invalidateIssueReportCache Nothing (Just reqDriverId)
   mapM_ (\IssueReport {id} -> CQIR.invalidateIssueReportCache (Just id) Nothing) issueReports

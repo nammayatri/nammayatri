@@ -21,8 +21,10 @@ where
 
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
@@ -42,15 +44,12 @@ data RideInfo = RideInfo
     rideStatus :: DRide.RideStatus
   }
 
-onStatus :: (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => OnStatusReq -> m ()
+onStatus :: (L.MonadFlow m, MonadTime m, Log m) => OnStatusReq -> m ()
 onStatus OnStatusReq {..} = do
-  booking <- Esq.runInReplica $ QBooking.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- QBooking.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   case mbRideInfo of
-    Nothing -> do
-      Esq.runTransaction $ do
-        QBooking.updateStatus booking.id bookingStatus
+    Nothing -> QBooking.updateStatus booking.id bookingStatus
     Just rideInfo -> do
-      ride <- Esq.runInReplica $ QRide.findByBPPRideId rideInfo.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId: " <> rideInfo.bppRideId.getId)
-      Esq.runTransaction $ do
-        QBooking.updateStatus booking.id bookingStatus
-        QRide.updateStatus ride.id rideInfo.rideStatus
+      ride <- QRide.findByBPPRideId rideInfo.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId: " <> rideInfo.bppRideId.getId)
+      QBooking.updateStatus booking.id bookingStatus >> QRide.updateStatus ride.id rideInfo.rideStatus
+      QRide.updateStatus ride.id rideInfo.rideStatus

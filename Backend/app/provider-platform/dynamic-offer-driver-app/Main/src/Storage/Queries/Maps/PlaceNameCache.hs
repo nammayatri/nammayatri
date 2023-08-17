@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Maps.PlaceNameCache
   {-# WARNING
@@ -20,24 +21,63 @@ module Storage.Queries.Maps.PlaceNameCache
 where
 
 import Domain.Types.Maps.PlaceNameCache
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Maps.PlaceNameCache
+import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 
-create :: PlaceNameCache -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => PlaceNameCache -> m ()
+create = createWithKV
 
-findPlaceByPlaceId :: Transactionable m => Text -> m [PlaceNameCache]
-findPlaceByPlaceId placeId =
-  Esq.findAll $ do
-    placeNameCache <- from $ table @PlaceNameCacheT
-    where_ $ placeNameCache ^. PlaceNameCachePlaceId ==. val (Just placeId)
-    return placeNameCache
+-- findPlaceByPlaceId :: Transactionable m => Text -> m [PlaceNameCache]
+-- findPlaceByPlaceId placeId =
+--   Esq.findAll $ do
+--     placeNameCache <- from $ table @PlaceNameCacheT
+--     where_ $ placeNameCache ^. PlaceNameCachePlaceId ==. val (Just placeId)
+--     return placeNameCache
 
-findPlaceByGeoHash :: Transactionable m => Text -> m [PlaceNameCache]
-findPlaceByGeoHash geoHash =
-  Esq.findAll $ do
-    placeNameCache <- from $ table @PlaceNameCacheT
-    where_ $ placeNameCache ^. PlaceNameCacheGeoHash ==. val (Just geoHash)
+findPlaceByPlaceId :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
+findPlaceByPlaceId placeId = findAllWithKV [Se.Is BeamPNC.placeId $ Se.Eq (Just placeId)]
 
-    return placeNameCache
+-- findPlaceByGeoHash :: Transactionable m => Text -> m [PlaceNameCache]
+-- findPlaceByGeoHash geoHash =
+--   Esq.findAll $ do
+--     placeNameCache <- from $ table @PlaceNameCacheT
+--     where_ $ placeNameCache ^. PlaceNameCacheGeoHash ==. val (Just geoHash)
+--     return placeNameCache
+
+findPlaceByGeoHash :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
+findPlaceByGeoHash geoHash = findAllWithKV [Se.Is BeamPNC.geoHash $ Se.Eq (Just geoHash)]
+
+instance FromTType' BeamPNC.PlaceNameCache PlaceNameCache where
+  fromTType' BeamPNC.PlaceNameCacheT {..} = do
+    pure $
+      Just
+        PlaceNameCache
+          { id = Id id,
+            formattedAddress = formattedAddress,
+            plusCode = plusCode,
+            lat = lat,
+            lon = lon,
+            placeId = placeId,
+            addressComponents = addressComponents,
+            geoHash = geoHash,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamPNC.PlaceNameCache PlaceNameCache where
+  toTType' PlaceNameCache {..} = do
+    BeamPNC.PlaceNameCacheT
+      { BeamPNC.id = getId id,
+        BeamPNC.formattedAddress = formattedAddress,
+        BeamPNC.plusCode = plusCode,
+        BeamPNC.lat = lat,
+        BeamPNC.lon = lon,
+        BeamPNC.placeId = placeId,
+        BeamPNC.addressComponents = addressComponents,
+        BeamPNC.geoHash = geoHash,
+        BeamPNC.createdAt = createdAt
+      }

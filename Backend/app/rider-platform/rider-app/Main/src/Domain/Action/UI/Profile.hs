@@ -31,10 +31,12 @@ import Data.List (nubBy)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
+-- import Storage.Tabular.Person ()
+
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
@@ -50,7 +52,6 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
-import Storage.Tabular.Person ()
 import Tools.Error
 import Tools.Metrics
 
@@ -109,6 +110,7 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
 getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
 getPersonDetails (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 
@@ -119,7 +121,8 @@ updatePerson personId req = do
   mbEncEmail <- encrypt `mapM` req.email
 
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
-  runTransaction $
+  -- runTransaction $
+  void $
     QPerson.updatePersonalInfo
       personId
       req.firstName
@@ -170,7 +173,8 @@ updateDefaultEmergencyNumbers personId req = do
   now <- getCurrentTime
   let uniqueRecords = getUniquePersonByMobileNumber req
   newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
-  runTransaction $ QPersonDEN.replaceAll personId newPersonDENList
+  -- runTransaction $ QPersonDEN.replaceAll personId newPersonDENList
+  QPersonDEN.replaceAll personId newPersonDENList
   pure APISuccess.Success
   where
     buildPersonDefaultEmergencyNumber now defEmNum = do
@@ -187,6 +191,7 @@ updateDefaultEmergencyNumbers personId req = do
 getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers (personId, _) = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
+  -- personENList <- QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
   return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList
 

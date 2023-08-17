@@ -25,7 +25,7 @@ import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (State, (.=))
+import EulerHS.Prelude hiding (State)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 

@@ -105,11 +105,13 @@ buildAuthReq merchantShortId req =
       lastName = Nothing,
       email = Nothing,
       language = Nothing,
-      gender = Nothing
+      gender = Nothing,
+      otpChannel = req.otpChannel
     }
 
 data CustomerAuthReq = CutomerAuthReq
   { mobileNumber :: Text,
-    mobileCountryCode :: Text
+    mobileCountryCode :: Text,
+    otpChannel :: Maybe DRegistration.OTPChannel
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

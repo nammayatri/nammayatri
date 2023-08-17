@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-identities #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,117 +12,190 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Vehicle where
 
+import Data.Either (fromRight)
+import qualified Database.Beam as B
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.Vehicle
+import Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.Vehicle as BeamV
 
-create :: Vehicle -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => Vehicle -> m ()
+create = createWithKV
 
-upsert :: Vehicle -> SqlDB ()
-upsert a@Vehicle {..} =
-  Esq.upsert
-    a
-    [ VehicleDriverId =. val (toKey driverId),
-      VehicleCapacity =. val capacity,
-      VehicleCategory =. val category,
-      VehicleMake =. val make,
-      VehicleModel =. val model,
-      VehicleSize =. val size,
-      VehicleVariant =. val variant,
-      VehicleColor =. val color,
-      VehicleEnergyType =. val energyType,
-      VehicleRegistrationCategory =. val registrationCategory,
-      VehicleUpdatedAt =. val updatedAt
-    ]
+upsert :: (L.MonadFlow m, Log m) => Vehicle -> m ()
+upsert a@Vehicle {..} = do
+  res <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq a.registrationNo]
+  if isJust res
+    then
+      updateOneWithKV
+        [ Se.Set BeamV.capacity capacity,
+          Se.Set BeamV.category category,
+          Se.Set BeamV.make make,
+          Se.Set BeamV.model model,
+          Se.Set BeamV.size size,
+          Se.Set BeamV.variant variant,
+          Se.Set BeamV.color color,
+          Se.Set BeamV.energyType energyType,
+          Se.Set BeamV.registrationCategory registrationCategory,
+          Se.Set BeamV.updatedAt updatedAt
+        ]
+        [Se.Is BeamV.registrationNo (Se.Eq a.registrationNo)]
+    else createWithKV a
 
-findById ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe Vehicle)
-findById = Esq.findById
+findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
+findById (Id driverId) = findOneWithKV [Se.Is BeamV.driverId $ Se.Eq driverId]
 
-updateVehicleRec :: Vehicle -> SqlDB ()
+updateVehicleRec :: (L.MonadFlow m, MonadTime m, Log m) => Vehicle -> m ()
 updateVehicleRec vehicle = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ VehicleCapacity =. val vehicle.capacity,
-        VehicleCategory =. val vehicle.category,
-        VehicleMake =. val vehicle.make,
-        VehicleVehicleName =. val vehicle.vehicleName,
-        VehicleModel =. val vehicle.model,
-        VehicleSize =. val vehicle.size,
-        VehicleVariant =. val vehicle.variant,
-        VehicleColor =. val vehicle.color,
-        VehicleEnergyType =. val vehicle.energyType,
-        VehicleRegistrationNo =. val vehicle.registrationNo,
-        VehicleRegistrationCategory =. val vehicle.registrationCategory,
-        VehicleUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.driverId)
+  updateOneWithKV
+    [ Se.Set BeamV.capacity vehicle.capacity,
+      Se.Set BeamV.category vehicle.category,
+      Se.Set BeamV.make vehicle.make,
+      Se.Set BeamV.vehicleName vehicle.vehicleName,
+      Se.Set BeamV.model vehicle.model,
+      Se.Set BeamV.size vehicle.size,
+      Se.Set BeamV.variant vehicle.variant,
+      Se.Set BeamV.color vehicle.color,
+      Se.Set BeamV.energyType vehicle.energyType,
+      Se.Set BeamV.registrationNo vehicle.registrationNo,
+      Se.Set BeamV.registrationCategory vehicle.registrationCategory,
+      Se.Set BeamV.updatedAt now
+    ]
+    [Se.Is BeamV.driverId (Se.Eq $ getId vehicle.driverId)]
 
-updateVehicleName :: Maybe Text -> Id Person -> SqlDB ()
-updateVehicleName vehicleName driverId = do
+-- updateVehicleName :: Maybe Text -> Id Person -> SqlDB ()
+-- updateVehicleName vehicleName driverId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ VehicleUpdatedAt =. val now,
+--         VehicleVehicleName =. val vehicleName
+--       ]
+--     where_ $ tbl ^. VehicleTId ==. val (toKey driverId)
+
+updateVehicleName :: (MonadFlow m) => Maybe Text -> Id Person -> m ()
+updateVehicleName vehicleName (Id driverId) = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ VehicleUpdatedAt =. val now,
-        VehicleVehicleName =. val vehicleName
-      ]
-    where_ $ tbl ^. VehicleTId ==. val (toKey driverId)
+  updateWithKV
+    [Se.Set BeamV.updatedAt now, Se.Set BeamV.vehicleName vehicleName]
+    [Se.Is BeamV.driverId (Se.Eq driverId)]
 
-deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey @VehicleT
+deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
 
-findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
+findByAnyOf :: (L.MonadFlow m, Log m) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =
-  Esq.findOne $ do
-    vehicle <- from $ table @VehicleT
-    where_ $
-      whenJust_ vehicleIdM (\vehicleId -> vehicle ^. VehicleTId ==. val (toKey vehicleId))
-        &&. whenJust_ registrationNoM (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
-    return vehicle
+  findOneWithKV
+    [ Se.And
+        ( []
+            <> if isJust vehicleIdM
+              then [Se.Is BeamV.driverId $ Se.Eq (getId (fromJust vehicleIdM))]
+              else
+                []
+                  <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust registrationNoM) | isJust registrationNoM])
+        )
+    ]
 
-findAllByVariantRegNumMerchantId ::
-  Transactionable m =>
-  Maybe Variant.Variant ->
-  Maybe Text ->
-  Integer ->
-  Integer ->
-  Id Merchant ->
-  m [Vehicle]
-findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = do
+-- findAllByVariantRegNumMerchantId ::
+--   Transactionable m =>
+--   Maybe Variant.Variant ->
+--   Maybe Text ->
+--   Integer ->
+--   Integer ->
+--   Id Merchant ->
+--   m [Vehicle]
+-- findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = do
+--   let limitVal = fromIntegral limit'
+--       offsetVal = fromIntegral offset'
+--   Esq.findAll $ do
+--     vehicle <- from $ table @VehicleT
+--     where_ $
+--       vehicle ^. VehicleMerchantId ==. val (toKey merchantId)
+--         &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
+--         &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` (%) ++. val regNum ++. (%))
+--     orderBy [desc $ vehicle ^. VehicleCreatedAt]
+--     limit limitVal
+--     offset offsetVal
+--     return vehicle
+
+findAllByVariantRegNumMerchantId :: (L.MonadFlow m, Log m) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId') = do
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'
-  Esq.findAll $ do
-    vehicle <- from $ table @VehicleT
-    where_ $
-      vehicle ^. VehicleMerchantId ==. val (toKey merchantId)
-        &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
-        &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` (%) ++. val regNum ++. (%))
-    orderBy [desc $ vehicle ^. VehicleCreatedAt]
-    limit limitVal
-    offset offsetVal
-    return vehicle
+  dbConf <- getMasterBeamConfig
+  vehicles <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\vehicle -> B.desc_ vehicle.createdAt) $
+                B.filter_'
+                  ( \BeamV.VehicleT {..} ->
+                      merchantId B.==?. B.val_ merchantId'
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\variant' -> B.sqlBool_ (variant B.==. B.val_ variant')) variantM
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\regNoStr -> B.sqlBool_ (registrationNo `B.like_` B.val_ ("%" <> regNoStr <> "%"))) mbRegNum
+                  )
+                  $ B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] vehicles)
 
-findByRegistrationNo ::
-  Transactionable m =>
-  Text ->
-  m (Maybe Vehicle)
-findByRegistrationNo registrationNo =
-  Esq.findOne $ do
-    vehicle <- from $ table @VehicleT
-    where_ $ vehicle ^. VehicleRegistrationNo ==. val registrationNo
-    return vehicle
+findByRegistrationNo :: (MonadFlow m) => Text -> m (Maybe Vehicle)
+findByRegistrationNo registrationNo = findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
+
+instance FromTType' BeamV.Vehicle Vehicle where
+  fromTType' BeamV.VehicleT {..} = do
+    pure $
+      Just
+        Vehicle
+          { driverId = Id driverId,
+            merchantId = Id merchantId,
+            variant = variant,
+            model = model,
+            color = color,
+            vehicleName = vehicleName,
+            registrationNo = registrationNo,
+            capacity = capacity,
+            category = category,
+            make = make,
+            size = size,
+            energyType = energyType,
+            registrationCategory = registrationCategory,
+            vehicleClass = vehicleClass,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamV.Vehicle Vehicle where
+  toTType' Vehicle {..} = do
+    BeamV.VehicleT
+      { BeamV.driverId = getId driverId,
+        BeamV.merchantId = getId merchantId,
+        BeamV.variant = variant,
+        BeamV.model = model,
+        BeamV.color = color,
+        BeamV.vehicleName = vehicleName,
+        BeamV.registrationNo = registrationNo,
+        BeamV.capacity = capacity,
+        BeamV.category = category,
+        BeamV.make = make,
+        BeamV.size = size,
+        BeamV.energyType = energyType,
+        BeamV.registrationCategory = registrationCategory,
+        BeamV.vehicleClass = vehicleClass,
+        BeamV.createdAt = createdAt,
+        BeamV.updatedAt = updatedAt
+      }

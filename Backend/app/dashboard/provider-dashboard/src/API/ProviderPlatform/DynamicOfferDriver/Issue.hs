@@ -44,6 +44,7 @@ type API =
            :<|> IssueUpdateAPI
            :<|> IssueAddCommentAPI
            :<|> IssueFetchMediaAPI
+           :<|> TicketStatusCallBackAPI
        )
 
 type IssueCategoryListAPI =
@@ -70,6 +71,10 @@ type IssueFetchMediaAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_FETCH_MEDIA
     :> Common.IssueFetchMediaAPI
 
+type TicketStatusCallBackAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'TICKET_STATUS_CALL_BACK
+    :> Common.TicketStatusCallBackAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   issueCategoryList merchantId
@@ -78,6 +83,7 @@ handler merchantId =
     :<|> issueUpdate merchantId
     :<|> issueAddComment merchantId
     :<|> issueFetchMedia merchantId
+    :<|> ticketStatusCallBack merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -157,3 +163,9 @@ issueFetchMedia :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Te
 issueFetchMedia merchantShortId apiTokenInfo filePath = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.issue.issueFetchMedia) filePath
+
+ticketStatusCallBack :: ShortId DM.Merchant -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPP checkedMerchantId (.issue.ticketStatusCallBack) req

@@ -11,55 +11,80 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Rating where
 
+import qualified Database.Beam as B
 import Domain.Types.Person
-import Domain.Types.Rating
+import Domain.Types.Rating as DR
 import Domain.Types.Ride
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.Rating
+import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.Rating as BeamR
 
-create :: Rating -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DR.Rating -> m ()
+create = createWithKV
 
-updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
-updateRating ratingId driverId newRatingValue newFeedbackDetails = do
+updateRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
+updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RatingRatingValue =. val newRatingValue,
-        RatingFeedbackDetails =. val newFeedbackDetails,
-        RatingUpdatedAt =. val now
-      ]
-    where_ $
-      tbl ^. RatingTId ==. val (toKey ratingId)
-        &&. tbl ^. RatingDriverId ==. val (toKey driverId)
+  updateOneWithKV
+    [ Se.Set BeamR.ratingValue newRatingValue,
+      Se.Set BeamR.feedbackDetails newFeedbackDetails,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.driverId (Se.Eq driverId)]]
 
-findAllRatingsForPerson :: Transactionable m => Id Person -> m [Rating]
-findAllRatingsForPerson driverId =
-  findAll $ do
-    rating <- from $ table @RatingT
-    where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
-    return rating
+findAllRatingsForPerson :: (L.MonadFlow m, Log m) => Id Person -> m [Rating]
+findAllRatingsForPerson driverId = findAllWithDb [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
 
-findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
-findRatingForRide rideId = findOne $ do
-  rating <- from $ table @RatingT
-  where_ $ rating ^. RatingRideId ==. val (toKey rideId)
-  pure rating
+findRatingForRide :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
+findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]
 
-findAllRatingUsersCountByPerson :: Transactionable m => Id Person -> m Int
-findAllRatingUsersCountByPerson driverId =
-  mkCount <$> do
-    findAll $ do
-      rating <- from $ table @RatingT
-      where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
+-- findAllRatingUsersCountByPerson (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId] <&> length
+
+findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
+findAllRatingUsersCountByPerson (Id driverId) = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            (\rating' -> BeamR.driverId rating' B.==?. B.val_ driverId)
+            do
+              B.all_ (BeamCommon.rating BeamCommon.atlasDB)
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
+instance FromTType' BeamR.Rating Rating where
+  fromTType' BeamR.RatingT {..} = do
+    pure $
+      Just
+        Rating
+          { id = Id id,
+            rideId = Id rideId,
+            driverId = Id driverId,
+            ratingValue = ratingValue,
+            feedbackDetails = feedbackDetails,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamR.Rating Rating where
+  toTType' Rating {..} = do
+    BeamR.RatingT
+      { BeamR.id = getId id,
+        BeamR.rideId = getId rideId,
+        BeamR.driverId = getId driverId,
+        BeamR.ratingValue = ratingValue,
+        BeamR.feedbackDetails = feedbackDetails,
+        BeamR.createdAt = createdAt,
+        BeamR.updatedAt = updatedAt
+      }

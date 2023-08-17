@@ -42,6 +42,8 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.DriverInformation as QDI
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
@@ -87,7 +89,7 @@ buildStartRideHandle merchantId = do
       }
 
 driverStartRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -98,7 +100,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -109,7 +111,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -119,7 +121,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   let driverId = ride.driverId
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-
+  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor

@@ -11,23 +11,63 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
+import qualified Domain.Types.CancellationReason as Domain
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.CancellationReason
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.CancellationReason as BeamCR
 
-findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
-findAll cancStage =
-  Esq.findAll $ do
-    cancellationReason <- from $ table @CancellationReasonT
-    where_ $
-      cancellationReason ^. CancellationReasonEnabled
-        &&. case cancStage of
-          OnSearch -> cancellationReason ^. CancellationReasonOnSearch
-          OnConfirm -> cancellationReason ^. CancellationReasonOnConfirm
-          OnAssign -> cancellationReason ^. CancellationReasonOnAssign
-    orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
-    return cancellationReason
+-- findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
+-- findAll cancStage =
+--   Esq.findAll $ do
+--     cancellationReason <- from $ table @CancellationReasonT
+--     where_ $
+--       cancellationReason ^. CancellationReasonEnabled
+--         &&. case cancStage of
+--           OnSearch -> cancellationReason ^. CancellationReasonOnSearch
+--           OnConfirm -> cancellationReason ^. CancellationReasonOnConfirm
+--           OnAssign -> cancellationReason ^. CancellationReasonOnAssign
+--     orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
+--     return cancellationReason
+
+-- Not querying by Id. In case the table is enabled someday, better to route this through DB
+findAll :: (L.MonadFlow m, Log m) => CancellationStage -> m [CancellationReason]
+findAll cancStage = do
+  seCaseCondition <- case cancStage of
+    OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True
+    OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
+    OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
+  findAllWithOptionsDb [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
+
+instance FromTType' BeamCR.CancellationReason CancellationReason where
+  fromTType' BeamCR.CancellationReasonT {..} = do
+    pure $
+      Just
+        CancellationReason
+          { reasonCode = Domain.CancellationReasonCode reasonCode,
+            description = description,
+            enabled = enabled,
+            onSearch = onSearch,
+            onConfirm = onConfirm,
+            onAssign = onAssign,
+            priority = priority
+          }
+
+instance ToTType' BeamCR.CancellationReason CancellationReason where
+  toTType' CancellationReason {..} = do
+    BeamCR.CancellationReasonT
+      { BeamCR.reasonCode = let (Domain.CancellationReasonCode rc) = reasonCode in rc,
+        BeamCR.description = description,
+        BeamCR.enabled = enabled,
+        BeamCR.onSearch = onSearch,
+        BeamCR.onConfirm = onConfirm,
+        BeamCR.onAssign = onAssign,
+        BeamCR.priority = priority
+      }

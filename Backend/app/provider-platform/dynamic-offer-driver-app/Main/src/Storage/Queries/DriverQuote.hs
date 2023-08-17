@@ -11,142 +11,169 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverQuote where
 
-import Data.Int (Int32)
+import qualified Data.Time as T
+import Domain.Types.DriverQuote
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as VehVar
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
-import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
-import Storage.Tabular.DriverQuote
-import qualified Storage.Tabular.FareParameters as Fare
-import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
+import Kernel.Utils.Common
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverQuote as BeamDQ
+import Storage.Queries.FareParameters as BeamQFP
+import qualified Storage.Queries.FareParameters as SQFP
 
--- import Domain.Action.UI.Cancel (CancelSearch(estimateId))
--- import Domain.Action.UI.Cancel (CancelSearch(estimateId))
+-- create :: Domain.DriverQuote -> SqlDB ()
+-- create dQuote = Esq.runTransaction $
+--   withFullEntity dQuote $ \(dQuoteT, (fareParams', fareParamsDetais)) -> do
+--     Esq.create' fareParams'
+--     case fareParamsDetais of
+--       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
+--       FareParamsT.SlabDetailsT -> return ()
+--     Esq.create' dQuoteT
 
-create :: Domain.DriverQuote -> SqlDB ()
-create dQuote = Esq.runTransaction $
-  withFullEntity dQuote $ \(dQuoteT, (fareParams', fareParamsDetais)) -> do
-    Esq.create' fareParams'
-    case fareParamsDetais of
-      FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
-      FareParamsT.SlabDetailsT fpsdt -> Esq.create' fpsdt
-    Esq.create' dQuoteT
+create :: (L.MonadFlow m, Log m) => Domain.DriverQuote -> m ()
+create dQuote = SQFP.create dQuote.fareParams >> createWithKV dQuote
 
-baseDriverQuoteQuery ::
-  From
-    ( SqlExpr (Entity DriverQuoteT)
-        :& SqlExpr (Entity Fare.FareParametersT)
-    )
-baseDriverQuoteQuery =
-  table @DriverQuoteT
-    `innerJoin` table @Fare.FareParametersT
-      `Esq.on` ( \(rb :& farePars) ->
-                   rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
-               )
+-- baseDriverQuoteQuery ::
+--   From
+--     ( SqlExpr (Entity DriverQuoteT)
+--         :& SqlExpr (Entity Fare.FareParametersT)
+--     )
+-- baseDriverQuoteQuery =
+--   table @DriverQuoteT
+--     `innerJoin` table @Fare.FareParametersT
+--       `Esq.on` ( \(rb :& farePars) ->
+--                    rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
+--                )
 
-findById :: (Transactionable m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
-findById dQuoteId = buildDType $ do
-  res <- Esq.findOne' $ do
-    (dQuote :& farePars) <-
-      from baseDriverQuoteQuery
-    where_ $ dQuote ^. DriverQuoteTId ==. val (toKey dQuoteId)
-    pure (dQuote, farePars)
-  join <$> mapM buildFullDriverQuote res
+findById :: (L.MonadFlow m, Log m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
+findById (Id driverQuoteId) = findOneWithKV [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
 
-findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (Transactionable m) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
-findActiveQuoteByDriverIdAndVehVarAndEstimateId estimateId driverId vehicleVariant now = do
-  buildDType $ do
-    res <- Esq.findOne' $ do
-      (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
-      where_ $
-        dQuote ^. DriverQuoteEstimateId ==. val (toKey estimateId)
-          &&. dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
-          &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteVehicleVariant ==. val vehicleVariant
-          &&. dQuote ^. DriverQuoteValidTill >=. val now
-      pure (dQuote, farePars)
-    join <$> mapM buildFullDriverQuote res
+setInactiveBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m ()
+setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
 
-setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
-setInactiveBySTId searchTryId = Esq.update $ \p -> do
-  set p [DriverQuoteStatus =. val Domain.Inactive]
-  where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+-- findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (Transactionable m) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
+-- findActiveQuoteByDriverIdAndVehVarAndEstimateId estimateId driverId vehicleVariant now = do
+--   buildDType $ do
+--     res <- Esq.findOne' $ do
+--       (dQuote :& farePars) <-
+--         from baseDriverQuoteQuery
+--       where_ $
+--         dQuote ^. DriverQuoteEstimateId ==. val (toKey estimateId)
+--           &&. dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
+--           &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
+--           &&. dQuote ^. DriverQuoteVehicleVariant ==. val vehicleVariant
+--           &&. dQuote ^. DriverQuoteValidTill >=. val now
+--       pure (dQuote, farePars)
+--     join <$> mapM buildFullDriverQuote res
 
-setInactiveBySRId :: Id DSR.SearchRequest -> SqlDB ()
-setInactiveBySRId searchReqId = Esq.update $ \p -> do
-  set p [DriverQuoteStatus =. val Domain.Inactive]
-  where_ $ p ^. DriverQuoteRequestId ==. val (toKey searchReqId)
+findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (MonadFlow m) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
+findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id estimateId) (Id driverId) vehicleVariant now = findAllWithKV [Se.And [Se.Is BeamDQ.estimateId $ Se.Eq estimateId, Se.Is BeamDQ.driverId $ Se.Eq driverId, Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.vehicleVariant $ Se.Eq vehicleVariant, Se.Is BeamDQ.validTill $ Se.GreaterThan $ T.utcToLocalTime T.utc now]] <&> listToMaybe
 
-findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
-findActiveQuotesByDriverId driverId driverUnlockDelay = do
+-- setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
+-- setInactiveBySTId searchTryId = Esq.update $ \p -> do
+--   set p [DriverQuoteStatus =. val Domain.Inactive]
+--   where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+
+setInactiveBySRId :: (L.MonadFlow m, Log m) => Id DSR.SearchRequest -> m ()
+setInactiveBySRId (Id searchReqId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
+
+findActiveQuotesByDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Seconds -> m [Domain.DriverQuote]
+findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
-  buildDType $ do
-    let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
-    res <- Esq.findAll' $ do
-      (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
-      where_ $
-        dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
-          &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
-      pure (dQuote, farePars)
-    catMaybes <$> mapM buildFullDriverQuote res
+  let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
+  findAllWithKV [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.driverId $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc $ addUTCTime delayToAvoidRaces now)]]
 
-findAllBySTId :: (Transactionable m) => Id DST.SearchTry -> m [Domain.DriverQuote]
-findAllBySTId searchTryId = do
-  buildDType $ do
-    res <- Esq.findAll' $ do
-      (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
-      where_ $
-        dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
-      pure (dQuote, farePars)
-    catMaybes <$> mapM buildFullDriverQuote res
+findDriverQuoteBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m (Maybe Domain.DriverQuote)
+findDriverQuoteBySTId (Id searchTryId) = findOneWithKV [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
 
-countAllBySTId :: (Transactionable m) => Id DST.SearchTry -> m Int32
-countAllBySTId searchTryId = do
-  fmap (fromMaybe 0) $
-    Esq.findOne $ do
-      dQuote <- from $ table @DriverQuoteT
-      where_ $
-        dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
-      pure (countRows @Int32)
+deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDQ.driverId (Se.Eq driverId)]
 
-deleteByDriverId :: Id Person -> SqlDB ()
-deleteByDriverId personId =
-  Esq.delete $ do
-    driverQuotes <- from $ table @DriverQuoteT
-    where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
+findAllBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m [Domain.DriverQuote]
+findAllBySTId (Id searchTryId) = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId, Se.Is BeamDQ.status $ Se.Eq Domain.Active]]
 
-findDriverQuoteBySTId :: (Transactionable m) => Id DST.SearchTry -> DTypeBuilder m (Maybe DriverQuoteT)
-findDriverQuoteBySTId searchTryId = Esq.findOne' $ do
-  driverQuote <- from $ table @DriverQuoteT
-  where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
-  pure driverQuote
+countAllBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m Int
+countAllBySTId searchTId = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId), Se.Is BeamDQ.status $ Se.Eq Domain.Active]] <&> length
 
-setInactiveAllDQByEstId :: Id DEstimate.Estimate -> UTCTime -> SqlDB ()
-setInactiveAllDQByEstId estimateId now = do
-  Esq.update $ \p -> do
-    set
-      p
-      [ DriverQuoteStatus =. val Domain.Inactive,
-        DriverQuoteUpdatedAt =. val now
-      ]
-    where_ $
-      p ^. DriverQuoteEstimateId ==. val (toKey estimateId)
-        &&. p ^. DriverQuoteStatus ==. val Domain.Active
-        &&. p ^. DriverQuoteValidTill >=. val now
+setInactiveAllDQByEstId :: (MonadFlow m) => Id DEstimate.Estimate -> UTCTime -> m ()
+setInactiveAllDQByEstId (Id estimateId) now = updateWithKV [Se.Set BeamDQ.status Domain.Inactive, Se.Set BeamDQ.updatedAt (T.utcToLocalTime T.utc now)] [Se.And [Se.Is BeamDQ.estimateId $ Se.Eq estimateId, Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
+
+instance FromTType' BeamDQ.DriverQuote DriverQuote where
+  fromTType' BeamDQ.DriverQuoteT {..} = do
+    fp <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in DriverQuote for id: " <> show fareParametersId)
+    return $
+      Just
+        Domain.DriverQuote
+          { id = Id id,
+            requestId = Id requestId,
+            searchTryId = Id searchTryId,
+            searchRequestForDriverId = Id <$> searchRequestForDriverId,
+            driverId = Id driverId,
+            estimateId = Id estimateId,
+            driverName = driverName,
+            driverRating = driverRating,
+            status = status,
+            vehicleVariant = vehicleVariant,
+            distance = distance,
+            distanceToPickup = distanceToPickup,
+            durationToPickup = durationToPickup,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc updatedAt,
+            validTill = T.localTimeToUTC T.utc validTill,
+            estimatedFare = estimatedFare,
+            fareParams = fp,
+            providerId = Id providerId,
+            specialLocationTag = specialLocationTag
+          }
+
+instance ToTType' BeamDQ.DriverQuote DriverQuote where
+  toTType' DriverQuote {..} = do
+    BeamDQ.DriverQuoteT
+      { BeamDQ.id = getId id,
+        BeamDQ.requestId = getId requestId,
+        BeamDQ.searchTryId = getId searchTryId,
+        BeamDQ.searchRequestForDriverId = getId <$> searchRequestForDriverId,
+        BeamDQ.driverId = getId driverId,
+        BeamDQ.estimateId = getId estimateId,
+        BeamDQ.driverName = driverName,
+        BeamDQ.driverRating = driverRating,
+        BeamDQ.status = status,
+        BeamDQ.vehicleVariant = vehicleVariant,
+        BeamDQ.distance = distance,
+        BeamDQ.distanceToPickup = distanceToPickup,
+        BeamDQ.durationToPickup = durationToPickup,
+        BeamDQ.createdAt = T.utcToLocalTime T.utc createdAt,
+        BeamDQ.updatedAt = T.utcToLocalTime T.utc updatedAt,
+        BeamDQ.validTill = T.utcToLocalTime T.utc validTill,
+        BeamDQ.estimatedFare = estimatedFare,
+        BeamDQ.fareParametersId = getId fareParams.id,
+        BeamDQ.providerId = getId providerId,
+        BeamDQ.specialLocationTag = specialLocationTag
+      }
+
+-- setInactiveAllDQByEstId :: Id DEstimate.Estimate -> UTCTime -> SqlDB ()
+-- setInactiveAllDQByEstId estimateId now = do
+--   Esq.update $ \p -> do
+--     set
+--       p
+--       [ DriverQuoteStatus =. val Domain.Inactive,
+--         DriverQuoteUpdatedAt =. val now
+--       ]
+--     where_ $
+--       p ^. DriverQuoteEstimateId ==. val (toKey estimateId)
+--         &&. p ^. DriverQuoteStatus ==. val Domain.Active
+--         &&. p ^. DriverQuoteValidTill >=. val now

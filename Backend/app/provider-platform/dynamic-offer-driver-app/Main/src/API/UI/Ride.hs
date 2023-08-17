@@ -35,15 +35,16 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
-import Servant
+import Servant hiding (throwError)
 import SharedLogic.Person (findPerson)
+import qualified Storage.CachedQueries.DriverInformation as QDI
 import qualified Storage.Queries.Booking as QBooking
 import Tools.Auth
 import Tools.Error
@@ -128,8 +129,11 @@ otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant) -> DRide.OTPRideRe
 otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   now <- getCurrentTime
+  driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
+  unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   let rideOtp = req.specialZoneOtpCode
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  -- booking <- QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   shandle <- RideStart.buildStartRideHandle merchantId

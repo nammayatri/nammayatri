@@ -11,30 +11,72 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 
 import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Person.PersonDefaultEmergencyNumber
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 
-replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
-replaceAll personId pdenList = do
-  Esq.delete $ do
-    personENT <- from $ table @PersonDefaultEmergencyNumberT
-    where_ $ personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
-  Esq.createMany pdenList
+-- replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
+-- replaceAll personId pdenList = do
+--   Esq.delete $ do
+--     personENT <- from $ table @PersonDefaultEmergencyNumberT
+--     where_ $ personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
+--   Esq.createMany pdenList
 
-findAllByPersonId ::
-  Transactionable m =>
-  Id Person ->
-  m [PersonDefaultEmergencyNumber]
-findAllByPersonId personId =
-  Esq.findAll $ do
-    personENT <- from $ table @PersonDefaultEmergencyNumberT
-    where_ $
-      personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
-    return personENT
+create :: (L.MonadFlow m, Log m) => PersonDefaultEmergencyNumber -> m ()
+create = createWithKV
+
+createMany :: (L.MonadFlow m, Log m) => [PersonDefaultEmergencyNumber] -> m ()
+createMany = traverse_ create
+
+replaceAll :: (L.MonadFlow m, Log m) => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
+replaceAll (Id personId) pdenList = do
+  deleteWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
+  createMany pdenList
+
+-- findAllByPersonId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m [PersonDefaultEmergencyNumber]
+-- findAllByPersonId personId =
+--   Esq.findAll $ do
+--     personENT <- from $ table @PersonDefaultEmergencyNumberT
+--     where_ $
+--       personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
+--     return personENT
+
+findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
+findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
+
+instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
+  fromTType' BeamPDEN.PersonDefaultEmergencyNumberT {..} = do
+    pure $
+      Just
+        PersonDefaultEmergencyNumber
+          { personId = Id personId,
+            name = name,
+            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            mobileCountryCode = mobileCountryCode,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
+  toTType' PersonDefaultEmergencyNumber {..} = do
+    BeamPDEN.PersonDefaultEmergencyNumberT
+      { BeamPDEN.personId = getId personId,
+        BeamPDEN.name = name,
+        BeamPDEN.mobileCountryCode = mobileCountryCode,
+        BeamPDEN.mobileNumberHash = mobileNumber.hash,
+        BeamPDEN.mobileNumberEncrypted = unEncrypted (mobileNumber.encrypted),
+        BeamPDEN.createdAt = createdAt
+      }

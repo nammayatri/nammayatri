@@ -15,6 +15,7 @@ let kafkaConsumerCfgs =
         { brokers = [ "localhost:29092" ]
         , groupId = "publicTransportQuotesGroup"
         , timeoutMilliseconds = +10000
+        , kafkaCompression = common.kafkaCompression.LZ4
         }
       }
 

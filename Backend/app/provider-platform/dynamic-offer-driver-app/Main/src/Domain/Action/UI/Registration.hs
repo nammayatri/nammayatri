@@ -31,16 +31,20 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+-- import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
-import qualified Kernel.Storage.Esqueleto as DB
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -66,6 +70,8 @@ import Tools.Error
 import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
+
+-- import qualified Kernel.Storage.Esqueleto as Esq
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
@@ -146,9 +152,8 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
   token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM)
-  Esq.runTransaction do
-    QR.create token
-    QP.updatePersonVersions person mbBundleVersion mbClientVersion
+  _ <- QR.create token
+  QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = SR.authValueHash token
@@ -167,7 +172,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: Id SP.Person -> Id DO.Merchant -> Esq.SqlDB ()
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Id DO.Merchant -> m ()
 createDriverDetails personId merchantId = do
   now <- getCurrentTime
   let driverId = cast personId
@@ -184,6 +189,7 @@ createDriverDetails personId merchantId = do
             verified = False,
             subscribed = True,
             paymentPending = False,
+            autoPayStatus = Nothing,
             referralCode = Nothing,
             lastEnabledOn = Nothing,
             canDowngradeToSedan = False,
@@ -198,6 +204,7 @@ createDriverDetails personId merchantId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo
+  pure ()
 
 makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
 makePerson req mbBundleVersion mbClientVersion merchantId isDashboard = do
@@ -252,7 +259,8 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
-  altNumAttempts <- Esq.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
+  altNumAttempts <- B.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
+  -- altNumAttempts <- QR.getAlternateNumberAttempts (Id entityId)
   now <- getCurrentTime
   return $
     SR.RegistrationToken
@@ -281,11 +289,12 @@ createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => Aut
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
   now <- getCurrentTime
-  DB.runTransaction $ do
-    QP.create person
-    QDFS.create $ makeIdleDriverFlowStatus person
-    createDriverDetails (person.id) merchantId
-  runInLocationDB $ QDriverLocation.create person.id initLatLong now merchantId
+  -- DB.runTransaction $ do
+  _ <- QP.create person
+  _ <- QDFS.create $ makeIdleDriverFlowStatus person
+  createDriverDetails (person.id) merchantId
+  -- runInLocationDB $ QDriverLocation.create person.id initLatLong now merchantId
+  QDriverLocation.create person.id initLatLong now merchantId
   pure person
   where
     makeIdleDriverFlowStatus person =
@@ -318,12 +327,12 @@ verify tokenId req = do
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
-  Esq.runTransaction $ do
-    QR.deleteByPersonIdExceptNew person.id tokenId
-    QR.setVerified tokenId
-    QP.updateDeviceToken person.id deviceToken
-    when isNewPerson $
-      QP.setIsNewFalse person.id
+  -- Esq.runTransaction $ do
+  QR.deleteByPersonIdExceptNew person.id tokenId
+  _ <- QR.setVerified tokenId
+  _ <- QP.updateDeviceToken person.id deviceToken
+  when isNewPerson $
+    QP.setIsNewFalse person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
@@ -352,14 +361,14 @@ callWhatsappOptApi ::
 callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  DB.runTransaction $
-    QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+  -- DB.runTransaction $
+  QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
-checkRegistrationTokenExists :: (Esq.Transactionable m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: (L.MonadFlow m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: (Esq.Transactionable m, MonadThrow m, Log m) => Text -> m SP.Person
+checkPersonExists :: (L.MonadFlow m, MonadThrow m, Log m) => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
@@ -392,7 +401,7 @@ resend tokenId = do
           }
     Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
-  Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
+  _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
@@ -414,8 +423,8 @@ logout (personId, _) = do
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  Esq.runTransaction $ do
-    QP.updateDeviceToken uperson.id Nothing
-    QR.deleteByPersonId personId
-  when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE)
+  -- Esq.runTransaction $ do
+  _ <- QP.updateDeviceToken uperson.id Nothing
+  QR.deleteByPersonId personId
+  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE))
   pure Success

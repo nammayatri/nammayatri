@@ -40,7 +40,6 @@ import Environment
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -56,8 +55,11 @@ import Kernel.Utils.SlidingWindowLimiter
 import Lib.SessionizerMetrics.Types.Event
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+-- import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
+-- import qualified Storage.CachedQueries.Merchant as QMerchant
+-- import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -208,4 +210,5 @@ searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCoun
 updateVersions :: EsqDBFlow m r => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
 updateVersions personId mbBundleVersion mbClientVersion = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
+  -- DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
+  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion

@@ -11,94 +11,95 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.IdfyVerification where
 
-import Domain.Types.DriverOnboarding.IdfyVerification
+import Domain.Types.DriverOnboarding.IdfyVerification as DDIV
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.DriverOnboarding.IdfyVerification
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
 
-create :: IdfyVerification -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => IdfyVerification -> m ()
+create = createWithKV
 
-findById ::
-  Transactionable m =>
-  Id IdfyVerification ->
-  m (Maybe IdfyVerification)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id IdfyVerification -> m (Maybe IdfyVerification)
+findById (Id idfvId) = findOneWithKV [Se.Is BeamIV.id $ Se.Eq idfvId]
 
-findAllByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m [IdfyVerification]
-findAllByDriverId driverId = do
-  findAll $ do
-    verifications <- from $ table @IdfyVerificationT
-    where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
-    return verifications
+findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [IdfyVerification]
+findAllByDriverId (Id driverId) = findAllWithKV [Se.Is BeamIV.driverId $ Se.Eq driverId]
 
-findLatestByDriverIdAndDocType ::
-  Transactionable m =>
-  Id Person ->
-  ImageType ->
-  m (Maybe IdfyVerification)
-findLatestByDriverIdAndDocType driverId imgType = do
-  verifications_ <- findAll $ do
-    verifications <- from $ table @IdfyVerificationT
-    where_ $
-      verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
-        &&. verifications ^. IdfyVerificationDocType ==. val imgType
-    orderBy [desc $ verifications ^. IdfyVerificationCreatedAt]
-    return verifications
-  pure $ headMaybe verifications_
-  where
-    headMaybe [] = Nothing
-    headMaybe (x : _) = Just x
+findLatestByDriverIdAndDocType :: (L.MonadFlow m, Log m) => Id Person -> ImageType -> m (Maybe IdfyVerification)
+findLatestByDriverIdAndDocType (Id driverId) imgType = findAllWithOptionsKV [Se.And [Se.Is BeamIV.driverId $ Se.Eq driverId, Se.Is BeamIV.docType $ Se.Eq imgType]] (Se.Desc BeamIV.createdAt) Nothing Nothing <&> listToMaybe
 
-findByRequestId ::
-  Transactionable m =>
-  Text ->
-  m (Maybe IdfyVerification)
-findByRequestId requestId = do
-  findOne $ do
-    verification <- from $ table @IdfyVerificationT
-    where_ $ verification ^. IdfyVerificationRequestId ==. val requestId
-    return verification
+findByRequestId :: (L.MonadFlow m, Log m) => Text -> m (Maybe IdfyVerification)
+findByRequestId requestId = findOneWithKV [Se.Is BeamIV.requestId $ Se.Eq requestId]
 
-updateResponse ::
-  Text ->
-  Text ->
-  Text ->
-  SqlDB ()
+updateResponse :: (L.MonadFlow m, MonadTime m, Log m) => Text -> Text -> Text -> m ()
 updateResponse requestId status resp = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ IdfyVerificationStatus =. val status,
-        IdfyVerificationIdfyResponse =. val (Just resp),
-        IdfyVerificationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
+  updateWithKV
+    [Se.Set BeamIV.status status, Se.Set BeamIV.idfyResponse $ Just resp, Se.Set BeamIV.updatedAt now]
+    [Se.Is BeamIV.requestId (Se.Eq requestId)]
 
-updateExtractValidationStatus :: Text -> ImageExtractionValidation -> SqlDB ()
+updateExtractValidationStatus :: (L.MonadFlow m, MonadTime m, Log m) => Text -> ImageExtractionValidation -> m ()
 updateExtractValidationStatus requestId status = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ IdfyVerificationImageExtractionValidation =. val status,
-        IdfyVerificationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
+  updateWithKV
+    [Se.Set BeamIV.imageExtractionValidation status, Se.Set BeamIV.updatedAt now]
+    [Se.Is BeamIV.requestId (Se.Eq requestId)]
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId =
-  Esq.delete $ do
-    verifications <- from $ table @IdfyVerificationT
-    where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey personId)
+deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamIV.driverId (Se.Eq personId)]
+
+instance FromTType' BeamIV.IdfyVerification IdfyVerification where
+  fromTType' BeamIV.IdfyVerificationT {..} = do
+    pure $
+      Just
+        IdfyVerification
+          { id = Id id,
+            documentImageId1 = Id documentImageId1,
+            documentImageId2 = Id <$> documentImageId2,
+            dashboardPassedVehicleVariant = dashboardPassedVehicleVariant,
+            driverId = Id driverId,
+            requestId = requestId,
+            docType = docType,
+            status = status,
+            issueDateOnDoc = issueDateOnDoc,
+            driverDateOfBirth = driverDateOfBirth,
+            documentNumber = EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash,
+            imageExtractionValidation = imageExtractionValidation,
+            idfyResponse = idfyResponse,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            multipleRC = multipleRC
+          }
+
+instance ToTType' BeamIV.IdfyVerification IdfyVerification where
+  toTType' IdfyVerification {..} = do
+    BeamIV.IdfyVerificationT
+      { BeamIV.id = getId id,
+        BeamIV.documentImageId1 = getId documentImageId1,
+        BeamIV.documentImageId2 = getId <$> documentImageId2,
+        BeamIV.dashboardPassedVehicleVariant = dashboardPassedVehicleVariant,
+        BeamIV.driverId = getId driverId,
+        BeamIV.requestId = requestId,
+        BeamIV.docType = docType,
+        BeamIV.status = status,
+        BeamIV.issueDateOnDoc = issueDateOnDoc,
+        BeamIV.driverDateOfBirth = driverDateOfBirth,
+        BeamIV.documentNumberEncrypted = documentNumber & unEncrypted . (.encrypted),
+        BeamIV.documentNumberHash = documentNumber & (.hash),
+        BeamIV.imageExtractionValidation = imageExtractionValidation,
+        BeamIV.idfyResponse = idfyResponse,
+        BeamIV.createdAt = createdAt,
+        BeamIV.updatedAt = updatedAt,
+        BeamIV.multipleRC = multipleRC
+      }

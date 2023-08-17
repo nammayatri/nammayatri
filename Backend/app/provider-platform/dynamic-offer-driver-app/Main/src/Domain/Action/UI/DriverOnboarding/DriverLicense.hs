@@ -39,7 +39,7 @@ import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (isNothing)
+-- import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -104,7 +104,7 @@ verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
     Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id $ T.toLower req.operatingCity
     Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
   when (null operatingCity') $
-    throwError $ InvalidOperatingCity req.operatingCity
+    throwError $ InvalidOperatingCity $ T.toLower req.operatingCity
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   onboardingDocumentConfig <- QODC.findByMerchantIdAndDocumentType person.merchantId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show DTO.DL))
   when
@@ -160,7 +160,7 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
       Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId}
   encryptedDL <- encrypt dlNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL
-  runTransaction $ IVQuery.create idfyVerificationEntity
+  IVQuery.create idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedDL = do
       id <- generateGUID
@@ -202,7 +202,7 @@ onVerifyDL verificationReq output = do
                /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
            )
         then do
-          runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed
+          _ <- IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed
           pure Ack
         else do
           now <- getCurrentTime
@@ -214,10 +214,10 @@ onVerifyDL verificationReq output = do
 
           case mDriverLicense of
             Just driverLicense -> do
-              runTransaction $ Query.upsert driverLicense
+              Query.upsert driverLicense
               case driverLicense.driverName of
-                Just name_ -> runTransaction $ Person.updateName person.id name_
-                Nothing -> return ()
+                Just name_ -> void $ Person.updateName person.id name_
+                Nothing -> pure ()
               return Ack
             Nothing -> return Ack
 

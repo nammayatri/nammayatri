@@ -117,7 +117,7 @@ runWithFlowRuntime flow = do
               logToFile = False,
               logFilePath = "",
               logToConsole = True,
-              logRawSql = False,
+              logRawSql = True,
               prettyPrinting = False
             }
   R.withFlowRuntime (Just logRuntime) $ \flowRt -> I.runFlow flowRt flow

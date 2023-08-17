@@ -15,7 +15,8 @@
 module Tools.SignatureAuth where
 
 import Control.Arrow
-import Control.Lens ((?=))
+import Control.Lens ((.=), (?=))
+import Control.Lens.At (at)
 import qualified Crypto.Hash as Hash
 import qualified Crypto.PubKey.RSA.PKCS15 as RSA
 import qualified Crypto.Store.X509 as CryptoStore
@@ -138,7 +139,7 @@ instance
       headerName = fromString $ symbolVal (Proxy @header)
       headerName :: IsString a => a
       env = getEnvEntry ctx
-      getRSAPublicKey (Base64 key) = CryptoStore.readPubKeyFileFromMemory key
+      getRSAPublicKey (Base64 key) = CryptoStore.readPubKeyFileFromMemory $ B64.decodeLenient key
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv
 

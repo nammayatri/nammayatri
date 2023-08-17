@@ -30,8 +30,9 @@ where
 
 import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
+import qualified EulerHS.Language as L
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -70,7 +71,7 @@ findAllByPhone phone =
         Just a -> return a
         Nothing -> cacheExophones merchantId /=<< Queries.findAllByPhone phone
 
-findAllExophones :: Esq.Transactionable m => m [Exophone]
+findAllExophones :: (L.MonadFlow m, Log m) => m [Exophone]
 findAllExophones = Queries.findAllExophones
 
 -- Call it after any update
@@ -103,11 +104,11 @@ makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
 patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"
 
-create :: Exophone -> Esq.SqlDB ()
+create :: (L.MonadFlow m, Log m) => Exophone -> m ()
 create = Queries.create
 
-updateAffectedPhones :: [Text] -> Esq.SqlDB ()
+updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantId :: Id DM.Merchant -> Esq.SqlDB ()
+deleteByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m ()
 deleteByMerchantId = Queries.deleteByMerchantId

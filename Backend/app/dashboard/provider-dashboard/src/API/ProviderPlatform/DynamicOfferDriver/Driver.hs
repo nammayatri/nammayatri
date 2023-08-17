@@ -63,7 +63,7 @@ type API =
            :<|> UpdateDriverNameAPI
            :<|> SetRCStatusAPI
            :<|> DeleteRCAPI
-           :<|> ClearOnRideStuckDrivers
+           :<|> ClearOnRideStuckDriversAPI
            --
        )
 
@@ -175,9 +175,9 @@ type UpdateDriverNameAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_NAME
     :> Common.UpdateDriverNameAPI
 
-type ClearOnRideStuckDrivers =
+type ClearOnRideStuckDriversAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS
-    :> Common.ClearOnRideStuckDrivers
+    :> Common.ClearOnRideStuckDriversAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -257,14 +257,14 @@ collectCash merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.CollectCashEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.collectCash) driverId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.collectCash) driverId apiTokenInfo.personId.getId
 
 exemptCash :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 exemptCash merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.ExemptCashEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.drivers.exemptCash) driverId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.exemptCash) driverId apiTokenInfo.personId.getId
 
 enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do

@@ -32,7 +32,9 @@ import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscription
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -53,7 +55,8 @@ data DriverOfferAPIs = DriverOfferAPIs
     volunteer :: VolunteerAPIs,
     driverReferral :: DriverReferralAPIs,
     driverRegistration :: DriverRegistrationAPIs,
-    issue :: IssueAPIs
+    issue :: IssueAPIs,
+    subscription :: SubscriptionAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -68,8 +71,8 @@ data DriversAPIs = DriversAPIs
     blockDriverWithReason :: Id Driver.Driver -> Driver.BlockDriverWithReasonReq -> Euler.EulerClient APISuccess,
     blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     blockReasonList :: Euler.EulerClient [Driver.BlockReason],
-    collectCash :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    exemptCash :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    collectCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
+    exemptCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
     unblockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Driver.DriverIds -> Euler.EulerClient Driver.DriverLocationRes,
     driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverInfoRes,
@@ -98,7 +101,9 @@ data RidesAPIs = RidesAPIs
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     rideSync :: Id Ride.Ride -> Euler.EulerClient Ride.RideSyncRes,
     multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncRes,
-    rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes
+    rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes,
+    bookingWithVehicleNumberAndPhone :: Ride.BookingWithVehicleAndPhoneReq -> Euler.EulerClient APISuccess,
+    ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
   }
 
 data BookingsAPIs = BookingsAPIs
@@ -167,13 +172,23 @@ data IssueAPIs = IssueAPIs
     issueInfo :: Id Issue.IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
     issueUpdate :: Id Issue.IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
     issueAddComment :: Id Issue.IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
-    issueFetchMedia :: Text -> Euler.EulerClient Text
+    issueFetchMedia :: Text -> Euler.EulerClient Text,
+    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
+  }
+
+data SubscriptionAPIs = SubscriptionAPIs
+  { planList :: Id Driver.Driver -> Euler.EulerClient Subscription.PlanListAPIRes,
+    planSelect :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient APISuccess,
+    planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,
+    currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes
   }
 
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
+  let subscription = SubscriptionAPIs {..}
   let driverReferral = DriverReferralAPIs {..}
   let driverRegistration = DriverRegistrationAPIs {..}
   let bookings = BookingsAPIs {..}
@@ -185,6 +200,7 @@ mkDriverOfferAPIs merchantId token = do
   where
     driversClient
       :<|> ridesClient
+      :<|> subscriptionClient
       :<|> bookingsClient
       :<|> merchantClient
       :<|> messageClient
@@ -192,6 +208,12 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverRegistrationClient
       :<|> volunteerClient
       :<|> issueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+
+    planList
+      :<|> planSelect
+      :<|> planSuspend
+      :<|> planSubscribe
+      :<|> currentPlan = subscriptionClient
 
     driverDocumentsInfo
       :<|> driverAadhaarInfo
@@ -232,7 +254,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> rideInfo
       :<|> rideSync
       :<|> multipleRideSync
-      :<|> rideRoute = ridesClient
+      :<|> rideRoute
+      :<|> bookingWithVehicleNumberAndPhone
+      :<|> ticketRideList = ridesClient
 
     stuckBookingsCancel
       :<|> multipleBookingSync = bookingsClient
@@ -287,7 +311,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> issueInfo
       :<|> issueUpdate
       :<|> issueAddComment
-      :<|> issueFetchMedia = issueClient
+      :<|> issueFetchMedia
+      :<|> ticketStatusCallBack = issueClient
 
 callDriverOfferBPP ::
   forall m r b c.

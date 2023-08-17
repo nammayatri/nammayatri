@@ -77,6 +77,8 @@ dependencies:
   - unix
   - string-conversions
   - filepath
+  - euler-hs
+  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info

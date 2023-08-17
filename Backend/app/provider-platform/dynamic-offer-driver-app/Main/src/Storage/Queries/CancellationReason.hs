@@ -11,17 +11,37 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.CancellationReason where
 
-import Domain.Types.CancellationReason hiding (priority)
+import Domain.Types.CancellationReason
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude hiding (isNothing)
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.CancellationReason
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.CancellationReason as BeamCR
 
-findAll :: Transactionable m => m [CancellationReason]
-findAll = Esq.findAll $ do
-  cancellationReason <- from $ table @CancellationReasonT
-  where_ $ cancellationReason ^. CancellationReasonEnabled
-  orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
-  return cancellationReason
+findAll :: (L.MonadFlow m, Log m) => m [CancellationReason]
+findAll = findAllWithOptionsDb [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
+
+instance FromTType' BeamCR.CancellationReason CancellationReason where
+  fromTType' BeamCR.CancellationReasonT {..} = do
+    pure $
+      Just
+        CancellationReason
+          { reasonCode = CancellationReasonCode reasonCode,
+            description = description,
+            enabled = enabled,
+            priority = priority
+          }
+
+instance ToTType' BeamCR.CancellationReason CancellationReason where
+  toTType' CancellationReason {..} = do
+    BeamCR.CancellationReasonT
+      { BeamCR.reasonCode = (\(CancellationReasonCode x) -> x) reasonCode,
+        BeamCR.description = description,
+        BeamCR.enabled = enabled,
+        BeamCR.priority = priority
+      }

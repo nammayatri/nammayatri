@@ -68,6 +68,7 @@ dependencies:
   - exceptions
   - http-client
   - containers
+  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info

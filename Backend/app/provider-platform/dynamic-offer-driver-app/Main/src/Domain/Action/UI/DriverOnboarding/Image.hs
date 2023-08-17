@@ -26,14 +26,15 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
+import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Person as Person
@@ -95,6 +96,7 @@ validateImage ::
 validateImage isDashboard (personId, _) ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
+  org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   -- not needed org now because it is used to notify
   -- org <- case mbMerchant of
   --   Nothing -> do
@@ -110,14 +112,14 @@ validateImage isDashboard (personId, _) ImageValidateRequest {..} = do
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit) $ do
       -- not needed now
-      -- driverPhone <- mapM decrypt person.mobileNumber
-      -- notifyErrorToSupport org.id driverPhone org.name ((.failureReason) <$> images)
+      driverPhone <- mapM decrypt person.mobileNumber
+      notifyErrorToSupport person org.id driverPhone org.name ((.failureReason) <$> images)
       throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
   imageEntity <- mkImage personId merchantId imagePath imageType False
-  runTransaction $ Query.create imageEntity
+  _ <- Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
   validationOutput <-
@@ -125,7 +127,7 @@ validateImage isDashboard (personId, _) ImageValidateRequest {..} = do
       Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
   when validationOutput.validationAvailable $ do
     checkErrors imageEntity.id imageType validationOutput.detectedImage
-  runTransaction $ Query.updateToValid imageEntity.id
+  _ <- Query.updateToValid imageEntity.id
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where

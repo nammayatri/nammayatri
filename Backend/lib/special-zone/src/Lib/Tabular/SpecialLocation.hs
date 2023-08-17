@@ -25,7 +25,6 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation as Domain
 
-derivePersistField "Domain.Category"
 derivePersistField "LatLong"
 derivePersistField "Domain.GatesInfo"
 
@@ -39,7 +38,7 @@ mkPersist
     SpecialLocationT sql=special_location
       id Text
       locationName Text
-      category Domain.Category
+      category Text
       gates (PostgresList Domain.GatesInfo)
       createdAt UTCTime
       Primary id

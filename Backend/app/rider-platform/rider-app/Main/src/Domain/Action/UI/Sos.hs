@@ -24,15 +24,16 @@ where
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Sos as DSos
+-- import Storage.Tabular.Person ()
+
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Sos as QSos
-import Storage.Tabular.Person ()
 import Tools.Error
 
 data SosReq = SosReq
@@ -54,7 +55,8 @@ newtype SosRes = SosRes
 createSosDetails :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> SosReq -> m SosRes
 createSosDetails personId req = do
   sosDetails <- buildSosDetails personId req
-  runTransaction $ QSos.create sosDetails
+  -- runTransaction $ QSos.create sosDetails
+  _ <- QSos.create sosDetails
   return $
     SosRes
       { sosId = sosDetails.id
@@ -63,10 +65,12 @@ createSosDetails personId req = do
 updateSosDetails :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r) => Id DSos.Sos -> Id Person.Person -> SosFeedbackReq -> m APISuccess.APISuccess
 updateSosDetails sosId personId req = do
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
+  -- sosDetails <- QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
 
   unless (personId == sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
 
-  runTransaction $ QSos.updateStatus sosId (req.status)
+  -- runTransaction $ QSos.updateStatus sosId (req.status)
+  void $ QSos.updateStatus sosId (req.status)
   pure APISuccess.Success
 
 buildSosDetails :: (EncFlow m r) => Id Person.Person -> SosReq -> m DSos.Sos

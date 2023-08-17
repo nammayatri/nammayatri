@@ -11,63 +11,94 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.DriverLicense where
 
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.Person (Person)
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.DriverOnboarding.DriverLicense
-import Storage.Tabular.Person ()
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 
-create :: DriverLicense -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DriverLicense -> m ()
+create = createWithKV
 
-upsert :: DriverLicense -> SqlDB ()
-upsert a@DriverLicense {..} =
-  Esq.upsert
-    a
-    [ DriverLicenseDriverDob =. val driverDob,
-      DriverLicenseDriverName =. val driverName,
-      DriverLicenseLicenseExpiry =. val licenseExpiry,
-      DriverLicenseClassOfVehicles =. val (PostgresList classOfVehicles),
-      DriverLicenseVerificationStatus =. val verificationStatus,
-      DriverLicenseFailedRules =. val (PostgresList failedRules),
-      DriverLicenseUpdatedAt =. val updatedAt
-    ]
+upsert :: (L.MonadFlow m, Log m) => DriverLicense -> m ()
+upsert a@DriverLicense {..} = do
+  res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
+  if isJust res
+    then
+      updateOneWithKV
+        [ Se.Set BeamDL.driverDob driverDob,
+          Se.Set BeamDL.driverName driverName,
+          Se.Set BeamDL.licenseExpiry licenseExpiry,
+          Se.Set BeamDL.classOfVehicles classOfVehicles,
+          Se.Set BeamDL.verificationStatus verificationStatus,
+          Se.Set BeamDL.failedRules failedRules,
+          Se.Set BeamDL.updatedAt updatedAt
+        ]
+        [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
+    else createWithKV a
 
-findById ::
-  Transactionable m =>
-  Id DriverLicense ->
-  m (Maybe DriverLicense)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id DriverLicense -> m (Maybe DriverLicense)
+findById (Id dlId) = findOneWithKV [Se.Is BeamDL.id $ Se.Eq dlId]
 
-findByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe DriverLicense)
-findByDriverId driverId = do
-  findOne $ do
-    dl <- from $ table @DriverLicenseT
-    where_ $ dl ^. DriverLicenseDriverId ==. val (toKey driverId)
-    return dl
+findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverLicense)
+findByDriverId (Id personId) = findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq personId]
 
-findByDLNumber ::
-  (Transactionable m, EncFlow m r) =>
-  Text ->
-  m (Maybe DriverLicense)
+findByDLNumber :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
   dlNumberHash <- getDbHash dlNumber
-  findOne $ do
-    dl <- from $ table @DriverLicenseT
-    where_ $ dl ^. DriverLicenseLicenseNumberHash ==. val dlNumberHash
-    return dl
+  findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
 
-deleteByDriverId :: Id Person -> SqlDB ()
-deleteByDriverId driverId =
-  Esq.delete $ do
-    dl <- from $ table @DriverLicenseT
-    where_ $ dl ^. DriverLicenseDriverId ==. val (toKey driverId)
+deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDL.driverId (Se.Eq driverId)]
+
+instance FromTType' BeamDL.DriverLicense DriverLicense where
+  fromTType' BeamDL.DriverLicenseT {..} = do
+    pure $
+      Just
+        DriverLicense
+          { id = Id id,
+            driverId = Id driverId,
+            documentImageId1 = Id documentImageId1,
+            documentImageId2 = Id <$> documentImageId2,
+            driverDob = driverDob,
+            driverName = driverName,
+            licenseNumber = EncryptedHashed (Encrypted licenseNumberEncrypted) licenseNumberHash,
+            licenseExpiry = licenseExpiry,
+            classOfVehicles = classOfVehicles,
+            failedRules = failedRules,
+            verificationStatus = verificationStatus,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            consent = consent,
+            consentTimestamp = consentTimestamp
+          }
+
+instance ToTType' BeamDL.DriverLicense DriverLicense where
+  toTType' DriverLicense {..} = do
+    BeamDL.DriverLicenseT
+      { BeamDL.id = getId id,
+        BeamDL.driverId = getId driverId,
+        BeamDL.documentImageId1 = getId documentImageId1,
+        BeamDL.documentImageId2 = getId <$> documentImageId2,
+        BeamDL.driverDob = driverDob,
+        BeamDL.driverName = driverName,
+        BeamDL.licenseNumberEncrypted = licenseNumber & unEncrypted . (.encrypted),
+        BeamDL.licenseNumberHash = licenseNumber & (.hash),
+        BeamDL.licenseExpiry = licenseExpiry,
+        BeamDL.classOfVehicles = classOfVehicles,
+        BeamDL.failedRules = failedRules,
+        BeamDL.verificationStatus = verificationStatus,
+        BeamDL.createdAt = createdAt,
+        BeamDL.updatedAt = updatedAt,
+        BeamDL.consent = consent,
+        BeamDL.consentTimestamp = consentTimestamp
+      }

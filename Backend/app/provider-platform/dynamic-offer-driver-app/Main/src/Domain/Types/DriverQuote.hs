@@ -29,7 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 
 data DriverQuoteStatus = Active | Inactive
-  deriving (Generic, Show, Read, Eq, ToJSON, FromJSON)
+  deriving (Show, Read, Eq, Generic, Ord, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable DriverQuoteStatus
 
 data DriverQuote = DriverQuote
@@ -54,4 +54,4 @@ data DriverQuote = DriverQuote
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show, PrettyShow, Eq)

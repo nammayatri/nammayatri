@@ -42,10 +42,10 @@ instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 instance ToJSON (MerchantPaymentMethodD 'Unsafe)
 
 data PaymentType = PREPAID | POSTPAID
-  deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord, ToSchema)
 
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash
-  deriving (Generic, Eq)
+  deriving (Generic, Eq, Ord)
 
 instance ToSchema PaymentInstrument where
   declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions paymentInstrumentOptions
@@ -104,7 +104,7 @@ instance Read PaymentInstrument where
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
 
 data CardType = DefaultCardType
-  deriving (Generic, Show, Read, Eq, ToSchema)
+  deriving (Generic, Show, Read, Eq, ToSchema, Ord)
 
 -- Generic instances for type with single value will not work
 instance FromJSON CardType where
@@ -116,7 +116,7 @@ instance ToJSON CardType where
   toJSON = String . show
 
 data WalletType = DefaultWalletType
-  deriving (Generic, Show, Read, Eq, ToSchema)
+  deriving (Generic, Show, Read, Eq, ToSchema, Ord)
 
 -- Generic instances for type with single value will not work
 instance FromJSON WalletType where
@@ -128,7 +128,7 @@ instance ToJSON WalletType where
   toJSON = String . show
 
 data PaymentCollector = BAP | BPP
-  deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, ToSchema, Ord)
 
 data PaymentMethodAPIEntity = PaymentMethodAPIEntity
   { id :: Id MerchantPaymentMethod,

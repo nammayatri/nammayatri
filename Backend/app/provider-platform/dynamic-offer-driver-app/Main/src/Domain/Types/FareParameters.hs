@@ -50,7 +50,9 @@ data FParamsSlabDetails = FParamsSlabDetails
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
-data FareParametersType = Progressive | Slab deriving (Show, Read)
+type FullFareParametersProgressiveDetails = (Id FareParameters, FParamsProgressiveDetails)
+
+data FareParametersType = Progressive | Slab deriving (Show, Read, Generic)
 
 getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of

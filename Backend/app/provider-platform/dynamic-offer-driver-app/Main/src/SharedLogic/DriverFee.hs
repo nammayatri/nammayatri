@@ -16,16 +16,15 @@ module SharedLogic.DriverFee where
 
 import Domain.Types.DriverFee
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBFlow, runTransaction)
+import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Types.Common (MonadFlow, generateGUID)
-import Kernel.Utils.Common (generateShortId)
 import Storage.Queries.DriverFee (create, updateStatus)
 
 mergeDriverFee :: (MonadFlow m, EsqDBFlow m r) => DriverFee -> DriverFee -> UTCTime -> m ()
 mergeDriverFee oldFee newFee now = do
   id <- generateGUID
-  shortId <- generateShortId
   let driverId = newFee.driverId
+      merchantId = newFee.merchantId
       govtCharges = newFee.govtCharges + oldFee.govtCharges
       platformFee = PlatformFee (oldFee.platformFee.fee + newFee.platformFee.fee) (oldFee.platformFee.cgst + newFee.platformFee.cgst) (oldFee.platformFee.sgst + newFee.platformFee.sgst)
       numRides = oldFee.numRides + newFee.numRides
@@ -34,10 +33,12 @@ mergeDriverFee oldFee newFee now = do
       startTime = oldFee.startTime
       endTime = newFee.endTime
       status = PAYMENT_OVERDUE
+      collectedBy = Nothing
       createdAt = now
       updatedAt = now
+      feeType = RECURRING_INVOICE
   let newDriverFee = DriverFee {..}
-  runTransaction $ do
-    updateStatus INACTIVE oldFee.id now
-    updateStatus INACTIVE newFee.id now
-    create newDriverFee
+  -- runTransaction $ do
+  _ <- updateStatus INACTIVE oldFee.id now
+  _ <- updateStatus INACTIVE newFee.id now
+  void $ create newDriverFee

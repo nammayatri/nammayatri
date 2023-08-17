@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant.TransporterConfig
   {-# WARNING
@@ -21,67 +22,192 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.Merchant.TransporterConfig
+import qualified Sequelize as Se
+import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId merchantId =
-  Esq.findOne $ do
-    config <- from $ table @TransporterConfigT
-    where_ $
-      config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
-    return config
+-- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
+-- findByMerchantId merchantId =
+--   Esq.findOne $ do
+--     config <- from $ table @TransporterConfigT
+--       config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+--     return config
 
-updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
-updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
+findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
+
+-- updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
+-- updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ TransporterConfigFcmUrl =. val (showBaseUrl fcmUrl),
+--         TransporterConfigFcmServiceAccount =. val fcmServiceAccount,
+--         TransporterConfigUpdatedAt =. val now
+--       ]
+
+updateFCMConfig :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> BaseUrl -> Text -> m ()
+updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ TransporterConfigFcmUrl =. val (showBaseUrl fcmUrl),
-        TransporterConfigFcmServiceAccount =. val fcmServiceAccount,
-        TransporterConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+  updateOneWithKV
+    [ Se.Set BeamTC.fcmUrl $ showBaseUrl fcmUrl,
+      Se.Set BeamTC.fcmServiceAccount fcmServiceAccount,
+      Se.Set BeamTC.updatedAt now
+    ]
+    [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
 
-updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
-updateReferralLinkPassword merchantId newPassword = do
+-- updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
+-- updateReferralLinkPassword merchantId newPassword = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ TransporterConfigReferralLinkPassword =. val newPassword,
+--         TransporterConfigUpdatedAt =. val now
+--       ]
+
+updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Text -> m ()
+updateReferralLinkPassword (Id merchantId) newPassword = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ TransporterConfigReferralLinkPassword =. val newPassword,
-        TransporterConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+  updateOneWithKV
+    [ Se.Set BeamTC.referralLinkPassword newPassword,
+      Se.Set BeamTC.updatedAt now
+    ]
+    [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
 
-update :: TransporterConfig -> SqlDB ()
+-- update :: TransporterConfig -> SqlDB ()
+-- update config = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       ]
+--     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)
+
+update :: (L.MonadFlow m, MonadTime m, Log m) => TransporterConfig -> m ()
 update config = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ TransporterConfigPickupLocThreshold =. val config.pickupLocThreshold,
-        TransporterConfigDropLocThreshold =. val config.dropLocThreshold,
-        TransporterConfigRideTimeEstimatedThreshold =. val config.rideTimeEstimatedThreshold,
-        TransporterConfigDefaultPopupDelay =. val config.defaultPopupDelay,
-        TransporterConfigPopupDelayToAddAsPenalty =. val config.popupDelayToAddAsPenalty,
-        TransporterConfigThresholdCancellationScore =. val config.thresholdCancellationScore,
-        TransporterConfigMinRidesForCancellationScore =. val config.minRidesForCancellationScore,
-        TransporterConfigMediaFileUrlPattern =. val config.mediaFileUrlPattern,
-        TransporterConfigMediaFileSizeUpperLimit =. val config.mediaFileSizeUpperLimit,
-        TransporterConfigOnboardingTryLimit =. val config.onboardingTryLimit,
-        TransporterConfigOnboardingRetryTimeInHours =. val config.onboardingRetryTimeInHours,
-        TransporterConfigCheckImageExtractionForDashboard =. val config.checkImageExtractionForDashboard,
-        TransporterConfigSearchRepeatLimit =. val config.searchRepeatLimit,
-        TransporterConfigDriverPaymentCycleStartTime =. val (nominalDiffTimeToSeconds config.driverPaymentCycleStartTime),
-        TransporterConfigTimeDiffFromUtc =. val config.timeDiffFromUtc,
-        TransporterConfigDriverPaymentCycleBuffer =. val (nominalDiffTimeToSeconds config.driverPaymentCycleBuffer),
-        TransporterConfigDriverPaymentReminderInterval =. val (nominalDiffTimeToSeconds config.driverPaymentReminderInterval),
-        TransporterConfigDriverPaymentCycleDuration =. val (nominalDiffTimeToSeconds config.driverPaymentCycleDuration),
-        TransporterConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)
+  updateOneWithKV
+    [ Se.Set BeamTC.pickupLocThreshold config.pickupLocThreshold,
+      Se.Set BeamTC.dropLocThreshold config.dropLocThreshold,
+      Se.Set BeamTC.rideTimeEstimatedThreshold config.rideTimeEstimatedThreshold,
+      Se.Set BeamTC.defaultPopupDelay config.defaultPopupDelay,
+      Se.Set BeamTC.popupDelayToAddAsPenalty config.popupDelayToAddAsPenalty,
+      Se.Set BeamTC.thresholdCancellationScore config.thresholdCancellationScore,
+      Se.Set BeamTC.minRidesForCancellationScore config.minRidesForCancellationScore,
+      Se.Set BeamTC.mediaFileUrlPattern config.mediaFileUrlPattern,
+      Se.Set BeamTC.mediaFileSizeUpperLimit config.mediaFileSizeUpperLimit,
+      Se.Set BeamTC.onboardingTryLimit config.onboardingTryLimit,
+      Se.Set BeamTC.onboardingRetryTimeInHours config.onboardingRetryTimeInHours,
+      Se.Set BeamTC.checkImageExtractionForDashboard config.checkImageExtractionForDashboard,
+      Se.Set BeamTC.searchRepeatLimit config.searchRepeatLimit,
+      Se.Set BeamTC.driverPaymentCycleStartTime (nominalDiffTimeToSeconds config.driverPaymentCycleStartTime),
+      Se.Set BeamTC.timeDiffFromUtc config.timeDiffFromUtc,
+      Se.Set BeamTC.driverPaymentCycleBuffer (nominalDiffTimeToSeconds config.driverPaymentCycleBuffer),
+      Se.Set BeamTC.driverPaymentReminderInterval (nominalDiffTimeToSeconds config.driverPaymentReminderInterval),
+      Se.Set BeamTC.driverPaymentCycleDuration (nominalDiffTimeToSeconds config.driverPaymentCycleDuration),
+      Se.Set BeamTC.updatedAt now
+    ]
+    [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]
+
+instance FromTType' BeamTC.TransporterConfig TransporterConfig where
+  fromTType' BeamTC.TransporterConfigT {..} = do
+    fcmUrl' <- parseBaseUrl fcmUrl
+    pure $
+      Just
+        TransporterConfig
+          { merchantId = Id merchantId,
+            pickupLocThreshold = pickupLocThreshold,
+            dropLocThreshold = dropLocThreshold,
+            rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,
+            includeDriverCurrentlyOnRide = includeDriverCurrentlyOnRide,
+            defaultPopupDelay = defaultPopupDelay,
+            popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,
+            thresholdCancellationScore = thresholdCancellationScore,
+            minRidesForCancellationScore = minRidesForCancellationScore,
+            thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
+            minRidesToUnlist = minRidesToUnlist,
+            mediaFileUrlPattern = mediaFileUrlPattern,
+            mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
+            referralLinkPassword = referralLinkPassword,
+            fcmConfig =
+              FCM.FCMConfig
+                { fcmUrl = fcmUrl',
+                  fcmServiceAccount = fcmServiceAccount,
+                  fcmTokenKeyPrefix = fcmTokenKeyPrefix
+                },
+            onboardingTryLimit = onboardingTryLimit,
+            onboardingRetryTimeInHours = onboardingRetryTimeInHours,
+            checkImageExtractionForDashboard = checkImageExtractionForDashboard,
+            searchRepeatLimit = searchRepeatLimit,
+            actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
+            upwardsRecomputeBuffer = upwardsRecomputeBuffer,
+            approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
+            driverPaymentCycleBuffer = secondsToNominalDiffTime driverPaymentCycleBuffer,
+            driverPaymentCycleDuration = secondsToNominalDiffTime driverPaymentCycleDuration,
+            driverPaymentCycleStartTime = secondsToNominalDiffTime driverPaymentCycleStartTime,
+            driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
+            driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
+            driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
+            timeDiffFromUtc = timeDiffFromUtc,
+            subscription = subscription,
+            minLocationAccuracy = minLocationAccuracy,
+            aadhaarVerificationRequired = aadhaarVerificationRequired,
+            enableDashboardSms = enableDashboardSms,
+            createdAt = createdAt,
+            rcLimit = rcLimit,
+            subscriptionStartTime = subscriptionStartTime,
+            automaticRCActivationCutOff = automaticRCActivationCutOff,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamTC.TransporterConfig TransporterConfig where
+  toTType' TransporterConfig {..} = do
+    BeamTC.TransporterConfigT
+      { BeamTC.merchantId = getId merchantId,
+        BeamTC.pickupLocThreshold = pickupLocThreshold,
+        BeamTC.dropLocThreshold = dropLocThreshold,
+        BeamTC.rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,
+        BeamTC.includeDriverCurrentlyOnRide = includeDriverCurrentlyOnRide,
+        BeamTC.defaultPopupDelay = defaultPopupDelay,
+        BeamTC.popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,
+        BeamTC.thresholdCancellationScore = thresholdCancellationScore,
+        BeamTC.minRidesForCancellationScore = minRidesForCancellationScore,
+        BeamTC.thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
+        BeamTC.minRidesToUnlist = minRidesToUnlist,
+        BeamTC.mediaFileUrlPattern = mediaFileUrlPattern,
+        BeamTC.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
+        BeamTC.referralLinkPassword = referralLinkPassword,
+        BeamTC.fcmUrl = showBaseUrl $ FCM.fcmUrl fcmConfig,
+        BeamTC.fcmServiceAccount = FCM.fcmServiceAccount fcmConfig,
+        BeamTC.fcmTokenKeyPrefix = FCM.fcmTokenKeyPrefix fcmConfig,
+        BeamTC.onboardingTryLimit = onboardingTryLimit,
+        BeamTC.onboardingRetryTimeInHours = onboardingRetryTimeInHours,
+        BeamTC.checkImageExtractionForDashboard = checkImageExtractionForDashboard,
+        BeamTC.searchRepeatLimit = searchRepeatLimit,
+        BeamTC.actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
+        BeamTC.upwardsRecomputeBuffer = upwardsRecomputeBuffer,
+        BeamTC.approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
+        BeamTC.driverPaymentCycleBuffer = nominalDiffTimeToSeconds driverPaymentCycleBuffer,
+        BeamTC.driverPaymentCycleDuration = nominalDiffTimeToSeconds driverPaymentCycleDuration,
+        BeamTC.driverPaymentCycleStartTime = nominalDiffTimeToSeconds driverPaymentCycleStartTime,
+        BeamTC.driverPaymentReminderInterval = nominalDiffTimeToSeconds driverPaymentReminderInterval,
+        BeamTC.driverAutoPayNotificationTime = nominalDiffTimeToSeconds driverAutoPayNotificationTime,
+        BeamTC.driverAutoPayExecutionTime = nominalDiffTimeToSeconds driverAutoPayExecutionTime,
+        BeamTC.timeDiffFromUtc = timeDiffFromUtc,
+        BeamTC.subscription = subscription,
+        BeamTC.minLocationAccuracy = minLocationAccuracy,
+        BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
+        BeamTC.enableDashboardSms = enableDashboardSms,
+        BeamTC.subscriptionStartTime = subscriptionStartTime,
+        BeamTC.createdAt = createdAt,
+        BeamTC.updatedAt = updatedAt,
+        BeamTC.rcLimit = rcLimit,
+        BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff
+      }

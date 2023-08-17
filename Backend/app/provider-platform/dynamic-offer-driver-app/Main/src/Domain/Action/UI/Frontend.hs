@@ -22,7 +22,6 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverMode as DMode
@@ -37,7 +36,7 @@ data GetDriverFlowStatusRes = GetDriverFlowStatusRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getDriverFlowStatus :: (CacheFlow m r, EsqDBFlow m r) => (Id DP.Person, Id DM.Merchant) -> m GetDriverFlowStatusRes
+getDriverFlowStatus :: (CacheFlow m r, EsqDBFlow m r, MonadTime m) => (Id DP.Person, Id DM.Merchant) -> m GetDriverFlowStatusRes
 getDriverFlowStatus (personId, _) = do
   -- should not be run in replica
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -53,6 +52,6 @@ getDriverFlowStatus (personId, _) = do
         else do
           driverInfo <- CDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
           let func status = do
-                Esq.runNoTransaction $ QDFS.updateStatus personId status
+                _ <- QDFS.updateStatus personId status
                 return $ GetDriverFlowStatusRes (Just driverStatus) status
           func $ DMode.getDriverStatus driverInfo.mode driverInfo.active

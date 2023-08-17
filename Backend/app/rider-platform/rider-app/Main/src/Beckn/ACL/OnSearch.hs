@@ -28,7 +28,7 @@ import GHC.Float (int2Double)
 -- import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context (validateContext)
-import Kernel.Storage.Esqueleto (runTransaction)
+-- import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Beckn.ReqTypes
@@ -87,7 +87,8 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   let errorType = show.(._type) <$> mbErr
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
-  runTransaction $
+  -- runTransaction $
+  void $
     OnSearchEvent.create $
       OnSearchEvent {..}
 

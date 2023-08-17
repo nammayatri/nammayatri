@@ -29,10 +29,12 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+-- import qualified Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+
+import Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -46,6 +48,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Ride as QRide
 
 ---------------------------------------------------------------------
@@ -63,8 +66,8 @@ stuckBookingsCancel merchantShortId req = do
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
 
   now <- getCurrentTime
-  stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
-  stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
+  stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
+  stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
   let bcReasons = mkBookingCancellationReason (merchant.id) Common.bookingStuckCode Nothing <$> stuckBookingIds
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
@@ -72,18 +75,19 @@ stuckBookingsCancel merchantShortId req = do
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
   driverLocations <- catMaybes <$> traverse (SDrLoc.findById merchant.id) stuckPersonIds
-  Esq.runTransaction $ do
-    QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
-    QBooking.cancelBookings allStuckBookingIds now
-    for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
-    CQDrInfo.updateNotOnRideMultiple stuckDriverIds
-    for_ stuckRideItems $ \item -> do
-      if item.driverActive
-        then QDFS.updateStatus item.driverId DDFS.ACTIVE
-        else QDFS.updateStatus item.driverId DDFS.IDLE
+  -- Esq.runTransaction $ do
+  _ <- QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
+  _ <- QBooking.cancelBookings allStuckBookingIds now
+  for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
+  _ <- CQDrInfo.updateNotOnRideMultiple stuckDriverIds
+  for_ stuckRideItems $ \item -> do
+    if item.driverActive
+      then QDFS.updateStatus item.driverId DDFS.ACTIVE
+      else QDFS.updateStatus item.driverId DDFS.IDLE
   for_ driverLocations $ \location -> do
     let latLong = LatLong location.lat location.lon
-    runInLocationDB $ QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
+    -- runInLocationDB $ QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
+    QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
   for_ stuckDriverIds CQDrInfo.clearDriverInfoCache
   for_ stuckPersonIds SRide.clearCache
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
@@ -128,11 +132,12 @@ multipleBookingSync merchantShortId req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
   let reqBookingIds = cast @Common.Booking @DBooking.Booking . (.bookingId) <$> req.bookings
-  rideBookingsMap <- Esq.runInReplica $ QBooking.findRideBookingsById merchant.id reqBookingIds
+  -- rideBookingsMap <- B.runInReplica $ QBooking.findRideBookingsById merchant.id reqBookingIds
+  rideBookingsMap <- B.runInReplica $ QR.findRideBookingsById merchant.id reqBookingIds
   respItems <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId
-      let mbRideBooking = HashMap.lookup bookingId rideBookingsMap
+      let mbRideBooking = HashMap.lookup (getId bookingId) rideBookingsMap
       case mbRideBooking of
         Nothing -> throwError (BookingDoesNotExist bookingId.getId)
         Just (booking, mbRide) -> do
@@ -148,9 +153,9 @@ multipleBookingSync merchantShortId req = do
                       then Just $ mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) bookingId
                       else Nothing
               unless (bookingNewStatus == booking.status) $ do
-                Esq.runTransaction $ do
-                  QBooking.updateStatus bookingId bookingNewStatus
-                  whenJust mbCancellationReason QBCR.upsert
+                -- Esq.runTransaction $ do
+                QBooking.updateStatus bookingId bookingNewStatus
+                whenJust mbCancellationReason QBCR.upsert
               let updBooking = booking{status = bookingNewStatus}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) (Just ride) updBooking merchant
             Nothing -> do
@@ -159,9 +164,9 @@ multipleBookingSync merchantShortId req = do
                       then Just $ mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
                       else Nothing
               when (booking.status /= DBooking.CANCELLED) $ do
-                Esq.runTransaction $ do
-                  QBooking.updateStatus bookingId DBooking.CANCELLED
-                  whenJust mbCancellationReason QBCR.upsert
+                -- Esq.runTransaction $ do
+                QBooking.updateStatus bookingId DBooking.CANCELLED
+                whenJust mbCancellationReason QBCR.upsert
               let updBooking = booking{status = DBooking.CANCELLED}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) Nothing updBooking merchant
           pure Common.SuccessItem

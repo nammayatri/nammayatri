@@ -16,6 +16,7 @@
 
 module Storage.CachedQueries.Issue.IssueReport where
 
+import Debug.Trace as T
 import Domain.Types.Issue.IssueReport
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
@@ -34,7 +35,7 @@ findAllByDriver driverId =
 findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueReport -> m (Maybe IssueReport)
 findById issueReportId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueReportByIdKey issueReportId) >>= \case
-    Just a -> pure a
+    Just a -> T.trace "found in the hedis" $ pure a
     Nothing -> cacheIssueReportById issueReportId /=<< Queries.findById issueReportId
 
 --------- Caching logic for issue Report by DriverId -------------------

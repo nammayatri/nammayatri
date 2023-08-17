@@ -11,19 +11,56 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.EstimateBreakup where
 
+import Domain.Types.Estimate
+import qualified Domain.Types.Estimate as DEB
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Estimate as TEstimate
-import Storage.Tabular.EstimateBreakup as SEB
+import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.EstimateBreakup as BeamEB
 
-findAllByEstimateIdT :: (Transactionable m) => EstimateTId -> MaybeT (DTypeBuilder m) [EstimateBreakupT]
-findAllByEstimateIdT = lift . findAllByEstimateId'
+create :: (L.MonadFlow m, Log m) => EstimateBreakup -> m ()
+create = createWithKV
 
-findAllByEstimateId' :: (Transactionable m) => EstimateTId -> DTypeBuilder m [EstimateBreakupT]
-findAllByEstimateId' estimateTId = Esq.findAll' $ do
-  estimateBreakup <- from $ table @SEB.EstimateBreakupT
-  where_ $ estimateBreakup ^. EstimateBreakupEstimateId ==. val estimateTId
-  return estimateBreakup
+-- findAllByEstimateIdT :: (Transactionable m) => EstimateTId -> MaybeT (DTypeBuilder m) [EstimateBreakupT]
+-- findAllByEstimateIdT = lift . findAllByEstimateId'
+
+-- findAllByEstimateId' :: (Transactionable m) => EstimateTId -> DTypeBuilder m [EstimateBreakupT]
+-- findAllByEstimateId' estimateTId = Esq.findAll' $ do
+--   estimateBreakup <- from $ table @SEB.EstimateBreakupT
+--   return estimateBreakup
+
+findAllByEstimateIdT :: (L.MonadFlow m, Log m) => Id Estimate -> m [EstimateBreakup]
+findAllByEstimateIdT (Id estimateId) = findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
+
+instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where
+  fromTType' BeamEB.EstimateBreakupT {..} = do
+    let price =
+          DEB.EstimateBreakupPrice
+            { currency = priceCurrency,
+              value = roundToIntegral priceValue
+            }
+    pure $
+      Just
+        EstimateBreakup
+          { id = Id id,
+            estimateId = Id estimateId,
+            title = title,
+            price = price
+          }
+
+instance ToTType' BeamEB.EstimateBreakup EstimateBreakup where
+  toTType' EstimateBreakup {..} = do
+    BeamEB.EstimateBreakupT
+      { BeamEB.id = getId id,
+        BeamEB.estimateId = getId estimateId,
+        BeamEB.title = title,
+        BeamEB.priceCurrency = price.currency,
+        BeamEB.priceValue = realToFrac price.value
+      }

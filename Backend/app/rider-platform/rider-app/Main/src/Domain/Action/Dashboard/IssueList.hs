@@ -15,15 +15,19 @@
 
 module Domain.Action.Dashboard.IssueList where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Issue as DI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Environment
+-- import Kernel.Storage.Esqueleto hiding (count)
+
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (count)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -65,6 +69,7 @@ getIssueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> M
 getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  -- merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let toDate = fromMaybe now mbTo
   let fromDate = fromMaybe (addUTCTime (negate nominalDay) now) mbFrom
   case mbMobileNumber of
@@ -72,13 +77,16 @@ getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
       customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
+      -- customer <- QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
       issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      -- issues <- QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
       return $ IssueListRes {list = issueList, summary = summary}
     Nothing -> do
       issues <- runInReplica $ QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
+      -- issues <- QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
@@ -101,3 +109,15 @@ buildIssueList (issues, person) = do
         createdAt = issues.createdAt,
         updatedAt = issues.updatedAt
       }
+
+ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
+ticketStatusCallBack _ req = do
+  _ <- QIssue.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+  QIssue.updateIssueStatus req.ticketId (toDomainIssueStatus req.status)
+  return Success
+
+toDomainIssueStatus :: Common.IssueStatus -> DI.IssueStatus
+toDomainIssueStatus = \case
+  Common.OPEN -> DI.OPEN
+  Common.PENDING -> DI.PENDING
+  Common.RESOLVED -> DI.RESOLVED

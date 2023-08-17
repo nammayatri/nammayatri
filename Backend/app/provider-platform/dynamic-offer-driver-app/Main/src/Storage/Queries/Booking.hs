@@ -11,115 +11,86 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Booking where
 
-import qualified Data.HashMap.Strict as HashMap
+-- import qualified Data.HashMap.Strict as HashMap
 import Domain.Types.Booking
-import Domain.Types.DriverQuote (DriverQuote)
+import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Merchant
-import qualified Domain.Types.Ride as DRide
+-- import qualified Domain.Types.Ride as DRide
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
+import qualified EulerHS.Language as L
+-- import Kernel.Types.Common (Money)
+
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
-import Kernel.Types.Common (Money)
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Time
+-- import Kernel.Types.Time
+import Kernel.Utils.Common
+import qualified Sequelize as Se
+import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
-import Storage.Queries.FullEntityBuilders
-import Storage.Tabular.Booking
-import Storage.Tabular.DriverQuote as DriverQuote
-import Storage.Tabular.Ride as Ride
+import qualified Storage.Queries.FareParameters as QueriesFP
 
--- fareParams already created with driverQuote
-create :: Booking -> SqlDB ()
-create dBooking =
-  withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' booking
+createBooking :: (L.MonadFlow m, Log m) => Booking -> m ()
+createBooking = createWithKV
 
-findById :: Transactionable m => Id Booking -> m (Maybe Booking)
-findById bookingId = buildDType $ do
-  res <-
-    Esq.findOne' $ do
-      rb <- from $ table @BookingT
-      where_ $ rb ^. BookingTId ==. val (toKey bookingId)
-      pure rb
-  join <$> mapM buildFullBooking res
+create :: (L.MonadFlow m, Log m) => Booking -> m ()
+create dBooking = QBBL.create dBooking.fromLocation >> QBBL.create dBooking.toLocation >> createBooking dBooking
 
-findBySTId :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
-findBySTId searchTryId = buildDType $ do
-  mbDriverQuoteT <- QDQuote.findDriverQuoteBySTId searchTryId
-  let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
-  mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
+findById :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
+findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
-  join <$> mapM buildFullBooking mbBookingT
+findBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m (Maybe Booking)
+findBySTId searchTryId = do
+  mbDriverQuote <- QDQuote.findDriverQuoteBySTId searchTryId
+  maybe (pure Nothing) (\dQ -> findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq $ getId $ DDQ.id dQ]) mbDriverQuote
 
-findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
-findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do
-  booking <- from $ table @BookingT
-  where_ $ booking ^. BookingQuoteId ==. val driverQuoteId.getId
-  pure booking
-
-updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
+updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingStatus =. val rbStatus,
-        BookingUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingTId ==. val (toKey rbId)
+  updateOneWithKV
+    [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateRiderId :: Id Booking -> Id RiderDetails -> SqlDB ()
+updateRiderId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id RiderDetails -> m ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingRiderId =. val (Just $ toKey riderId),
-        BookingUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingTId ==. val (toKey rbId)
+  updateOneWithKV
+    [Se.Set BeamB.riderId $ Just $ getId riderId, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateRiderName :: Id Booking -> Text -> SqlDB ()
+updateRiderName :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateRiderName bookingId riderName = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingRiderName =. val (Just riderName),
-        BookingUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
+  updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateSpecialZoneOtpCode :: Id Booking -> Text -> SqlDB ()
+updateSpecialZoneOtpCode :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingSpecialZoneOtpCode =. val (Just specialZoneOtpCode),
-        BookingUpdatedAt =. val now
+  updateOneWithKV
+    [Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings (Id merchantId) bookingIds now = do
+  let updatedTimestamp = addUTCTime (- (6 * 60 * 60)) now
+  (Domain.Types.Booking.id <$>)
+    <$> findAllWithDb
+      [ Se.And
+          [ Se.Is BeamB.providerId (Se.Eq merchantId),
+            Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
+            Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
+            Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp)
+          ]
       ]
-    where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
-findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings merchantId bookingIds now = do
-  Esq.findAll $ do
-    booking <- from $ table @BookingT
-    let upcoming6HrsCond =
-          booking ^. BookingCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-        &&. (booking ^. BookingStatus `in_` valList [NEW, TRIP_ASSIGNED] &&. upcoming6HrsCond)
-    pure $ booking ^. BookingTId
-
-findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
   maybe
@@ -127,61 +98,108 @@ findBookingBySpecialZoneOTP merchantId otpCode now = do
     findById
     bookingId
 
-findBookingIdBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
-findBookingIdBySpecialZoneOTP merchantId otpCode now = do
-  Esq.findOne $ do
-    booking <- from $ table @BookingT
-    let otpExpiryCondition =
-          booking ^. BookingCreatedAt +. Esq.interval [Esq.MINUTE 30] >=. val now
-    where_ $
-      booking ^. BookingSpecialZoneOtpCode ==. val (Just otpCode)
-        &&. (booking ^. BookingStatus ==. val NEW &&. otpExpiryCondition)
-        &&. booking ^. BookingProviderId ==. val (toKey merchantId)
-    pure $ booking ^. BookingTId
+findBookingIdBySpecialZoneOTP :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
+findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now = do
+  let otpExpiryCondition = addUTCTime (- (30 * 60) :: NominalDiffTime) now
+  (Domain.Types.Booking.id <$>) <$> findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
 
-cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
-cancelBookings bookingIds now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingStatus =. val CANCELLED,
-        BookingUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+cancelBookings :: (L.MonadFlow m, Log m) => [Id Booking] -> UTCTime -> m ()
+cancelBookings bookingIds now =
+  updateWithKV
+    [Se.Set BeamB.status CANCELLED, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
-findRideBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m (HashMap.HashMap (Id Booking) (Booking, Maybe DRide.Ride))
-findRideBookingsById merchantId bookingIds = do
-  bookings <- findBookingsById merchantId bookingIds
-  rides <- findRidesByBookingId (bookings <&> (.id))
-  let tuple = map (\booking -> (booking.id, (booking, find (\ride -> ride.bookingId == booking.id) rides))) bookings
-  pure $ HashMap.fromList tuple
+-- findFareForCancelledBookings :: Transactionable m => [Id Booking] -> m Money
+-- findFareForCancelledBookings bookingIds =
+--   mkSum
+--     <$> Esq.findAll do
+--       booking <- from $ table @BookingT
+--       where_ $
+--         booking ^. BookingStatus ==. val CANCELLED
+--           &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
+--       pure (sum_ $ booking ^. BookingEstimatedFare :: SqlExpr (Esq.Value (Maybe Money)))
+--   where
+--     mkSum [Just value] = value
+--     mkSum _ = 0
 
-findBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m [Booking]
-findBookingsById merchantId bookingIds = Esq.buildDType $ do
-  bookingTs <- Esq.findAll' $ do
-    booking <- from $ table @BookingT
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-    return booking
-  catMaybes <$> forM bookingTs buildFullBooking
+findFareForCancelledBookings :: MonadFlow m => [Id Booking] -> m Money
+findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.status $ Se.Eq CANCELLED, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]] <&> sum . map Domain.Types.Booking.estimatedFare
 
-findRidesByBookingId :: Transactionable m => [Id Booking] -> m [DRide.Ride]
-findRidesByBookingId bookingIds = Esq.findAll $ do
-  ride <- from $ table @Ride.RideT
-  where_ $
-    ride ^. RideBookingId `in_` valList (toKey <$> bookingIds)
-  return ride
+instance FromTType' BeamB.Booking Booking where
+  fromTType' BeamB.BookingT {..} = do
+    fl <- QBBL.findById (Id fromLocationId) >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> show fromLocationId)
+    tl <- QBBL.findById (Id toLocationId) >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> show toLocationId)
+    fp <- QueriesFP.findById (Id fareParametersId)
+    pUrl <- parseBaseUrl bapUri
+    if isJust fp
+      then
+        pure $
+          Just
+            Booking
+              { id = Id id,
+                transactionId = transactionId,
+                quoteId = quoteId,
+                status = status,
+                bookingType = bookingType,
+                specialLocationTag = specialLocationTag,
+                specialZoneOtpCode = specialZoneOtpCode,
+                area = area,
+                providerId = Id providerId,
+                primaryExophone = primaryExophone,
+                bapId = bapId,
+                bapUri = pUrl,
+                bapCity = bapCity,
+                bapCountry = bapCountry,
+                startTime = startTime,
+                riderId = Id <$> riderId,
+                fromLocation = fl,
+                toLocation = tl,
+                vehicleVariant = vehicleVariant,
+                estimatedDistance = estimatedDistance,
+                maxEstimatedDistance = maxEstimatedDistance,
+                estimatedFare = estimatedFare,
+                estimatedDuration = estimatedDuration,
+                fareParams = fromJust fp, -- This fromJust is safe because of the check above.
+                paymentMethodId = Id <$> paymentMethodId,
+                riderName = riderName,
+                paymentUrl = paymentUrl,
+                createdAt = createdAt,
+                updatedAt = updatedAt
+              }
+      else do
+        logError $ "FareParameters not found for booking: " <> show id
+        pure Nothing
 
-findFareForCancelledBookings :: Transactionable m => [Id Booking] -> m Money
-findFareForCancelledBookings bookingIds =
-  mkSum
-    <$> Esq.findAll do
-      booking <- from $ table @BookingT
-      where_ $
-        booking ^. BookingStatus ==. val CANCELLED
-          &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-      pure (sum_ $ booking ^. BookingEstimatedFare :: SqlExpr (Esq.Value (Maybe Money)))
-  where
-    mkSum [Just value] = value
-    mkSum _ = 0
+instance ToTType' BeamB.Booking Booking where
+  toTType' Booking {..} =
+    BeamB.BookingT
+      { BeamB.id = getId id,
+        BeamB.transactionId = transactionId,
+        BeamB.quoteId = quoteId,
+        BeamB.status = status,
+        BeamB.bookingType = bookingType,
+        BeamB.specialLocationTag = specialLocationTag,
+        BeamB.specialZoneOtpCode = specialZoneOtpCode,
+        BeamB.area = area,
+        BeamB.providerId = getId providerId,
+        BeamB.primaryExophone = primaryExophone,
+        BeamB.bapId = bapId,
+        BeamB.bapUri = showBaseUrl bapUri,
+        BeamB.startTime = startTime,
+        BeamB.riderId = getId <$> riderId,
+        BeamB.bapCity = bapCity,
+        BeamB.bapCountry = bapCountry,
+        BeamB.fromLocationId = getId fromLocation.id,
+        BeamB.toLocationId = getId toLocation.id,
+        BeamB.vehicleVariant = vehicleVariant,
+        BeamB.estimatedDistance = estimatedDistance,
+        BeamB.maxEstimatedDistance = maxEstimatedDistance,
+        BeamB.estimatedFare = estimatedFare,
+        BeamB.estimatedDuration = estimatedDuration,
+        BeamB.fareParametersId = getId fareParams.id,
+        BeamB.paymentMethodId = getId <$> paymentMethodId,
+        BeamB.paymentUrl = paymentUrl,
+        BeamB.riderName = riderName,
+        BeamB.createdAt = createdAt,
+        BeamB.updatedAt = updatedAt
+      }

@@ -11,12 +11,45 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Feedback.Feedback where
 
-import Domain.Types.Feedback.Feedback (Feedback)
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Feedback.Feedback ()
+import Control.Applicative
+import Data.Foldable
+import Data.Function hiding (id)
+import Data.Maybe
+import Domain.Types.Feedback.Feedback
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
+import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
+import qualified Storage.Beam.Feedback.Feedback as BeamF
 
-createMany :: [Feedback] -> SqlDB ()
-createMany = Esq.createMany
+create :: (L.MonadFlow m, Log m) => Feedback -> m ()
+create = createWithKV
+
+createMany :: (L.MonadFlow m, Log m) => [Feedback] -> m ()
+createMany = traverse_ create
+
+instance FromTType' BeamF.Feedback Feedback where
+  fromTType' BeamF.FeedbackT {..} = do
+    pure $
+      Just
+        Feedback
+          { id = Id id,
+            rideId = Id rideId,
+            driverId = Id driverId,
+            badge = badge,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamF.Feedback Feedback where
+  toTType' Feedback {..} =
+    BeamF.FeedbackT
+      { BeamF.id = getId id,
+        BeamF.rideId = getId rideId,
+        BeamF.driverId = getId driverId,
+        BeamF.badge = badge,
+        BeamF.createdAt = createdAt
+      }

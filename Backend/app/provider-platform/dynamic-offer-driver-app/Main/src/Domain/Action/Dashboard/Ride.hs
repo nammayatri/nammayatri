@@ -19,6 +19,8 @@ module Domain.Action.Dashboard.Ride
     multipleRideSync,
     rideRoute,
     currentActiveRide,
+    bookingWithVehicleNumberAndPhone,
+    ticketRideList,
   )
 where
 
@@ -27,21 +29,28 @@ import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
 import qualified Data.Time as Time
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
+import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
 import qualified Kernel.Storage.Clickhouse.Types as CH
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -53,9 +62,11 @@ import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.Vehicle as VQuery
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -80,6 +91,8 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
   rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbfrom mbto
+  -- rideItems <- QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbfrom mbto
+  logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?
@@ -109,7 +122,46 @@ buildRideListItem QRide.RideItem {..} = do
       }
 
 ---------------------------------------------------------------------------------------------------
+ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
+ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
+  merchant <- findMerchantByShortId merchantShortId
+  let totalRides = 5
+  let mbShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbRideShortId
+  case (mbShortId, mbPhoneNumber) of
+    (Just shortId, _) -> do
+      ride <- QRide.findRideByRideShortId shortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
+      rideDetail <- rideInfo merchantShortId (cast ride.id)
+      let ticketRideDetail = makeRequiredRideDetail ride.driverId (ride, rideDetail)
+      return Common.TicketRideListRes {rides = [ticketRideDetail]}
+    (Nothing, Just number) -> do
+      no <- getDbHash number
+      let code = fromMaybe "+91" countryCode
+      person <- runInReplica $ QPerson.findByMobileNumberAndMerchant code no merchant.id >>= fromMaybeM (PersonWithPhoneNotFound number)
+      ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing Nothing Nothing
+      let lastNRides = map fst ridesAndBooking
+      ridesDetail <- mapM (\ride -> rideInfo merchantShortId (cast ride.id)) lastNRides
+      let rdList = zipWith (curry (makeRequiredRideDetail person.id)) lastNRides ridesDetail
+      return Common.TicketRideListRes {rides = rdList}
+    (Nothing, Nothing) -> throwError $ InvalidRequest "Ride Short Id or Phone Number Not Received"
+  where
+    makeRequiredRideDetail personId (ride, detail) =
+      Common.RideInfo
+        { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
+          customerName = detail.customerName,
+          customerPhoneNo = detail.customerPhoneNo,
+          driverName = detail.driverName,
+          driverPhoneNo = detail.driverPhoneNo,
+          vehicleNo = detail.vehicleNo,
+          status = detail.bookingStatus,
+          rideCreatedAt = ride.createdAt,
+          pickupLocation = detail.customerPickupLocation,
+          dropLocation = detail.customerDropLocation,
+          fare = detail.actualFare,
+          personId = cast personId,
+          classification = Ticket.DRIVER
+        }
 
+---------------------------------------------------------------------------------------------------
 getActualRoute :: MonadFlow m => Common.DriverEdaKafka -> m Common.ActualRoute
 getActualRoute Common.DriverEdaKafka {..} =
   case (lat, lon, ts, acc, rideStatus) of
@@ -129,6 +181,8 @@ rideRoute merchantShortId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
   let rideQId = T.unpack rideId.getId
       driverQId = T.unpack ride.driverId.getId
@@ -157,6 +211,10 @@ rideInfo merchantShortId reqRideId = do
   rideDetails <- runInReplica $ QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
   mQuote <- runInReplica $ DQ.findById (Id booking.quoteId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- rideDetails <- QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
+  -- booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  -- mQuote <- DQ.findById (Id booking.quoteId)
   let driverId = ride.driverId
 
   -- merchant access checking
@@ -164,13 +222,15 @@ rideInfo merchantShortId reqRideId = do
 
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  mDriverLocation <- QDrLoc.findByIdInReplica driverId
-
+  -- riderDetails <- QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
+  mDriverLocation <- QDrLoc.findById driverId
   mbBCReason <-
     if ride.status == DRide.CANCELLED
       then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
+      -- QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
       else pure Nothing
   driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByEntityId rideId
+  -- driverInitiatedCallCount <- QCallStatus.countCallsByEntityId rideId
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
@@ -217,7 +277,8 @@ rideInfo merchantShortId reqRideId = do
         cancellationReason,
         driverInitiatedCallCount,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
-        distanceCalculationFailed = ride.distanceCalculationFailed
+        distanceCalculationFailed = ride.distanceCalculationFailed,
+        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
       }
 
 mkLocationAPIEntity :: DBLoc.BookingLocation -> Common.LocationAPIEntity
@@ -250,13 +311,24 @@ mkBookingStatus ride now = do
     DRide.COMPLETED -> Common.COMPLETED
     DRide.CANCELLED -> Common.CANCELLED
 
+castDVehicleVariant :: DVeh.Variant -> Common.Variant
+castDVehicleVariant = \case
+  DVeh.SUV -> Common.SUV
+  DVeh.HATCHBACK -> Common.HATCHBACK
+  DVeh.SEDAN -> Common.SEDAN
+  DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
+  DVeh.TAXI -> Common.TAXI
+  DVeh.TAXI_PLUS -> Common.TAXI_PLUS
+
 ---------------------------------------------------------------------
 rideSync :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes
 rideSync merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  -- booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
 
   -- merchant access checking
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
@@ -302,10 +374,42 @@ mkMultipleRideData rideId Common.RideSyncRes {..} =
 ---------------------------------------------------------------------
 currentActiveRide :: ShortId DM.Merchant -> Text -> Flow (Id Common.Ride)
 currentActiveRide _ vehicleNumber = do
-  vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNumber >>= fromMaybeM (RCNotFound vehicleNumber)
-  rcActiveAssociation <- runInReplica $ DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
-  activeRide <- runInReplica $ QRide.getActiveByDriverId rcActiveAssociation.driverId >>= fromMaybeM NoActiveRidePresent
+  vehicle <- VQuery.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleNotFound vehicleNumber)
+  activeRide <- runInReplica $ QRide.getActiveByDriverId vehicle.driverId >>= fromMaybeM NoActiveRidePresent
   let rideId = cast @DRide.Ride @Common.Ride activeRide.id
   pure rideId
 
 ---------------------------------------------------------------------
+
+bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> Flow APISuccess
+bookingWithVehicleNumberAndPhone merchantShortId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  phoneNumberHash <- getDbHash req.phoneNumber
+  person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
+  mblinkedVehicle <- VQuery.findById person.id
+  now <- getCurrentTime
+  case mblinkedVehicle of
+    Just vehicle -> do
+      unless (vehicle.registrationNo == req.vehicleNumber) $ do
+        tryLinkinRC person.id merchant.id now
+    Nothing -> do
+      tryLinkinRC person.id merchant.id now
+  return Success
+  where
+    tryLinkinRC personId merchantId now = do
+      vehicleRC <- RCQuery.findLastVehicleRCWrapper req.vehicleNumber >>= fromMaybeM VehicleIsNotRegistered
+      mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id personId
+      case mRCAssociation of
+        Just assoc -> do
+          when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
+            createRCAssociation personId vehicleRC
+        Nothing -> createRCAssociation personId vehicleRC
+      let rcStatusReq =
+            DomainRC.RCStatusReq
+              { rcNo = req.vehicleNumber,
+                isActivate = True
+              }
+      void $ DomainRC.linkRCStatus (personId, merchantId) rcStatusReq
+    createRCAssociation driverId rc = do
+      driverRCAssoc <- makeRCAssociation driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      DAQuery.create driverRCAssoc
