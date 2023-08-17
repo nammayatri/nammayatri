@@ -13,13 +13,12 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.MerchantServiceConfig where
 
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -32,6 +31,7 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -44,7 +44,6 @@ import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.ServiceName where
@@ -75,20 +74,7 @@ instance B.Table MerchantServiceConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = Id <$> serviceName <*> merchantId
 
-instance ModelMeta MerchantServiceConfigT where
-  modelFieldModification = merchantServiceConfigTMod
-  modelTableName = "merchant_service_config"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type MerchantServiceConfig = MerchantServiceConfigT Identity
-
-instance FromJSON MerchantServiceConfig where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MerchantServiceConfig where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MerchantServiceConfig
 
 merchantServiceConfigTMod :: MerchantServiceConfigT (B.FieldModification (B.TableField MerchantServiceConfigT))
 merchantServiceConfigTMod =
@@ -124,19 +110,6 @@ getServiceNameConfigJSON = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
 
-instance Serialize MerchantServiceConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-merchantServiceConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantServiceConfigToHSModifiers =
-  M.empty
-
-merchantServiceConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-merchantServiceConfigToPSModifiers =
-  M.empty
-
 $(enableKVPG ''MerchantServiceConfigT ['serviceName, 'merchantId] [])
+
+$(mkTableInstances ''MerchantServiceConfigT "merchant_service_config" "atlas_driver_offer_bpp")

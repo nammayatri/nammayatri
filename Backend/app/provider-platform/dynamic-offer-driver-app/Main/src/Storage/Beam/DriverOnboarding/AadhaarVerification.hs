@@ -14,23 +14,21 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.AadhaarVerification where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common ()
-import Lib.UtilsTH
 import Sequelize
 
 data AadhaarVerificationT f = AadhaarVerificationT
@@ -52,20 +50,7 @@ instance B.Table AadhaarVerificationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta AadhaarVerificationT where
-  modelFieldModification = aadhaarVerificationTMod
-  modelTableName = "aadhaar_verification"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type AadhaarVerification = AadhaarVerificationT Identity
-
-instance FromJSON AadhaarVerification where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON AadhaarVerification where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show AadhaarVerification
 
 aadhaarVerificationTMod :: AadhaarVerificationT (B.FieldModification (B.TableField AadhaarVerificationT))
 aadhaarVerificationTMod =
@@ -81,19 +66,6 @@ aadhaarVerificationTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize AadhaarVerification where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-aadhaarVerificationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarVerificationToHSModifiers =
-  M.empty
-
-aadhaarVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarVerificationToPSModifiers =
-  M.empty
-
 $(enableKVPG ''AadhaarVerificationT ['driverId] [['aadhaarNumberHash]])
+
+$(mkTableInstances ''AadhaarVerificationT "aadhaar_verification" "atlas_driver_offer_bpp")

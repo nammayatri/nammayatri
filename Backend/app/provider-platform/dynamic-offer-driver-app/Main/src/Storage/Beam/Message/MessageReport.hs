@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Message.MessageReport where
@@ -26,8 +27,6 @@ import qualified Data.Aeson as A
 -- import qualified Data.Vector as Vector
 
 import Data.ByteString (ByteString)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -36,16 +35,15 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Message.MessageReport as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.DeliveryStatus where
@@ -118,26 +116,7 @@ instance B.Table MessageReportT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . driverId
 
-instance ModelMeta MessageReportT where
-  modelFieldModification = messageReportTMod
-  modelTableName = "message_report"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type MessageReport = MessageReportT Identity
-
-messageReportTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity MessageReportT)
-messageReportTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "message_report"
-    <> B.modifyTableFields messageReportTMod
-
-instance FromJSON MessageReport where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MessageReport where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MessageReport
 
 messageReportTMod :: MessageReportT (B.FieldModification (B.TableField MessageReportT))
 messageReportTMod =
@@ -153,19 +132,5 @@ messageReportTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Serialize MessageReport where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-messageReportToHSModifiers :: M.Map Text (A.Value -> A.Value)
-messageReportToHSModifiers =
-  M.empty
-
-messageReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
-messageReportToPSModifiers =
-  M.empty
-
 $(enableKVPG ''MessageReportT ['driverId, 'messageId] [['messageId], ['driverId]])
+$(mkTableInstances ''MessageReportT "message_report" "atlas_driver_offer_bpp")

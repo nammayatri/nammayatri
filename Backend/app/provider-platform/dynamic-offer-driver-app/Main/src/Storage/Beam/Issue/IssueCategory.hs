@@ -13,20 +13,18 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Issue.IssueCategory where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data IssueCategoryT f = IssueCategoryT
@@ -42,20 +40,7 @@ instance B.Table IssueCategoryT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta IssueCategoryT where
-  modelFieldModification = issueCategoryTMod
-  modelTableName = "issue_category"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type IssueCategory = IssueCategoryT Identity
-
-instance FromJSON IssueCategory where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON IssueCategory where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show IssueCategory
 
 issueCategoryTMod :: IssueCategoryT (B.FieldModification (B.TableField IssueCategoryT))
 issueCategoryTMod =
@@ -65,19 +50,6 @@ issueCategoryTMod =
       logoUrl = B.fieldNamed "logo_url"
     }
 
-instance Serialize IssueCategory where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-issueCategoryToHSModifiers :: M.Map Text (A.Value -> A.Value)
-issueCategoryToHSModifiers =
-  M.empty
-
-issueCategoryToPSModifiers :: M.Map Text (A.Value -> A.Value)
-issueCategoryToPSModifiers =
-  M.empty
-
 $(enableKVPG ''IssueCategoryT ['id] [['category]])
+
+$(mkTableInstances ''IssueCategoryT "issue_category" "atlas_driver_offer_bpp")

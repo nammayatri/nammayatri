@@ -13,24 +13,21 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.RideDetails where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 -- import Storage.Tabular.Vehicle ()
@@ -55,26 +52,7 @@ instance B.Table RideDetailsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta RideDetailsT where
-  modelFieldModification = rideDetailsTMod
-  modelTableName = "ride_details"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type RideDetails = RideDetailsT Identity
-
-rideDetailsTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideDetailsT)
-rideDetailsTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "ride_details"
-    <> B.modifyTableFields rideDetailsTMod
-
-instance FromJSON RideDetails where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON RideDetails where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show RideDetails
 
 rideDetailsTMod :: RideDetailsT (B.FieldModification (B.TableField RideDetailsT))
 rideDetailsTMod =
@@ -91,19 +69,6 @@ rideDetailsTMod =
       vehicleClass = B.fieldNamed "vehicle_class"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-rideDetailsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-rideDetailsToHSModifiers =
-  M.empty
-
-rideDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-rideDetailsToPSModifiers =
-  M.empty
-
-instance Serialize RideDetails where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''RideDetailsT ['id] [])
+
+$(mkTableInstances ''RideDetailsT "ride_details" "atlas_driver_offer_bpp")

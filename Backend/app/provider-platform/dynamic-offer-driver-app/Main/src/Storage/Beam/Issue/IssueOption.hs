@@ -13,20 +13,18 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Issue.IssueOption where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data IssueOptionT f = IssueOptionT
@@ -42,20 +40,7 @@ instance B.Table IssueOptionT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta IssueOptionT where
-  modelFieldModification = issueOptionTMod
-  modelTableName = "issue_option"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type IssueOption = IssueOptionT Identity
-
-instance FromJSON IssueOption where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON IssueOption where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show IssueOption
 
 issueOptionTMod :: IssueOptionT (B.FieldModification (B.TableField IssueOptionT))
 issueOptionTMod =
@@ -65,19 +50,6 @@ issueOptionTMod =
       option = B.fieldNamed "option"
     }
 
-instance Serialize IssueOption where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-issueOptionToHSModifiers :: M.Map Text (A.Value -> A.Value)
-issueOptionToHSModifiers =
-  M.empty
-
-issueOptionToPSModifiers :: M.Map Text (A.Value -> A.Value)
-issueOptionToPSModifiers =
-  M.empty
-
 $(enableKVPG ''IssueOptionT ['id] [['issueCategoryId]])
+
+$(mkTableInstances ''IssueOptionT "issue_option" "atlas_driver_offer_bpp")

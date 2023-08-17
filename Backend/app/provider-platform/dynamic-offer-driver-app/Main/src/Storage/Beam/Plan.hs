@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Plan where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -28,15 +26,14 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Plan as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.PaymentMode where
@@ -116,26 +113,7 @@ instance B.Table PlanT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta PlanT where
-  modelFieldModification = planTMod
-  modelTableName = "plan"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type Plan = PlanT Identity
-
-planTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PlanT)
-planTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "plan"
-    <> B.modifyTableFields planTMod
-
-instance FromJSON Plan where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Plan where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show Plan
 
 deriving stock instance Ord Domain.Frequency
 
@@ -165,19 +143,6 @@ planTMod =
       planType = B.fieldNamed "plan_type"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-planToHSModifiers :: M.Map Text (A.Value -> A.Value)
-planToHSModifiers =
-  M.empty
-
-planToPSModifiers :: M.Map Text (A.Value -> A.Value)
-planToPSModifiers =
-  M.empty
-
-instance Serialize Plan where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''PlanT ['id] [['paymentMode], ['merchantId]]) -- DON'T Enable for KV
+
+$(mkTableInstances ''PlanT "plan" "atlas_driver_offer_bpp")

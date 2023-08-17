@@ -13,24 +13,21 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Message.MessageTranslation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import qualified Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 -- import Storage.Tabular.Person ()
@@ -55,26 +52,7 @@ instance B.Table MessageTranslationT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . messageId
 
-instance ModelMeta MessageTranslationT where
-  modelFieldModification = messageTranslationTMod
-  modelTableName = "message_translation"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
-messageTranslationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity MessageTranslationT)
-messageTranslationTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "message_translation"
-    <> B.modifyTableFields messageTranslationTMod
-
 type MessageTranslation = MessageTranslationT Identity
-
-instance FromJSON MessageTranslation where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON MessageTranslation where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show MessageTranslation
 
 messageTranslationTMod :: MessageTranslationT (B.FieldModification (B.TableField MessageTranslationT))
 messageTranslationTMod =
@@ -88,19 +66,6 @@ messageTranslationTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance Data.Serialize.Serialize MessageTranslation where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-messageTranslationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-messageTranslationToHSModifiers =
-  M.empty
-
-messageTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-messageTranslationToPSModifiers =
-  M.empty
-
 $(enableKVPG ''MessageTranslationT ['messageId] [])
+
+$(mkTableInstances ''MessageTranslationT "message_translation" "atlas_driver_offer_bpp")
