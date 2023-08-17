@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.BusinessEvent where
 
@@ -19,13 +20,15 @@ import Domain.Types.BusinessEvent
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant (Variant)
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common
-import Storage.Tabular.BusinessEvent ()
+import qualified Storage.Beam.BusinessEvent as BeamBE
 
 logBusinessEvent ::
+  (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) =>
   Maybe (Id Driver) ->
   EventType ->
   Maybe (Id Booking) ->
@@ -34,25 +37,26 @@ logBusinessEvent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe (Id Ride) ->
-  SqlDB ()
+  m ()
 logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId = do
   uuid <- generateGUID
   now <- getCurrentTime
-  Esq.create $
-    BusinessEvent
-      { id = uuid,
-        eventType = eventType,
-        timeStamp = now,
-        driverId = driverId,
-        bookingId = bookingId,
-        whenPoolWasComputed = whenPoolWasComputed,
-        vehicleVariant = variant,
-        distance = distance,
-        duration = duration,
-        rideId = rideId
-      }
+  let bE =
+        BusinessEvent
+          { id = uuid,
+            eventType = eventType,
+            timeStamp = now,
+            driverId = driverId,
+            bookingId = bookingId,
+            whenPoolWasComputed = whenPoolWasComputed,
+            vehicleVariant = variant,
+            distance = distance,
+            duration = duration,
+            rideId = rideId
+          }
+  createWithKV bE
 
-logDriverAssignedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+logDriverAssignedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Driver -> Id Booking -> Id Ride -> m ()
 logDriverAssignedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -64,7 +68,7 @@ logDriverAssignedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: Id Booking -> SqlDB ()
+logRideConfirmedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Booking -> m ()
 logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
@@ -76,7 +80,7 @@ logRideConfirmedEvent bookingId = do
     Nothing
     Nothing
 
-logRideCommencedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+logRideCommencedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Driver -> Id Booking -> Id Ride -> m ()
 logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -87,3 +91,35 @@ logRideCommencedEvent driverId bookingId rideId = do
     Nothing
     Nothing
     (Just rideId)
+
+instance FromTType' BeamBE.BusinessEvent BusinessEvent where
+  fromTType' BeamBE.BusinessEventT {..} = do
+    pure $
+      Just
+        BusinessEvent
+          { id = Id id,
+            driverId = Id <$> driverId,
+            eventType = eventType,
+            timeStamp = timeStamp,
+            bookingId = Id <$> bookingId,
+            whenPoolWasComputed = whenPoolWasComputed,
+            vehicleVariant = vehicleVariant,
+            distance = Meters <$> distance,
+            duration = Seconds <$> distance,
+            rideId = Id <$> rideId
+          }
+
+instance ToTType' BeamBE.BusinessEvent BusinessEvent where
+  toTType' BusinessEvent {..} = do
+    BeamBE.BusinessEventT
+      { BeamBE.id = getId id,
+        BeamBE.driverId = getId <$> driverId,
+        BeamBE.eventType = eventType,
+        BeamBE.timeStamp = timeStamp,
+        BeamBE.bookingId = getId <$> bookingId,
+        BeamBE.whenPoolWasComputed = whenPoolWasComputed,
+        BeamBE.vehicleVariant = vehicleVariant,
+        BeamBE.distance = getMeters <$> distance,
+        BeamBE.duration = getSeconds <$> duration,
+        BeamBE.rideId = getId <$> rideId
+      }

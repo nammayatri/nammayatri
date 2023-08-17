@@ -31,4 +31,5 @@ status bookingId = do
   departureStation <- runInReplica $ QTransportStation.findById booking.departureStationId >>= fromMaybeM TransportStationNotFound
   arrivalStation <- runInReplica $ QTransportStation.findById booking.arrivalStationId >>= fromMaybeM TransportStationNotFound
   paymentTrans <- runInReplica $ QPT.findByBookingId bookingId
+
   return $ DBooking.makeBookingAPIEntity booking departureStation arrivalStation paymentTrans

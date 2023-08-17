@@ -23,6 +23,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
+import Kernel.Beam.Functions as B
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -52,8 +53,10 @@ handler transporterId req = do
   transporter <-
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  booking <- Esq.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
-  mbRide <- Esq.runInReplica $ QRide.findOneByBookingId booking.id
+  booking <- B.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
+  mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
+  -- booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
+  -- mbRide <- QRide.findOneByBookingId booking.id
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
 

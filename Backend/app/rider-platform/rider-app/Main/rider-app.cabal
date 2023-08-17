@@ -65,6 +65,7 @@ library
       API.UI.HotSpot
       API.UI.Maps
       API.UI.Payment
+      API.UI.PersonStats
       API.UI.Profile
       API.UI.Quote
       API.UI.Registration
@@ -128,6 +129,7 @@ library
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
+      Domain.Action.UI.PersonStats
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
       Domain.Action.UI.Registration
@@ -178,6 +180,7 @@ library
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
+      Domain.Types.Person.PersonStats
       Domain.Types.Quote
       Domain.Types.RegistrationToken
       Domain.Types.RentalSlab
@@ -191,6 +194,9 @@ library
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
       Environment
+      Lib.Mesh
+      Lib.Utils
+      Lib.UtilsTH
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
@@ -200,7 +206,52 @@ library
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.Person
       SharedLogic.PublicTransport
+      Storage.Beam.AppInstalls
+      Storage.Beam.BlackListOrg
+      Storage.Beam.Booking
+      Storage.Beam.Booking.BookingLocation
+      Storage.Beam.BookingCancellationReason
+      Storage.Beam.CallbackRequest
+      Storage.Beam.CallStatus
+      Storage.Beam.CancellationReason
+      Storage.Beam.Common
+      Storage.Beam.DriverOffer
+      Storage.Beam.Estimate
+      Storage.Beam.EstimateBreakup
+      Storage.Beam.Exophone
+      Storage.Beam.FarePolicy.FareBreakup
+      Storage.Beam.FeedbackForm
+      Storage.Beam.Geometry
+      Storage.Beam.HotSpotConfig
+      Storage.Beam.Issue
+      Storage.Beam.Maps.DirectionsCache
+      Storage.Beam.Maps.PlaceNameCache
+      Storage.Beam.Merchant
+      Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantPaymentMethod
+      Storage.Beam.Merchant.MerchantServiceConfig
+      Storage.Beam.Merchant.MerchantServiceUsageConfig
+      Storage.Beam.MerchantConfig
+      Storage.Beam.OnSearchEvent
+      Storage.Beam.Payment.PaymentOrder
+      Storage.Beam.Payment.PaymentTransaction
+      Storage.Beam.Person
+      Storage.Beam.Person.PersonDefaultEmergencyNumber
+      Storage.Beam.Person.PersonFlowStatus
+      Storage.Beam.Person.PersonStats
+      Storage.Beam.Quote
+      Storage.Beam.RegistrationToken
+      Storage.Beam.RentalSlab
+      Storage.Beam.Ride
+      Storage.Beam.SavedReqLocation
+      Storage.Beam.SearchRequest
+      Storage.Beam.SearchRequest.SearchReqLocation
+      Storage.Beam.Sos
+      Storage.Beam.SpecialZoneQuote
+      Storage.Beam.TripTerms
+      Storage.Beam.Webengage
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
@@ -220,6 +271,7 @@ library
       Storage.Queries.AppInstalls
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
+      Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
@@ -230,7 +282,6 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
-      Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.HotSpotConfig
       Storage.Queries.Issues
@@ -246,55 +297,18 @@ library
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
+      Storage.Queries.Person.PersonStats
       Storage.Queries.Quote
       Storage.Queries.RegistrationToken
+      Storage.Queries.RentalSlab
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.Sos
+      Storage.Queries.SpecialZoneQuote
+      Storage.Queries.TripTerms
       Storage.Queries.Webengage
-      Storage.Tabular.AppInstalls
-      Storage.Tabular.BlackListOrg
-      Storage.Tabular.Booking
-      Storage.Tabular.Booking.BookingLocation
-      Storage.Tabular.BookingCancellationReason
-      Storage.Tabular.CallbackRequest
-      Storage.Tabular.CallStatus
-      Storage.Tabular.CancellationReason
-      Storage.Tabular.DriverOffer
-      Storage.Tabular.Estimate
-      Storage.Tabular.Estimate.Instances
-      Storage.Tabular.EstimateBreakup
-      Storage.Tabular.Exophone
-      Storage.Tabular.FarePolicy.FareBreakup
-      Storage.Tabular.FeedbackForm
-      Storage.Tabular.Geometry
-      Storage.Tabular.HotSpotConfig
-      Storage.Tabular.Issue
-      Storage.Tabular.Maps.DirectionsCache
-      Storage.Tabular.Maps.PlaceNameCache
-      Storage.Tabular.Merchant
-      Storage.Tabular.Merchant.MerchantMessage
-      Storage.Tabular.Merchant.MerchantPaymentMethod
-      Storage.Tabular.Merchant.MerchantServiceConfig
-      Storage.Tabular.Merchant.MerchantServiceUsageConfig
-      Storage.Tabular.MerchantConfig
-      Storage.Tabular.OnSearchEvent
-      Storage.Tabular.Person
-      Storage.Tabular.Person.PersonDefaultEmergencyNumber
-      Storage.Tabular.Person.PersonFlowStatus
-      Storage.Tabular.Quote
-      Storage.Tabular.Quote.Instances
-      Storage.Tabular.RegistrationToken
-      Storage.Tabular.RentalSlab
-      Storage.Tabular.Ride
-      Storage.Tabular.SavedReqLocation
-      Storage.Tabular.SearchRequest
-      Storage.Tabular.SearchRequest.SearchReqLocation
-      Storage.Tabular.Sos
-      Storage.Tabular.SpecialZoneQuote
-      Storage.Tabular.TripTerms
-      Storage.Tabular.Webengage
       Tools.Auth
       Tools.Call
       Tools.Error
@@ -310,6 +324,7 @@ library
       Tools.SignatureAuth
       Tools.SMS
       Tools.Streaming.Kafka
+      Tools.Ticket
       Tools.Whatsapp
   other-modules:
       Paths_rider_app
@@ -357,11 +372,16 @@ library
     , amazonka-ses
     , base >=4.7 && <5
     , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-spec
     , bytestring
+    , casing
+    , cereal
     , containers
     , cryptonite
-    , cryptostore >=0.3.0.0
+    , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
     , euler-hs
@@ -375,10 +395,13 @@ library
     , openapi3
     , payment
     , persistent
+    , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , random
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , servant
     , servant-client
     , servant-client-core
@@ -387,10 +410,13 @@ library
     , sessionizer-metrics
     , special-zone
     , special-zone-a
+    , template-haskell
     , text
     , text-conversions
     , time
     , unliftio-core
+    , unordered-containers
+    , vector
     , wai
     , wai-middleware-prometheus
     , warp
@@ -445,11 +471,16 @@ executable rider-app-exe
     , amazonka-ses
     , base >=4.7 && <5
     , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-spec
     , bytestring
+    , casing
+    , cereal
     , containers
     , cryptonite
-    , cryptostore >=0.3.0.0
+    , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
     , euler-hs
@@ -462,20 +493,26 @@ executable rider-app-exe
     , mobility-core
     , openapi3
     , persistent
+    , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , random
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , sequelize
     , servant
     , servant-client
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , template-haskell
     , text
     , text-conversions
     , time
     , unliftio-core
+    , unordered-containers
+    , vector
     , wai
     , wai-middleware-prometheus
     , warp

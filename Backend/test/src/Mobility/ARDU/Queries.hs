@@ -15,22 +15,32 @@
 module Mobility.ARDU.Queries where
 
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as DBooking
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Kernel.Types.Id as K
+import Kernel.Types.Logging (Log)
+import Sequelize as Se
 import qualified Servant.Client as Servant
-import "dynamic-offer-driver-app" Storage.Tabular.Booking
+import "dynamic-offer-driver-app" Storage.Beam.Booking as BeamB
 
-updateBapUrl :: BaseUrl -> Id DBooking.Booking -> Esq.SqlDB ()
-updateBapUrl bapUrl bookingId = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingBapUri =. val (showBaseUrl bapUrl)
-      ]
-    where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
+-- updateBapUrl :: BaseUrl -> Id DBooking.Booking -> Esq.SqlDB ()
+-- updateBapUrl bapUrl bookingId = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ BookingBapUri =. val (showBaseUrl bapUrl)
+--       ]
+--     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
-updateBapUrlWithFake :: Id DBooking.Booking -> Esq.SqlDB ()
+updateBapUrl :: (L.MonadFlow m, Log m) => BaseUrl -> Id DBooking.Booking -> m ()
+updateBapUrl bapUrl (K.Id bookingId) =
+  updateWithKV
+    [Se.Set bapUri $ showBaseUrl bapUrl]
+    [Se.Is BeamB.id $ Se.Eq bookingId]
+
+updateBapUrlWithFake :: (L.MonadFlow m, Log m) => Id DBooking.Booking -> m ()
 updateBapUrlWithFake = updateBapUrl fakeUrl
 
 fakeUrl :: BaseUrl

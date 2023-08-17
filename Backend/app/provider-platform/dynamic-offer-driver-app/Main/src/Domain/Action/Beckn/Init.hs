@@ -106,9 +106,8 @@ cancelBooking booking transporterId = do
   unless (transporterId' == transporterId) $ throwError AccessDenied
   bookingCancellationReason <- buildBookingCancellationReason
   transporter <- QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  Esq.runTransaction $ do
-    QBCR.upsert bookingCancellationReason
-    QRB.updateStatus booking.id DRB.CANCELLED
+  _ <- QBCR.upsert bookingCancellationReason
+  _ <- QRB.updateStatus booking.id DRB.CANCELLED
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
   pure Ack
@@ -152,17 +151,16 @@ handler merchantId req eitherReq = do
         Left (driverQuote, searchRequest, searchTry) -> do
           booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
-          Esq.runTransaction $ do
-            QST.updateStatus searchTry.id DST.COMPLETED
-            QRB.create booking
+          -- Esq.runTransaction $ do
+          QST.updateStatus searchTry.id DST.COMPLETED
+          _ <- QRB.create booking
           return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
         Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl
-          Esq.runTransaction $
-            QRB.create booking
+          _ <- QRB.create booking
           return (booking, Nothing, Nothing)
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
   let paymentMethodInfo = req.paymentMethodInfo

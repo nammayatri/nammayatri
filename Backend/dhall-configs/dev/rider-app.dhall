@@ -111,7 +111,10 @@ let slackCfg =
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
 
 let rideConfig =
       { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }
@@ -139,6 +142,12 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
+let tables =
+      { enableKVForWriteAlso =
+          [] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [] : List Text
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -164,7 +173,8 @@ in  { esqDBCfg
     , autoMigrate = True
     , coreVersion = "0.9.4"
     , loggerConfig =
-        common.loggerConfig // { logFilePath = "/tmp/rider-app.log" }
+            common.loggerConfig
+        //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , metricsSearchDurationTimeout = +45
@@ -192,4 +202,5 @@ in  { esqDBCfg
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , tables
     }

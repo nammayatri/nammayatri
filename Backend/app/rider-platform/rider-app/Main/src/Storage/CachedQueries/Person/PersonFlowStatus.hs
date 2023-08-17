@@ -17,14 +17,17 @@ module Storage.CachedQueries.Person.PersonFlowStatus where
 
 import Domain.Types.Person
 import Domain.Types.Person.PersonFlowStatus
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
+import Kernel.Types.Time
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person.PersonFlowStatus as Queries
 
-create :: PersonFlowStatus -> Esq.SqlDB ()
+create :: (L.MonadFlow m, Log m) => PersonFlowStatus -> m ()
 create = Queries.create
 
 getStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m (Maybe FlowStatus)
@@ -33,13 +36,14 @@ getStatus personId =
     Just a -> return a
     Nothing -> flip whenJust (cachedStatus personId) /=<< Queries.getStatus personId
 
-updateStatus :: Id Person -> FlowStatus -> Esq.SqlDB ()
+--updateStatus :: Id Person -> FlowStatus -> Esq.SqlDB ()
+updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> FlowStatus -> m ()
 updateStatus = Queries.updateStatus
 
-deleteByPersonId :: Id Person -> Esq.SqlDB ()
+deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByPersonId = Queries.deleteByPersonId
 
-updateToIdleMultiple :: [Id Person] -> UTCTime -> Esq.SqlDB ()
+updateToIdleMultiple :: (L.MonadFlow m, Log m) => [Id Person] -> UTCTime -> m ()
 updateToIdleMultiple = Queries.updateToIdleMultiple
 
 cachedStatus :: CacheFlow m r => Id Person -> FlowStatus -> m ()
@@ -51,6 +55,6 @@ cachedStatus personId flowStatus = do
 makeFlowStatusKey :: Id Person -> Text
 makeFlowStatusKey personId = "CachedQueries:Person:FlowStatus-" <> personId.getId
 
-clearCache :: CacheFlow m r => Id Person -> m ()
+clearCache :: L.MonadFlow m => CacheFlow m r => Id Person -> m ()
 clearCache personId = do
   Hedis.del (makeFlowStatusKey personId)

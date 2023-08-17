@@ -26,7 +26,7 @@ import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
-import Kernel.Storage.Esqueleto (runInReplica)
+import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -157,8 +157,11 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   mbRide <- runInReplica $ QRide.findActiveByRBId booking.id
+  -- mbRide <- QRide.findActiveByRBId booking.id
   rideList <- runInReplica $ QRide.findAllByRBId booking.id
+  -- rideList <- QRide.findAllByRBId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
+  -- fareBreakups <- QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantId paymentMethodId booking.merchantId

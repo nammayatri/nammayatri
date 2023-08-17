@@ -25,15 +25,17 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantServiceUsageConfig
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified EulerHS.Language as L
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
 
-findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantId id =
   Hedis.safeGet (makeMerchantIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
@@ -53,7 +55,6 @@ clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache merchantId = do
   Hedis.del (makeMerchantIdKey merchantId)
 
-updateMerchantServiceUsageConfig ::
-  MerchantServiceUsageConfig ->
-  Esq.SqlDB ()
+--updateMerchantServiceUsageConfig :: MerchantServiceUsageConfig -> Esq.SqlDB ()
+updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m, Log m) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

@@ -49,6 +49,8 @@ default-extensions:
   - UndecidableInstances
   - StandaloneDeriving
   - PackageImports
+  - TemplateHaskell
+  - TemplateHaskell
 
 dependencies:
   - aeson
@@ -95,6 +97,15 @@ dependencies:
   - cassava
   - vector
   - geohash == 1.0.1
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - template-haskell
+  - sequelize
+  - casing
+  - postgresql-simple
+  - random
 
 ghc-options:
   - -fwrite-ide-info

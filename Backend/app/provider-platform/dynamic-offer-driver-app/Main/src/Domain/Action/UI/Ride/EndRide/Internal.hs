@@ -32,6 +32,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.FareParameters as DFare
+-- import qualified Domain.Types.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant.TransporterConfig
@@ -59,6 +60,7 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
+-- import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -122,20 +124,27 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   nowUtc <- getCurrentTime
   maxShards <- asks (.maxShards)
   let rideDate = getCurrentDate nowUtc
-  Esq.runTransaction $ do
-    whenJust mbRiderDetails $ \riderDetails ->
-      when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
-    whenJust mbFareParams QFare.create
-    QRide.updateAll ride.id ride
-    QRide.updateStatus ride.id Ride.COMPLETED
-    QRB.updateStatus booking.id SRB.COMPLETED
-    QDriverStats.updateIdleTime driverId
-    QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-    QDI.updateOnRide driverId False
-    if driverInfo.active
-      then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-      else QDFS.updateStatus ride.driverId DDFS.IDLE
-  DLoc.updateOnRide driverId False merchantId
+  -- Esq.runTransaction $ do
+  _ <- QDI.updateOnRide driverId False
+  _ <- DLoc.updateOnRide driverId False merchantId
+  if driverInfo.active
+    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+    else QDFS.updateStatus ride.driverId DDFS.IDLE
+  DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
+  SRide.clearCache $ cast driverId
+  whenJust mbFareParams QFare.create
+  whenJust mbRiderDetails $ \riderDetails ->
+    when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
+  _ <- QRide.updateAll ride.id ride
+  _ <- QRide.updateStatus ride.id Ride.COMPLETED
+  _ <- QRB.updateStatus booking.id SRB.COMPLETED
+  QDriverStats.updateIdleTime driverId
+  _ <- QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  _ <- QDI.updateOnRide driverId False
+  if driverInfo.active
+    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+    else QDFS.updateStatus ride.driverId DDFS.IDLE
+  _ <- DLoc.updateOnRide driverId False merchantId
   when (thresholdConfig.subscription) $ createDriverFee merchantId driverId ride.fare newFareParams maxShards
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
     driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate) $ ride.driverId.getId
@@ -281,14 +290,17 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-  driverFee <- mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig
+  driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
   unless (totalDriverFee <= 0) $ do
-    case lastDriverFee of
+    _ <- case lastDriverFee of
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
-          then Esq.runNoTransaction $ QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now
-          else Esq.runNoTransaction $ QDF.create driverFee
-      Nothing -> Esq.runNoTransaction $ QDF.create driverFee
+          then -- then Esq.runNoTransaction $ QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now
+            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now
+          else -- else Esq.runNoTransaction $ QDF.create driverFee
+            QDF.create driverFee
+      -- Nothing -> Esq.runNoTransaction $ QDF.create driverFee
+      Nothing -> QDF.create driverFee
 
     isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime
     let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
@@ -321,6 +333,7 @@ mkDriverFee ::
   ( MonadFlow m
   ) =>
   UTCTime ->
+  Id Merchant ->
   Id DP.Driver ->
   Maybe Money ->
   Money ->
@@ -329,9 +342,8 @@ mkDriverFee ::
   HighPrecMoney ->
   TransporterConfig ->
   m DF.DriverFee
-mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
+mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
   id <- generateGUID
-  shortId <- generateShortId
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
@@ -339,11 +351,13 @@ mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterC
     DF.DriverFee
       { payBy = addUTCTime transporterConfig.driverPaymentCycleBuffer endTime,
         status = DF.ONGOING,
+        collectedBy = Nothing,
         numRides = 1,
         createdAt = now,
         updatedAt = now,
         platformFee = DF.PlatformFee platformFee cgst sgst,
         totalEarnings = fromMaybe 0 rideFare,
+        feeType = DF.RECURRING_INVOICE,
         ..
       }
 

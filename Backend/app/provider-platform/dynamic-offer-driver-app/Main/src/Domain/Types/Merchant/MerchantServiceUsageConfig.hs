@@ -20,6 +20,7 @@ import Kernel.External.AadhaarVerification.Types (AadhaarVerificationService)
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types (MapsService)
 import Kernel.External.SMS.Types
+import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Verification.Types (VerificationService)
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
@@ -43,6 +44,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     verificationService :: VerificationService,
     aadhaarVerificationService :: AadhaarVerificationService,
     faceVerificationService :: VerificationService,
+    issueTicketService :: IssueTicketService,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

@@ -39,11 +39,14 @@ import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
+import Environment ()
+import qualified EulerHS.Language as L
+-- import qualified Kernel.Storage.Esqueleto as DB
+
+import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -241,6 +244,7 @@ onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasCacheConfig r,
     EsqDBFlow m r,
+    L.MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
@@ -258,10 +262,10 @@ onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   incrementRideCreatedRequestCount booking.merchantId.getId
-  DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
-    QRide.create ride
-    QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
+  -- DB.runTransaction $ do
+  _ <- QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
+  _ <- QRide.create ride
+  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
   withLongRetry $ CallBPP.callTrack booking ride
@@ -300,9 +304,9 @@ onUpdate ValidatedRideStartedReq {..} = do
              rideEndTime = Nothing
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
-  DB.runTransaction $ do
-    QRide.updateMultiple updRideForStartReq.id updRideForStartReq
-    QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
+  -- DB.runTransaction $ do
+  _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
+  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
@@ -327,14 +331,13 @@ onUpdate ValidatedRideCompletedReq {..} = do
           Nothing -> True
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}}
-  DB.runTransaction $ do
-    when shouldUpdateRideComplete $
-      QP.updateHasTakenValidRide booking.riderId
-    unless (booking.status == SRB.COMPLETED) $ QRB.updateStatus booking.id SRB.COMPLETED
-    whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
-    QRide.updateMultiple updRide.id updRide
-    QFareBreakup.createMany breakups
-    QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
+  -- DB.runTransaction $ do
+  when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
+  unless (booking.status == SRB.COMPLETED) $ void $ QRB.updateStatus booking.id SRB.COMPLETED
+  whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
+  _ <- QRide.updateMultiple updRide.id updRide
+  _ <- QFareBreakup.createMany breakups
+  void $ QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
   QPFS.clearCache booking.riderId
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
@@ -381,43 +384,43 @@ onUpdate ValidatedBookingCancelledReq {..} = do
     Nothing -> do
       logDebug "No ride found for the booking."
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
-  DB.runTransaction $ do
-    unless (booking.status == SRB.CANCELLED) $ QRB.updateStatus booking.id SRB.CANCELLED
-    whenJust mbRide $ \ride -> do
-      unless (ride.status == SRide.CANCELLED) $ QRide.updateStatus ride.id SRide.CANCELLED
-    unless (cancellationSource == SBCR.ByUser) $
-      QBCR.upsert bookingCancellationReason
-    QPFS.updateStatus booking.riderId DPFS.IDLE
+  -- DB.runTransaction $ do
+  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
+  unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
+  whenJust mbRide $ \ride -> void $ do
+    unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
+  unless (cancellationSource == SBCR.ByUser) $
+    QBCR.upsert bookingCancellationReason
   QPFS.clearCache booking.riderId
   -- notify customer
   Notify.notifyOnBookingCancelled booking cancellationSource
 onUpdate ValidatedBookingReallocationReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
-  DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
-    QRide.updateStatus ride.id SRide.CANCELLED
-    QBCR.upsert bookingCancellationReason
+  -- DB.runTransaction $ do
+  _ <- QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
+  _ <- QRide.updateStatus ride.id SRide.CANCELLED
+  QBCR.upsert bookingCancellationReason
   -- notify customer
   Notify.notifyOnBookingReallocated booking
 onUpdate ValidatedDriverArrivedReq {..} = do
   now <- getCurrentTime
-  unless (isJust ride.driverArrivalTime) $
-    DB.runTransaction $ do
-      QRide.updateDriverArrival ride.id
-      QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = Just now}
+  unless (isJust ride.driverArrivalTime) $ do
+    -- DB.runTransaction $ do
+    _ <- QRide.updateDriverArrival ride.id
+    void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = Just now}
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
 onUpdate ValidatedEstimateRepetitionReq {..} = do
   bookingCancellationReason <- buildBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
   logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
-  DB.runTransaction $ do
-    QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
-    QRB.updateStatus booking.id SRB.REALLOCATED
-    QRide.updateStatus ride.id SRide.CANCELLED
-    QBCR.upsert bookingCancellationReason
-    QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
+  -- DB.runTransaction $ do
+  _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
+  _ <- QRB.updateStatus booking.id SRB.REALLOCATED
+  _ <- QRide.updateStatus ride.id SRide.CANCELLED
+  _ <- QBCR.upsert bookingCancellationReason
+  _ <- QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
   QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
@@ -438,18 +441,21 @@ validateRequest ::
   m ValidatedOnUpdateReq
 validateRequest RideAssignedReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   return $ ValidatedRideAssignedReq {..}
   where
     isAssignable booking = booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]
 validateRequest RideStartedReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   return $ ValidatedRideStartedReq {..}
 validateRequest RideCompletedReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   let bookingCanBeCompleted = booking.status == SRB.TRIP_ASSIGNED
       rideCanBeCompleted = ride.status == SRide.INPROGRESS
@@ -463,6 +469,7 @@ validateRequest RideCompletedReq {..} = do
   return $ ValidatedRideCompletedReq {..}
 validateRequest BookingCancelledReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   mbRide <- QRide.findActiveByRBId booking.id
   let isRideCancellable = maybe False (\ride -> ride.status `notElem` [SRide.INPROGRESS, SRide.CANCELLED]) mbRide
       bookingAlreadyCancelled = booking.status == SRB.CANCELLED
@@ -474,10 +481,12 @@ validateRequest BookingCancelledReq {..} = do
       booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 validateRequest BookingReallocationReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   return $ ValidatedBookingReallocationReq {..}
 validateRequest DriverArrivedReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
   return $ ValidatedDriverArrivedReq {..}
@@ -485,6 +494,7 @@ validateRequest DriverArrivedReq {..} = do
     isValidRideStatus status = status == SRide.NEW
 validateRequest NewMessageReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
   return $ ValidatedNewMessageReq {..}
@@ -492,6 +502,7 @@ validateRequest NewMessageReq {..} = do
     isValidRideStatus status = status == SRide.NEW
 validateRequest EstimateRepetitionReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)

@@ -18,7 +18,7 @@ import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DI
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -97,6 +97,7 @@ hatchbackDriver :: Text
 hatchbackDriver = "ND-hatchback-driver-0000000000000000"
 
 setDriversActive :: Bool -> Maybe DI.DriverMode -> FlowR ARDUEnv.AppEnv ()
-setDriversActive isActive mode = Esq.runTransaction $ do
+setDriversActive isActive mode = do
+  -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
   forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive mode)

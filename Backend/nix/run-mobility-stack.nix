@@ -52,6 +52,8 @@ _:
         driver-offer-allocator-exe = { };
         driver-tracking-healthcheck-exe = { };
         dynamic-offer-driver-app-exe = { };
+        dynamic-offer-driver-drainer-exe = { };
+        rider-app-drainer-exe = { };
         image-api-helper-exe = { };
         kafka-consumers-exe = {
           environment = {

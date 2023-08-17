@@ -11,10 +11,17 @@ import qualified Domain.Types.MediaFile as DMF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
+-- import qualified EulerHS.Extra.EulerDB as Extra
+-- import qualified EulerHS.KVConnector.Flow as KV
+-- import EulerHS.KVConnector.Types
+-- import qualified EulerHS.Language as L
+
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -42,19 +49,20 @@ issueCategoryList _merchantShortId = do
 
 toDomainIssueStatus :: Common.IssueStatus -> DIR.IssueStatus
 toDomainIssueStatus = \case
-  Common.NEW -> DIR.NEW
-  Common.INPROGRESS -> DIR.INPROGRESS
+  Common.OPEN -> DIR.OPEN
+  Common.PENDING -> DIR.PENDING
   Common.RESOLVED -> DIR.RESOLVED
 
 toCommonIssueStatus :: DIR.IssueStatus -> Common.IssueStatus
 toCommonIssueStatus = \case
-  DIR.NEW -> Common.NEW
-  DIR.INPROGRESS -> Common.INPROGRESS
+  DIR.OPEN -> Common.OPEN
+  DIR.PENDING -> Common.PENDING
   DIR.RESOLVED -> Common.RESOLVED
 
 issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
 issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
-  issueReports <- Esq.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
+  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
+  -- issueReports <- QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
   issues <- mapM mkIssueReport issueReports
@@ -77,11 +85,14 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = d
 
 issueInfo :: ShortId DM.Merchant -> Id DIR.IssueReport -> Flow Common.IssueInfoRes
 issueInfo _merchantShortId issueReportId = do
-  issueReport <- Esq.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  issueReport <- B.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  -- issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId
-  comments <- Esq.runInReplica (QC.findAllByIssueReportId issueReport.id)
+  comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
+  -- comments <- QC.findAllByIssueReportId issueReport.id
   category <- CQIC.findById issueReport.categoryId >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
-  driverDetail <- mapM mkDriverDetail =<< Esq.runInReplica (QP.findById issueReport.driverId)
+  driverDetail <- mapM mkDriverDetail =<< B.runInReplica (QP.findById issueReport.driverId)
+  -- driverDetail <- mapM mkDriverDetail =<< QP.findById issueReport.driverId
   option <- mapM (\optionId -> CQIO.findById optionId >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
   pure $
     Common.IssueInfoRes
@@ -139,7 +150,7 @@ issueUpdate _merchantShortId issueReportId req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  Esq.runTransaction $ QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
+  QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
   whenJust req.assignee mkIssueAssigneeUpdateComment
   CQIR.invalidateIssueReportCache (Just issueReportId) (Just issueReport.driverId)
   pure Success
@@ -147,7 +158,7 @@ issueUpdate _merchantShortId issueReportId req = do
     mkIssueAssigneeUpdateComment assignee = do
       id <- generateGUID
       now <- getCurrentTime
-      Esq.runTransaction $
+      void $
         QC.create $
           DC.Comment
             { id,
@@ -160,7 +171,7 @@ issueUpdate _merchantShortId issueReportId req = do
 issueAddComment :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueAddCommentByUserReq -> Flow APISuccess
 issueAddComment _merchantShortId issueReportId req = do
   void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  Esq.runTransaction $ QC.create =<< mkComment
+  _ <- QC.create =<< mkComment
   pure Success
   where
     mkComment = do
@@ -178,3 +189,9 @@ issueAddComment _merchantShortId issueReportId req = do
 issueFetchMedia :: ShortId DM.Merchant -> Text -> Flow Text
 issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
+
+ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
+ticketStatusCallBack _ req = do
+  _ <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+  QIR.updateIssueStatus req.ticketId (toDomainIssueStatus req.status)
+  return Success

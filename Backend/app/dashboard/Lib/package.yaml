@@ -74,6 +74,7 @@ dependencies:
   - http-types
   - dashboard-helper-api
   - rider-app
+  - dynamic-offer-driver-app
   - random
   - base32
   - cryptonite

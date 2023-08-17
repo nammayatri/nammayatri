@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.BlackListOrg
   {-# WARNING
@@ -20,15 +21,39 @@ module Storage.Queries.BlackListOrg
 where
 
 import Domain.Types.BlackListOrg
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Kernel.Types.Registry.Subscriber (Subscriber)
-import Storage.Tabular.BlackListOrg
+import qualified Sequelize as Se
+import qualified Storage.Beam.BlackListOrg as BeamBLO
 
-findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
-findBySubscriberId subscriberId = do
-  findOne $ do
-    org <- from $ table @BlackListOrgT
-    where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
-    return org
+-- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
+-- findBySubscriberId subscriberId = do
+--   findOne $ do
+--     org <- from $ table @BlackListOrgT
+--     where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
+--     return org
+
+findBySubscriberId :: (L.MonadFlow m, Log m) => ShortId Subscriber -> m (Maybe BlackListOrg)
+findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
+
+instance FromTType' BeamBLO.BlackListOrg BlackListOrg where
+  fromTType' BeamBLO.BlackListOrgT {..} = do
+    pure $
+      Just
+        BlackListOrg
+          { id = Id id,
+            subscriberId = ShortId subscriberId,
+            _type = orgType
+          }
+
+instance ToTType' BeamBLO.BlackListOrg BlackListOrg where
+  toTType' BlackListOrg {..} = do
+    BeamBLO.BlackListOrgT
+      { BeamBLO.id = getId id,
+        BeamBLO.subscriberId = getShortId subscriberId,
+        BeamBLO.orgType = _type
+      }

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -14,68 +16,116 @@
 
 module Storage.Queries.BookingCancellationReason where
 
+import qualified Data.List
+import qualified Database.Beam as B
 import Domain.Types.Booking
-import Domain.Types.BookingCancellationReason
+import Domain.Types.BookingCancellationReason as DBCR
+import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Person
 import Domain.Types.Ride
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import qualified EulerHS.Language as L
+import EulerHS.Prelude as P hiding (null, (^.))
+import Kernel.Beam.Functions
+import Kernel.External.Maps.Types (LatLong (..), lat, lon)
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Storage.Tabular.BookingCancellationReason
+import qualified Sequelize as Se
+import qualified Storage.Beam.BookingCancellationReason as BeamBCR
+import qualified Storage.Beam.Common as BeamCommon
 
-create :: BookingCancellationReason -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DBCR.BookingCancellationReason -> m ()
+create = createWithKV
 
-findAllCancelledByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m Int
+-- TODO: Convert this function
+-- findAllCancelledByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m Int
+-- findAllCancelledByDriverId driverId = do
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+--         rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+--           &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+
+findAllCancelledByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m Int
 findAllCancelledByDriverId driverId = do
-  mkCount <$> do
-    Esq.findAll $ do
-      rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
-      where_ $
-        rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
-          &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            ( \bcr ->
+                B.sqlBool_ (bcr.source B.==. B.val_ ByDriver)
+                  B.&&?. (bcr.driverId B.==?. B.val_ (Just $ getId driverId))
+            )
+            do
+              B.all_ (BeamCommon.bookingCancellationReason BeamCommon.atlasDB)
+  pure $ either (const 0) (\r -> if Data.List.null r then 0 else Data.List.head r) res
 
-findByBookingId ::
-  Transactionable m =>
-  Id Booking ->
-  m (Maybe BookingCancellationReason)
-findByBookingId bookingId =
-  Esq.findOne $ do
-    bookingCancellationReason <- from $ table @BookingCancellationReasonT
-    where_ $ bookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey bookingId)
-    return bookingCancellationReason
+findByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
+findByBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
-findByRideId :: Transactionable m => Id Ride -> m (Maybe BookingCancellationReason)
-findByRideId rideId = Esq.findOne $ do
-  bookingCancellationReason <- from $ table @BookingCancellationReasonT
-  where_ $ bookingCancellationReason ^. BookingCancellationReasonRideId ==. (just . val . toKey $ rideId)
-  return bookingCancellationReason
+findByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe BookingCancellationReason)
+findByRideId (Id rideId) = findOneWithKV [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
 
-upsert :: BookingCancellationReason -> SqlDB ()
-upsert cancellationReason =
-  Esq.upsert
-    cancellationReason
-    [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
-      BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
-      BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
-      BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
-    ]
+upsert :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
+upsert cancellationReason = do
+  res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
+  if isJust res
+    then
+      updateOneWithKV
+        [ Se.Set BeamBCR.bookingId (getId cancellationReason.bookingId),
+          Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
+          Se.Set BeamBCR.reasonCode ((\(CancellationReasonCode x) -> x) <$> cancellationReason.reasonCode),
+          Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo
+        ]
+        [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
+    else createWithKV cancellationReason
 
-findAllBookingIdsCancelledByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m [Id Booking]
-findAllBookingIdsCancelledByDriverId driverId = do
-  Esq.findAll $ do
-    rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
-    where_ $
-      rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
-        &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
-    return (rideBookingCancellationReason ^. BookingCancellationReasonBookingId)
+-- findAllBookingIdsCancelledByDriverId :: Transactionable m => Id Person -> m [Id Booking]
+-- findAllBookingIdsCancelledByDriverId driverId = do
+--   Esq.findAll $ do
+--     rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+--     where_ $
+--       rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+--         &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+--     return (rideBookingCancellationReason ^. BookingCancellationReasonBookingId)
+
+findAllBookingIdsCancelledByDriverId :: MonadFlow m => Id Person -> m [Id Booking]
+findAllBookingIdsCancelledByDriverId driverId = findAllWithDb [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
+
+instance FromTType' (BeamBCR.BookingCancellationReasonT Identity) BookingCancellationReason where
+  fromTType' BeamBCR.BookingCancellationReasonT {..} = do
+    pure $
+      Just
+        BookingCancellationReason
+          { driverId = Id <$> driverId,
+            bookingId = Id bookingId,
+            rideId = Id <$> rideId,
+            merchantId = Id <$> merchantId,
+            source = source,
+            reasonCode = CancellationReasonCode <$> reasonCode,
+            additionalInfo = additionalInfo,
+            driverCancellationLocation = LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
+            driverDistToPickup = driverDistToPickup
+          }
+
+instance ToTType' BeamBCR.BookingCancellationReason BookingCancellationReason where
+  toTType' BookingCancellationReason {..} = do
+    BeamBCR.BookingCancellationReasonT
+      { BeamBCR.driverId = getId <$> driverId,
+        BeamBCR.bookingId = getId bookingId,
+        BeamBCR.rideId = getId <$> rideId,
+        BeamBCR.merchantId = getId <$> merchantId,
+        BeamBCR.source = source,
+        BeamBCR.reasonCode = (\(CancellationReasonCode x) -> x) <$> reasonCode,
+        BeamBCR.additionalInfo = additionalInfo,
+        BeamBCR.driverCancellationLocationLat = lat <$> driverCancellationLocation,
+        BeamBCR.driverCancellationLocationLon = lon <$> driverCancellationLocation,
+        BeamBCR.driverDistToPickup = driverDistToPickup
+      }

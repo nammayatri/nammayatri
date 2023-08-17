@@ -11,31 +11,99 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.AadhaarOtp where
 
 import Domain.Types.DriverOnboarding.AadhaarOtp
-import Domain.Types.Person (Person)
+import Domain.Types.Person
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.DriverOnboarding.AadhaarOtpReq
-import Storage.Tabular.DriverOnboarding.AadhaarOtpVerify
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
+import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV
 
-createForGenerate :: AadhaarOtpReq -> Esq.SqlDB ()
-createForGenerate = Esq.create
+createForGenerate :: (L.MonadFlow m, Log m) => AadhaarOtpReq -> m ()
+createForGenerate = createWithKV
 
-createForVerify :: AadhaarOtpVerify -> Esq.SqlDB ()
-createForVerify = Esq.create
+createForVerify :: (L.MonadFlow m, Log m) => AadhaarOtpVerify -> m ()
+createForVerify = createWithKV
 
-deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
-deleteByPersonIdForGenerate personId =
-  Esq.delete $ do
-    verifications <- from $ table @AadhaarOtpReqT
-    where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
+-- deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
+-- deleteByPersonIdForGenerate personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @AadhaarOtpReqT
+--     where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
 
-deleteByPersonIdForVerify :: Id Person -> SqlDB ()
-deleteByPersonIdForVerify personId =
-  Esq.delete $ do
-    verifications <- from $ table @AadhaarOtpVerifyT
-    where_ $ verifications ^. AadhaarOtpVerifyDriverId ==. val (toKey personId)
+deleteByPersonIdForGenerate :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonIdForGenerate personId = deleteWithKV [Se.Is BeamAOR.driverId (Se.Eq (getId personId))]
+
+-- deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
+-- deleteByPersonIdForGenerate personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @AadhaarOtpReqT
+--     where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
+
+deleteByPersonIdForVerify :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonIdForVerify personId = deleteWithKV [Se.Is BeamAOV.driverId (Se.Eq (getId personId))]
+
+-- deleteByPersonIdForVerify :: Id Person -> SqlDB ()
+-- deleteByPersonIdForVerify personId =
+--   Esq.delete $ do
+--     verifications <- from $ table @AadhaarOtpVerifyT
+--     where_ $ verifications ^. AadhaarOtpVerifyDriverId ==. val (toKey personId)
+
+instance FromTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where
+  fromTType' BeamAOR.AadhaarOtpReqT {..} = do
+    pure $
+      Just
+        AadhaarOtpReq
+          { id = Id id,
+            driverId = Id driverId,
+            requestId = requestId,
+            statusCode = statusCode,
+            transactionId = transactionId,
+            requestMessage = requestMessage,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where
+  toTType' AadhaarOtpReq {..} =
+    BeamAOR.AadhaarOtpReqT
+      { BeamAOR.id = getId id,
+        BeamAOR.driverId = getId driverId,
+        BeamAOR.requestId = requestId,
+        BeamAOR.statusCode = statusCode,
+        BeamAOR.transactionId = transactionId,
+        BeamAOR.requestMessage = requestMessage,
+        BeamAOR.createdAt = createdAt
+      }
+
+instance FromTType' BeamAOV.AadhaarOtpVerify AadhaarOtpVerify where
+  fromTType' BeamAOV.AadhaarOtpVerifyT {..} = do
+    pure $
+      Just
+        AadhaarOtpVerify
+          { id = Id id,
+            driverId = Id driverId,
+            requestId = requestId,
+            statusCode = statusCode,
+            transactionId = transactionId,
+            requestMessage = requestMessage,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamAOV.AadhaarOtpVerify AadhaarOtpVerify where
+  toTType' AadhaarOtpVerify {..} =
+    BeamAOV.AadhaarOtpVerifyT
+      { BeamAOV.id = getId id,
+        BeamAOV.driverId = getId driverId,
+        BeamAOV.requestId = requestId,
+        BeamAOV.statusCode = statusCode,
+        BeamAOV.transactionId = transactionId,
+        BeamAOV.requestMessage = requestMessage,
+        BeamAOV.createdAt = createdAt
+      }

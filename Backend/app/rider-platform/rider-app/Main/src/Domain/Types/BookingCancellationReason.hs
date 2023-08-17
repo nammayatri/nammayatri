@@ -14,7 +14,7 @@
 
 module Domain.Types.BookingCancellationReason where
 
-import Domain.Types.Booking (Booking)
+import Domain.Types.Booking.Type (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Ride (Ride)

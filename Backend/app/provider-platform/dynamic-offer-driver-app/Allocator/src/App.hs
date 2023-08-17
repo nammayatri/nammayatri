@@ -15,7 +15,10 @@
 module App where
 
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Runtime as R
+import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
+import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
@@ -61,7 +64,20 @@ runDriverOfferAllocator configModifier = do
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
 
-  R.withFlowRuntime (Just loggerRt) \flowRt -> do
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    runFlow
+      flowRt
+      ( prepareConnectionDriver
+          ConnectionConfigDriver
+            { esqDBCfg = handlerCfg.appCfg.esqDBCfg,
+              esqDBReplicaCfg = handlerCfg.appCfg.esqDBReplicaCfg,
+              hedisClusterCfg = handlerCfg.appCfg.hedisClusterCfg,
+              locationDbCfg = handlerCfg.appCfg.esqLocationDBCfg,
+              locationDbReplicaCfg = handlerCfg.appCfg.esqLocationDBRepCfg
+            }
+          handlerCfg.appCfg.tables
+      )
+    -- R.withFlowRuntime (Just loggerRt) \flowRt -> do
     flowRt' <- runFlowR flowRt handlerEnv $ do
       withLogTag "Server startup" $ do
         migrateIfNeeded handlerCfg.appCfg.migrationPath handlerCfg.appCfg.autoMigrate handlerCfg.appCfg.esqDBCfg

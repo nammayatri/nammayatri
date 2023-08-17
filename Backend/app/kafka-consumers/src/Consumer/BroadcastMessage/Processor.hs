@@ -18,29 +18,31 @@ module Consumer.BroadcastMessage.Processor
 where
 
 import qualified Data.Map as HM
-import qualified Domain.Types.Message.Message as Types
-import qualified Domain.Types.Message.MessageReport as Types
+import "dynamic-offer-driver-app" Domain.Types.Message.Message as Types
+import "dynamic-offer-driver-app" Domain.Types.Message.MessageReport as Types
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Storage.Queries.Message.MessageReport as MRQuery
-import qualified Storage.Queries.Person as Person
-import Tools.Notifications (sendMessageToDriver)
+import "dynamic-offer-driver-app" Storage.Queries.Message.MessageReport as MRQuery
+import "dynamic-offer-driver-app" Storage.Queries.Person as Person
+import "dynamic-offer-driver-app" Tools.Notifications (sendMessageToDriver)
 
 broadcastMessage :: Types.MessageDict -> Text -> Flow ()
 broadcastMessage messageDict driverId = do
-  mDriver <- Esq.runInReplica $ Person.findById (Id driverId)
+  -- mDriver <- Esq.runInReplica $ Person.findById (Id driverId)
+  mDriver <- Person.findById (Id driverId)
   status <-
     case mDriver of
       Just driver -> do
         let message = maybe messageDict.defaultMessage (flip (HM.findWithDefault messageDict.defaultMessage) messageDict.translations . show) driver.language
-        Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (Id driverId) Types.Sending
+        -- Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (Id driverId) Types.Sending
+        _ <- MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (Id driverId) Types.Sending
         exep <- try @_ @SomeException (sendMessageToDriver driver.merchantId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE message.title message.shortDescription driver.id message.id driver.deviceToken)
         return $
           case exep of
             Left _ -> Types.Failed
             Right _ -> Types.Success
       Nothing -> return Types.Failed
-  void $ Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId messageDict.defaultMessage.id (Id driverId) status
+  -- void $ Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId messageDict.defaultMessage.id (Id driverId) status
+  void $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId messageDict.defaultMessage.id (Id driverId) status

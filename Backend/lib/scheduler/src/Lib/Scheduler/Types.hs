@@ -96,7 +96,7 @@ data Job (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   }
 
 data JobStatus = Pending | Completed | Failed
-  deriving (Show, Eq, Read, Generic)
+  deriving (Show, Eq, Read, Generic, FromJSON, ToJSON)
   deriving (PrettyShow) via Showable JobStatus
 
 derivePersistField "JobStatus"

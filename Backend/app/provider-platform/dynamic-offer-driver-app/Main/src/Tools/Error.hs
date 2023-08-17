@@ -148,6 +148,7 @@ data DriverError
   | DriverAccountBlocked
   | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
+  | DriverNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -158,6 +159,7 @@ instance IsBaseError DriverError where
   toMessage DriverAccountBlocked = Just "Driver account has been blocked."
   toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
+  toMessage (DriverNotFound phoneNo) = Just $ "No Driver is found Registered  with this phone number = " <> phoneNo
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -166,12 +168,14 @@ instance IsHTTPError DriverError where
     DriverAccountBlocked -> "DRIVER_ACCOUNT_BLOCKED"
     DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
+    DriverNotFound _ -> "DRIVER_NOT_FOUND"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E500
     DriverAccountBlocked -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
+    DriverNotFound _ -> E403
 
 instance IsAPIError DriverError
 
@@ -551,3 +555,53 @@ instance IsHTTPError MerchantPaymentMethodError where
     MerchantPaymentMethodDoesNotExist _ -> E400
 
 instance IsAPIError MerchantPaymentMethodError
+
+data SubscriptionError
+  = PlanNotFound Text
+  | MandateNotFound Text
+  | ActiveMandateExists Text
+  | ActiveMandateDoNotExist Text
+  | InActiveMandateDoNotExist Text
+  | InvalidPaymentMode
+  | NoCurrentPlanForDriver Text
+  | NoDriverPlanForMandate Text
+  | InvalidAutoPayStatus
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SubscriptionError
+
+instance IsBaseError SubscriptionError where
+  toMessage = \case
+    PlanNotFound planId -> Just $ "Plan with planId \"" <> show planId <> "\"not found."
+    MandateNotFound mandateId -> Just $ "Mandate with mandateId \"" <> show mandateId <> "\"not found."
+    ActiveMandateExists driverId -> Just $ "mandate already exists for driverId \"" <> show driverId <> "\""
+    ActiveMandateDoNotExist driverId -> Just $ "no mandate exist for driverId \"" <> show driverId <> "\""
+    InActiveMandateDoNotExist driverId -> Just $ "no inactive mandate exist for driverId \"" <> show driverId <> "\""
+    NoCurrentPlanForDriver driverId -> Just $ "No plan exists for driverId \"" <> show driverId <> "\""
+    NoDriverPlanForMandate mandateId -> Just $ "No plan exists for mandateId \"" <> show mandateId <> "\""
+    InvalidPaymentMode -> Just "Invalid payment method"
+    InvalidAutoPayStatus -> Just "Invalid auto pay status"
+
+instance IsHTTPError SubscriptionError where
+  toErrorCode = \case
+    PlanNotFound _ -> "PLAN_NOT_FOUND"
+    MandateNotFound _ -> "MANDATE_NOT_FOUND"
+    ActiveMandateExists _ -> "ACTIVE_MANDATE_EXISTS"
+    ActiveMandateDoNotExist _ -> "NO_ACTIVE_MANDATE_EXIST"
+    InActiveMandateDoNotExist _ -> "NO_INACTIVE_MANDATE_EXIST"
+    NoCurrentPlanForDriver _ -> "NO_PLAN_FOR_DRIVER"
+    NoDriverPlanForMandate _ -> "NO_DRIVER_PLAN_FOR_MANDATE"
+    InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
+    InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
+  toHttpCode = \case
+    PlanNotFound _ -> E500
+    MandateNotFound _ -> E500
+    ActiveMandateExists _ -> E400
+    ActiveMandateDoNotExist _ -> E400
+    InActiveMandateDoNotExist _ -> E400
+    InvalidPaymentMode -> E400
+    InvalidAutoPayStatus -> E400
+    NoCurrentPlanForDriver _ -> E500
+    NoDriverPlanForMandate _ -> E500
+
+instance IsAPIError SubscriptionError

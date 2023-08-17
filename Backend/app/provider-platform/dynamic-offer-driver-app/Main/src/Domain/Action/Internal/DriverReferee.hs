@@ -20,7 +20,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.RiderDetails as DRD
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
-import qualified Kernel.Storage.Esqueleto as ESQ
+-- import qualified Kernel.Storage.Esqueleto as ESQ
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Error
@@ -59,11 +59,11 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   numberHash <- getDbHash customerMobileNumber
   driverReferralLinkage <- QDR.findByRefferalCode referralCode >>= fromMaybeM (InvalidRequest "Invalid referral code.")
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
-  case mbRiderDetails of
-    Just _ -> ESQ.runTransaction $ QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
+  _ <- case mbRiderDetails of
+    Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
     Nothing -> do
       riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId
-      ESQ.runTransaction $ QRD.create riderDetails
+      QRD.create riderDetails
   pure Success
   where
     mkRiderDetailsObj driverId = do

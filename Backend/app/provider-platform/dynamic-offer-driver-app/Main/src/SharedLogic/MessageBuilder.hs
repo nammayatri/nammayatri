@@ -26,6 +26,8 @@ module SharedLogic.MessageBuilder
     buildBookingMessage,
     BuildCollectCashMessageReq (..),
     buildCollectCashMessage,
+    BuildSendPaymentLinkReq (..),
+    buildSendPaymentLink,
   )
 where
 
@@ -41,6 +43,22 @@ import Tools.Error
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
+
+data BuildSendPaymentLinkReq = BuildSendPaymentLinkReq
+  { paymentLink :: Text,
+    amount :: Text
+  }
+  deriving (Generic)
+
+buildSendPaymentLink :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildSendPaymentLinkReq -> m Text
+buildSendPaymentLink merchantId req = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.SEND_PAYMENT_LINK
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.SEND_PAYMENT_LINK))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "paymentLink") req.paymentLink
+      & T.replace (templateText "amount") req.amount
 
 data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   { otp :: Text,

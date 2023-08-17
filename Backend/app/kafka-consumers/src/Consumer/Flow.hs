@@ -17,6 +17,7 @@ module Consumer.Flow where
 
 import qualified Consumer.AvailabilityTime.Processor as ATProcessor
 import qualified Consumer.BroadcastMessage.Processor as BMProcessor
+import qualified Consumer.CustomerStats.Processor as PSProcessor
 import Control.Error.Util
 import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
@@ -39,6 +40,18 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
   case consumerType of
     AVAILABILITY_TIME -> availabilityConsumer flowRt appEnv kafkaConsumer
     BROADCAST_MESSAGE -> broadcastMessageConsumer flowRt appEnv kafkaConsumer
+    PERSON_STATS -> updateCustomerStatsConsumer flowRt appEnv kafkaConsumer
+
+updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+updateCustomerStatsConsumer flowRt appEnv kafkaConsumer =
+  readMessages kafkaConsumer
+    & S.mapM updateCustomerStatsWithFlow
+    & S.drain
+  where
+    updateCustomerStatsWithFlow (messagePayload, personId, _) =
+      runFlowR flowRt appEnv . withLogTag personId $
+        generateGUID
+          >>= flip withLogTag (PSProcessor.updateCustomerStats messagePayload personId)
 
 broadcastMessageConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 broadcastMessageConsumer flowRt appEnv kafkaConsumer =
@@ -117,3 +130,4 @@ getConfigNameFromConsumertype :: ConsumerType -> IO String
 getConfigNameFromConsumertype = \case
   AVAILABILITY_TIME -> pure "driver-availability-calculator"
   BROADCAST_MESSAGE -> pure "broadcast-message"
+  PERSON_STATS -> pure "person-stats"

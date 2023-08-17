@@ -17,6 +17,7 @@ module AWS.S3.Flow (get', put', get'', put'', mockGet, mockPut) where
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
+import Data.List (last)
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -94,7 +95,7 @@ callS3API :: CallAPI env api a
 callS3API =
   callApiUnwrappingApiError
     (identity @S3Error)
-    (Just s3AuthManagerKey)
+    (Just $ ET.ManagerSelector $ T.pack s3AuthManagerKey)
     (Just "S3_NOT_AVAILABLE")
 
 get'' ::

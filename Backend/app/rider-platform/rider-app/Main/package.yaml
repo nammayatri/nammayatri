@@ -59,7 +59,7 @@ dependencies:
   - base64-bytestring
   - bytestring
   - cryptonite
-  - cryptostore >= 0.3.0.0
+  - cryptostore >= 0.2.3.0
   - x509
   - euler-hs
   - lens
@@ -89,6 +89,18 @@ dependencies:
   - http-types
   - containers
   - geohash == 1.0.1
+  - euler-hs
+  - unordered-containers
+  - vector
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - template-haskell
+  - sequelize
+  - casing
+  - postgresql-simple
+  - random
 
 ghc-options:
   - -fwrite-ide-info

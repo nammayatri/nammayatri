@@ -16,12 +16,11 @@ module Lib.Types.SpecialLocationPriority where
 
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Types.SpecialLocation (Category (..))
 
 data SpecialLocationPriority = SpecialLocationPriority
   { id :: Id SpecialLocationPriority,
     merchantId :: Text,
-    category :: Category,
+    category :: Text,
     pickupPriority :: Int,
     dropPriority :: Int
   }

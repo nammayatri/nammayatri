@@ -29,10 +29,13 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
+-- import qualified Kernel.Storage.Esqueleto as DB
+
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -103,10 +106,10 @@ onSelect OnSelectValidatedReq {..} = do
   logPretty DEBUG "quotes" quotes
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
-  DB.runTransaction $ do
-    QQuote.createMany quotes
-    QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
+  -- DB.runTransaction $ do
+  _ <- QQuote.createMany quotes
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
+  void $ QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
   QPFS.clearCache searchRequest.riderId
 
   if searchRequest.autoAssignEnabledV2 == Just True
@@ -219,3 +222,5 @@ validateRequest DOnSelectReq {..} = do
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
       isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
+
+-- isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_

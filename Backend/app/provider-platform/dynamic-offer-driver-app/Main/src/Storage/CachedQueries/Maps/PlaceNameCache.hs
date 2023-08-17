@@ -16,9 +16,11 @@
 module Storage.CachedQueries.Maps.PlaceNameCache where
 
 import Domain.Types.Maps.PlaceNameCache
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Logging (Log)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Maps.PlaceNameCache as Queries
 
@@ -34,7 +36,7 @@ findPlaceByGeoHash geoHash =
     Just a -> return a
     Nothing -> cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash geoHash
 
-create :: PlaceNameCache -> Esq.SqlDB ()
+create :: (L.MonadFlow m, Log m) => PlaceNameCache -> m ()
 create = Queries.create
 
 -- test with empty list

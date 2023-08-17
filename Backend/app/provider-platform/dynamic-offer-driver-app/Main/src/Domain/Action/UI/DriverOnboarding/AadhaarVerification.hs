@@ -25,7 +25,6 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.External.Encryption (DbHash, getDbHash)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
@@ -76,7 +75,8 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId $ req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
-  Esq.runNoTransaction $ Query.createForGenerate aadhaarOtpEntity
+  -- Esq.runNoTransaction $ Query.createForGenerate aadhaarOtpEntity
+  _ <- Query.createForGenerate aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard
   pure res
 
@@ -114,12 +114,14 @@ verifyAadhaarOtp mbMerchant personId req = do
               }
       res <- AadhaarVerification.verifyAadhaarOtp person.merchantId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
-      Esq.runTransaction $ Query.createForVerify aadhaarVerifyEntity
+      -- Esq.runTransaction $ Query.createForVerify aadhaarVerifyEntity
+      Query.createForVerify aadhaarVerifyEntity
       if res.code == pack "1002"
         then do
           Redis.del key
           aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just res.image) True
-          Esq.runNoTransaction $ Q.create aadhaarEntity
+          --Esq.runNoTransaction $ Q.create aadhaarEntity
+          _ <- Q.create aadhaarEntity
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
           Status.statusHandler (person.id, person.merchantId) Nothing
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
@@ -134,7 +136,8 @@ unVerifiedAadhaarData personId req = do
   mAadhaarCard <- Q.findByDriverId personId
   when (isJust mAadhaarCard) $ throwError AadhaarDataAlreadyPresent
   aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False
-  Esq.runNoTransaction $ Q.create aadhaarEntity
+  -- Esq.runNoTransaction $ Q.create aadhaarEntity
+  Q.create aadhaarEntity
   return Success
 
 makeTransactionIdAndAadhaarHashKey :: Id Person.Person -> Text

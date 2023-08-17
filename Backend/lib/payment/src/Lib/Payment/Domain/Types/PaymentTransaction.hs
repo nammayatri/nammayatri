@@ -37,6 +37,12 @@ data PaymentTransaction = PaymentTransaction
     statusId :: Int,
     status :: Payment.TransactionStatus,
     juspayResponse :: Maybe Text, -- webhook resp dump
+    mandateStatus :: Maybe Payment.MandateStatus,
+    mandateStartDate :: Maybe UTCTime,
+    mandateEndDate :: Maybe UTCTime,
+    mandateId :: Maybe Text,
+    mandateFrequency :: Maybe Payment.MandateFrequency,
+    mandateMaxAmount :: Maybe HighPrecMoney,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

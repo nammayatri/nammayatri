@@ -26,7 +26,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
 import Kernel.Serviceability
-import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
@@ -85,8 +85,8 @@ rentalSearch personId bundleVersion clientVersion device req = do
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
-  DB.runTransaction $ do
-    QSearchRequest.create searchRequest
+  -- DB.runTransaction $ do
+  _ <- QSearchRequest.create searchRequest
   let dSearchRes =
         RentalSearchRes
           { origin = req.origin,

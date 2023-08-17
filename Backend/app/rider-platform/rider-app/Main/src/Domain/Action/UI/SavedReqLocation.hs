@@ -24,9 +24,9 @@ where
 import Data.Text (pack)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica, runTransaction)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
@@ -63,19 +63,20 @@ createSavedReqLocation riderId sreq = do
   unless (null savedLocations) $ throwError $ InvalidRequest "Location with this tag already exists"
   now <- getCurrentTime
   location <- buildSavedReqLocation sreq now riderId
-  runTransaction $
-    QSavedReqLocation.create location
+  -- runTransaction $
+  _ <- QSavedReqLocation.create location
   return APISuccess.Success
 
 getSavedReqLocations :: EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
   savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
+  -- savedLocations <- QSavedReqLocation.findAllByRiderId riderId
   return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations
 
 deleteSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> Text -> m APISuccess.APISuccess
 deleteSavedReqLocation riderId tag = do
-  runTransaction $
-    QSavedReqLocation.deleteByRiderIdAndTag riderId tag
+  -- runTransaction $
+  void $ QSavedReqLocation.deleteByRiderIdAndTag riderId tag
   return APISuccess.Success
 
 buildSavedReqLocation :: MonadFlow m => CreateSavedReqLocationReq -> UTCTime -> Id Person.Person -> m SavedReqLocation.SavedReqLocation

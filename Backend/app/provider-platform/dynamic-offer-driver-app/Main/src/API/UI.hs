@@ -34,6 +34,7 @@ import qualified API.UI.OnMessage as OnMessage
 import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Payment as Payment
 import qualified API.UI.Performance as Performance
+import qualified API.UI.Plan as Plan
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
@@ -73,6 +74,7 @@ type API =
            :<|> LeaderBoard.API
            :<|> OnMessage.API
            :<|> RideRoute.API
+           :<|> Plan.API
        )
 
 handler :: FlowServer API
@@ -101,3 +103,4 @@ handler =
     :<|> LeaderBoard.handler
     :<|> OnMessage.handler
     :<|> RideRoute.handler
+    :<|> Plan.handler

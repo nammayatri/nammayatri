@@ -123,6 +123,7 @@ library
     , record-hasfield
     , rider-app
     , search-result-aggregator
+    , sequelize
     , servant
     , servant-client
     , servant-server
@@ -214,6 +215,7 @@ test-suite beckn-integ-test
     , record-hasfield
     , rider-app
     , search-result-aggregator
+    , sequelize
     , servant
     , servant-client
     , servant-server

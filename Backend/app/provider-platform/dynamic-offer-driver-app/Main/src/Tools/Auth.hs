@@ -19,6 +19,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto.Config
@@ -59,7 +60,7 @@ instance VerificationMethod VerifyToken where
 
 verifyTokenAction ::
   forall m r.
-  (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds) =>
+  (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, L.MonadFlow m) =>
   VerificationAction VerifyToken m
 verifyTokenAction = VerificationAction verifyPerson
 
@@ -79,7 +80,7 @@ verifyAdmin user = do
     throwError AccessDenied
   return user
 
-verifyToken :: (HasEsqEnv m r, MonadThrow m, Log m) => RegToken -> m SR.RegistrationToken
+verifyToken :: (HasEsqEnv m r, L.MonadFlow m, MonadThrow m, Log m) => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do
   QR.findByToken regToken
     >>= Utils.fromMaybeM (InvalidToken regToken)
@@ -93,7 +94,7 @@ validateAdmin regToken = do
       >>= fromMaybeM (PersonNotFound entityId)
   verifyAdmin user
 
-verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person, Id Merchant.Merchant)
+verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, L.MonadFlow m) => RegToken -> m (Id Person.Person, Id Merchant.Merchant)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
@@ -153,7 +154,7 @@ verifyDashboard incomingToken = do
     then pure Dashboard
     else throwError (InvalidToken "dashboard token") -- we shouldn't show to dashboard user incoming token
 
-clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r) => Id Person.Person -> m ()
+clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r, L.MonadFlow m) => Id Person.Person -> m ()
 clearDriverSession personId = do
   regTokens <- QR.findAllByPersonId personId
   for_ regTokens $ \regToken -> do

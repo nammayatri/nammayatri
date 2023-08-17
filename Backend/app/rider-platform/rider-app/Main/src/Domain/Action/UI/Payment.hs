@@ -26,8 +26,12 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
+import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import Kernel.Types.Common hiding (id)
@@ -54,37 +58,43 @@ createOrder ::
   Id DRide.Ride ->
   Flow Payment.CreateOrderResp
 createOrder (personId, merchantId) rideId = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus $ show ride.status)
   totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  riderId <- runInReplica $ QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  -- person <- QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  riderId <- B.runInReplica $ QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
+  -- riderId <- QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
   unless (person.id == riderId) $ throwError NotAnExecutor
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let createOrderReq =
         Payment.CreateOrderReq
-          { orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
-            amount = totalFare,
+          { orderId = rideId.getId,
+            orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
+            amount = fromIntegral totalFare,
             customerId = person.id.getId,
             customerEmail,
             customerPhone,
-            paymentPageClientId = "yatrisathi",
             customerFirstName = person.firstName,
-            customerLastName = person.lastName
+            customerLastName = person.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderId = cast @DRide.Ride @DOrder.PaymentOrder rideId
       createOrderCall = Payment.createOrder merchantId -- api call
-  DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
+  DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
 getStatus ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
+    L.MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -108,7 +118,8 @@ getOrder ::
   Id DOrder.PaymentOrder ->
   m DOrder.PaymentOrderAPIEntity
 getOrder (personId, _) orderId = do
-  order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  order <- B.runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  -- order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 

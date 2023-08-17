@@ -46,6 +46,7 @@ let consumerProperties =
       { groupId = "groupId"
       , brockers = [ "localhost:29092" ]
       , autoCommit = None Integer
+      , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let kafkaConsumerCfg =
@@ -55,6 +56,12 @@ let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
 
 let cacheConfig = { configsExpTime = +86400 }
+
+let tables =
+      { enableKVForWriteAlso =
+          [] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [] : List Text
+      }
 
 in  { hedisCfg
     , hedisClusterCfg
@@ -76,4 +83,5 @@ in  { hedisCfg
         //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , tables
     }

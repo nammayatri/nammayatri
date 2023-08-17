@@ -60,6 +60,8 @@ dependencies:
   - text
   - time
   - servant-server
+  - euler-hs
+  - unordered-containers
 
 ghc-options:
   - -Wall

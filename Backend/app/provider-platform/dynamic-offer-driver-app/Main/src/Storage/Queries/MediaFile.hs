@@ -11,28 +11,48 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.MediaFile where
 
-import Domain.Types.MediaFile
+import qualified Data.Time as T
+import Domain.Types.MediaFile as DMF
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.MediaFile
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.MediaFile as BeamMF
 
-create :: MediaFile -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DMF.MediaFile -> m ()
+create = createWithKV
 
-findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
-findById = Esq.findById
+findById :: (L.MonadFlow m, Log m) => Id MediaFile -> m (Maybe MediaFile)
+findById (Id mediaFileId) = findOneWithKV [Se.Is BeamMF.id $ Se.Eq mediaFileId]
 
-findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
-findAllIn mfList =
-  Esq.findAll $ do
-    mediaFile <- from $ table @MediaFileT
-    where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
-    return mediaFile
+findAllIn :: (L.MonadFlow m, Log m) => [Id MediaFile] -> m [MediaFile]
+findAllIn mfList = findAllWithKV [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
 
-deleteById :: Id MediaFile -> SqlDB ()
-deleteById = Esq.deleteByKey @MediaFileT
+deleteById :: (L.MonadFlow m, Log m) => Id MediaFile -> m ()
+deleteById (Id mediaFileId) = deleteWithKV [Se.Is BeamMF.id (Se.Eq mediaFileId)]
+
+instance FromTType' BeamMF.MediaFile MediaFile where
+  fromTType' BeamMF.MediaFileT {..} = do
+    pure $
+      Just
+        MediaFile
+          { id = Id id,
+            _type = fileType,
+            url = url,
+            createdAt = T.localTimeToUTC T.utc createdAt
+          }
+
+instance ToTType' BeamMF.MediaFile MediaFile where
+  toTType' MediaFile {..} = do
+    BeamMF.MediaFileT
+      { BeamMF.id = getId id,
+        BeamMF.fileType = _type,
+        BeamMF.url = url,
+        BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
+      }

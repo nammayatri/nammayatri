@@ -71,6 +71,7 @@ dependencies:
   - openapi3
   - servant-openapi3
   - dashboard-helper-api
+  - unordered-containers
 
 ghc-options:
   - -Wall

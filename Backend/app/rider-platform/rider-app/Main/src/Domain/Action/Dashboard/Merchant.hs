@@ -31,7 +31,6 @@ import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -65,13 +64,13 @@ merchantUpdate merchantShortId req = do
       throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
     pure allExophones
 
-  Esq.runTransaction $ do
-    CQM.update updMerchant
-    whenJust req.exoPhones \exophones -> do
-      CQExophone.deleteByMerchantId merchant.id
-      forM_ exophones $ \exophoneReq -> do
-        exophone <- buildExophone merchant.id now exophoneReq
-        CQExophone.create exophone
+  -- Esq.runTransaction $ do
+  void $ CQM.update updMerchant
+  whenJust req.exoPhones \exophones -> do
+    CQExophone.deleteByMerchantId merchant.id
+    forM_ exophones $ \exophoneReq -> do
+      exophone <- buildExophone merchant.id now exophoneReq
+      CQExophone.create exophone
 
   CQM.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
@@ -124,8 +123,8 @@ mapsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
@@ -140,8 +139,8 @@ smsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
@@ -174,8 +173,8 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
                                    autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
-  Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success
@@ -201,8 +200,8 @@ smsServiceUsageConfigUpdate merchantShortId req = do
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
-  Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
+  -- Esq.runTransaction $ do
+  _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success

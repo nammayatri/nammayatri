@@ -21,7 +21,6 @@ import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified Data.Text as T
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -34,7 +33,8 @@ exotelHeartbeat req = do
   let incomingAffected = req.incomingAffected <&> (.phoneNumber)
       outgoingAffected = req.outgoingAffected <&> (.phoneNumber)
   let affectedPhones = incomingAffected <> outgoingAffected
-  Esq.runTransaction $ CQExophone.updateAffectedPhones affectedPhones
+  -- Esq.runTransaction $ CQExophone.updateAffectedPhones affectedPhones
+  void $ CQExophone.updateAffectedPhones affectedPhones
   -- CQExophone.clearAllCache
   logTagInfo "dashboard -> exotelHeartbeat: " $
     show req.statusType

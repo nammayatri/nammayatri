@@ -26,6 +26,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.SMS as Sms
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -39,6 +40,7 @@ data ServiceName
   | CallService Call.CallService
   | NotificationService Notification.NotificationService
   | PaymentService Payment.PaymentService
+  | IssueTicketService Ticket.IssueTicketService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -49,6 +51,7 @@ instance Show ServiceName where
   show (CallService s) = "Call_" <> show s
   show (NotificationService s) = "Notification_" <> show s
   show (PaymentService s) = "Payment_" <> show s
+  show (IssueTicketService s) = "Ticket_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -79,6 +82,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Payment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (IssueTicketService v1, r2)
+                 | r1 <- stripPrefix "Ticket_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -91,6 +98,7 @@ data ServiceConfigD (s :: UsageSafety)
   | CallServiceConfig !CallServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
+  | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -132,6 +140,8 @@ getServiceName msc = case msc.serviceConfig of
     Notification.PayTMConfig _ -> NotificationService Notification.PayTM
   PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
+  IssueTicketServiceConfig ticketCfg -> case ticketCfg of
+    Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
 
 buildMerchantServiceConfig ::
   MonadTime m =>

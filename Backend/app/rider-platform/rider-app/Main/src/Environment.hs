@@ -39,7 +39,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common
+import Kernel.Types.Common (HighPrecMeters, Meters, Seconds, Tables)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow
 import Kernel.Types.Id (ShortId (..))
@@ -108,7 +108,8 @@ data AppCfg = AppCfg
     registryMap :: M.Map Text BaseUrl,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    tables :: Tables
   }
   deriving (Generic, FromDhall)
 

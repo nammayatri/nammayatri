@@ -22,6 +22,7 @@ import qualified Data.Text.Encoding as T
 import Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
+import qualified EulerHS.Types as ET
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Queries.BecknRequest as QBR
 import Kernel.Types.Id
@@ -53,7 +54,7 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
         context
           & #bpp_uri ?~ bppUri
           & #bpp_id ?~ bppSubscriberId
-  withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
+  withBecknCallbackMig doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl f
 
 logBecknRequest :: AppEnv -> Application -> Application
 logBecknRequest appEnv f req@Wai.Request {..} respF = do

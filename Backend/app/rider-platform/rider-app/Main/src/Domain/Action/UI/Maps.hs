@@ -30,6 +30,7 @@ import Data.Text (pack)
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
+import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -93,7 +94,7 @@ getPlaceName (_, merchantId) req = do
         then callMapsApi merchantId req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi :: (L.MonadFlow m, EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId req geoHashPrecisionValue = do
   res <- Maps.getPlaceName merchantId req
   let firstElement = listToMaybe res
@@ -103,7 +104,8 @@ callMapsApi merchantId req geoHashPrecisionValue = do
             MIT.ByLatLong (Maps.LatLong lat lon) -> (lat, lon)
             _ -> (element.location.lat, element.location.lon)
       placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
-      Esq.runTransaction $ CM.create placeNameCache
+      -- Esq.runTransaction $ CM.create placeNameCache
+      _ <- CM.create placeNameCache
       case (placeNameCache.placeId, placeNameCache.geoHash) of
         (Just placeId, Just geoHash) -> do
           CM.cachedPlaceByPlaceId placeId [placeNameCache]

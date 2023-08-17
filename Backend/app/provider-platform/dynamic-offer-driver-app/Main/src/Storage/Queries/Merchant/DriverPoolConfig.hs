@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant.DriverPoolConfig
   {-# WARNING
@@ -21,51 +22,95 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (Meters, MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Storage.Tabular.Merchant.DriverPoolConfig
+import Kernel.Types.Logging (Log)
+import qualified Sequelize as Se
+import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 
-create :: DriverPoolConfig -> SqlDB ()
-create = Esq.create
+create :: (L.MonadFlow m, Log m) => DriverPoolConfig -> m ()
+create = createWithKV
 
-findAllByMerchantId :: Transactionable m => Id Merchant -> m [DriverPoolConfig]
-findAllByMerchantId merchantId =
-  Esq.findAll $ do
-    driverPoolConfig <- from $ table @DriverPoolConfigT
-    where_ $
-      driverPoolConfig ^. DriverPoolConfigMerchantId ==. val (toKey merchantId)
-    orderBy [desc $ driverPoolConfig ^. DriverPoolConfigTripDistance]
-    return driverPoolConfig
+findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [DriverPoolConfig]
+findAllByMerchantId (Id merchantId) = findAllWithOptionsKV [Se.Is BeamDPC.merchantId $ Se.Eq merchantId] (Se.Desc BeamDPC.tripDistance) Nothing Nothing
 
-findByMerchantIdAndTripDistance :: Transactionable m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
-findByMerchantIdAndTripDistance merchantId tripDistance =
-  Esq.findOne $ do
-    driverPoolConfig <- from $ table @DriverPoolConfigT
-    where_ $
-      driverPoolConfig ^. DriverPoolConfigTId ==. val (toKey (merchantId, tripDistance))
-    return driverPoolConfig
+findByMerchantIdAndTripDistance :: (L.MonadFlow m, Log m) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantIdAndTripDistance (Id merchantId) tripDistance = findOneWithKV [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
 
-update :: DriverPoolConfig -> SqlDB ()
+update :: (L.MonadFlow m, MonadTime m, Log m) => DriverPoolConfig -> m ()
 update config = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverPoolConfigMinRadiusOfSearch =. val config.minRadiusOfSearch,
-        DriverPoolConfigMaxRadiusOfSearch =. val config.maxRadiusOfSearch,
-        DriverPoolConfigRadiusStepSize =. val config.radiusStepSize,
-        DriverPoolConfigDriverPositionInfoExpiry =. val config.driverPositionInfoExpiry,
-        DriverPoolConfigActualDistanceThreshold =. val config.actualDistanceThreshold,
-        DriverPoolConfigMaxDriverQuotesRequired =. val config.maxDriverQuotesRequired,
-        DriverPoolConfigDriverQuoteLimit =. val config.driverQuoteLimit,
-        DriverPoolConfigDriverRequestCountLimit =. val config.driverRequestCountLimit,
-        DriverPoolConfigDriverBatchSize =. val config.driverBatchSize,
-        DriverPoolConfigMaxNumberOfBatches =. val config.maxNumberOfBatches,
-        DriverPoolConfigMaxParallelSearchRequests =. val config.maxParallelSearchRequests,
-        DriverPoolConfigPoolSortingType =. val config.poolSortingType,
-        DriverPoolConfigSingleBatchProcessTime =. val config.singleBatchProcessTime,
-        DriverPoolConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverPoolConfigTId ==. val (toKey (config.merchantId, config.tripDistance))
+  updateWithKV
+    [ Se.Set BeamDPC.minRadiusOfSearch config.minRadiusOfSearch,
+      Se.Set BeamDPC.maxRadiusOfSearch config.maxRadiusOfSearch,
+      Se.Set BeamDPC.radiusStepSize config.radiusStepSize,
+      Se.Set BeamDPC.driverPositionInfoExpiry config.driverPositionInfoExpiry,
+      Se.Set BeamDPC.actualDistanceThreshold config.actualDistanceThreshold,
+      Se.Set BeamDPC.maxDriverQuotesRequired config.maxDriverQuotesRequired,
+      Se.Set BeamDPC.driverQuoteLimit config.driverQuoteLimit,
+      Se.Set BeamDPC.driverRequestCountLimit config.driverRequestCountLimit,
+      Se.Set BeamDPC.driverBatchSize config.driverBatchSize,
+      Se.Set BeamDPC.maxNumberOfBatches config.maxNumberOfBatches,
+      Se.Set BeamDPC.maxParallelSearchRequests config.maxParallelSearchRequests,
+      Se.Set BeamDPC.poolSortingType config.poolSortingType,
+      Se.Set BeamDPC.singleBatchProcessTime config.singleBatchProcessTime,
+      Se.Set BeamDPC.updatedAt now
+    ]
+    [Se.And [Se.Is BeamDPC.merchantId (Se.Eq $ getId config.merchantId), Se.Is BeamDPC.tripDistance (Se.Eq config.tripDistance)]]
+
+instance FromTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
+  fromTType' BeamDPC.DriverPoolConfigT {..} = do
+    pure $
+      Just
+        DriverPoolConfig
+          { merchantId = Id merchantId,
+            distanceBasedBatchSplit = distanceBasedBatchSplit,
+            minRadiusOfSearch = minRadiusOfSearch,
+            maxRadiusOfSearch = maxRadiusOfSearch,
+            radiusStepSize = radiusStepSize,
+            driverPositionInfoExpiry = driverPositionInfoExpiry,
+            actualDistanceThreshold = actualDistanceThreshold,
+            maxDriverQuotesRequired = maxDriverQuotesRequired,
+            driverQuoteLimit = driverQuoteLimit,
+            driverRequestCountLimit = driverRequestCountLimit,
+            driverBatchSize = driverBatchSize,
+            maxNumberOfBatches = maxNumberOfBatches,
+            maxParallelSearchRequests = maxParallelSearchRequests,
+            poolSortingType = poolSortingType,
+            singleBatchProcessTime = singleBatchProcessTime,
+            tripDistance = tripDistance,
+            radiusShrinkValueForDriversOnRide = radiusShrinkValueForDriversOnRide,
+            driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
+            driverToDestinationDuration = driverToDestinationDuration,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
+  toTType' DriverPoolConfig {..} = do
+    BeamDPC.DriverPoolConfigT
+      { BeamDPC.merchantId = getId merchantId,
+        BeamDPC.distanceBasedBatchSplit = distanceBasedBatchSplit,
+        BeamDPC.minRadiusOfSearch = minRadiusOfSearch,
+        BeamDPC.maxRadiusOfSearch = maxRadiusOfSearch,
+        BeamDPC.radiusStepSize = radiusStepSize,
+        BeamDPC.driverPositionInfoExpiry = driverPositionInfoExpiry,
+        BeamDPC.actualDistanceThreshold = actualDistanceThreshold,
+        BeamDPC.maxDriverQuotesRequired = maxDriverQuotesRequired,
+        BeamDPC.driverQuoteLimit = driverQuoteLimit,
+        BeamDPC.driverRequestCountLimit = driverRequestCountLimit,
+        BeamDPC.driverBatchSize = driverBatchSize,
+        BeamDPC.maxNumberOfBatches = maxNumberOfBatches,
+        BeamDPC.maxParallelSearchRequests = maxParallelSearchRequests,
+        BeamDPC.poolSortingType = poolSortingType,
+        BeamDPC.singleBatchProcessTime = singleBatchProcessTime,
+        BeamDPC.tripDistance = tripDistance,
+        BeamDPC.radiusShrinkValueForDriversOnRide = radiusShrinkValueForDriversOnRide,
+        BeamDPC.driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
+        BeamDPC.driverToDestinationDuration = driverToDestinationDuration,
+        BeamDPC.createdAt = createdAt,
+        BeamDPC.updatedAt = updatedAt
+      }

@@ -19,7 +19,6 @@ import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Whatsapp.Interface.Types as Reexport
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -40,6 +39,5 @@ whatsAppOptAPI (personId, _) OptAPIRequest {..} = do
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")
   unless (whatsappNotificationEnrollStatus == Just status) $
     void $ Whatsapp.whatsAppOptAPI merchantId $ OptApiReq {phoneNumber = mobileNo, method = status}
-  DB.runTransaction $
-    void $ QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+  void $ QP.updateWhatsappNotificationEnrollStatus personId $ Just status
   return Success

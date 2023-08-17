@@ -21,18 +21,18 @@ data Medium
   = SMS
   | EMAIL
   | SIGNATURE
-  deriving (Generic, FromJSON, ToJSON, Eq, Show, Read, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Eq, Show, Ord, Read, ToSchema)
 
 data RTEntityType
   = CUSTOMER
   | USER
-  deriving (Generic, FromJSON, ToJSON, Eq, Show, Read)
+  deriving (Generic, FromJSON, ToJSON, Eq, Ord, Show, Read)
 
 data LoginType
   = OTP
   | PASSWORD
   | DIRECT
-  deriving (Generic, FromJSON, ToJSON, Eq, Show, Read, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Eq, Ord, Show, Read, ToSchema)
 
 data RegistrationToken = RegistrationToken
   { id :: Id RegistrationToken,

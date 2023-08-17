@@ -21,7 +21,7 @@ import Kernel.Prelude
 import Servant
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Ord)
 
 instance FromHttpApiData CancellationStage where
   parseUrlPiece = parseHeader . encodeUtf8
@@ -29,7 +29,7 @@ instance FromHttpApiData CancellationStage where
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
 newtype CancellationReasonCode = CancellationReasonCode Text
-  deriving (Generic, Show, Eq, Read, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, Eq, Read, ToJSON, FromJSON, ToSchema, Ord)
 
 data CancellationReason = CancellationReason
   { reasonCode :: CancellationReasonCode,

@@ -7,9 +7,9 @@ where
 import qualified Domain.Types.DriverReferral as D
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -31,7 +31,8 @@ createDriverReferral ::
     Redis.HedisFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    MonadTime m
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   Bool ->
@@ -43,15 +44,17 @@ createDriverReferral (driverId, merchantId) isDashboard ReferralLinkReq {..} = d
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
-  mbLastReferralCodeWithDriver <- Esq.runInReplica $ QRD.findById driverId
+  mbLastReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
+  -- mbLastReferralCodeWithDriver <- QRD.findById driverId
   whenJust mbLastReferralCodeWithDriver $ \lastReferralCodeWithDriver ->
     unless (lastReferralCodeWithDriver.referralCode.getId == referralCode) $ throwError (InvalidRequest $ "DriverId: " <> driverId.getId <> " already linked with some referralCode.")
-  mbReferralCodeAlreadyLinked <- Esq.runInReplica $ QRD.findByRefferalCode $ Id referralCode
+  mbReferralCodeAlreadyLinked <- B.runInReplica $ QRD.findByRefferalCode $ Id referralCode
+  -- mbReferralCodeAlreadyLinked <- QRD.findByRefferalCode $ Id referralCode
   whenJust mbReferralCodeAlreadyLinked $ \referralCodeAlreadyLinked ->
     unless (referralCodeAlreadyLinked.driverId == driverId) $ throwError (InvalidRequest $ "RefferalCode: " <> referralCode <> " already linked with some other account.")
   driverRefferalRecord <- mkDriverRefferalType referralCode
   when (all isNothing [mbReferralCodeAlreadyLinked, mbLastReferralCodeWithDriver]) $
-    Esq.runTransaction $ QRD.create driverRefferalRecord
+    void (QRD.create driverRefferalRecord)
   pure Success
   where
     mkDriverRefferalType rc = do

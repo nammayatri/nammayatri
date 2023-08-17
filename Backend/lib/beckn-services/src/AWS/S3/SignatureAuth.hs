@@ -25,9 +25,10 @@ import Data.ByteString as DB
 import Data.ByteString.Char8 as DBC
 import Data.ByteString.Lazy as BSL
 import qualified Data.CaseInsensitive as CI (foldedCase)
+import qualified Data.HashMap.Internal as HMap
 import qualified Data.List as DL
 import Data.Map
-import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Data.Text.Encoding as DTE
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -148,9 +149,9 @@ prepareS3AuthManager ::
   R.FlowRuntime ->
   r ->
   S3AwsConfig ->
-  Map String Http.ManagerSettings
+  HashMap Text Http.ManagerSettings
 prepareS3AuthManager flowRt appEnv s3AwsConfig =
-  Map.singleton s3AuthManagerKey $
+  HMap.singleton (T.pack s3AuthManagerKey) $
     Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req_ =
@@ -205,6 +206,6 @@ modFlowRtWithS3AuthManagers flowRt appEnv s3AwsConfig = do
   logInfo "Loaded S3 http manager - "
   pure $ flowRt {R._httpClientManagers = managers}
 
-mkS3MbManager :: (HasLog r) => R.FlowRuntime -> r -> S3Config -> Maybe (Map String ManagerSettings)
+mkS3MbManager :: (HasLog r) => R.FlowRuntime -> r -> S3Config -> Maybe (HashMap Text ManagerSettings)
 mkS3MbManager _flowRt _appEnv S3MockConf {} = Nothing
 mkS3MbManager flowRt appEnv (S3AwsConf s3AwsConfig) = Just $ prepareS3AuthManager flowRt appEnv s3AwsConfig

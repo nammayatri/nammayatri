@@ -1,0 +1,145 @@
+{-
+  Copyright 2022-23, Juspay India Pvt Ltd
+
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Storage.Beam.DriverQuote where
+
+import qualified Data.Aeson as A
+import qualified Data.HashMap.Internal as HM
+import qualified Data.Map.Strict as M
+import Data.Serialize
+import qualified Data.Time as Time
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.MySQL ()
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Domain.Types.DriverQuote as Domain
+import qualified Domain.Types.Vehicle.Variant as Variant
+import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import GHC.Generics (Generic)
+import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
+import qualified Kernel.Types.Common as Common
+import Lib.Utils ()
+import Lib.UtilsTH
+import Sequelize
+
+instance FromField Domain.DriverQuoteStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DriverQuoteStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverQuoteStatus
+
+instance FromBackendRow Postgres Domain.DriverQuoteStatus
+
+data DriverQuoteT f = DriverQuoteT
+  { id :: B.C f Text,
+    requestId :: B.C f Text,
+    searchTryId :: B.C f Text,
+    searchRequestForDriverId :: B.C f (Maybe Text),
+    estimateId :: B.C f Text,
+    driverId :: B.C f Text,
+    driverName :: B.C f Text,
+    driverRating :: B.C f (Maybe Centesimal),
+    status :: B.C f Domain.DriverQuoteStatus,
+    vehicleVariant :: B.C f Variant.Variant,
+    distance :: B.C f Meters,
+    distanceToPickup :: B.C f Meters,
+    durationToPickup :: B.C f Seconds,
+    validTill :: B.C f Time.LocalTime,
+    estimatedFare :: B.C f Common.Money,
+    fareParametersId :: B.C f Text,
+    providerId :: B.C f Text,
+    specialLocationTag :: B.C f (Maybe Text),
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime
+  }
+  deriving (Generic, B.Beamable)
+
+instance IsString Domain.DriverQuoteStatus where
+  fromString = show
+
+instance IsString Variant.Variant where
+  fromString = show
+
+-- instance IsString Common.Money where
+--   fromString = show
+
+instance B.Table DriverQuoteT where
+  data PrimaryKey DriverQuoteT f
+    = Id (B.C f Text)
+    deriving (Generic, B.Beamable)
+  primaryKey = Id . id
+
+instance ModelMeta DriverQuoteT where
+  modelFieldModification = driverQuoteTMod
+  modelTableName = "driver_quote"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
+
+type DriverQuote = DriverQuoteT Identity
+
+instance FromJSON DriverQuote where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON DriverQuote where
+  toJSON = A.genericToJSON A.defaultOptions
+
+deriving stock instance Show DriverQuote
+
+driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT))
+driverQuoteTMod =
+  B.tableModification
+    { id = B.fieldNamed "id",
+      requestId = B.fieldNamed "search_request_id",
+      searchTryId = B.fieldNamed "search_try_id",
+      searchRequestForDriverId = B.fieldNamed "search_request_for_driver_id",
+      driverId = B.fieldNamed "driver_id",
+      estimateId = B.fieldNamed "estimate_id",
+      driverName = B.fieldNamed "driver_name",
+      driverRating = B.fieldNamed "driver_rating",
+      status = B.fieldNamed "status",
+      vehicleVariant = B.fieldNamed "vehicle_variant",
+      distance = B.fieldNamed "distance",
+      distanceToPickup = B.fieldNamed "distance_to_pickup",
+      durationToPickup = B.fieldNamed "duration_to_pickup",
+      validTill = B.fieldNamed "valid_till",
+      estimatedFare = B.fieldNamed "estimated_fare",
+      fareParametersId = B.fieldNamed "fare_parameters_id",
+      providerId = B.fieldNamed "provider_id",
+      specialLocationTag = B.fieldNamed "special_location_tag",
+      createdAt = B.fieldNamed "created_at",
+      updatedAt = B.fieldNamed "updated_at"
+    }
+
+psToHs :: HM.HashMap Text Text
+psToHs = HM.empty
+
+driverQuoteToHSModifiers :: M.Map Text (A.Value -> A.Value)
+driverQuoteToHSModifiers =
+  M.empty
+
+driverQuoteToPSModifiers :: M.Map Text (A.Value -> A.Value)
+driverQuoteToPSModifiers =
+  M.empty
+
+instance Serialize DriverQuote where
+  put = error "undefined"
+  get = error "undefined"
+
+$(enableKVPG ''DriverQuoteT ['id] [['driverId], ['searchTryId], ['requestId]])

@@ -24,15 +24,7 @@ let esqDBReplicaCfg =
       , connectionPoolCount = esqDBCfg.connectionPoolCount
       }
 
-let esqLocationDBCfg =
-      { connectHost = "localhost"
-      , connectPort = 5454
-      , connectUser = sec.locDBUserId
-      , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_dev_loc"
-      , connectSchemaName = "atlas_person_location"
-      , connectionPoolCount = +25
-      }
+let esqLocationDBCfg = esqDBCfg
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost
@@ -138,7 +130,16 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
-let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
+let tables =
+      { enableKVForWriteAlso =
+          [] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [] : List Text
+      }
 
 let registryMap =
       [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
@@ -215,5 +216,6 @@ in  { esqDBCfg
     , enableAPILatencyLogging = True
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     }

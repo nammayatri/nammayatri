@@ -45,6 +45,7 @@ handler authInfo =
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DriverFee -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails driverFeeId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails driverFeeId
 
+-- This APIs are decoupled from Driver Fee Table.
 getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
 getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
 
