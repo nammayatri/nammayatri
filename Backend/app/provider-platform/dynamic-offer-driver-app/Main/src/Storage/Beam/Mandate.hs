@@ -31,6 +31,7 @@ data MandateT f = MandateT
     startDate :: B.C f UTCTime,
     endDate :: B.C f UTCTime,
     maxAmount :: B.C f HighPrecMoney,
+    payerApp :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -69,6 +70,7 @@ mandateTMod =
       status = B.fieldNamed "status",
       startDate = B.fieldNamed "start_date",
       payerVpa = B.fieldNamed "payer_vpa",
+      payerApp = B.fieldNamed "payer_app",
       endDate = B.fieldNamed "end_date",
       maxAmount = B.fieldNamed "max_amount",
       createdAt = B.fieldNamed "created_at",
