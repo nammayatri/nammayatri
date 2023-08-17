@@ -44,9 +44,9 @@
                     app:lottie_rawRes="@raw/waiting_for_customer_lottie" />
 
                 <ImageView
-                    android:layout_width="180dp"
+                    android:layout_width="235dp"
                     android:id="@+id/image_view_waiting"
-                    android:layout_height="128dp"
+                    android:layout_height="125dp"
                     android:layout_gravity="center"
                     android:layout_marginTop="20dp"
                     android:background="@drawable/ic_waiting_image" />

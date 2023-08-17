@@ -13,6 +13,7 @@ window.getMerchantConfig = function () {
     "showRateCard": "true",
     "showDashboard": "false",
     "enableShareRide": "false",
+    "autoVariantEnabled": false,
     "shareAppTitle": "Share Pass Culture!",
     "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
     "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",

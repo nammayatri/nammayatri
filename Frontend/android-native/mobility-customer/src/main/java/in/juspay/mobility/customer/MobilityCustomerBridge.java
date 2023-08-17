@@ -307,7 +307,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void updateRoute(String json, String dest, String eta, String specialLocation) {
+    public void updateRoute(String json, String dest, String eta, String src, String specialLocation) {
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 try {
@@ -321,7 +321,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         LatLng tempPoint = new LatLng(lat, lng);
                         path.add(tempPoint);
                     }
-                    Marker currMarker = (Marker) markers.get("ny_ic_vehicle_nav_on_map");
+                    Marker currMarker = (Marker) markers.get(src);
                     currMarker.setTitle("Vehicle Icon On Map");
                     Marker destMarker = (Marker) markers.get(dest);   
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
@@ -333,7 +333,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         polyline.setEndCap(new ButtCap());
                         if (path.size() == 0) {
                             LatLng destination = destMarker.getPosition();
-                            animateMarkerNew(destination, currMarker);
+                            animateMarkerNew(src, destination, currMarker);
                             polyline.remove();
                             polyline = null;
                             currMarker.setAnchor(0.5f, 0);
@@ -344,7 +344,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             double sourceLat = path.get(path.size() - 1).latitude;
                             double sourceLong = path.get(path.size() - 1).longitude;
                             LatLng destination = path.get(path.size() - 1);
-                            animateMarkerNew(destination, currMarker);
+                            animateMarkerNew(src, destination, currMarker);
                             PatternItem DASH = new Dash(1);
                             List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Collections.singletonList(DASH);
                             polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
@@ -364,7 +364,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         });
     }
 
-    private void animateMarkerNew(final LatLng destination, final Marker marker) {
+    private void animateMarkerNew(String src, LatLng destination, final Marker marker) {
         if (marker != null) {
 
             LatLng startPosition = marker.getPosition();
@@ -381,7 +381,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     if (rotation > 1.0)
                         marker.setRotation(rotation);
                     marker.setPosition(newPosition);
-                    markers.put("ny_ic_vehicle_nav_on_map", marker);
+                    markers.put(src, marker);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

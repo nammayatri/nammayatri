@@ -52,6 +52,7 @@ type AppConfig =
   , internationalNumberEnabled :: Boolean
   , dashboardUrl :: String 
   , callOptions :: Array String
+  , autoVariantEnabled :: Boolean
   } 
 
 type QuoteListItemConfig = {
