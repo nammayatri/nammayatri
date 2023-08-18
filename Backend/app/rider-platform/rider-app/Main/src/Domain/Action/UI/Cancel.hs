@@ -90,7 +90,6 @@ cancel bookingId _ req = do
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
-  -- mRide <- QR.findActiveByRBId booking.id
   cancellationReason <-
     case mRide of
       Just ride -> do
@@ -103,7 +102,6 @@ cancel bookingId _ req = do
             logTagInfo "DriverLocationFetchFailed" $ show err
             buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
       Nothing -> buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
-  -- DB.runTransaction $ QBCR.upsert cancellationReason
   QBCR.upsert cancellationReason
   return $
     CancelRes
@@ -152,7 +150,6 @@ mkDomainCancelSearch personId estimateId = do
     buildCancelReq estId sendToBpp estStatus = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      -- person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       let searchRequestId = estimate.requestId
       pure
@@ -177,13 +174,10 @@ cancelSearch personId dcr = do
     if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
       then -- then Esq.runTransaction $ do
       do
-        -- Esq.runTransaction $
         _ <- QPFS.updateStatus personId DPFS.IDLE
         void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
         QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
       else do
-        -- Esq.runTransaction $ do
-        -- Esq.runTransaction $
         _ <- QPFS.updateStatus personId DPFS.IDLE
         void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
         QDOffer.updateStatus dcr.estimateId DDO.INACTIVE

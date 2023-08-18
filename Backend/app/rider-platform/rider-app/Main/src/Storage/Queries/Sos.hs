@@ -15,17 +15,6 @@ import qualified Storage.Beam.Sos as BeamS
 create :: (L.MonadFlow m, Log m) => Sos.Sos -> m ()
 create = createWithKV
 
--- updateStatus :: Id Sos.Sos -> Sos.SosStatus -> SqlDB ()
--- updateStatus sosId status = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SosUpdatedAt =. val now,
---         SosStatus =. val status
---       ]
---     where_ $ tbl ^. SosId ==. val (getId sosId)
-
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Sos.Sos -> Sos.SosStatus -> m ()
 updateStatus sosId status = do
   now <- getCurrentTime
@@ -34,9 +23,6 @@ updateStatus sosId status = do
       Se.Set BeamS.updatedAt now
     ]
     [Se.Is BeamS.id $ Se.Eq (getId sosId)]
-
--- findById :: Transactionable m => Id Sos.Sos -> m (Maybe Sos)
--- findById = Esq.findById
 
 findById :: (L.MonadFlow m, Log m) => Id Sos.Sos -> m (Maybe Sos)
 findById sosId = findOneWithKV [Se.Is BeamS.id $ Se.Eq (getId sosId)]

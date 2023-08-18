@@ -34,8 +34,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
 
--- import Storage.Tabular.Vehicle ()
-
 instance IsString Vehicle.Variant where
   fromString = show
 

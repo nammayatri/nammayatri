@@ -20,24 +20,10 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
--- import Storage.Tabular.Person as Person
-
 import qualified Database.Beam as B
--- import qualified Storage.Beam.DriverInformation as BeamDI
--- import qualified Storage.Beam.Ride as BeamR
--- import Database.Beam.Postgres (Postgres)
--- import EulerHS.KVConnector.Utils (meshModelTableEntity)
--- import qualified Database.PostgreSQL.Simple.SqlQQ as B
--- import qualified Storage.Beam.Ride as BeamR
--- import Database.Beam (QExpr, QBaseScope)
-
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
--- import Kernel.Storage.Esqueleto as Esq
-
--- import qualified Storage.Beam.Ride as BeamR
-
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -57,9 +43,6 @@ import qualified Storage.Beam.Ride as BeamR
 import Storage.Queries.Booking ()
 import Storage.Queries.Person ()
 
--- import Storage.Tabular.Booking as Booking
--- import Storage.Tabular.Ride as Ride
-
 create :: (L.MonadFlow m, Log m) => Ride -> m ()
 create = createWithKV
 
@@ -70,20 +53,6 @@ data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   }
   deriving (Generic, B.Database be)
 
--- updateStatus ::
---   Id Ride ->
---   RideStatus ->
---   SqlDB ()
--- updateStatus rideId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RideUpdatedAt =. val now,
---         RideStatus =. val status_
---       ]
---     where_ $ tbl ^. RideId ==. val (getId rideId)
-
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
@@ -92,20 +61,6 @@ updateStatus rideId status = do
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-
--- updateTrackingUrl ::
---   Id Ride ->
---   BaseUrl ->
---   SqlDB ()
--- updateTrackingUrl rideId url = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RideUpdatedAt =. val now,
---         RideTrackingUrl =. val (Just $ showBaseUrl url)
---       ]
---     where_ $ tbl ^. RideId ==. val (getId rideId)
 
 updateTrackingUrl :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
@@ -116,20 +71,6 @@ updateTrackingUrl rideId url = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
--- updateRideRating ::
---   Id Ride ->
---   Int ->
---   SqlDB ()
--- updateRideRating rideId rideRating = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RideUpdatedAt =. val now,
---         RideRideRating =. val (Just rideRating)
---       ]
---     where_ $ tbl ^. RideId ==. val (getId rideId)
-
 updateRideRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Int -> m ()
 updateRideRating rideId rideRating = do
   now <- getCurrentTime
@@ -139,40 +80,14 @@ updateRideRating rideId rideRating = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
--- findById :: Transactionable m => Id Ride -> m (Maybe Ride)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
-
--- findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
--- findByBPPRideId bppRideId_ =
---   findOne $ do
---     ride <- from $ table @RideT
---     where_ $ ride ^. RideBppRideId ==. val (getId bppRideId_)
---     return ride
 
 findByBPPRideId :: (L.MonadFlow m, Log m) => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
 
 findAllCompletedRides :: MonadFlow m => m [Ride]
 findAllCompletedRides = findAllWithKV [Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]
-
--- updateMultiple :: Id Ride -> Ride -> SqlDB ()
--- updateMultiple rideId ride = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RideUpdatedAt =. val now,
---         RideStatus =. val ride.status,
---         RideFare =. val (realToFrac <$> ride.fare),
---         RideTotalFare =. val (realToFrac <$> ride.totalFare),
---         RideChargeableDistance =. val ride.chargeableDistance,
---         RideRideStartTime =. val ride.rideStartTime,
---         RideRideEndTime =. val ride.rideEndTime
---       ]
---     where_ $ tbl ^. RideId ==. val (getId rideId)
 
 updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
@@ -188,58 +103,16 @@ updateMultiple rideId ride = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
--- findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
--- findActiveByRBId rbId =
---   findOne $ do
---     ride <- from $ table @RideT
---     where_ $
---       ride ^. RideBookingId ==. val (toKey rbId)
---         &&. ride ^. RideStatus !=. val CANCELLED
---     return ride
-
 findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
-
--- findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
--- findAllByRBId bookingId =
---   findAll $ do
---     ride <- from $ table @RideT
---     where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
---     orderBy [desc $ ride ^. RideCreatedAt]
---     return ride
 
 findAllByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m [Ride]
 findAllByRBId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
 
--- updateDriverArrival :: Id Ride -> SqlDB ()
--- updateDriverArrival rideId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RideDriverArrivalTime =. val (Just now),
---         RideUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. RideTId ==. val (toKey rideId)
-
 findLatestCompletedRide :: MonadFlow m => Id Person -> m (Maybe Ride)
 findLatestCompletedRide riderId = do
-  -- Esq.findOne $ do
-  --   (ride :& booking) <-
-  --     from $
-  --       table @RideT
-  --         `innerJoin` table @BookingT
-  --           `Esq.on` ( \(ride :& booking) ->
-  --                        ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-  --                    )
-  --   Esq.where_ $
-  --     ride ^. RideStatus ==. val COMPLETED
-  --       &&. booking ^. BookingRiderId ==. val (toKey riderId)
-  --   Esq.limit 1
-  --   Esq.orderBy [Esq.desc $ ride ^. RideCreatedAt]
-  --   return ride
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
-  findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking)] (Se.Desc BeamR.createdAt) Nothing Nothing <&> listToMaybe
+  findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 updateDriverArrival :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> m ()
 updateDriverArrival rideId = do
@@ -250,33 +123,11 @@ updateDriverArrival rideId = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
--- upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
--- upcoming6HrsCond ride now = ride ^. RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
-
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,
     bookingId :: Id Booking,
     riderId :: Id Person
   }
-
--- findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
--- findStuckRideItems merchantId bookingIds now = do
---   res <- Esq.findAll $ do
---     ride :& booking <-
---       from $
---         table @RideT
---           `innerJoin` table @BookingT
---             `Esq.on` ( \(ride :& booking) ->
---                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
---                      )
---     where_ $
---       booking ^. BookingMerchantId ==. val (toKey merchantId)
---         &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
---         &&. (ride ^. RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now)
---     pure (ride ^. RideTId, booking ^. BookingTId, booking ^. BookingRiderId)
---   pure $ mkStuckRideItem <$> res
---   where
---     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
 findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
@@ -306,16 +157,6 @@ findStuckRideItems (Id merchantId) bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
--- cancelRides :: [Id Ride] -> UTCTime -> SqlDB ()
--- cancelRides rideIds now = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RideStatus =. val CANCELLED,
---         RideUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. RideTId `in_` valList (toKey <$> rideIds)
-
 cancelRides :: (L.MonadFlow m, MonadTime m, Log m) => [Id Ride] -> UTCTime -> m ()
 cancelRides rideIds now = do
   updateWithKV
@@ -329,65 +170,6 @@ data RideItem = RideItem
     ride :: Ride,
     bookingStatus :: Common.BookingStatus
   }
-
--- findAllRideItems ::
---   Transactionable m =>
---   Id Merchant ->
---   Int ->
---   Int ->
---   Maybe Common.BookingStatus ->
---   Maybe (ShortId Ride) ->
---   Maybe DbHash ->
---   Maybe Text ->
---   Maybe UTCTime ->
---   Maybe UTCTime ->
---   UTCTime ->
---   m [RideItem]
--- findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now = do
---   res <- Esq.findAll $ do
---     booking :& ride :& person <-
---       from $
---         table @BookingT
---           `innerJoin` table @RideT
---             `Esq.on` ( \(booking :& ride) ->
---                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
---                      )
---           `innerJoin` table @PersonT
---             `Esq.on` ( \(booking :& _ :& person) ->
---                          booking ^. Booking.BookingRiderId ==. person ^. Person.PersonTId
---                      )
---     let bookingStatusVal = mkBookingStatusVal ride
---     where_ $
---       booking ^. BookingMerchantId ==. val (toKey merchantId)
---         &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
---         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
---         &&. whenJust_ mbCustomerPhoneDBHash (\hash -> person ^. Person.PersonMobileNumberHash ==. val (Just hash))
---         &&. whenJust_ mbDriverPhone (\driverMobileNumber -> ride ^. Ride.RideDriverMobileNumber ==. val driverMobileNumber)
---         &&. whenJust_ mbFrom (\defaultFrom -> ride ^. Ride.RideCreatedAt >=. val defaultFrom)
---         &&. whenJust_ mbTo (\defaultTo -> ride ^. Ride.RideCreatedAt <=. val defaultTo)
---     limit $ fromIntegral limitVal
---     offset $ fromIntegral offsetVal
---     return
---       ( person,
---         ride,
---         bookingStatusVal
---       )
---   pure $ mkRideItem <$> res
---   where
---     mkBookingStatusVal ride = do
---       -- ride considered as ONGOING_6HRS if ride.status = INPROGRESS, but somehow ride.rideStartTime = Nothing
---       let ongoing6HrsCond =
---             ride ^. Ride.RideRideStartTime +. just (Esq.interval [Esq.HOUR 6]) <=. val (Just now)
---       case_
---         [ when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. not_ (upcoming6HrsCond ride now)) then_ $ val Common.UPCOMING,
---           when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now) then_ $ val Common.UPCOMING_6HRS,
---           when_ (ride ^. Ride.RideStatus ==. val Ride.INPROGRESS &&. not_ ongoing6HrsCond) then_ $ val Common.ONGOING,
---           when_ (ride ^. Ride.RideStatus ==. val Ride.COMPLETED) then_ $ val Common.RCOMPLETED,
---           when_ (ride ^. Ride.RideStatus ==. val Ride.CANCELLED) then_ $ val Common.RCANCELLED
---         ]
---         (else_ $ val Common.ONGOING_6HRS)
---     mkRideItem (person, ride, bookingStatus) = do
--- RideItem {..}
 
 instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.BookingStatus
 
@@ -424,7 +206,6 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                     B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (defaultTo)) mbTo)
                     B.&&?. (maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ (bookingStatus)) mbBookingStatus)
               )
-              -- B.&&?. B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW) (booking.status B.val_ Common.RCOMPLETED) (B.val_ Common.RCANCELLED)) $
               do
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
                 ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
@@ -432,10 +213,8 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                 pure (booking', ride', person')
   res' <- case res of
     Right x -> do
-      -- let bookings = fst' <$> x
       let rides = snd' <$> x
           persons = thd' <$> x
-      -- b <- catMaybes <$> (mapM fromTType' (bookings))
       r <- catMaybes <$> (mapM fromTType' (rides))
       p <- catMaybes <$> (mapM fromTType' (persons))
       pure $ zip3 p r (mkBookingStatus now <$> r)
@@ -456,7 +235,6 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
       | ride.status == Ride.INPROGRESS && not (ride.rideStartTime <= Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.RCANCELLED
       | otherwise = Common.ONGOING_6HRS
-    -- fst' (x, _, _) = x
     snd' (_, y, _) = y
     thd' (_, _, z) = z
     mkRideItem (person, ride, bookingStatus) = do
@@ -496,13 +274,6 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
       where
         lookupRide :: Booking -> [Ride.Ride] -> Maybe Ride.Ride
         lookupRide booking = foldr (\ride acc -> if booking.id == ride.bookingId then Just ride else acc) Nothing
-    -- filterBookingsWithConditions :: [(Booking, Maybe Ride.Ride)] -> [Booking]
-    -- filterBookingsWithConditions =
-    --     filter isBookingValid
-    --   where
-    --     isBookingValid :: (Booking, Maybe Ride.Ride) -> Bool
-    --     isBookingValid (booking, maybeRide) =
-    --         isJust (booking.otpCode) && isJust ((Ride.id :: Ride.Ride -> Id Ride.Ride) <$> maybeRide)
     filterBookingsWithConditions :: [(Booking, Maybe Ride.Ride)] -> [Booking]
     filterBookingsWithConditions filteredBookings =
       map fst $ filter (uncurry isBookingValid) filteredBookings
@@ -515,19 +286,6 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                   DRB.OneWaySpecialZoneDetails details -> details.otpCode
                   _ -> Nothing
            in isJust maybeRide || (isJust (otpCode) && isNothing maybeRide)
-
--- findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
--- findRiderIdByRideId rideId = findOne $ do
---   ride :& booking <-
---     from $
---       table @RideT
---         `innerJoin` table @BookingT
---           `Esq.on` ( \(ride :& booking) ->
---                        ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
---                    )
---   where_ $
---     ride ^. RideTId ==. val (toKey rideId)
---   pure $ booking ^. BookingRiderId
 
 findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
@@ -601,43 +359,10 @@ instance ToTType' BeamR.Ride Ride where
 
 countRidesByRiderId :: MonadFlow m => Id Person -> m Int
 countRidesByRiderId riderId = do
-  -- mkCount <$> do
-  --   Esq.findAll $ do
-  --     (ride :& booking) <-
-  --       from $
-  --         table @RideT
-  --           `innerJoin` table @BookingT
-  --             `Esq.on` ( \(ride :& booking) ->
-  --                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-  --                      )
-  --     where_ $
-  --       ride ^. RideStatus ==. val Ride.COMPLETED
-  --         &&. booking ^. BookingRiderId ==. val (toKey riderId)
-  --     return (countRows :: SqlExpr (Esq.Value Int))
-  -- where
-  --   mkCount [counter] = counter
-  --   mkCount _ = 0
   booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
   findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] <&> length
 
 countRidesFromDateToNowByRiderId :: MonadFlow m => Id Person -> UTCTime -> m Int
 countRidesFromDateToNowByRiderId riderId date = do
-  -- mkCount <$> do
-  --   Esq.findAll $ do
-  --     (ride :& booking) <-
-  --       from $
-  --         table @RideT
-  --           `innerJoin` table @BookingT
-  --             `Esq.on` ( \(ride :& booking) ->
-  --                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-  --                      )
-  --     where_ $
-  --       ride ^. RideStatus ==. val Ride.COMPLETED
-  --         &&. booking ^. BookingRiderId ==. val (toKey riderId)
-  --         &&. ride ^. RideCreatedAt >. val date
-  --     return (countRows :: SqlExpr (Esq.Value Int))
-  -- where
-  --   mkCount [counter] = counter
-  --   mkCount _ = 0
   booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
   findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED, Se.Is BeamR.createdAt $ Se.GreaterThan date]] <&> length

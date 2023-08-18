@@ -22,8 +22,6 @@ module Storage.Queries.Person where
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Maybe as Mb
--- import qualified Storage.Queries.DriverInformation as QueriesDI
-
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
@@ -438,19 +436,6 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id mercha
         ]
     ]
 
--- personDriverTable ::
---   From
---     ( Table PersonT
---         :& Table DriverInformationT
---     )
--- personDriverTable =
---   table @PersonT
---     `innerJoin` table @DriverInformationT
---     `Esq.on` ( \(person :& driver) ->
---                  person ^. PersonTId ==. driver ^. DriverInformationDriverId
---                    &&. Esq.not_ (driver ^. DriverInformationBlocked)
---              )
-
 findAllDriverIdExceptProvided :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
   dbConf <- getMasterBeamConfig
@@ -828,14 +813,6 @@ updateAlternateMobileNumberAndCode person = do
 
 findAllPersonWithDriverInfos :: (L.MonadFlow m, Log m) => [DriverInformation] -> Id Merchant -> m [Person]
 findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In (getId . DriverInfo.driverId <$> dInfos), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
-
--- updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
--- updateMediaId driverId faceImageId =
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [PersonFaceImageId =. val (toKey <$> faceImageId)]
---     where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)
 
 updateMediaId :: (MonadFlow m) => Id Person -> Maybe (Id MediaFile) -> m ()
 updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]

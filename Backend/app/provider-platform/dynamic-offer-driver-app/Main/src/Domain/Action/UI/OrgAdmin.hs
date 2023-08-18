@@ -73,7 +73,6 @@ updateProfile admin req = do
               lastName = req.lastName <|> admin.lastName,
               deviceToken = req.deviceToken <|> admin.deviceToken
              }
-  -- Esq.runTransaction $
   _ <- QPerson.updatePersonRec updAdmin.id updAdmin
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decUpdAdmin <- decrypt updAdmin

@@ -39,27 +39,6 @@ import Lib.Utils (buildRadiusWithin'')
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverLocation as BeamDL
 
--- data AtlasDB f = AtlasDB
---   { driverLocation :: f (B.TableEntity BeamDL.DriverLocationT)
---   }
---   deriving (Generic, B.Database be)
-
--- atlasDB :: B.DatabaseSettings be AtlasDB
--- atlasDB =
---   B.defaultDbSettings
---     `B.withDbModification` B.dbModification
---       { driverLocation = dLocationTable
---       }
-
--- dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamDL.DriverLocationT)
--- dLocationTable =
---   B.setEntitySchema (Just "atlas_driver_offer_bpp")
---     <> B.setEntityName "driver_location"
---     <> B.modifyTableFields BeamDL.driverLocationTMod
-
--- driverLocationEMod :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamDL.DriverLocationT)
--- driverLocationEMod = B.modifyTableFields BeamDL.driverLocationTMod
-
 create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 create drLocationId latLong updateTime merchantId = do
   now <- getCurrentTime

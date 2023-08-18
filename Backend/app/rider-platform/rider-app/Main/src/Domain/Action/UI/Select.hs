@@ -40,8 +40,6 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
--- import Kernel.Storage.Esqueleto (runInReplica)
-
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -127,7 +125,6 @@ select personId estimateId req@DSelectReq {..} = do
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
-  -- Esq.runTransaction $ do
   _ <- QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
@@ -147,24 +144,19 @@ select personId estimateId req@DSelectReq {..} = do
 selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  -- estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
-  -- selectedQuotes <- QQuote.findAllByEstimateId estimateId DDO.ACTIVE
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
 
 selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
-    -- estimate <- MaybeT $ QEstimate.findById estimateId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
     bookingId <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id
-    -- bookingId <- MaybeT $ QBooking.findBookingIdAssignedByEstimateId estimate.id
     return $ QuotesResultResponse {bookingId = Just bookingId, selectedQuotes = Nothing}
   case res of
     Just r -> pure r
     Nothing -> do
       selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
-      -- selectedQuotes <- QQuote.findAllByEstimateId estimateId DDO.ACTIVE
       return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes}

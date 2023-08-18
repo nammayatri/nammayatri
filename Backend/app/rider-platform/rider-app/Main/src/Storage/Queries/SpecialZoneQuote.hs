@@ -27,9 +27,6 @@ import qualified Storage.Beam.SpecialZoneQuote as BeamSZQ
 createSpecialZoneQuote :: (L.MonadFlow m, Log m) => SpecialZoneQuote -> m ()
 createSpecialZoneQuote = createWithKV
 
--- findById' :: (MonadThrow m, Log m, Transactionable m) => Id SpecialZoneQuote -> DTypeBuilder m (Maybe SpecialZoneQuoteT)
--- findById' = Esq.findById'
-
 findById :: (L.MonadFlow m, Log m) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
 findById specialZoneQuoteId = findOneWithKV [Se.Is BeamSZQ.id $ Se.Eq (getId specialZoneQuoteId)]
 

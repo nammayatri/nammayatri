@@ -23,27 +23,7 @@ import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
--- import Storage.Tabular.CallStatus ()
 import qualified Tools.Call as Call
-
--- import qualified EulerHS.KVConnector.Flow as KV
--- import qualified EulerHS.Language as L
--- import qualified Kernel.Beam.Types as KBT
--- import qualified Sequelize as Se
--- import EulerHS.KVConnector.Types
-
--- Need to update this according to createUnique
--- create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
--- create callStatus = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamCS.CallStatusT
---   updatedMeshConfig <- setMeshConfig modelName
---   case dbConf of
---     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam CallStatus)
---     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- create :: CallStatus -> SqlDB ()
--- create callStatus = void $ Esq.createUnique callStatus
 
 create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
 create cs = do
@@ -52,38 +32,16 @@ create cs = do
     Nothing -> createWithKV cs
     Just _ -> pure ()
 
--- findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCS.id $ Se.Eq callStatusId]
 
--- findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
--- findByCallSid callSid =
---   Esq.findOne $ do
---     callStatus <- from $ table @CallStatusT
---     where_ $ callStatus ^. CallStatusCallId ==. val callSid
---     return callStatus
-
 findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
-
--- updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> SqlDB ()
--- updateCallStatus callId status conversationDuration mbrecordingUrl = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ CallStatusStatus =. val status,
---         CallStatusConversationDuration =. val conversationDuration,
---         CallStatusRecordingUrl =. val (showBaseUrl <$> mbrecordingUrl)
---       ]
---     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
 updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Se.Set BeamCS.conversationDuration conversationDuration,
-      -- Se.Set BeamCS.recordingUrl $ showBaseUrl <$> recordingUrl,
       Se.Set BeamCS.recordingUrl recordingUrl,
       Se.Set BeamCS.status status
     ]

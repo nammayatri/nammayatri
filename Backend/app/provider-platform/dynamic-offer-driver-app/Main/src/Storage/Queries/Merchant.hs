@@ -30,62 +30,21 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
--- findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
-
--- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
--- findBySubscriberId subscriberId = Esq.findOne $ do
---   org <- from $ table @MerchantT
---     org ^. MerchantSubscriberId ==. val (subscriberId.getShortId)
---   return org
 
 findBySubscriberId :: (L.MonadFlow m, Log m) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId (ShortId subscriberId) = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
 
--- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
--- findByShortId shortId = Esq.findOne $ do
---   org <- from $ table @MerchantT
---     org ^. MerchantShortId ==. val (shortId.getShortId)
---   return org
-
 findByShortId :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq shortId]
-
--- loadAllProviders :: Transactionable m => m [Merchant]
--- loadAllProviders =
---   Esq.findAll $ do
---     org <- from $ table @MerchantT
---       org ^. MerchantStatus ==. val DM.APPROVED
---         &&. org ^. MerchantEnabled
---     return org
 
 loadAllProviders :: (L.MonadFlow m, Log m) => m [Merchant]
 loadAllProviders = do
   findAllWithDb [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
 
--- findAll :: Transactionable m => m [Merchant]
--- findAll =
---   Esq.findAll $ do from $ table @MerchantT
-
 findAll :: (L.MonadFlow m, Log m) => m [Merchant]
 findAll = findAllWithDb [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
-
--- update :: Merchant -> SqlDB ()
--- update org = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ MerchantName =. val org.name,
---         MerchantDescription =. val org.description,
---         MerchantHeadCount =. val org.headCount,
---         MerchantEnabled =. val org.enabled,
---         MerchantUpdatedAt =. val now,
---         MerchantFromTime =. val org.fromTime
---       ]
 
 update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
 update org = do

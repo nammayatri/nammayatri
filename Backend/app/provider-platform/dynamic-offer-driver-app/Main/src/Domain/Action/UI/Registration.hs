@@ -33,11 +33,6 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
--- import qualified Kernel.Storage.Esqueleto as DB
--- import qualified Kernel.Storage.Esqueleto as Esq
-
--- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
-
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
@@ -260,7 +255,6 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
   rtid <- generateGUID
   token <- generateGUID
   altNumAttempts <- B.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
-  -- altNumAttempts <- QR.getAlternateNumberAttempts (Id entityId)
   now <- getCurrentTime
   return $
     SR.RegistrationToken
@@ -289,11 +283,9 @@ createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => Aut
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
   now <- getCurrentTime
-  -- DB.runTransaction $ do
   _ <- QP.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails (person.id) merchantId
-  -- runInLocationDB $ QDriverLocation.create person.id initLatLong now merchantId
   QDriverLocation.create person.id initLatLong now merchantId
   pure person
   where
@@ -327,7 +319,6 @@ verify tokenId req = do
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
-  -- Esq.runTransaction $ do
   QR.deleteByPersonIdExceptNew person.id tokenId
   _ <- QR.setVerified tokenId
   _ <- QP.updateDeviceToken person.id deviceToken
@@ -361,7 +352,6 @@ callWhatsappOptApi ::
 callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  -- DB.runTransaction $
   QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
 checkRegistrationTokenExists :: (L.MonadFlow m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
@@ -423,7 +413,6 @@ logout (personId, _) = do
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  -- Esq.runTransaction $ do
   _ <- QP.updateDeviceToken uperson.id Nothing
   QR.deleteByPersonId personId
   when (uperson.role == SP.DRIVER) $ void (QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE))

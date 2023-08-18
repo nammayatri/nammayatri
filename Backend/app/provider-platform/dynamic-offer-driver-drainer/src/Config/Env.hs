@@ -5,7 +5,6 @@ import Data.Aeson as A
 import Data.ByteString.Lazy as DBL
 import Data.Text as T
 import Data.Text.Encoding as DTE
--- import Euler.WebService.Config.EnvVars as Env
 import EulerHS.Prelude
 import EulerHS.Types as ET
 import Juspay.Extra.Config (lookupEnvT)

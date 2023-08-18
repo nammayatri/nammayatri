@@ -27,8 +27,6 @@ module Domain.Action.UI.Registration
   )
 where
 
--- import Kernel.External.SMS
-
 import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.OpenApi hiding (email, info)
@@ -208,9 +206,7 @@ auth req mbBundleVersion mbClientVersion = do
 
   if person.enabled && not person.blocked
     then do
-      -- DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
-      -- DB.runTransaction (RegistrationToken.create regToken)
       _ <- RegistrationToken.create regToken
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
@@ -270,12 +266,9 @@ signatureAuth req mbBundleVersion mbClientVersion = do
   regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
   if person.enabled && not person.blocked
     then do
-      -- DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
-      -- DB.runTransaction (RegistrationToken.create regToken)
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` req.email
-      -- DB.runTransaction $ do
       _ <- RegistrationToken.setDirectAuth regToken.id
       _ <- Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing)
       personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
@@ -287,7 +280,6 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
   pid <- BC.generateGUID
   now <- getCurrentTime
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
-  -- personWithSameDeviceToken <- listToMaybe <$> (Person.findBlockedByDeviceToken req.deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
@@ -371,7 +363,6 @@ verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r, L.MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
-  -- DB.runTransaction $ do
   void $ RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
   when isNewPerson $
     void $ Person.setIsNewFalse person.id
@@ -410,13 +401,11 @@ verify tokenId req = do
   person <- checkPersonExists entityId
   let deviceToken = Just req.deviceToken
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
-  -- personWithSameDeviceToken <- listToMaybe <$> Person.findBlockedByDeviceToken deviceToken
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- QMSUC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
     when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
-  -- DB.runTransaction $ do
   void $ RegistrationToken.setVerified tokenId
   void $ Person.updateDeviceToken person.id deviceToken
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
@@ -441,7 +430,6 @@ callWhatsappOptApi ::
 callWhatsappOptApi mobileNo personId merchantId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  -- DB.runTransaction $
   void $ Person.updateWhatsappNotificationEnrollStatus personId $ Just status
 
 getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
@@ -452,7 +440,6 @@ createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.Hedi
 createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId
   createPersonStats <- makePersonStats person
-  -- DB.runTransaction $ do
   _ <- Person.create person
   _ <- QDFS.create $ makeIdlePersonFlowStatus person
   _ <- QPS.create createPersonStats
@@ -515,7 +502,6 @@ resend tokenId = do
           }
     Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
-  -- DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing
 
@@ -534,7 +520,6 @@ logout ::
   m APISuccess
 logout personId = do
   cleanCachedTokens personId
-  -- DB.runTransaction $ do
   void $ Person.updateDeviceToken personId Nothing
   void $ RegistrationToken.deleteByPersonId personId
   pure AP.Success

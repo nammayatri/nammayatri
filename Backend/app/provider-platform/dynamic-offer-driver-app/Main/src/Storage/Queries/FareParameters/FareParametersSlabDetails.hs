@@ -43,7 +43,6 @@ instance ToTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetai
       }
 
 instance FromTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetails where
-  -- fromTType' :: (MonadThrow m, L.MonadFlow m) => FareParametersSlabDetails -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
   fromTType' FareParametersSlabDetailsT {..} = do
     pure $
       Just

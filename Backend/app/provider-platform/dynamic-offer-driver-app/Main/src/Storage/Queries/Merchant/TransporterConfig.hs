@@ -31,26 +31,8 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
--- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
--- findByMerchantId merchantId =
---   Esq.findOne $ do
---     config <- from $ table @TransporterConfigT
---       config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
---     return config
-
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
-
--- updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
--- updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ TransporterConfigFcmUrl =. val (showBaseUrl fcmUrl),
---         TransporterConfigFcmServiceAccount =. val fcmServiceAccount,
---         TransporterConfigUpdatedAt =. val now
---       ]
 
 updateFCMConfig :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
@@ -62,16 +44,6 @@ updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
     ]
     [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
 
--- updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
--- updateReferralLinkPassword merchantId newPassword = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ TransporterConfigReferralLinkPassword =. val newPassword,
---         TransporterConfigUpdatedAt =. val now
---       ]
-
 updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Text -> m ()
 updateReferralLinkPassword (Id merchantId) newPassword = do
   now <- getCurrentTime
@@ -80,15 +52,6 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
       Se.Set BeamTC.updatedAt now
     ]
     [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
-
--- update :: TransporterConfig -> SqlDB ()
--- update config = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       ]
---     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)
 
 update :: (L.MonadFlow m, MonadTime m, Log m) => TransporterConfig -> m ()
 update config = do

@@ -31,24 +31,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
--- create :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
--- create SearchRequest = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamR.RideT
---   updatedMeshConfig <- setMeshConfig modelName
---   case dbConf of
---     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam SearchRequest)
---     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- create :: SearchRequest -> SqlDB ()
--- create dsReq = Esq.runTransaction $
---   withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
---     Esq.create' fromLoc
---     traverse_ Esq.create' mbToLoc
---     Esq.create' sReq
-
--- need to be implemented and changed at reference
-
 createDSReq :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
 createDSReq = createWithKV
 
@@ -58,79 +40,14 @@ create dsReq = do
   _ <- traverse_ QSRL.create dsReq.toLocation
   createDSReq dsReq
 
--- fullSearchRequestTable ::
---   From
---     ( Table SearchRequestT
---         :& Table SearchReqLocationT
---         :& MbTable SearchReqLocationT
---     )
--- fullSearchRequestTable =
---   table @SearchRequestT
---     `innerJoin` table @SearchReqLocationT
---       `Esq.on` ( \(s :& loc1) ->
---                    s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId
---                )
---     `leftJoin` table @SearchReqLocationT
---       `Esq.on` ( \(s :& _ :& mbLoc2) ->
---                    s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
---                )
-
--- findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
--- findById searchRequestId = Esq.buildDType $ do
---   mbFullSearchReqT <- Esq.findOne' $ do
---     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
---     where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
---     pure (sReq, sFromLoc, mbSToLoc)
---   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
-
 findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
-
--- findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
--- findByPersonId personId searchRequestId = Esq.buildDType $ do
---   mbFullSearchReqT <- Esq.findOne' $ do
---     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
---     where_ $
---       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
---         &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
---     return (searchRequest, sFromLoc, mbSToLoc)
---   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
 findByPersonId :: (L.MonadFlow m, Log m) => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 findByPersonId (Id personId) (Id searchRequestId) = findOneWithKV [Se.And [Se.Is BeamSR.id $ Se.Eq searchRequestId, Se.Is BeamSR.riderId $ Se.Eq personId]]
 
--- findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
--- findAllByPerson perId = Esq.buildDType $ do
---   fullSearchRequestsT <- Esq.findAll' $ do
---     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
---     where_ $
---       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
---     return (searchRequest, sFromLoc, mbSToLoc)
---   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
-
 findAllByPerson :: (L.MonadFlow m, Log m) => Id Person -> m [SearchRequest]
 findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq personId]
-
--- updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
--- updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchRequestCustomerExtraFee =. val customerExtraFee,
---         SearchRequestSelectedPaymentMethodId =. val (toKey <$> paymentMethodId)
---       ]
---     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
-
--- findLatestSearchRequest :: Transactionable m => Id Person -> m (Maybe SearchRequest)
--- findLatestSearchRequest riderId = Esq.buildDType $ do
---   fullSearchRequestT <- Esq.findOne' $ do
---     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
---     Esq.where_ $
---       searchRequest ^. SearchRequestRiderId ==. val (toKey riderId)
---     Esq.limit 1
---     Esq.orderBy [Esq.desc $ searchRequest ^. SearchRequestCreatedAt]
---     return (searchRequest, sFromLoc, mbSToLoc)
---   pure $ extractSolidType @SearchRequest <$> fullSearchRequestT
 
 findLatestSearchRequest :: MonadFlow m => Id Person -> m (Maybe SearchRequest)
 findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderId $ Se.Eq riderId] (Se.Desc BeamSR.createdAt) (Just 1) Nothing <&> listToMaybe
@@ -143,20 +60,6 @@ updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee payment
     ]
     [Se.Is BeamSR.id (Se.Eq searchReqId)]
 
--- updateAutoAssign ::
---   Id SearchRequest ->
---   Bool ->
---   Bool ->
---   SqlDB ()
--- updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 =
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled),
---         SearchRequestAutoAssignEnabledV2 =. val (Just autoAssignedEnabledV2)
---       ]
---     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
-
 updateAutoAssign :: (L.MonadFlow m, Log m) => Id SearchRequest -> Bool -> Bool -> m ()
 updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 = do
   updateOneWithKV
@@ -164,15 +67,6 @@ updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 
       Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2
     ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
-
--- updatePaymentMethods :: Id SearchRequest -> [Id MerchantPaymentMethod] -> SqlDB ()
--- updatePaymentMethods searchReqId availablePaymentMethods =
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchRequestAvailablePaymentMethods =. val (PostgresList $ toKey <$> availablePaymentMethods)
---       ]
---     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
 
 updatePaymentMethods :: (L.MonadFlow m, Log m) => Id SearchRequest -> [Id MerchantPaymentMethod] -> m ()
 updatePaymentMethods (Id searchReqId) availablePaymentMethods =

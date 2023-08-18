@@ -55,14 +55,11 @@ stuckBookingsCancel merchantShortId req = do
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
   now <- getCurrentTime
   stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
-  -- stuckBookingIds <- QBooking.findStuckBookings merchant.id reqBookingIds now
   stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
-  -- stuckRideItems <- QRide.findStuckRideItems merchant.id reqBookingIds now
   let bcReasons = mkBookingCancellationReason merchant.id Common.bookingStuckCode Nothing <$> stuckBookingIds
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason (merchant.id) Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
   let stuckPersonIds = stuckRideItems <&> (.riderId)
-  -- Esq.runTransaction $ do
   _ <- QRide.cancelRides (stuckRideItems <&> (.rideId)) now
   _ <- QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
@@ -125,12 +122,10 @@ bookingSync ::
 bookingSync merchant reqBookingId = do
   let bookingId = cast @Common.Booking @DBooking.Booking reqBookingId
   booking <- B.runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  -- booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (merchant.id == booking.merchantId) $
     throwError (BookingDoesNotExist bookingId.getId)
 
   mbRide <- B.runInReplica $ QRide.findActiveByRBId bookingId
-  -- mbRide <- QRide.findActiveByRBId bookingId
   case mbRide of
     Just ride -> do
       let bookingNewStatus = case ride.status of

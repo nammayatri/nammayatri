@@ -21,8 +21,6 @@ where
 
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common hiding (id)

@@ -31,8 +31,6 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id)
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Beam.Functions as B
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
@@ -98,9 +96,7 @@ listVehicles :: EsqDBReplicaFlow m r => SP.Person -> Maybe Variant.Variant -> Ma
 listVehicles admin variantM mbRegNum limitM offsetM = do
   let merchantId = admin.merchantId
   personList <- B.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId
-  -- personList <- QP.findAllByMerchantId [SP.DRIVER] merchantId
   vehicleList <- B.runInReplica $ QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId
-  -- vehicleList <- QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId
   respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
   where

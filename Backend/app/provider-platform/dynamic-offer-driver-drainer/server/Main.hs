@@ -1,13 +1,6 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
--- {-# OPTIONS_GHC -Wno-unused-matches     #-}
-
 module Main where
-
--- import Prelude
-
--- main :: IO ()
--- main = pure ()
 
 import Config.Config as Config
 import Config.Env as Env
@@ -17,10 +10,6 @@ import qualified DBSync.DBSync as DBSync
 import qualified Data.HashSet as HS
 import qualified "unordered-containers" Data.HashSet as HashSet
 import qualified Data.Text as T
--- import qualified Euler.WebService.Database.EulerDB as EulerDB
-
--- import Utils.Logging as Logging
-
 import Environment
 import qualified Euler.Events.Network as NW
 import EulerHS.Interpreters (runFlow)
@@ -61,30 +50,6 @@ main = do
           then ET.UnsafeLogSQL_DO_NOT_USE_IN_PRODUCTION
           else ET.SafelyOmitSqlLogs
 
-  -- whitelistedLoggingKeysText <- Logging.getwhiteListedLoggingKeys
-  -- let mWhitelistedLoggingKeys = decodeFromText whitelistedLoggingKeysText :: Maybe [Text]
-  -- whitelistedRef <- newIORef (HS.fromList <$> mWhitelistedLoggingKeys)
-
-  -- let formatter = Logging.drainerFlowFormatter whitelistedRef
-  -- let loggingMask =
-  --       ET.LogMaskingConfig
-  --         { _maskKeys = HashSet.fromList ["accountNumber"],
-  --           _maskText = Just "XXXXXXXXX",
-  --           _keyType = ET.BlackListKey
-  --         }
-  -- let loggerCfg =
-  --       ET.defaultLoggerConfig
-  --         { ET._logToFile = logToFile,
-  --           ET._logLevel = logLevel,
-  --           ET._logFilePath = logFile,
-  --           ET._isAsync = logAsync,
-  --           ET._logRawSql = shouldLogSql,
-  --           ET._logAPI = logAPI',
-  --           ET._logMaskingConfig = Nothing,
-  --           ET._logToConsole = logToConsole -- uncomment this for perf in production
-  --         }
-
-  -- let loggerRt = T.trace ((show appCfg.esqDBCfg) <> "/n" <> (show appCfg.loggerConfig.logRawSql)) $ L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "dynamic-offer-driver-app"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
@@ -105,13 +70,9 @@ main = do
                   }
                 appCfg.tables
             )
-          -- Left (e :: SomeException) -> putStrLn @String ("Exception thrown while running dbConfig: " <> show e)
-          -- Right _ -> do
           dbSyncMetric <- Event.mkDBSyncMetric
           let environment = Env (T.pack C.kvRedis) dbSyncMetric
           threadPerPodCount <- Env.getThreadPerPodCount
-          -- handle graceful shutdown of threads
-          -- DBSync.spawnDrainerThread threadPerPodCount flowRt' environment
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )
         config

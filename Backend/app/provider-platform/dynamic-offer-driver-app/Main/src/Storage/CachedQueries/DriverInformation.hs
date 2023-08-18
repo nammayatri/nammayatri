@@ -52,7 +52,6 @@ updateEnabledState driverId isEnabled = do
 updateAadhaarVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
 updateAadhaarVerifiedState driverId isVerified = do
   clearDriverInfoCache driverId
-  -- Esq.runNoTransaction $ Queries.updateAadhaarVerifiedState driverId isVerified
   void $ Queries.updateAadhaarVerifiedState driverId isVerified
 
 updateEnabledVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Bool -> m ()
@@ -67,7 +66,6 @@ updateBlockedState driverId isBlocked = do
 
 updateDynamicBlockedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> m ()
 updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked = do
-  -- Esq.runNoTransaction $ Queries.updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked
   Queries.updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked
   clearDriverInfoCache driverId
 
@@ -84,13 +82,11 @@ updateOnRide driverId onRide = do
 updatePendingPayment :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
 updatePendingPayment isPending driverId = do
   clearDriverInfoCache driverId
-  -- Esq.runTransaction $ Queries.updatePendingPayment isPending driverId
   void $ Queries.updatePendingPayment isPending driverId
 
 updateSubscription :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed driverId = do
   clearDriverInfoCache driverId
-  -- Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
   void $ Queries.updateSubscription isSubscribed driverId
 
 updateAutoPayStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Maybe DriverAutoPayStatus -> Id Person.Driver -> m ()

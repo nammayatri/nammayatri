@@ -81,7 +81,6 @@ getPersonFlowStatus personId mIsPolling = do
       if now < personStatus.validTill
         then return $ GetPersonFlowStatusRes Nothing personStatus
         else do
-          -- Esq.runTransaction $
           _ <- QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE
 
@@ -91,15 +90,10 @@ notifyEvent personId req = do
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
-      -- activeBooking <- QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
       whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
       QPFS.updateStatus personId DPFS.IDLE
   QPFS.clearCache personId
   pure APISuccess.Success
-
--- where
--- backToIDLE = Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
--- backToIDLE = QPFS.updateStatus personId DPFS.IDLE
 
 handleRideTracking ::
   ( CacheFlow m r,
@@ -167,7 +161,6 @@ handleRideTracking _ _ status = return $ GetPersonFlowStatusRes Nothing status
 
 updateStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DP.Person -> DPFS.FlowStatus -> m ()
 updateStatus personId updatedStatus = do
-  -- Esq.runTransaction $ QPFS.updateStatus personId updatedStatus
   _ <- QPFS.updateStatus personId updatedStatus
   QPFS.clearCache personId
 
@@ -176,6 +169,5 @@ getTrackUrl rideId mTrackUrl = do
   case mTrackUrl of
     Nothing -> do
       ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-      -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
       return ride.trackingUrl
     a -> return a

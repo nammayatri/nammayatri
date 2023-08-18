@@ -31,8 +31,6 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
--- import qualified Domain.Types.DriverPlan as Domain
--- import Domain.Types.Person (Person)
 import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import Kernel.Prelude

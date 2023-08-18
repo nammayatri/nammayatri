@@ -1,12 +1,6 @@
 module DBSync.Create where
 
--- import Config.Config as Config
 import Config.Env
--- import Utils.Logging
-
--- import Storage.Beam.RegistrationToken as BeamRT
--- import System.CPUTime
-
 import Data.Maybe
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
@@ -107,11 +101,7 @@ runCreateCommands cmds = do
       if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
 
     runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
-      -- t1 <- EL.getCurrentDateInMillis
-      -- cpuT1 <- EL.runIO getCPUTime
       res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates
-      -- t2 <- EL.getCurrentDateInMillis
-      -- cpuT2 <- EL.runIO getCPUTime
       case (res, index) of -- Ignore duplicate entry
         (Right _, _) -> do
           -- EL.logInfoV ("Drainer Info" :: Text) $ createDBLogEntry model "CREATE" (t2 - t1) (cpuT2 - cpuT1) dbObjects -- Logging group latencies

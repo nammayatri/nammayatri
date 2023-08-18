@@ -20,15 +20,11 @@ module Storage.Queries.Merchant.MerchantServiceConfig
     #-}
 where
 
--- import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
-
 import qualified Data.Aeson as A
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified EulerHS.Language as L
--- import qualified EulerHS.Prelude as EHP
-
 import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
@@ -47,45 +43,16 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Tools.Error
 
--- findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
--- findByMerchantIdAndService merchantId serviceName =
---   Esq.findOne $ do
---     merchantServiceConfig <- from $ table @MerchantServiceConfigT
---     where_ $
---       merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
---     return merchantServiceConfig
-
 findByMerchantIdAndService :: (L.MonadFlow m, Log m) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService (Id merchantId) serviceName = findOneWithKV [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
 
--- FIXME this query created for backward compatibility
--- findOne :: Transactionable m => ServiceName -> m (Maybe MerchantServiceConfig)
--- findOne serviceName =
---   Esq.findOne $ do
---     merchantServiceConfig <- from $ table @MerchantServiceConfigT
---     where_ $
---       merchantServiceConfig ^. MerchantServiceConfigServiceName ==. val serviceName
---     limit 1
---     return merchantServiceConfig
-
 findOne :: (L.MonadFlow m, Log m) => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = findAllWithOptionsKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName] (Se.Desc BeamMSC.createdAt) (Just 1) Nothing <&> listToMaybe
-
--- upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
--- upsertMerchantServiceConfig merchantServiceConfig = do
---   now <- getCurrentTime
---   let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
---   Esq.upsert
---     merchantServiceConfig
---     [ MerchantServiceConfigConfigJSON =. val configJSON,
---       MerchantServiceConfigUpdatedAt =. val now
---     ]
 
 upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig
-  -- _ <-  T.trace ("upsertMerchantServiceConfig" <> (show merchantServiceConfig.merchantId) <> show _serviceName) $ pure ()
   res <- findByMerchantIdAndService merchantServiceConfig.merchantId _serviceName
   if isJust res
     then

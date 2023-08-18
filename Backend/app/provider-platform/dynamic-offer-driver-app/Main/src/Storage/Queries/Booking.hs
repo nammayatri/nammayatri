@@ -15,21 +15,16 @@
 
 module Storage.Queries.Booking where
 
--- import qualified Data.HashMap.Strict as HashMap
 import Domain.Types.Booking
 import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Merchant
--- import qualified Domain.Types.Ride as DRide
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.Language as L
--- import Kernel.Types.Common (Money)
-
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
--- import Kernel.Types.Time
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
@@ -108,19 +103,6 @@ cancelBookings bookingIds now =
   updateWithKV
     [Se.Set BeamB.status CANCELLED, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
-
--- findFareForCancelledBookings :: Transactionable m => [Id Booking] -> m Money
--- findFareForCancelledBookings bookingIds =
---   mkSum
---     <$> Esq.findAll do
---       booking <- from $ table @BookingT
---       where_ $
---         booking ^. BookingStatus ==. val CANCELLED
---           &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
---       pure (sum_ $ booking ^. BookingEstimatedFare :: SqlExpr (Esq.Value (Maybe Money)))
---   where
---     mkSum [Just value] = value
---     mkSum _ = 0
 
 findFareForCancelledBookings :: MonadFlow m => [Id Booking] -> m Money
 findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.status $ Se.Eq CANCELLED, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]] <&> sum . map Domain.Types.Booking.estimatedFare
