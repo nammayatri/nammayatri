@@ -38,8 +38,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 instance FromField Domain.FarePolicyType where
   fromField = fromFieldEnum
 

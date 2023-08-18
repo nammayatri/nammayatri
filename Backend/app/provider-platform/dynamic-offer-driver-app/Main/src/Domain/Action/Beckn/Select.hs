@@ -27,8 +27,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Environment
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common
@@ -106,16 +104,13 @@ handler merchant sReq estimate = do
       searchTry <- case mbLastSearchTry of
         Nothing -> do
           searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare 0 DST.INITIAL
-          -- Esq.runTransaction $ do
           _ <- QST.create searchTry
           return searchTry
         Just oldSearchTry -> do
           let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
-          -- hack check, i think we should store whole breakup instead of  single baseFare value
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
           searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
-          -- Esq.runTransaction $ do
           when (oldSearchTry.status == DST.ACTIVE) $ do
             QST.updateStatus oldSearchTry.id DST.CANCELLED
             void $ QDQ.setInactiveBySTId oldSearchTry.id

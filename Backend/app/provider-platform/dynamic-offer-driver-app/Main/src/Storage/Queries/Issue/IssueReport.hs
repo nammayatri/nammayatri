@@ -16,26 +16,8 @@ import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueReport as BeamIR
 
--- create :: IssueReport -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => IssueReport.IssueReport -> m ()
 create = createWithKV
-
--- findAllWithOptions :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
--- findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = Esq.findAll $ do
---   issueReport <- from $ table @IssueReportT
---   where_ $
---     whenJust_ mbStatus (\statusVal -> issueReport ^. IssueReportStatus ==. val statusVal)
---       &&. whenJust_ mbAssignee (\assignee -> issueReport ^. IssueReportAssignee ==. just (val assignee))
---       &&. whenJust_ mbCategoryId (\categoryId -> issueReport ^. IssueReportCategoryId ==. val (toKey categoryId))
---   orderBy [desc $ issueReport ^. IssueReportCreatedAt]
---   limit limitVal
---   offset offsetVal
---   return issueReport
---   where
---     limitVal = min (maybe 10 fromIntegral mbLimit) 10
---     offsetVal = maybe 0 fromIntegral mbOffset
 
 findAllWithOptions :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
 findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
@@ -52,70 +34,22 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
             ]
       ]
 
--- findById :: Transactionable m => Id IssueReport -> m (Maybe IssueReport)
--- findById issueReportId = Esq.findOne $ do
---   issueReport <- from $ table @IssueReportT
---   where_ $
---     issueReport ^. IssueReportTId ==. val (toKey issueReportId)
---       &&. issueReport ^. IssueReportDeleted ==. val False
---   pure issueReport
-
 findById :: (L.MonadFlow m, Log m) => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.deleted $ Se.Eq False]]
-
--- findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]
--- findAllByDriver driverId = Esq.findAll $ do
---   issueReport <- from $ table @IssueReportT
---   where_ $
---     issueReport ^. IssueReportDriverId ==. val (toKey driverId)
---       &&. issueReport ^. IssueReportDeleted ==. val False
---   pure issueReport
 
 findAllByDriver :: (L.MonadFlow m, Log m) => Id SP.Person -> m [IssueReport]
 findAllByDriver (Id driverId) = findAllWithKV [Se.And [Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
--- safeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
--- safeToDelete issueReportId driverId = Esq.findOne $ do
---   issueReport <- from $ table @IssueReportT
---   where_ $
---     issueReport ^. IssueReportTId ==. val (toKey issueReportId)
---       &&. issueReport ^. IssueReportDeleted ==. val False
---       &&. issueReport ^. IssueReportDriverId ==. val (toKey driverId)
---   pure issueReport
-
 safeToDelete :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id driverId) = findOneWithKV [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
-
--- isSafeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m Bool
--- isSafeToDelete issueReportId driverId = do
---   findSafeToDelete <- safeToDelete issueReportId driverId
---   return $ isJust findSafeToDelete
 
 isSafeToDelete :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m Bool
 isSafeToDelete issueReportId driverId = do
   findSafeToDelete <- safeToDelete issueReportId driverId
   return $ isJust findSafeToDelete
 
--- deleteByPersonId :: Id SP.Person -> SqlDB ()
--- deleteByPersonId driverId =
---   Esq.delete $ do
---     issueReport <- from $ table @IssueReportT
---     where_ $ issueReport ^. IssueReportDriverId ==. val (toKey driverId)
-
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id SP.Person -> m ()
 deleteByPersonId (Id driverId) = deleteWithKV [Se.Is BeamIR.driverId (Se.Eq driverId)]
-
--- updateAsDeleted :: Id IssueReport -> SqlDB ()
--- updateAsDeleted issueReportId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ IssueReportDeleted =. val True,
---         IssueReportUpdatedAt =. val now
---       ]
---     where_ $
---       tbl ^. IssueReportTId ==. val (toKey issueReportId)
 
 updateAsDeleted :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> m ()
 updateAsDeleted issueReportId = do
@@ -126,39 +60,12 @@ updateAsDeleted issueReportId = do
     ]
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
 
--- updateStatusAssignee :: Id IssueReport -> Maybe IssueStatus -> Maybe Text -> SqlDB ()
--- updateStatusAssignee issueReportId status assignee = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       ( [IssueReportUpdatedAt =. val now]
---           <> maybe [] (\justStatus -> [IssueReportStatus =. val justStatus]) status
---           <> maybe [] (\justAssignee -> [IssueReportAssignee =. just (val justAssignee)]) assignee
---       )
---     where_ $
---       tbl ^. IssueReportTId ==. val (toKey issueReportId)
---         &&. tbl ^. IssueReportDeleted ==. val False
-
 updateStatusAssignee :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
   updateOneWithKV
     ([Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> ([Se.Set BeamIR.assignee assignee | isJust assignee]))
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
-
--- updateOption :: Id IssueReport -> Id IssueOption -> SqlDB ()
--- updateOption issueReportId optionId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ IssueReportOptionId =. just (val (toKey optionId)),
---         IssueReportUpdatedAt =. val now
---       ]
---     where_ $
---       tbl ^. IssueReportTId ==. val (toKey issueReportId)
---         &&. tbl ^. IssueReportDeleted ==. val False
 
 updateOption :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> Id IssueOption -> m ()
 updateOption issueReportId (Id optionId) = do

@@ -30,8 +30,6 @@ import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 data RideDetailsT f = RideDetailsT
   { id :: B.C f Text,
     driverName :: B.C f Text,

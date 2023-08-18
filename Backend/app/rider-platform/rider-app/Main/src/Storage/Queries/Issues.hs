@@ -23,8 +23,6 @@ import Domain.Types.Issue as Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
--- import Kernel.Storage.Esqueleto as Esq
-
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -34,13 +32,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Issue as BeamI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.Person ()
-
--- import Storage.Tabular.Issue
--- import Storage.Tabular.Person
-
--- insertIssue :: Issue -> SqlDB ()
--- insertIssue = do
---   Esq.create
 
 insertIssue :: (L.MonadFlow m, Log m) => Issue -> m ()
 insertIssue = createWithKV

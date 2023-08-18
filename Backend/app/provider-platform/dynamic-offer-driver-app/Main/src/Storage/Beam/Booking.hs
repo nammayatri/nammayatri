@@ -37,8 +37,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 instance FromField Domain.BookingStatus where
   fromField = fromFieldEnum
 
@@ -100,9 +98,6 @@ instance IsString Domain.BookingType where
 
 instance IsString Veh.Variant where
   fromString = show
-
--- instance IsString Money where
---   fromString = show
 
 instance B.Table BookingT where
   data PrimaryKey BookingT f

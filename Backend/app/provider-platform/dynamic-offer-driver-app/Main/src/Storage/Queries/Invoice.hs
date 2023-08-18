@@ -13,25 +13,11 @@ import Kernel.Types.Time
 import qualified Sequelize as Se
 import Storage.Beam.Invoice as BeamI hiding (Id)
 
--- createMany :: [Invoice] -> SqlDB ()
--- createMany = Esq.createMany
-
 create :: (L.MonadFlow m, Log m) => Domain.Invoice -> m ()
 create = createWithKV
 
 createMany :: (L.MonadFlow m, Log m) => [Domain.Invoice] -> m ()
 createMany = traverse_ create
-
--- findAllByInvoiceId ::
---   Transactionable m =>
---   Id Invoice ->
---   m [Invoice]
--- findAllByInvoiceId invoiceId = do
---   Esq.findAll $ do
---     invoice <- from $ table @InvoiceT
---     where_ $
---       invoice ^. InvoiceId ==. val (invoiceId.getId)
---     return invoice
 
 findByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
 findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]

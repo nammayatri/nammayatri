@@ -18,25 +18,6 @@ import qualified Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 import Storage.Queries.Issue.IssueTranslation ()
 
--- fullCategoryTable ::
---   Language ->
---   From
---     ( Table IssueCategoryT
---         :& MbTable IssueTranslationT
---     )
--- fullCategoryTable language =
---   table @IssueCategoryT
---     `leftJoin` table @IssueTranslationT
---       `Esq.on` ( \(category :& translation) ->
---                    just (category ^. IssueCategoryCategory) ==. translation ?. IssueTranslationSentence
---                      &&. translation ?. IssueTranslationLanguage ==. just (val language)
---                )
-
--- findAllByLanguage :: Transactionable m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
--- findAllByLanguage language = Esq.findAll $ do
---   (issueCategory :& mbIssueTranslation) <- from $ fullCategoryTable language
---   return (issueCategory, mbIssueTranslation)
-
 findAllIssueTranslationWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
 findAllIssueTranslationWithSeCondition = findAllWithKV
 
@@ -53,19 +34,8 @@ findAllByLanguage language = do
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iCategory, Just iTranslation'')) <$> iTranslations' else [(iCategory, Nothing)]
 
--- findById :: Transactionable m => Id IssueCategory -> m (Maybe IssueCategory)
--- findById issueCategoryId = Esq.findOne $ do
---   issueCategory <- from $ table @IssueCategoryT
---   where_ $ issueCategory ^. IssueCategoryTId ==. val (toKey issueCategoryId)
---   return issueCategory
-
 findById :: (L.MonadFlow m, Log m) => Id IssueCategory -> m (Maybe IssueCategory)
 findById (Id issueCategoryId) = findOneWithKV [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
-
--- findByIdAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
--- findByIdAndLanguage issueCategoryId language = Esq.findOne $ do
---   (issueCategory :& mbIssueTranslation) <- from $ fullCategoryTable language
---   return (issueCategory, mbIssueTranslation)
 
 findByIdAndLanguage :: (L.MonadFlow m, Log m) => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage (Id issueCategoryId) language = do

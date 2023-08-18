@@ -29,68 +29,17 @@ import qualified Storage.Beam.SavedReqLocation as BeamSRL
 create :: (L.MonadFlow m, Log m) => SavedReqLocation -> m ()
 create = createWithKV
 
--- findAllByRiderId :: Transactionable m => Id Person -> m [SavedReqLocation]
--- findAllByRiderId perId =
---   Esq.findAll $ do
---     saveReqLocation <- from $ table @SavedReqLocationT
---     where_ $
---       saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
---     orderBy [desc $ saveReqLocation ^. SavedReqLocationUpdatedAt]
---     return saveReqLocation
-
 findAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId = findAllWithOptionsKV [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)] (Se.Desc BeamSRL.updatedAt) Nothing Nothing
-
--- deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
--- deleteByRiderIdAndTag perId addressTag = do
---   Esq.delete $ do
---     saveReqLocation <- from $ table @SavedReqLocationT
---     where_ $
---       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
---         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
 
 deleteByRiderIdAndTag :: (L.MonadFlow m, Log m) => Id Person -> Text -> m ()
 deleteByRiderIdAndTag perId addressTag = deleteWithKV [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
 
--- findAllByRiderIdAndTag :: Transactionable m => Id Person -> Text -> m [SavedReqLocation]
--- findAllByRiderIdAndTag perId addressTag =
---   Esq.findAll $ do
---     saveReqLocation <- from $ table @SavedReqLocationT
---     where_ $
---       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
---         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
---     return saveReqLocation
-
 findAllByRiderIdAndTag :: (L.MonadFlow m, Log m) => Id Person -> Text -> m [SavedReqLocation]
 findAllByRiderIdAndTag perId addressTag = findAllWithKV [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
 
--- findByLatLonAndRiderId :: Transactionable m => Id Person -> LatLong -> m (Maybe SavedReqLocation)
--- findByLatLonAndRiderId personId LatLong {..} = Esq.findOne $ do
---   saveReqLocation <- from $ table @SavedReqLocationT
---   where_ $
---     saveReqLocation ^. SavedReqLocationLat ==. val lat
---       &&. saveReqLocation ^. SavedReqLocationLon ==. val lon
---       &&. saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId)
---   return saveReqLocation
-
 findByLatLonAndRiderId :: (L.MonadFlow m, Log m) => Id Person -> LatLong -> m (Maybe SavedReqLocation)
 findByLatLonAndRiderId personId LatLong {..} = findOneWithKV [Se.And [Se.Is BeamSRL.lat (Se.Eq lat), Se.Is BeamSRL.lon (Se.Eq lon), Se.Is BeamSRL.riderId (Se.Eq (getId personId))]]
-
--- deleteAllByRiderId :: Id Person -> SqlDB ()
--- deleteAllByRiderId personId = do
---   Esq.delete $ do
---     saveReqLocation <- from $ table @SavedReqLocationT
---     where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))
-
--- countAllByRiderId :: Transactionable m => Id Person -> m Int
--- countAllByRiderId perId =
---   fromMaybe 0
---     <$> Esq.findAll
---       ( do
---           saveReqLocation <- from $ table @SavedReqLocationT
---           where_ $ saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
---           return (countRows :: SqlExpr (Esq.Value Int))
---       )
 
 countAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m Int
 countAllByRiderId perId = findAllWithKV [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)] <&> length

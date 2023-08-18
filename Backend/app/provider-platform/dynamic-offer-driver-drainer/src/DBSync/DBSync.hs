@@ -1,8 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
--- {-# LANGUAGE TypeApplications    #-}
-
 module DBSync.DBSync where
 
 import qualified Config.Config as Config
@@ -15,18 +13,13 @@ import DBSync.Update
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.HashMap.Strict as HM
--- import qualified Data.IORef as IORef
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as V
 import qualified Database.Redis as R
--- import Euler.WebService.Logging
--- import qualified EulerHS.Interpreters as R
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
--- import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
--- import GHC.Float (int2Double)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.Config
 import Types.DBSync
@@ -39,10 +32,6 @@ import Utils.Utils
 
 peekDBCommand :: Text -> Integer -> Flow (Either ET.KVDBReply (Maybe [(EL.KVDBStreamEntryID, [(Text, ByteString)])]))
 peekDBCommand dbStreamKey count = do
-  -- streamLen <- RQ.getRedisStreamLength dbStreamKey
-  -- case streamLen of
-  --   Right v -> void $ publishDBSyncMetric $ Event.DBSyncStreamLength dbStreamKey (int2Double $ fromIntegral v)
-  --   Left err -> EL.logError ("PEEK_STREAM_LENGTH_ERROR" :: Text) $ ("Error while checking stream length: " :: Text) <> show err
   {- Either Error (Maybe (Array Entry)) -}
   dbReadResponse <-
     ((find (\x -> decodeToText (R.stream x) == dbStreamKey) =<<) <$>)
@@ -124,10 +113,6 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
   (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
-  -- void $
-  --   if null cSucc
-  --     then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Create" 0
-  --     else pureRightExceptT $ traverse_ (publishDrainLatency "Create") cSucc
   {- drop successful inserts from stream -}
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) cSucc
   {- fail if any insert fails -}
@@ -147,10 +132,6 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
   {- run updates parallel -}
   (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
-  -- void $
-  --   if null uSucc
-  --     then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Update" 0
-  --     else pureRightExceptT $ traverse_ (publishDrainLatency "Update") uSucc
   {- drop successful updates from stream -}
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) uSucc
   {- fail if any update fails -}
@@ -170,10 +151,6 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
   {- run deletes parallel -}
   (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
-  -- void $
-  --   if null dSucc
-  --     then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Delete" 0
-  --     else pureRightExceptT $ traverse_ (publishDrainLatency "Delete") dSucc
   {- drop successful deletes from stream -}
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) dSucc
   {- fail if any delete fails -}
@@ -209,22 +186,15 @@ process dbStreamKey count = do
       EL.logInfo ("PEEK_DB_COMMAND_ERROR" :: Text) $ show err
       pure 0
     Right Nothing -> do
-      -- void $ publishDBSyncMetric $ Event.QueryBatchSize (int2Double 0)
-      -- EL.logInfo ("DB_SYNC_PROCESS_TIME" :: Text) (show (0 :: Integer))
-      -- void $ publishDBSyncMetric $ Event.QueryBatchProcessTime (int2Double 0)
       pure 0
     Right (Just c) -> run c
   where
     {- Let's try to decode and run the commands -}
-    -- afterProcess <- EL.getCurrentDateInMillis
-    -- EL.logInfo ("DB_SYNC_PROCESS_TIME" :: Text) (show $ afterProcess - beforeProcess)
-    -- void $ publishDBSyncMetric $ Event.QueryBatchProcessTime (int2Double (afterProcess - beforeProcess))
     {- time taken to process batch -}
 
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries
-      -- void $ publishDBSyncMetric $ Event.QueryBatchSize (int2Double $ length entries)
       let createEntries = mapMaybe filterCreateCommands commands
           updateEntries = mapMaybe filterUpdateCommands commands
           deleteEntries = mapMaybe filterDeleteCommands commands
@@ -235,15 +205,6 @@ process dbStreamKey count = do
           stopDrainer
           pure cnt
         Right cnt -> pure cnt
-
--- spawnDrainerThread :: Int -> R.FlowRuntime -> Env -> IO ()
--- spawnDrainerThread 0 _ _ = pure ()
--- spawnDrainerThread count flowRt env = do
---   ctx <- IORef.newIORef mempty
---   newCounter <- IORef.newIORef 0
---   let newFlowRt = changeLogContextAndResetCounter ctx flowRt newCounter
---   void $ forkIO $ R.runFlow newFlowRt (runReaderT startDBSync env)
---   spawnDrainerThread (count - 1) flowRt env
 
 startDBSync :: Flow ()
 startDBSync = do

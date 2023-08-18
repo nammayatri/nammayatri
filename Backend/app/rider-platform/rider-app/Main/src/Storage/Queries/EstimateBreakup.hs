@@ -28,14 +28,6 @@ import qualified Storage.Beam.EstimateBreakup as BeamEB
 create :: (L.MonadFlow m, Log m) => EstimateBreakup -> m ()
 create = createWithKV
 
--- findAllByEstimateIdT :: (Transactionable m) => EstimateTId -> MaybeT (DTypeBuilder m) [EstimateBreakupT]
--- findAllByEstimateIdT = lift . findAllByEstimateId'
-
--- findAllByEstimateId' :: (Transactionable m) => EstimateTId -> DTypeBuilder m [EstimateBreakupT]
--- findAllByEstimateId' estimateTId = Esq.findAll' $ do
---   estimateBreakup <- from $ table @SEB.EstimateBreakupT
---   return estimateBreakup
-
 findAllByEstimateIdT :: (L.MonadFlow m, Log m) => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateIdT (Id estimateId) = findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
 

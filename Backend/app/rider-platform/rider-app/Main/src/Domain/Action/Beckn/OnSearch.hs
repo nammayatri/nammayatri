@@ -43,8 +43,6 @@ import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
--- import qualified Kernel.Storage.Esqueleto as DB
-
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -156,7 +154,6 @@ data RentalQuoteDetails = RentalQuoteDetails
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
 validateRequest DOnSearchReq {..} = do
   _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
-  -- _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   return $ ValidatedOnSearchReq {..}
 
@@ -174,7 +171,6 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   forM_ estimates $ \est -> do
     triggerEstimateEvent EstimateEventData {estimate = est, personId = _searchRequest.riderId, merchantId = _searchRequest.merchantId}
-  -- DB.runTransaction do
   _ <- QEstimate.createMany estimates
   _ <- QQuote.createMany quotes
   _ <- QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}

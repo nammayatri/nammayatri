@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Plan where
 
-import qualified Data.List as List
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
@@ -241,7 +240,7 @@ planSuspend isDashboard (driverId, _merchantId) = do
   unless (driverInfo.autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateActiveMandateExists driverId driverPlan
-  Redis.whenWithLockRedis (DF.paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
+  Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
     QM.updateStatus mandate.id DM.INACTIVE
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) MANUAL
     CDI.updateAutoPayStatus (Just DI.SUSPENDED) (cast driverId)
@@ -255,7 +254,7 @@ planResume (driverId, _merchantId) = do
   unless (driverInfo.autoPayStatus == Just DI.SUSPENDED) $ throwError InvalidAutoPayStatus
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateInActiveMandateExists driverId driverPlan
-  Redis.whenWithLockRedis (DF.paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
+  Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
     QM.updateStatus mandate.id DM.ACTIVE
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) AUTOPAY
     CDI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)
@@ -287,31 +286,29 @@ createMandateInvoiceAndOrder :: Id SP.Person -> Id DM.Merchant -> Plan -> Flow (
 createMandateInvoiceAndOrder driverId merchantId plan = do
   driverPendingAndDuesFees <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
-  allPlans <- QPD.fetchAllPlan
-  let allPlansMaxAmount = List.maximum $ allPlans <&> (.maxAmount)
   let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverPendingAndDuesFees
   case driverRegisterationFee of
     Just registerFee -> do
       invoice <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
       case invoice of
-        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues allPlansMaxAmount) (Just (inv.id, inv.invoiceShortId))
-        Nothing -> createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues allPlansMaxAmount
+        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues) (Just (inv.id, inv.invoiceShortId))
+        Nothing -> createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues
     Nothing -> do
       driverFee <- mkDriverFee
       QDF.create driverFee
-      createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues allPlansMaxAmount
+      createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues
   where
-    mandateOrder currentDues allPlansMaxAmount =
+    mandateOrder currentDues =
       SPayment.MandateOrder
-        { maxAmount = max allPlansMaxAmount currentDues,
+        { maxAmount = max plan.maxAmount currentDues,
           _type = Payment.REQUIRED,
           frequency = Payment.ASPRESENTED
         }
-    createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues allPlansMaxAmount = do
+    createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues = do
       if not (null driverPendingAndDuesFees)
-        then SPayment.createOrder (driverId, merchantId) (driverFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues allPlansMaxAmount) Nothing
+        then SPayment.createOrder (driverId, merchantId) (driverFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues) Nothing
         else do
-          SPayment.createOrder (driverId, merchantId) [driverFee] (Just $ mandateOrder currentDues allPlansMaxAmount) Nothing
+          SPayment.createOrder (driverId, merchantId) [driverFee] (Just $ mandateOrder currentDues) Nothing
     mkDriverFee = do
       id <- generateGUID
       now <- getCurrentTime

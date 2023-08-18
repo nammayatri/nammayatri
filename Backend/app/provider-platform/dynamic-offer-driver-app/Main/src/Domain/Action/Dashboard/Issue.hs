@@ -11,13 +11,6 @@ import qualified Domain.Types.MediaFile as DMF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
--- import qualified EulerHS.Extra.EulerDB as Extra
--- import qualified EulerHS.KVConnector.Flow as KV
--- import EulerHS.KVConnector.Types
--- import qualified EulerHS.Language as L
-
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..))
@@ -62,7 +55,6 @@ toCommonIssueStatus = \case
 issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
 issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
   issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
-  -- issueReports <- QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
   issues <- mapM mkIssueReport issueReports
@@ -86,13 +78,10 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = d
 issueInfo :: ShortId DM.Merchant -> Id DIR.IssueReport -> Flow Common.IssueInfoRes
 issueInfo _merchantShortId issueReportId = do
   issueReport <- B.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  -- issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId
   comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
-  -- comments <- QC.findAllByIssueReportId issueReport.id
   category <- CQIC.findById issueReport.categoryId >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
   driverDetail <- mapM mkDriverDetail =<< B.runInReplica (QP.findById issueReport.driverId)
-  -- driverDetail <- mapM mkDriverDetail =<< QP.findById issueReport.driverId
   option <- mapM (\optionId -> CQIO.findById optionId >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
   pure $
     Common.IssueInfoRes

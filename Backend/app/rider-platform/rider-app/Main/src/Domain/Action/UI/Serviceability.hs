@@ -68,7 +68,6 @@ checkServiceability settingAccessor (_, merchantId) location = do
       pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
     Regions regions -> do
       serviceable <- runInReplica $ someGeometriesContain location regions
-      -- serviceable <- someGeometriesContain location regions
       if serviceable
         then do
           specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location

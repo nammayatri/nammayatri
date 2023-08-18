@@ -27,18 +27,8 @@ import qualified Storage.Beam.Webengage as BeamW
 create :: (L.MonadFlow m, Log m) => Webengage -> m ()
 create = createWithKV
 
--- findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id Webengage -> m (Maybe Webengage)
 findById webengageId = findOneWithKV [Se.Is BeamW.id $ Se.Eq (getId webengageId)]
-
--- findByInfoMsgId :: Transactionable m => Text -> m (Maybe Webengage)
--- findByInfoMsgId infoMessageId =
---   Esq.findOne $ do
---     webengage <- from $ table @WebengageT
---     where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
---     return webengage
 
 findByInfoMsgId :: (L.MonadFlow m, Log m) => Text -> m (Maybe Webengage)
 findByInfoMsgId infoMessageId = findOneWithKV [Se.Is BeamW.infoMessageId $ Se.Eq infoMessageId]

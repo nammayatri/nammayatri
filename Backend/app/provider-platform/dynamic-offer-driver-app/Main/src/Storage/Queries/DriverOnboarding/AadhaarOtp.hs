@@ -32,29 +32,11 @@ createForGenerate = createWithKV
 createForVerify :: (L.MonadFlow m, Log m) => AadhaarOtpVerify -> m ()
 createForVerify = createWithKV
 
--- deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
--- deleteByPersonIdForGenerate personId =
---   Esq.delete $ do
---     verifications <- from $ table @AadhaarOtpReqT
---     where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
-
 deleteByPersonIdForGenerate :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByPersonIdForGenerate personId = deleteWithKV [Se.Is BeamAOR.driverId (Se.Eq (getId personId))]
 
--- deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
--- deleteByPersonIdForGenerate personId =
---   Esq.delete $ do
---     verifications <- from $ table @AadhaarOtpReqT
---     where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
-
 deleteByPersonIdForVerify :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByPersonIdForVerify personId = deleteWithKV [Se.Is BeamAOV.driverId (Se.Eq (getId personId))]
-
--- deleteByPersonIdForVerify :: Id Person -> SqlDB ()
--- deleteByPersonIdForVerify personId =
---   Esq.delete $ do
---     verifications <- from $ table @AadhaarOtpVerifyT
---     where_ $ verifications ^. AadhaarOtpVerifyDriverId ==. val (toKey personId)
 
 instance FromTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where
   fromTType' BeamAOR.AadhaarOtpReqT {..} = do

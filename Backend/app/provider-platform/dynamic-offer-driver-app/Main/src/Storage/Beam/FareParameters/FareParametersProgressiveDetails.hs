@@ -31,8 +31,6 @@ import Kernel.Types.Common (Money)
 import Lib.Utils ()
 import Sequelize as Se
 
--- import Storage.Tabular.Vehicle ()
-
 instance IsString Vehicle.Variant where
   fromString = show
 

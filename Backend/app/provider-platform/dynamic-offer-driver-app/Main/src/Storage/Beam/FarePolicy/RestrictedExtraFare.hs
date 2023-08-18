@@ -30,13 +30,8 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 instance IsString Vehicle.Variant where
   fromString = show
-
--- instance IsString Money where
---   fromString = show
 
 data RestrictedExtraFareT f = RestrictedExtraFareT
   { id :: B.C f Text,

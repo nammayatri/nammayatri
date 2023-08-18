@@ -20,8 +20,6 @@ import Domain.Types.Mandate
 import Domain.Types.Person
 import Domain.Types.Plan
 import qualified EulerHS.Language as L
--- import Kernel.Storage.Esqueleto as Esq
-
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -36,24 +34,8 @@ create = createWithKV
 findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverPlan)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamDF.driverId $ Se.Eq driverId]
 
--- findByDriverId :: Transactionable m => Id Person -> m (Maybe DriverPlan)
--- findByDriverId driverId = do
---   findOne $ do
---     driverPlan <- from $ table @DriverPlanT
---     where_ $
---       driverPlan ^. DriverPlanDriverId ==. val (toKey driverId)
---     return driverPlan
-
 findByMandateId :: (L.MonadFlow m, Log m) => Id Mandate -> m (Maybe DriverPlan)
 findByMandateId (Id mandateId) = findOneWithKV [Se.Is BeamDF.mandateId $ Se.Eq (Just mandateId)]
-
--- findByMandateId :: Transactionable m => Id DM.Mandate -> m (Maybe DriverPlan)
--- findByMandateId mandateId = do
---   findOne $ do
---     driverPlan <- from $ table @DriverPlanT
---     where_ $
---       driverPlan ^. DriverPlanMandateId ==. val (Just $ toKey mandateId)
---     return driverPlan
 
 updatePlanIdByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Id Plan -> m ()
 updatePlanIdByDriverId (Id driverId) (Id planId) = do
@@ -62,34 +44,12 @@ updatePlanIdByDriverId (Id driverId) (Id planId) = do
     [Se.Set BeamDF.planId planId, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.driverId (Se.Eq driverId)]
 
--- updatePlanIdByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Id Plan -> SqlDB ()
--- updatePlanIdByDriverId driverId planId = do
---   now <- getCurrentTime
---   update $ \tbl -> do
---     set
---       tbl
---       [ DriverPlanPlanId =. val (toKey planId),
---         DriverPlanUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
-
 updateMandateIdByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Id Mandate -> m ()
 updateMandateIdByDriverId driverId (Id mandateId) = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamDF.mandateId (Just mandateId), Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
-
--- updateMandateIdByDriverId :: Id Person -> Id DM.Mandate -> SqlDB ()
--- updateMandateIdByDriverId driverId mandateId = do
---   now <- getCurrentTime
---   update $ \tbl -> do
---     set
---       tbl
---       [ DriverPlanMandateId =. val (Just $ toKey mandateId),
---         DriverPlanUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
 
 updatePaymentModeByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> PaymentMode -> m ()
 updatePaymentModeByDriverId driverId paymentMode = do
@@ -99,17 +59,6 @@ updatePaymentModeByDriverId driverId paymentMode = do
       Se.Set BeamDF.updatedAt now
     ]
     [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
-
--- updatePaymentModeByDriverId :: Id Person -> PaymentMode -> SqlDB ()
--- updatePaymentModeByDriverId driverId paymentMode = do
---   now <- getCurrentTime
---   update $ \tbl -> do
---     set
---       tbl
---       [ DriverPlanPlanType =. val paymentMode,
---         DriverPlanUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
 
 instance FromTType' BeamDF.DriverPlan DriverPlan where
   fromTType' BeamDF.DriverPlanT {..} = do

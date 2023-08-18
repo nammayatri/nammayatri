@@ -106,7 +106,6 @@ cancel req merchant booking = do
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
     Nothing -> do
       logDebug "No ride found for the booking."
-  -- Esq.runTransaction $ do
   QBCR.upsert bookingCR
   _ <- QRB.updateStatus booking.id SRB.CANCELLED
   whenJust mbRide $ \ride -> do

@@ -19,24 +19,11 @@
 
 module Storage.Beam.DriverBlockReason where
 
--- import qualified Dashboard.ProviderPlatform.Driver as Domain
--- import Data.ByteString.Internal (ByteString, unpackChars)
 import Data.Serialize
--- import qualified Data.Time as Time
 import qualified Database.Beam as B
--- import Database.Beam.Backend
 import Database.Beam.MySQL ()
--- import Database.Beam.Postgres
---   ( Postgres,
---     ResultError (ConversionFailed, UnexpectedNull),
---   )
--- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
--- import qualified Database.PostgreSQL.Simple.FromField as DPSF
--- import qualified Domain.Types.DriverBlockReason as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
--- import Kernel.Types.Common hiding (id)
--- import Lib.Utils
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize

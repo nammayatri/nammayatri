@@ -40,16 +40,6 @@ import Lib.Utils ()
 import Sequelize
 import Storage.Beam.DriverOnboarding.Image ()
 
--- instance FromField Image.ImageType where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
-
--- instance FromBackendRow Postgres Image.ImageType
-
 instance FromField Domain.ImageExtractionValidation where
   fromField = fromFieldEnum
 

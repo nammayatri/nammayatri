@@ -51,7 +51,6 @@ data ValidatedOnConfirmReq = ValidatedOnConfirmReq
 onConfirm :: (EncFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => ValidatedOnConfirmReq -> m ()
 onConfirm ValidatedOnConfirmReq {..} = do
   whenJust specialZoneOtp $ \otp -> do
-    -- DB.runTransaction $ do
     void $ QRB.updateOtpCodeBookingId booking.id otp
     fork "sending Booking confirmed dasboard sms" $ do
       merchantConfig <- QMSUC.findByMerchantId booking.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound booking.merchantId.getId)
@@ -72,11 +71,9 @@ onConfirm ValidatedOnConfirmReq {..} = do
           Sms.sendSMS booking.merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         else do
           logInfo "Merchant not configured to send dashboard sms"
-  -- DB.runTransaction $ do
   void $ QRB.updateStatus booking.id DRB.CONFIRMED
 
 validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
 validateRequest OnConfirmReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
-  -- booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
   return $ ValidatedOnConfirmReq {..}

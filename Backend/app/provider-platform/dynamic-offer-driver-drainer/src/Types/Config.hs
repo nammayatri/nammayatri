@@ -24,7 +24,6 @@ data DatabaseConfig = DatabaseConfig
     _db :: String,
     _user :: String,
     _password :: String
-    -- , _sslMode  :: Maybe ET.SSLMode
   }
   deriving (Generic, Eq, Show)
 

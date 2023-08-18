@@ -141,7 +141,6 @@ getDriverMobileNumber (driverId, merchantId) rcNo = do
           }
   exotelResponse <- initiateCall merchantId callReq
   callStatus <- buildCallStatus callStatusId exotelResponse vehicleRC.id.getId
-  -- runTransaction $ QCallStatus.create callStatus
   QCallStatus.create callStatus
   return $ CallRes callStatusId
   where
@@ -210,13 +209,10 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
         let dtmfNumber = dropFirstZero $ removeQuotes number
         dtmfMobileHash <- getDbHash dtmfNumber
         person <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" dtmfMobileHash exophone.merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
-        -- person <- QPerson.findByMobileNumberAndMerchant "+91" dtmfMobileHash exophone.merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
         return (person, Just dtmfNumber)
       Just entity -> return (entity, Nothing)
   activeRide <- runInReplica (QRide.getActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  -- activeRide <- (QRide.getActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
   activeBooking <- runInReplica (QRB.findById activeRide.bookingId) >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
-  -- activeBooking <- (QRB.findById activeRide.bookingId) >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-
     activeBooking.riderId
       & fromMaybeM (BookingFieldNotPresent "riderId")
@@ -247,8 +243,6 @@ getCallStatus :: MonadFlow m => Id SCS.CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
   runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
 
--- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
-
 -- | Get customer's mobile phone
 getCustomerPhone :: (EncFlow m r, MonadFlow m) => SRide.Ride -> m Text
 getCustomerPhone ride = do
@@ -264,7 +258,6 @@ getCustomerPhone ride = do
 getDriverPhone :: (EncFlow m r, MonadFlow m) => SRide.Ride -> m Text
 getDriverPhone ride = do
   driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  -- driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   decMobNum <- mapM decrypt driver.mobileNumber
   let phonenum = (<>) <$> driver.mobileCountryCode <*> decMobNum
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")

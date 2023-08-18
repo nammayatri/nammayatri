@@ -30,36 +30,8 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 
--- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
--- findByMerchantId merchId =
---   Esq.findOne $ do
---     merchantMapsCfg <- from $ table @MerchantServiceUsageConfigT
---     where_ $
---       merchantMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey merchId)
---     return merchantMapsCfg
-
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
-
--- updateMerchantServiceUsageConfig ::
---   MerchantServiceUsageConfig ->
---   SqlDB ()
--- updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ MerchantServiceUsageConfigGetDistances =. val getDistances,
---         MerchantServiceUsageConfigGetRoutes =. val getRoutes,
---         MerchantServiceUsageConfigSnapToRoad =. val snapToRoad,
---         MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
---         MerchantServiceUsageConfigGetPlaceDetails =. val getPlaceDetails,
---         MerchantServiceUsageConfigAutoComplete =. val autoComplete,
---         MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
---         MerchantServiceUsageConfigUpdatedAt =. val now
---       ]
---     where_ $
---       tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
 
 updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m, Log m) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do

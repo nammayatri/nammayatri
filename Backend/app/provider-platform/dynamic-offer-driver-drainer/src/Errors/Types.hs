@@ -52,8 +52,6 @@ instance ToJSON ErrorPayload where
 instance FromJSON ErrorPayload where
   parseJSON = genericParseJSON aesonOmitNothingFields
 
--- ----------------------------------------------------------------------------
-
 data ECErrorPayload = ECErrorPayload
   { status :: Text,
     error_code :: Maybe Text,

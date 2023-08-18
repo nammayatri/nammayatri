@@ -76,9 +76,6 @@ instance IsString Domain.DriverQuoteStatus where
 instance IsString Variant.Variant where
   fromString = show
 
--- instance IsString Common.Money where
---   fromString = show
-
 instance B.Table DriverQuoteT where
   data PrimaryKey DriverQuoteT f
     = Id (B.C f Text)

@@ -35,34 +35,11 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
 
--- create :: Image -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => Image -> m ()
 create = createWithKV
 
--- findById ::
---   Transactionable m =>
---   Id Image ->
---   m (Maybe Image)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id Image -> m (Maybe Image)
 findById (Id imageid) = findOneWithKV [Se.Is BeamI.id $ Se.Eq imageid]
-
--- findImagesByPersonAndType ::
---   (Transactionable m) =>
---   Id Merchant ->
---   Id Person ->
---   ImageType ->
---   m [Image]
--- findImagesByPersonAndType merchantId personId imgType = do
---   findAll $ do
---     images <- from $ table @ImageT
---       images ^. ImagePersonId ==. val (toKey personId)
---         &&. images ^. ImageImageType ==. val imgType
---         &&. images ^. ImageMerchantId ==. val (toKey merchantId)
---     return images
 
 findImagesByPersonAndType :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
@@ -70,33 +47,6 @@ findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
     [ Se.And
         [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
     ]
-
--- findRecentByPersonIdAndImageType ::
---   ( Transactionable m,
---     MonadFlow m,
---     CacheFlow m r,
---     EsqDBFlow m r,
---     EsqDBReplicaFlow m r
---   ) =>
---   Id Person ->
---   ImageType ->
---   m [Image]
--- findRecentByPersonIdAndImageType personId imgtype = do
---   -- person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
---   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
---   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
---   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
---   let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
---   now <- getCurrentTime
---   findAll $ do
---     images <- from $ table @ImageT
---     where_ $
---       images ^. ImagePersonId ==. val (toKey personId)
---         &&. images ^. ImageImageType ==. val imgtype
---         &&. images ^. ImageCreatedAt >. val (hoursAgo onBoardingRetryTimeInHours now)
---     return images
---   where
---     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
 findRecentByPersonIdAndImageType :: (L.MonadFlow m, Log m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
 findRecentByPersonIdAndImageType personId imgtype = do
@@ -112,50 +62,20 @@ findRecentByPersonIdAndImageType personId imgtype = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
--- updateToValid :: Id Image -> SqlDB ()
--- updateToValid id = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ImageIsValid =. val True]
-
 updateToValid :: (L.MonadFlow m, Log m) => Id Image -> m ()
 updateToValid (Id id) =
   updateWithKV
     [Se.Set BeamI.isValid True]
     [Se.Is BeamI.id (Se.Eq id)]
 
--- findByMerchantId ::
---   Transactionable m =>
---   Id Merchant ->
---   m [Image]
--- findByMerchantId merchantId = do
---   findAll $ do
---     images <- from $ table @ImageT
---     where_ $ images ^. ImageMerchantId ==. val (toKey merchantId)
---     return images
-
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Image]
 findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamI.merchantId $ Se.Eq merchantId]
-
--- addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
--- addFailureReason id reason = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ImageFailureReason =. val (Just reason)]
---     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
 addFailureReason :: (L.MonadFlow m, Log m) => Id Image -> DriverOnboardingError -> m ()
 addFailureReason (Id id) reason =
   updateWithKV
     [Se.Set BeamI.failureReason $ Just reason]
     [Se.Is BeamI.id (Se.Eq id)]
-
--- deleteByPersonId :: Id Person -> SqlDB ()
--- deleteByPersonId personId =
---   Esq.delete $ do
---     images <- from $ table @ImageT
 
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamI.personId (Se.Eq personId)]

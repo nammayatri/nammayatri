@@ -149,7 +149,6 @@ cancelRideTransaction ::
 cancelRideTransaction bookingId ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  -- Esq.runTransaction $ do
   _ <- QDI.updateOnRide driverId False
   _ <- QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
@@ -185,7 +184,6 @@ repeatSearch ::
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
 
-  -- Esq.runTransaction $ do
   _ <- QST.create newSearchTry
 
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
@@ -202,12 +200,6 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
       let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       maxShards <- asks (.maxShards)
       Esq.runTransaction $ do
-        --   createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-        --     SendSearchRequestToDriverJobData
-        --       { searchTryId = newSearchTry.id,
-        --         estimatedRideDistance = searchReq.estimatedDistance,
-        --         driverExtraFeeBounds = driverExtraFeeBounds
-        --       }
         createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
             { searchTryId = newSearchTry.id,

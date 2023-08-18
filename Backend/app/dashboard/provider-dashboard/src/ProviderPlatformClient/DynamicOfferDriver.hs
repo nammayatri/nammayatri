@@ -102,7 +102,7 @@ data RidesAPIs = RidesAPIs
     rideSync :: Id Ride.Ride -> Euler.EulerClient Ride.RideSyncRes,
     multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncRes,
     rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes,
-    bookingWithVehicleNumberAndPhone :: Ride.BookingWithVehicleAndPhoneReq -> Euler.EulerClient APISuccess,
+    bookingWithVehicleNumberAndPhone :: Ride.BookingWithVehicleAndPhoneReq -> Euler.EulerClient Ride.BookingWithVehicleAndPhoneRes,
     ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
   }
 

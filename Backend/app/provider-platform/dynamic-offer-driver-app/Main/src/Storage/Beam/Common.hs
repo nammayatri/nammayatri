@@ -8,10 +8,6 @@ module Storage.Beam.Common where
 
 import qualified Database.Beam as B
 import GHC.Generics (Generic)
--- import Storage.Beam.DriverOnboarding.Image
-
--- import Storage.Beam.DriverOnboarding.IdfyVerification
-
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus

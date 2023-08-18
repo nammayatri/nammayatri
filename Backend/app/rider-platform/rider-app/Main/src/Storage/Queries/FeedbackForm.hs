@@ -24,21 +24,8 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FeedbackForm as BFF
 
--- findAllFeedback :: Transactionable m => m [FeedbackFormRes]
--- findAllFeedback = Esq.findAll $ do
---   from $ table @FeedbackFormT
-
 findAllFeedback :: (L.MonadFlow m, Log m) => m [FeedbackFormRes]
 findAllFeedback = findAllWithDb [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
-
--- findAllFeedbackByRating :: Transactionable m => Int -> m [FeedbackFormRes]
--- findAllFeedbackByRating rating =
---   Esq.findAll $ do
---     feedbackForm <- from $ table @FeedbackFormT
---     where_ $
---       feedbackForm ^. FeedbackFormRating ==. val (Just rating)
---         ||. Esq.isNothing (feedbackForm ^. FeedbackFormRating)
---     pure feedbackForm
 
 findAllFeedbackByRating :: (L.MonadFlow m, Log m) => Int -> m [FeedbackFormRes]
 findAllFeedbackByRating rating = findAllWithDb [Se.Or [Se.Is BFF.rating $ Se.Eq $ Just rating, Se.Is BFF.rating $ Se.Eq Nothing]]

@@ -25,7 +25,6 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -62,7 +61,6 @@ feedback request = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
-  -- DB.runTransaction $ do
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRide.updateRideRating rideId ratingValue
   QPFS.clearCache booking.riderId

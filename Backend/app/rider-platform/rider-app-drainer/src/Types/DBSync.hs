@@ -9,7 +9,7 @@ module Types.DBSync
     Types.DBSync.Flow,
     History,
     StateRef (..),
-    DBSyncException (..),
+    DBSyncConfig (..),
     DBCommand (..),
     CreateDBCommand (..),
     UpdateDBCommand (..),
@@ -20,12 +20,17 @@ where
 import EulerHS.KVConnector.DBSync
 import EulerHS.Language as EL
 import EulerHS.Prelude
-import EulerHS.Types as ET hiding (Tag)
-import Types.Config
 import Types.DBSync.Create as X
 import Types.DBSync.Delete as X
 import Types.DBSync.Update as X
 import Types.Event as Event
+
+data DBSyncConfig = DBSyncConfig
+  { _emptyRetry :: Int,
+    _rateLimitN :: Int,
+    _rateLimitWindow :: Int,
+    _streamReadCount :: Integer
+  }
 
 data Env = Env
   { _streamRedisInfo :: Text,
@@ -40,14 +45,6 @@ data StateRef = StateRef
   { _config :: DBSyncConfig,
     _history :: History
   }
-
-data DBSyncException
-  = DECODE_ERROR Text
-  | CONFIG_NOT_FOUND Text
-  | REDIS_STREAM_ERROR ET.KVDBReply
-  deriving (Show)
-
-instance Exception DBSyncException
 
 data DBCommand
   = Create DBCommandVersion Tag Double DBName DBCreateObject

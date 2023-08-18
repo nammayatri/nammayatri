@@ -31,9 +31,6 @@ create = createWithKV
 findByPersonId :: MonadFlow m => Id Person -> m (Maybe Domain.PersonStats)
 findByPersonId (Id personId) = findOneWithKV [Se.Is BeamPS.personId $ Se.Eq personId]
 
--- findPersonStats :: (L.MonadFlow m, Log m) => Id Person -> m (Int, Int, Int, Int, Int, Int, Int, Int, Int)
--- findPersonStats(Id personId) =maybe (pure (0, 0, 0, 0, 0, 0, 0, 0, 0)) (pure . (Domain.userCancelledRides &&& Domain.driverCancelledRides &&& Domain.completedRides &&& Domain.weekdayRides &&& Domain.weekendRides &&& Domain.offPeakRides &&& Domain.morningPeakRides &&& Domain.eveningPeakRides &&& Domain.weekendPeakRides)) =<< findOneWithKV [Se.Is BeamPS.personId (Se.Eq personId)]
-
 incrementOrSetPersonStats :: (L.MonadFlow m, MonadTime m, Log m) => Domain.PersonStats -> m ()
 incrementOrSetPersonStats personStats = do
   now <- getCurrentTime

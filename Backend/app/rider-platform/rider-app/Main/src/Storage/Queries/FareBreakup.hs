@@ -25,21 +25,11 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 
--- createMany :: [FareBreakup] -> SqlDB ()
--- createMany = Esq.createMany
-
 create :: (L.MonadFlow m, Log m) => FareBreakup -> m ()
 create = createWithKV
 
 createMany :: (L.MonadFlow m, Log m) => [FareBreakup] -> m ()
 createMany = traverse_ create
-
--- findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
--- findAllByBookingId bookingId =
---   findAll $ do
---     fareBreakup <- from $ table @FareBreakupT
---     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
---     return fareBreakup
 
 findAllByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
 findAllByBookingId bookingId = findAllWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]

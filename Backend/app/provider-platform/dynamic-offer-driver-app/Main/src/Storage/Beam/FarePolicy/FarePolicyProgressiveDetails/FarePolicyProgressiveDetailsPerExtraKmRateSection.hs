@@ -32,8 +32,6 @@ import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
 import Sequelize as Se
 
--- import Storage.Tabular.Vehicle ()
-
 instance IsString Vehicle.Variant where
   fromString = show
 

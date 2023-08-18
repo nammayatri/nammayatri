@@ -31,51 +31,17 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
--- findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
-
--- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
--- findByShortId shortId_ = do
---   findOne $ do
---     merchant <- from $ table @MerchantT
---     where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId_)
---     return merchant
 
 findByShortId :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
 
--- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
--- findBySubscriberId subscriberId = do
---   findOne $ do
---     merchant <- from $ table @MerchantT
---     where_ $ merchant ^. MerchantSubscriberId ==. val (getShortId subscriberId)
---     return merchant
-
 findBySubscriberId :: (L.MonadFlow m, Log m) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq $ getShortId subscriberId]
 
--- findAll :: Transactionable m => m [Merchant]
--- findAll =
---   Esq.findAll $ do from $ table @MerchantT
-
 findAll :: (L.MonadFlow m, Log m) => m [Merchant]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
-
--- update :: Merchant -> SqlDB ()
--- update merchant = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ MerchantName =. val merchant.name,
---         MerchantGatewayUrl =. val (showBaseUrl merchant.gatewayUrl),
---         MerchantRegistryUrl =. val (showBaseUrl merchant.registryUrl),
---         MerchantUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. MerchantTId ==. val (toKey merchant.id)
 
 update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
 update org = do

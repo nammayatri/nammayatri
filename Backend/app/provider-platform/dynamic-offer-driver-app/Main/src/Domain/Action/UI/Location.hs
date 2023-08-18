@@ -21,8 +21,6 @@ where
 
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
 import Kernel.External.Maps.Types (LatLong)
@@ -59,7 +57,6 @@ getLocation rideId = do
       SRide.INPROGRESS -> pure ActualRide
       _ -> throwError $ RideInvalidStatus "Cannot track this ride"
   driver <- runInReplica $ Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  -- driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   currLocation <- DrLoc.findById driver.merchantId driver.id >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = realToFrac ride.traveledDistance.getHighPrecMeters

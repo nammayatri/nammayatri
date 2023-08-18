@@ -20,7 +20,6 @@ module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
--- import Data.ByteString.Lazy (toStrict)
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B

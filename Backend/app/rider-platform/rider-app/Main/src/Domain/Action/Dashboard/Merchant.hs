@@ -64,7 +64,6 @@ merchantUpdate merchantShortId req = do
       throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
     pure allExophones
 
-  -- Esq.runTransaction $ do
   void $ CQM.update updMerchant
   whenJust req.exoPhones \exophones -> do
     CQExophone.deleteByMerchantId merchant.id
@@ -123,7 +122,6 @@ mapsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  -- Esq.runTransaction $ do
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
@@ -139,7 +137,6 @@ smsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  -- Esq.runTransaction $ do
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
@@ -173,7 +170,6 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
                                    autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
-  -- Esq.runTransaction $ do
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
@@ -200,7 +196,6 @@ smsServiceUsageConfigUpdate merchantShortId req = do
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
-  -- Esq.runTransaction $ do
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)

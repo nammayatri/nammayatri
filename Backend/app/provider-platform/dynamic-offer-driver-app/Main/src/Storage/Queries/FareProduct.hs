@@ -32,38 +32,12 @@ import Kernel.Types.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as BeamFP
 
--- findAllFareProductForVariants ::
---   Transactionable m =>
---   Id Merchant ->
---   Domain.Area ->
---   m [Domain.FareProduct]
--- findAllFareProductForVariants merchantId area =
---   Esq.findAll $ do
---     fareProduct <- from $ table @FareProductT
---       fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
---         &&. fareProduct ^. FareProductArea ==. val area
---     return fareProduct
-
 findAllFareProductForVariants ::
   (L.MonadFlow m, Log m) =>
   Id Merchant ->
   Domain.Area ->
   m [Domain.FareProduct]
 findAllFareProductForVariants (Id merchantId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.area $ Se.Eq area]]
-
--- findByMerchantVariantArea ::
---   Transactionable m =>
---   Id Merchant ->
---   Variant ->
---   Domain.Area ->
---   m (Maybe Domain.FareProduct)
--- findByMerchantVariantArea merchantId vehicleVariant area =
---   Esq.findOne $ do
---     fareProduct <- from $ table @FareProductT
---       fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
---         &&. fareProduct ^. FareProductArea ==. val area
---         &&. fareProduct ^. FareProductVehicleVariant ==. val vehicleVariant
---     return fareProduct
 
 findByMerchantVariantArea ::
   (L.MonadFlow m, Log m) =>

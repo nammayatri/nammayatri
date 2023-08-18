@@ -161,7 +161,7 @@ multipleRideSync merchantShortId = withFlowHandlerAPI . DRide.multipleRideSync m
 rideRoute :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideRouteRes
 rideRoute merchantShortId rideId = withFlowHandlerAPI $ DRide.rideRoute merchantShortId rideId
 
-bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler APISuccess
+bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler Common.BookingWithVehicleAndPhoneRes
 bookingWithVehicleNumberAndPhone merchantShortId = withFlowHandlerAPI . DRide.bookingWithVehicleNumberAndPhone merchantShortId
 
 ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes

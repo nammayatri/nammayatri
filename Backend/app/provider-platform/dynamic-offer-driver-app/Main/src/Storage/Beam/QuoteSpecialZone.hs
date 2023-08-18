@@ -32,8 +32,6 @@ import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,
     searchRequestId :: B.C f Text,
@@ -52,9 +50,6 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
 
 instance IsString Variant.Variant where
   fromString = show
-
--- instance IsString Common.Money where
---   fromString = show
 
 instance B.Table QuoteSpecialZoneT where
   data PrimaryKey QuoteSpecialZoneT f

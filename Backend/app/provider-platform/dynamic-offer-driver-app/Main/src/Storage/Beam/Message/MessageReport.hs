@@ -20,12 +20,6 @@ module Storage.Beam.Message.MessageReport where
 
 import Data.Aeson
 import qualified Data.Aeson as A
--- import Data.ByteString.Internal (ByteString)
-
--- import Database.PostgreSQL.Simple.HStore
--- import qualified Data.Map as Map
--- import qualified Data.Vector as Vector
-
 import Data.ByteString (ByteString)
 import Data.Serialize
 import qualified Data.Time as Time
@@ -59,16 +53,6 @@ instance FromBackendRow Postgres Domain.DeliveryStatus
 instance IsString Domain.DeliveryStatus where
   fromString = show
 
--- fromFieldmessageDynamicFields ::
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion Domain.MessageDynamicFieldsType
--- fromFieldmessageDynamicFields f mbValue = do
---   value <- fromField f mbValue
---   case A.fromJSON value of
---     A.Success val -> pure val
---     _ -> DPSF.returnError ConversionFailed f "Conversion failed."
-
 fromFieldmessageDynamicFields ::
   DPSF.Field ->
   Maybe ByteString ->
@@ -84,8 +68,6 @@ instance FromField Domain.MessageDynamicFieldsType where
 
 instance HasSqlValueSyntax be Value => HasSqlValueSyntax be Domain.MessageDynamicFieldsType where
   sqlValueSyntax = sqlValueSyntax . A.toJSON
-
--- sqlValueSyntax value = sqlValueSyntax (Vector.fromList (Map.toList value))
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageDynamicFieldsType
 
@@ -104,7 +86,6 @@ data MessageReportT f = MessageReportT
     likeStatus :: B.C f Bool,
     reply :: B.C f (Maybe Text),
     messageDynamicFields :: B.C f A.Value,
-    -- messageDynamicFields :: B.C f Domain.MessageDynamicFieldsType,
     updatedAt :: B.C f Time.LocalTime,
     createdAt :: B.C f Time.LocalTime
   }

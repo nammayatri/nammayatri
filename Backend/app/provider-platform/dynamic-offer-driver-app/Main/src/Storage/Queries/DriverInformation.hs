@@ -19,8 +19,6 @@
 
 module Storage.Queries.DriverInformation where
 
--- import Control.Applicative (liftA2)
-
 import Data.Time.Clock (addUTCTime)
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
@@ -35,9 +33,6 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se
--- import Storage.Tabular.DriverInformation
--- import Storage.Tabular.Person
-
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -52,23 +47,6 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
-
--- fetchAllByIds :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [DriverInformation]
--- fetchAllByIds merchantId driversIds = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamDI.DriverInformationT
---   updatedMeshConfig <- setMeshConfig modelName
---   case dbConf of
---     Just dbCOnf' -> do
---       dInfos <- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
---       foldM (fn' dbCOnf' updatedMeshConfig) [] dInfos
---     Nothing -> pure []
---   where
---     fn' dbCOnf' updatedMeshConfig b a = do
---       id' <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamP.id $ Se.Eq (getId a.driverId), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
---       case id' of
---         Right (Just _) -> pure (a : b)
---         _ -> pure b
 
 fetchAllByIds :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = do
@@ -116,36 +94,6 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
         <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
-
--- TODO @Vijay Gupta: update the following function according to main
--- updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
--- updateBlockedState driverId isBlocked = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       ( [ DriverInformationBlocked =. val isBlocked,
---           DriverInformationUpdatedAt =. val now
---         ]
---           <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
---       )
---     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
-
--- updateDynamicBlockedState :: Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> SqlDB ()
--- updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
---   now <- getCurrentTime
---   let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       ( [ DriverInformationBlocked =. val isBlocked,
---           DriverInformationBlockedReason =. val blockedReason,
---           DriverInformationBlockExpiryTime =. val expiryTime,
---           DriverInformationUpdatedAt =. val now
---         ]
---           <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
---       )
---     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateDynamicBlockedState :: (MonadFlow m) => Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> m ()
 updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
@@ -217,15 +165,6 @@ updateOnRide (Id driverId) onRide = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
--- findByDriverIdActiveRide :: (Transactionable m) => Id Person.Driver -> m (Maybe DriverInformation)
--- findByDriverIdActiveRide driverId = do
---   Esq.findOne $ do
---     driverInfo <- from $ table @DriverInformationT
---     where_ $
---       driverInfo ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
---         &&. driverInfo ^. DriverInformationOnRide ==. val True
---     return driverInfo
-
 findByDriverIdActiveRide :: (MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
 findByDriverIdActiveRide (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDI.driverId $ Se.Eq driverId, Se.Is BeamDI.onRide $ Se.Eq True]]
 
@@ -283,21 +222,6 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
   driverInfos <- getDriverInfos driverLocations
   getDrivers driverInfos
 
--- logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
-
--- getDrivers ::
---   Transactionable m =>
---   [DriverInformation] ->
---   m [Person]
--- getDrivers driverInfos = do
---   Esq.findAll $ do
---     persons <- from $ table @PersonT
---     where_ $
---       persons ^. PersonTId `in_` valList personsKeys
---     return persons
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfos
-
 getDrivers ::
   (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
@@ -306,20 +230,6 @@ getDrivers driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
   where
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfos
 
--- getDriverInfos ::
---   Transactionable m =>
---   [DriverLocation] ->
---   m [DriverInformation]
--- getDriverInfos driverLocations = do
---   Esq.findAll $ do
---     driverInfos <- from $ table @DriverInformationT
---     where_ $
---       driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
---         &&. driverInfos ^. DriverInformationActive
---     return driverInfos
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
-
 getDriverInfos ::
   (L.MonadFlow m, Log m) =>
   [DriverLocation] ->
@@ -327,19 +237,6 @@ getDriverInfos ::
 getDriverInfos driverLocations = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In personsKeys, Se.Is BeamDI.active $ Se.Eq True]]
   where
     personsKeys = getId <$> fetchDriverIDsFromLocations driverLocations
-
--- imported from driverlocation query file
--- getDriverLocs ::
---   (Transactionable m, EsqLocRepDBFlow m r) =>
---   UTCTime ->
---   m [DriverLocation]
--- getDriverLocs before = do
---   runInLocReplica $
---     Esq.findAll $ do
---       driverLocs <- from $ table @DriverLocationT
---       where_ $
---         driverLocs ^. DriverLocationUpdatedAt <. val before
---       return driverLocs
 
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId
@@ -386,17 +283,6 @@ updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchba
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
--- updateAutoPayStatus :: Maybe DriverAutoPayStatus -> Id Person.Driver -> SqlDB ()
--- updateAutoPayStatus autoPayStatus driverId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverInformationAutoPayStatus =. val autoPayStatus,
---         DriverInformationUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
-
 updateAutoPayStatus :: (L.MonadFlow m, MonadTime m, Log m) => Maybe DriverAutoPayStatus -> Id Person.Driver -> m ()
 updateAutoPayStatus autoPayStatus (Id driverId) = do
   now <- getCurrentTime
@@ -405,17 +291,6 @@ updateAutoPayStatus autoPayStatus (Id driverId) = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
-
--- updateSubscription :: Bool -> Id Person.Driver -> SqlDB ()
--- updateSubscription isSubscribed driverId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverInformationSubscribed =. val isSubscribed,
---         DriverInformationUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateSubscription :: (L.MonadFlow m, MonadTime m, Log m) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed (Id driverId) = do
@@ -426,17 +301,6 @@ updateSubscription isSubscribed (Id driverId) = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
--- updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
--- updateAadhaarVerifiedState personId isVerified = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverInformationAadhaarVerified =. val isVerified,
---         DriverInformationUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast personId)
-
 updateAadhaarVerifiedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person.Driver -> Bool -> m ()
 updateAadhaarVerifiedState (Id personId) isVerified = do
   now <- getCurrentTime
@@ -445,20 +309,6 @@ updateAadhaarVerifiedState (Id personId) isVerified = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq personId)]
-
--- updatePendingPayment ::
---   Bool ->
---   Id Person.Driver ->
---   SqlDB ()
--- updatePendingPayment isPending driverId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverInformationPaymentPending =. val isPending,
---         DriverInformationUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updatePendingPayment :: (L.MonadFlow m, MonadTime m, Log m) => Bool -> Id Person.Driver -> m ()
 updatePendingPayment isPending (Id driverId) = do

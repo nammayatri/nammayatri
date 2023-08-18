@@ -30,15 +30,6 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
 
--- findAllByMerchantId :: Transactionable m => Id Merchant -> m [MerchantPaymentMethod]
--- findAllByMerchantId merchantId =
---   Esq.findAll $ do
---     merchantPaymentMethod <- from $ table @MerchantPaymentMethodT
---     where_ $
---       merchantPaymentMethod ^. MerchantPaymentMethodMerchantId ==. val (toKey merchantId)
---     orderBy [desc $ merchantPaymentMethod ^. MerchantPaymentMethodPriority]
---     return merchantPaymentMethod
-
 findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [MerchantPaymentMethod]
 findAllByMerchantId (Id merchantId) = findAllWithOptionsKV [Se.Is BeamMPM.merchantId $ Se.Eq merchantId] (Se.Desc BeamMPM.priority) Nothing Nothing
 

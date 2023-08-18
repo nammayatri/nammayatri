@@ -52,12 +52,9 @@ deleteCustomer merchantShortId customerId = do
   let personId = cast @Common.Customer @DP.Person customerId
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  -- person <- QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   unless (merchant.id == person.merchantId) $ throwError (PersonDoesNotExist $ getId personId)
   bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
-  -- bookings <- QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
-  -- runTransaction $ do
   _ <- QP.deleteById personId
   QPFS.clearCache personId
   _ <- QPFS.deleteByPersonId personId
@@ -104,7 +101,6 @@ unblockCustomer merchantShortId customerId = do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
     )
     merchantConfigs
-  -- runTransaction $ do
   void $ QP.updatingEnabledAndBlockedState personId Nothing False
   logTagInfo "dashboard -> unblockCustomer : " (show personId)
   pure Success
@@ -125,7 +121,6 @@ customerInfo merchantShortId customerId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
-  -- numberOfRides <- fromMaybe 0 <$> QP.fetchRidesCount personId
   pure Common.CustomerInfoRes {numberOfRides}
 
 ---------------------------------------------------------------------
@@ -136,11 +131,9 @@ listCustomers merchantShortId mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   customers <- runInReplica $ QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
-  -- customers <- QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
   items <- mapM buildCustomerListItem customers
   let count = length items
   totalCount <- runInReplica $ QP.countCustomers merchant.id
-  -- totalCount <- QP.countCustomers merchant.id
   let summary = Common.Summary {totalCount, count}
   pure Common.CustomerListRes {totalItems = count, summary, customers = items}
   where

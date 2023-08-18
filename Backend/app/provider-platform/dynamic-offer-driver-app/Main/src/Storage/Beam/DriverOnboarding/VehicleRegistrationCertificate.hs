@@ -34,19 +34,6 @@ import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
 
--- instance FromField Domain.VerificationStatus where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VerificationStatus where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
-
--- instance FromBackendRow Postgres Domain.VerificationStatus
-
--- instance IsString Domain.VerificationStatus where
---   fromString = show
-
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
     documentImageId :: B.C f Text,

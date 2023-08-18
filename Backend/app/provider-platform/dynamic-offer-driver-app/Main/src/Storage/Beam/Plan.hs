@@ -99,8 +99,6 @@ data PlanT f = PlanT
     isOfferApplicable :: B.C f Bool,
     maxCreditLimit :: B.C f HighPrecMoney,
     planBaseAmount :: B.C f Domain.PlanBaseAmount,
-    -- rideCountBasedFeePolicy :: RideCountBasedFeePolicyConfig, -- todo
-    -- distanceBasedFeePolicy :: , -- todo
     freeRideCount :: B.C f Int,
     frequency :: B.C f Domain.Frequency,
     planType :: B.C f Domain.PlanType
@@ -119,8 +117,6 @@ deriving stock instance Ord Domain.Frequency
 
 deriving stock instance Ord Domain.PlanType
 
--- deriving stock instance Ord Domain.PaymentMode
-
 deriving stock instance Ord Domain.PlanBaseAmount
 
 planTMod :: PlanT (B.FieldModification (B.TableField PlanT))
@@ -136,8 +132,6 @@ planTMod =
       isOfferApplicable = B.fieldNamed "is_offer_applicable",
       maxCreditLimit = B.fieldNamed "max_credit_limit",
       planBaseAmount = B.fieldNamed "plan_base_amount",
-      -- rideCountBasedFeePolicy :: RideCountBasedFeePolicyConfig, -- todo
-      -- distanceBasedFeePolicy :: , -- todo
       freeRideCount = B.fieldNamed "free_ride_count",
       frequency = B.fieldNamed "frequency",
       planType = B.fieldNamed "plan_type"

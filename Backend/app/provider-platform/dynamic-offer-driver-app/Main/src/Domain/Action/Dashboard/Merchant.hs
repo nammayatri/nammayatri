@@ -52,7 +52,6 @@ import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -69,7 +68,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
--- import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as DFP
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -93,14 +91,12 @@ merchantUpdate merchantShortId req = do
       throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
     pure allExophones
 
-  -- Esq.runTransaction $ do
   _ <- CQM.update updMerchant
   whenJust req.exoPhones \exophones -> do
     CQExophone.deleteByMerchantId merchant.id
     forM_ exophones $ \exophoneReq -> do
       exophone <- buildExophone merchant.id now exophoneReq
       CQExophone.create exophone
-  -- Esq.runTransaction $ do
   whenJust req.fcmConfig $
     \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
 
@@ -181,7 +177,6 @@ merchantCommonConfigUpdate merchantShortId req = do
                driverPaymentReminderInterval = maybe config.driverPaymentReminderInterval (.value) req.driverPaymentReminderInterval,
                timeDiffFromUtc = maybe config.timeDiffFromUtc (.value) req.timeDiffFromUtc
               }
-  -- Esq.runTransaction $ do
   _ <- CQTC.update updConfig
   CQTC.clearCache merchant.id
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
@@ -234,7 +229,6 @@ driverPoolConfigUpdate merchantShortId tripDistance req = do
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
                distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
               }
-  -- Esq.runTransaction $ do
   _ <- CQDPC.update updConfig
   CQDPC.clearCache merchant.id
   logTagInfo "dashboard -> driverPoolConfigUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
@@ -260,7 +254,6 @@ driverPoolConfigCreate merchantShortId tripDistance req = do
   mbConfig <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchant.id.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id tripDistance req
-  -- Esq.runTransaction $ do
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchant.id
@@ -320,7 +313,6 @@ driverIntelligentPoolConfigUpdate merchantShortId req = do
                locationUpdateSampleTime = maybe config.locationUpdateSampleTime (.value) req.locationUpdateSampleTime,
                defaultDriverSpeed = maybe config.defaultDriverSpeed (.value) req.defaultDriverSpeed
               }
-  -- Esq.runTransaction $ do
   _ <- CQDIPC.update updConfig
   CQDIPC.clearCache merchant.id
   logTagInfo "dashboard -> driverIntelligentPoolConfigUpdate : " (show merchant.id)
@@ -480,7 +472,6 @@ mapsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  -- Esq.runTransaction $ do
   CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
@@ -496,7 +487,6 @@ smsServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  -- Esq.runTransaction $ do
   CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
@@ -547,7 +537,6 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
                                    autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
-  -- Esq.runTransaction $ do
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
@@ -574,7 +563,6 @@ smsServiceUsageConfigUpdate merchantShortId req = do
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
-  -- Esq.runTransaction $ do
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
@@ -590,7 +578,6 @@ verificationServiceConfigUpdate merchantShortId req = do
   let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
   serviceConfig <- DMSC.VerificationServiceConfig <$> Common.buildVerificationServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  -- Esq.runTransaction $ do
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)

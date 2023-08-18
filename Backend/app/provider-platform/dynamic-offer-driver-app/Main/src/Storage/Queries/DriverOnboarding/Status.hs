@@ -58,15 +58,6 @@ data DriverDocsInfo = DriverDocsInfo
     numVehRegImages :: Int
   }
 
--- imagesAggTableCTEbyDoctype :: Image.ImageType -> SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
--- imagesAggTableCTEbyDoctype imageType = with $ do
---   image <- from $ table @ImageT
---   where_ $ image ^. ImageImageType ==. val imageType
---   groupBy $ image ^. ImagePersonId
---   pure (image ^. ImagePersonId, count @Int $ image ^. ImageId)
-
--- imagesAggTableCTEbyDoctype' = do
-
 imagesAggTableCTEbyDoctype :: L.MonadFlow m => Image.ImageType -> m [(Text, Int)]
 imagesAggTableCTEbyDoctype imageType' = do
   dbConf <- getMasterBeamConfig
@@ -78,44 +69,6 @@ imagesAggTableCTEbyDoctype imageType' = do
             B.filter_' (\(BeamI.ImageT {..}) -> imageType B.==?. B.val_ imageType') $
               B.all_ (BeamCommon.image BeamCommon.atlasDB)
   pure (Prelude.fromRight [] resp)
-
--- baseDriverDocumentsInfoQuery ::
---   From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
---   From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
---   From
---     ( Table PersonT
---         :& MbTable DriverLicenseT
---         :& MbTable IdfyVerificationT
---         :& MbTable DriverRCAssociationT
---         :& MbTable VehicleRegistrationCertificateT
---         :& MbTable IdfyVerificationT
---         :& Table DriverInformationT
---         :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
---         :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
---     )
--- baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggTable =
---   table @PersonT
---     `Esq.leftJoin` table @DriverLicenseT `Esq.on` (\(p :& l) -> just (p ^. PersonTId) ==. l ?. DriverLicenseDriverId)
---     `Esq.leftJoin` table @IdfyVerificationT
---       `Esq.on` ( \(p :& _ :& licReq) ->
---                    just (p ^. PersonTId) ==. licReq ?. IdfyVerificationDriverId
---                      &&. licReq ?. IdfyVerificationDocType ==. just (val Image.DriverLicense)
---                )
---     `Esq.leftJoin` table @DriverRCAssociationT
---       `Esq.on` (\(p :& _ :& _ :& rcAssoc) -> just (p ^. PersonTId) ==. rcAssoc ?. DriverRCAssociationDriverId)
---     `Esq.leftJoin` table @VehicleRegistrationCertificateT
---       `Esq.on` (\(_ :& _ :& _ :& rcAssoc :& regCert) -> rcAssoc ?. DriverRCAssociationRcId ==. regCert ?. VehicleRegistrationCertificateTId)
---     `Esq.leftJoin` table @IdfyVerificationT
---       `Esq.on` ( \(p :& _ :& _ :& _ :& _ :& regReq) ->
---                    just (p ^. PersonTId) ==. regReq ?. IdfyVerificationDriverId
---                      &&. regReq ?. IdfyVerificationDocType ==. just (val Image.VehicleRegistrationCertificate)
---                )
---     `Esq.innerJoin` table @DriverInformationT
---       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& driverInfo) -> p ^. PersonTId ==. driverInfo ^. DriverInformationDriverId)
---     `Esq.leftJoin` licenseImagesAggTable
---       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& (licImgPersonId, _)) -> just (p ^. PersonTId) ==. licImgPersonId)
---     `Esq.leftJoin` vehicleRegistrationImagesAggTable
---       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& _ :& (vehRegImgPersonId, _)) -> just (p ^. PersonTId) ==. vehRegImgPersonId)
 
 fetchDriverDocsInfo :: (L.MonadFlow m, Log m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
 fetchDriverDocsInfo merchantId' mbDriverIds = do
@@ -135,7 +88,6 @@ fetchDriverDocsInfo merchantId' mbDriverIds = do
   resDom <- case res of
     Right res' -> do
       p <- catMaybes <$> mapM fromTType' (fst' <$> res')
-      -- dl <- mapM (maybe (pure Nothing) (fromTType')) dl''
       dl <- mapM (maybe (pure Nothing) fromTType') (snd' <$> res')
       idfy <- mapM (maybe (pure Nothing) fromTType') (thd' <$> res')
       drc <- mapM (maybe (pure Nothing) fromTType') (fth' <$> res')
@@ -165,19 +117,6 @@ fetchDriverDocsInfo merchantId' mbDriverIds = do
     fft' (_, _, _, _, x, _, _) = x
     six' (_, _, _, _, _, x, _) = x
     sev' (_, _, _, _, _, _, x) = x
-
--- fetchDriverDocsInfo :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
--- fetchDriverDocsInfo merchantId mbDriverIds = fmap (map mkDriverDocsInfo) $
---   Esq.findAll $ do
---     imagesCountLic <- imagesAggTableCTEbyDoctype Image.DriverLicense
---     imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
---     person :& license :& licReq :& assoc :& registration :& regReq :& driverInfo :& licImages :& vehRegImages <-
---       from $ baseDriverDocumentsInfoQuery imagesCountLic imagesCountVehReg
-
---     where_ $
---       maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
---         &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
---     pure (person, license, licReq, assoc, registration, regReq, driverInfo, snd licImages, snd vehRegImages)
 
 mkDriverDocsInfo ::
   ( Person,

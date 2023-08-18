@@ -131,8 +131,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     public MobilityDriverBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
-        // TODO Send proper clientID once it is whitelisted
-        bridgeComponents.getJsCallback().addJsToWebView("window.JBridge.setAnalyticsHeader(JSON.stringify({\"x-client-id\": \"nammayatripartner\"}));");
         registerCallBacks();
     }
 
