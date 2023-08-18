@@ -84,11 +84,11 @@ loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (Global
         Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
     pure unit
-  else if state.props.subView == ManagePlan then do
-    uiPlans <- Remote.getUiPlans ""
-    case uiPlans of
-      Right resp -> doAff do liftEffect $ push $ loadAlternatePlans resp
-      Left err -> doAff do liftEffect $ push $ errorAction err
+  -- else if state.props.subView == ManagePlan then do -- TODO:: Refactor this function for better error handling
+  --   uiPlans <- Remote.getUiPlans ""
+  --   case uiPlans of
+  --     Right resp -> doAff do liftEffect $ push $ loadAlternatePlans resp
+  --     Left err -> doAff do liftEffect $ push $ errorAction err
   else pure unit
 
 paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
