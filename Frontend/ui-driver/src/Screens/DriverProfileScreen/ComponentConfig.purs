@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -43,14 +43,14 @@ import Data.Array as DA
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import PrestoDOM.Types.DomAttributes  (Corners(..))
-import Prelude 
+import Prelude
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
 import Helpers.Utils (getPeriod)
 import MerchantConfig.Utils (getValueFromConfig)
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
-logoutPopUp  state = let 
+logoutPopUp  state = let
   config' = PopUpModal.config
   popUpConfig' = config' {
     primaryText {text = (getString LOGOUT)},
@@ -60,10 +60,10 @@ logoutPopUp  state = let
   }
   in popUpConfig'
 
-genericHeaderConfig :: ST.DriverProfileScreenState -> GenericHeader.Config 
-genericHeaderConfig state = let 
+genericHeaderConfig :: ST.DriverProfileScreenState -> GenericHeader.Config
+genericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
@@ -72,7 +72,7 @@ genericHeaderConfig state = let
       , height = (V 25)
       , width = (V 25)
       , margin = (Margin 16 16 16 16)
-      } 
+      }
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = (getString SETTINGS)
@@ -85,12 +85,12 @@ genericHeaderConfig state = let
   in genericHeaderConfig'
 
 primaryEditTextConfig :: ST.DriverProfileScreenState -> PrimaryEditText.Config
-primaryEditTextConfig state = let 
+primaryEditTextConfig state = let
   config = PrimaryEditText.config
   primaryEditTextConfig' = config
     { editText
       { singleLine = true
-        , pattern = case state.props.detailsUpdationType of 
+        , pattern = case state.props.detailsUpdationType of
                       Just ST.VEHICLE_AGE -> Just "[0-9]*,2"
                       Just ST.VEHICLE_NAME -> Just "[a-zA-Z0-9]*,30"
                       _ ->  Just "[a-zA-Z0-9]*,30"
@@ -102,7 +102,7 @@ primaryEditTextConfig state = let
     , stroke = ("1,"<> Color.blue800)
     , id = (EHC.getNewIDWithTag "UpdateDetailsEditText")
     , topLabel
-      { text =  case state.props.detailsUpdationType of 
+      { text =  case state.props.detailsUpdationType of
                   Just ST.VEHICLE_AGE -> (getString HOW_OLD_IS_YOUR_VEHICLE)
                   Just ST.VEHICLE_NAME -> (getString ENTER_NAME_OF_VEHICLE)
                   _ -> ""
@@ -111,10 +111,10 @@ primaryEditTextConfig state = let
     }
   in primaryEditTextConfig'
 
-driverGenericHeaderConfig :: ST.DriverProfileScreenState -> GenericHeader.Config 
-driverGenericHeaderConfig state = let 
+driverGenericHeaderConfig :: ST.DriverProfileScreenState -> GenericHeader.Config
+driverGenericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
@@ -122,7 +122,7 @@ driverGenericHeaderConfig state = let
       , width = V 25
       , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
       , margin = Margin 12 12 12 12
-      } 
+      }
     , padding = PaddingVertical 5 5
     , textConfig {
         text = if state.props.showGenderView then getString GENDER else getString ALTERNATE_NUMBER
@@ -132,9 +132,9 @@ driverGenericHeaderConfig state = let
   in genericHeaderConfig'
 
 primaryButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
+primaryButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig
       { text = getString UPDATE
       , color = Color.primaryButtonColor}
@@ -149,9 +149,9 @@ primaryButtonConfig state = let
 
 
 updateButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
-updateButtonConfig state = let 
+updateButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig
       { text = getString UPDATE
       , color = Color.primaryButtonColor}
@@ -164,9 +164,9 @@ updateButtonConfig state = let
       }
   in primaryButtonConfig'
 
-  
+
 alternatePrimaryEditTextConfig :: ST.DriverProfileScreenState -> PrimaryEditText.Config
-alternatePrimaryEditTextConfig state = let 
+alternatePrimaryEditTextConfig state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
       { editText
@@ -178,18 +178,18 @@ alternatePrimaryEditTextConfig state = let
         }
       , showConstantField = true
       , topLabel
-        { 
+        {
 text = ""
         , color = Color.black800
         , visibility = GONE
         }
       , type = "number"
-      , errorLabel 
+      , errorLabel
         { text = if state.props.numberExistError then getString NUMBER_ALREADY_EXIST_ERROR else getString PLEASE_ENTER_A_VALID_10_DIGIT_NUMBER
         , margin = MarginTop 1
         }
-      , constantField { 
-          color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
+      , constantField {
+          color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900
         , padding = PaddingBottom 1
         }
       , showErrorLabel = not state.props.checkAlternateNumber || state.props.numberExistError
@@ -228,7 +228,7 @@ enterOtpState state = let
       config' = InAppKeyboardModalController.config
       inAppModalConfig' = config'{
         modalType = if state.props.otpAttemptsExceeded then ST.NONE else ST.OTP
-      , showResendOtpButton = true 
+      , showResendOtpButton = true
       , otpIncorrect = if state.props.otpAttemptsExceeded then false else state.props.otpIncorrect
       , otpAttemptsExceeded = state.props.otpAttemptsExceeded
       , inputTextConfig {
@@ -294,7 +294,7 @@ activateAndDeactivateRcPopUpConfig push state =
         , optionButtonOrientation = "VERTICAL"
         , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black700}
         , option1 {
-          text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE) 
+          text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE)
         , width = MATCH_PARENT
         , color = Color.yellow900
         , strokeColor = Color.black900
@@ -349,9 +349,9 @@ callDriverPopUpConfig push state =
     popUpConfig'
 
 addRCButtonConfig :: ST.DriverProfileScreenState -> PrimaryButton.Config
-addRCButtonConfig state = let 
+addRCButtonConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig
       { text = (getString ADD_NEW_RC)
       , color = Color.blue900}
@@ -373,12 +373,12 @@ deleteRcPopUpConfig state =
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , optionButtonOrientation = "VERTICAL"
-        , secondaryText { text = (getString CONFIRMATION_FOR_DELETING_RC) <>"- " <> state.data.vehicleRegNumber <> "?" , color = Color.black700}
+        , secondaryText { text = (getString CONFIRMATION_FOR_DELETING_RC) <>"- " <> state.data.rcNumber <> "?" , color = Color.black700}
         , option1 {
           text = (getString YES_DELETE)
         , width = MATCH_PARENT
         , color = Color.white900
-        , strokeColor = Color.red 
+        , strokeColor = Color.red
         , background = Color.red
         }
         , option2 {
@@ -405,12 +405,12 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         ]
       else
         []
-    ) <> 
+    ) <>
     ( [ { mainTxt: if alive.periodType == "new" then "" else (show alive.period) <> " " <> alive.periodType
           , subTxt: "on " <> getValueFromConfig "clientName"
           }
         ]
-    )<> 
+    )<>
     ( if DA.length lang > 0 then
             [ { mainTxt: show (DA.length lang)
               , subTxt: getString LANGUAGES_SPOKEN

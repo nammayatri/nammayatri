@@ -531,7 +531,7 @@ const mlStrings = {
   COLOUR : "നിറം",
   BADGES: "ব্যাজ",
   CANCELLATION_RATE : "റദ്ദാക്കൽ നിരക്ക്",
-  RIDES_CANCELLED : "റദ്ദാക്കിയ റൈഡുകളുടെ എണ്ണം", 
+  RIDES_CANCELLED : "റദ്ദാക്കിയ റൈഡുകളുടെ എണ്ണം",
   EARNINGS_MISSED : "നഷ്‌ടമായ വരുമാനം",
   SUMMARY : "സംഗ്രഹം",
   NAMMA_BONUS  : "നമ്മ ബോണസ്",
@@ -599,5 +599,6 @@ const mlStrings = {
   RC_STATUS : "RC നില",
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "ഉപയോക്താക്കൾ റേറ്റുചെയ്തത്",
-  MONTHS : "മാസങ്ങൾ"
+  MONTHS : "മാസങ്ങൾ",
+  RC_ADDED_SUCCESSFULLY : "രജിസ്ട്രേഷൻ സർട്ടിഫിക്കറ്റ് വിജയകരമായി ചേർത്തു"
 }
