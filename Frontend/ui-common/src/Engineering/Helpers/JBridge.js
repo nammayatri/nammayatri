@@ -920,6 +920,24 @@ export const getCurrentPosition = function (cb) {
   };
 };
 
+export const getCurrentPositionWithTimeout = function (cb){
+    return function (action){
+      return function (delay){
+        return function () {
+          var callbackFallback = function (){
+            cb(action("0.0")("0.0"))();
+          };
+          var timer = setTimeout(callbackFallback, delay);
+          var callback = callbackMapper.map(function (lat, lng) {
+            clearTimeout(timer);
+            cb(action(lat)(lng))();
+          });
+          window.JBridge.getCurrentPosition(callback);
+        }
+      }
+    }
+  }
+
 export const openNavigation = function (slat) {
   return function (slong) {
     return function (dlat) {
@@ -927,7 +945,7 @@ export const openNavigation = function (slat) {
         if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery && window.__OS != "IOS") {
           var query = window.appConfig.navigationAppConfig.query;
           var packageName = window.appConfig.navigationAppConfig.packageName;
-          return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
+          return window.JBridge.openNavigationWithQuery(dlat, dlong, "http://maps.google.com///?daddr=%@,%@d&directionsmode=driving", packageName);
         } else {
           return window.JBridge.openNavigation(slat, slong, dlat, dlong);
         }
