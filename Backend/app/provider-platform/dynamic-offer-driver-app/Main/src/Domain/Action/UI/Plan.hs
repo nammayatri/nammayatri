@@ -15,6 +15,8 @@
 module Domain.Action.UI.Plan where
 
 import Data.OpenApi (ToSchema (..))
+import qualified Data.Text as T
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -281,29 +283,33 @@ createMandateInvoiceAndOrder :: Id SP.Person -> Id DM.Merchant -> Plan -> Flow (
 createMandateInvoiceAndOrder driverId merchantId plan = do
   driverPendingAndDuesFees <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
+  transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  now <- getCurrentTime
   let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverPendingAndDuesFees
   case driverRegisterationFee of
     Just registerFee -> do
       invoice <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
       case invoice of
-        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues) (Just (inv.id, inv.invoiceShortId))
-        Nothing -> createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues
+        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) (Just (inv.id, inv.invoiceShortId))
+        Nothing -> createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues now transporterConfig.mandateValidity
     Nothing -> do
       driverFee <- mkDriverFee
       QDF.create driverFee
-      createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues
+      createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues now transporterConfig.mandateValidity
   where
-    mandateOrder currentDues =
+    mandateOrder currentDues now mandateValidity =
       SPayment.MandateOrder
         { maxAmount = max plan.maxAmount currentDues,
           _type = Payment.REQUIRED,
-          frequency = Payment.ASPRESENTED
+          frequency = Payment.ASPRESENTED,
+          mandateStartDate = T.pack $ show $ utcTimeToPOSIXSeconds now,
+          mandateEndDate = T.pack $ show $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime (fromIntegral (60 * 60 * 24 * 365 * mandateValidity))) now
         }
-    createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues = do
+    createOrderForDriverFee driverPendingAndDuesFees driverFee currentDues now mandateValidity = do
       if not (null driverPendingAndDuesFees)
-        then SPayment.createOrder (driverId, merchantId) (driverFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues) Nothing
+        then SPayment.createOrder (driverId, merchantId) (driverFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues now mandateValidity) Nothing
         else do
-          SPayment.createOrder (driverId, merchantId) [driverFee] (Just $ mandateOrder currentDues) Nothing
+          SPayment.createOrder (driverId, merchantId) [driverFee] (Just $ mandateOrder currentDues now mandateValidity) Nothing
     mkDriverFee = do
       id <- generateGUID
       now <- getCurrentTime

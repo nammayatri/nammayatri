@@ -65,8 +65,8 @@ updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName = do
   updateOneWithKV
     ( [Se.Set BeamM.status status, Se.Set BeamM.updatedAt now]
         <> [Se.Set BeamM.payerVpa payerVpa | isJust payerVpa]
-        <> [Se.Set BeamM.payerVpa payerApp | isJust payerApp]
-        <> [Se.Set BeamM.payerVpa payerAppName | isJust payerAppName]
+        <> [Se.Set BeamM.payerApp payerApp | isJust payerApp]
+        <> [Se.Set BeamM.payerAppName payerAppName | isJust payerAppName]
     )
     [Se.Is BeamM.id (Se.Eq mandateId)]
 
