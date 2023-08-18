@@ -370,7 +370,6 @@ uploadRC state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , padding (Padding 20 30 20 10)
-  , onClick push (const UploadFile)
   , clickable $ not state.props.rcAvailable
   , visibility if state.data.dateOfRegistration /= Nothing then GONE else VISIBLE
   ][  linearLayout
@@ -399,51 +398,58 @@ uploadRC state push =
             ] <> FontStyle.h2 TypoGraphy
             ]
         , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
           , gravity CENTER
-          , background Color.grey700
-          , PP.cornerRadii $ PTD.Corners 4.0 true true false false
-          ][ imageView
-            [ width ( V 328 )
-            , height ( V 166 )
-            , imageWithFallback $ "ny_ic_rc_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rc_demo.png"
-            ]
-          ]
-        , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation HORIZONTAL
-          , stroke ("1," <> Color.borderColorLight) 
-          , PP.cornerRadii $ PTD.Corners 4.0 false false true true
-          , gravity CENTER
-          ][  textView
-              [ width $ V 20
+          , orientation VERTICAL
+          , onClick push (const UploadFile)
+          ][  linearLayout
+              [ width MATCH_PARENT
               , height WRAP_CONTENT
-              ]
-            , textView
-              ([ width MATCH_PARENT
-              , height (V 60)
-              , padding (Padding 0 17 20 0)
-              , color if state.props.rcAvailable then Color.greyTextColor else Color.darkGrey
-              , fontStyle $ FontStyle.semiBold LanguageStyle
-              , text if state.props.rcAvailable then state.props.rc_name else (getString UPLOAD_RC)
-              , maxLines 1
-              , ellipsize true
-              , weight 1.0
-              , cornerRadius 4.0
-              , pattern "[a-z, 0-9, A-Z]"
-              , stroke ("1," <> Color.white900)
-              --, id "111127"
-              ] <> FontStyle.subHeading1 TypoGraphy) 
-            , linearLayout
-              [ height MATCH_PARENT
-              , width WRAP_CONTENT
-              , margin (Margin 0 10 20 10)
-              ][ uploadIcon state push
-                , previewIcon state push
+              , gravity CENTER
+              , background Color.grey700
+              , PP.cornerRadii $ PTD.Corners 4.0 true true false false
+              ][ imageView
+                [ width ( V 328 )
+                , height ( V 166 )
+                , imageWithFallback $ "ny_ic_rc_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rc_demo.png"
                 ]
-             ]
+              ]
+            , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation HORIZONTAL
+              , stroke ("1," <> Color.borderColorLight) 
+              , PP.cornerRadii $ PTD.Corners 4.0 false false true true
+              , gravity CENTER
+              ][  textView
+                  [ width $ V 20
+                  , height WRAP_CONTENT
+                  ]
+                , textView
+                  ([ width MATCH_PARENT
+                  , height (V 60)
+                  , padding (Padding 0 17 20 0)
+                  , color if state.props.rcAvailable then Color.greyTextColor else Color.darkGrey
+                  , fontStyle $ FontStyle.semiBold LanguageStyle
+                  , text if state.props.rcAvailable then state.props.rc_name else (getString UPLOAD_RC)
+                  , maxLines 1
+                  , ellipsize true
+                  , weight 1.0
+                  , cornerRadius 4.0
+                  , pattern "[a-z, 0-9, A-Z]"
+                  , stroke ("1," <> Color.white900)
+                  --, id "111127"
+                  ] <> FontStyle.subHeading1 TypoGraphy) 
+                , linearLayout
+                  [ height MATCH_PARENT
+                  , width WRAP_CONTENT
+                  , margin (Margin 0 10 20 10)
+                  ][ uploadIcon state push
+                    , previewIcon state push
+                    ]
+                ]
+          ]
         , textView $ -- (Error Indication)
           [ width WRAP_CONTENT
           , height WRAP_CONTENT

@@ -435,40 +435,41 @@ waitTimeInfoCardConfig _ = let
 
 
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
-makePaymentState state = {
-  title : getString GREAT_JOB,
-  description : getDescription state,
-  description2 : ( case getValueToLocalStore LANGUAGE_KEY of
-                        "EN_US" -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
-                        "HI_IN" -> "यात्री साथी का उपयोग जारी रखने के लिए, कृपया "<> state.data.paymentState.date <>" के लिए अपना भुगतान पूरा करें"
-                        "KN_IN" -> "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು "<> state.data.paymentState.date <> " ಕ್ಕೆ ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
-                        "TA_IN" -> "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, "<> state.data.paymentState.date <> " க்கு உங்கள் கட்டணத்தைச் செலுத்தவும்"
-                        "BN_IN" -> "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে " <> state.data.paymentState.date <> " -এর জন্য আপনার অর্থপ্রদান সম্পূর্ণ করুন"
-                        _       -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
-                     ),
-  okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
-                        "EN_US" -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
-                        "HI_IN" -> "अभी ₹" <> (show state.data.paymentState.payableAndGST) <>" का भुगतान करें"
-                        "KN_IN" -> "ಈಗ ₹"<> (show state.data.paymentState.payableAndGST)<>" ಪಾವತಿಸಿ"
-                        "TA_IN" -> "இப்போது ₹" <> (show state.data.paymentState.payableAndGST) <> " செலுத்துங்கள்"
-                        "BN_IN" -> "এখন " <> (show state.data.paymentState.payableAndGST) <> " পে করুন"
-                        _       -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
-                     ),
-  cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")
-                          && not state.data.paymentState.laterButtonVisibility) then Nothing else Just $ getString LATER,
-  ridesCount : state.data.paymentState.rideCount,
-  feeItem : [
-    { feeType : MakePaymentModal.TOTAL_COLLECTED,
-      title : getString TOTAL_MONEY_COLLECTED,
-      val : state.data.paymentState.totalMoneyCollected},
-    { feeType : MakePaymentModal.EARNED_OF_THE_DAY,
-      title : getString FARE_EARNED_OF_THE_DAY,
-      val : (state.data.paymentState.totalMoneyCollected - state.data.paymentState.payableAndGST)},
-    { feeType : MakePaymentModal.GST_PAYABLE,
-      title : getString GST_PLUS_PAYABLE,
-      val : state.data.paymentState.payableAndGST}
-  ]
-}
+makePaymentState state = 
+  let payableAndGST = EHC.formatCurrencyWithCommas (show state.data.paymentState.payableAndGST) in {
+    title : getString GREAT_JOB,
+    description : getDescription state,
+    description2 : ( case getValueToLocalStore LANGUAGE_KEY of
+                          "EN_US" -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                          "HI_IN" -> "यात्री साथी का उपयोग जारी रखने के लिए, कृपया "<> state.data.paymentState.date <>" के लिए अपना भुगतान पूरा करें"
+                          "KN_IN" -> "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು "<> state.data.paymentState.date <> " ಕ್ಕೆ ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
+                          "TA_IN" -> "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, "<> state.data.paymentState.date <> " க்கு உங்கள் கட்டணத்தைச் செலுத்தவும்"
+                          "BN_IN" -> "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে " <> state.data.paymentState.date <> " -এর জন্য আপনার অর্থপ্রদান সম্পূর্ণ করুন"
+                          _       -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                      ),
+    okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
+                          "EN_US" -> "Pay ₹" <> payableAndGST <> " now"
+                          "HI_IN" -> "अभी ₹" <> payableAndGST <>" का भुगतान करें"
+                          "KN_IN" -> "ಈಗ ₹"<> payableAndGST <>" ಪಾವತಿಸಿ"
+                          "TA_IN" -> "இப்போது ₹" <> payableAndGST <> " செலுத்துங்கள்"
+                          "BN_IN" -> "এখন " <> payableAndGST <> " পে করুন"
+                          _       -> "Pay ₹" <> payableAndGST <> " now"
+                      ),
+    cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")
+                            && not state.data.paymentState.laterButtonVisibility) then Nothing else Just $ getString LATER,
+    ridesCount : state.data.paymentState.rideCount,
+    feeItem : [
+      { feeType : MakePaymentModal.TOTAL_COLLECTED,
+        title : getString TOTAL_MONEY_COLLECTED,
+        val : state.data.paymentState.totalMoneyCollected},
+      { feeType : MakePaymentModal.EARNED_OF_THE_DAY,
+        title : getString FARE_EARNED_OF_THE_DAY,
+        val : (state.data.paymentState.totalMoneyCollected - state.data.paymentState.payableAndGST)},
+      { feeType : MakePaymentModal.GST_PAYABLE,
+        title : getString GST_PLUS_PAYABLE,
+        val : state.data.paymentState.payableAndGST}
+    ]
+  }
 
 getDescription :: ST.HomeScreenState -> String
 getDescription state =  case getValueToLocalStore LANGUAGE_KEY of

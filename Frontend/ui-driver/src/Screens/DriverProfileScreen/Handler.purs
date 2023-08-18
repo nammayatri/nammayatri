@@ -83,10 +83,10 @@ driverProfileScreen = do
     ActivatingOrDeactivatingRC state -> App.BackT $ App.NoBack <$> pure (GO_TO_ACTIVATE_OR_DEACTIVATE_RC state)
     DeletingRc state -> App.BackT $ App.NoBack <$> pure (GO_TO_DELETE_RC state)
     CallingDriver state -> App.BackT $ App.NoBack <$> pure (GO_TO_CALL_DRIVER state)
-    AddingRC state -> App.BackT $ App.BackPoint <$> pure (ADD_RC state)
+    AddingRC state -> App.BackT $ App.NoBack <$> pure (ADD_RC state)
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
     GoBack -> do
-      modifyScreenState $ DriverProfileScreenStateType (\_ -> DriverProfileScreenData.initData)
+      modifyScreenState $ DriverProfileScreenStateType (\driverDetailsScreen -> DriverProfileScreenData.initData{ data {driverVehicleType = driverDetailsScreen.data.driverVehicleType, capacity = driverDetailsScreen.data.capacity, downgradeOptions = driverDetailsScreen.data.downgradeOptions, vehicleSelected = driverDetailsScreen.data.vehicleSelected}})
       App.BackT $ pure App.GoBack

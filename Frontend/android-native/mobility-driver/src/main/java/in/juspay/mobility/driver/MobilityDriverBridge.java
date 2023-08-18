@@ -511,12 +511,18 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void removeMediaPlayer() {
-        for (MediaPlayerView audioPlayer : audioPlayers) {
-            audioPlayer.resetListeners();
+        try {
+            if (audioPlayers != null) {
+                for (MediaPlayerView audioPlayer : audioPlayers) {
+                    audioPlayer.resetListeners();
+                }
+                bridgeComponents.getContext().getCacheDir().delete();
+                audioPlayers.clear();
+                DefaultMediaPlayerControl.mediaPlayer.reset();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        bridgeComponents.getContext().getCacheDir().delete();
-        audioPlayers.clear();
-        DefaultMediaPlayerControl.mediaPlayer.reset();
     }
 
     @Override

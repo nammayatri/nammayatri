@@ -29,6 +29,6 @@ reportIssueChatScreen = do
     (GlobalState state) <- getState
     act <- lift $ lift $ runScreen $ screen state.reportIssueChatScreen
     case act of
-        GoBack -> App.BackT $ App.NoBack <$> pure (GO_TO_HELP_AND_SUPPORT)
+        GoBack -> App.BackT $ pure App.GoBack
         UploadIssue updatedState -> App.BackT $ App.NoBack <$> (pure $ SUBMIT_ISSUE updatedState)
         CallCustomer updatedState -> App.BackT $ App.NoBack <$> (pure $ CALL_CUSTOMER updatedState)

@@ -479,3 +479,11 @@ function formatDates(date, format) {
   }
   return result;
 }
+
+export function formatCurrencyWithCommas(amount) {
+  amount = parseFloat(amount.replace(/[^0-9.-]+/g, ''));
+  if (isNaN(amount)) {
+    return "";
+  }
+  return amount.toLocaleString('en-IN');
+}

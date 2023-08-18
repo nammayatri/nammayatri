@@ -20,6 +20,7 @@ import PrestoDOM.Properties (background, clickable, color, cornerRadii, cornerRa
 import PrestoDOM.Types.Core (PrestoDOM)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Corners(..))
 import Styles.Colors as Color
+import Engineering.Helpers.Commons as EHC
 
 
 view :: forall w . (Action -> Effect Unit) -> MakePaymentModalState -> PrestoDOM (Effect Unit) w
@@ -116,7 +117,7 @@ feeItem push state item =
       , gravity RIGHT
       , weight 1.0
       , color Color.black800
-      , text $ "₹" <> (show item.val)
+      , text $ "₹" <> EHC.formatCurrencyWithCommas (show item.val)
       ] <> FontStyle.body6 TypoGraphy
   ]
 
