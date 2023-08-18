@@ -99,7 +99,7 @@ type MultipleRideSyncAPI =
     :> Common.MultipleRideSyncAPI
 
 type BookingWithVehicleNumberAndPhoneAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE
     :> Common.BookingWithVehicleNumberAndPhoneAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -217,11 +217,11 @@ currentActiveRide merchantShortId apiTokenInfo vehichleNumber = withFlowHandlerA
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.rides.currentActiveRide) vehichleNumber
 
-bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> ApiTokenInfo -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler APISuccess
+bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> ApiTokenInfo -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler Common.BookingWithVehicleAndPhoneRes
 bookingWithVehicleNumberAndPhone merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.BookingWithVehicleNumberAndPhoneEndpoint apiTokenInfo Nothing (Just req)
-  T.withTransactionStoring transaction $
+  T.withResponseTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.rides.bookingWithVehicleNumberAndPhone) req
 
 ticketRideList :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes

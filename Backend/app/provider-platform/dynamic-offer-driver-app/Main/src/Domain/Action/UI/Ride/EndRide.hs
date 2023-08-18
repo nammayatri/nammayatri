@@ -189,8 +189,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
-          driverLocation <- findDriverLoc booking.providerId driverId >>= fromMaybeM LocationNotFound
-          pure $ getCoordinates driverLocation
+          pure $ getCoordinates booking.toLocation
     CallBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
 
