@@ -57,13 +57,8 @@ view push state =
   , width $ V (screenWidth unit)
   , background Color.transparent
   , orientation VERTICAL
-  ][ linearLayout[
-       height WRAP_CONTENT
-      , width MATCH_PARENT 
-      , gravity RIGHT
-      , padding $ PaddingHorizontal 16 16
-      ][supportButton push state]  
-    , mapOptionsView push state
+  ][  
+     mapOptionsView push state
     , messageNotificationView push state
     , driverInfoViewSpecialZone push state
     , driverInfoView push state
@@ -324,9 +319,11 @@ supportButton push state =
   , orientation VERTICAL
   , gravity CENTER
   , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+  , margin $ Margin 16 0 16 10
   , background Color.white900
   , scrollBarX false
   , margin $ MarginTop 10
+  , cornerRadius 9.0
   ][
  linearLayout
   [ orientation HORIZONTAL
@@ -406,7 +403,6 @@ supportButton push state =
     ]
   ]
   ]
-
 
 locationTrackButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 locationTrackButton push state =
@@ -766,7 +762,6 @@ driverInfoView push state =
               , driverDetailsView push state
               , paymentMethodView push state (getString RIDE_FARE) true
               , supportButton push state
-              , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.data.config.showPickUpandDrop)
               , (if os == "IOS" then scrollView else linearLayout)
                 [ width MATCH_PARENT
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
@@ -1148,7 +1143,7 @@ sourceDistanceView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin $ Margin 16 0 16 16
+  , margin $ Margin 16 6 16 16
   , background Color.white900
   , cornerRadius 9.0
   , padding $ Padding 0 10 0 if (os == "IOS" && state.props.currentStage == RideStarted) then safeMarginBottom else 16
