@@ -71,6 +71,7 @@ data TransporterConfigT f = TransporterConfigT
     aadhaarVerificationRequired :: B.C f Bool,
     enableDashboardSms :: B.C f Bool,
     subscriptionStartTime :: B.C f UTCTime,
+    mandateValidity :: B.C f Int,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -136,6 +137,7 @@ transporterConfigTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
       rcLimit = B.fieldNamed "rc_limit",
+      mandateValidity = B.fieldNamed "mandate_validity",
       automaticRCActivationCutOff = B.fieldNamed "automatic_r_c_activation_cut_off",
       driverAutoPayNotificationTime = B.fieldNamed "driver_auto_pay_notification_time",
       driverAutoPayExecutionTime = B.fieldNamed "driver_auto_pay_execution_time",
