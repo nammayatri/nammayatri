@@ -25,10 +25,8 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Data.Array ((!!), union, drop, filter, elem, length)
-import Data.Array (filter, foldl, any)
+import Data.Array ((!!), union, drop, filter, elem, length, foldl, any)
 import Data.Int (fromString)
-import Data.Lens ((^.))
 import Data.Lens.Getter ((^.))
 import Data.Maybe (fromMaybe, Maybe(..), isJust)
 import Data.String as DS
@@ -36,38 +34,28 @@ import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC)
-import Helpers.Utils (launchAppSettings)
-import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer)
-import JBridge (hideKeyboardOnNavigation)
+import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings)
+import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation)
 import Language.Strings (getString)
 import Language.Types as STR
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude ((>), (-), (+), (<>), (<=), (||), not)
-import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=))
+import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import PrestoDOM.Utils (updateWithCmdAndExit)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..), MenuOptions(..))
 import Screens.DriverProfileScreen.Transformer (getAnalyticsData)
-import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..))
-import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..), EditRc(..))
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..))
 import Screens.Types as ST
 import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
 import Services.API as SA
 import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Services.Backend (dummyVehicleObject)
-import Services.Backend (dummyVehicleObject)
 import Services.Config (getSupportNumber)
-import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 
 instance showAction :: Show Action where
@@ -391,7 +379,6 @@ eval EditNumberText state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
-   pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    continue state
   else

@@ -554,7 +554,7 @@ const hindiStrings = {
   LANGUAGE_UPDATED : "भाषा अद्यतन",
   SINGLE_RC_CANNOT_BE_DELETED : "एकल आरसी को हटाया नहीं जा सकता",
   CANCELLATION_RATE : "रद्दीकरण दर",
-  RIDES_CANCELLED : "रद्द की गई सवारी", 
+  RIDES_CANCELLED : "रद्द की गई सवारी",
   EARNINGS_MISSED : "छूटी हुई कमाई",
   SUMMARY : "सारांश",
   NAMMA_BONUS  : "नम्मा बोनस",
@@ -631,5 +631,6 @@ const hindiStrings = {
   RC_STATUS : "आरसी स्थिति",
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "उपयोगकर्ताओं द्वारा मूल्यांकित",
-  MONTHS : "महीने"
+  MONTHS : "महीने",
+  RC_ADDED_SUCCESSFULLY : "पंजीकरण प्रमाणपत्र सफलतापूर्वक जोड़ा गया"
 }

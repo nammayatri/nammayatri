@@ -601,5 +601,6 @@ const tamilStrings = {
   BOOKING_OPTIONS : "முன்பதிவு விருப்பங்கள்",
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "பயனர்கள் மூலம் மதிப்பிடப்பட்டது",
-  MONTHS : "மாதங்கள்"
+  MONTHS : "மாதங்கள்",
+  RC_ADDED_SUCCESSFULLY : "பதிவுச் சான்றிதழ் வெற்றிகரமாக சேர்க்கப்பட்டது"
 }

@@ -471,15 +471,16 @@ const frenchStrings = {
   TODAY : "আজ",
   AADHAAR_ALREADY_LINKED : "déjà lié",
   OPTIONAL : " (Facultatif)",
-  DOWNLOAD_STATEMENT : "Télécharger la déclaration",
-  SELECT_A_DATE_RANGE : "Sélectionnez une plage de dates pour télécharger le relevé",
-  FEE_PAYMENT_HISTORY : "Historique de paiement des frais",
-  LANGUAGES_SPOKEN : "Langues parlées",
-  VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements",
-  RIDE_TYPE : "Type de trajet",
+  DOWNLOAD_STATEMENT : "Télécharger la déclaration",
+  SELECT_A_DATE_RANGE : "Sélectionnez une plage de dates pour télécharger le relevé",
+  FEE_PAYMENT_HISTORY : "Historique de paiement des frais",
+  LANGUAGES_SPOKEN : "Langues parlées",
+  VIEW_PAYMENT_HISTORY : "Afficher l'historique des paiements",
+  RIDE_TYPE : "Type de trajet",
   PLACE_CALL_REQUEST : "Faire une demande d'appel",
   RC_STATUS : "Statut RC",
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "UTILISATRICES Évalué par",
-  MONTHS : "Mois"
+  MONTHS : "Mois",
+  RC_ADDED_SUCCESSFULLY : "Certificat d'enregistrement ajouté avec succès"
 }

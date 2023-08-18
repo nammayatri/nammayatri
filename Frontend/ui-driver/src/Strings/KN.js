@@ -603,5 +603,6 @@ const kannadaStrings = {
   RC_STATUS : "RC ಸ್ಥಿತಿ",
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "ಬಳಕೆದಾರರು ಇವರಿಂದ ರೇಟ್ ಮಾಡಲಾಗಿದೆ",
-  MONTHS : "ತಿಂಗಳುಗಳು"
+  MONTHS : "ತಿಂಗಳುಗಳು",
+  RC_ADDED_SUCCESSFULLY : "ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸೇರಿಸಲಾಗಿದೆ"
 }
