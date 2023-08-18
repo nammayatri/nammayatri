@@ -81,6 +81,7 @@ foreign import convertUTCtoISC :: String -> String -> String
 foreign import getCurrentTimeStamp :: Unit -> Number
 foreign import getDateFromObj :: Fn1 DateObj String
 foreign import getFormattedDate :: Fn1 DateObj String
+foreign import formatCurrencyWithCommas :: String -> String
 
 os :: String
 os = getOs unit

@@ -37,8 +37,8 @@ addVehicleDetails = do
       App.BackT $ App.NoBack <$> (pure $ if updatedState.props.addRcFromProfile then DRIVER_PROFILE_SCREEN else ONBOARDING_FLOW)
     GoToApplicationSubmitted updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_APPLICATION_SCREEN updatedState)
-    ValidateImageAPICall updatedState -> App.BackT $ App.BackPoint <$> (pure $ VALIDATE_IMAGE_API_CALL updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_APPLICATION_SCREEN updatedState)
+    ValidateImageAPICall updatedState -> App.BackT $ App.NoBack <$> (pure $ VALIDATE_IMAGE_API_CALL updatedState)
     ReferApiCall updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFER_API_CALL updatedState)
     ApplicationSubmittedScreen -> App.BackT $ App.BackPoint <$> (pure $ APPLICATION_STATUS_SCREEN)
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_USER

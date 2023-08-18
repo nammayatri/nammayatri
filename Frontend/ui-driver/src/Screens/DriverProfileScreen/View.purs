@@ -413,7 +413,7 @@ missedOpportunityView state push  =
 missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
 missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> "%"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
   {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-    {key : (getString EARNINGS_MISSED), value : "₹" <>  show analyticsData.missedEarnings , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+    {key : (getString EARNINGS_MISSED), value : "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings) , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push =
@@ -444,16 +444,16 @@ driverAnalyticsView state push =
             , width MATCH_PARENT
             ]
             [
-              infoTileView state {primaryText: "₹ " <> analyticsData.totalEarnings, subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+              infoTileView state {primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
             , linearLayout
               [ height MATCH_PARENT
               , width (V 1)
               , margin (Margin 0 16 0 16)
               , background Color.lightGreyShade
               ][]
-            , infoTileView state {primaryText: "₹ " <> analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+            , infoTileView state {primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
             ]
-          else infoCard state push {key : (getString EARNED_ON_APP), value : "₹" <> analyticsData.totalEarnings , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
+          else infoCard state push {key : (getString EARNED_ON_APP), value : "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings) , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
         ]
       , linearLayout
         [ width MATCH_PARENT

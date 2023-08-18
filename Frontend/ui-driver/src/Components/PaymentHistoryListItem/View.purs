@@ -5,7 +5,7 @@ import Common.Types.App (LazyCheck(..))
 import Common.Types.App (PaymentStatus(..))
 import Components.PaymentHistoryListItem.Controller (Action(..), Config)
 import Effect (Effect)
-import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
+import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth, formatCurrencyWithCommas)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
@@ -69,7 +69,7 @@ view push config =
         , textView
             $ [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text $ "₹" <> show config.charges
+              , text $ "₹" <> formatCurrencyWithCommas (show config.charges)
               , color styleConfig.textColor
               ]
             <> FontStyle.h2 LanguageStyle
@@ -90,7 +90,7 @@ view push config =
         , textView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ " ₹" <> show config.totalEarning
+            , text $ " ₹" <> formatCurrencyWithCommas (show config.totalEarning)
             , color Color.black800
             , textSize FontSize.a_14
             , fontStyle $ FontStyle.semiBold TypoGraphy
@@ -118,9 +118,9 @@ paymentBreakupView config =
     , width MATCH_PARENT
     , orientation VERTICAL
     , visibility if config.isSelected then VISIBLE else GONE
-    ] $ [ breakupView (getString TOTAL_PAYABLE) (" ₹" <> (show config.charges))
+    ] $ [ breakupView (getString TOTAL_PAYABLE) (" ₹" <> formatCurrencyWithCommas (show config.charges))
       , dashDividerView
-    ] <> (map (\item -> breakupView item.description ("₹ " <> (show item.amount))) config.paymentBreakUp)
+    ] <> (map (\item -> breakupView item.description ("₹ " <> formatCurrencyWithCommas (show item.amount))) config.paymentBreakUp)
 
 breakupView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
 breakupView description amount = 
