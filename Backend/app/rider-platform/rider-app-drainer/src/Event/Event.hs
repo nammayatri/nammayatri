@@ -19,6 +19,7 @@ mkDBSyncMetric = do
       QueryExecutionFailure action model -> inc (metrics </> #query_execution_failure_error) action model
       DuplicateEntryCreate model -> inc (metrics </> #duplicate_entry_create) model
       DrainerQueryExecutes action count -> add (metrics </> #drainer_query_executes) count action
+      QueryDrainLatency action latency -> observe (metrics </> #query_drain_latency) latency action
       DrainerStopStatus status -> setGauge (metrics </> #drainer_stop_status) status
 
 collectionDBSyncMetric =
@@ -28,5 +29,6 @@ collectionDBSyncMetric =
     .> query_execution_failure_error
     .> duplicate_entry_create
     .> drainer_query_executes
+    .> query_drain_latency
     .> drainer_stop_status
     .> MNil
