@@ -118,7 +118,7 @@ topTextView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
-        ][  softwareLicenseView
+        ][  softwareLicenseView state
           , termsAndConditionsView state
           , privacyPolicyView state
           ]
@@ -197,8 +197,8 @@ bottomLinksView state =
     ]
   
 --------------------------------------------------- softwareLicenseView -----------------------------------------------------
-softwareLicenseView :: forall w . PrestoDOM (Effect Unit) w
-softwareLicenseView = 
+softwareLicenseView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+softwareLicenseView state = 
   linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL

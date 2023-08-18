@@ -12,6 +12,19 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+module Constants where
 
-module Strings where
+appConfig :: String
+appConfig = "appConfig"
 
+configuration_file :: String
+configuration_file = "v1-configuration"
+
+dotJSA :: String
+dotJSA = ".jsa"
+
+dotJS :: String
+dotJS = ".js"
+
+dotJSON :: String
+dotJSON = ".json"

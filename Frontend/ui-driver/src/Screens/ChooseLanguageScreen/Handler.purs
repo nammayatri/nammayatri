@@ -28,12 +28,13 @@ import Screens.ChooseLanguageScreen.View as ChooseLanguageScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import MerchantConfig.Utils (getValueFromConfig)
+import Constants as Constants
 
 
 chooseLanguage :: FlowBT String ScreenOutput
 chooseLanguage = do
   (GlobalState state) <- getState
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{data{config = config},props{selectedLanguage = getValueFromConfig "defaultLanguage"}}
   case action of
     GoToEnterMobileScreen updateState -> do

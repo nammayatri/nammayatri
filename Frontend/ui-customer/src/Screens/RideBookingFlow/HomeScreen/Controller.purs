@@ -1255,7 +1255,7 @@ eval (IssueReportPopUpAC (CancelRidePopUp.OnGoBack)) state = continue state { da
 eval (IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index)) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
 
 eval (IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
-  let issue = reportIssueOptions!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
+  let issue = (reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
   let reason = (fromMaybe dummyCancelReason issue).description
   exit $ ReportIssue state { data {
     ratingViewState { issueReason = Just reason, issueDescription = reason},

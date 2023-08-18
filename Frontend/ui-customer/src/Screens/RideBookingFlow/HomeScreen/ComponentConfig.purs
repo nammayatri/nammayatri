@@ -369,10 +369,9 @@ reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let
     reportIssueConfig = CancelRidePopUpConfig.config
-    lastIndex = (DA.length reportIssueOptions) - 1
     reportIssueConfig' =
       reportIssueConfig
-        { selectionOptions = reportIssueOptions
+        { selectionOptions = reportIssueOptions state
         , primaryButtonTextConfig
           { firstText = getString GO_BACK_
           , secondText = getString SUBMIT
@@ -1084,8 +1083,8 @@ requestInfoCardConfig _ = let
   }
   in requestInfoCardConfig'
 
-reportIssueOptions :: Array OptionButtonList -- need to modify
-reportIssueOptions =
+reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
+reportIssueOptions state =
   [ { reasonCode: "DRIVER_WAS_NOT_READY_TO_GO"
     , description: getString DRIVER_WAS_NOT_READY_TO_GO
     , textBoxRequired : false
