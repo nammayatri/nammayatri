@@ -39,7 +39,9 @@ import qualified Tools.Payment as Payment
 data MandateOrder = MandateOrder
   { maxAmount :: HighPrecMoney,
     _type :: MandateType,
-    frequency :: MandateFrequency
+    frequency :: MandateFrequency,
+    mandateStartDate :: Text,
+    mandateEndDate :: Text
   }
 
 createOrder ::
@@ -81,7 +83,9 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = d
             customerLastName = driver.lastName,
             createMandate = mbMandateOrder <&> (._type),
             mandateMaxAmount = mbMandateOrder <&> (.maxAmount),
-            mandateFrequency = mbMandateOrder <&> (.frequency)
+            mandateFrequency = mbMandateOrder <&> (.frequency),
+            mandateEndDate = mbMandateOrder <&> (.mandateEndDate),
+            mandateStartDate = mbMandateOrder <&> (.mandateStartDate)
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id

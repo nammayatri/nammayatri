@@ -125,6 +125,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             enableDashboardSms = enableDashboardSms,
             createdAt = createdAt,
             rcLimit = rcLimit,
+            mandateValidity = mandateValidity,
             subscriptionStartTime = subscriptionStartTime,
             automaticRCActivationCutOff = automaticRCActivationCutOff,
             updatedAt = updatedAt
@@ -172,5 +173,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,
+        BeamTC.mandateValidity = mandateValidity,
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff
       }
