@@ -94,7 +94,7 @@ baseAppFlow baseFlow = do
     (GlobalState state) <- getState
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
-    checkDateAndTime 
+    checkDateAndTime
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
@@ -168,11 +168,11 @@ checkDateAndTime = do
         _ <- UI.handleAppUpdatePopUp
         checkDateAndTime
 
-getLatestAndroidVersion :: Merchant -> Int 
-getLatestAndroidVersion merchant = 
-  case merchant of 
+getLatestAndroidVersion :: Merchant -> Int
+getLatestAndroidVersion merchant =
+  case merchant of
     NAMMAYATRI -> 54
-    YATRI -> 48 
+    YATRI -> 48
     YATRISATHI -> 2
     MOBILITY_PM -> 1
     MOBILITY_RS -> 1
@@ -263,11 +263,11 @@ getDriverInfoFlow = do
           Just value -> void $ pure $ setCleverTapUserData "Phone" ("+91" <> value)
           Nothing -> pure unit
 
-      let middleName = case getDriverInfoResp.middleName of 
+      let middleName = case getDriverInfoResp.middleName of
                         Just ""  -> ""
                         Just name -> (" " <> name)
                         Nothing -> ""
-          lastName   = case getDriverInfoResp.lastName of 
+          lastName   = case getDriverInfoResp.lastName of
                         Just "" -> ""
                         Just name -> (" " <> name)
                         Nothing -> ""
@@ -292,7 +292,7 @@ getDriverInfoFlow = do
       case getDriverInfoResp.rating of
         Just value -> void $ pure $ setCleverTapUserData "Rating" (show $ value)
         Nothing -> pure unit
-      
+
       let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
       void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
       setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
@@ -300,11 +300,11 @@ getDriverInfoFlow = do
       case getDriverInfoResp.blocked of
         Just value -> void $ pure $ setCleverTapUserProp "Blocked" (show $ value)
         Nothing -> pure unit
-      
+
       case getDriverInfoResp.mode of
         Just currentMode -> void $ pure $ setCleverTapUserProp "Mode" currentMode
         Nothing -> pure unit
-      
+
       if fromMaybe 0 getDriverInfoResp.numberOfRides > 0 then void $ pure $ setCleverTapUserProp "First ride taken" "true"
         else void $ pure $ setCleverTapUserProp "First ride taken" "false"
 
@@ -599,11 +599,12 @@ addVehicleDetailsflow addRcFromProf = do
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ lift $ lift $ toggleLoader false
+              _ <- pure $ toast $ getString RC_ADDED_SUCCESSFULLY
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
               let profileState = state'.driverProfileScreen
-              if (null profileState.data.rcDataArray) then applicationSubmittedFlow "StatusScreen" 
-              else do 
+              if (null profileState.data.rcDataArray) then applicationSubmittedFlow "StatusScreen"
+              else do
                 modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
                 driverProfileFlow
             Left errorPayload -> do
@@ -635,7 +636,7 @@ addVehicleDetailsflow addRcFromProf = do
           else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
             let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
             modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
-            addVehicleDetailsflow false 
+            addVehicleDetailsflow false
             else do
               _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
               modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data {rcImageID = "IMAGE_NOT_VALIDATED" }}
@@ -643,7 +644,7 @@ addVehicleDetailsflow addRcFromProf = do
 
     LOGOUT_USER -> do
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      deleteValueFromLocalStore REGISTERATION_TOKEN   
+      deleteValueFromLocalStore REGISTERATION_TOKEN
       deleteValueFromLocalStore VERSION_NAME
       deleteValueFromLocalStore BASE_URL
       deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
@@ -817,14 +818,14 @@ driverProfileFlow = do
     GO_TO_BOOKING_OPTIONS_SCREEN state-> do
       modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> bookingOptions{data{vehicleType = state.data.driverVehicleType, vehicleNumber = state.data.vehicleRegNumber, vehicleName = state.data.vehicleModelName, vehicleCapacity = state.data.capacity, downgradeOptions = ((downgradeOptionsConfig state.data.vehicleSelected) <$> state.data.downgradeOptions)}})
       bookingOptionsFlow
-    GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do 
+    GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
       res <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq (not state.data.isRCActive) (state.data.rcNumber))
       case res of
         Right (MakeRcActiveOrInactiveResp response) -> do
           pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)
           modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false,screenType = ST.VEHICLE_DETAILS}})
           driverProfileFlow
-        Left errorPayload -> do 
+        Left errorPayload -> do
           let codeMessage = decodeErrorCode errorPayload.response.errorMessage
           if codeMessage == "RC_ACTIVE_ON_OTHER_ACCOUNT" || codeMessage == "RC_Vehicle_ON_RIDE" then do
             modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = true, screenType = ST.VEHICLE_DETAILS}})
@@ -832,17 +833,17 @@ driverProfileFlow = do
              modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS}})
              pure $ toast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           driverProfileFlow
-    GO_TO_DELETE_RC state -> do 
+    GO_TO_DELETE_RC state -> do
       resp <- lift $ lift $ Remote.deleteRc (Remote.deleteRcReq state.data.rcNumber)
       case resp of
-        Right res-> do 
+        Right res-> do
           pure $ toast $ "RC-"<>state.data.rcNumber<>" "<> (getString REMOVED)
           modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false, screenType = ST.VEHICLE_DETAILS}})
         Left error-> do
           pure $ toast $ decodeErrorMessage error.response.errorMessage
           modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS}})
       driverProfileFlow
-    ADD_RC state -> do 
+    ADD_RC state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       let (GlobalState defaultEpassState) = defaultGlobalState
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
@@ -853,7 +854,7 @@ driverProfileFlow = do
       _ <- Remote.callDriverToDriverBT  state.data.rcNumber
       pure $ toast $ (getString PLEASE_WAIT_WHILE_WE_CONNECT_WITH_DRIVER)
       driverProfileFlow
-      
+
 
     DRIVER_ALTERNATE_CALL_API1 updatedState -> do
       let number =  updatedState.data.driverEditAlternateMobile
@@ -937,7 +938,7 @@ driverProfileFlow = do
       let genderSelected = state.data.driverGender
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
           requiredData = initialData{gender = genderSelected}
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)       
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure $ toast (getString GENDER_UPDATED)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state { data {driverGender = genderSelected}})
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
@@ -1026,7 +1027,7 @@ driverProfileFlow = do
       let genderSelected = state.data.driverGender
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
           requiredData = initialData{gender = genderSelected}
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)       
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure $ toast (getString GENDER_UPDATED)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state { data {driverGender = genderSelected}})
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
@@ -1756,7 +1757,7 @@ homeScreenFlow = do
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
       _ <- pure $ spy "number_of_deviation" (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT)
-      let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) >=3 
+      let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) >=3
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation)-- driver's  lat long during ending ride
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"

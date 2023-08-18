@@ -562,7 +562,7 @@ const bengaliStrings = {
   LANGUAGE_UPDATED : "ভাষা আপডেট করা হয়েছে",
   SINGLE_RC_CANNOT_BE_DELETED : "একক আরসি মুছে ফেলা যাবে না",
 	CANCELLATION_RATE : "বাতিল করার হার",
-  RIDES_CANCELLED : "বাতিল করা রাইডের সংখ্যা", 
+  RIDES_CANCELLED : "বাতিল করা রাইডের সংখ্যা",
   EARNINGS_MISSED : "মিসড আর্নিংস",
   SUMMARY : "সারাংশ",
   NAMMA_BONUS  : "নাম্মা বোনাস",
@@ -639,5 +639,6 @@ const bengaliStrings = {
 	RC_STATUS : "আরসি স্ট্যাটাস",
 	RATED_BY_USERS1 : "",
 	RATED_BY_USERS2 : "ব্যবহারকারী দ্বারা রেট",
-	MONTHS : "মাস"
+	MONTHS : "মাস",
+	RC_ADDED_SUCCESSFULLY : "নিবন্ধন শংসাপত্র সফলভাবে যোগ করা হয়েছে"
 }
