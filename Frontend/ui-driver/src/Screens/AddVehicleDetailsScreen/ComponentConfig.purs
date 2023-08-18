@@ -28,25 +28,25 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Components.ReferralMobileNumber as ReferralMobileNumber
 import MerchantConfig.Utils (getValueFromConfig)
+import Data.String as DS
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     imageUploadCondition = getValueFromConfig "imageUploadOptional" || state.props.isValidState
+    activate = ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
+                (state.data.dateOfRegistration /= Just "") && 
+                state.data.vehicle_registration_number /= "" &&
+                ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number == (getValueFromConfig "RC_VALIDATION_TEXT"))) &&
+                imageUploadCondition)
     primaryButtonConfig' = config 
       { textConfig{ text = (getString NEXT)}
       , width = MATCH_PARENT
       , cornerRadius = 0.0
       , height = (V 60)
       , background = Color.black900 
-      , alpha = if ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
-                    (state.data.dateOfRegistration /= Just "") && 
-                    state.data.vehicle_registration_number /= "" &&
-                     imageUploadCondition)  then 1.0 else 0.8
-      , isClickable = ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
-                        (state.data.dateOfRegistration /= Just "") &&
-                        state.data.vehicle_registration_number /= "" &&
-                        imageUploadCondition)
+      , alpha = if activate then 1.0 else 0.8
+      , isClickable = activate
       , margin = (Margin 0 0 0 0)
       }
   in primaryButtonConfig'

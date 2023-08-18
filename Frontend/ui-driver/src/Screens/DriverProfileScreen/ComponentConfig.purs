@@ -326,7 +326,7 @@ callDriverPopUpConfig push state =
         , backgroundColor = Color.transparent
         , cornerRadius = (Corners 24.0 true true true true)
         , optionButtonOrientation = "VERTICAL"
-        , secondaryText { text = (getString CONNECT_CALL_ANONYMOUSLY), color = Color.black600}
+        , secondaryText { text = (getString CONNECT_CALL_ANONYMOUSLY), color = Color.black700}
         , option1 {
           text = (getString PLACE_CALL_REQUEST)
         , width = MATCH_PARENT

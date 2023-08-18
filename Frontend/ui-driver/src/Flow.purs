@@ -591,7 +591,7 @@ addVehicleDetailsflow addRcFromProf = do
     GO_TO_APPLICATION_SCREEN state -> do
       if (state.data.rcImageID == "IMAGE_NOT_VALIDATED") then do
         modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
-        addVehicleDetailsflow false
+        addVehicleDetailsflow state.props.addRcFromProfile
         else do
           void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
           void $ lift $ lift $ toggleLoader true
@@ -613,10 +613,10 @@ addVehicleDetailsflow addRcFromProf = do
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
                 let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage}}
-                addVehicleDetailsflow false
+                addVehicleDetailsflow state.props.addRcFromProfile
                 else do
                   _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-                  addVehicleDetailsflow false
+                  addVehicleDetailsflow state.props.addRcFromProfile
 
     VALIDATE_IMAGE_API_CALL state -> do
       void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_VALIDATING_THE_IMAGE)
@@ -627,20 +627,20 @@ addVehicleDetailsflow addRcFromProf = do
         void $ lift $ lift $ toggleLoader false
         modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state)
         modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {data { rcImageID = resp.imageId}})
-        addVehicleDetailsflow false
+        addVehicleDetailsflow state.props.addRcFromProfile
        Left errorPayload -> do
         void $ lift $ lift $ toggleLoader false
         if errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_VALIDATION_EXCEED_LIMIT" then do
           modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {props { limitExceedModal = true}})
-          addVehicleDetailsflow false
+          addVehicleDetailsflow state.props.addRcFromProfile
           else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
             let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
             modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
-            addVehicleDetailsflow false
+            addVehicleDetailsflow state.props.addRcFromProfile 
             else do
               _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
               modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data {rcImageID = "IMAGE_NOT_VALIDATED" }}
-              addVehicleDetailsflow false
+              addVehicleDetailsflow state.props.addRcFromProfile
 
     LOGOUT_USER -> do
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
@@ -664,14 +664,16 @@ addVehicleDetailsflow addRcFromProf = do
         Right (ReferDriverResp resp) -> do
           void $ lift $ lift $ toggleLoader false
           modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state{ props{isValid = false, openReferralMobileNumber = false, referralViewstatus = true}})
-          addVehicleDetailsflow false
+          addVehicleDetailsflow state.props.addRcFromProfile
         Left errorPayload -> do
           void $ lift $ lift $ toggleLoader false
           modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state{ props{ isValid = true, openReferralMobileNumber = true, referralViewstatus = false}})
-          addVehicleDetailsflow false
+          addVehicleDetailsflow state.props.addRcFromProfile
     APPLICATION_STATUS_SCREEN -> applicationSubmittedFlow "StatusScreen"
     ONBOARDING_FLOW -> onBoardingFlow
-    DRIVER_PROFILE_SCREEN -> driverProfileFlow
+    DRIVER_PROFILE_SCREEN -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS, openSettings = false}})
+      driverProfileFlow
 
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
@@ -823,17 +825,29 @@ driverProfileFlow = do
       case res of
         Right (MakeRcActiveOrInactiveResp response) -> do
           pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)
-          modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false,screenType = ST.VEHICLE_DETAILS}})
+          modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, alreadyActive = false,screenType = ST.VEHICLE_DETAILS}})
+          refreshDriverProfile
           driverProfileFlow
         Left errorPayload -> do
           let codeMessage = decodeErrorCode errorPayload.response.errorMessage
           if codeMessage == "RC_ACTIVE_ON_OTHER_ACCOUNT" || codeMessage == "RC_Vehicle_ON_RIDE" then do
-            modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = true, screenType = ST.VEHICLE_DETAILS}})
+            modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, alreadyActive = true, screenType = ST.VEHICLE_DETAILS}})
           else do
-             modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS}})
+             modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, screenType = ST.VEHICLE_DETAILS}})
              pure $ toast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+          refreshDriverProfile
           driverProfileFlow
-    GO_TO_DELETE_RC state -> do
+      where 
+          refreshDriverProfile = do 
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+            case getDriverInfoApiResp of
+              Right getDriverInfoResp -> do
+                let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+                let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
+                modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverVehicleType = linkedVehicle.variant, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp)}})
+              Left errorPayload -> do
+                pure unit
+    GO_TO_DELETE_RC state -> do 
       resp <- lift $ lift $ Remote.deleteRc (Remote.deleteRcReq state.data.rcNumber)
       case resp of
         Right res-> do
