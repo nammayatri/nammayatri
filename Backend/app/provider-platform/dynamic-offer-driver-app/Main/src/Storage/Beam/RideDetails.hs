@@ -33,8 +33,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 data RideDetailsT f = RideDetailsT
   { id :: B.C f Text,
     driverName :: B.C f Text,

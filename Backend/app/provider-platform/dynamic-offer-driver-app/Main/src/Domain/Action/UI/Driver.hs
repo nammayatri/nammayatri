@@ -97,8 +97,6 @@ import EulerHS.Prelude hiding (id, state)
 import EulerHS.Types (base64Encode)
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
--- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
-
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -453,15 +451,12 @@ createDriver admin req = do
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId
   metaData <- buildMetaData req.metaData person.id
-  -- Esq.runTransaction $ do
   _ <- QPerson.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails person.id admin.id merchantId
   _ <- QVehicle.create vehicle
-  -- Esq.runTransaction $ QMeta.create metaData
   _ <- QMeta.create metaData
   now <- getCurrentTime
-  -- runInLocationDB $ QDriverLocation.create person.id initLatLong now admin.merchantId
   QDriverLocation.create person.id initLatLong now admin.merchantId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
@@ -548,9 +543,7 @@ getInformation ::
 getInformation (personId, merchantId) = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
-  -- driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
@@ -573,7 +566,6 @@ setActivity (personId, _) isActive mode = do
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
-    -- Esq.runTransaction $
     QDFS.updateStatus personId $
       DMode.getDriverStatus mode isActive
   pure APISuccess.Success
@@ -592,7 +584,6 @@ buildDriverEntityRes (person, driverInfo) = do
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   mediaUrl <- forM person.faceImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
-    -- mediaEntry <- MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
   return $
     DriverEntityRes
@@ -659,13 +650,11 @@ deleteDriver admin driverId = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
   QDriverInformation.deleteById (cast driverId)
-  -- Esq.runTransaction $ do
   QDriverStats.deleteById (cast driverId)
   QR.deleteByPersonId driverId
   QVehicle.deleteById driverId
   QDFS.deleteById driverId
   QPerson.deleteById driverId
-  -- runInLocationDB $ QDriverLocation.deleteById driverId
   QDriverLocation.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
@@ -704,13 +693,11 @@ updateDriver (personId, _) req = do
                    canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi
                   }
 
-  -- Esq.runTransaction $ do
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   _ <- QPerson.updatePersonRec personId updPerson
   _ <- QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
   QDriverInformation.clearDriverInfoCache (cast personId)
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  -- driverStats <- QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
@@ -750,7 +737,6 @@ updateMetaData ::
   m APISuccess
 updateMetaData (personId, _) req = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- Esq.runTransaction $ do QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
   QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
   return Success
 
@@ -873,7 +859,6 @@ getNearbySearchRequests ::
   m GetNearbySearchRequestsRes
 getNearbySearchRequests (driverId, merchantId) = do
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
-  -- nearbyReqs <- QSRD.findByDriver driverId
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantId (cast driverId)
@@ -883,9 +868,7 @@ getNearbySearchRequests (driverId, merchantId) = do
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
       let searchTryId = nearbyReq.searchTryId
       searchTry <- runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-      -- searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-      -- searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
@@ -933,7 +916,6 @@ respondQuote ::
     HasField "coreVersion" r Text,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    -- HasField "searchRequestId" r (Id DST.SearchTry),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -973,7 +955,6 @@ respondQuote (driverId, _) req = do
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
           quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
           quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
-          -- quoteCount <- QDrQt.countAllBySTId searchTry.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
           farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
           let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
@@ -994,7 +975,6 @@ respondQuote (driverId, _) req = do
                 }
           driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
-          -- Esq.runTransaction $ do
           _ <- QDrQt.create driverQuote
           _ <- QSRD.updateDriverResponse sReqFD.id req.response
           QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
@@ -1063,10 +1043,8 @@ respondQuote (driverId, _) req = do
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        -- Esq.runNoTransaction $ do
         _ <- QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-        -- driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
@@ -1077,10 +1055,8 @@ getStats ::
 getStats (driverId, merchantId) date = do
   transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   rides <- runInReplica $ QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
-  -- rides <- QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
-  -- fareParameters <- QFP.findAllIn fareParamId
   return $
     DriverStatsRes
       { totalRidesOfDay = length rides,
@@ -1108,7 +1084,6 @@ driverPhotoUpload :: (Id SP.Person, Id DM.Merchant) -> DriverPhotoUploadReq -> F
 driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
   checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
-  -- person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
   encImage <- L.runIO $ base64Encode <$> BS.readFile image
   imageExtension <- validateContentType
   let req = IF.FaceValidationReq {file = encImage}
@@ -1125,7 +1100,6 @@ driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
     Right _ -> do
       case person.faceImageId of
         Just mediaFileId -> do
-          -- Esq.runTransaction $ do
           QPerson.updateMediaId driverId Nothing
           MFQuery.deleteById mediaFileId
         Nothing -> return ()
@@ -1160,7 +1134,6 @@ createFilePath driverId fileType imageExtension = do
 createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Flow APISuccess
 createMediaEntry driverId Common.AddLinkAsMedia {..} = do
   fileEntity <- mkFile url
-  -- Esq.runTransaction $ do
   MFQuery.create fileEntity
   QPerson.updateMediaId driverId (Just fileEntity.id)
   return Success
@@ -1232,9 +1205,7 @@ validate ::
   m DriverAlternateNumberRes
 validate (personId, _) phoneNumber = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
-  -- altNoAttempt <- QRegister.getAlternateNumberAttempts personId
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
@@ -1283,7 +1254,6 @@ verifyAuth (personId, _) req = do
   Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
     runRequestValidation validateAuthVerifyReq req
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    -- person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     checkSlidingWindowLimit (verifyHitsCountKey personId)
     verified <- Redis.get (makeAlternateNumberVerifiedKey personId) >>= fromMaybeM (InvalidRequest "Verified not found")
     when verified $ throwError $ AuthBlocked "Already verified."
@@ -1302,7 +1272,6 @@ verifyAuth (personId, _) req = do
         mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
     mobileNumberHash <- getDbHash altMobNo
     mbPerson <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumberHash person.merchantId
-    -- Esq.runTransaction $ do
     _ <- QPerson.updateAlternateMobileNumberAndCode driver
     expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
     Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime
@@ -1370,13 +1339,11 @@ remove ::
   m APISuccess
 remove (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driver =
         person
           { SP.unencryptedAlternateMobileNumber = Nothing,
             SP.alternateMobileNumber = Nothing
           }
-  -- Esq.runTransaction $ do
   _ <- QPerson.updateAlternateMobileNumberAndCode driver
   return Success
 
@@ -1393,7 +1360,6 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
-  -- driverFees <- QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
   mapM buildPaymentResp driverFees
   where
     maxLimit = 20

@@ -16,15 +16,8 @@
 module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
--- import Kernel.Storage.Esqueleto as Esq
-
 import qualified Data.Time as T
 import qualified Database.Beam as B
--- import qualified Domain.Types.Ride as Ride
-
--- import qualified Storage.Beam.Booking as BeamB
-
--- import qualified Storage.Beam.Ride as BeamR
 import qualified Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
@@ -43,54 +36,14 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 
--- import Storage.Tabular.Booking
--- import Storage.Tabular.Person
--- import Storage.Tabular.Ride
-
 create :: (L.MonadFlow m, Log m) => Person -> m ()
 create = createWithKV
-
--- findById ::
---   Transactionable m =>
---   Id Person ->
---   m (Maybe Person)
--- findById = Esq.findById
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
--- findByMobileNumberAndMerchantId ::
---   Transactionable m =>
---   Text ->
---   DbHash ->
---   Id Merchant ->
---   m (Maybe Person)
--- findByMobileNumberAndMerchantId countryCode mobileNumberHash merchantId = do
---   Esq.findOne $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonMobileCountryCode ==. val (Just countryCode)
---         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
---         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
---     return person
-
 findByMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-
--- findByEmailAndPassword ::
---   (Transactionable m, EncFlow m r) =>
---   Text ->
---   Text ->
---   m (Maybe Person)
--- findByEmailAndPassword email_ password = do
---   emailDbHash <- getDbHash email_
---   passwordDbHash <- getDbHash password
---   findOne $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonEmailHash ==. val (Just emailDbHash)
---         &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
---     return person
 
 findByEmailAndPassword :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> Text -> m (Maybe Person)
 findByEmailAndPassword email_ password = do
@@ -98,76 +51,16 @@ findByEmailAndPassword email_ password = do
   passwordDbHash <- getDbHash password
   findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash), Se.Is BeamP.passwordHash $ Se.Eq (Just passwordDbHash)]]
 
--- findByEmail ::
---   (Transactionable m, EncFlow m r) =>
---   Text ->
---   m (Maybe Person)
--- findByEmail email_ = do
---   emailDbHash <- getDbHash email_
---   findOne $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonEmailHash ==. val (Just emailDbHash)
---     return person
-
 findByEmail :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> m (Maybe Person)
 findByEmail email_ = do
   emailDbHash <- getDbHash email_
   findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash)]
 
--- findByRoleAndMobileNumberAndMerchantId ::
---   Transactionable m =>
---   Role ->
---   Text ->
---   DbHash ->
---   Id Merchant ->
---   m (Maybe Person)
--- findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash merchantId = do
---   findOne $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonRole ==. val role_
---         &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
---         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
---         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
---     return person
-
 findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
--- findByRoleAndMobileNumberAndMerchantIdWithoutCC :: Transactionable m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
--- findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId = do
---   findOne $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonRole ==. val role_
---         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
---         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
---     return person
-
 findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-
--- updateMultiple :: Id Person -> Person -> SqlDB ()
--- updateMultiple personId person = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonUpdatedAt =. val now,
---         PersonFirstName =. val (person.firstName),
---         PersonMiddleName =. val (person.middleName),
---         PersonLastName =. val (person.lastName),
---         PersonGender =. val (person.gender),
---         PersonDescription =. val (person.description),
---         PersonRole =. val (person.role),
---         PersonIdentifier =. val (person.identifier),
---         PersonRating =. val (person.rating),
---         PersonDeviceToken =. val (person.deviceToken),
---         PersonClientVersion =. val (versionToText <$> person.clientVersion),
---         PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
---       ]
---     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
 updateMultiple (Id personId) person = do
@@ -188,24 +81,6 @@ updateMultiple (Id personId) person = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
--- updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
--- updatePersonVersions person mbBundleVersion mbClientVersion =
---   when
---     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
---     do
---       now <- getCurrentTime
---       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
---           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
---       Esq.update $ \tbl -> do
---         set
---           tbl
---           [ PersonUpdatedAt =. val now,
---             PersonClientVersion =. val mbClientVersionText,
---             PersonBundleVersion =. val mbBundleVersionText
---           ]
---         where_ $
---           tbl ^. PersonTId ==. val (toKey person.id)
-
 updatePersonVersions :: (L.MonadFlow m, MonadTime m, Log m) => Person -> Maybe Version -> Maybe Version -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
@@ -221,17 +96,6 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
--- updateDeviceToken :: Id Person -> Maybe Text -> SqlDB ()
--- updateDeviceToken personId mbDeviceToken = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonUpdatedAt =. val now,
---         PersonDeviceToken =. val mbDeviceToken
---       ]
---     where_ $ tbl ^. PersonId ==. val (getId personId)
-
 updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
 updateDeviceToken (Id personId) mbDeviceToken = do
   now <- getCurrentTime
@@ -240,17 +104,6 @@ updateDeviceToken (Id personId) mbDeviceToken = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
-
--- updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
--- updateWhatsappNotificationEnrollStatus personId enrollStatus = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
---         PersonUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
 updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
@@ -261,17 +114,6 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
--- setIsNewFalse :: Id Person -> SqlDB ()
--- setIsNewFalse personId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonUpdatedAt =. val now,
---         PersonIsNew =. val False
---       ]
---     where_ $ tbl ^. PersonId ==. val (getId personId)
-
 setIsNewFalse :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 setIsNewFalse (Id personId) = do
   now <- getCurrentTime
@@ -280,44 +122,6 @@ setIsNewFalse (Id personId) = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
-
--- updatePersonalInfo ::
---   Id Person ->
---   Maybe Text ->
---   Maybe Text ->
---   Maybe Text ->
---   Maybe Text ->
---   Maybe (EncryptedHashed Text) ->
---   Maybe Text ->
---   Maybe Text ->
---   Maybe Language ->
---   Maybe Gender ->
---   Maybe Version ->
---   Maybe Version ->
---   SqlDB ()
--- updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
---   now <- getCurrentTime
---   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
---   let mbEmailHash = mbEncEmail <&> (.hash)
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       ( [PersonUpdatedAt =. val now]
---           <> updateWhenJust_ (\x -> PersonFirstName =. val (Just x)) mbFirstName
---           <> updateWhenJust_ (\x -> PersonMiddleName =. val (Just x)) mbMiddleName
---           <> updateWhenJust_ (\x -> PersonLastName =. val (Just x)) mbLastName
---           <> updateWhenJust_ (\x -> PersonEmailEncrypted =. val (Just x)) mbEmailEncrypted
---           <> updateWhenJust_ (\x -> PersonEmailHash =. val (Just x)) mbEmailHash
---           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
---           <> updateWhenJust_ (\x -> PersonNotificationToken =. val (Just x)) mbNotificationToken
---           <> updateWhenJust_ (\x -> PersonReferralCode =. val (Just x)) mbReferralCode
---           <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
---           <> updateWhenJust_ (\x -> PersonLanguage =. val (Just x)) mbLanguage
---           <> updateWhenJust_ (\x -> PersonGender =. val x) mbGender
---           <> updateWhenJust_ (\x -> PersonClientVersion =. val (versionToText <$> Just x)) mbCVersion
---           <> updateWhenJust_ (\x -> PersonBundleVersion =. val (versionToText <$> Just x)) mbBVersion
---       )
---     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 updatePersonalInfo ::
   (L.MonadFlow m, MonadTime m, Log m) =>
@@ -356,25 +160,8 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
--- deleteById :: Id Person -> SqlDB ()
--- deleteById personId = do
---   Esq.delete $ do
---     person <- from $ table @PersonT
---     where_ (person ^. PersonId ==. val (getId personId))
-
 deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
-
--- updateHasTakenValidRide :: Id Person -> SqlDB ()
--- updateHasTakenValidRide personId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonHasTakenValidRide =. val True,
---         PersonUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 updateHasTakenValidRide (Id personId) = do
@@ -384,18 +171,6 @@ updateHasTakenValidRide (Id personId) = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
-
--- updateReferralCodeAndReferredAt :: Id Person -> Maybe Text -> SqlDB ()
--- updateReferralCodeAndReferredAt personId referralCode = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonReferredAt =. val (Just now),
---         PersonReferralCode =. val referralCode,
---         PersonUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 updateReferralCodeAndReferredAt :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
 updateReferralCodeAndReferredAt (Id personId) referralCode = do
@@ -407,46 +182,15 @@ updateReferralCodeAndReferredAt (Id personId) referralCode = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
--- findByReferralCode ::
---   (Transactionable m, EncFlow m r) =>
---   Text ->
---   m (Maybe Person)
--- findByReferralCode referralCode = do
---   findOne $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonReferralCode ==. val (Just referralCode)
---     return person
-
 findByReferralCode ::
   (L.MonadFlow m, EncFlow m r) =>
   Text ->
   m (Maybe Person)
 findByReferralCode referralCode = findOneWithKV [Se.Is BeamP.referralCode (Se.Eq (Just referralCode))]
 
--- findBlockedByDeviceToken :: Transactionable m => Maybe Text -> m [Person]
--- findBlockedByDeviceToken deviceToken = do
---   findAll $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonDeviceToken ==. val deviceToken
---         &&. person ^. PersonBlocked ==. val True
---     return person
-
 findBlockedByDeviceToken :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
-
--- updateBlockedState :: Id Person -> Bool -> SqlDB ()
--- updateBlockedState personId isBlocked = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonBlocked =. val isBlocked,
---         PersonUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 updateBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> m ()
 updateBlockedState (Id personId) isBlocked = do
@@ -456,20 +200,6 @@ updateBlockedState (Id personId) isBlocked = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
-
--- updatingEnabledAndBlockedState :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
--- updatingEnabledAndBlockedState personId blockedByRule isBlocked = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       $ [ PersonEnabled =. val (not isBlocked),
---           PersonBlocked =. val isBlocked,
---           PersonBlockedByRuleId =. val (toKey <$> blockedByRule),
---           PersonUpdatedAt =. val now
---         ]
---         <> [PersonBlockedAt =. val (Just now) | isBlocked]
---     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 updatingEnabledAndBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
@@ -483,29 +213,6 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
         <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
-
--- findAllCustomers ::
---   Transactionable m =>
---   Id Merchant ->
---   Int ->
---   Int ->
---   Maybe Bool ->
---   Maybe Bool ->
---   Maybe DbHash ->
---   m [Person]
--- findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
---   Esq.findAll $ do
---     person <- from $ table @PersonT
---     where_ $
---       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
---         &&. person ^. PersonRole ==. val USER
---         &&. maybe (val True) (\enabled -> person ^. PersonEnabled ==. val enabled) mbEnabled
---         &&. maybe (val True) (\blocked -> person ^. PersonBlocked ==. val blocked) mbBlocked
---         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
---     orderBy [asc (person ^. PersonFirstName)]
---     limit $ fromIntegral limitVal
---     offset $ fromIntegral offsetVal
---     pure person
 
 findAllCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
 findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
@@ -523,22 +230,6 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
     (Just limitVal)
     (Just offsetVal)
 
--- countCustomers :: Transactionable m => Id Merchant -> m Int
--- countCustomers merchantId =
---   mkCount <$> do
---     Esq.findAll $ do
---       person <- from $ table @PersonT
---       where_ $
---         person ^. PersonMerchantId ==. val (toKey merchantId)
---           &&. person ^. PersonRole ==. val USER
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
-
--- countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
--- countCustomers merchantId = findAllWithKV [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
-
 countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
 countCustomers (Id merchantId) = do
   dbConf <- getMasterBeamConfig
@@ -551,57 +242,6 @@ countCustomers (Id merchantId) = do
             do
               B.all_ (BeamCommon.person BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
-
--- fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
--- fetchRidesCount personId = do
---   dbConf <- getMasterBeamConfig
---   res <- L.runDB dbConf $
---     L.findRows $
---       B.select $
---           B.aggregate_ (\(booking, _) -> (B.group_ (BeamB.riderId booking), B.as_ @Int B.countAll_)) $
---           B.filter_' (\(_, ride) -> B.sqlBool_ (B.not_ (ride.status `B.in_` (B.val_ <$> [Ride.NEW, Ride.CANCELLED]))))
---             do
---               booking' <- B.all_ (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamB.BookingT BeamR.RideT))
---               ride' <- B.join_' (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamB.BookingT BeamR.RideT)) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
---               pure (booking', ride')
---   person <- findOneWithKV [Se.Is BeamP.id $ Se.Eq (getId personId)]
---   let res' = either (const []) EP.id res
---   maybe (pure Nothing) (\p -> pure (snd <$> find (\r -> (getId p.id) == fst r) res')) person
-
--- ridesCountAggTable :: SqlQuery (From (SqlExpr (Esq.Value PersonTId), SqlExpr (Esq.Value Int)))
--- ridesCountAggTable = with $ do
---   ride :& booking <-
---     from $
---       table @RideT
---         `innerJoin` table @BookingT
---         `Esq.on` ( \(ride :& booking) ->
---                      ride ^. RideBookingId ==. booking ^. BookingTId
---                  )
---   where_ (not_ $ ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
---   groupBy $ booking ^. BookingRiderId
---   pure (booking ^. BookingRiderId, count @Int $ ride ^. RideId)
-
--- fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
--- fetchRidesCount personId = do
---   person <- findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq (getId personId), Se.Is BeamP.role $ Se.Eq USER]]
---   if isNothing person
---     then pure Nothing
---     else do
---       dbConf <- getMasterBeamConfig
---       res <- L.runDB dbConf $
---         L.findRows $
---           B.select $
---             B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
---               B.filter_'
---                 ( \(booking, ride) ->
---                     B.sqlBool_ (B.not_ (ride.status `B.in_` (B.val_ <$> [Ride.NEW, Ride.CANCELLED])))
---                       B.&&?. booking.riderId B.==?. B.val_ (getId personId)
---                 )
---                 do
---                   booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
---                   ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
---                   pure (booking', ride')
---       pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
 
 fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do

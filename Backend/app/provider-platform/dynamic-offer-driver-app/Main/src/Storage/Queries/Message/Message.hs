@@ -37,9 +37,6 @@ createMessage msg = do
 create :: (L.MonadFlow m, Log m) => Message -> m ()
 create = createWithKV
 
--- findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
   message <- findOneWithKV [Se.Is BeamM.id $ Se.Eq messageId]
@@ -86,17 +83,6 @@ findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 
--- updateMessageLikeCount :: Id Message -> Int -> SqlDB ()
--- updateMessageLikeCount messageId value = do
---   Esq.update $ \msg -> do
---     set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
-
--- updateMessageLikeCount :: (L.MonadFlow m, Log m) => Id Message -> Int -> m (MeshResult())
--- updateMessageLikeCount :: messageId value = do
---   messageObject <- findById messageId
---   likeCount <- mapM DTMM.likeCount messageObject
-
--- helper
 updateMessageLikeCount :: (L.MonadFlow m, Log m) => Id Message -> Int -> m ()
 updateMessageLikeCount messageId value = do
   findById messageId >>= \case
@@ -116,9 +102,6 @@ updateMessageViewCount messageId value = do
         [Se.Set BeamM.viewCount $ viewCount + value]
         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
     Nothing -> pure ()
-
--- Esq.update $ \msg -> do
---   set msg [MessageViewCount =. (msg ^. MessageViewCount) +. val value]
 
 instance FromTType' BeamM.Message Message where
   fromTType' BeamM.MessageT {..} = do

@@ -54,6 +54,5 @@ clearCache :: Hedis.HedisFlow m r => Id Merchant -> ServiceName -> m ()
 clearCache merchantId serviceName = do
   Hedis.del (makeMerchantIdAndServiceKey merchantId serviceName)
 
---upsertMerchantServiceConfig :: MerchantServiceConfig -> Esq.SqlDB ()
 upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig

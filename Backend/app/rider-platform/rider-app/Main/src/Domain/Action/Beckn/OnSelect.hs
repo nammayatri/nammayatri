@@ -29,10 +29,6 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
--- import qualified Kernel.Storage.Esqueleto as DB
-
--- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -106,7 +102,6 @@ onSelect OnSelectValidatedReq {..} = do
   logPretty DEBUG "quotes" quotes
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
-  -- DB.runTransaction $ do
   _ <- QQuote.createMany quotes
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
   void $ QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
@@ -222,5 +217,3 @@ validateRequest DOnSelectReq {..} = do
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
       isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
-
--- isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_

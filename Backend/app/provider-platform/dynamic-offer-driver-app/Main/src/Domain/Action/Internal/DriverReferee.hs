@@ -20,7 +20,6 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.RiderDetails as DRD
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
--- import qualified Kernel.Storage.Esqueleto as ESQ
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Error

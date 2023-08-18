@@ -45,11 +45,9 @@ createDriverReferral (driverId, merchantId) isDashboard ReferralLinkReq {..} = d
   when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
   mbLastReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
-  -- mbLastReferralCodeWithDriver <- QRD.findById driverId
   whenJust mbLastReferralCodeWithDriver $ \lastReferralCodeWithDriver ->
     unless (lastReferralCodeWithDriver.referralCode.getId == referralCode) $ throwError (InvalidRequest $ "DriverId: " <> driverId.getId <> " already linked with some referralCode.")
   mbReferralCodeAlreadyLinked <- B.runInReplica $ QRD.findByRefferalCode $ Id referralCode
-  -- mbReferralCodeAlreadyLinked <- QRD.findByRefferalCode $ Id referralCode
   whenJust mbReferralCodeAlreadyLinked $ \referralCodeAlreadyLinked ->
     unless (referralCodeAlreadyLinked.driverId == driverId) $ throwError (InvalidRequest $ "RefferalCode: " <> referralCode <> " already linked with some other account.")
   driverRefferalRecord <- mkDriverRefferalType referralCode

@@ -42,8 +42,6 @@ data Plan = Plan
     isOfferApplicable :: Bool,
     maxCreditLimit :: HighPrecMoney,
     planBaseAmount :: PlanBaseAmount,
-    -- rideCountBasedFeePolicy :: RideCountBasedFeePolicyConfig, -- todo
-    -- distanceBasedFeePolicy :: , -- todo
     freeRideCount :: Int,
     frequency :: Frequency,
     planType :: PlanType

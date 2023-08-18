@@ -27,9 +27,6 @@ import qualified Storage.Beam.RentalSlab as BeamRS
 createRentalSlab :: (L.MonadFlow m, Log m) => RentalSlab -> m ()
 createRentalSlab = createWithKV
 
--- findById' :: (MonadThrow m, Log m, Transactionable m) => Id RentalSlab -> DTypeBuilder m (Maybe RentalSlabT)
--- findById' = Esq.findById'
-
 findById :: (L.MonadFlow m, Log m) => Id RentalSlab -> m (Maybe RentalSlab)
 findById rentalSlabId = findOneWithKV [Se.Is BeamRS.id $ Se.Eq (getId rentalSlabId)]
 

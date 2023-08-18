@@ -7,8 +7,6 @@ import Types.Config
 import Types.DBSync
 import Utils.Redis
 
--- import Prelude
-
 getDBSyncConfig :: Flow (Either Text DBSyncConfig)
 getDBSyncConfig = runExceptT $ do
   retryMs <- ExceptT $ readHashKey C.dbsyncConfigKey "empty-retry-time"

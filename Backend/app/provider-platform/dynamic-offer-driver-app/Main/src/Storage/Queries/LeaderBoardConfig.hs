@@ -25,14 +25,6 @@ import Kernel.Utils.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.LeaderBoardConfig as BeamLBC
 
--- findLeaderBoardConfigbyType :: (Transactionable m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
--- findLeaderBoardConfigbyType leaderBType merchantId = Esq.findOne $ do
---   leaderBoardConfig <- from $ table @LeaderBoardConfigsT
---     leaderBoardConfig ^. LeaderBoardConfigsLeaderBoardType ==. val leaderBType
---       &&. leaderBoardConfig ^. LeaderBoardConfigsMerchantId ==. val (toKey merchantId)
-
---   pure leaderBoardConfig
-
 findLeaderBoardConfigbyType :: (L.MonadFlow m, Log m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
 findLeaderBoardConfigbyType leaderBType (Id merchantId) =
   findOneWithKV

@@ -105,7 +105,6 @@ driverDocumentsInfo merchantShortId = do
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
   drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
-  -- drivers <- QDocStatus.fetchDriverDocsInfo merchant.id Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
   where
     oneMonth :: NominalDiffTime
@@ -180,7 +179,6 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSu
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   driversWithInfo <- B.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
-  -- driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
@@ -219,7 +217,6 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumber <- getDbHash phone
   driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
-  -- driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   driverFee <- findPendingFeesByDriverId (cast driver.id)
   return $ map mkPaymentDueResp (catMaybes [driverFee])
   where
@@ -269,8 +266,6 @@ driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
   Common.mkDriverActivityRes <$> B.runInReplica (CQDriverInfo.countDrivers merchant.id)
-
--- Common.mkDriverActivityRes <$> (CQDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -324,7 +319,6 @@ blockDriverWithReason merchantShortId reqDriverId req = do
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driver <-
     B.runInReplica (QPerson.findById personId)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -358,7 +352,6 @@ blockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- B.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -408,7 +401,6 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -419,7 +411,6 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   CDI.updatePendingPayment False driverFee.driverId
   CDI.updateSubscription True driverId
-  -- Esq.runTransaction $ do
   QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) driverFee.id now
   QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
   fork "sending dashboard sms - collected cash" $ do
@@ -435,7 +426,6 @@ unblockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- Esq.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -492,34 +482,24 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
       B.runInReplica $
         QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-    -- QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
-    --   >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber, Nothing, Nothing) -> do
       B.runInReplica $
         QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
-    -- QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
-    --   >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     (Nothing, Nothing, Just driverLicenseNumber, Nothing) -> do
       dlNumberHash <- getDbHash driverLicenseNumber
       B.runInReplica $
         QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
           >>= fromMaybeM (InvalidRequest "License does not exist.")
-    -- QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
-    --   >>= fromMaybeM (InvalidRequest "License does not exist.")
     (Nothing, Nothing, Nothing, Just rcNumber) -> do
       rcNumberHash <- getDbHash rcNumber
       B.runInReplica $
         QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
           >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
-    -- QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
-    --   >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
   let driverId = driverWithRidesCount.person.id
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
-  -- mbDriverLicense <- QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
-  -- rcAssociationHistory <- QRCAssociation.findAllByDriverId driverId
   buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
 
 buildDriverInfoRes ::
@@ -646,7 +626,6 @@ updatePhoneNumber merchantShortId reqDriverId req = do
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  -- Esq.runTransaction $ do
   _ <- QPerson.updateMobileNumberAndCode updDriver
   _ <- QR.deleteByPersonId personId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
@@ -671,7 +650,6 @@ addVehicle merchantShortId reqDriverId req = do
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
 
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
-  -- Esq.runTransaction $ QPerson.updatePersonRec personId updDriver
   _ <- QPerson.updatePersonRec personId updDriver
 
   void $ try @_ @SomeException (runVerifyRCFlow personId merchant) -- ignore if throws error
@@ -736,7 +714,6 @@ updateDriverName merchantShortId reqDriverId req = do
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- Esq.runInReplica (QPerson.findById personId)
 
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
@@ -761,11 +738,9 @@ unlinkDL merchantShortId driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  -- Esq.runTransaction $ do
   _ <- QDriverLicense.deleteByDriverId personId
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
@@ -780,9 +755,7 @@ unlinkAadhaar merchantShortId driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
 
   _ <- B.runInReplica $ AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
-  -- _ <- AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
-  -- Esq.runTransaction $ do
   AV.deleteByDriverId personId
   CQDriverInfo.updateAadhaarVerifiedState driverId_ False
   unless (transporterConfig.aadhaarVerificationRequired) $ CQDriverInfo.updateEnabledVerifiedState driverId_ False False
@@ -799,7 +772,6 @@ endRCAssociation merchantShortId reqDriverId = do
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
@@ -822,7 +794,6 @@ setRCStatus merchantShortId reqDriverId Common.RCStatusReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {..})
@@ -832,7 +803,6 @@ deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
@@ -843,7 +813,6 @@ clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDr
 clearOnRideStuckDrivers merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
   driverInfos <- B.runInReplica QPerson.getOnRideStuckDriverIds
-  -- driverInfos <- runInReplica QPerson.getOnRideStuckDriverIds
   driverIds <-
     mapM
       ( \driverInf -> do
@@ -885,11 +854,9 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
   driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   res <- AV.findByDriverId driver.id
   case res of
-    -- Just _ -> Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
     Just _ -> AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
     Nothing -> do
       aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True
-      -- Esq.runTransaction $ AV.create aadhaarEntity
       AV.create aadhaarEntity
   CQDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success

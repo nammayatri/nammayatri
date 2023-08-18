@@ -35,7 +35,6 @@ saveFeedbackFormResult :: FeedbackFormReq -> Flow APISuccess
 saveFeedbackFormResult feedbackFormReq = do
   let rideId = feedbackFormReq.rideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   feedbackChipsList <- getFeedbackAnswers feedbackFormReq
   addFeedback feedbackChipsList rideId ride.driverId
   updateFeedbackBadge feedbackChipsList ride.driverId
@@ -54,7 +53,6 @@ addFeedback :: [Text] -> Id DRide.Ride -> Id DP.Person -> Flow ()
 addFeedback feedbackChipsList rideId driverId = do
   unless (null feedbackChipsList) $ do
     newFeedbacks <- generateFeedbackList feedbackChipsList
-    -- Esq.runTransaction $ QFeedback.createMany newFeedbacks
     QFeedback.createMany newFeedbacks
   where
     generateFeedbackList :: MonadFlow m => [Text] -> m [DFeedback.Feedback]
@@ -70,11 +68,9 @@ updateFeedbackBadge feedbackChipsList driverId = do
       case feedbackBadge of
         Just feedbackBadgeItem -> do
           let badgeCount = feedbackBadgeItem.badgeCount + 1
-          -- Esq.runTransaction $ QFeedbackBadge.updateFeedbackBadge feedbackBadgeItem badgeCount
           QFeedbackBadge.updateFeedbackBadge feedbackBadgeItem badgeCount
         Nothing -> do
           newFeedbackBadge <- buildFeedbackBadge driverId badge
-          -- Esq.runTransaction $ QFeedbackBadge.createFeedbackBadge newFeedbackBadge
           QFeedbackBadge.createFeedbackBadge newFeedbackBadge
 
 buildFeedback :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Text -> m DFeedback.Feedback

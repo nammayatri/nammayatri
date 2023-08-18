@@ -37,8 +37,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 instance IsString Centesimal where
   fromString = show
 
@@ -65,9 +63,6 @@ data FareParametersT f = FareParametersT
     govtCharges :: B.C f (Maybe Money)
   }
   deriving (Generic, B.Beamable)
-
--- instance IsString Money where
---   fromString = show
 
 instance B.Table FareParametersT where
   data PrimaryKey FareParametersT f

@@ -35,8 +35,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
--- import Storage.Tabular.Vehicle ()
-
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax :: HasSqlValueSyntax be String => BaseUrl -> be
   sqlValueSyntax = autoSqlValueSyntax

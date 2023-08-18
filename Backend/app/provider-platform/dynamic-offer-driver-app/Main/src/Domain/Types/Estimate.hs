@@ -62,11 +62,7 @@ deriving instance FromJSON (EstimateBreakupD 'Unsafe)
 
 deriving instance FromJSON (EstimateBreakupD 'Safe)
 
--- deriving instance Read (EstimateBreakupD 'Unsafe)
-
 deriving instance Read EstimateBreakup
-
--- deriving instance FromJSON (EstimateBreakup)
 
 deriving instance ToJSON (EstimateBreakupD 'Unsafe)
 

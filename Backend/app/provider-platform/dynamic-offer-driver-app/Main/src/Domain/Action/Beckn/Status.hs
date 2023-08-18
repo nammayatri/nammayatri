@@ -55,8 +55,6 @@ handler transporterId req = do
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   booking <- B.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
   mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
-  -- booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
-  -- mbRide <- QRide.findOneByBookingId booking.id
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
 

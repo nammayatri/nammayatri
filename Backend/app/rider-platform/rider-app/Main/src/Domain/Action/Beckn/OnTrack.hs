@@ -21,7 +21,6 @@ where
 
 import Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
--- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -42,8 +41,6 @@ data ValidatedOnTrackReq = ValidatedOnTrackReq
 
 onTrack :: (CacheFlow m r, EsqDBFlow m r) => ValidatedOnTrackReq -> m ()
 onTrack ValidatedOnTrackReq {..} = void $ QRide.updateTrackingUrl ride.id trackUrl
-
--- DB.runTransaction $ do
 
 validateRequest :: (CacheFlow m r, EsqDBFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
 validateRequest OnTrackReq {..} = do

@@ -31,7 +31,6 @@ mandateMaxAmountIsMissing =
   ECErrorPayload
     { status = "ERROR",
       status_id = Just (-1),
-      --  , error_message = Just $ "Pass mandate_max_amount also to create a mandate order"
       error_message = Just "mandate_max_amount is not passed or is invalid",
       error_code = Just "INVALID_REQUEST"
     }
@@ -286,17 +285,6 @@ ecBadOrigin =
             }
     }
 
---ecForbidden :: ECErrorResponse
---ecForbidden =ECErrorResponse
---  { code = 403
---  , response = A.encodePretty $ ECErrorPayload
---      { status = "Forbidden Resource"
---      , status_id = Nothing
---      , error_message = Just "Authentication is required for fetching order details"
---      , error_code = Just "forbidden_resource"
---      }
---  }
-
 ecAccessDenied :: ECErrorResponse
 ecAccessDenied =
   ECErrorResponse
@@ -326,17 +314,6 @@ ecMandatoryFieldsMissing =
             }
     }
 
---txnNotProcessError :: ECErrorResponse
---txnNotProcessError = ECErrorResponse
---  { code = 400
---  , response = A.encodePretty $ ECErrorPayload
---      { status = "invalid_request_error"
---      , status_id = Nothing
---      , error_message = Just "Transaction is inprocess"
---      , error_code = Just "invalid"
---      }
---  }
-
 badRequest :: ECErrorResponse
 badRequest =
   ECErrorResponse
@@ -350,17 +327,6 @@ badRequest =
               error_code = Just "invalid_request"
             }
     }
-
---merchantIdMissing :: ECErrorResponse
---merchantIdMissing = ECErrorResponse
---  { code = 400
---  , response = A.encodePretty $ ECErrorPayload
---      { status = "invalid_request_error"
---      , status_id = Nothing
---      , error_message = Just "Merchant ID information is missing. Either authenticate or pass merchant_id."
---      , error_code = Just "missing"
---      }
---  }
 
 merchantAccountNull :: ECErrorResponse
 merchantAccountNull =

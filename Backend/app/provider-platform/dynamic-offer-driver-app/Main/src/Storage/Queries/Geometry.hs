@@ -16,13 +16,6 @@
 
 module Storage.Queries.Geometry where
 
--- import Database.Beam.Postgres
--- import qualified Database.Beam.Schema.Tables as B
-
--- import EulerHS.KVConnector.Utils (meshModelTableEntity)
-
--- import Sequelize
-
 import Data.Either
 import qualified Database.Beam as B
 import Domain.Types.Geometry
@@ -35,34 +28,6 @@ import Kernel.Types.Logging
 import Lib.Utils (containsPoint')
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
-
--- data AtlasDB f = AtlasDB
---   { geometry :: f (B.TableEntity BeamG.GeometryT)
---   }
---   deriving (Generic, B.Database be)
-
--- atlasDB :: B.DatabaseSettings be AtlasDB
--- atlasDB =
---   B.defaultDbSettings
---     `B.withDbModification` B.dbModification
---       { geometry = geometryTable
---       }
-
--- geometryTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamG.GeometryT)
--- geometryTable =
---   B.setEntitySchema (Just "atlas_driver_offer_bpp")
---     <> B.setEntityName "geometry"
---     <> B.modifyTableFields BeamG.geometryTMod
-
--- findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
--- findGeometriesContaining gps regions =
---   Esq.findAll $ do
---     geometry <- from $ table @GeometryT
---     where_ $
---       geometry ^. GeometryRegion `in_` valList regions
---         &&. containsPoint (gps.lon, gps.lat) --QExpr (\tbl -> PgCommandSyntax PgCommandTypeQuery (emit $ "st_contains (" <> show gps.lon <> " , " <> show gps.lat <> ")"))
---         -- containsPoint (gps.lon, gps.lat)
---     return geometry
 
 findGeometriesContaining :: forall m. (L.MonadFlow m, Log m) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do

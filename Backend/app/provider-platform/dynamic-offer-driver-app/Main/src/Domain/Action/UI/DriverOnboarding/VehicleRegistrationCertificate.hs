@@ -188,7 +188,6 @@ verifyRC isDashboard mbMerchant (personId, merchantId) req@DriverRCReq {..} mbVa
 
     createRCAssociation driverId rc = do
       driverRCAssoc <- Domain.makeRCAssociation driverId rc.id (convertTextToUTC (Just "2099-12-12"))
-      -- Esq.runNoTransaction $ DAQuery.create driverRCAssoc
       DAQuery.create driverRCAssoc
       when (isNothing multipleRC) $ do
         rcNumber <- decrypt rc.certificateNumber

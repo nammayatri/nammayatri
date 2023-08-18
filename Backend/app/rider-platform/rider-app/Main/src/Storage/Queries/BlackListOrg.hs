@@ -30,13 +30,6 @@ import Kernel.Types.Registry.Subscriber (Subscriber)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BlackListOrg as BeamBLO
 
--- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
--- findBySubscriberId subscriberId = do
---   findOne $ do
---     org <- from $ table @BlackListOrgT
---     where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
---     return org
-
 findBySubscriberId :: (L.MonadFlow m, Log m) => ShortId Subscriber -> m (Maybe BlackListOrg)
 findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
 

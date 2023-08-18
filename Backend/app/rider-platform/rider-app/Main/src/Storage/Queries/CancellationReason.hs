@@ -24,19 +24,6 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
--- findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
--- findAll cancStage =
---   Esq.findAll $ do
---     cancellationReason <- from $ table @CancellationReasonT
---     where_ $
---       cancellationReason ^. CancellationReasonEnabled
---         &&. case cancStage of
---           OnSearch -> cancellationReason ^. CancellationReasonOnSearch
---           OnConfirm -> cancellationReason ^. CancellationReasonOnConfirm
---           OnAssign -> cancellationReason ^. CancellationReasonOnAssign
---     orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
---     return cancellationReason
-
 -- Not querying by Id. In case the table is enabled someday, better to route this through DB
 findAll :: (L.MonadFlow m, Log m) => CancellationStage -> m [CancellationReason]
 findAll cancStage = do

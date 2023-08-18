@@ -96,7 +96,6 @@ generateToken SP.Person {..} = do
   regToken <- createSupportRegToken personId mkId
   -- Clean Old Login Session
   -- FIXME We should also cleanup old token from Redis
-  -- runTransaction $ do
   _ <- RegistrationToken.deleteByPersonId id
   _ <- RegistrationToken.create regToken
   pure $ regToken.token
@@ -106,7 +105,6 @@ logout (personId, _) = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   -- FIXME We should also cleanup old token from Redis
-  -- runTransaction
   _ <- RegistrationToken.deleteByPersonId person.id
   pure $ LogoutRes "Logged out successfully"
 
@@ -137,7 +135,6 @@ createSupportRegToken entityId merchantId = do
 listOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = do
   supportP <- B.runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
   OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
@@ -155,7 +152,6 @@ listOrder personId mRequestId mMobile mlimit moffset = do
             >>= fromMaybeM (PersonDoesNotExist number)
       bookings <-
         B.runInReplica $ QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
-      -- QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
       return $ OrderInfo person bookings
     getByRequestId bookingId merchantId = do
       (booking :: DRB.Booking) <-

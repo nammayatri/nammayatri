@@ -35,16 +35,6 @@ findById (Id driverOfferId) = findOneWithKV [Se.Is BeamDO.id $ Se.Eq driverOffer
 findByBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> m [DriverOffer]
 findByBPPQuoteId bppQuoteId = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
 
--- updateStatus :: Id Estimate -> DriverOfferStatus -> SqlDB ()
--- updateStatus estimateId status = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverOfferStatus =. val status,
---         DriverOfferUpdatedAt =. val now
---       ]
-
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Estimate -> DriverOfferStatus -> m ()
 updateStatus (Id estimateId) status = do
   now <- getCurrentTime

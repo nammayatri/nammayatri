@@ -32,7 +32,6 @@ import qualified Domain.Types.Person as DP
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -50,7 +49,6 @@ updateReferralLinkPassword merchantShortId req = do
   unless (TU.validateAllDigitWithMinLength 5 req.referralLinkPassword) $
     throwError (InvalidRequest "Password should be minimum 5 digits in length")
   merchant <- findMerchantByShortId merchantShortId
-  -- Esq.runTransaction $ do
   _ <- SCT.updateReferralLinkPassword merchant.id req.referralLinkPassword
   SCT.clearCache merchant.id
   logTagInfo "dashboard -> updateReferralLinkPassword : " (show merchant.id)

@@ -92,9 +92,6 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   }
   deriving (Generic, B.Beamable)
 
--- instance IsString Money where
---   fromString = show
-
 instance IsString Domain.DriverSearchRequestStatus where
   fromString = show
 

@@ -32,22 +32,8 @@ import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 create :: (L.MonadFlow m, Log m) => PlaceNameCache -> m ()
 create = createWithKV
 
--- findPlaceByPlaceId :: Transactionable m => Text -> m [PlaceNameCache]
--- findPlaceByPlaceId placeId =
---   Esq.findAll $ do
---     placeNameCache <- from $ table @PlaceNameCacheT
---     where_ $ placeNameCache ^. PlaceNameCachePlaceId ==. val (Just placeId)
---     return placeNameCache
-
 findPlaceByPlaceId :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId = findAllWithKV [Se.Is BeamPNC.placeId $ Se.Eq (Just placeId)]
-
--- findPlaceByGeoHash :: Transactionable m => Text -> m [PlaceNameCache]
--- findPlaceByGeoHash geoHash =
---   Esq.findAll $ do
---     placeNameCache <- from $ table @PlaceNameCacheT
---     where_ $ placeNameCache ^. PlaceNameCacheGeoHash ==. val (Just geoHash)
---     return placeNameCache
 
 findPlaceByGeoHash :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
 findPlaceByGeoHash geoHash = findAllWithKV [Se.Is BeamPNC.geoHash $ Se.Eq (Just geoHash)]

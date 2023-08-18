@@ -30,15 +30,6 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfig as BeamMC
 
--- findAllByMerchantId :: Transactionable m => Id Merchant -> m [DMC.MerchantConfig]
--- findAllByMerchantId merchantId =
---   Esq.findAll $ do
---     config <- from $ table @MerchantConfigT
---     where_ $
---       config ^. MerchantConfigMerchantId ==. val (toKey merchantId)
---         &&. config ^. MerchantConfigEnabled ==. val True
---     return config
-
 findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [DMC.MerchantConfig]
 findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMC.merchantId $ Se.Eq merchantId, Se.Is BeamMC.enabled $ Se.Eq True]]
 

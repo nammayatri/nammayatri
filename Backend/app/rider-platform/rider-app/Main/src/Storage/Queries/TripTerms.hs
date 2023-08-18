@@ -27,9 +27,6 @@ import qualified Storage.Beam.TripTerms as BeamTT
 createTripTerms :: (L.MonadFlow m, Log m) => TripTerms -> m ()
 createTripTerms = createWithKV
 
--- findById' :: (MonadThrow m, Log m, Transactionable m) => Id TripTerms -> DTypeBuilder m (Maybe TripTermsT)
--- findById' = Esq.findById'
-
 findById'' :: (L.MonadFlow m, Log m) => Id TripTerms -> m (Maybe TripTerms)
 findById'' tripTermsId = findOneWithKV [Se.Is BeamTT.id $ Se.Eq (getId tripTermsId)]
 

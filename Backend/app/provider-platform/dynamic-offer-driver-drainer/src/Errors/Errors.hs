@@ -1,7 +1,6 @@
 module Errors.Errors
   ( DatabaseError (DatabaseError),
     DomainTypeParseError (DomainTypeParseError),
-    -- TODO: Remove
     module X,
   )
 where

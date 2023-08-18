@@ -15,7 +15,6 @@
 
 module Storage.Queries.Estimate where
 
--- import Data.Tuple.Extra
 import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
 import qualified EulerHS.Language as L
@@ -26,7 +25,6 @@ import Kernel.Types.Id (Id (Id, getId))
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
--- import Storage.Queries.FullEntityBuilders (buildFullEstimate)
 import qualified Storage.Queries.TripTerms as QTT
 
 createEstimate :: (L.MonadFlow m, Log m) => Estimate -> m ()
@@ -38,85 +36,17 @@ create estimate = do
   _ <- createEstimate estimate
   traverse_ QEB.create estimate.estimateBreakupList
 
--- -- order of creating entites make sense!
--- create :: Estimate -> SqlDB ()
--- create estimate =
---   Esq.withFullEntity estimate $ \(estimateT, estimateBreakupT, mbTripTermsT) -> do
---     traverse_ Esq.create' mbTripTermsT
---     Esq.create' estimateT
---     traverse_ Esq.create' estimateBreakupT
-
--- createMany :: [Estimate] -> SqlDB ()
--- createMany estimates =
---   Esq.withFullEntities estimates $ \list -> do
---     let estimateTs = map fst3 list
---         estimateBreakupT = map snd3 list
---         tripTermsTs = mapMaybe thd3 list
---     Esq.createMany' tripTermsTs
---     Esq.createMany' estimateTs
---     traverse_ Esq.createMany' estimateBreakupT
-
 createMany :: (L.MonadFlow m, Log m) => [Estimate] -> m ()
 createMany = traverse_ create
-
--- fullEstimateTable ::
---   From
---     ( Table EstimateT
---         :& Esq.MbTable TripTermsT
---     )
--- fullEstimateTable =
---   table @EstimateT
---     `leftJoin` table @TripTermsT
---       `Esq.on` ( \(estimate :& mbTripTerms) ->
---                    estimate ^. EstimateTripTermsId ==. mbTripTerms ?. TripTermsTId
---                )
-
--- findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
--- findById estimateId = Esq.buildDType $ do
---   mbFullEstimateT <- Esq.findOne' $ do
---     (estimate :& mbTripTerms) <- from fullEstimateTable
---     where_ $ estimate ^. EstimateTId ==. val (toKey estimateId)
---     pure (estimate, mbTripTerms)
---   mapM buildFullEstimate mbFullEstimateT
 
 findById :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
 
--- findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
--- findAllBySRId searchRequestId = Esq.buildDType $ do
---   fullEstimateTs <- Esq.findAll' $ do
---     (estimate :& mbTripTerms) <- from fullEstimateTable
---     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
---     pure (estimate, mbTripTerms)
---   mapM buildFullEstimate fullEstimateTs
-
 findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Estimate]
 findAllBySRId (Id searchRequestId) = findAllWithKV [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
 
--- findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
--- findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
---   mbFullEstimateT <- Esq.findOne' $ do
---     (estimate :& mbTripTerms) <- from fullEstimateTable
---     where_ $ estimate ^. EstimateBppEstimateId ==. val (getId bppEstimateId_)
---     pure (estimate, mbTripTerms)
---   mapM buildFullEstimate mbFullEstimateT
-
 findByBPPEstimateId :: (L.MonadFlow m, Log m) => Id BPPEstimate -> m (Maybe Estimate)
 findByBPPEstimateId (Id bppEstimateId_) = findOneWithKV [Se.Is BeamE.bppEstimateId $ Se.Eq bppEstimateId_]
-
--- updateStatus ::
---   Id Estimate ->
---   EstimateStatus ->
---   SqlDB ()
--- updateStatus estimateId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ EstimateUpdatedAt =. val now,
---         EstimateStatus =. val status_
---       ]
---     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Estimate -> EstimateStatus -> m ()
 updateStatus (Id estimateId) status_ = do
@@ -127,33 +57,8 @@ updateStatus (Id estimateId) status_ = do
     ]
     [Se.Is BeamE.id (Se.Eq estimateId)]
 
--- getStatus ::
---   (Transactionable m) =>
---   Id Estimate ->
---   m (Maybe EstimateStatus)
--- getStatus estimateId = do
---   findOne $ do
---     estimateT <- from $ table @EstimateT
---     where_ $
---       estimateT ^. EstimateId ==. val (getId estimateId)
---     return $ estimateT ^. EstimateStatus
-
 getStatus :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)
-
--- updateStatusByRequestId ::
---   Id SearchRequest ->
---   EstimateStatus ->
---   SqlDB ()
--- updateStatusByRequestId searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ EstimateUpdatedAt =. val now,
---         EstimateStatus =. val status_
---       ]
---     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
 
 updateStatusByRequestId :: (L.MonadFlow m, MonadTime m, Log m) => Id SearchRequest -> EstimateStatus -> m ()
 updateStatusByRequestId (Id searchId) status_ = do

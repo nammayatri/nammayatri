@@ -157,11 +157,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   mbRide <- runInReplica $ QRide.findActiveByRBId booking.id
-  -- mbRide <- QRide.findActiveByRBId booking.id
   rideList <- runInReplica $ QRide.findAllByRBId booking.id
-  -- rideList <- QRide.findAllByRBId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
-  -- fareBreakups <- QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantId paymentMethodId booking.merchantId

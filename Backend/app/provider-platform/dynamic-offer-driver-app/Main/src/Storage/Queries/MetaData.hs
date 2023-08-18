@@ -25,25 +25,8 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.MetaData as BeamMD
 
--- create :: MetaData -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => MetaData -> m ()
 create = createWithKV
-
--- updateMetaData :: Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> SqlDB ()
--- updateMetaData personId device deviceOS deviceDateTime appPermissions = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ MetaDataDevice =. val device,
---         MetaDataDeviceOS =. val deviceOS,
---         MetaDataDeviceDateTime =. val deviceDateTime,
---         MetaDataAppPermissions =. val appPermissions,
---         MetaDataUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. MetaDataDriverId ==. val
 
 updateMetaData :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> m ()
 updateMetaData personId device deviceOS deviceDateTime appPermissions = do

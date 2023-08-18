@@ -32,7 +32,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.FareParameters as DFare
--- import qualified Domain.Types.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant.TransporterConfig
@@ -60,7 +59,6 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
--- import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -124,7 +122,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   nowUtc <- getCurrentTime
   maxShards <- asks (.maxShards)
   let rideDate = getCurrentDate nowUtc
-  -- Esq.runTransaction $ do
   _ <- QDI.updateOnRide driverId False
   _ <- DLoc.updateOnRide driverId False merchantId
   if driverInfo.active
@@ -299,7 +296,6 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
             QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now
           else -- else Esq.runNoTransaction $ QDF.create driverFee
             QDF.create driverFee
-      -- Nothing -> Esq.runNoTransaction $ QDF.create driverFee
       Nothing -> QDF.create driverFee
 
     isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime

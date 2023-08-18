@@ -20,8 +20,6 @@ module Storage.Queries.Merchant.OnboardingDocumentConfig
     #-}
 where
 
--- import qualified Data.Text as T
-
 import Data.Aeson (fromJSON)
 import qualified Data.Aeson as A
 import qualified Data.List
@@ -40,47 +38,9 @@ import qualified Storage.Beam.Merchant.OnboardingDocumentConfig as BeamODC
 create :: (L.MonadFlow m, Log m) => OnboardingDocumentConfig -> m ()
 create = createWithKV
 
--- findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
--- findAllByMerchantId merchantId =
---   Esq.findAll $ do
---     config <- from $ table @OnboardingDocumentConfigT
---     where_ $
---       config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
---     return config
-
 findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [OnboardingDocumentConfig]
 findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamODC.merchantId $ Se.Eq merchantId]
 
--- update :: OnboardingDocumentConfig -> SqlDB ()
--- update config = do
---   now <- getCurrentTime
---   let supportedClassJson = getConfigJSON config.supportedVehicleClasses
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
---         OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
---         OnboardingDocumentConfigSupportedVehicleClassesJSON =. val supportedClassJson,
---         OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
---         OnboardingDocumentConfigRcNumberPrefix =. val config.rcNumberPrefix,
---         OnboardingDocumentConfigUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
-
--- -- updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m ()
--- updateDeviceToken (Id personId) mbDeviceToken = do
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         updatedMeshConfig
---         [ Se.Set BeamP.deviceToken mbDeviceToken,
---           Se.Set BeamP.updatedAt now
---         ]
---         [Se.Is BeamP.id (Se.Eq personId)]
-
---complete this function after tranformations is done
 update :: (L.MonadFlow m, MonadTime m, Log m) => OnboardingDocumentConfig -> m ()
 update config = do
   let supportedClassJson = BeamODC.getConfigJSON config.supportedVehicleClasses
@@ -98,7 +58,6 @@ update config = do
 instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   fromTType' BeamODC.OnboardingDocumentConfigT {..} = do
     supportedVehicleClasses' <- maybe (throwError $ InternalError "Unable to decode OnboardingDocumentConfigT.supportedVehicleClasses") return $ case documentType of
-      -- Domain.DL -> Domain.DLValidClasses <$> decodeFromText (T.pack (show supportedVehicleClassesJSON))
       Domain.DL -> Domain.DLValidClasses <$> valueToMaybe supportedVehicleClassesJSON
       Domain.RC -> Domain.RCValidClasses . sortOnCapcity <$> valueToVehicleClassMap supportedVehicleClassesJSON
       _ -> Just $ Domain.RCValidClasses []

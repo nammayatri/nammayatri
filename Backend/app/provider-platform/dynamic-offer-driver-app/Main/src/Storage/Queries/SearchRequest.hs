@@ -17,8 +17,6 @@ module Storage.Queries.SearchRequest where
 
 import Domain.Types.SearchRequest as Domain
 import qualified EulerHS.Language as L
--- import Kernel.Storage.Esqueleto as Esq
-
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
