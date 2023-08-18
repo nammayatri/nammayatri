@@ -267,29 +267,6 @@ if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.inclu
 }
 
 function loadConfig() {
-  if (window.appConfig) {
-    return;
-  }
-  const headID = document.getElementsByTagName("head")[0];
-  console.log(headID)
-  const newScript = document.createElement("script");
-  newScript.type = "text/javascript";
-  newScript.id = "ny-customer-configuration";
-  var config = window.JBridge.loadFileInDUI("v1-configuration.jsa");
-  newScript.innerHTML = config == "" ? window.JBridge.loadFileInDUI("v1-configuration.js") : config;
-  headID.appendChild(newScript);
-  try {
-      const merchantConfig = (
-          function(){
-              try {
-                  return JSON.parse(window.getMerchantConfig());
-              } catch(e){
-                  return "{}";
-              }
-          }
-      )();
-      window.appConfig = merchantConfig;
-  } catch(e){
-      console.error("config parse/merge failed", e);
-  }
+  var config = require("./output/Helpers.FileProvider.Utils");
+  config.loadAppConfig("");
 }
