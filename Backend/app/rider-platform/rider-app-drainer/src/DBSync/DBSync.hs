@@ -107,6 +107,10 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
   (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
+  void $
+    if null cSucc
+      then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Create" 0
+      else pureRightExceptT $ traverse_ (publishDrainLatency "Create") cSucc
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) cSucc
 
   void $
@@ -125,6 +129,10 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
 
   (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
+  void $
+    if null uSucc
+      then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Update" 0
+      else pureRightExceptT $ traverse_ (publishDrainLatency "Update") uSucc
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) uSucc
 
   void $
@@ -143,6 +151,10 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
 
   (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
+  void $
+    if null dSucc
+      then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Delete" 0
+      else pureRightExceptT $ traverse_ (publishDrainLatency "Delete") dSucc
   void $ pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) dSucc
 
   if not (null dFail)
