@@ -129,7 +129,6 @@ getActualRoute Common.DriverEdaKafka {..} =
       lon' <- readMaybe lon_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
       let acc' = readMaybe $ fromMaybe "" acc_
       let rideStatus' = readMaybe $ fromMaybe "" rideStatus_
-      logInfo $ "Driver's hearbeat's timestamp received from clickhouse " <> show ts_ -- can be removed after running once in prod
       ts' <- Time.parseTimeM True Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" ts_ & fromMaybeM (InvalidRequest "Couldn't find driver's timestamp.")
       pure $ Common.ActualRoute lat' lon' ts' acc' rideStatus'
     _ -> throwError $ InvalidRequest "Couldn't find driver's location."
