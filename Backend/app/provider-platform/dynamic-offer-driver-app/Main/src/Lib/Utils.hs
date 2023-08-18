@@ -4,13 +4,34 @@
 module Lib.Utils where
 
 -- import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
+
 -- import Data.ByteString.Lazy (fromStrict)
-import Data.Fixed (Centi)
+
 -- import Kernel.External.AadhaarVerification.Types
 
 -- import qualified Data.Serialize as Serialize
 -- import qualified Data.Vector as V
+
+-- import Kernel.External.Encryption
+-- import Kernel.External.Types
+
+-- import Kernel.Storage.Esqueleto.Types
+
+-- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
+-- import qualified Domain.Types.DriverOnboarding.Image as Image
+
+-- import EulerHS.CachedSqlDBQuery (SqlReturning)
+-- import qualified EulerHS.KVConnector.Flow as KV
+-- import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
+-- import qualified EulerHS.Language as L
+-- import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn, OptionEntity)
+-- import qualified Kernel.Beam.Types as KBT
+
+-- import Kernel.Types.Error
+
+import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.Fixed (Centi)
 import Database.Beam
 import qualified Database.Beam as B
 import Database.Beam.Backend hiding (tableName)
@@ -20,29 +41,16 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
--- import Kernel.External.Encryption
--- import Kernel.External.Types
-
--- import Kernel.Storage.Esqueleto.Types
-
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DomainDI
--- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
--- import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.FarePolicy as DomainFP
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DomainODC
 import Domain.Types.Vehicle.Variant (Variant (..))
--- import EulerHS.CachedSqlDBQuery (SqlReturning)
--- import qualified EulerHS.KVConnector.Flow as KV
--- import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
--- import qualified EulerHS.Language as L
--- import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn, OptionEntity)
--- import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
--- import Kernel.Types.Error
 import Kernel.Utils.Common (encodeToText)
 
 -- import Kernel.Utils.Error (throwError)
@@ -305,6 +313,30 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainDI.DriverMode
 
 instance FromBackendRow Postgres DomainDI.DriverMode
 
+fromFieldPoint ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Point
+fromFieldPoint f mbValue = case mbValue of
+  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
+  Just _ -> pure Point
+
+instance FromField Point where
+  fromField = fromFieldPoint
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Point where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Point
+
+instance FromBackendRow Postgres Point
+
+deriving anyclass instance A.FromJSON Point
+
+deriving stock instance Ord Point
+
+deriving anyclass instance A.ToJSON Point
+
 -- instance FromField DomainIdfy.VerificationStatus where
 --   fromField = fromFieldEnum
 
@@ -409,6 +441,9 @@ buildRadiusWithin'' (lat, lon) rad =
 
 (<->.) :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
 (<->.) (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> " <> "ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
+
+byDist :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
+byDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> 'SRID=4326;POINT(" <> show lon <> " " <> show lat <> ")'"))
 
 -- kvTables :: [Text]
 -- kvTables = ["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]

@@ -34,7 +34,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common (Centesimal, maskText)
 import Servant.API
 
-data Driver -- = Person
+type Driver = Person
 
 data Role
   = DRIVER

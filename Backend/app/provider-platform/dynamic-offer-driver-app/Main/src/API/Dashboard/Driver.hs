@@ -54,6 +54,9 @@ type API =
            :<|> Common.SetRCStatusAPI
            :<|> Common.DeleteRCAPI
            :<|> Common.ClearOnRideStuckDriversAPI
+           :<|> Common.GetDriverHomeLocationAPI
+           :<|> Common.UpdateDriverHomeLocationAPI
+           :<|> Common.IncrementDriverGoToCountAPI
        )
 
 -- driver cash collection api ----------------------------------------
@@ -106,6 +109,9 @@ handler merchantId =
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
     :<|> clearOnRideStuckDrivers merchantId
+    :<|> getDriverHomeLocation merchantId
+    :<|> updateDriverHomeLocation merchantId
+    :<|> incrementDriverGoToCount merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
@@ -186,6 +192,15 @@ updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateD
 
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> FlowHandler Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers
+
+getDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.GetHomeLocationsRes
+getDriverHomeLocation merchantShortId = withFlowHandlerAPI . DDriver.getDriverHomeLocation merchantShortId
+
+updateDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> FlowHandler APISuccess
+updateDriverHomeLocation merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverHomeLocation merchantShortId driverId
+
+incrementDriverGoToCount :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+incrementDriverGoToCount merchantShortId = withFlowHandlerAPI . DDriver.incrementDriverGoToCount merchantShortId
 
 setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
 setRCStatus merchantShortId driverId = withFlowHandlerAPI . DDriver.setRCStatus merchantShortId driverId
