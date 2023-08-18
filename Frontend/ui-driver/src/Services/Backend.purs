@@ -356,10 +356,10 @@ getDriverInfoApi payload = do
 --------------------------------- getAllRcDataBT ---------------------------------------------------------------------------------------------------------------------------------
 
 getAllRcDataBT :: GetAllRcDataReq -> FlowBT String GetAllRcDataResp
-getAllRcDataBT payload = do 
+getAllRcDataBT payload = do
     headers <- getHeaders' "" true
     withAPIResultBT ((EP.getAllRcData "")) (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
-    where 
+    where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
@@ -426,7 +426,7 @@ updateDriverInfoBT payload = do
             BackT $ pure GoBack
 
 mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
-mkUpdateDriverInfoReq dummy 
+mkUpdateDriverInfoReq dummy
   = UpdateDriverInfoReq
     { middleName: Nothing
     , firstName: Nothing
@@ -546,14 +546,6 @@ getCorrespondingErrorMessage errorPayload = do
         "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         _ -> decodeErrorMessage errorPayload.response.errorMessage
 
-registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp
-registerDriverRCBT payload = do
-        headers <- getHeaders' "" false
-        withAPIResultBT (EP.registerDriverRC "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
-    where
-    errorHandler (ErrorPayload errorPayload) = do
-        BackT $ pure GoBack
-
 registerDriverRC payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.registerDriverRC "") unwrapResponse $ callAPI headers payload
@@ -575,13 +567,13 @@ deleteRc payload = do
 
 
 deleteRcReq :: String -> DeleteRcReq
-deleteRcReq rcNo = DeleteRcReq 
+deleteRcReq rcNo = DeleteRcReq
     {
         "rcNo" : rcNo
     }
 
 makeRcActiveOrInactiveReq :: Boolean -> String -> MakeRcActiveOrInactiveReq
-makeRcActiveOrInactiveReq isActivate rcNo =  MakeRcActiveOrInactiveReq 
+makeRcActiveOrInactiveReq isActivate rcNo =  MakeRcActiveOrInactiveReq
     {
         "rcNo" : rcNo,
         "isActivate" : isActivate
@@ -949,7 +941,7 @@ paymentOrderStatus orderId = do
     where
         unwrapResponse (x) = x
 
-    
+
 getPaymentHistory :: String -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetPaymentHistoryResp)
 getPaymentHistory from to status = do
       headers <- getHeaders "" true

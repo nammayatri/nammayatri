@@ -552,7 +552,7 @@ const englishStrings = {
   LANGUAGE_UPDATED : "Language Updated",
   SINGLE_RC_CANNOT_BE_DELETED : "Single RC cannot be deleted",
   CANCELLATION_RATE : "Cancellation Rate",
-  RIDES_CANCELLED : "Rides Cancelled", 
+  RIDES_CANCELLED : "Rides Cancelled",
   EARNINGS_MISSED : "Earnings Missed",
   SUMMARY : "Summary",
   NAMMA_BONUS  : "Namma Bonus",
@@ -633,5 +633,6 @@ const englishStrings = {
   RC_STATUS : "Rc Status",
   RATED_BY_USERS1 : "Rated By",
   RATED_BY_USERS2 : "Users",
-  MONTHS : "Months"
+  MONTHS : "Months",
+  RC_ADDED_SUCCESSFULLY : "RC added Successfully"
 }
