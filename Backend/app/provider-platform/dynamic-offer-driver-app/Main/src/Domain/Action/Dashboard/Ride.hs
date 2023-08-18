@@ -31,6 +31,7 @@ import qualified Data.Time as Time
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
@@ -48,7 +49,6 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
 import qualified Kernel.Storage.Clickhouse.Types as CH
-import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -340,12 +340,20 @@ currentActiveRide _ vehicleNumber = do
 
 ---------------------------------------------------------------------
 
-bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> Flow APISuccess
+bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> Flow Common.BookingWithVehicleAndPhoneRes
 bookingWithVehicleNumberAndPhone merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
   phoneNumberHash <- getDbHash req.phoneNumber
   person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
   mblinkedVehicle <- VQuery.findById person.id
+  when req.endRideForVehicle do
+    mbvehicle <- VQuery.findByRegistrationNo req.vehicleNumber
+    whenJust mbvehicle $ \vehicle -> do
+      activeRideId <- runInReplica $ QRide.getActiveByDriverId vehicle.driverId
+      whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
+  when req.endRideForDriver do
+    activeRideId <- runInReplica $ QRide.getActiveByDriverId person.id
+    whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
   now <- getCurrentTime
   case mblinkedVehicle of
     Just vehicle -> do
@@ -353,7 +361,10 @@ bookingWithVehicleNumberAndPhone merchantShortId req = do
         tryLinkinRC person.id merchant.id now
     Nothing -> do
       tryLinkinRC person.id merchant.id now
-  return Success
+  return
+    Common.BookingWithVehicleAndPhoneRes
+      { driverId = person.id.getId
+      }
   where
     tryLinkinRC personId merchantId now = do
       vehicleRC <- RCQuery.findLastVehicleRCWrapper req.vehicleNumber >>= fromMaybeM VehicleIsNotRegistered
@@ -372,3 +383,9 @@ bookingWithVehicleNumberAndPhone merchantShortId req = do
     createRCAssociation driverId rc = do
       driverRCAssoc <- makeRCAssociation driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
+
+endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Flow ()
+endActiveRide rideId merchantId = do
+  let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId}
+  shandle <- EHandler.buildEndRideHandle merchantId
+  void $ EHandler.dashboardEndRide shandle rideId dashboardReq

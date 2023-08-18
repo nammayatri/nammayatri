@@ -405,15 +405,26 @@ type BookingWithVehicleNumberAndPhoneAPI =
   "booking"
     :> "withVehicleNumberAndPhone"
     :> ReqBody '[JSON] BookingWithVehicleAndPhoneReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] BookingWithVehicleAndPhoneRes
 
 data BookingWithVehicleAndPhoneReq = BookingWithVehicleAndPhoneReq
   { vehicleNumber :: Text,
     phoneNumber :: Text,
-    countryCode :: Text
+    countryCode :: Text,
+    endRideForDriver :: Bool,
+    endRideForVehicle :: Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets BookingWithVehicleAndPhoneReq where
+  hideSecrets = identity
+
+newtype BookingWithVehicleAndPhoneRes = BookingWithVehicleAndPhoneRes
+  { driverId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BookingWithVehicleAndPhoneRes where
   hideSecrets = identity
