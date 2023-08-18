@@ -1012,6 +1012,15 @@ getUiPlans dummy = do
     where
         unwrapResponse (x) = x
 
+getUiPlansBT :: String -> FlowBT String UiPlansResp
+getUiPlansBT dummy = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getUiPlans "") (\x → x) errorHandler (lift $ lift $ callAPI headers (UiPlansReq ""))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+            BackT $ pure GoBack
+
 getCurrentPlan :: String -> Flow GlobalState (Either ErrorResponse GetCurrentPlanResp)
 getCurrentPlan driverId = do
     headers <- getHeaders "" false
