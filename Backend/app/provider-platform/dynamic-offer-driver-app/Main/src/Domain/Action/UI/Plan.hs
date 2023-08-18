@@ -240,7 +240,7 @@ planSuspend isDashboard (driverId, _merchantId) = do
   unless (driverInfo.autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateActiveMandateExists driverId driverPlan
-  Redis.whenWithLockRedis (DF.paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
+  Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
     QM.updateStatus mandate.id DM.INACTIVE
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) MANUAL
     CDI.updateAutoPayStatus (Just DI.SUSPENDED) (cast driverId)
@@ -254,7 +254,7 @@ planResume (driverId, _merchantId) = do
   unless (driverInfo.autoPayStatus == Just DI.SUSPENDED) $ throwError InvalidAutoPayStatus
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateInActiveMandateExists driverId driverPlan
-  Redis.whenWithLockRedis (DF.paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
+  Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
     QM.updateStatus mandate.id DM.ACTIVE
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) AUTOPAY
     CDI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)

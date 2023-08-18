@@ -105,8 +105,7 @@ getStatus (personId, merchantId) orderId = do
     DPayment.MandatePaymentStatus {..} -> do
       unless (order.status /= Payment.CHARGED) $ do
         processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
-      processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa payerApp
-      processMandateStatus mandateStatus mandateId
+      processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
     DPayment.PaymentStatus _ -> do
       unless (order.status /= Payment.CHARGED) $ do
         processPayment merchantId (cast order.personId) order.id True
@@ -142,11 +141,11 @@ juspayWebhookHandler merchantShortId authData value = do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               unless (transactionStatus /= Payment.CHARGED) $ do
                 processPayment merchantId (cast order.personId) order.id (shouldSendSuccessNotification mandateStatus)
-              processMandate (cast order.personId) DM.INACTIVE mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa (upi <&> (.payer_app))
-              processMandateStatus mandateStatus mandateId
+              processMandate (cast order.personId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi
               notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus
             Payment.MandateStatusResp {..} -> do
-              processMandateStatus status mandateId
+              order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+              processMandate (cast order.personId) status mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount Nothing Nothing
             Payment.BadStatusResp -> pure ()
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -192,42 +191,26 @@ sendNotificationIfNotSent key actions = do
     Hedis.setExp key True 86400 -- 24 hours
     actions
 
-processMandate :: Id DP.Person -> DM.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Text -> Flow ()
-processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa payerApp = do
-  Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
-    mbExistingMandate <- QM.findById mandateId
-    case mbExistingMandate of
-      Just mandate -> QM.updateStatus mandate.id mandateStatus
-      Nothing -> QM.create =<< mkMandate
-    QDP.updateMandateIdByDriverId driverId mandateId
-  where
-    mkMandate = do
-      now <- getCurrentTime
-      return $
-        DM.Mandate
-          { id = mandateId,
-            status = mandateStatus,
-            createdAt = now,
-            updatedAt = now,
-            payerVpa = payerVpa,
-            payerApp = payerApp,
-            ..
-          }
+processMandate :: Id DP.Person -> Payment.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> Flow ()
+processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails = do
+  let payerApp = upiDetails >>= (.payerApp)
+      payerAppName = upiDetails >>= (.payerAppName)
+  mbExistingMandate <- QM.findById mandateId
+  when (isNothing mbExistingMandate) $ QM.create =<< mkMandate payerApp payerAppName
+  QDP.updateMandateIdByDriverId driverId mandateId
 
-processMandateStatus :: Payment.MandateStatus -> Text -> Flow ()
-processMandateStatus mandateStatus mandateId = do
   when (mandateStatus == Payment.ACTIVE) $ do
-    driverPlan <- QDP.findByMandateId (Id mandateId) >>= fromMaybeM (NoDriverPlanForMandate mandateId)
-    Redis.whenWithLockRedis (paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
-      QM.updateStatus (Id mandateId) DM.ACTIVE
+    driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
+    Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
+      QM.updateMandateDetails mandateId DM.ACTIVE payerVpa payerApp payerAppName
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
       CDI.updateSubscription True (cast driverPlan.driverId)
       CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
-    driverPlan <- QDP.findByMandateId (Id mandateId) >>= fromMaybeM (NoDriverPlanForMandate mandateId)
+    driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
     driver <- B.runInReplica $ QP.findById driverPlan.driverId >>= fromMaybeM (PersonDoesNotExist driverPlan.driverId.getId)
-    Redis.whenWithLockRedis (paymentProcessingLockKey driverPlan.driverId.getId) 60 $ do
-      QM.updateStatus (Id mandateId) DM.INACTIVE
+    Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
+      QM.updateMandateDetails mandateId DM.INACTIVE payerVpa payerApp payerAppName
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
       CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
       when (mandateStatus == Payment.PAUSED) $
@@ -242,3 +225,15 @@ processMandateStatus mandateStatus mandateId = do
       Payment.FAILURE -> Nothing
       Payment.PAUSED -> Just DI.PAUSED_PSP
       Payment.EXPIRED -> Nothing
+    mkMandate payerApp payerAppName = do
+      now <- getCurrentTime
+      return $
+        DM.Mandate
+          { id = mandateId,
+            status = DM.INACTIVE,
+            createdAt = now,
+            updatedAt = now,
+            payerApp,
+            payerAppName,
+            ..
+          }

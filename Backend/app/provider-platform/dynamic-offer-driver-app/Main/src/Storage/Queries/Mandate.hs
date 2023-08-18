@@ -59,6 +59,17 @@ findByStatus mandateId status = findOneWithKV [Se.And [Se.Is BeamM.id $ Se.Eq ma
 --       ]
 --     where_ $ tbl ^. MandateTId ==. val (toKey mandateId)
 
+updateMandateDetails :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Mandate -> MandateStatus -> Maybe Text -> Maybe Text -> Maybe Text -> m ()
+updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamM.status status, Se.Set BeamM.updatedAt now]
+        <> [Se.Set BeamM.payerVpa payerVpa | isJust payerVpa]
+        <> [Se.Set BeamM.payerVpa payerApp | isJust payerApp]
+        <> [Se.Set BeamM.payerVpa payerAppName | isJust payerAppName]
+    )
+    [Se.Is BeamM.id (Se.Eq mandateId)]
+
 updateStatus :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Mandate -> MandateStatus -> m ()
 updateStatus (Id mandateId) status = do
   now <- getCurrentTime
@@ -79,7 +90,8 @@ instance FromTType' BeamM.Mandate Domain.Mandate where
             createdAt = createdAt,
             updatedAt = updatedAt,
             payerVpa = payerVpa,
-            payerApp = payerApp
+            payerApp = payerApp,
+            payerAppName = payerAppName
           }
 
 instance ToTType' BeamM.Mandate Domain.Mandate where
@@ -93,5 +105,6 @@ instance ToTType' BeamM.Mandate Domain.Mandate where
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
         BeamM.payerVpa = payerVpa,
-        BeamM.payerApp = payerApp
+        BeamM.payerApp = payerApp,
+        BeamM.payerAppName = payerAppName
       }
