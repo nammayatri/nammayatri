@@ -31,4 +31,5 @@ data DBSyncMetric
   | QueryExecutionFailure Action ModelName
   | DuplicateEntryCreate ModelName
   | DrainerQueryExecutes Action Word
+  | QueryDrainLatency Action Latency
   | DrainerStopStatus Status
