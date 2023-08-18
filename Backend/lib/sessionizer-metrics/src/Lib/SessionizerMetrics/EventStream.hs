@@ -17,16 +17,19 @@ module Lib.SessionizerMetrics.EventStream where
 import Kernel.Prelude hiding (at, traceId)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Kafka.Internal
+import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 
 triggerEvent ::
   ( EventStreamFlow m r,
-    ToJSON p
+    ToJSON p,
+    Show p
   ) =>
   Event p ->
   m ()
 triggerEvent event = do
   allEventStream <- asks (.eventStreamMap)
+  logDebug $ "Rupak's Log" <> show event
   let streamNames = filter (elem (eventType event) . eventTypes) allEventStream
   logDebug $ "my filtered stream map" <> show streamNames
   forM_ streamNames $ \stream -> do
@@ -34,6 +37,10 @@ triggerEvent event = do
       KAFKA_STREAM -> do
         let KafkaStream matchedConfig = stream.streamConfig
         fork "updating in kafka" $ streamUpdates event matchedConfig
+      PROMETHEUS_STREAM -> do
+        let PrometheusStream matchedConfig = stream.streamConfig
+        eventCounter <- liftIO registerEventRequestCounterMetric
+        fork "updating in prometheus" $ incrementCounter eventCounter matchedConfig
       _ -> logDebug "Default stream"
 
 createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> m (Event p)

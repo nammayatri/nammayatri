@@ -27,14 +27,14 @@ import Prometheus as P
 type HasBAPMetrics m r = HasFlowEnv m r ["bapMetrics" ::: BAPMetricsContainer, "version" ::: DeploymentVersion]
 
 data BAPMetricsContainer = BAPMetricsContainer
-  { searchRequestCounter :: SearchRequestCounterMetric,
+  { eventRequestCounter :: EventCounterMetric,
+    searchRequestCounter :: SearchRequestCounterMetric,
     rideCreatedCounter :: RideCreatedCounterMetric,
-    --eventRequestCounter :: EventCounterMetric,
     searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric
   }
 
--- type EventCounterMetric = P.Vector P.Label3 P.Counter
+type EventCounterMetric = P.Vector P.Label3 P.Counter
 
 type SearchRequestCounterMetric = P.Vector P.Label2 P.Counter
 
@@ -50,11 +50,12 @@ registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
+  eventRequestCounter <- registerEventRequestCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   return $ BAPMetricsContainer {..}
 
--- registerSearchRequestCounterMetric :: IO EventCounterMetric
--- registerSearchRequestCounterMetric = P.register $ P.vector ("event", "merchant_name", "version") $ P.counter $ P.Info "search_request_count" ""
+registerEventRequestCounterMetric :: IO EventCounterMetric
+registerEventRequestCounterMetric = P.register $ P.vector ("event", "merchant_name", "version") $ P.counter $ P.Info "event_count" ""
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
 registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version") $ P.counter $ P.Info "search_request_count" ""

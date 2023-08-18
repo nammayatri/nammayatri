@@ -75,7 +75,11 @@ let sampleLogConfig
     : Text
     = "log-stream"
 
-let eventStreamMappings =
+let samplePrometheusConfig
+    : globalCommon.prometheusCounterConfig
+    = { merchantName = "NAMMA_YATRI", event = "RideCreated" }
+
+let eventStreamMap =
       [ { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
         , streamConfig = globalCommon.streamConfig.KafkaStream sampleKafkaConfig
         , eventTypes =
@@ -96,6 +100,14 @@ let eventStreamMappings =
         , eventTypes =
           [ globalCommon.eventType.RideEnded
           , globalCommon.eventType.RideCancelled
+          ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.PROMETHEUS_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.PrometheusStream samplePrometheusConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideCreated
+          , globalCommon.eventType.SearchRequest
           ]
         }
       ]
@@ -191,5 +203,5 @@ in  { esqDBCfg
     , registryMap
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
-    , eventStreamMap = eventStreamMappings
+    , eventStreamMap
     }

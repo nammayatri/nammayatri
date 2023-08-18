@@ -33,11 +33,17 @@ incrementCounter ::
     MonadIO m,
     Log m
   ) =>
+  P.Vector P.Label3 P.Counter ->
   PrometheusCounterConfig ->
   m ()
-incrementCounter promConfig = do
-  logDebug "Prometheus Increment Counter"
-  let counterName' = promConfig.counterName
-  let label' = promConfig.label
+incrementCounter counterName promConfig = do
+  logDebug " Rupak Prometheus Increment Counter"
   version <- asks (.version)
-  liftIO $ P.withLabel counterName' (label', version.getDeploymentVersion) P.incCounter
+  let event = promConfig.event
+  let merchantName = promConfig.merchantName
+  liftIO $ P.withLabel counterName (event, merchantName, version.getDeploymentVersion) P.incCounter
+
+type EventCounterMetric = P.Vector P.Label3 P.Counter
+
+registerEventRequestCounterMetric :: IO EventCounterMetric
+registerEventRequestCounterMetric = P.register $ P.vector ("event", "merchant_name", "version") $ P.counter $ P.Info "event_count" ""

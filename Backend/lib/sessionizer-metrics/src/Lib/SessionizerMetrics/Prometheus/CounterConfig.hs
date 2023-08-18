@@ -15,12 +15,10 @@
 module Lib.SessionizerMetrics.Prometheus.CounterConfig where
 
 import Kernel.Prelude
--- import Kernel.Utils.Dhall (FromDhall)
-import Prometheus as P
+import Kernel.Utils.Dhall (FromDhall)
 
 data PrometheusCounterConfig = PrometheusCounterConfig
-  { counterName :: P.Vector P.Label2 P.Counter,
-    label :: Text
-    -- event :: Text
+  { merchantName :: Text,
+    event :: Text
   }
-  deriving (Generic)
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
