@@ -78,7 +78,9 @@ createOrder (personId, merchantId) rideId = do
             customerLastName = person.lastName,
             createMandate = Nothing,
             mandateMaxAmount = Nothing,
-            mandateFrequency = Nothing
+            mandateFrequency = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
