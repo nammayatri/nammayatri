@@ -109,7 +109,10 @@ dropDBCommand :: Text -> EL.KVDBStreamEntryID -> Flow ()
 dropDBCommand dbStreamKey entryId = do
   count <- RQ.deleteStreamValue dbStreamKey [entryId]
   case count of
-    Right 1 -> pure ()
+    Right 1 -> do
+      time <- EL.getCurrentDateInMillis
+      let latency = int2Double time - int2Double (fromIntegral id)
+      void $ publishDBSyncMetric Event.QueryDrainLatency Nothing Nothing (Just latency)
     Right n -> do
       void $ publishDBSyncMetric Event.DropDBCommandError
       EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Dropped : " :: Text) <> show n
