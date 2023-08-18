@@ -55,7 +55,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>))
+import Prelude (Unit, bind, discard, identity, pure, unit, void, show, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -69,6 +69,7 @@ import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
+import JBridge (getCurrentPositionWithTimeout)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -302,3 +303,16 @@ getNegotiationUnit :: String -> String
 getNegotiationUnit varient = case varient of
   "AUTO_RICKSHAW" -> "10"
   _ -> "20"
+
+data LatLon = LatLon String String
+
+getCurrentLocation :: Number -> Number -> Number -> Number -> FlowBT String LatLon
+getCurrentLocation currentLat currentLon sourceLat sourceLon = do
+  (LatLon startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon 500 $> nonCanceler)
+  if(startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0") then
+    pure (LatLon startRideCurrentLat startRideCurrentLong)
+  else do 
+    let distanceDiff = (getDistanceBwCordinates currentLat currentLon sourceLat sourceLon)
+        rideLat = show $ if distanceDiff <= 0.10 then  currentLat else sourceLat
+        rideLong = show $ if distanceDiff <= 0.10 then currentLon else sourceLon
+    pure (LatLon rideLat rideLong)
