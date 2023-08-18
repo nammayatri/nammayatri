@@ -44,6 +44,17 @@ updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName = do
     )
     [Se.Is BeamM.id (Se.Eq mandateId)]
 
+updateMandateDetails :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Mandate -> MandateStatus -> Maybe Text -> Maybe Text -> Maybe Text -> m ()
+updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamM.status status, Se.Set BeamM.updatedAt now]
+        <> [Se.Set BeamM.payerVpa payerVpa | isJust payerVpa]
+        <> [Se.Set BeamM.payerApp payerApp | isJust payerApp]
+        <> [Se.Set BeamM.payerAppName payerAppName | isJust payerAppName]
+    )
+    [Se.Is BeamM.id (Se.Eq mandateId)]
+
 updateStatus :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Mandate -> MandateStatus -> m ()
 updateStatus (Id mandateId) status = do
   now <- getCurrentTime
