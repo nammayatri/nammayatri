@@ -60,6 +60,7 @@ import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Engineering.Helpers.Utils (getAppConfig)
+import Constants as Constants
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<))
@@ -244,7 +245,7 @@ forceIOSupdate c_maj c_min c_patch updatedIOSversion=
 currentRideFlow :: Boolean -> FlowBT String Unit
 currentRideFlow rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
   (GlobalState state') <- getState
@@ -518,7 +519,7 @@ enterMobileNumberScreenFlow = do
   liftFlowBT $ hideLoader -- Removed initial choose langauge screen
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   void $ lift $ lift $ toggleLoader false
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {data {config =  config }})
   logField_ <- lift $ lift $ getLogFields
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_enter_mob_num_scn_view"
@@ -589,7 +590,7 @@ welcomeScreenFlow = do
 accountSetUpScreenFlow :: FlowBT String Unit
 accountSetUpScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{config = config}})
   flow <- UI.accountSetUpScreen
   case flow of
@@ -637,7 +638,7 @@ homeScreenFlow = do
   -- TODO: HANDLE LOCATION LIST INITIALLY
   _ <- pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }, data {config = config}})
   flow <- UI.homeScreen
   case flow of
@@ -1461,7 +1462,7 @@ getFinalAmount (RideBookingRes resp) =
 tripDetailsScreenFlow :: TripDetailsGoBackType ->  FlowBT String Unit
 tripDetailsScreenFlow fromMyRides = do
   (GlobalState state) <- getState
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   expiryTime <- pure $ (getExpiryTime state.tripDetailsScreen.data.selectedItem.rideEndTimeUTC isForLostAndFound)
   modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = fromMyRides, canConnectWithDriver = (expiryTime <= 86400)}, data{config = config}}) -- expiryTime < 24hrs or 86400 seconds
   flow <- UI.tripDetailsScreen
@@ -1494,7 +1495,7 @@ tripDetailsScreenFlow fromMyRides = do
 
 invoiceScreenFlow :: FlowBT String Unit
 invoiceScreenFlow = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen{data{config = config}})
   flow <- UI.invoiceScreen
   (GlobalState newState) <- getState
@@ -1515,7 +1516,7 @@ contactUsScreenFlow = do
 
 helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config = config}})
   modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data{config = config}})
   flow <- UI.helpAndSupportScreen
@@ -1540,7 +1541,7 @@ helpAndSupportScreenFlow = do
 
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit
 myRidesScreenFlow fromNavBar = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}, data{config = config}})
   flow <- UI.myRidesScreen
   case flow of
@@ -1577,7 +1578,7 @@ myRidesScreenFlow fromNavBar = do
 
 selectLanguageScreenFlow :: FlowBT String Unit
 selectLanguageScreenFlow = do
-  appConfig <- getAppConfig
+  appConfig <- getAppConfig Constants.appConfig
   logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> selectLanguageScreen{data{config = appConfig}})
   flow <- UI.selectLanguageScreen
@@ -1631,7 +1632,7 @@ emergencyScreenFlow = do
 
 aboutUsScreenFlow :: FlowBT String Unit
 aboutUsScreenFlow = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ AboutUsScreenStateType (\aboutUsScreen -> aboutUsScreen {appConfig = config})
   flow <- UI.aboutUsScreen
   case flow of
@@ -1640,7 +1641,7 @@ aboutUsScreenFlow = do
 permissionScreenFlow :: String -> FlowBT String Unit
 permissionScreenFlow triggertype = do
   _ <- pure $ hideKeyboardOnNavigation true
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen{appConfig = config})
   flow <- UI.permissionScreen triggertype
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
@@ -1663,7 +1664,7 @@ permissionScreenFlow triggertype = do
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{data{config = config}})
   flow <- UI.myProfileScreen
   case flow of
@@ -1712,7 +1713,7 @@ myProfileScreenFlow = do
 
 savedLocationFlow :: FlowBT String Unit
 savedLocationFlow = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreen -> savedLocationScreen{data{config = config}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   flow <- UI.savedLocationScreen
@@ -1784,7 +1785,7 @@ savedLocationFlow = do
 
 addNewAddressScreenFlow ::String -> FlowBT String Unit
 addNewAddressScreenFlow input = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{data{config = config}})
   flow <- UI.addNewAddressScreen
   case flow of
@@ -1969,7 +1970,7 @@ addNewAddressScreenFlow input = do
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
-  config <- getAppConfig
+  config <- getAppConfig Constants.appConfig
   modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { config = config })
   flow <- UI.referralScreen
   case flow of

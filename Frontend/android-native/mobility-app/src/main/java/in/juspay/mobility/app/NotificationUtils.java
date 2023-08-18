@@ -355,17 +355,8 @@ public class NotificationUtils {
         System.out.println("In clean notification before notify");
 
         if (notificationType.equals(ALLOCATION_TYPE)) {
-//                    mBuilder.setTimeoutAfter(20000);
             System.out.println("In clean notification if");
         }
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            Log.e(LOG_TAG, "no notification permission");
-            return;
-        } else {
-            notificationManager.notify(notificationId, mBuilder.build());
-        }
-
-
         if (TRIP_CHANNEL_ID.equals(notificationType)) {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -386,10 +377,10 @@ public class NotificationUtils {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             if (key.equals("USER"))
-                {if (CANCELLED_PRODUCT.equals(notificationType))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
-                else
-                    mFirebaseAnalytics.logEvent("ny_user_ride_reallocation",params);}
+            {if (CANCELLED_PRODUCT.equals(notificationType))
+                mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
+            else
+                mFirebaseAnalytics.logEvent("ny_user_ride_reallocation",params);}
             else
                 mFirebaseAnalytics.logEvent("ride_cancelled", params);
             if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
@@ -419,6 +410,11 @@ public class NotificationUtils {
             for (int i = 0; i < callBack.size(); i++) {
                 callBack.get(i).customerCallBack(notificationType);
             }
+        }
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG, "no notification permission");
+        } else {
+            notificationManager.notify(notificationId, mBuilder.build());
         }
     }
 
