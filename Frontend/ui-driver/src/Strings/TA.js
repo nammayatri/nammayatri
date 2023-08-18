@@ -674,8 +674,8 @@ const tamilStrings = {
   AUTOPAY_IS_NOT_ENABLED_YET : "ஆட்டோ டெபிட் இன்னும் செயல்படவில்லை!",
   ENABLE_AUTOPAY_DESC : "தொந்தரவு இல்லாமல்‌ கட்டணங்களைத் செலுத்த  ஆட்டோ டெபிட்  முறையை இப்போதே இயக்குங்கள்‌!",
   ENABLE_AUTOPAY_NOW : "இப்போது ஆட்டோ டெபிட் செயல்படுத்த",
-  PAYMENT_PENDING_STR : "கட்டணம் நிலுவையில் உள்ளது!",
-  PAYMENT_PENDING_DESC_STR : "புதுப்பிப்பு இருக்கும்போது நாங்கள் உங்களுக்குத் தெரிவிப்போம் அல்லது நீங்கள் மீண்டும் முயற்சி செய்யலாம். பல பற்றுகள் ஏற்பட்டால் நாங்கள் பணத்தைத் திருப்பித் தருவோம்",
+  AUTOPAY_SETUP_PENDING_STR : "தானாகச் செலுத்தும் அமைவு நிலுவையில் உள்ளது!",
+  PAYMENT_PENDING_DESC_STR : "காத்திருங்கள் அல்லது பணம் செலுத்த மீண்டும் முயற்சிக்கவும். கூடுதல் கட்டணம் திருப்பித் தரப்படும்.",
   REFRESH_STR : "புதுப்பிக்க",
   TRANSACTION_DETAILS : "பரிவர்த்தனை விவரங்கள்",
   RIDE_DETAILS : "சவாரி விவரங்கள்",
@@ -721,5 +721,12 @@ const tamilStrings = {
   DAILY_PER_RIDE_PLAN_DESC : "ஒரு நாளைக்கு அதிகபட்சம் ₹35 வரை",
   AUTOPAY_CANCELLED : "தானியங்கு கட்டணம் ரத்து செய்யப்பட்டது",
   NO : "இல்லை",
-  YES_CANCEL : "ஆம், ரத்துசெய்"
+  YES_CANCEL : "ஆம், ரத்துசெய்",
+	OFFERS_NOT_APPLICABLE : "பூர்த்தி செய்யாத வரை சலுகைகள் பொருந்தாது",
+  PAUSED_STR : "இடைநிறுத்தப்பட்டது",
+  PENDING_STR : "நிலுவையில் உள்ளது",
+  PLAN_SWITCHED_TO : "Plan Switched to ",
+  SWITCH_PLAN_STR : "ஸ்விட்ச் பிளான்?",
+  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "குறிப்பு: தினசரி வரம்பற்ற திட்டத்தில் மட்டுமே பொருந்தும்",
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
 }

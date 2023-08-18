@@ -704,8 +704,8 @@ const hindiStrings = {
   AUTOPAY_IS_NOT_ENABLED_YET : "ऑटोपे अभी तक सक्षम नहीं है!",
   ENABLE_AUTOPAY_DESC : "परेशानी मुक्त भुगतान शुरू करने के लिए अभी ऑटोपे सक्षम करें!",
   ENABLE_AUTOPAY_NOW : "अभी ऑटोपे सक्षम करें",
-  PAYMENT_PENDING_STR : "भुगतान लंबित!",
-  PAYMENT_PENDING_DESC_STR : "कोई अपडेट होने पर हम आपको बताएंगे या आप पुनः प्रयास कर सकते हैं। हम एकाधिक डेबिट के मामले में धनवापसी करेंगे",
+  AUTOPAY_SETUP_PENDING_STR : "ऑटोपे सेटअप लंबित!",
+  PAYMENT_PENDING_DESC_STR : "प्रतीक्षा करें या भुगतान का पुनः प्रयास करें। अतिरिक्त भुगतान वापस कर दिया जाएगा।",
   REFRESH_STR : "स्थिति जाँचिए",
   TRANSACTION_DETAILS : "लेनदेन विवरण",
   RIDE_DETAILS : "सवारी विवरण",
@@ -752,5 +752,14 @@ const hindiStrings = {
   DAILY_PER_RIDE_PLAN_DESC : "प्रति दिन अधिकतम ₹35 तक",
   AUTOPAY_CANCELLED : "ऑटोपे भुगतान रद्द",
   NO : "नहीं",
-  YES_CANCEL : "हां, रद्द करें"
+  YES_CANCEL : "हां, रद्द करें",
+  PAY_TO_JOIN_THIS_PLAN : "इस योजना में शामिल होने के लिए ₹1 का भुगतान करें",
+	OFFERS_NOT_APPLICABLE : "पूरा होने तक ऑफर लागू नहीं होंगे",
+  PAUSED_STR : "रोके गए",
+  PENDING_STR : "लंबित",
+  SWITCH_PLAN_STR : "योजना बदलें?",
+  PLAN_SWITCHED_TO : "Plan Switched to ",
+  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।",
+  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
 }

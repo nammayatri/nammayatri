@@ -27,7 +27,7 @@ import Data.Maybe as Mb
 import Data.Semigroup ((<>))
 import Font.Style (Style(..))
 import Language.Types (STR(..))
-import Prelude ((==), (/=), (&&))
+import Prelude ((==), (/=), (&&), ($))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (SubscribePopupType(..), PlanCardConfig(..))
 import Screens.Types as ST
@@ -37,7 +37,7 @@ clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString CLEAR_DUES) }
+      { textConfig{ text = (getString SETUP_AUTOPAY_STR)}
       , isClickable = true
       , alpha = if true then 1.0 else 0.6
       , height = (V 48)
@@ -76,7 +76,7 @@ joinPlanButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = case (getSelectedJoiningPlan state) of 
-                                Mb.Just value -> ( "Join " <> value <> " Plan") 
+                                Mb.Just value -> (getString PAY_TO_JOIN_THIS_PLAN)
                                 Mb.Nothing -> (getString TAP_A_PLAN_TO_VIEW_DETAILS) }
       , isClickable = if isNothing state.props.joinPlanProps.selectedPlanItem then false else true
       , alpha = if isNothing state.props.joinPlanProps.selectedPlanItem then 0.6 else 1.0
@@ -104,6 +104,7 @@ popupModalConfig state = let
                   Mb.Just FailedPopup -> (getString PAYMENT_FAILED)
                   Mb.Just DuesClearedPopup -> (getString DUES_CLEARED_SUCCESSFULLY)
                   Mb.Just CancelAutoPay -> (getString NOT_PLANNING_TO_TAKE_RIDES)
+                  Mb.Just SwitchedPlan -> (getString PLAN_SWITCHED_TO) <> (if state.data.managePlanData.currentPlan.title == "DAILY UNLIMITED" then getString DAILY_UNLIMITED else getString DAILY_PER_RIDE)
                   Mb.Nothing -> ""
       , margin = Margin 16 16 16 0
       , visibility = VISIBLE
@@ -115,6 +116,7 @@ popupModalConfig state = let
                   Mb.Just SuccessPopup -> getString GOT_IT
                   Mb.Just FailedPopup -> getString RETRY_PAYMENT_STR
                   Mb.Just DuesClearedPopup -> getString GOT_IT
+                  Mb.Just SwitchedPlan -> getString GOT_IT
                   Mb.Just CancelAutoPay -> getString PAUSE_AUTOPAY_STR
                   Mb.Nothing -> ""
       , color = Color.yellow900
@@ -125,6 +127,7 @@ popupModalConfig state = let
       coverImageConfig {
         imageUrl =  case state.props.popUpState of
           Mb.Just SuccessPopup -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+          Mb.Just SwitchedPlan -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
           Mb.Just FailedPopup -> "ny_failed,"
           Mb.Just DuesClearedPopup -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
           Mb.Just CancelAutoPay -> "ny_ic_pause_autopay,"
@@ -134,10 +137,10 @@ popupModalConfig state = let
       , height = V 114
       },
     secondaryText {
-      text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else ""
+      text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else if state.data.managePlanData.currentPlan.title == "DAILY PER RIDE" then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE else ""
       , color = Color.black700
       , margin = Margin 16 4 16 0
-      , visibility = if state.props.popUpState == Mb.Just FailedPopup then VISIBLE else GONE
+      , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan] then VISIBLE else GONE
       },
       option2 { visibility = false }
     }

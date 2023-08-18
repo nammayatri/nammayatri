@@ -672,8 +672,8 @@ const mlStrings = {
   AUTOPAY_IS_NOT_ENABLED_YET : "ഓട്ടോപേ ഇതുവരെ പ്രവർത്തനക്ഷമമാക്കിയിട്ടില്ല!",
   ENABLE_AUTOPAY_DESC : "തടസ്സരഹിതമായ പേയ്‌മെന്റുകൾ ആരംഭിക്കാൻ ഇപ്പോൾ സ്വയമേവ പണമടയ്ക്കൽ പ്രവർത്തനക്ഷമമാക്കുക!",
   ENABLE_AUTOPAY_NOW : "ഇപ്പോൾ സ്വയമേവ പണമടയ്ക്കൽ പ്രവർത്തനക്ഷമമാക്കുക",
-  PAYMENT_PENDING_STR : "പേയ്‌മെന്റ് തീർച്ചപ്പെടുത്തിയിട്ടില്ല!",
-  PAYMENT_PENDING_DESC_STR : "നിങ്ങളുടെ പേയ്‌മെന്റ് പ്രോസസ്സ് ചെയ്യുകയാണ്\n ഒരു അപ്‌ഡേറ്റ് ഉണ്ടാകുമ്പോൾ ഞങ്ങൾ നിങ്ങളെ അറിയിക്കും.",
+  AUTOPAY_SETUP_PENDING_STR : "സ്വയമേവ പണമടയ്ക്കൽ സജ്ജീകരണം തീർച്ചപ്പെടുത്തിയിട്ടില്ല!",
+  PAYMENT_PENDING_DESC_STR : "കാത്തിരിക്കുക അല്ലെങ്കിൽ പണമടയ്ക്കാൻ വീണ്ടും ശ്രമിക്കുക. അധിക തുക തിരികെ നൽകും.",
   REFRESH_STR : "പുതുക്കുക",
   TRANSACTION_DETAILS : "ഇടപാട് വിശദാംശങ്ങൾ",
   RIDE_DETAILS : "റൈഡ് വിശദാംശങ്ങൾ",
@@ -700,5 +700,13 @@ const mlStrings = {
   DAILY_UNLIMITED : "ദിവസേന അൺലിമിറ്റഡ്",
   DAILY_PER_RIDE : "ദിവസേന ഓരോ റൈഡിനും",
   DAILY_UNLIMITED_PLAN_DESC : "എല്ലാ ദിവസവും പരിധിയില്ലാത്ത റൈഡുകൾ ആസ്വദിക്കൂ",
-  DAILY_PER_RIDE_PLAN_DESC : "പ്രതിദിനം പരമാവധി ₹35 വരെ"
+  DAILY_PER_RIDE_PLAN_DESC : "പ്രതിദിനം പരമാവധി ₹35 വരെ",
+  PAY_TO_JOIN_THIS_PLAN : "ഈ പ്ലാനിൽ ചേരാൻ ₹1 അടയ്ക്കുക",
+	OFFERS_NOT_APPLICABLE : "പൂർത്തിയാക്കിയില്ലെങ്കിൽ ഓഫറുകൾ ബാധകമല്ല",
+  PAUSED_STR : "Paused",
+  PENDING_STR : "Pending",
+  PLAN_SWITCHED_TO : "Plan Switched to ",
+  SWITCH_PLAN_STR : "സ്വിച്ച് പ്ലാൻ?",
+  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത പ്ലാനിൽ ഓട്ടോപെ സജ്ജമാക്കിയിട്ടുണ്ടെങ്കിൽ മാത്രമേ ബാധകമായ ഓഫറുകൾ.",
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
 }

@@ -52,7 +52,8 @@ getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {
     gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
     hasImage : true ,
     imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png" ,
-    offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description)
+    offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description),
+    addedFromUI : false
     }) offerEntityArr)
 
 myPlanListTransformer :: GetCurrentPlanResp -> PlanCardConfig
@@ -93,7 +94,8 @@ freeRideOfferConfig lazy =
     gradient : [],
     hasImage : false,
     imageURL : "",
-    offerDescription : Nothing
+    offerDescription : Nothing,
+    addedFromUI : false
     }
 
 noChargesOfferConfig :: LazyCheck -> PromoConfig
@@ -104,7 +106,8 @@ noChargesOfferConfig lazy=
     gradient : [],
     hasImage : false,
     imageURL : "",
-    offerDescription : Just $ "<b>" <> getString DAILY_PER_RIDE_DESC <> "</b>"
+    offerDescription : Just $ "<b>" <> getString DAILY_PER_RIDE_DESC <> "</b>",
+    addedFromUI : true
     }
 
 alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array PlanCardConfig

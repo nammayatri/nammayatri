@@ -712,8 +712,8 @@ const bengaliStrings = {
 	AUTOPAY_IS_NOT_ENABLED_YET : "অটোপে এখনো সক্ষম করা হয়নি!",
 	ENABLE_AUTOPAY_DESC : "ঝামেলা-মুক্ত অর্থপ্রদান শুরু করতে এখনই স্বতঃপে সক্ষম করুন!",
 	ENABLE_AUTOPAY_NOW : "এখনই স্বতঃপে সক্ষম করুন",
-	PAYMENT_PENDING_STR : "পেমেন্ট বাকি আছে!",
-  	PAYMENT_PENDING_DESC_STR : "আপনার অর্থপ্রদান প্রক্রিয়া করা হচ্ছে। একটি আপডেট হলে আমরা আপনাকে জানাব।",
+	AUTOPAY_SETUP_PENDING_STR : "অটোপে সেটআপ মুলতুবি আছে!",
+  	PAYMENT_PENDING_DESC_STR : "আপনার অর্থপ্রদান প্রক্রিয়া করা হচ্ছে। একটি আপডেট হলে আমরা আপনাকে জানাব।অপেক্ষা করুন বা আবার পেমেন্ট করার চেষ্টা করুন। অতিরিক্ত অর্থ ফেরত দেওয়া হবে।",
   	REFRESH_STR : "রিফ্রেশ করুন",
 	TRANSACTION_DETAILS : "লেনদেনের বিবরণ",
 	RIDE_DETAILS : "রাইডের বিবরণ",
@@ -740,5 +740,14 @@ const bengaliStrings = {
 	DAILY_UNLIMITED : "দৈনিক সীমাহীন",
     DAILY_PER_RIDE : "প্রতি যাত্রায় প্রতিদিন",
     DAILY_UNLIMITED_PLAN_DESC : "প্রতিদিন সীমাহীন রাইড উপভোগ করুন",
-    DAILY_PER_RIDE_PLAN_DESC : "প্রতিদিন সর্বোচ্চ ₹35 পর্যন্ত"
+    DAILY_PER_RIDE_PLAN_DESC : "প্রতিদিন সর্বোচ্চ ₹35 পর্যন্ত",
+	PAY_TO_JOIN_THIS_PLAN : "এই প্ল্যানে যোগ দিতে ₹1 পে করুন",
+	OFFERS_NOT_APPLICABLE : "সম্পূর্ণ না হলে অফার প্রযোজ্য নয়",
+	PAUSED_STR : "বিরতি দেওয়া হয়েছে",
+	PENDING_STR : "বিচারাধীন",
+	PLAN_SWITCHED_TO : "Plan Switched to ",
+	SWITCH_PLAN_STR : "স্যুইচ প্ল্যান?",
+	OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "দ্রষ্টব্য: অফারগুলি শুধুমাত্র ডেইলি আনলিমিটেড প্ল্যানে প্রযোজ্য",
+	OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
+  	DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
 	}
