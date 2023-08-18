@@ -2360,16 +2360,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1692363833,
-        "narHash": "sha256-viaU5Sgw3J3UP/Xrr90eQ68TwDYcGVgWzmGWq43o0LE=",
+        "lastModified": 1692377565,
+        "narHash": "sha256-HTislgK1Z6MhayVcC7LiN99RR2dwg2ArnN+3XyUn5Uw=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "8d0bac8eb5b943a441cafb49bcbe835b0f0b7afa",
+        "rev": "f04febd870641689540acef3495d2f3fe2fe4f75",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "updatedEulerHS",
+        "ref": "prodHotPush",
         "repo": "shared-kernel",
         "type": "github"
       }

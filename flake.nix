@@ -3,7 +3,7 @@
     common.url = "github:nammayatri/common";
 
     # Backend inputs
-    shared-kernel.url = "github:nammayatri/shared-kernel/updatedEulerHS";
+    shared-kernel.url = "github:nammayatri/shared-kernel/prodHotPush";
     beckn-gateway.url = "github:nammayatri/beckn-gateway/updatedEulerHS";
     # euler-webservices.url = "git+ssh://git@ssh.bitbucket.juspay.net/jbiz/euler-webservice";
     beckn-gateway.inputs.common.follows = "common";
