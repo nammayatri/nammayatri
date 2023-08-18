@@ -23,7 +23,7 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Error, makeAff, nonCanceler)
 import Engineering.Helpers.BackTrack (getState)
-import Helpers.Utils (getDistanceBwCordinates)
+import Helpers.Utils (getDistanceBwCordinates, LatLon(..), getCurrentLocation)
 import JBridge (getCurrentPosition, getCurrentPositionWithTimeout)
 import Log (printLog)
 import Presto.Core.Types.Language.Flow (doAff)
@@ -34,8 +34,6 @@ import Screens.HomeScreen.View as HomeScreen
 import Screens.Types (KeyboardModalType(..))
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-
-data Location = Location String String
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
 homeScreen = do
@@ -59,33 +57,18 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS status)
     StartRide state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
-      (Location startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) Location 500 $> nonCanceler)
-      if(startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0")
-        then do App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : startRideCurrentLat, lon : startRideCurrentLong} state)
-        else do 
-          let distanceDiff = (getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.src_lat state.data.activeRide.src_lon)
-              rideLat = show $ if distanceDiff <= 0.10 then  state.data.currentDriverLat else state.data.activeRide.src_lat
-              rideLong = show $ if distanceDiff <= 0.10 then state.data.currentDriverLon else state.data.activeRide.src_lon
-          App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : rideLat , lon : rideLong } state) 
+      LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.src_lat state.data.activeRide.src_lon
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : lat , lon : lon } state) 
 
     StartZoneRide  state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
-      (Location startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) Location 500 $> nonCanceler)
-      if(startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0")
-        then do App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : startRideCurrentLat, lon : startRideCurrentLong})
-        else do 
-          let distanceDiff = (getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.src_lat state.data.activeRide.src_lon)
-              rideLat = show $ if distanceDiff <= 0.10 then  state.data.currentDriverLat else state.data.activeRide.src_lat
-              rideLong = show $ if distanceDiff <= 0.10 then state.data.currentDriverLon else state.data.activeRide.src_lon
-          App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : rideLat , lon : rideLong }) 
+      LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : lat , lon : lon }) 
 
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      (Location endRideCurrentLat endRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
-      _ <- pure $ printLog "lat handler" endRideCurrentLat
-      _ <- pure $ printLog "lon handler" endRideCurrentLong
-      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : endRideCurrentLat, lon : endRideCurrentLong})
+      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon})
     SelectListModal state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → state)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : state.data.activeRide.id , info : state.data.cancelRideModal.selectedReasonDescription, reason : state.data.cancelRideModal.selectedReasonCode})
