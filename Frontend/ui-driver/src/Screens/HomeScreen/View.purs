@@ -79,6 +79,7 @@ import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Components.RateCard as RateCard
+import Effect.Uncurried (runEffectFn1)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -168,6 +169,7 @@ screen initialState =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.driverFeeId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
+          -- runEffectFn1 HU.consumeBP unit  
           pure $ pure unit
         )
   ]

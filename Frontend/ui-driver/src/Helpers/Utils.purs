@@ -301,6 +301,8 @@ type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 
 foreign import startPP :: MicroAPPInvokeSignature
 
+foreign import initiatePP :: EffectFn1 Unit Unit
+
 foreign import consumeBP :: EffectFn1 Unit Unit
 
 paymentPageUI :: PaymentPagePayload -> FlowBT String String
