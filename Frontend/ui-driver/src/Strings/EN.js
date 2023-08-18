@@ -707,8 +707,8 @@ const englishStrings = {
   AUTOPAY_IS_NOT_ENABLED_YET : "Autopay is not enabled yet!",
   ENABLE_AUTOPAY_DESC : "Enable Autopay now to start hassle-free payments!",
   ENABLE_AUTOPAY_NOW : "Enable Autopay Now",
-  PAYMENT_PENDING_STR : "Payment Pending!",
-  PAYMENT_PENDING_DESC_STR : "We will let you know when there is an update or you can try again. We will refund in case of multiple debits",
+  AUTOPAY_SETUP_PENDING_STR : "Autopay Setup Pending!",
+  PAYMENT_PENDING_DESC_STR : "Wait or retry payment. Extra payment will be refunded.",
   REFRESH_STR : "Check Status",
   TRANSACTION_DETAILS : "Transaction Details",
   RIDE_DETAILS : "Ride Details",
@@ -753,5 +753,13 @@ const englishStrings = {
   DAILY_PER_RIDE_PLAN_DESC : "Up to a maximum of ₹35 per day",
   AUTOPAY_CANCELLED : "Autopay Cancelled",
   NO : "No",
-  YES_CANCEL : "Yes, Cancel"
+  YES_CANCEL : "Yes, Cancel",
+  PAY_TO_JOIN_THIS_PLAN : "Pay ₹1 to join this plan",
+	OFFERS_NOT_APPLICABLE : "Offers not applicable unless completed",
+  PAUSED_STR : "Paused",
+  PENDING_STR : "Pending",
+  SWITCH_PLAN_STR : "Switch Plan?",
+  PLAN_SWITCHED_TO : "Plan Switched to ",
+  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
 }

@@ -41,6 +41,7 @@ data Action = BackPressed
             | SelectPlan PlanCardConfig
             | ChoosePlan PlanCardConfig
             | ToggleDueDetails
+            | ToggleDueDetailsView
             | NoAction
             | ViewPaymentHistory
             | PopUpModalAC PopUpModal.Action
@@ -85,6 +86,8 @@ eval BackPressed state =
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
 
+eval ToggleDueDetailsView state = continue state {props { isDueViewExpanded = not state.props.isDueViewExpanded}}
+
 eval (ClearDue PrimaryButton.OnClick) state = continue state
 
 eval (SwitchPlan PrimaryButton.OnClick) state = do
@@ -104,14 +107,18 @@ eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selecte
 
 eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state
 
-eval HeaderRightClick state = case state.props.subView of
-    MyPlan -> exit $ PaymentHistory state 
-    _ -> continue state
+eval HeaderRightClick state = do
+    -- case state.props.subView of
+    -- MyPlan -> exit $ PaymentHistory state 
+    _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
+    updateAndExit state { props{showShimmer = true, subView = ManagePlan}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
+
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
                   Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Just FailedPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Just DuesClearedPopup -> exit $ Refresh
+                  Mb.Just SwitchedPlan -> exit $ Refresh
                   Mb.Just CancelAutoPay -> exit $ CancelAutoPayPlan state -- CancelAutoPay API
                   Mb.Nothing -> continue state
 

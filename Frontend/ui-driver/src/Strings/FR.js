@@ -554,8 +554,8 @@ const frenchStrings = {
   AUTOPAY_IS_NOT_ENABLED_YET : "Le paiement automatique n'est pas encore activé !",
   ENABLE_AUTOPAY_DESC : "Activez le paiement automatique maintenant pour commencer les paiements sans tracas !",
   ENABLE_AUTOPAY_NOW : "Activer le paiement automatique maintenant",
-  PAYMENT_PENDING_STR : "Paiement en attente !",
-  PAYMENT_PENDING_DESC_STR : "Votre paiement est en cours de traitement.\nNous vous informerons dès qu'il y aura une mise à jour.",
+  AUTOPAY_SETUP_PENDING_STR : "Configuration du paiement automatique en attente !",
+  PAYMENT_PENDING_DESC_STR : "Attendez ou réessayez le paiement. Le paiement supplémentaire sera remboursé.",
   REFRESH_STR : "Actualiser",
   TRANSACTION_DETAILS : "Détails de la transaction",
   RIDE_DETAILS : "Détails du trajet",
@@ -582,5 +582,14 @@ const frenchStrings = {
   DAILY_UNLIMITED : "quotidiennement illimité",
   DAILY_PER_RIDE : "quotidiennement par trajet",
   DAILY_UNLIMITED_PLAN_DESC : "Profitez de trajets illimités, tous les jours",
-  DAILY_PER_RIDE_PLAN_DESC : "Jusqu'à un maximum de ₹35 par jour"
+  DAILY_PER_RIDE_PLAN_DESC : "Jusqu'à un maximum de ₹35 par jour",
+  PAY_TO_JOIN_THIS_PLAN : "Payez 1 ₹ pour rejoindre ce plan",
+	OFFERS_NOT_APPLICABLE : "Les offres ne s'appliquent que si elles sont complétées",
+  PAUSED_STR : "En pause",
+  PENDING_STR : "En attente",
+  SWITCH_PLAN_STR : "Plan de commutation?",
+  PLAN_SWITCHED_TO : "Plan Switched to ",
+  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Remarque: Offre applicable uniquement si AutoPay est configuré sur le plan illimité quotidien.",
+  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
 }

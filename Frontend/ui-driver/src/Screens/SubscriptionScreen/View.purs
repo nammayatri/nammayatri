@@ -26,7 +26,7 @@ import Components.BottomNavBar (navData)
 import Components.BottomNavBar as BottomNavBar
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (any, elem)
+import Data.Array (any, elem, length, filter, (!!))
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber, pow, ceil)
@@ -47,10 +47,10 @@ import JBridge (getWidthFromPercent)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<>), (==), (>), bind, pure, discard, void)
+import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -246,7 +246,7 @@ paymentPendingView push state =
   , padding $ Padding 16 12 16 12
   , visibility if (state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing) then VISIBLE else GONE
   ][  textView
-      [ text $ getString PAYMENT_PENDING_STR
+      [ text $ getString AUTOPAY_SETUP_PENDING_STR
       , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
       , fontStyle $ FontStyle.semiBold LanguageStyle
       , color Color.black800
@@ -256,6 +256,12 @@ paymentPendingView push state =
       , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
       , fontStyle $ FontStyle.medium LanguageStyle
       , color Color.black800
+      ]
+    , textView
+      [ text $ getString OFFERS_NOT_APPLICABLE
+      , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
+      , fontStyle $ FontStyle.medium LanguageStyle
+      , color Color.red
       ]
     , linearLayout
       [ width MATCH_PARENT
@@ -446,7 +452,7 @@ myPlanView push state visibility' =
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
   , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
-  ][ headerView push (getString PLAN) "" false state.props.isSelectedLangTamil -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
+  ][ headerView push (getString PLAN) (getString MANAGE_PLAN) false state.props.isSelectedLangTamil -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
    , paymentPendingView push state
    , myPlanBodyview push state
   ]
@@ -535,19 +541,18 @@ myPlanBodyview push state =
            ]
          , paymentMethodView push state.data.myPlanData
        ]
-     , planDescriptionView push state.data.myPlanData.planEntity state.props.isSelectedLangTamil
+     , planDescriptionView push state.data.myPlanData.planEntity (state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil
-     , duesView push state
-     , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING] then PrimaryButton.view (push <<< ResumeAutoPay) (resumeAutopayButtonConfig state) else dummyView
+    --  , duesView push state
     ]
   ]
 
 
-planDescriptionView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> PrestoDOM (Effect Unit) w 
-planDescriptionView push state isSelectedLangTamil = 
+planDescriptionView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
+planDescriptionView push state isFreezed isSelectedLangTamil = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -557,6 +562,7 @@ planDescriptionView push state isSelectedLangTamil =
   , margin $ MarginHorizontal 16 16
   , cornerRadius 8.0
   , orientation VERTICAL
+  , alpha if isFreezed then 0.5 else 1.0
   ][ linearLayout
      [ height WRAP_CONTENT
      , width MATCH_PARENT
@@ -621,7 +627,7 @@ planDescriptionView push state isSelectedLangTamil =
               ]
             ]
          )state.offers)
-     , arrowButtonView push (getString MANAGE_PLAN) true ManagePlanAC isSelectedLangTamil
+     , arrowButtonView push (getString MANAGE_PLAN) true (if isFreezed then NoAction else ManagePlanAC) isSelectedLangTamil
   ]
 
 duesView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
@@ -635,83 +641,109 @@ duesView push state =
   , cornerRadius 8.0
   , stroke $ "1," <> Color.grey900
   , margin $ Margin 16 16 16 0
-  ][ textView
-     [ text (getString YOUR_DUES)
-     , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
-     , fontStyle $ FontStyle.semiBold LanguageStyle
-     , color Color.black800
-     , margin $ MarginBottom 8
-     ]
-   , textView
-     [ textFromHtml $ getString if state.data.myPlanData.mandateStatus == "active" then YOUR_DUES_DESCRIPTION else YOUR_DUES_DESCRIPTION_MANUAL
-     , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
-     , fontStyle $ FontStyle.medium LanguageStyle
-     , color Color.black600
-     , margin $ MarginBottom 16
-     ]
-   , linearLayout
-     [ height WRAP_CONTENT
-     , width MATCH_PARENT
-     , padding $ Padding 16 12 16 12
-     , margin $ MarginBottom 12
-     , orientation VERTICAL
-     , background Color.blue600
-     , cornerRadius 8.0
-     ][ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER_VERTICAL
-        ][ textView
-           [ text (getString CURRENT_DUES)
-           , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
-           , fontStyle $ FontStyle.medium LanguageStyle
-           , color Color.black600
-           , weight 1.0
-           ] 
-         , textView
-           [ text (getString YOUR_LIMIT)
-           , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
-           , fontStyle $ FontStyle.medium LanguageStyle
-           , color Color.black600
-           ]              
+  ][ 
+    linearLayout[
+        gravity CENTER
+      , margin $ MarginBottom 8
+      , width MATCH_PARENT
+    ][
+      textView
+      [ text (getString YOUR_DUES)
+      , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
+      , weight 1.0
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      , color Color.black800
+      ]
+      , textView
+        [ text $  "₹" <> show state.data.myPlanData.currentDueAmount
+        , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
+        , fontStyle $ FontStyle.bold LanguageStyle
+        , color Color.blue800
         ]
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER_VERTICAL
-        ][ textView
-           [ text $  "₹" <> show state.data.myPlanData.currentDueAmount
-           , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
-           , fontStyle $ FontStyle.bold LanguageStyle
-           , color Color.blue800
-           , weight 1.0
-           ] 
-         , textView
-           [ text $ "₹" <>  show state.data.myPlanData.maxDueAmount
-           , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
-           , fontStyle $ FontStyle.bold LanguageStyle
-           , color Color.black700
-           ]             
-        ]
-      , relativeLayout
-        [ height $ V 4
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        , margin $ MarginTop 8
-        ][ linearLayout
-           [ height $ V 4
-           , width $ V $ (screenWidth unit) - 100
-           , background Color.black700
-           , cornerRadius 4.0
-           ][]
-         , linearLayout
-           [ height $ V 4
-           , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.currentDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 100)
-           , background Color.blue800
-           , cornerRadius 4.0
-           ][]
-        ]
-     ]
+      , imageView [
+        imageWithFallback if state.props.isDueViewExpanded 
+                                 then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
+                                 else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png"
+        , height $ V 16
+        , width $ V 16
+        , margin $ MarginLeft 6
+        , onClick push $ const $ ToggleDueDetailsView
+      ]
+    ]
+   , linearLayout[
+      orientation VERTICAL
+      , visibility if state.props.isDueViewExpanded then VISIBLE else GONE
+   ][
+      textView
+      [ textFromHtml $ getString if state.data.myPlanData.mandateStatus == "active" then YOUR_DUES_DESCRIPTION else YOUR_DUES_DESCRIPTION_MANUAL
+      , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
+      , fontStyle $ FontStyle.medium LanguageStyle
+      , color Color.black600
+      , margin $ MarginBottom 16
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , padding $ Padding 16 12 16 12
+      , margin $ MarginBottom 12
+      , orientation VERTICAL
+      , background Color.blue600
+      , cornerRadius 8.0
+      ][ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_VERTICAL
+          ][ textView
+            [ text (getString CURRENT_DUES)
+            , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
+            , fontStyle $ FontStyle.medium LanguageStyle
+            , color Color.black600
+            , weight 1.0
+            ] 
+          , textView
+            [ text (getString YOUR_LIMIT)
+            , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
+            , fontStyle $ FontStyle.medium LanguageStyle
+            , color Color.black600
+            ]              
+          ]
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_VERTICAL
+          ][ textView
+            [ text $  "₹" <> show state.data.myPlanData.currentDueAmount
+            , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
+            , fontStyle $ FontStyle.bold LanguageStyle
+            , color Color.blue800
+            , weight 1.0
+            ] 
+          , textView
+            [ text $ "₹" <>  show state.data.myPlanData.maxDueAmount
+            , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
+            , fontStyle $ FontStyle.bold LanguageStyle
+            , color Color.black700
+            ]             
+          ]
+        , relativeLayout
+          [ height $ V 4
+          , width MATCH_PARENT
+          , orientation HORIZONTAL
+          , margin $ MarginTop 8
+          ][ linearLayout
+            [ height $ V 4
+            , width $ V $ (screenWidth unit) - 100
+            , background Color.black700
+            , cornerRadius 4.0
+            ][]
+          , linearLayout
+            [ height $ V 4
+            , width $ V $ ceil $ getValueBtwRange state.data.myPlanData.currentDueAmount 0.0 state.data.myPlanData.maxDueAmount 0.0 (toNumber $ (screenWidth unit) - 100)
+            , background Color.blue800
+            , cornerRadius 4.0
+            ][]
+          ]
+      ]
    , linearLayout
      [ height WRAP_CONTENT
      , width MATCH_PARENT
@@ -809,7 +841,8 @@ duesView push state =
             ] 
            ]
       ] 
-   , if false then PrimaryButton.view (push <<< ClearDue) (clearDueButtonConfig state) else dummyView
+   ]
+   , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING] then  PrimaryButton.view (push <<< ResumeAutoPay) (clearDueButtonConfig state) else dummyView
    , if false then arrowButtonView push (getString SETUP_AUTOPAY) false NoAction state.props.isSelectedLangTamil else dummyView
   ]
 
@@ -914,8 +947,9 @@ arrowButtonView push title arrowVisibility action isSelectedLangTamil =
   ]
 
 paymentMethodView :: forall w. (Action -> Effect Unit) -> MyPlanData -> PrestoDOM (Effect Unit) w
-paymentMethodView push state = 
-  linearLayout
+paymentMethodView push state =
+  let statusPillData = getAutoPayStatusPillData state.autoPayStatus
+  in linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , orientation HORIZONTAL
@@ -927,11 +961,10 @@ paymentMethodView push state =
     [ width $ V 12
     , height $ V 12
     , margin (MarginRight 4)
-    , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , imageWithFallback (getImageURL "ny_ic_upi_logo")
     ]
   , textView 
-    [ text if state.autoPayStatus == ACTIVE_AUTOPAY then (getString UPI_AUTOPAY_S) else (getString MANUAL_PAYMENT)
+    [ text (getString UPI_AUTOPAY_S)
     , textSize FontSize.a_10
     , fontStyle $ FontStyle.medium LanguageStyle
     , color Color.black900
@@ -940,17 +973,15 @@ paymentMethodView push state =
   , linearLayout
     [ height $ V 4
     , width $ V 4
-    , background if state.mandateStatus == "active" then Color.green900 else Color.orange900
+    , background statusPillData.color
     , cornerRadius 12.0
-    , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , margin $ MarginHorizontal 4 4
     ][]
   , textView
-    [ text $ getString ACTIVE_STR
+    [ text $ statusPillData.status
     , textSize FontSize.a_10
-    , visibility if state.autoPayStatus == ACTIVE_AUTOPAY then VISIBLE else GONE
     , fontStyle $ FontStyle.medium LanguageStyle
-    , color if state.mandateStatus == "active" then Color.green900 else Color.orange900
+    , color statusPillData.color
     , padding $ PaddingBottom 3
     ]
   ]
@@ -990,6 +1021,14 @@ managePlanBodyView push state =
         ](map(
              (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil)
              ) state.data.managePlanData.alternatePlans)
+      , textView [
+        text (getString OFFERS_APPLICABLE_ON_DAILY_UNLIMITED)
+        , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
+        , fontStyle $ FontStyle.semiBold LanguageStyle
+        , color Color.black600
+        , margin $ MarginBottom 16
+        , visibility if showOfferApplicable state then VISIBLE else GONE
+      ]
       , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
      ]
    ]
@@ -1350,7 +1389,7 @@ planPriceView fares frequency isSelectedLangTamil =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   ][ textView $ 
-     [ textFromHtml $ "₹" <> "<strike>" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+     [ textFromHtml $ "<strike> ₹" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
      , visibility if (getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
@@ -1390,3 +1429,19 @@ languageSpecificTranslation str variable =
   case getValueToLocalStore LANGUAGE_KEY of
     "EN_US" -> str <> " " <> variable
     _ -> variable <> " " <> str 
+
+getAutoPayStatusPillData :: AutoPayStatus -> {color :: String, status :: String}
+getAutoPayStatusPillData autoPayStatus =
+  case autoPayStatus of 
+    ACTIVE_AUTOPAY -> {color: Color.green900, status : getString ACTIVE_STR }
+    SUSPENDED -> {color: Color.red, status : getString CANCELLED_ }
+    PAUSED_PSP -> {color: Color.orange900, status : getString PAUSED_STR }
+    CANCELLED_PSP ->  {color: Color.red, status : getString CANCELLED_  }
+    PENDING -> {color: Color.orange900, status : getString PENDING_STR }
+    _ -> {color: Color.orange900, status : getString PENDING_STR }
+
+showOfferApplicable :: SubscriptionScreenState -> Boolean
+showOfferApplicable state = 
+  let currentPlanOffers = length $ filter (\item -> not item.addedFromUI) state.data.managePlanData.currentPlan.offers
+      selectedPlanOffers = length $ filter (\item -> not item.addedFromUI) state.props.managePlanProps.selectedPlanItem.offers
+  in state.props.managePlanProps.selectedPlanItem.id /= state.data.managePlanData.currentPlan.id && selectedPlanOffers < currentPlanOffers

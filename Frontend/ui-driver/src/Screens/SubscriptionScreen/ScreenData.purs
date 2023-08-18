@@ -65,6 +65,7 @@ initData = {
         showShimmer : true ,
         refreshPaymentStatus : false,
         confirmCancel : false,
+        isDueViewExpanded : false,
         joinPlanProps : {
             paymentMode : "",
             selectedPlanItem : Mb.Nothing
@@ -91,7 +92,8 @@ dummyPlanConfig =
                 gradient : [],
                 hasImage : true,
                 imageURL : "",
-                offerDescription : Mb.Nothing
+                offerDescription : Mb.Nothing,
+                addedFromUI : false
                 }
                 ]
     , priceBreakup : []

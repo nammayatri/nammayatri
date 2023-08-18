@@ -2107,8 +2107,7 @@ subScriptionFlow = do
           _ <- pure $ cleverTapCustomEvent "ny_driver_switch_plan"
           _ <- pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "new_plan" state.props.managePlanProps.selectedPlanItem.title
           _ <- pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "previous_plan" state.data.managePlanData.currentPlan.title
-          pure $ toast $ getString SWITCHED_PLAN
-          modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+          modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props{popUpState = Just SwitchedPlan}, data{managePlanData{currentPlan {title = state.props.managePlanProps.selectedPlanItem.title}}}})
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     RESUME_AUTOPAY state ->

@@ -1533,6 +1533,7 @@ type SubscriptionScreenProps = {
   resumeBtnVisibility :: Boolean,
   showError :: Boolean,
   showShimmer :: Boolean,
+  isDueViewExpanded :: Boolean,
   refreshPaymentStatus :: Boolean,
   confirmCancel :: Boolean,
   isSelectedLangTamil :: Boolean
@@ -1597,9 +1598,10 @@ type PromoConfig = {
   , hasImage :: Boolean
   , imageURL :: String
   , offerDescription :: Maybe String
+  , addedFromUI :: Boolean
 }
 
-data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay
+data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan
 
 derive instance genericSubscribePopupType :: Generic SubscribePopupType _
 instance showSubscribePopupType :: Show SubscribePopupType where show = genericShow
