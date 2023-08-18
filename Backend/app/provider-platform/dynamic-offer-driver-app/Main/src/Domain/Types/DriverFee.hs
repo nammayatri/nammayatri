@@ -59,6 +59,9 @@ data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE deriving (Read, Show, Eq
 paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
+mandateProcessingLockKey :: Text -> Text
+mandateProcessingLockKey mandateId = "Mandate:Processing:MandateId" <> mandateId
+
 instance FromHttpApiData DriverFeeStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece

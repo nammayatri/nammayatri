@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.mandate
     );
 ALTER TABLE atlas_driver_offer_bpp.mandate OWNER TO atlas_driver_offer_bpp_user;
 ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN payer_app Text;
+ALTER TABLE atlas_driver_offer_bpp.mandate ADD COLUMN payer_app_name Text;
 
 
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.plan

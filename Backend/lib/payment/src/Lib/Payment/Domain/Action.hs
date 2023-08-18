@@ -51,7 +51,7 @@ data PaymentStatusResp
         mandateId :: Text,
         mandateMaxAmount :: HighPrecMoney,
         payerVpa :: Maybe Text,
-        payerApp :: Maybe Text
+        upi :: Maybe Payment.Upi
       }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -210,7 +210,7 @@ orderStatusService personId orderId orderStatusCall = do
                 ..
               }
       updateOrderTransaction order orderTxn Nothing
-      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, payerApp = orderStatusResp.upi <&> (.payer_app), ..}
+      return $ MandatePaymentStatus {status = orderStatusResp.transactionStatus, upi = orderStatusResp.upi, ..}
     Payment.OrderStatusResp {..} -> do
       let orderTxn =
             OrderTxn
