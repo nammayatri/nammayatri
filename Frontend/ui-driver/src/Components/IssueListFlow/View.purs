@@ -73,12 +73,11 @@ headerLayout state push =
         ]
         [ imageView
             [ width  state.headerConfig.imageConfig.width                        
-            , height state.headerConfig.imageConfig.height                       
+            , height state.headerConfig.imageConfig.height
             , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
             , onClick push $ const BackPressed
             , padding state.headerConfig.imageConfig.padding    
-            , margin  state.headerConfig.imageConfig.margin                                   
-            , onClick push (const BackPressed)
+            , margin  state.headerConfig.imageConfig.margin
             ]
         , textView
             $ [ width  state.headerConfig.headTextConfig.width                                 
