@@ -185,7 +185,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     when (thresholdConfig.subscription) $ do
       -- window end time over - still ongoing - sendPaymentReminder
       -- payBy is also over - still ongoing/pending - unsubscribe
-      unless (driverInfo.onRide) $ handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc -- not needed for now
+      unless (driverInfo.onRide) $ handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
