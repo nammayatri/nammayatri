@@ -27,52 +27,14 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
 
--- create :: AadhaarVerification -> Esq.SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => AadhaarVerification -> m ()
 create = createWithKV
-
--- findById ::
---   Transactionable m =>
---   Id AadhaarVerification ->
---   m (Maybe AadhaarVerification)
--- findById = Esq.findById
-
--- findById :: (L.MonadFlow m, Log m) => Id AadhaarVerification -> m (Maybe AadhaarVerification)
--- findById (Id aadhaarVerification) = findOneWithKV [Se.Is BeamAV.id $ Se.Eq aadhaarVerification]
-
--- findByDriverId ::
---   Transactionable m =>
---   Id Person ->
---   m (Maybe AadhaarVerification)
--- findByDriverId driverId = do
---   findOne $ do
---     aadhaar <- from $ table @AadhaarVerificationT
---     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
---     return aadhaar
 
 findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe AadhaarVerification)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamAV.driverId $ Se.Eq driverId]
 
--- deleteByDriverId :: Id Person -> SqlDB ()
--- deleteByDriverId driverId =
---   Esq.delete $ do
---     aadhaar <- from $ table @AadhaarVerificationT
---     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
-
 deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq driverId)]
-
--- findByAadhaarNumberHash ::
---   Transactionable m =>
---   DbHash ->
---   m (Maybe AadhaarVerification)
--- findByAadhaarNumberHash aadhaarHash = do
---   findOne $ do
---     aadhaar <- from $ table @AadhaarVerificationT
---     where_ $ aadhaar ^. AadhaarVerificationAadhaarNumberHash ==. val (Just aadhaarHash)
---     return aadhaar
 
 findByAadhaarNumberHash :: (L.MonadFlow m, Log m) => DbHash -> m (Maybe AadhaarVerification)
 findByAadhaarNumberHash aadhaarHash = findOneWithKV [Se.Is BeamAV.aadhaarNumberHash $ Se.Eq (Just aadhaarHash)]
@@ -89,27 +51,6 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
       Se.Set BeamAV.updatedAt now
     ]
     [Se.Is BeamAV.driverId (Se.Eq $ getId personId)]
-
--- findByPhoneNumberAndUpdate :: Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> Esq.SqlDB ()
--- findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ AadhaarVerificationDriverName =. val name,
---         AadhaarVerificationDriverGender =. val gender,
---         AadhaarVerificationDriverDob =. val dob,
---         AadhaarVerificationAadhaarNumberHash =. val aadhaarNumberHash,
---         AadhaarVerificationIsVerified =. val isVerified,
---         AadhaarVerificationUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. AadhaarVerificationDriverId ==. val (toKey personId)
-
--- deleteByPersonId :: Id Person -> SqlDB ()
--- deleteByPersonId personId =
---   Esq.delete $ do
---     verifications <- from $ table @AadhaarVerificationT
---     where_ $ verifications ^. AadhaarVerificationDriverId ==. val (toKey personId)
 
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq personId)]

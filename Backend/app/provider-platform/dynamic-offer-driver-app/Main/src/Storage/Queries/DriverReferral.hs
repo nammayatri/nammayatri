@@ -12,30 +12,14 @@ import Kernel.Types.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverReferral as BeamDR
 
--- create :: DriverReferral -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => DDR.DriverReferral -> m ()
 create = createWithKV
-
--- findByRefferalCode :: Transactionable m => Id DriverReferral -> m (Maybe DriverReferral)
--- findByRefferalCode = Esq.findById
 
 findByRefferalCode ::
   (L.MonadFlow m, Log m) =>
   Id DriverReferral ->
   m (Maybe DriverReferral)
 findByRefferalCode (Id referralId) = findOneWithKV [Se.Is BeamDR.referralCode $ Se.Eq referralId]
-
--- findById ::
---   Transactionable m =>
---   Id SP.Person ->
---   m (Maybe DriverReferral)
--- findById driverId = do
---   findOne $ do
---     driverReferral <- from $ table @DriverReferralT
---     where_ $ driverReferral ^. DriverReferralDriverId ==. val (toKey driverId)
---     return driverReferral
 
 findById ::
   (L.MonadFlow m, Log m) =>

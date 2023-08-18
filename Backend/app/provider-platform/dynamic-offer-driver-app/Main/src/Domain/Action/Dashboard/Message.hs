@@ -33,8 +33,6 @@ import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -164,7 +162,6 @@ addMessage :: ShortId DM.Merchant -> Common.AddMessageRequest -> Flow Common.Add
 addMessage merchantShortId Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   message <- mkMessage merchant
-  -- Esq.runTransaction $
   _ <- MQuery.create message
   return $ Common.AddMessageResponse {messageId = cast $ message.id}
   where
@@ -196,15 +193,12 @@ sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISucce
 sendMessage merchantShortId Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
-  -- message <- MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   allDriverIds <- case _type of
     AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
-    -- AllEnabled -> QP.findAllDriverIdExceptProvided (merchant.id) []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
       B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
-  -- QP.findAllDriverIdExceptProvided (merchant.id) driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
   fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
   return Success
@@ -229,7 +223,6 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
     createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
     createMessageLanguageDict message = do
       translations <- B.runInReplica $ MTQuery.findByMessageId message.id
-      -- translations <- MTQuery.findByMessageId message.id
       pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
 
     addTranslation Domain.RawMessage {..} trans =
@@ -285,15 +278,10 @@ messageDeliveryInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.M
 messageDeliveryInfo merchantShortId messageId = do
   _ <- findMerchantByShortId merchantShortId
   success <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
-  -- success <- MRQuery.getMessageCountByStatus messageId Domain.Success
   failed <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
-  -- failed <- MRQuery.getMessageCountByStatus messageId Domain.Failed
   queued <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
-  -- queued <- MRQuery.getMessageCountByStatus messageId Domain.Queued
   sending <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
-  -- sending <- MRQuery.getMessageCountByStatus messageId Domain.Sending
   seen <- B.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
-  -- seen <- MRQuery.getMessageCountByReadStatus messageId
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
   return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount, viewed = message.viewCount}
 
@@ -301,7 +289,6 @@ messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text ->
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
   encMesageReports <- B.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
-  -- encMesageReports <- MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
   messageReports <- mapM (secondM decrypt) encMesageReports
   let count = length messageReports
   let summary = Common.Summary {totalCount = count, count}

@@ -35,29 +35,8 @@ import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 
--- create :: Domain.DriverQuote -> SqlDB ()
--- create dQuote = Esq.runTransaction $
---   withFullEntity dQuote $ \(dQuoteT, (fareParams', fareParamsDetais)) -> do
---     Esq.create' fareParams'
---     case fareParamsDetais of
---       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
---       FareParamsT.SlabDetailsT -> return ()
---     Esq.create' dQuoteT
-
 create :: (L.MonadFlow m, Log m) => Domain.DriverQuote -> m ()
 create dQuote = SQFP.create dQuote.fareParams >> createWithKV dQuote
-
--- baseDriverQuoteQuery ::
---   From
---     ( SqlExpr (Entity DriverQuoteT)
---         :& SqlExpr (Entity Fare.FareParametersT)
---     )
--- baseDriverQuoteQuery =
---   table @DriverQuoteT
---     `innerJoin` table @Fare.FareParametersT
---       `Esq.on` ( \(rb :& farePars) ->
---                    rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
---                )
 
 findById :: (L.MonadFlow m, Log m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = findOneWithKV [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
@@ -65,28 +44,8 @@ findById (Id driverQuoteId) = findOneWithKV [Se.Is BeamDQ.id $ Se.Eq driverQuote
 setInactiveBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
 
--- findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (Transactionable m) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
--- findActiveQuoteByDriverIdAndVehVarAndEstimateId estimateId driverId vehicleVariant now = do
---   buildDType $ do
---     res <- Esq.findOne' $ do
---       (dQuote :& farePars) <-
---         from baseDriverQuoteQuery
---       where_ $
---         dQuote ^. DriverQuoteEstimateId ==. val (toKey estimateId)
---           &&. dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
---           &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
---           &&. dQuote ^. DriverQuoteVehicleVariant ==. val vehicleVariant
---           &&. dQuote ^. DriverQuoteValidTill >=. val now
---       pure (dQuote, farePars)
---     join <$> mapM buildFullDriverQuote res
-
 findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (MonadFlow m) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
 findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id estimateId) (Id driverId) vehicleVariant now = findAllWithKV [Se.And [Se.Is BeamDQ.estimateId $ Se.Eq estimateId, Se.Is BeamDQ.driverId $ Se.Eq driverId, Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.vehicleVariant $ Se.Eq vehicleVariant, Se.Is BeamDQ.validTill $ Se.GreaterThan $ T.utcToLocalTime T.utc now]] <&> listToMaybe
-
--- setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
--- setInactiveBySTId searchTryId = Esq.update $ \p -> do
---   set p [DriverQuoteStatus =. val Domain.Inactive]
---   where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
 
 setInactiveBySRId :: (L.MonadFlow m, Log m) => Id DSR.SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
@@ -164,16 +123,3 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.providerId = getId providerId,
         BeamDQ.specialLocationTag = specialLocationTag
       }
-
--- setInactiveAllDQByEstId :: Id DEstimate.Estimate -> UTCTime -> SqlDB ()
--- setInactiveAllDQByEstId estimateId now = do
---   Esq.update $ \p -> do
---     set
---       p
---       [ DriverQuoteStatus =. val Domain.Inactive,
---         DriverQuoteUpdatedAt =. val now
---       ]
---     where_ $
---       p ^. DriverQuoteEstimateId ==. val (toKey estimateId)
---         &&. p ^. DriverQuoteStatus ==. val Domain.Active
---         &&. p ^. DriverQuoteValidTill >=. val now

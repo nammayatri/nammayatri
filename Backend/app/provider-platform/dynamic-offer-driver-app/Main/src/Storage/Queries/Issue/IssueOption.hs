@@ -17,37 +17,8 @@ import qualified Storage.Beam.Issue.IssueOption as BeamIO
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified Storage.Queries.Issue.IssueTranslation ()
 
--- findByIdAndCategoryId :: Transactionable m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
--- findByIdAndCategoryId issueOptionId issueCategoryId = Esq.findOne $ do
---   issueOption <- from $ table @IssueOptionT
---   where_ $
---     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
---       &&. issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
---   pure issueOption
-
 findByIdAndCategoryId :: (L.MonadFlow m, Log m) => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
 findByIdAndCategoryId issueOptionId issueCategoryId = findOneWithKV [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
-
--- fullOptionTable ::
---   Language ->
---   From
---     ( Table IssueOptionT
---         :& MbTable IssueTranslationT
---     )
--- fullOptionTable language =
---   table @IssueOptionT
---     `leftJoin` table @IssueTranslationT
---       `Esq.on` ( \(option :& translation) ->
---                    just (option ^. IssueOptionOption) ==. translation ?. IssueTranslationSentence
---                      &&. translation ?. IssueTranslationLanguage ==. just (val language)
---                )
-
--- findAllByCategoryAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
--- findAllByCategoryAndLanguage issueCategoryId language = Esq.findAll $ do
---   (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
---   where_ $
---     issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
---   pure (issueOption, mbIssueTranslation)
 
 findAllIssueOptionWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamIO.IssueOptionT] -> m [IssueOption]
 findAllIssueOptionWithSeCondition = findAllWithKV
@@ -65,17 +36,6 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations' else [(iOption, Nothing)]
 
--- getDriverInfoWithDL drLocs dInfosWithLocs dInfo =
---   let drLocs' = filter (\drLoc -> drLoc.driverId == dInfo.driverId) drLocs
---    in dInfosWithLocs <> ((\drLoc -> (dInfo, drLoc)) <$> drLocs')
-
--- findByIdAndLanguage :: Transactionable m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
--- findByIdAndLanguage issueOptionId language = Esq.findOne $ do
---   (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
---   where_ $
---     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
---   pure (issueOption, mbIssueTranslation)
-
 findByIdAndLanguage :: (L.MonadFlow m, Log m) => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
 findByIdAndLanguage issueOptionId language = do
   iOptions <- findAllIssueOptionWithSeCondition [Se.Is BeamIO.id $ Se.Eq (getId issueOptionId)]
@@ -87,13 +47,6 @@ findByIdAndLanguage issueOptionId language = do
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations' else [(iOption, Nothing)]
     headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
-
--- findById :: Transactionable m => Id IssueOption -> m (Maybe IssueOption)
--- findById issueOptionId = Esq.findOne $ do
---   issueOption <- from $ table @IssueOptionT
---   where_ $
---     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
---   pure issueOption
 
 findById :: (L.MonadFlow m, Log m) => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Se.Is BeamIO.id $ Se.Eq issueOptionId]

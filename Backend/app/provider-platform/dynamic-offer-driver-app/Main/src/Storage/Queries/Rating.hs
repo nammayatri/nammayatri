@@ -47,9 +47,6 @@ findAllRatingsForPerson driverId = findAllWithDb [Se.Is BeamR.driverId $ Se.Eq $
 findRatingForRide :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]
 
--- findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
--- findAllRatingUsersCountByPerson (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId] <&> length
-
 findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
 findAllRatingUsersCountByPerson (Id driverId) = do
   dbConf <- getMasterBeamConfig

@@ -33,9 +33,7 @@ exotelHeartbeat req = do
   let incomingAffected = req.incomingAffected <&> (.phoneNumber)
       outgoingAffected = req.outgoingAffected <&> (.phoneNumber)
   let affectedPhones = incomingAffected <> outgoingAffected
-  -- Esq.runTransaction $ CQExophone.updateAffectedPhones affectedPhones
   void $ CQExophone.updateAffectedPhones affectedPhones
-  -- CQExophone.clearAllCache
   logTagInfo "dashboard -> exotelHeartbeat: " $
     show req.statusType
       <> (if null incomingAffected then "" else "; incomingAffected: " <> T.intercalate "," incomingAffected)

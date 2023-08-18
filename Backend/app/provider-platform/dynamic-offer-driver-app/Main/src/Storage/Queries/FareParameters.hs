@@ -17,7 +17,6 @@ module Storage.Queries.FareParameters where
 
 import Domain.Types.FareParameters as DFP
 import qualified EulerHS.Language as L
--- import Kernel.Types.Logging (Log)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -41,14 +40,6 @@ findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePara
 
 findAllIn :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
-
--- findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]
--- findAllIn fareParamIds =
---   buildDType $ do
---     res <- Esq.findAll' $ do
---       fareParamFile <- from $ table @FareParametersT
---       pure fareParamFile
---     catMaybes <$> mapM buildFullFareParameters res
 
 instance FromTType' BeamFP.FareParameters FareParameters where
   fromTType' BeamFP.FareParametersT {..} = do
@@ -97,43 +88,8 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..}
       }
 
--- findAllLateNightRides :: Transactionable m => [Id FareParameters] -> m Int
--- findAllLateNightRides fareParamIds =
---   mkCount <$> do
---     Esq.findAll $ do
---       fareParamFile <- from $ table @FareParametersT
---       where_ $
---         fareParamFile ^. FareParametersId `in_` valList (map getId fareParamIds)
---           &&. not_ (Esq.isNothing (fareParamFile ^. FareParametersNightShiftCharge))
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
-
 findAllLateNightRides :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m Int
 findAllLateNightRides fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds, Se.Is BeamFP.nightShiftCharge $ Se.Not $ Se.Eq Nothing] <&> length
-
--- findDriverSelectedFareEarnings :: Transactionable m => [Id FareParameters] -> m Money
--- findDriverSelectedFareEarnings fareParamIds =
---   mkSum
---     <$> Esq.findAll do
---       fareParamFile <- from $ table @FareParametersT
---       where_ $ fareParamFile ^. FareParametersId `in_` valList (map getId fareParamIds)
---       pure (sum_ $ fareParamFile ^. FareParametersDriverSelectedFare :: SqlExpr (Esq.Value (Maybe Money)))
---   where
---     mkSum [Just value] = value
---     mkSum _ = 0
-
--- findCustomerExtraFees :: Transactionable m => [Id FareParameters] -> m Money
--- findCustomerExtraFees fareParamIds =
---   mkSum
---     <$> Esq.findAll do
---       fareParamFile <- from $ table @FareParametersT
---       where_ $ fareParamFile ^. FareParametersId `in_` valList (map getId fareParamIds)
---       pure (sum_ $ fareParamFile ^. FareParametersCustomerExtraFee :: SqlExpr (Esq.Value (Maybe Money)))
---   where
---     mkSum [Just value] = value
---     mkSum _ = 0
 
 findDriverSelectedFareEarnings :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m Int
 findDriverSelectedFareEarnings fareParamIds = do

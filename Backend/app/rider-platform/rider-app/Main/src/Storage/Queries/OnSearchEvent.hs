@@ -16,8 +16,6 @@
 module Storage.Queries.OnSearchEvent where
 
 import Domain.Types.OnSearchEvent
--- import Kernel.Storage.Esqueleto as Esq
-
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude

@@ -19,7 +19,6 @@ module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
--- import Data.ByteString.Lazy (toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize

@@ -31,8 +31,5 @@ data DBSyncMetric
   | QueryExecutionFailure Action ModelName
   | DuplicateEntryCreate ModelName
   | -- | QueryDrainLatency Action Latency
-    -- | DBSyncStreamLength Stream StreamLength
-    -- | QueryBatchProcessTime ProcessTime
-    -- | QueryBatchSize BatchSize
     DrainerQueryExecutes Action Word
   | DrainerStopStatus Status

@@ -49,20 +49,13 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
--- import qualified Data.Text as T
--- import Data.Vector
-
 fromFieldEnum' ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion GeoRestriction
 fromFieldEnum' f mbValue = case mbValue of
   Nothing -> pure Geo.Unrestricted
   Just _ -> Geo.Regions . V.toList <$> fromField f mbValue
-
--- instance FromField Base64 where
---   fromField = fromFieldEnum
 
 deriving newtype instance FromField Base64
 
@@ -82,8 +75,6 @@ instance HasSqlValueSyntax be (Maybe [Text]) => HasSqlValueSyntax be GeoRestrict
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be GeoRestriction
 
 instance FromBackendRow Postgres GeoRestriction
-
--- deriving stock instance Read GeoRestriction
 
 deriving stock instance Eq GeoRestriction
 

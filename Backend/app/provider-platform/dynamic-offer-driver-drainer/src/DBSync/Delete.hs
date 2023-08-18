@@ -1,11 +1,7 @@
 module DBSync.Delete where
 
--- import Config.Config as Config
 import Config.Env
 import Data.Either.Extra (mapLeft)
--- import           Utils.Logging
--- import System.CPUTime
-
 import Data.Maybe
 import Data.Text as T
 import EulerHS.CachedSqlDBQuery as CDB
@@ -103,11 +99,7 @@ runDeleteCommands (cmd, val) = do
       runDeleteWithRetries id value whereClause model dbConf 0 maxRetries
 
     runDeleteWithRetries id value whereClause model dbConf retryIndex maxRetries = do
-      --   t1    <- EL.getCurrentDateInMillis
-      --   cpuT1 <- EL.runIO getCPUTime
       res <- mapLeft MDBError <$> CDB.deleteAllReturning dbConf whereClause
-      --   t2    <- EL.getCurrentDateInMillis
-      --   cpuT2 <- EL.runIO getCPUTime
       case (res, retryIndex) of
         (Left _, y) | y < maxRetries -> do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" model
@@ -118,5 +110,4 @@ runDeleteCommands (cmd, val) = do
           EL.logError (("Delete failed: " :: Text) <> T.pack (show x)) (show [("command" :: String, value)] :: Text)
           pure $ Left (x, id)
         (Right _, _) -> do
-          --   EL.logInfoV ("Drainer Info" :: Text) $ createDBLogEntry model "DELETE" (t2 -t1) (cpuT2 - cpuT1) rVals
           pure $ Right id

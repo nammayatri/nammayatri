@@ -30,8 +30,6 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
--- import Storage.Tabular.Person ()
-
 feedbackForm :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => Maybe Int -> m FeedbackFormList
 feedbackForm ratingValue =
   do

@@ -75,19 +75,6 @@ metaDataTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
--- defaultMetaData :: MetaData
--- defaultMetaData =
---   MetaDataT
---     {
---       driverId = "",
---       device = Nothing,
---       deviceOS = Nothing,
---       deviceDateTime = Nothing,
---       appPermissions = Nothing,
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
-
 instance Serialize MetaData where
   put = error "undefined"
   get = error "undefined"

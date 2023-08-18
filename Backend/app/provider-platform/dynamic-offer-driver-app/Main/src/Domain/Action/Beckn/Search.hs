@@ -43,13 +43,6 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
--- import Kernel.Serviceability
--- import qualified Kernel.Storage.Esqueleto as Esq
--- import qualified Kernel.Storage.Hedis as Redis
-
--- import Lib.Utils
-
--- import Kernel.External.Maps.Types
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (Alternative (empty), whenJustM)
 import Kernel.External.Maps.Google.PolyLinePoints
@@ -165,7 +158,6 @@ handler merchant sReq = do
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
         triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
-        -- Esq.runTransaction $ do
         _ <- QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
         let listOfVehicleVariants = listVehicleVariantHelper farePolicies
@@ -190,7 +182,6 @@ handler merchant sReq = do
               farePolicy.vehicleVariant
               result.duration
               allFarePoliciesProduct.specialLocationTag
-        -- Esq.runTransaction $
         for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
@@ -260,7 +251,6 @@ handler merchant sReq = do
 
           forM_ estimates $ \est -> do
             triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
-          -- Esq.runTransaction $ do
           _ <- QSR.create searchReq
           QEst.createMany estimates
 
@@ -404,14 +394,12 @@ validateRequest merchantId sReq = do
   unless merchant.enabled $ throwError AgencyDisabled
   let fromLocationLatLong = sReq.pickupLocation
       toLocationLatLong = sReq.dropLocation
-  -- res <- QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)
   unlessM (rideServiceable' merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
     throwError RideNotServiceable
   return merchant
   where
     rideServiceable' ::
       ( -- EsqDBFlow m r,
-        --   EsqDBReplicaFlow m r,
         L.MonadFlow m
       ) =>
       GeofencingConfig ->

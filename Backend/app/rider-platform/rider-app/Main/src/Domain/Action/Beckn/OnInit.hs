@@ -65,7 +65,6 @@ data OnInitRes = OnInitRes
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
 onInit req = do
-  -- DB.runTransaction $ do
   void $ QRideB.updateBPPBookingId req.bookingId req.bppBookingId
   void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)

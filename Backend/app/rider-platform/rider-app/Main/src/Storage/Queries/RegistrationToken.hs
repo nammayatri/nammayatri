@@ -28,32 +28,11 @@ import qualified Storage.Beam.RegistrationToken as BeamRT
 create :: (L.MonadFlow m, Log m) => RegistrationToken -> m ()
 create = createWithKV
 
--- findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
--- findById = Esq.findById
-
 findById :: (L.MonadFlow m, Log m) => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = findOneWithKV [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
 
--- findByToken :: Transactionable m => Text -> m (Maybe RegistrationToken)
--- findByToken token_ =
---   findOne $ do
---     registrationToken <- from $ table @RegistrationTokenT
---     where_ $ registrationToken ^. RegistrationTokenToken ==. val token_
---     return registrationToken
-
 findByToken :: (L.MonadFlow m, Log m) => RegToken -> m (Maybe RegistrationToken)
 findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
-
--- setVerified :: Id RegistrationToken -> SqlDB ()
--- setVerified rtId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RegistrationTokenUpdatedAt =. val now,
---         RegistrationTokenVerified =. val True
---       ]
---     where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
 
 setVerified :: (L.MonadFlow m, MonadTime m, Log m) => Id RegistrationToken -> m ()
 setVerified (Id rtId) = do
@@ -63,19 +42,6 @@ setVerified (Id rtId) = do
       Se.Set BeamRT.updatedAt now
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
-
--- setDirectAuth :: Id RegistrationToken -> SqlDB ()
--- setDirectAuth rtId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RegistrationTokenUpdatedAt =. val now,
---         RegistrationTokenVerified =. val True,
---         RegistrationTokenAuthMedium =. val SIGNATURE,
---         RegistrationTokenAuthType =. val DIRECT
---       ]
---     where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
 
 setDirectAuth :: (L.MonadFlow m, MonadTime m, Log m) => Id RegistrationToken -> m ()
 setDirectAuth (Id rtId) = do
@@ -88,17 +54,6 @@ setDirectAuth (Id rtId) = do
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
 
--- updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
--- updateAttempts attemps rtId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RegistrationTokenUpdatedAt =. val now,
---         RegistrationTokenAttempts =. val attemps
---       ]
---     where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
-
 updateAttempts :: (L.MonadFlow m, MonadTime m, Log m) => Int -> Id RegistrationToken -> m ()
 updateAttempts attempts (Id rtId) = do
   now <- getCurrentTime
@@ -108,32 +63,11 @@ updateAttempts attempts (Id rtId) = do
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
 
--- deleteByPersonId :: Id Person -> SqlDB ()
--- deleteByPersonId (Id personId) = do
---   delete $ do
---     registrationToken <- from $ table @RegistrationTokenT
---     where_ (registrationToken ^. RegistrationTokenEntityId ==. val personId)
-
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId)]]
 
--- deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
--- deleteByPersonIdExceptNew (Id personId) newRT = do
---   delete $ do
---     registrationToken <- from $ table @RegistrationTokenT
---     where_ $
---       (registrationToken ^. RegistrationTokenEntityId ==. val personId)
---         &&. not_ (registrationToken ^. RegistrationTokenId ==. val (getId newRT))
-
 deleteByPersonIdExceptNew :: (L.MonadFlow m, Log m) => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
-
--- findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
--- findAllByPersonId (Id personId) =
---   findAll $ do
---     registrationToken <- from $ table @RegistrationTokenT
---     where_ $ registrationToken ^. RegistrationTokenEntityId ==. val personId
---     return registrationToken
 
 findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]

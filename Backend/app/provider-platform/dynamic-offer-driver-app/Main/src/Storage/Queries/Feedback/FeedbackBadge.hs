@@ -30,27 +30,8 @@ import Prelude hiding (id)
 createFeedbackBadge :: (L.MonadFlow m, Log m) => FeedbackBadge -> m ()
 createFeedbackBadge = createWithKV
 
--- findFeedbackBadgeForDriver :: Transactionable m => Id Person -> Text -> m (Maybe FeedbackBadge)
--- findFeedbackBadgeForDriver driverId badge = findOne $ do
---   feedbackBadge <- from $ table @FeedbackBadgeT
---   where_ $ feedbackBadge ^. FeedbackBadgeDriverId ==. val (toKey driverId) &&. feedbackBadge ^. FeedbackBadgeBadge ==. val badge
---   pure feedbackBadge
-
 findFeedbackBadgeForDriver :: (L.MonadFlow m, Log m) => Id Person -> Text -> m (Maybe FeedbackBadge)
 findFeedbackBadgeForDriver (Id driverId) badge = findOneWithKV [Se.And [Se.Is BFFB.driverId $ Se.Eq driverId, Se.Is BFFB.badge $ Se.Eq badge]]
-
--- updateFeedbackBadge :: FeedbackBadge -> Int -> SqlDB ()
--- updateFeedbackBadge feedbackBadge newBadgeCount = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ FeedbackBadgeBadgeCount =. val newBadgeCount,
---         FeedbackBadgeUpdatedAt =. val now
---       ]
---     where_ $
---       tbl ^. FeedbackBadgeTId ==. val (toKey feedbackBadge.id)
---         &&. tbl ^. FeedbackBadgeDriverId ==. val (toKey feedbackBadge.driverId)
 
 updateFeedbackBadge :: (L.MonadFlow m, Log m, MonadTime m) => FeedbackBadge -> Int -> m ()
 updateFeedbackBadge feedbackBadge newBadgeCount = do
@@ -60,12 +41,6 @@ updateFeedbackBadge feedbackBadge newBadgeCount = do
       Se.Set BFFB.updatedAt now
     ]
     [Se.And [Se.Is BFFB.id $ Se.Eq $ getId feedbackBadge.id, Se.Is BFFB.driverId $ Se.Eq $ getId feedbackBadge.driverId]]
-
--- findAllFeedbackBadgeForDriver :: Transactionable m => Id Person -> m [FeedbackBadge]
--- findAllFeedbackBadgeForDriver driverId = findAll $ do
---   feedbackBadges <- from $ table @FeedbackBadgeT
---   where_ $ feedbackBadges ^. FeedbackBadgeDriverId ==. val (toKey driverId)
---   pure feedbackBadges
 
 findAllFeedbackBadgeForDriver :: (L.MonadFlow m, Log m) => Id Person -> m [FeedbackBadge]
 findAllFeedbackBadgeForDriver (Id driverId) = findAllWithKV [Se.Is BFFB.driverId $ Se.Eq driverId]

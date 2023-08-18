@@ -56,7 +56,6 @@ getLanguage driverId mbLanguage = do
       then return mbLanguage
       else runMaybeT $ do
         driverDetail <- MaybeT . B.runInReplica $ QP.findById driverId
-        -- driverDetail <- MaybeT $ QP.findById driverId
         MaybeT $ pure driverDetail.language
   return $ fromMaybe ENGLISH extractLanguage
 
@@ -303,7 +302,6 @@ updateIssueOption issueReportId (driverId, _) Common.IssueUpdateReq {..} = do
 deleteIssue :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 deleteIssue issueReportId (driverId, _) = do
   unlessM (B.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
-    -- unlessM (QIR.isSafeToDelete issueReportId driverId) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this driver.")
   issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   _ <- QIR.updateAsDeleted issueReportId

@@ -28,51 +28,15 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 
--- create :: OperatingCity -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => OperatingCity -> m ()
 create = createWithKV
-
--- findById ::
---   Transactionable m =>
---   Id OperatingCity ->
---   m (Maybe OperatingCity)
--- findById = Esq.findById
 
 findById :: (L.MonadFlow m, Log m) => Id OperatingCity -> m (Maybe OperatingCity)
 findById (Id ocId) = findOneWithKV [Se.Is BeamOC.id $ Se.Eq ocId]
 
--- findByMerchantId ::
---   Transactionable m =>
---   Id Merchant ->
---   m (Maybe OperatingCity)
--- findByMerchantId personid = do
---   findOne $ do
---     vechileRegCert <- from $ table @OperatingCityT
---     return vechileRegCert
-
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe OperatingCity)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
 
--- findEnabledCityByName ::
---   Transactionable m =>
---   Text ->
---   m [OperatingCity]
--- findEnabledCityByName city =
---   Esq.findAll $ do
---     operatingCity <- from $ table @OperatingCityT
---     where_ $
---       lower_ (operatingCity ^. OperatingCityCityName) ==. val city
---         &&. operatingCity ^. OperatingCityEnabled
---     return operatingCity
-
--- findEnabledCityByName :: (L.MonadFlow m, Log m) => Text -> m [OperatingCity]
--- findEnabledCityByName city =
---   findAllWithKV
---     [ Se.And
---         [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
---     ]
 findEnabledCityByName :: (L.MonadFlow m, Log m) => Text -> m [OperatingCity]
 findEnabledCityByName city = do
   dbConf <- getMasterBeamConfig
@@ -83,20 +47,6 @@ findEnabledCityByName city = do
           B.filter_' (\BeamOC.OperatingCityT {..} -> (B.lower_ cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
             B.all_ (BeamCommon.operatingCity BeamCommon.atlasDB)
   either (pure . const []) ((catMaybes <$>) . mapM fromTType') operatingCities
-
--- findEnabledCityByMerchantIdAndName ::
---   Transactionable m =>
---   Id Merchant ->
---   Text ->
---   m [OperatingCity]
--- findEnabledCityByMerchantIdAndName merchantId city =
---   Esq.findAll $ do
---     operatingCity <- from $ table @OperatingCityT
---     where_ $
---       lower_ (operatingCity ^. OperatingCityCityName) ==. val city
---         &&. operatingCity ^. OperatingCityMerchantId ==. val (toKey merchantId)
---         &&. operatingCity ^. OperatingCityEnabled
---     return operatingCity
 
 findEnabledCityByMerchantIdAndName :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m [OperatingCity]
 findEnabledCityByMerchantIdAndName (Id mId) city = do

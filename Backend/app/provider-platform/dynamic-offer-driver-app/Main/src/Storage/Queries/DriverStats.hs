@@ -27,20 +27,6 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
 
--- createInitialDriverStats :: Id Driver -> SqlDB ()
--- createInitialDriverStats driverId = do
---   now <- getCurrentTime
---   Esq.create $
---     DriverStats
---       { driverId = driverId,
---         idleSince = now,
---         totalRides = 0,
---         totalDistance = 0
---       }
-
--- create :: DriverStats -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => DriverStats -> m ()
 create = createWithKV
 
@@ -63,33 +49,11 @@ createInitialDriverStats driverId = do
           }
   createWithKV dStats
 
--- getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
--- getTopDriversByIdleTime count_ ids =
---   Esq.findAll $ do
---     driverStats <- from $ table @DriverStatsT
---     where_ $ driverStats ^. DriverStatsDriverId `in_` valList (toKey . cast <$> ids)
---     orderBy [asc $ driverStats ^. DriverStatsIdleSince]
---     limit $ fromIntegral count_
---     return $ driverStats ^. DriverStatsTId
-
 getTopDriversByIdleTime :: (L.MonadFlow m, Log m) => Int -> [Id Driver] -> m [Id Driver]
 getTopDriversByIdleTime count_ ids = findAllWithOptionsDb [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
 
--- updateIdleTime :: Id Driver -> SqlDB ()
--- updateIdleTime driverId = updateIdleTimes [driverId]
-
 updateIdleTime :: (L.MonadFlow m, MonadTime m, Log m) => Id Driver -> m ()
 updateIdleTime driverId = updateIdleTimes [driverId]
-
--- updateIdleTimes :: [Id Driver] -> SqlDB ()
--- updateIdleTimes driverIds = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsIdleSince =. val now
---       ]
---     where_ $ tbl ^. DriverStatsDriverId `in_` valList (toKey . cast <$> driverIds)
 
 updateIdleTimes :: (L.MonadFlow m, MonadTime m, Log m) => [Id Driver] -> m ()
 updateIdleTimes driverIds = do
@@ -99,33 +63,14 @@ updateIdleTimes driverIds = do
     ]
     [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
 
--- fetchAll :: Transactionable m => m [DriverStats]
--- fetchAll = Esq.findAll $ from $ table @DriverStatsT
-
 fetchAll :: (L.MonadFlow m, Log m) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
-
--- findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
--- findById = Esq.findById
 
 findById :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverStats)
 findById (Id driverId) = findOneWithKV [Se.Is BeamDS.driverId $ Se.Eq driverId]
 
--- deleteById :: Id Driver -> SqlDB ()
--- deleteById = Esq.deleteByKey @DriverStatsT
-
 deleteById :: (L.MonadFlow m, Log m) => Id Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
-
--- incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
--- incrementTotalRidesAndTotalDist driverId rideDist = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
---         DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 findTotalRides :: (L.MonadFlow m, Log m) => Id Driver -> m (Int, Meters)
 findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
@@ -141,15 +86,6 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
--- incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
--- incrementTotalRidesAssigned driverId number = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
-
 findTotalRidesAssigned :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe Int)
 findTotalRidesAssigned (Id driverId) = (Domain.totalRidesAssigned =<<) <$> findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
@@ -160,49 +96,8 @@ incrementTotalRidesAssigned (Id driverId') number = do
     Just newRides -> do
       updateOneWithKV [Se.Set BeamDS.totalRidesAssigned (Just (newRides + number))] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
--- setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
--- setCancelledRidesCount driverId cancelledCount = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsRidesCancelled =. val (Just cancelledCount)
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
-
 setCancelledRidesCount :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
 setCancelledRidesCount (Id driverId') cancelledCount = updateOneWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
-
--- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
--- getDriversSortedOrder mbLimitVal =
---   Esq.findAll $ do
---     driverStats <- from $ table @DriverStatsT
---     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
---     limit $ maybe 10 fromIntegral mbLimitVal
---     return driverStats
-
--- incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
--- incrementTotalRidesAssigned driverId number = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsUpdatedAt =. val now,
---         DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
-
--- setDriverStats :: Id Driver -> Int -> Int -> Money -> SqlDB ()
--- setDriverStats driverId totalRides cancelledCount missedEarning = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsUpdatedAt =. val now,
---         DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val totalRides),
---         DriverStatsRidesCancelled =. val (Just cancelledCount),
---         DriverStatsEarningsMissed =. (tbl ^. DriverStatsEarningsMissed) +. val missedEarning
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 setDriverStats :: (MonadFlow m) => Id Driver -> Int -> Int -> Money -> m ()
 setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
@@ -235,18 +130,6 @@ setCancelledRidesCountAndIncrementEarningsMissed (Id driverId') cancelledCount m
           Se.Set BeamDS.earningsMissed (ds.earningsMissed + missedEarning)
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
-
--- setCancelledRidesCountAndIncrementEarningsMissed :: Id Driver -> Int -> Money -> SqlDB ()
--- setCancelledRidesCountAndIncrementEarningsMissed driverId cancelledCount missedEarning = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsUpdatedAt =. val now,
---         DriverStatsRidesCancelled =. val (Just cancelledCount),
---         DriverStatsEarningsMissed =. (tbl ^. DriverStatsEarningsMissed) +. val missedEarning
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 instance FromTType' BeamDS.DriverStats DriverStats where
   fromTType' BeamDS.DriverStatsT {..} = do
@@ -282,19 +165,6 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.updatedAt = updatedAt
       }
 
--- incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: Id Driver -> Money -> Money -> Int -> SqlDB ()
--- incrementTotalEarningsAndBonusEarnedAndLateNightTrip driverId increasedEarning increasedBonus tripCount = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsUpdatedAt =. val now,
---         DriverStatsTotalEarnings =. (tbl ^. DriverStatsTotalEarnings) +. val increasedEarning,
---         DriverStatsBonusEarned =. (tbl ^. DriverStatsBonusEarned) +. val increasedBonus,
---         DriverStatsLateNightTrips =. (tbl ^. DriverStatsLateNightTrips) +. val tripCount
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
-
 incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m) => Id Driver -> Money -> Money -> Int -> m ()
 incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEarning increasedBonus tripCount = do
   now <- getCurrentTime
@@ -309,17 +179,6 @@ incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEar
           Se.Set BeamDS.lateNightTrips (ds.lateNightTrips + tripCount)
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
-
--- setMissedEarnings :: Id Driver -> Money -> SqlDB ()
--- setMissedEarnings driverId missedEarnings = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverStatsUpdatedAt =. val now,
---         DriverStatsEarningsMissed =. val missedEarnings
---       ]
---     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 setMissedEarnings :: (MonadFlow m) => Id Driver -> Money -> m ()
 setMissedEarnings (Id driverId') missedEarnings = do

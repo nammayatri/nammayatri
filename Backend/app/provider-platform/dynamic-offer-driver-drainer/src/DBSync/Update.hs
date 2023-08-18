@@ -139,11 +139,7 @@ runUpdateCommands (cmd, val) = do
       runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
 
     runUpdateWithRetries id value setClause whereClause model dbConf retryIndex maxRetries = do
-      --   t1    <- EL.getCurrentDateInMillis
-      --   cpuT1 <- EL.runIO getCPUTime
       res <- updateDB dbConf Nothing setClause whereClause value
-      --   t2    <- EL.getCurrentDateInMillis
-      --   cpuT2 <- EL.runIO getCPUTime
       case (res, retryIndex) of
         (Left _, y) | y < maxRetries -> do
           void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" model
@@ -154,5 +150,4 @@ runUpdateCommands (cmd, val) = do
           EL.logError (("Update failed: " :: Text) <> T.pack (show x)) (show [("command" :: String, value)] :: Text)
           pure $ Left (x, id)
         (Right _, _) -> do
-          --   EL.logInfoV ("Drainer Info" :: Text) $ createDBLogEntry model "UPDATE" (t2 -t1) (cpuT2 - cpuT1) rVals
           pure $ Right id

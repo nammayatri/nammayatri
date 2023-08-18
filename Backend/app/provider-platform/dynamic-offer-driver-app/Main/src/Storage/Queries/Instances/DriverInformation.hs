@@ -81,28 +81,3 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.createdAt = createdAt,
         BeamDI.updatedAt = updatedAt
       }
-
--- transformBeamDriverInformationToDomain :: BeamDI.DriverInformation -> DriverInformation
--- transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
---   DriverInformation
---     { driverId = Id driverId,
---       adminId = Id <$> adminId,
---       merchantId = Id <$> merchantId,
---       active = active,
---       onRide = onRide,
---       enabled = enabled,
---       blocked = blocked,
---       verified = verified,
---       subscribed = subscribed,
---       paymentPending = paymentPending,
---       aadhaarVerified = aadhaarVerified,
---       numOfLocks = numOfLocks,
---       referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
---       lastEnabledOn = lastEnabledOn,
---       canDowngradeToSedan = canDowngradeToSedan,
---       canDowngradeToHatchback = canDowngradeToHatchback,
---       canDowngradeToTaxi = canDowngradeToTaxi,
---       mode = mode,
---       createdAt = createdAt,
---       updatedAt = updatedAt
---     }

@@ -32,7 +32,6 @@ import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
 import qualified EulerHS.Language as L
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common

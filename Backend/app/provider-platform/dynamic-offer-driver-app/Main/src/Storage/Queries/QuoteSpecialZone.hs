@@ -33,14 +33,6 @@ import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 
--- create :: QuoteSpecialZone -> SqlDB ()
--- create quote = Esq.runTransaction $
---   withFullEntity quote $ \(quoteT, (fareParams', fareParamsDetais)) -> do
---     Esq.create' fareParams'
---       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
---       FareParamsT.SlabDetailsT -> return ()
---     Esq.create' quoteT
-
 create :: (L.MonadFlow m, Log m) => QuoteSpecialZone -> m ()
 create quote = SQFP.create quote.fareParams >> createWithKV quote
 

@@ -32,25 +32,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 
--- create :: Exophone -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => DE.Exophone -> m ()
 create = createWithKV
-
--- findAllByPhone :: Transactionable m => Text -> m [Exophone]
--- findAllByPhone phone = do
---   findAll $ do
---     exophone <- from $ table @ExophoneT
---     where_ $ just (exophone ^. ExophoneMerchantId) ==. subSelect subQuery
---     return exophone
---   where
---     subQuery = do
---       exophone1 <- from $ table @ExophoneT
---       where_ $
---         exophone1 ^. ExophonePrimaryPhone ==. val phone
---           ||. exophone1 ^. ExophoneBackupPhone ==. val phone
---       return (exophone1 ^. ExophoneMerchantId)
 
 findAllMerchantIdsByPhone :: (L.MonadFlow m, Log m) => Text -> m [Id DM.Merchant]
 findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantId <$>)
@@ -60,57 +43,12 @@ findAllByPhone phone = do
   merchIds <- findAllMerchantIdsByPhone phone
   findAllWithKV [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
 
--- findAllByMerchantId :: Transactionable m => Id DM.Merchant -> m [Exophone]
--- findAllByMerchantId merchantId = do
---   findAll $ do
---     exophone <- from $ table @ExophoneT
---     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
---     return exophone
-
 findAllByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m [Exophone]
 findAllByMerchantId (Id merchantId) = do
   findAllWithKV [Se.Is BeamE.merchantId $ Se.Eq merchantId]
 
--- findAllExophones :: Transactionable m => m [Exophone]
--- findAllExophones = findAll $ from $ table @ExophoneT
-
 findAllExophones :: (L.MonadFlow m, Log m) => m [Exophone]
 findAllExophones = findAllWithDb [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
-
--- updateAffectedPhones :: [Text] -> SqlDB ()
--- updateAffectedPhones primaryPhones = do
---   let indianMobileCode = val "+91"
---   now <- getCurrentTime
---   let primaryPhonesList = valList primaryPhones
---   Esq.update $ \tbl -> do
---     let isPrimaryDown =
---           tbl ^. ExophonePrimaryPhone `in_` primaryPhonesList
---             ||. (indianMobileCode ++. tbl ^. ExophonePrimaryPhone) `in_` primaryPhonesList
---     set
---       tbl
---       [ ExophoneIsPrimaryDown =. isPrimaryDown,
---         ExophoneUpdatedAt =. val now
---       ]
---     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
-
--- updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
--- updateAffectedPhonesHelper primaryNumbers = do
---   dbConf <- getMasterBeamConfig
---   let indianMobileCode = "+91"
---   geoms <-
---     L.runDB dbConf $
---       L.findRow $
---         B.select $
---           B.limit_ 1 $
---             B.filter_'
---               ( \BeamE.ExophoneT {..} ->
---                   B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
---                     B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
---               )
---               $
---               -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
---               B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
---   either (const (pure False)) (pure . isJust) geoms
 
 updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
@@ -134,46 +72,6 @@ updateAffectedPhones primaryPhones = do
               isPrimaryDown B.==?. (primaryPhone `B.in_` (B.val_ <$> primaryPhones))
                 B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
           )
-
--- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
--- updateAffectedPhones' primaryPhones = do
---   let indianMobileCode = "+91"
---   now <- getCurrentTime
---   let primaryPhonesList = valList primaryPhones
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbConf' -> do
---       conn <- L.getOrInitSqlConn dbConf'
---       case conn of
---         Right c -> do
-
---     Nothing -> pure (error "DB Config not found")
-
--- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
--- updateAffectedPhones' primaryPhones = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
--- let modelName = Se.modelTableName @BeamE.ExophoneT
--- updatedMeshConfig <- setMeshConfig modelName
---   now <- getCurrentTime
---   let indianMobileCode = "+91"
---   -- let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (indianMobileCode ++ BeamE.primaryPhone) $ Se.In primaryPhones ]
---   let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (\eT@BeamE.ExophoneT {..} -> (primaryPhone eT) ++ indianMobileCode) $ Se.In primaryPhones ]
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         updatedMeshConfig
---         [ Se.Set BeamE.isPrimaryDown isPrimaryDown,
---           Se.Set BeamE.updatedAt now
---         ]
---         [Se.Is BeamE.isPrimaryDown (Se.Eq isPrimaryDown)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
--- deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
--- deleteByMerchantId merchantId = do
---   Esq.delete $ do
---     exophone <- from $ table @ExophoneT
---     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
 
 deleteByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m ()
 deleteByMerchantId (Id merchantId) = deleteWithKV [Se.Is BeamE.merchantId (Se.Eq merchantId)]

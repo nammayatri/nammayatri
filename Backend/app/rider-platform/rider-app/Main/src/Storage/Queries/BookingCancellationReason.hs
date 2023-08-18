@@ -31,30 +31,8 @@ import qualified Storage.Beam.Common as BeamCommon
 create :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
 create = createWithKV
 
--- findByRideBookingId ::
---   Transactionable m =>
---   Id Booking ->
---   m (Maybe BookingCancellationReason)
--- findByRideBookingId rideBookingId =
---   Esq.findOne $ do
---     rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
---     where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
---     return rideBookingCancellationReason
-
 findByRideBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
 findByRideBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
-
--- upsert :: BookingCancellationReason -> SqlDB ()
--- upsert cancellationReason =
---   Esq.upsert
---     cancellationReason
---     [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
---       BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
---       BookingCancellationReasonSource =. val (cancellationReason.source),
---       BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
---       BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
---       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
---     ]
 
 upsert :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
 upsert cancellationReason = do
@@ -71,19 +49,6 @@ upsert cancellationReason = do
         ]
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
-
--- countCancelledBookingsByBookingIds :: Transactionable m => [Id Booking] -> CancellationSource -> m Int
--- countCancelledBookingsByBookingIds bookingIds cancellationSource = do
---   mkCount <$> do
---     Esq.findAll $ do
---       bookingCancellationReason <- from $ table @BookingCancellationReasonT
---       where_ $
---         bookingCancellationReason ^. BookingCancellationReasonSource ==. val cancellationSource
---           &&. bookingCancellationReason ^. BookingCancellationReasonBookingId `in_` valList (toKey <$> bookingIds)
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
 
 countCancelledBookingsByBookingIds :: (L.MonadFlow m, Log m) => [Id Booking] -> CancellationSource -> m Int
 countCancelledBookingsByBookingIds bookingIds cancellationSource = do

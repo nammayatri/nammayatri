@@ -36,7 +36,6 @@ getStatus personId =
     Just a -> return a
     Nothing -> flip whenJust (cachedStatus personId) /=<< Queries.getStatus personId
 
---updateStatus :: Id Person -> FlowStatus -> Esq.SqlDB ()
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> FlowStatus -> m ()
 updateStatus = Queries.updateStatus
 

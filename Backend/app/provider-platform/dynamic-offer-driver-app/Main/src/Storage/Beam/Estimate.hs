@@ -45,8 +45,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
--- import Data.Aeson (FromJSON, ToJSON)
-
 instance FromBackendRow Postgres [Domain.EstimateBreakup]
 
 instance FromField [Domain.EstimateBreakup] where
@@ -106,9 +104,6 @@ data EstimateT f = EstimateT
 
 instance IsString Domain.EstimateBreakup where
   fromString = show
-
--- instance IsString Money where
---   fromString = show
 
 instance IsString Variant.Variant where
   fromString = show

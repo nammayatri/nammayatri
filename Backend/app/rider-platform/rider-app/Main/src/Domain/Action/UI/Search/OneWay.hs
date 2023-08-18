@@ -32,10 +32,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
--- import Kernel.Serviceability
--- import qualified Kernel.Storage.Esqueleto as DB
--- import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-
 import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -187,7 +183,6 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
   triggerSearchEvent SearchEventData {searchRequest = searchRequest}
-  -- DB.runTransaction $ do
   _ <- QSearchRequest.create searchRequest
   _ <- QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
@@ -214,25 +209,6 @@ oneWaySearch personId req bundleVersion clientVersion device = do
     validateServiceability geoConfig =
       unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable
-
--- rideServiceable' ::
---     L.MonadFlow m =>
---   GeofencingConfig ->
---   (LatLong -> [Text] -> m Bool) ->
---   LatLong ->
---   Maybe LatLong ->
---   m Bool
--- rideServiceable' geofencingConfig someGeometriesContain' origin mbDestination = do
---   originServiceable <-
---     case geofencingConfig.origin of
---       Unrestricted -> pure True
---       Regions regions -> someGeometriesContain' origin regions
---   destinationServiceable <-
---     case geofencingConfig.destination of
---       Unrestricted -> pure True
---       Regions regions -> do
---         maybe (pure True) (`someGeometriesContain` regions) mbDestination
---   pure $ originServiceable && destinationServiceable
 
 getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
 getLongestRouteDistance [] = Nothing

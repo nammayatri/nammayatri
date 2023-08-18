@@ -35,8 +35,6 @@ findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ 
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' BeamFPPD.FarePolicyProgressiveDetailsT {..} = do
     fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyId)
-    -- mfPPDP <- fromMaybeM (InternalError "FarePolicyProgressiveDetailsPerExtraKmRateSection not found") (pure $ nonEmpty fullFPPDP)
-    -- fPPDP <- maybe (InternalError "FarePolicyProgressiveDetailsPerExtraKmRateSection not found") (pure . id) (nonEmpty fullFPPDP)
     fPPDP <- fromMaybeM (InternalError "FromLocation not found") (nonEmpty fullFPPDP)
     pure $
       Just

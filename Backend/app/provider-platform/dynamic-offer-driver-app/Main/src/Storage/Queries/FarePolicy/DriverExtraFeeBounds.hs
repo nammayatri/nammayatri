@@ -15,10 +15,6 @@
 
 module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
--- import qualified Domain.Types.FarePolicy as FarePolicy
-
--- import Kernel.Storage.Esqueleto as Esq
-
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified EulerHS.Language as L
@@ -29,33 +25,11 @@ import Kernel.Types.Id as KTI
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 
--- create :: DFP.FullDriverExtraFeeBounds -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => DFP.FullDriverExtraFeeBounds -> m ()
 create = createWithKV
 
--- findByFarePolicyIdAndStartDistance :: Transactionable m => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
--- findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
---   farePolicy <- from $ table @DFP.DriverExtraFeeBoundsT
---   where_ $
---     farePolicy ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
---       &&. farePolicy ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistance
---   pure farePolicy
-
 findByFarePolicyIdAndStartDistance :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
 findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> listToMaybe
-
--- update :: Id DFP.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
--- update farePolicyId startDistace minFee maxFee = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DFP.DriverExtraFeeBoundsMinFee =. val minFee,
---         DFP.DriverExtraFeeBoundsMaxFee =. val maxFee
---       ]
---       tbl ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
---         &&. tbl ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistace
 
 update :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
 update (Id farePolicyId) startDistance minFee maxFee =

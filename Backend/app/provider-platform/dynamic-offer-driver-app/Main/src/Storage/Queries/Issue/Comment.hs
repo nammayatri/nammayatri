@@ -13,18 +13,8 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
 
--- create :: Comment -> SqlDB ()
--- create = Esq.create
-
 create :: (L.MonadFlow m, Log m) => Comment.Comment -> m ()
 create = createWithKV
-
--- findAllByIssueReportId :: Transactionable m => Id IssueReport -> m [Comment]
--- findAllByIssueReportId issueReportId = findAll $ do
---   comment <- from $ table @CommentT
---   where_ $ comment ^. CommentIssueReportId ==. val (toKey issueReportId)
---   orderBy [desc $ comment ^. CommentCreatedAt]
---   return comment
 
 findById :: (L.MonadFlow m, Log m) => Id Comment -> m (Maybe Comment)
 findById (Id id) = findOneWithKV [Se.Is BeamC.id $ Se.Eq id]

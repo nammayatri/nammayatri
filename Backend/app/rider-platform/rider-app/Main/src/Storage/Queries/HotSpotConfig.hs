@@ -25,12 +25,6 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.HotSpotConfig as BeamHSC
 
--- findConfigByMerchantId ::
---   (MonadIO m, Transactionable m) =>
---   Id Merchant ->
---   m (Maybe HotSpotConfig)
--- findConfigByMerchantId merchantId = Esq.findById (Id merchantId.getId)
-
 findConfigByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe HotSpotConfig)
 findConfigByMerchantId merchantId = findOneWithKV [Se.Is BeamHSC.id $ Se.Eq $ getId merchantId]
 

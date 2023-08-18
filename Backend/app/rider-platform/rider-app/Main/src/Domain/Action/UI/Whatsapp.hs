@@ -38,6 +38,5 @@ whatsAppOptAPI personId OptAPIRequest {..} = do
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")
   unless (whatsappNotificationEnrollStatus == Just status) $
     void $ Whatsapp.whatsAppOptAPI merchantId $ OptApiReq {phoneNumber = mobileNo, method = status}
-  -- DB.runTransaction $
   void $ QP.updateWhatsappNotificationEnrollStatus personId $ Just status
   return Success

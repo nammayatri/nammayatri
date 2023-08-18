@@ -26,13 +26,6 @@ import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 
--- replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
--- replaceAll personId pdenList = do
---   Esq.delete $ do
---     personENT <- from $ table @PersonDefaultEmergencyNumberT
---     where_ $ personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
---   Esq.createMany pdenList
-
 create :: (L.MonadFlow m, Log m) => PersonDefaultEmergencyNumber -> m ()
 create = createWithKV
 
@@ -43,17 +36,6 @@ replaceAll :: (L.MonadFlow m, Log m) => Id Person -> [PersonDefaultEmergencyNumb
 replaceAll (Id personId) pdenList = do
   deleteWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
   createMany pdenList
-
--- findAllByPersonId ::
---   Transactionable m =>
---   Id Person ->
---   m [PersonDefaultEmergencyNumber]
--- findAllByPersonId personId =
---   Esq.findAll $ do
---     personENT <- from $ table @PersonDefaultEmergencyNumberT
---     where_ $
---       personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
---     return personENT
 
 findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
 findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]

@@ -18,7 +18,6 @@ module Storage.Queries.Driver.DriverFlowStatus where
 import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
--- import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude

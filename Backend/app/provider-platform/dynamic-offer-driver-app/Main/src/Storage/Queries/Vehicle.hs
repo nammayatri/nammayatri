@@ -76,17 +76,6 @@ updateVehicleRec vehicle = do
     ]
     [Se.Is BeamV.driverId (Se.Eq $ getId vehicle.driverId)]
 
--- updateVehicleName :: Maybe Text -> Id Person -> SqlDB ()
--- updateVehicleName vehicleName driverId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ VehicleUpdatedAt =. val now,
---         VehicleVehicleName =. val vehicleName
---       ]
---     where_ $ tbl ^. VehicleTId ==. val (toKey driverId)
-
 updateVehicleName :: (MonadFlow m) => Maybe Text -> Id Person -> m ()
 updateVehicleName vehicleName (Id driverId) = do
   now <- getCurrentTime
@@ -109,28 +98,6 @@ findByAnyOf registrationNoM vehicleIdM =
                   <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust registrationNoM) | isJust registrationNoM])
         )
     ]
-
--- findAllByVariantRegNumMerchantId ::
---   Transactionable m =>
---   Maybe Variant.Variant ->
---   Maybe Text ->
---   Integer ->
---   Integer ->
---   Id Merchant ->
---   m [Vehicle]
--- findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = do
---   let limitVal = fromIntegral limit'
---       offsetVal = fromIntegral offset'
---   Esq.findAll $ do
---     vehicle <- from $ table @VehicleT
---     where_ $
---       vehicle ^. VehicleMerchantId ==. val (toKey merchantId)
---         &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
---         &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` (%) ++. val regNum ++. (%))
---     orderBy [desc $ vehicle ^. VehicleCreatedAt]
---     limit limitVal
---     offset offsetVal
---     return vehicle
 
 findAllByVariantRegNumMerchantId :: (L.MonadFlow m, Log m) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId') = do

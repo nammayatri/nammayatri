@@ -34,30 +34,8 @@ import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 create :: (L.MonadFlow m, Log m) => DPFS.PersonFlowStatus -> m ()
 create = createWithKV
 
--- getStatus ::
---   (Transactionable m) =>
---   Id Person ->
---   m (Maybe DPFS.FlowStatus)
--- getStatus personId = do
---   findOne $ do
---     personFlowStatus <- from $ table @PersonFlowStatusT
---     where_ $
---       personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId)
---     return $ personFlowStatus ^. PersonFlowStatusFlowStatus
-
 getStatus :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DPFS.FlowStatus)
 getStatus (Id personId) = findOneWithKV [Se.Is BeamPFS.personId $ Se.Eq personId] <&> (DPFS.flowStatus <$>)
-
--- updateStatus :: Id Person -> DPFS.FlowStatus -> SqlDB ()
--- updateStatus personId flowStatus = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonFlowStatusUpdatedAt =. val now,
---         PersonFlowStatusFlowStatus =. val flowStatus
---       ]
---     where_ $ tbl ^. PersonFlowStatusTId ==. val (toKey personId)
 
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> DPFS.FlowStatus -> m ()
 updateStatus (Id personId) flowStatus = do
@@ -66,24 +44,8 @@ updateStatus (Id personId) flowStatus = do
     [Se.Set BeamPFS.flowStatus flowStatus, Se.Set BeamPFS.updatedAt now]
     [Se.Is BeamPFS.personId $ Se.Eq personId]
 
--- deleteByPersonId :: Id Person -> SqlDB ()
--- deleteByPersonId personId = do
---   Esq.delete $ do
---     personFlowStatus <- from $ table @PersonFlowStatusT
---     where_ (personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId))
-
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamPFS.personId $ Se.Eq personId]
-
--- updateToIdleMultiple :: [Id Person] -> UTCTime -> SqlDB ()
--- updateToIdleMultiple personIds now = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ PersonFlowStatusUpdatedAt =. val now,
---         PersonFlowStatusFlowStatus =. val DPFS.IDLE
---       ]
---     where_ $ tbl ^. PersonFlowStatusTId `in_` valList (toKey <$> personIds)
 
 updateToIdleMultiple :: (L.MonadFlow m, Log m) => [Id Person] -> UTCTime -> m ()
 updateToIdleMultiple personIds now =
