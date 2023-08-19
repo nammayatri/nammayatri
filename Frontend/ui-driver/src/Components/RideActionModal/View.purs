@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -45,8 +45,8 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
-  linearLayout 
+view push config =
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
@@ -58,7 +58,7 @@ view push config =
       , margin $ MarginBottom 16
       ][ messageButton push config
        , callButton push config
-       , openGoogleMap push config 
+       , openGoogleMap push config
       ]
     , if config.specialLocationTag == Maybe.Nothing || (getRequiredTag "text" config.specialLocationTag) == Maybe.Nothing
         then rideActionView push config else rideActionViewWithZone push config
@@ -89,11 +89,11 @@ messageButton push config =
       ]
   ]
 
-getCurrentAndroidVersion :: Merchant -> Int 
-getCurrentAndroidVersion merchant = 
-  case merchant of 
+getCurrentAndroidVersion :: Merchant -> Int
+getCurrentAndroidVersion merchant =
+  case merchant of
     NAMMAYATRI -> 54
-    YATRI -> 47 
+    YATRI -> 47
     YATRISATHI -> 1
     _ -> 1
 
@@ -122,7 +122,7 @@ callButton push config =
       , width $ V 20
       ]
   ]
-  
+
 rideActionViewWithZone :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
 rideActionViewWithZone push config =
   linearLayout
@@ -142,7 +142,7 @@ rideActionViewWithZone push config =
           , height $ V 18
           , imageWithFallback $ getSpecialZoneConfig "imageUrl" config.specialLocationTag
           ]
-        , textView 
+        , textView
           [ width WRAP_CONTENT
           , height MATCH_PARENT
           , text $ getSpecialZoneConfig "text" config.specialLocationTag
@@ -177,13 +177,13 @@ rideActionViewWithZone push config =
   ]
 
 rideTypeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-rideTypeView push config = 
+rideTypeView push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingHorizontal 16 16
-  , visibility if (config.startRideActive || config.requestedVehicleVariant == Maybe.Nothing) then GONE else VISIBLE
+  , visibility if config.requestedVehicleVariant == Maybe.Nothing then GONE else VISIBLE
   ][ linearLayout
       [ height $ V 1
       , width MATCH_PARENT
@@ -196,7 +196,7 @@ rideTypeView push config =
       ][  textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ getString RIDE_TYPE
+          , text $ getString RIDE_TYPE <> ":"
           , color Color.black650
           ] <> FontStyle.body1 TypoGraphy
         , textView $
@@ -264,10 +264,10 @@ openGoogleMap push config =
           ] <> FontStyle.body1 TypoGraphy
           )
       ]
-  ] 
+  ]
 
 rideActionDataView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-rideActionDataView push config = 
+rideActionDataView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -281,7 +281,7 @@ rideActionDataView push config =
           , background Color.black500
           ][]
       , customerNameView push config
-      , linearLayout 
+      , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
@@ -296,14 +296,14 @@ rideActionDataView push config =
       ]
 
 totalDistanceView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-totalDistanceView push config = 
+totalDistanceView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity LEFT
     , orientation VERTICAL
     , weight 1.0
-    ][ textView $ 
+    ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text (getString RIDE_DISTANCE)
@@ -311,7 +311,7 @@ totalDistanceView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
-      , textView $ 
+      , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.totalDistance
@@ -322,7 +322,7 @@ totalDistanceView push config =
     ]
 
 sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-sourceAndDestinationView push config = 
+sourceAndDestinationView push config =
   relativeLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -332,7 +332,7 @@ sourceAndDestinationView push config =
       ]
 
 startRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-startRide push config = 
+startRide push config =
   linearLayout
   [ width MATCH_PARENT
   , height (V 50)
@@ -352,7 +352,7 @@ startRide push config =
   ]
 
 endRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-endRide push config = 
+endRide push config =
   linearLayout
   [ width MATCH_PARENT
   , height (V 50)
@@ -372,8 +372,8 @@ endRide push config =
   ]
 
 cancelRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-cancelRide push config = 
-  linearLayout 
+cancelRide push config =
+  linearLayout
   [ width MATCH_PARENT
   , height (V 34)
   , gravity CENTER
@@ -391,11 +391,11 @@ cancelRide push config =
   ]
 
 customerNameView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-customerNameView push config = 
+customerNameView push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , orientation HORIZONTAL  
+  , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , margin $ MarginVertical 16 20
   ][  linearLayout
@@ -405,7 +405,7 @@ customerNameView push config =
       , gravity START
       ][  textView $
           [ width WRAP_CONTENT
-          , height WRAP_CONTENT 
+          , height WRAP_CONTENT
           , text $ getTitle config
           , color Color.greyTextColor
           , ellipsize true
@@ -416,14 +416,14 @@ customerNameView push config =
     ]
 
 estimatedFareView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-estimatedFareView push config = 
+estimatedFareView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity LEFT
     , orientation VERTICAL
     , weight 1.0
-    ][ textView $ 
+    ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text (getString RIDE_FARE)
@@ -431,7 +431,7 @@ estimatedFareView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
-      , textView $ 
+      , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text ((getValueFromConfig "currency") <> (show config.estimatedRideFare))
@@ -442,7 +442,7 @@ estimatedFareView push config =
     ]
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-waitTimeView push config = 
+waitTimeView push config =
    linearLayout
      [ height WRAP_CONTENT
      , gravity START
@@ -454,7 +454,7 @@ waitTimeView push config =
          [
           orientation HORIZONTAL
          ]
-         [textView $ 
+         [textView $
         [ height WRAP_CONTENT
          , width WRAP_CONTENT
          , text (getString WAIT_TIME)
@@ -472,7 +472,7 @@ waitTimeView push config =
             , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
           ]
          ]
-        , textView $ 
+        , textView $
          [ height WRAP_CONTENT
          , width WRAP_CONTENT
          , text (config.waitTime)
@@ -486,13 +486,13 @@ waitTimeView push config =
 
 
 rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-rideInfoView push config = 
+rideInfoView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , stroke ("1," <> Color.grey900)
     , cornerRadius 8.0
-    , padding (Padding 16 16 5 16) 
+    , padding (Padding 16 16 5 16)
     ][ estimatedFareView push config
      , separator true
      , totalDistanceView push config
@@ -505,7 +505,7 @@ rideInfoView push config =
     ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
-separator visibility' = 
+separator visibility' =
   linearLayout
     [ weight 1.0
     , height MATCH_PARENT
@@ -519,7 +519,7 @@ separator visibility' =
     ]
 
 sourceDestinationImageView :: forall w . Config -> PrestoDOM (Effect Unit) w
-sourceDestinationImageView  config = 
+sourceDestinationImageView  config =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -534,16 +534,16 @@ sourceDestinationImageView  config =
       , imageView
         [ height $ V 14
         , width $ V 14
-        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"        
+        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
         ]
       ]
 
 
 sourceDestinationTextView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 sourceDestinationTextView push config =
-  linearLayout 
-    [ width WRAP_CONTENT 
-    , orientation VERTICAL 
+  linearLayout
+    [ width WRAP_CONTENT
+    , orientation VERTICAL
     , height WRAP_CONTENT
     , margin (MarginLeft 25)
     ][  textView $
@@ -554,7 +554,7 @@ sourceDestinationTextView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.subHeading1 TypoGraphy
-      , textView $ 
+      , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.sourceAddress.detailText
@@ -564,21 +564,21 @@ sourceDestinationTextView push config =
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
       , destAddressTextView config push
-      ]   
+      ]
 
 arrivedButtonView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-arrivedButtonView push config = 
+arrivedButtonView push config =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , orientation HORIZONTAL
   , cornerRadius 24.0
   , gravity CENTER_VERTICAL
-  , stroke $ if config.notifiedCustomer then "0," <> Color.blackLessTrans  else "1," <> Color.blue900 
+  , stroke $ if config.notifiedCustomer then "0," <> Color.blackLessTrans  else "1," <> Color.blue900
   , background if config.notifiedCustomer then Color.grey700 else Color.white900
   , padding (Padding 10 7 12 7)
   , margin (MarginTop 12)
-  , onClick (\action -> do 
+  , onClick (\action -> do
       if config.notifiedCustomer then pure unit
         else do
           _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show Triggered)
@@ -603,8 +603,8 @@ arrivedButtonView push config =
     ]
 
 destinationView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-destinationView config push = 
-  linearLayout 
+destinationView config push =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
@@ -613,13 +613,13 @@ destinationView config push =
       [ height $ V 24
       , width $ V 24
       , imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
-      , margin $ Margin 0 3 8 0         
+      , margin $ Margin 0 3 8 0
       ]
     , destAddressTextView config push
   ]
 
 lineImageView :: forall w . Int -> PrestoDOM (Effect Unit) w
-lineImageView val = 
+lineImageView val =
   imageView
     [ height $ V val
     , width $ V 15
@@ -628,8 +628,8 @@ lineImageView val =
     ]
 
 destAddressTextView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-destAddressTextView config push= 
-  linearLayout 
+destAddressTextView config push=
+  linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation VERTICAL
@@ -654,17 +654,17 @@ destAddressTextView config push=
 getTitle :: Config -> String
 getTitle config = case config.startRideActive of
   false -> (getString YOU_ARE_ON_A_RIDE)
-  true  -> case config.isDriverArrived, config.notifiedCustomer of 
-    false, false  -> (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...") 
+  true  -> case config.isDriverArrived, config.notifiedCustomer of
+    false, false  -> (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
     true, _       -> (getString YOU_ARE_AT_PICKUP)
-    false,true    -> case (getValueToLocalStore LANGUAGE_KEY) of 
+    false,true    -> case (getValueToLocalStore LANGUAGE_KEY) of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
 
 
 separatorConfig :: SeparatorView.Config
-separatorConfig = 
+separatorConfig =
   {
     orientation : VERTICAL
   , count : 6
