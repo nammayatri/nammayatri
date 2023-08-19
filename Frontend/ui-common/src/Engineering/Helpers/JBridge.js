@@ -883,6 +883,24 @@ export const getCurrentLatLong = function () {
   }
 };
 
+export const getCurrentPositionWithTimeout = function (cb){
+  return function (action){
+    return function (delay){
+      return function () {
+        var callbackFallback = function (){
+          cb(action("0.0")("0.0"))();
+        };
+        var timer = setTimeout(callbackFallback, delay);
+        var callback = callbackMapper.map(function (lat, lng) {
+          clearTimeout(timer);
+          cb(action(lat)(lng))();
+        });
+        window.JBridge.getCurrentPosition(callback);
+      }
+    }
+  }
+}
+
 export const isLocationEnabled = function (unit) {
   return function () {
     if (window.__OS == "IOS")
