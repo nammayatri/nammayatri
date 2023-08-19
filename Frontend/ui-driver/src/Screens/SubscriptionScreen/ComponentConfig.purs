@@ -22,6 +22,7 @@ import Common.Types.App (PaymentStatus(..))
 import Components.PopUpModal as PopUpModalConfig
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
+import Data.Maybe (isNothing)
 import Data.Maybe as Mb
 import Data.Semigroup ((<>))
 import Font.Style (Style(..))
@@ -53,7 +54,7 @@ switchPlanButtonConfig state = let
       , height = (V 48)
       , cornerRadius = 8.0
       , margin = (Margin 0 16 0 16)
-      , visibility = if state.data.myPlanData.planEntity.id == state.props.managePlanProps.selectedPlan then GONE else VISIBLE
+      , visibility = if state.data.myPlanData.planEntity.id == state.props.managePlanProps.selectedPlanItem.id then GONE else VISIBLE
       }
   in primaryButtonConfig'
 
@@ -77,16 +78,16 @@ joinPlanButtonConfig state = let
       { textConfig{ text = case (getSelectedJoiningPlan state) of 
                                 Mb.Just value -> ( "Join " <> value <> " Plan") 
                                 Mb.Nothing -> (getString TAP_A_PLAN_TO_VIEW_DETAILS) }
-      , isClickable = if state.props.joinPlanProps.selectedPlan /= Mb.Nothing && state.props.paymentStatus /= Mb.Just Pending then true else false
-      , alpha = if state.props.joinPlanProps.selectedPlan /=Mb.Nothing && state.props.paymentStatus /= Mb.Just Pending then 1.0 else 0.6
+      , isClickable = if isNothing state.props.joinPlanProps.selectedPlanItem then false else true
+      , alpha = if isNothing state.props.joinPlanProps.selectedPlanItem then 0.6 else 1.0
       , height = (V 48)
       , cornerRadius = 8.0
       , margin = (MarginBottom 16)
       }
   in primaryButtonConfig'
 
-pupupModalConfig :: ST.SubscriptionScreenState -> PopUpModalConfig.Config
-pupupModalConfig state = let
+popupModalConfig :: ST.SubscriptionScreenState -> PopUpModalConfig.Config
+popupModalConfig state = let
     config = PopUpModalConfig.config
     popUpConf' = config {
       cornerRadius = Corners 15.0 true true true true
@@ -104,7 +105,7 @@ pupupModalConfig state = let
                   Mb.Just DuesClearedPopup -> (getString DUES_CLEARED_SUCCESSFULLY)
                   Mb.Just CancelAutoPay -> (getString NOT_PLANNING_TO_TAKE_RIDES)
                   Mb.Nothing -> ""
-      , margin = (Margin 16 32 16 24)
+      , margin = Margin 16 16 16 0
       , visibility = VISIBLE
       , color = Color.black800
       , textStyle = Heading2
@@ -119,6 +120,7 @@ pupupModalConfig state = let
       , color = Color.yellow900
       , background = Color.black
       , visibility =true
+      , margin = MarginTop 16
       },
       coverImageConfig {
         imageUrl =  case state.props.popUpState of
@@ -134,7 +136,7 @@ pupupModalConfig state = let
     secondaryText {
       text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else ""
       , color = Color.black700
-      , margin = Margin 16 12 16 40
+      , margin = Margin 16 4 16 0
       , visibility = if state.props.popUpState == Mb.Just FailedPopup then VISIBLE else GONE
       },
       option2 { visibility = false }
@@ -161,15 +163,15 @@ confirmCancelPopupConfig state = let
       , margin = (Margin 16 12 16 40)
         },
       option1 {
-        text = "No"
+        text = getString NO
       , color = Color.black900
       , strokeColor = Color.black700
       },
-      option2 {text = "Yes, Cancel"
+      option2 {text = getString YES_CANCEL
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
-      , margin = (MarginLeft 12) 
+      , margin = MarginLeft 12
       },
       coverImageConfig {
         imageUrl = "ny_ic_pause_autopay,"
@@ -182,16 +184,16 @@ confirmCancelPopupConfig state = let
 
 getSelectedAlternatePlan :: ST.SubscriptionScreenState -> String
 getSelectedAlternatePlan state = do
-  let plan = (DA.filter(\item -> item.id == state.props.managePlanProps.selectedPlan) state.data.managePlanData.alternatePlans)
+  let plan = (DA.filter(\item -> item.id == state.props.managePlanProps.selectedPlanItem.id) state.data.managePlanData.alternatePlans)
   case plan DA.!! 0 of 
     Mb.Just value -> value.title
     Mb.Nothing -> state.data.myPlanData.planEntity.title
 
 getSelectedJoiningPlan :: ST.SubscriptionScreenState -> Mb.Maybe String
 getSelectedJoiningPlan state = do
-  case state.props.joinPlanProps.selectedPlan of
-    Mb.Just id -> do 
-                    let plan = (DA.filter(\item -> item.id == id) state.data.joinPlanData.allPlans)
+  case state.props.joinPlanProps.selectedPlanItem of
+    Mb.Just planEntity -> do 
+                    let plan = (DA.filter(\item -> item.id == planEntity.id) state.data.joinPlanData.allPlans)
                     case plan DA.!! 0 of 
                       Mb.Just value -> Mb.Just value.title
                       Mb.Nothing -> Mb.Nothing

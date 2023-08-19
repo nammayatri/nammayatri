@@ -750,5 +750,8 @@ const englishStrings = {
   DAILY_UNLIMITED : "DAILY UNLIMITED",
   DAILY_PER_RIDE : "DAILY PER RIDE",
   DAILY_UNLIMITED_PLAN_DESC : "Enjoy UNLIMITED rides, every day",
-  DAILY_PER_RIDE_PLAN_DESC : "Up to a maximum of ₹35 per day"
+  DAILY_PER_RIDE_PLAN_DESC : "Up to a maximum of ₹35 per day",
+  AUTOPAY_CANCELLED : "Autopay Cancelled",
+  NO : "No",
+  YES_CANCEL : "Yes, Cancel"
 }

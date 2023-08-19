@@ -1,3 +1,20 @@
+{-
+ 
+  Copyright 2022-23, Juspay India Pvt Ltd
+ 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ 
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ 
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ 
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ 
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+
+
 module Screens.SubscriptionScreen.View where
 
 import Screens.SubscriptionScreen.ComponentConfig
@@ -40,7 +57,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getPlanPrice, getAllFareFromArray)
-import Screens.Types (AutoPayStatus(..), GlobalProps, MyPlanData, PaymentMethod(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
+import Screens.Types (AutoPayStatus(..), GlobalProps, MyPlanData, PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore)
@@ -141,8 +158,8 @@ view push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , visibility if (not Mb.isNothing state.props.popUpState) then VISIBLE else GONE
-      ][PopUpModal.view (push <<< PopUpModalAC) (pupupModalConfig state)]
-    , PrestoAnim.animationSet [ Anim.fadeIn (not Mb.isNothing state.props.popUpState) ] $
+      ][PopUpModal.view (push <<< PopUpModalAC) (popupModalConfig state)]
+    , PrestoAnim.animationSet [ Anim.fadeIn state.props.confirmCancel] $
       linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -367,7 +384,11 @@ plansBottomView push state =
               , width MATCH_PARENT
               , orientation VERTICAL
               ](map 
-                  (\item -> planCardView push item (item.id == (Mb.fromMaybe "" state.props.joinPlanProps.selectedPlan)) true ChoosePlan state.props.isSelectedLangTamil
+                  (\item ->
+                    let selectedPlan = state.props.joinPlanProps.selectedPlanItem
+                    in case selectedPlan of
+                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil
+                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -954,7 +975,7 @@ managePlanBodyView push state =
         , color Color.black700
         , margin $ MarginBottom 12
         ]
-      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlan) true SelectPlan state.props.isSelectedLangTamil
+      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil
       , textView
         [ text (getString ALTERNATE_PLAN)
         , textSize if state.props.isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
@@ -967,13 +988,13 @@ managePlanBodyView push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         ](map(
-             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlan) true SelectPlan state.props.isSelectedLangTamil)
+             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil)
              ) state.data.managePlanData.alternatePlans)
       , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
      ]
    ]
 
-planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (String -> Action) -> Boolean -> PrestoDOM (Effect Unit) w
+planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (PlanCardConfig -> Action) -> Boolean -> PrestoDOM (Effect Unit) w
 planCardView push state isSelected clickable' action isSelectedLangTamil =
   -- PrestoAnim.animationSet                TODO :: Animations
   -- [ translateInXForwardAnim true] $
@@ -987,7 +1008,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil =
   , orientation VERTICAL
   , margin $ MarginBottom 16
   , clickable clickable'
-  , onClick push $ const $ action state.id
+  , onClick push $ const $ action state
   ][ linearLayout
      [ height WRAP_CONTENT
      , width MATCH_PARENT
