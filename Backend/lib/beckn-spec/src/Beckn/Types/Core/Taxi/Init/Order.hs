@@ -14,6 +14,7 @@
 
 module Beckn.Types.Core.Taxi.Init.Order where
 
+import Beckn.Types.Core.Taxi.Common.Billing
 import Beckn.Types.Core.Taxi.Common.Payment
 import Beckn.Types.Core.Taxi.Common.Provider
 import Beckn.Types.Core.Taxi.Common.Quote
@@ -56,19 +57,4 @@ instance FromJSON OrderItem where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 instance ToJSON OrderItem where
-  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-data Billing = Billing
-  { name :: Maybe Text,
-    phone :: Maybe Text
-  }
-  deriving (Generic, Show)
-
-instance ToSchema Billing where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-instance FromJSON Billing where
-  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-instance ToJSON Billing where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

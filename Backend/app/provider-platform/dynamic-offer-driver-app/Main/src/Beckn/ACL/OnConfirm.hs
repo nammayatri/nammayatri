@@ -47,6 +47,7 @@ buildOnConfirmMessage res = do
               state = "ACTIVE",
               items = [mkOrderItem itemId booking.quoteId currency totalFareDecimal],
               fulfillment = fulfillmentDetails,
+              billing = mkBilling (Just res.riderPhoneNumber) res.riderName,
               quote =
                 OnConfirm.Quote
                   { price =
@@ -82,6 +83,9 @@ buildOnConfirmMessage res = do
                   }
             }
       }
+
+mkBilling :: Maybe Text -> Maybe Text -> OnConfirm.Billing
+mkBilling phone name = OnConfirm.Billing {..}
 
 mkOrderItem :: Text -> Text -> Text -> DecimalValue -> OnConfirm.OrderItem
 mkOrderItem itemId fulfillmentId currency totalFareDecimal =
