@@ -945,7 +945,7 @@ export const openNavigation = function (slat) {
         if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery && window.__OS != "IOS") {
           var query = window.appConfig.navigationAppConfig.query;
           var packageName = window.appConfig.navigationAppConfig.packageName;
-          return window.JBridge.openNavigationWithQuery(dlat, dlong, "http://maps.google.com///?daddr=%@,%@d&directionsmode=driving", packageName);
+          return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
         } else {
           return window.JBridge.openNavigation(slat, slong, dlat, dlong);
         }
