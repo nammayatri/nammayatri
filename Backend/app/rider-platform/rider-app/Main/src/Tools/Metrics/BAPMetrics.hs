@@ -40,10 +40,10 @@ finishSearchMetrics merchantName txnId = do
   finishSearchMetrics' bmContainer merchantName version txnId
 
 incrementRideCreatedRequestCount :: HasBAPMetrics m r => Text -> m ()
-incrementRideCreatedRequestCount merchantName = do
+incrementRideCreatedRequestCount merchantId = do
   bmContainer <- asks (.bapMetrics)
   version <- asks (.version)
-  incrementRideCreatedRequestCount' bmContainer merchantName version
+  incrementRideCreatedRequestCount' bmContainer merchantId version
 
 incrementRideCreatedRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
 incrementRideCreatedRequestCount' bmContainer merchantId version = do
