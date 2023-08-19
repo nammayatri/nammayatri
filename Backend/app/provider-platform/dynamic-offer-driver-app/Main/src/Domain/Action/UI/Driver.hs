@@ -160,6 +160,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
+import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Text.Read as Read
 import qualified Tools.Auth as Auth
@@ -562,6 +563,8 @@ setActivity (personId, _) isActive mode = do
   let driverId = cast personId
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+    mbVehicle <- QV.findById personId
+    when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
