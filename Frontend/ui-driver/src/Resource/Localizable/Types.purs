@@ -759,6 +759,9 @@ data STR = LETS_GET_STARTED
         | DAILY_PER_RIDE
         | DAILY_UNLIMITED_PLAN_DESC
         | DAILY_PER_RIDE_PLAN_DESC
+        | AUTOPAY_CANCELLED
+        | NO
+        | YES_CANCEL
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1506,3 +1509,6 @@ getStringFromEnum key = case key of
     DAILY_PER_RIDE -> "DAILY_PER_RIDE"
     DAILY_UNLIMITED_PLAN_DESC -> "DAILY_UNLIMITED_PLAN_DESC"
     DAILY_PER_RIDE_PLAN_DESC -> "DAILY_PER_RIDE_PLAN_DESC"
+    AUTOPAY_CANCELLED -> "AUTOPAY_CANCELLED"
+    NO -> "NO"
+    YES_CANCEL -> "YES_CANCEL"

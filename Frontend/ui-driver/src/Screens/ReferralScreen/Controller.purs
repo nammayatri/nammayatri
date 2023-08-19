@@ -15,33 +15,33 @@
 
 module Screens.ReferralScreen.Controller where
 
-import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void, (<>), when, map, (-), (>))
-import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
 import Components.BottomNavBar as BottomNavBar
 import Components.GenericHeader as GenericHeader
-import Components.PrimaryEditText.Controllers as PrimaryEditText
-import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Components.PrimaryButton.Controller as PrimaryButton
 import Components.PopUpModal.Controller as PopUpModal
-import PrestoDOM (Eval, continue, exit, continueWithCmd , updateAndExit)
-import PrestoDOM.Types.Core (class Loggable)
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress , trackAppTextInput, trackAppScreenEvent)
-import Screens (ScreenName(..), getScreen)
-import Data.String (length)
-import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd)
-import Services.Config (getSupportNumber)
-import Debug (spy)
-import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
-import Storage (setValueToLocalNativeStore, KeyStore(..))
-import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
+import Components.PrimaryButton.Controller as PrimaryButton
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Data.Array (last, (!!), init, replicate, filter, sortWith, any)
 import Data.Array (length) as DA
 import Data.Maybe (Maybe(..))
-import Services.API (LeaderBoardRes(..), DriversInfo(..))
 import Data.Maybe (fromMaybe)
-import Screens.ReferralScreen.ScreenData as RSD
-import Engineering.Helpers.LogEvent (logEvent)
+import Data.String (length)
+import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
+import Engineering.Helpers.LogEvent (logEvent)
+import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
+import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>))
+import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
+import Screens (ScreenName(..), getScreen)
+import Screens.ReferralScreen.ScreenData as RSD
+import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
+import Services.API (LeaderBoardRes(..), DriversInfo(..))
+import Services.Config (getSupportNumber)
+import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -263,7 +263,10 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications
-    "Join" -> exit $ SubscriptionScreen state
+    "Join" -> do
+      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      exit $ SubscriptionScreen state
     _ -> continue state
 
 eval _ state = continue state

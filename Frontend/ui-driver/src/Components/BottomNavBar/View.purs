@@ -28,7 +28,7 @@ import JBridge (startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Visibility(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, maxLines, onClick, orientation, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
@@ -55,8 +55,10 @@ view push state =
           , gravity CENTER
           , onClick push (const (OnNavigate item.text))
           ][ linearLayout
-              [ width (V 24)
-              , height (V 24)
+              [ width $ V 50
+              , height WRAP_CONTENT
+              , gravity CENTER
+              , orientation VERTICAL
               ][ if ((item.text == "Alert") && ((getValueToLocalNativeStore ALERT_RECEIVED) == "true") && state.activeIndex /= 3) then
                     lottieLoaderView state push state.activeIndex item.text
                  else
@@ -65,10 +67,11 @@ view push state =
                     , height (V 24)
                     , imageWithFallback if state.activeIndex == index then item.activeIcon else item.defaultIcon
                     ]
-                ]
            , textView (
-             [ width WRAP_CONTENT
+             [ weight 1.0
              , height WRAP_CONTENT
+             , gravity CENTER_HORIZONTAL
+             , maxLines 1
              , color if index == state.activeIndex then Color.black else Color.black600
              , text case item.text of
                       "Home"          -> getString HOME
@@ -76,9 +79,10 @@ view push state =
                       "Rankings"      -> getString RANKINGS
                       "Profile"       -> getString PROFILE
                       "Alert"         -> getString MESSAGES
-                      "Join"          -> getString PLANS
+                      "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
                       _               -> ""
              ] <> FontStyle.tags TypoGraphy)
+                ]
            ]
          ) state.navButton
          )

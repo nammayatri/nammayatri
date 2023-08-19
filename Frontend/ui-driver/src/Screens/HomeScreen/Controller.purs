@@ -333,7 +333,10 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
-    "Join" -> exit $ SubscriptionScreen state
+    "Join" -> do
+      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      exit $ SubscriptionScreen state
     _ -> continue state
 
 eval (OfferPopupAC PopUpModal.OnButton1Click) state = do

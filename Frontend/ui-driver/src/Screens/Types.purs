@@ -1544,8 +1544,8 @@ type JoinPlanData = {
 }
 
 type JoinPlanProps = {
-  selectedPlan :: Maybe String,
-  paymentMode :: String
+  paymentMode :: String,
+  selectedPlanItem :: Maybe PlanCardConfig
 }
 
 type ManagePlanData = {
@@ -1554,7 +1554,7 @@ type ManagePlanData = {
 }
 
 type ManagePlanProps = {
-  selectedPlan :: String
+  selectedPlanItem :: PlanCardConfig
 }
 
 type MyPlanData = {
@@ -1599,8 +1599,6 @@ type PromoConfig = {
   , offerDescription :: Maybe String
 }
 
-data PaymentMethod = UPI_AUTOPAY | MANUAL
-
 data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay
 
 derive instance genericSubscribePopupType :: Generic SubscribePopupType _
@@ -1608,10 +1606,6 @@ instance showSubscribePopupType :: Show SubscribePopupType where show = genericS
 instance eqSubscribePopupType :: Eq SubscribePopupType where eq = genericEq
 instance decodeSubscribePopupType :: Decode SubscribePopupType where decode = defaultEnumDecode
 instance encodeSubscribePopupType :: Encode SubscribePopupType where encode = defaultEnumEncode
-
-derive instance genericPaymentMethod:: Generic PaymentMethod _
-instance showPaymentMethod:: Show PaymentMethod where show = genericShow
-instance eqPaymentMethod:: Eq PaymentMethod where eq = genericEq
 
 data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING
 

@@ -6,19 +6,20 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
 import Data.Int as DI
+import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
 import Data.String (toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp)
+import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, pure, unit, not, negate, show, ($), (==), (-), (*), (&&))
+import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, myPlanListTransformer, planListTransformer)
-import Screens.Types (AutoPayStatus(..), PaymentMethod(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (GetCurrentPlanResp(..), MandateData(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
+import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), PlanCardConfig)
+import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
 
@@ -37,8 +38,8 @@ data Action = BackPressed
             | SwitchPlan PrimaryButton.Action
             | JoinPlanAC PrimaryButton.Action
             | ManagePlanAC
-            | SelectPlan String
-            | ChoosePlan String
+            | SelectPlan PlanCardConfig
+            | ChoosePlan PlanCardConfig
             | ToggleDueDetails
             | NoAction
             | ViewPaymentHistory
@@ -65,7 +66,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | JoinPlanExit SubscriptionScreenState
                     | PaymentHistory SubscriptionScreenState
                     | CancelAutoPayPlan SubscriptionScreenState
-                    | SwitchCurrentPlan SubscriptionScreenState
+                    | SwitchCurrentPlan SubscriptionScreenState String
                     | ResumeAutoPayPlan SubscriptionScreenState
                     | CheckOrderStatus SubscriptionScreenState String
                     | GotoManagePlan SubscriptionScreenState
@@ -87,18 +88,19 @@ eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpande
 eval (ClearDue PrimaryButton.OnClick) state = continue state
 
 eval (SwitchPlan PrimaryButton.OnClick) state = do
-  _ <- pure $ cleverTapCustomEvent "ny_driver_switch_plan_clicked"
-  updateAndExit state { props{showShimmer = true}} $ SwitchCurrentPlan state { props{showShimmer = true}}
+  let planId = state.props.managePlanProps.selectedPlanItem.id
+  if planId /= "" then do
+    _ <- pure $ cleverTapCustomEvent "ny_driver_switch_plan_clicked"
+    updateAndExit state { props{showShimmer = true}} $ SwitchCurrentPlan state { props{showShimmer = true}} planId
+  else continue state
 
 eval ManagePlanAC state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
-  updateAndExit state { props{showShimmer = true}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlan = state.data.myPlanData.planEntity.id } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
+  updateAndExit state { props{showShimmer = true, subView = ManagePlan}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
-eval (SelectPlan planID ) state = continue state {props {managePlanProps {selectedPlan = planID}}}
+eval (SelectPlan config ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
 
-eval (ChoosePlan planID ) state = do
-  _ <- pure $ cleverTapCustomEvent "ny_driver_plan_selected"
-  continue state {props {joinPlanProps {selectedPlan = Mb.Just planID}}}
+eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selectedPlanItem = Mb.Just config}}}
 
 eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state
 
@@ -107,8 +109,8 @@ eval HeaderRightClick state = case state.props.subView of
     _ -> continue state
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
-                  Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true}} $ Refresh
-                  Mb.Just FailedPopup -> continue state {props {popUpState = Mb.Nothing}} -- Retry Payment
+                  Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
+                  Mb.Just FailedPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Just DuesClearedPopup -> exit $ Refresh
                   Mb.Just CancelAutoPay -> exit $ CancelAutoPayPlan state -- CancelAutoPay API
                   Mb.Nothing -> continue state
@@ -118,7 +120,7 @@ eval (ConfirmCancelPopup (PopUpModal.OnButton1Click)) state = continue state { p
 
 eval (ConfirmCancelPopup (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_cancel_autopay"
-  updateAndExit state { props{showShimmer = true}} $ CancelAutoPayPlan state { props{showShimmer = true}}
+  updateAndExit state { props{showShimmer = true, confirmCancel = false}} $ CancelAutoPayPlan state { props{showShimmer = true, confirmCancel = false}}
 
 eval (ResumeAutoPay PrimaryButton.OnClick) state = updateAndExit state { props{showShimmer = true}} $ ResumeAutoPayPlan state { props{showShimmer = true}}
 
@@ -147,27 +149,38 @@ eval (LoadPlans plans) state = do
       data{ joinPlanData {allPlans = planListTransformer plans,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
-            joinPlanProps { selectedPlan = if (state.props.joinPlanProps.selectedPlan == Mb.Nothing) then getSelectedId plans else state.props.joinPlanProps.selectedPlan}} }
+            joinPlanProps { selectedPlanItem = if (isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans else state.props.joinPlanProps.selectedPlanItem}} }
 
-eval (LoadMyPlans plans) state =
+eval (LoadMyPlans plans) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
       (PlanEntity planEntity) = currentPlanResp.currentPlanDetails
       newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ orderId = currentPlanResp.orderId, planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer plans, maxDueAmount = planEntity.totalPlanCreditLimit, currentDueAmount = planEntity.currentDues, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
-  in case currentPlanResp.mandateDetails of 
+
+  _ <- pure $ setCleverTapUserProp "Plan" planEntity.name
+  _ <- pure $ setCleverTapUserProp "Subscription Offer" $ show $ map (\(OfferEntity offer) -> offer.title) planEntity.offers
+  _ <- pure $ setCleverTapUserProp "Due Amount" $ show planEntity.currentDues
+  _ <- pure $ setCleverTapUserProp "Autopay status" $ fromMaybe "Nothing" currentPlanResp.autoPayStatus
+
+
+  case currentPlanResp.mandateDetails of 
     Mb.Nothing -> continue newState
-    Mb.Just (MandateData mandateDetails) -> continue newState 
-                                          {data {
-                                              myPlanData {
-                                                mandateStatus = toLower mandateDetails.status
-                                              }
-                                            , autoPayDetails {
-                                                detailsList = getAutoPayDetailsList (MandateData mandateDetails)
-                                              , pspLogo = getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
-                                              , payerUpiId = mandateDetails.payerVpa
-                                              }
-                                            , planId = planEntity.id
-                                            }
-                                          }
+    Mb.Just (MandateData mandateDetails) -> do
+      _ <- pure $ setCleverTapUserProp "Mandate status" mandateDetails.status
+      _ <- pure $ setCleverTapUserProp "Autopay Max Amount Registered" $ show mandateDetails.maxAmount
+      _ <- pure $ setCleverTapUserProp "Payment method" if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"
+      _ <- pure $ setCleverTapUserProp "UPI ID availability" if isNothing mandateDetails.payerVpa then "FALSE" else "TRUE"
+      continue newState 
+        {data {
+            myPlanData {
+              mandateStatus = toLower mandateDetails.status
+            }
+          , autoPayDetails {
+              detailsList = getAutoPayDetailsList (MandateData mandateDetails)
+            , pspLogo = getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
+            , payerUpiId = mandateDetails.payerVpa
+            }
+          }
+        }
 
 eval CheckPaymentStatus state = case state.data.orderId of
   Mb.Just id -> updateAndExit state { props{refreshPaymentStatus = true}} $ CheckOrderStatus state id

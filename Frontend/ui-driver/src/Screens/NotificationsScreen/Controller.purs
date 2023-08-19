@@ -16,7 +16,8 @@
 module Screens.NotificationsScreen.Controller where
 
 import Prelude
-import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
+
+import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
 import Components.NotificationCard.Controller as NotificationCardAC
 import Components.NotificationDetailModel as NotificationDetailModel
@@ -30,10 +31,11 @@ import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
+import Debug (spy)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
 import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer, parseNumber)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
@@ -41,8 +43,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeData, YoutubeVideoStatus(..))
 import Services.API (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
 import Services.Backend as Remote
-import Storage (KeyStore(..), setValueToLocalNativeStore)
-import Debug (spy)
+import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
 
 instance showAction :: Show Action where
@@ -244,6 +245,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
       exit $ GoToReferralScreen
     "Join" -> do 
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state
 

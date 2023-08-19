@@ -50,7 +50,7 @@ main event = do
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true
     case resp of
-      Right _ -> pure $ printLog "printLog " "Success in main"
+      Right _ -> liftFlow $ main event
       Left error -> liftFlow $ main event
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ runEffectFn1 Utils.initiatePP unit
   JBridge.storeMainFiberOb mainFiber

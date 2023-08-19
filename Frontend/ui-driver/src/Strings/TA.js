@@ -718,5 +718,8 @@ const tamilStrings = {
   DAILY_UNLIMITED : "டெய்லி அன்லிமிட்டட்‌",
   DAILY_PER_RIDE : "டெய்லி பர்‌ ரைட்‌",
   DAILY_UNLIMITED_PLAN_DESC : "தினமும் அன்லிமிட்டட்‌ சவாரிகள்",
-  DAILY_PER_RIDE_PLAN_DESC : "ஒரு நாளைக்கு அதிகபட்சம் ₹35 வரை"
+  DAILY_PER_RIDE_PLAN_DESC : "ஒரு நாளைக்கு அதிகபட்சம் ₹35 வரை",
+  AUTOPAY_CANCELLED : "தானியங்கு கட்டணம் ரத்து செய்யப்பட்டது",
+  NO : "இல்லை",
+  YES_CANCEL : "ஆம், ரத்துசெய்"
 }

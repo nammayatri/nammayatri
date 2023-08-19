@@ -27,7 +27,7 @@ import Data.Either (Either(..))
 import Data.Functor (map)
 import Data.Int (round, toNumber, ceil, fromString)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Number (fromString) as Number
 import Data.Ord (compare)
 import Data.Ord (compare)
@@ -44,6 +44,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -51,7 +52,7 @@ import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation, unregisterDateAndTime, withinTimeRange, cleverTapCustomEvent)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, unregisterDateAndTime, withinTimeRange)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
@@ -74,11 +75,11 @@ import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), UpdatePopupType(..), PaymentMethod(..), AutoPayStatus(..), SubscriptionSubview(..))
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..), PlanCardConfig)
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
@@ -88,7 +89,6 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Effect.Uncurried (runEffectFn1)
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
@@ -261,6 +261,7 @@ getDriverInfoFlow = do
     Right getDriverInfoResp -> do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = (GetDriverInfoResp getDriverInfoResp)})
+      setValueToLocalStore DRIVER_SUBSCRIBED if isNothing getDriverInfoResp.autoPayStatus then "false" else "true"
       let (OrganizationInfo organization) = getDriverInfoResp.organization
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
       case getDriverInfoResp.mobileNumber of
@@ -311,6 +312,8 @@ getDriverInfoFlow = do
       
       if fromMaybe 0 getDriverInfoResp.numberOfRides > 0 then void $ pure $ setCleverTapUserProp "First ride taken" "true"
         else void $ pure $ setCleverTapUserProp "First ride taken" "false"
+      
+      _ <- pure $ setCleverTapUserProp "Plan Subscription Status" if isNothing getDriverInfoResp.autoPayStatus then "FALSE" else "TRUE"
 
       let dbClientVersion = getDriverInfoResp.clientVersion
       let dbBundleVersion = getDriverInfoResp.bundleVersion
@@ -1529,6 +1532,7 @@ currentRideFlow = do
             stage = (if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted)
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
         _ <- updateStage $ HomeScreenStage stage
+        void $ pure $ setCleverTapUserProp "Driver On-ride" "Yes"
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide}, props{ silentPopUpView = false, goOfflineModal = false }})
       Nothing -> do
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
@@ -1538,6 +1542,7 @@ currentRideFlow = do
     setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
     _ <- updateStage $ HomeScreenStage HomeScreen
     pure unit
+  void $ pure $ setCleverTapUserProp "Driver On-ride" "No"
   (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && (getMerchant FunctionCall) == YATRISATHI}})
   homeScreenFlow
@@ -1773,6 +1778,7 @@ homeScreenFlow = do
       _ <- pure $ spy "number_of_deviation" (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT)
       let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) >=3 
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation)-- driver's  lat long during ending ride
+      _ <- pure $ cleverTapCustomEvent "ny_driver_ride_ended"
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
@@ -1909,7 +1915,7 @@ homeScreenFlow = do
     ON_CALL state -> do
       (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id)
       homeScreenFlow
-    OPEN_PAYMENT_PAGE state -> paymentFlow
+    OPEN_PAYMENT_PAGE state -> ysPaymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
       let (GlobalState defGlobalState) = defaultGlobalState
       modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
@@ -1920,46 +1926,18 @@ homeScreenFlow = do
       aadhaarVerificationFlow
   pure unit
 
-
-dummyPayload :: PaymentPagePayload
-dummyPayload = PaymentPagePayload {
-    requestId: Just "6751a25bc42f4af7a4d22d059eb35f3f",
-    service: Just "in.juspay.hyperpay",
-    payload : PayPayload {
-        clientId: Just "nammayatri",
-        amount:  "1.0",
-        merchantId: Just "nammayatri",
-        clientAuthToken:  "tkn_27ed89179f6a404cad1f6b4268412d8e",
-        clientAuthTokenExpiry:  "2023-08-11T09:17:01Z",
-        environment: Just "sandbox",
-        lastName: Just "wick",
-        action: Just "paymentPage",
-        customerId: Just "favorit-suv-000000000000000000000000",
-        currency: "INR",
-        firstName: Just "john",
-        customerPhone: Just "9876543201",
-        customerEmail: Just "test@mail.com",
-        orderId: Just "yourUniqueOrderId001",
-        description: Just "Order Description",
-        options_getUpiDeepLinks  : Nothing,
-        returnUrl  : Just "",
-        "options.createMandate" : Just "REQUIRED",
-        "mandate.maxAmount" : Just "25.0",
-        "mandate.endDate" : Nothing,
-        "mandate.startDate" : Nothing,
-        language : Nothing
-    }
-}
-
-nyPaymentFlow :: String -> FlowBT String Unit
-nyPaymentFlow planId = do
-  response <- lift $ lift $ Remote.subscribePlan planId
+nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
+nyPaymentFlow planCardConfig fromJoinPlan = do
+  response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
   case response of
     Right (SubscribePlanResp listResp) -> do
+      _ <- when fromJoinPlan do
+        _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "selected_plan" planCardConfig.title
+        _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "offer" $ show $ map (\offer -> offer.title) planCardConfig.offers
+        pure unit 
       let (CreateOrderRes orderResp) = listResp.orderResp
           (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
           (PayPayload innerpayload) = sdk_payload.payload
-          orderPayload = PayPayload $ innerpayload{ orderId = Just listResp.orderId }
           finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
 
@@ -1972,24 +1950,36 @@ nyPaymentFlow planId = do
       case orderStatus of
         Right (OrderStatusRes statusResp) ->
           case statusResp.status of
-            PS.CHARGED -> setPaymentStatus Success orderPayload UPI_AUTOPAY
-            PS.AUTHORIZATION_FAILED -> setPaymentStatus Failed orderPayload UPI_AUTOPAY
-            PS.AUTHENTICATION_FAILED -> setPaymentStatus Failed orderPayload UPI_AUTOPAY
-            PS.JUSPAY_DECLINED -> setPaymentStatus Failed orderPayload UPI_AUTOPAY
+            PS.CHARGED -> setSubscriptionStatus Success statusResp.status planCardConfig
+            PS.AUTHORIZATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
+            PS.AUTHENTICATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
+            PS.JUSPAY_DECLINED -> setSubscriptionStatus Failed statusResp.status planCardConfig
             PS.NEW -> pure unit
-            PS.PENDING_VBV -> setPaymentStatus Pending orderPayload UPI_AUTOPAY
-            _ -> setPaymentStatus Pending orderPayload UPI_AUTOPAY
-        Left err -> setPaymentStatus Pending orderPayload UPI_AUTOPAY
+            PS.PENDING_VBV -> setSubscriptionStatus Pending statusResp.status planCardConfig
+            _ -> setSubscriptionStatus Pending statusResp.status planCardConfig
+        Left err -> setSubscriptionStatus Pending PS.PENDING_VBV planCardConfig
     Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
   subScriptionFlow
+
+setSubscriptionStatus :: PaymentStatus -> PS.APIPaymentStatus -> PlanCardConfig -> FlowBT String Unit
+setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
+  case paymentStatus of
+    Success -> do 
+      _ <- pure $ cleverTapCustomEvent "ny_driver_subscription_success"
+      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup, paymentStatus = Just paymentStatus }})
+    Failed -> do
+      _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title
+      _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "failure_code" (show apiPaymentStatus)
+      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, paymentStatus = Just paymentStatus }})
+    Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {paymentStatus = Just paymentStatus, joinPlanProps {selectedPlanItem = Nothing}}})
 
 paymentHistoryFlow :: FlowBT String Unit
 paymentHistoryFlow = do 
   exitAction <- UI.paymentHistory
   pure unit 
 
-paymentFlow :: FlowBT String Unit
-paymentFlow = do
+ysPaymentFlow :: FlowBT String Unit
+ysPaymentFlow = do
   (GlobalState state) <- getState
   let homeScreenState = state.homeScreen
   response <- lift $ lift $ Remote.createPaymentOrder homeScreenState.data.paymentState.driverFeeId
@@ -2005,34 +1995,24 @@ paymentFlow = do
       case orderStatus of
         Right (OrderStatusRes resp) ->
           case resp.status of
-            PS.CHARGED -> setPaymentStatus Success sdk_payload.payload MANUAL
-            PS.AUTHORIZATION_FAILED -> setPaymentStatus Failed sdk_payload.payload MANUAL
-            PS.AUTHENTICATION_FAILED -> setPaymentStatus Failed sdk_payload.payload MANUAL
-            PS.JUSPAY_DECLINED -> setPaymentStatus Failed sdk_payload.payload MANUAL
-            PS.NEW -> setPaymentStatus Pending sdk_payload.payload MANUAL
-            PS.PENDING_VBV -> setPaymentStatus Pending sdk_payload.payload MANUAL
-            PS.AUTHORIZING -> setPaymentStatus Pending sdk_payload.payload MANUAL
-            PS.COD_INITIATED -> setPaymentStatus Pending sdk_payload.payload MANUAL
-            PS.STARTED -> setPaymentStatus Pending sdk_payload.payload MANUAL
-            PS.AUTO_REFUNDED -> setPaymentStatus Pending sdk_payload.payload MANUAL
-        Left error -> setPaymentStatus Failed sdk_payload.payload MANUAL
+            PS.CHARGED -> setPaymentStatus Success sdk_payload.payload
+            PS.AUTHORIZATION_FAILED -> setPaymentStatus Failed sdk_payload.payload
+            PS.AUTHENTICATION_FAILED -> setPaymentStatus Failed sdk_payload.payload
+            PS.JUSPAY_DECLINED -> setPaymentStatus Failed sdk_payload.payload
+            PS.NEW -> setPaymentStatus Pending sdk_payload.payload
+            PS.PENDING_VBV -> setPaymentStatus Pending sdk_payload.payload
+            PS.AUTHORIZING -> setPaymentStatus Pending sdk_payload.payload
+            PS.COD_INITIATED -> setPaymentStatus Pending sdk_payload.payload
+            PS.STARTED -> setPaymentStatus Pending sdk_payload.payload
+            PS.AUTO_REFUNDED -> setPaymentStatus Pending sdk_payload.payload
+        Left error -> setPaymentStatus Failed sdk_payload.payload
     Left (error) -> do
       pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
       homeScreenFlow
   ackScreenFlow
 
-
-setPaymentStatus :: PaymentStatus -> PayPayload -> PaymentMethod -> FlowBT String Unit
-setPaymentStatus paymentStatus (PayPayload payload) paymentMethod = do
-  case paymentMethod of 
-    UPI_AUTOPAY -> case paymentStatus of -- ys mandate flow
-        Success -> do 
-          _ <- pure $ cleverTapCustomEvent "ny_driver_subscription_success"
-          modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup, paymentStatus = Just paymentStatus }})
-        Failed -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, paymentStatus = Just paymentStatus }})
-        Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {paymentStatus = Just paymentStatus, joinPlanProps {selectedPlan = Nothing}}, data {orderId = payload.orderId}})
-
-    MANUAL -> 
+setPaymentStatus :: PaymentStatus -> PayPayload -> FlowBT String Unit
+setPaymentStatus paymentStatus (PayPayload payload) = do
       case paymentStatus of
         Success -> do
                   let currency = (getValueFromConfig "currency")
@@ -2084,7 +2064,7 @@ ackScreenFlow = do
   action <- UI.acknowledgementScreen
   case action of
     EXIT_TO_HOME_SCREEN -> homeScreenFlow
-    RETRY_PAYMENT -> paymentFlow
+    RETRY_PAYMENT -> ysPaymentFlow
 
 
 subScriptionFlow :: FlowBT String Unit
@@ -2099,48 +2079,45 @@ subScriptionFlow = do
     NAV GoToAlerts -> notificationFlow
     GOTO_HOMESCREEN -> homeScreenFlow
     MAKE_PAYMENT state -> do
-      case state.props.joinPlanProps.selectedPlan of 
+      case state.props.joinPlanProps.selectedPlanItem of 
         Just selectedPlan -> do
           setValueToLocalStore DISABLE_WIDGET "true"
-          nyPaymentFlow selectedPlan
+          nyPaymentFlow selectedPlan true
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
-      void $ lift $ lift $ toggleLoader true
-      suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId -- Cancel API
-      void $ lift $ lift $ toggleLoader false
+      suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
       case suspendMandate of 
         Right resp -> do 
           getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
           let (GlobalState defGlobalState) = defaultGlobalState
           modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+          pure $ toast $ getString AUTOPAY_CANCELLED
           subScriptionFlow
         Left errorPayload -> do 
           pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
           modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ props{ showError = true, showShimmer = false }})
       subScriptionFlow
-    SWITCH_PLAN state -> do
-      void $ lift $ lift $ toggleLoader true
-      selectPlanResp <- lift $ lift $ Remote.selectPlan state.props.managePlanProps.selectedPlan -- SwitchPlan API
-      void $ lift $ lift $ toggleLoader false
+    SWITCH_PLAN state planId -> do
+      selectPlanResp <- lift $ lift $ Remote.selectPlan planId
       case selectPlanResp of 
         Right resp -> do
           let (GlobalState defGlobalState) = defaultGlobalState
-          modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
           _ <- pure $ cleverTapCustomEvent "ny_driver_switch_plan"
+          _ <- pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "new_plan" state.props.managePlanProps.selectedPlanItem.title
+          _ <- pure $ cleverTapCustomEventWithParams "ny_driver_switch_plan" "previous_plan" state.data.managePlanData.currentPlan.title
           pure $ toast $ getString SWITCHED_PLAN
+          modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
     RESUME_AUTOPAY state ->
       case state.data.myPlanData.autoPayStatus of
-        CANCELLED_PSP -> nyPaymentFlow state.data.planId
-        PAUSED_PSP -> nyPaymentFlow state.data.planId
-        PENDING -> nyPaymentFlow state.data.planId
+        CANCELLED_PSP -> nyPaymentFlow state.data.myPlanData.planEntity false
+        PAUSED_PSP -> nyPaymentFlow state.data.myPlanData.planEntity false
+        PENDING -> nyPaymentFlow state.data.myPlanData.planEntity false
         _ -> do
-          void $ lift $ lift $ toggleLoader true
-          resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId -- Resume API
-          void $ lift $ lift $ toggleLoader false
+          resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId
           case resumeMandate of 
             Right resp -> do
               getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
@@ -2150,7 +2127,7 @@ subScriptionFlow = do
               pure $ toast $ getString RESUMED_AUTOPAY
             Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
           subScriptionFlow
-    RETRY_PAYMENT_AC state planId -> nyPaymentFlow planId
+    RETRY_PAYMENT_AC state planId -> nyPaymentFlow state.data.myPlanData.planEntity false
     CHECK_ORDER_STATUS state orderId-> do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
       case orderStatus of
