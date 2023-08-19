@@ -17,6 +17,7 @@ module Beckn.Types.Core.Taxi.Confirm.Order
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Billing
 import Beckn.Types.Core.Taxi.Common.Payment
 import Beckn.Types.Core.Taxi.Common.Price
 import Beckn.Types.Core.Taxi.Common.Provider
@@ -33,6 +34,7 @@ data Order = Order
     items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
     quote :: Quote,
+    billing :: Billing,
     payment :: Payment,
     provider :: Maybe Provider
   }
@@ -49,6 +51,7 @@ instance ToJSON Order where
 
 data OrderItem = OrderItem
   { id :: Text,
+    fulfillment_id :: Maybe Text,
     price :: Maybe Price
   }
   deriving (Generic, Show)

@@ -36,6 +36,7 @@ instance ToSchema Order where
 
 data OrderItem = OrderItem
   { id :: Text,
+    fulfillment_id :: Text,
     price :: Price,
     tags :: Maybe TagGroups
   }
