@@ -88,6 +88,7 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Engineering.Helpers.LogEvent (logEvent)
 import Common.Styles.Colors as Color
+import Effect.Uncurried (runEffectFn1)
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
@@ -127,6 +128,7 @@ baseAppFlow baseFlow = do
       setValueToLocalNativeStore GPS_METHOD "CURRENT"
       setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
       setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
+      _ <- liftFlowBT $ runEffectFn1 consumeBP unit
       when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
         setValueToLocalStore SESSION_ID (generateSessionId unit)
       if(driverId == "__failed") then void $ lift $ lift $ setLogField "driver_id" $ encode ("null")
@@ -1925,7 +1927,7 @@ paymentFlow = do
     Right (CreateOrderRes listResp) -> do
       let (PaymentPagePayload sdk_payload) = listResp.sdk_payload
       paymentPageOutput <- paymentPageUI listResp.sdk_payload
-      let _ = consumeBP unit
+      _ <- liftFlowBT $ runEffectFn1 consumeBP unit
       if (paymentPageOutput == "backpressed") then homeScreenFlow else pure unit-- backpressed FAIL
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus homeScreenState.data.paymentState.driverFeeId
       case orderStatus of

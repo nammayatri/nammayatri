@@ -70,6 +70,7 @@ import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import JBridge (getCurrentPositionWithTimeout)
+import Effect.Uncurried(EffectFn1)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -294,7 +295,7 @@ type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 
 foreign import startPP :: MicroAPPInvokeSignature
 
-foreign import consumeBP :: Unit -> Unit
+foreign import consumeBP :: EffectFn1 Unit Unit
 
 paymentPageUI :: PaymentPagePayload -> FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
