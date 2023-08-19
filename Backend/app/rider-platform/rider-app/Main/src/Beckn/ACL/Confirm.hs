@@ -51,10 +51,12 @@ mkConfirmMessage res = do
               items =
                 [ Confirm.OrderItem
                     { id = res.itemId,
+                      fulfillment_id = res.fulfillmentId,
                       price = Nothing
                     }
                 ],
               fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant,
+              billing = mkBilling (Just res.riderPhoneNumber) res.mbRiderName,
               payment = mkPayment res.estimatedTotalFare res.paymentUrl,
               quote =
                 Confirm.Quote
@@ -85,6 +87,9 @@ mkConfirmMessage res = do
     fulfillmentType = case res.bookingDetails of
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE
+
+mkBilling :: Maybe Text -> Maybe Text -> Confirm.Billing
+mkBilling phone name = Confirm.Billing {..}
 
 mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
 mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =

@@ -20,6 +20,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.Agent as Reexport
 import Beckn.Types.Core.Taxi.Common.Authorization as Reexport
+import Beckn.Types.Core.Taxi.Common.Billing as Reexport
 import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
 import Beckn.Types.Core.Taxi.Common.Customer as Reexport
 import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport

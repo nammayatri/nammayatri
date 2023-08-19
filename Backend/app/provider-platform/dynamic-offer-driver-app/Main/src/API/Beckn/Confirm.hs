@@ -64,7 +64,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
             DBooking.NormalBooking -> do
               ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
               driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-              --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
+              -- -driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
               driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
               -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
               fork "on_confirm/on_update" $ do

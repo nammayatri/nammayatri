@@ -49,6 +49,7 @@ buildOrder res = do
   let item =
         Select.OrderItem
           { id = res.estimate.itemId,
+            fulfillment_id = res.estimate.bppEstimateId.getId,
             price =
               Select.Price
                 { currency = "INR",

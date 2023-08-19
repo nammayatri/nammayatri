@@ -19,6 +19,7 @@ module Beckn.Types.Core.Taxi.Init
 where
 
 import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.Billing as Reexport
 import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
 import Beckn.Types.Core.Taxi.Common.Location as Reexport
