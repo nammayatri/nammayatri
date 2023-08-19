@@ -55,7 +55,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), show)
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show)
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -70,7 +70,8 @@ import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PaymentPagePayload, PromotionPopupConfig)
-import Storage (KeyStore)
+import Storage (KeyStore) 
+import JBridge (getCurrentPositionWithTimeout)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -314,4 +315,17 @@ getNegotiationUnit varient = case varient of
   _ -> "20"
   
 getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
-getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min 
+
+data LatLon = LatLon String String
+
+getCurrentLocation :: Number -> Number -> Number -> Number -> FlowBT String LatLon
+getCurrentLocation currentLat currentLon sourceLat sourceLon = do
+  (LatLon startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon 500 $> nonCanceler)
+  if(startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0") then
+    pure (LatLon startRideCurrentLat startRideCurrentLong)
+  else do 
+    let distanceDiff = (getDistanceBwCordinates currentLat currentLon sourceLat sourceLon)
+        rideLat = show $ if distanceDiff <= 0.10 then  currentLat else sourceLat
+        rideLong = show $ if distanceDiff <= 0.10 then currentLon else sourceLon
+    pure (LatLon rideLat rideLong) 

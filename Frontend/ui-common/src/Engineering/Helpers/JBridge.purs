@@ -134,6 +134,7 @@ foreign import mapSnapShot :: forall action. String -> Locations -> String -> Bo
 foreign import getCurrentLatLong  :: Effect Paths
 foreign import isLocationEnabled :: Unit -> Effect Boolean
 foreign import getCurrentPosition  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
+foreign import getCurrentPositionWithTimeout  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Int -> Effect Unit
 
 foreign import isMockLocation :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import animateCamera :: Number -> Number -> Int -> String -> Effect Unit

@@ -32,8 +32,8 @@ import Types.ModifyScreenState (modifyScreenState)
 import Screens.Types (KeyboardModalType(..))
 import Data.Maybe (Maybe(..))
 import Presto.Core.Types.Language.Flow (getLogFields)
+import Helpers.Utils (getCurrentLocation, LatLon(..))
 
-data Location = Location String String
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
 homeScreen = do
@@ -57,21 +57,16 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS state status)
     StartRide state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
-      (Location startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
-      _ <- pure $ printLog "lat handler" startRideCurrentLat
-      _ <- pure $ printLog "lon handler" startRideCurrentLong
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : startRideCurrentLat, lon : startRideCurrentLong} state)
+      LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.src_lat state.data.activeRide.src_lon
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : lat , lon : lon } state) 
     StartZoneRide  state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
-      (Location startZoneRideCurrentLat startZoneRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : startZoneRideCurrentLat, lon : startZoneRideCurrentLong})
+      LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : lat , lon : lon }) 
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      (Location endRideCurrentLat endRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
-      _ <- pure $ printLog "lat handler" endRideCurrentLat
-      _ <- pure $ printLog "lon handler" endRideCurrentLong
-      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : endRideCurrentLat, lon : endRideCurrentLong})
+      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon})
     SelectListModal state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → state)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : state.data.activeRide.id , info : state.data.cancelRideModal.selectedReasonDescription, reason : state.data.cancelRideModal.selectedReasonCode})
