@@ -255,7 +255,7 @@ eval (AddImagesModelAction (ImageModel.OnClickDelete index)) state = do
   let imageIds' = fromMaybe state.data.addImagesState.imageMediaIds $ deleteAt index state.data.addImagesState.imageMediaIds
   continueWithCmd state { data { addImagesState { images = images', stateChanged = not (imageIds' == state.data.uploadedImagesIds), imageMediaIds = imageIds' } } } [do
     _ <- forWithIndex images' \i x -> do
-      _ <- renderBase64ImageFile x.image (getNewIDWithTag "add_image_component_image" <> (show i)) false
+      _ <- renderBase64ImageFile x.image (getNewIDWithTag "add_image_component_image" <> (show i)) false "CENTER_CROP"
       pure NoAction
     pure NoAction
   ]

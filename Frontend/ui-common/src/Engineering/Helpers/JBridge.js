@@ -1308,17 +1308,25 @@ export const previewImage = function (base64Image) {
 export const renderBase64Image = function (image) {
   return function (id) {
     return function (fitCenter) {
-      try {
-        if (JBridge.renderBase64Image) {
-          return JBridge.renderBase64Image(image, id, fitCenter);
+      return function (imgScaleType){
+        try {
+          if(JBridge.renderBase64Image){
+            return JBridge.renderBase64Image(image, id, fitCenter, imgScaleType);
+          }
+        }catch(err1){
+          try {
+            if (JBridge.renderBase64Image) {
+              return JBridge.renderBase64Image(image, id, fitCenter);
+            }
+          } catch (err2) {
+          /*
+          * This function is deprecated on 22 May - 2023
+          * Added only for Backward Compability
+          * Remove this function once it is not begin used.
+          */
+            return JBridge.renderBase64Image(image, id);
+          }
         }
-      } catch (err) {
-    /*
-     * This function is deprecated on 22 May - 2023
-     * Added only for Backward Compability
-     * Remove this function once it is not begin used.
-     */
-        return JBridge.renderBase64Image(image, id);
       }
     };
   };

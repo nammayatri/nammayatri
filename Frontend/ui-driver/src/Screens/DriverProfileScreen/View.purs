@@ -342,15 +342,28 @@ tabImageView state push =
   ][  PrestoAnim.animationSet
       [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
       , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
-      ] $ imageView
-          [ height $ V 88
+      ] $ 
+      linearLayout[
+        height $ V 88
+      , width $ V 88
+      , cornerRadius 44.0
+      , margin $ MarginRight 10
+      , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
+      , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
+      ] [ (if state.data.profileImg == Nothing then 
+          imageView[ 
+            height $ V 88
           , width $ V 88
-          , cornerRadius 44.0
-          , margin $ MarginRight 10
-          , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
-          , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
           , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
           ]
+        else 
+          linearLayout [
+            height $ V 88
+          , width $ V 88
+          , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
+          , id (getNewIDWithTag "driver_prof_img")][]
+        )
+      ]      
   ,  PrestoAnim.animationSet
     [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) {fromX = 44 , toX = -44}
     , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}

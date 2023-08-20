@@ -99,7 +99,8 @@ initData = {
           chargesBreakup : [],
           blockedDueToPayment : false,
           laterButtonVisibility : false
-        }
+        },
+        profileImg : Nothing
     },
     props: {
         statusOnline : true,
