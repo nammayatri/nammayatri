@@ -19,12 +19,13 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateE
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import GHC.Exts (fromList)
 
 data RideStartedEvent = RideStartedEvent
   { id :: Text,
     -- update_target :: Text,
+    state :: Text,
     fulfillment :: FulfillmentInfo
   }
   deriving (Generic, Show)
@@ -35,6 +36,7 @@ instance ToJSON RideStartedEvent where
     A.Object $
       "id" .= id
         -- <> "update_target" .= update_target
+        <> "state" .= state
         <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_STARTED <> "name" .= A.String "Ride Started") :: A.Object) :: A.Object)))
 
 instance FromJSON RideStartedEvent where
@@ -44,6 +46,7 @@ instance FromJSON RideStartedEvent where
     RideStartedEvent
       <$> obj .: "id"
       -- <*> obj .: "update_target"
+      <*> obj .: "state"
       <*> obj .: "fulfillment"
 
 instance ToSchema RideStartedEvent where
@@ -77,6 +80,7 @@ instance ToSchema RideStartedEvent where
             L..~ fromList
               [ ("id", txt),
                 -- ("update_target", txt),
+                ("state", txt),
                 ("fulfillment", Inline fulfillment)
               ]
-          & required L..~ ["id", "fulfillment"]
+          & required L..~ ["id", "state", "fulfillment"]

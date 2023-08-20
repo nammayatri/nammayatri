@@ -61,7 +61,9 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
         OS.Provider
           { id = provider.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = provider.name},
-            locations = maybe [] mkProviderLocations estimateList,
+            locations = case estimateList of
+              Nothing -> Nothing
+              Just list -> Just (mkProviderLocations list),
             items,
             fulfillments
           }

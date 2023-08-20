@@ -25,7 +25,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateE
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, tags, title, value)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import GHC.Exts (fromList)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
@@ -33,6 +33,7 @@ import Kernel.Utils.Schema
 data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
     -- update_target :: Text,
+    state :: Text,
     quote :: RideCompletedQuote,
     fulfillment :: FulfillmentInfo,
     payment :: Maybe Payment
@@ -45,6 +46,7 @@ instance ToJSON RideCompletedEvent where
     A.Object $
       "id" .= id
         -- <> "update_target" .= update_target
+        <> "state" .= state
         <> "quote" .= quote
         <> "payment" .= payment
         <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_COMPLETED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)))
@@ -56,6 +58,7 @@ instance FromJSON RideCompletedEvent where
     RideCompletedEvent
       <$> obj .: "id"
       -- <*> obj .: "update_target"
+      <*> obj .: "state"
       <*> obj .: "quote"
       <*> obj .: "fulfillment"
       <*> obj .: "payment"
@@ -93,6 +96,7 @@ instance ToSchema RideCompletedEvent where
             L..~ fromList
               [ ("id", txt),
                 -- ("update_target", txt),
+                ("state", txt),
                 ("quote", quote),
                 ("payment", payment),
                 ("fulfillment", Inline fulfillment)
@@ -100,6 +104,7 @@ instance ToSchema RideCompletedEvent where
           & required
             L..~ [ "id",
                    --  "update_target",
+                   "state",
                    "quote",
                    "fulfillment",
                    "payment"

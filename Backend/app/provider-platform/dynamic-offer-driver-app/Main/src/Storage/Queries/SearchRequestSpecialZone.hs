@@ -90,8 +90,8 @@ getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSRSZ.transacti
 --     pure (sReq, sFromLoc, mbSToLoc)
 --   pure $ extractSolidType @SearchRequestSpecialZone <$> mbFullSearchReqT
 
-findByMsgIdAndBapIdAndBppId :: (L.MonadFlow m, Log m) => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
-findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
+findByTxnIdAndBapIdAndBppId :: (L.MonadFlow m, Log m) => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByTxnIdAndBapIdAndBppId txnId bapId (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
 
 -- getValidTill ::
 --   (Transactionable m) =>
