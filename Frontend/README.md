@@ -82,3 +82,12 @@ To start the frontend app for IOS, follow these steps:
 **Starting the Server**
 
     npm run start:ios:<master, sandbox, or prod>
+
+**Running Script for creating Screen**
+
+1. Change the current Directory to frontend/scripts
+2. run the following command 
+```bash
+  bash createScreen.sh <Screen Name> <Directory_Name>
+```
+  Directory_Name  = ui-driver  | ui-customer

@@ -51,56 +51,56 @@ import Foreign (Foreign)
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
-    splashScreen :: SplashScreenState
-  , enterMobileNumberScreen :: EnterMobileNumberScreenState
-  , chooseLanguageScreen :: ChooseLanguageScreenState
-  , accountSetUpScreen :: AccountSetUpScreenState
-  , tripDetailsScreen :: TripDetailsScreenState
-  , invoiceScreen :: InvoiceScreenState
-  , contactUsScreen :: ContactUsScreenState
-  , helpAndSupportScreen :: HelpAndSupportScreenState
-  , myRidesScreen :: MyRidesScreenState
-  , permissionScreen :: PermissionScreenState
-  , homeScreen :: HomeScreenState
-  , selectLanguageScreen :: SelectLanguageScreenState
-  , aboutUsScreen :: AboutUsScreenState
-  , myProfileScreen :: MyProfileScreenState
-  , savedLocationScreen :: SavedLocationScreenState
-  , addNewAddressScreen :: AddNewAddressScreenState
-  , appUpdatePopUpScreen :: AppUpdatePopUpState
-  , referralScreen :: ReferralScreenState
-  , emergencyContactsScreen :: EmergencyContactsScreenState
-  , welcomeScreen :: WelcomeScreenState
-  , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
-  , ticketBookingScreen :: TicketBookingScreenState
-  , ticketInfoScreen :: TicketInfoScreenState
+    splashScreen :: SplashScreenState ,
+    enterMobileNumberScreen :: EnterMobileNumberScreenState , 
+    chooseLanguageScreen :: ChooseLanguageScreenState , 
+    accountSetUpScreen :: AccountSetUpScreenState , 
+    tripDetailsScreen :: TripDetailsScreenState , 
+    invoiceScreen :: InvoiceScreenState , 
+    contactUsScreen :: ContactUsScreenState , 
+    helpAndSupportScreen :: HelpAndSupportScreenState , 
+    myRidesScreen :: MyRidesScreenState , 
+    permissionScreen :: PermissionScreenState , 
+    homeScreen :: HomeScreenState , 
+    selectLanguageScreen :: SelectLanguageScreenState , 
+    aboutUsScreen :: AboutUsScreenState , 
+    myProfileScreen :: MyProfileScreenState , 
+    savedLocationScreen :: SavedLocationScreenState , 
+    addNewAddressScreen :: AddNewAddressScreenState , 
+    appUpdatePopUpScreen :: AppUpdatePopUpState , 
+    referralScreen :: ReferralScreenState , 
+    emergencyContactsScreen :: EmergencyContactsScreenState , 
+    welcomeScreen :: WelcomeScreenState , 
+    loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState , 
+    ticketBookingScreen :: TicketBookingScreenState , 
+    ticketInfoScreen :: TicketInfoScreenState 
   }
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-    splashScreen : {data : {message : "pass"}}
-  , enterMobileNumberScreen : EnterMobileNumberScreenData.initData
-  , chooseLanguageScreen : ChooseLanguageScreenData.initData
-  , accountSetUpScreen : AccountSetUpScreenData.initData
-  , tripDetailsScreen : TripDetailsScreenData.initData
-  , invoiceScreen : InvoiceScreenData.initData
-  , contactUsScreen : ContactUsScreenData.initData
-  , helpAndSupportScreen : HelpAndSupportScreenData.initData
-  , myRidesScreen : MyRideScreenData.initData
-  , homeScreen : HomeScreenData.initData
-  , selectLanguageScreen : SelectLanguageScreenData.initData
-  , permissionScreen : PermissionScreenData.initData
-  , aboutUsScreen : AboutUsScreenData.initData
-  , myProfileScreen : MyProfileScreenData.initData
-  , savedLocationScreen : SavedLocationScreenData.initData
-  , addNewAddressScreen : AddNewAddressScreenData.initData
-  , appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData
-  , referralScreen : ReferralScreenData.initData
-  , emergencyContactsScreen : EmergencyContactsScreenData.initData
-  , welcomeScreen : WelcomeScreenData.initData
-  , loaderOverlay : LoaderScreenScreenData.initData
-  , ticketBookingScreen : TicketBookingScreenData.initData
-  , ticketInfoScreen : TicketInfoScreenData.initData
+  splashScreen : {data : {message : "pass"}} ,
+  enterMobileNumberScreen : EnterMobileNumberScreenData.initData , 
+  chooseLanguageScreen : ChooseLanguageScreenData.initData , 
+  accountSetUpScreen : AccountSetUpScreenData.initData , 
+  tripDetailsScreen : TripDetailsScreenData.initData , 
+  invoiceScreen : InvoiceScreenData.initData , 
+  contactUsScreen : ContactUsScreenData.initData , 
+  helpAndSupportScreen : HelpAndSupportScreenData.initData , 
+  myRidesScreen : MyRideScreenData.initData , 
+  homeScreen : HomeScreenData.initData , 
+  selectLanguageScreen : SelectLanguageScreenData.initData , 
+  permissionScreen : PermissionScreenData.initData , 
+  aboutUsScreen : AboutUsScreenData.initData , 
+  myProfileScreen : MyProfileScreenData.initData , 
+  savedLocationScreen : SavedLocationScreenData.initData , 
+  addNewAddressScreen : AddNewAddressScreenData.initData , 
+  appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData , 
+  referralScreen : ReferralScreenData.initData , 
+  emergencyContactsScreen : EmergencyContactsScreenData.initData , 
+  welcomeScreen : WelcomeScreenData.initData , 
+  loaderOverlay : LoaderScreenScreenData.initData , 
+  ticketBookingScreen : TicketBookingScreenData.initData , 
+  ticketInfoScreen : TicketInfoScreenData.initData 
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK

@@ -65,94 +65,94 @@ import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
-    splashScreen :: SplashScreenState
-  , chooseLanguageScreen :: ChooseLanguageScreenState
-  , driverProfileScreen :: DriverProfileScreenState
-  , applicationStatusScreen :: ApplicationStatusScreenState
-  , mobileNumberScreen :: EnterMobileNumberScreenState
-  , enterOTPScreen :: EnterOTPScreenState
-  , uploadDrivingLicenseScreen :: UploadDrivingLicenseState
-  , registrationScreen :: RegistrationScreenState
-  , uploadAdhaarScreen :: UploadAdhaarScreenState
-  , addVehicleDetailsScreen :: AddVehicleDetailsScreenState
-  , tripDetailsScreen :: TripDetailsScreenState
-  , rideHistoryScreen :: RideHistoryScreenState
-  , rideSelectionScreen :: RideSelectionScreenState
-  , reportIssueChatScreen :: ReportIssueChatScreenState
-  , bankDetailsScreen :: BankDetailScreenState
-  , driverDetailsScreen :: DriverDetailsScreenState
-  , vehicleDetailsScreen :: VehicleDetailsScreenState
-  , aboutUsScreen :: AboutUsScreenState
-  , selectedLanguageScreen :: SelectLanguageScreenState
-  , helpAndSupportScreen :: HelpAndSupportScreenState
-  , writeToUsScreen :: WriteToUsScreenState
-  , permissionsScreen :: PermissionsScreenState
-  , homeScreen :: HomeScreenState
-  , editBankDetailsScreen :: EditBankDetailsScreenState
-  , editAadhaarDetailsScreen :: EditAadhaarDetailsScreenState
-  , noInternetScreen :: NoInternetScreenState
-  , popUpScreen :: PopUpScreenState
-  , driverRideRatingScreen :: DriverRideRatingScreenState
-  , appUpdatePopUpScreen :: AppUpdatePopUpScreenState
-  , notificationScreen :: NotificationsScreenState
-  , referralScreen :: ReferralScreenState
-  , bookingOptionsScreen :: BookingOptionsScreenState
-  , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
-  , acknowledgementScreen :: AcknowledgementScreenState
-  , aadhaarVerificationScreen :: AadhaarVerificationScreenState
-  , globalProps :: GlobalProps
-  , subscriptionScreen :: SubscriptionScreenState
-  , onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState
-  , paymentHistoryScreen :: PaymentHistoryScreenState
-  , driverSavedLocationScreen :: DriverSavedLocationScreenState
-  , chooseCityScreen :: ChooseCityScreenState
-  , welcomeScreen :: WelcomeScreenState
+    splashScreen :: SplashScreenState ,
+    chooseLanguageScreen :: ChooseLanguageScreenState , 
+    driverProfileScreen :: DriverProfileScreenState , 
+    applicationStatusScreen :: ApplicationStatusScreenState , 
+    mobileNumberScreen :: EnterMobileNumberScreenState , 
+    enterOTPScreen :: EnterOTPScreenState , 
+    uploadDrivingLicenseScreen :: UploadDrivingLicenseState , 
+    registrationScreen :: RegistrationScreenState , 
+    uploadAdhaarScreen :: UploadAdhaarScreenState , 
+    addVehicleDetailsScreen :: AddVehicleDetailsScreenState , 
+    tripDetailsScreen :: TripDetailsScreenState , 
+    rideHistoryScreen :: RideHistoryScreenState , 
+    rideSelectionScreen :: RideSelectionScreenState , 
+    reportIssueChatScreen :: ReportIssueChatScreenState , 
+    bankDetailsScreen :: BankDetailScreenState , 
+    driverDetailsScreen :: DriverDetailsScreenState , 
+    vehicleDetailsScreen :: VehicleDetailsScreenState , 
+    aboutUsScreen :: AboutUsScreenState , 
+    selectedLanguageScreen :: SelectLanguageScreenState , 
+    helpAndSupportScreen :: HelpAndSupportScreenState , 
+    writeToUsScreen :: WriteToUsScreenState , 
+    permissionsScreen :: PermissionsScreenState , 
+    homeScreen :: HomeScreenState , 
+    editBankDetailsScreen :: EditBankDetailsScreenState , 
+    editAadhaarDetailsScreen :: EditAadhaarDetailsScreenState , 
+    noInternetScreen :: NoInternetScreenState , 
+    popUpScreen :: PopUpScreenState , 
+    driverRideRatingScreen :: DriverRideRatingScreenState , 
+    appUpdatePopUpScreen :: AppUpdatePopUpScreenState , 
+    notificationScreen :: NotificationsScreenState , 
+    referralScreen :: ReferralScreenState , 
+    bookingOptionsScreen :: BookingOptionsScreenState , 
+    loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState , 
+    acknowledgementScreen :: AcknowledgementScreenState , 
+    aadhaarVerificationScreen :: AadhaarVerificationScreenState , 
+    globalProps :: GlobalProps , 
+    subscriptionScreen :: SubscriptionScreenState , 
+    onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState , 
+    paymentHistoryScreen :: PaymentHistoryScreenState , 
+    driverSavedLocationScreen :: DriverSavedLocationScreenState ,
+    chooseCityScreen :: ChooseCityScreenState ,
+    welcomeScreen :: WelcomeScreenState 
   }
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-  splashScreen : {data : { message : "WeDontTalkAnymore"}}
-, chooseLanguageScreen : ChooseLanguageScreenData.initData
-, driverProfileScreen : DriverProfileScreenData.initData
-, applicationStatusScreen : ApplicationStatusScreenData.initData
-, mobileNumberScreen : EnterMobileNumberScreenData.initData
-, enterOTPScreen : EnterOTPScreenData.initData
-, uploadDrivingLicenseScreen : UploadDrivingLicenseScreenData.initData
-, registrationScreen: RegistrationScreenData.initData
-, uploadAdhaarScreen : UploadAdhaarScreenData.initData
-, addVehicleDetailsScreen : AddVehicleDetailsScreenData.initData
-, tripDetailsScreen : TripDetailsScreenData.initData
-, rideHistoryScreen : RideHistoryScreenData.initData
-, rideSelectionScreen : RideSelectionScreenData.initData
-, reportIssueChatScreen : ReportIssueChatScreenData.initData
-, bankDetailsScreen : BankDetailScreenData.initData
-, driverDetailsScreen : DriverDetailsScreenData.initData
-, vehicleDetailsScreen : VehicleDetailsScreenData.initData
-, aboutUsScreen : AboutUsScreenData.initData
-, selectedLanguageScreen : SelectLanguageScreenData.initData
-, helpAndSupportScreen : HelpAndSupportScreenData.initData
-, writeToUsScreen : WriteToUsScreenData.initData
-, permissionsScreen : PermissionsScreenData.initData
-, homeScreen : HomeScreenData.initData
-, editBankDetailsScreen : EditBankDetailsScreenData.initData
-, editAadhaarDetailsScreen : EditAadhaarDetailsScreenData.initData
-, noInternetScreen : {}
-, popUpScreen : PopUpScreenData.initData
-, driverRideRatingScreen : DriverRideRatingScreenData.initData
-, appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData
-, notificationScreen : NotificationsScreenData.initData
-, referralScreen : ReferralScreenData.initData
-, bookingOptionsScreen : BookingOptionsScreenData.initData
-, loaderOverlay : LoaderOverlayScreenData.initData
-, acknowledgementScreen : AcknowledgementScreenData.initData
-, aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData
-, globalProps : defaultGlobalProps
-, subscriptionScreen : SubscriptionScreenData.initData
-, onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
-, paymentHistoryScreen : PaymentHistoryScreenData.initData
-, driverSavedLocationScreen : DriverSavedLocationScreenData.initData
-, chooseCityScreen : ChooseCityScreenData.initData
-, welcomeScreen : WelcomeScreenData.initData
+  splashScreen : {data : { message : "WeDontTalkAnymore"}} ,
+  chooseLanguageScreen : ChooseLanguageScreenData.initData , 
+  driverProfileScreen : DriverProfileScreenData.initData , 
+  applicationStatusScreen : ApplicationStatusScreenData.initData , 
+  mobileNumberScreen : EnterMobileNumberScreenData.initData , 
+  enterOTPScreen : EnterOTPScreenData.initData , 
+  uploadDrivingLicenseScreen : UploadDrivingLicenseScreenData.initData , 
+  registrationScreen: RegistrationScreenData.initData , 
+  uploadAdhaarScreen : UploadAdhaarScreenData.initData , 
+  addVehicleDetailsScreen : AddVehicleDetailsScreenData.initData , 
+  tripDetailsScreen : TripDetailsScreenData.initData , 
+  rideHistoryScreen : RideHistoryScreenData.initData , 
+  rideSelectionScreen : RideSelectionScreenData.initData , 
+  reportIssueChatScreen : ReportIssueChatScreenData.initData , 
+  bankDetailsScreen : BankDetailScreenData.initData , 
+  driverDetailsScreen : DriverDetailsScreenData.initData , 
+  vehicleDetailsScreen : VehicleDetailsScreenData.initData , 
+  aboutUsScreen : AboutUsScreenData.initData , 
+  selectedLanguageScreen : SelectLanguageScreenData.initData , 
+  helpAndSupportScreen : HelpAndSupportScreenData.initData , 
+  writeToUsScreen : WriteToUsScreenData.initData , 
+  permissionsScreen : PermissionsScreenData.initData , 
+  homeScreen : HomeScreenData.initData , 
+  editBankDetailsScreen : EditBankDetailsScreenData.initData , 
+  editAadhaarDetailsScreen : EditAadhaarDetailsScreenData.initData , 
+  noInternetScreen : {} , 
+  popUpScreen : PopUpScreenData.initData , 
+  driverRideRatingScreen : DriverRideRatingScreenData.initData , 
+  appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData , 
+  notificationScreen : NotificationsScreenData.initData , 
+  referralScreen : ReferralScreenData.initData , 
+  bookingOptionsScreen : BookingOptionsScreenData.initData , 
+  loaderOverlay : LoaderOverlayScreenData.initData , 
+  acknowledgementScreen : AcknowledgementScreenData.initData , 
+  aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData , 
+  globalProps : defaultGlobalProps , 
+  subscriptionScreen : SubscriptionScreenData.initData , 
+  onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData , 
+  paymentHistoryScreen : PaymentHistoryScreenData.initData , 
+  driverSavedLocationScreen : DriverSavedLocationScreenData.initData ,
+  chooseCityScreen : ChooseCityScreenData.initData ,
+  welcomeScreen : WelcomeScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -164,48 +164,6 @@ defaultGlobalProps = {
   gotoPopupType : NO_POPUP_VIEW
 }
 
-data ScreenType =
-   SplashScreenStateType (SplashScreenState -> SplashScreenState)
-  | ChooseLanguageScreenStateType (ChooseLanguageScreenState -> ChooseLanguageScreenState)
-  | DriverProfileScreenStateType (DriverProfileScreenState -> DriverProfileScreenState)
-  | ApplicationStatusScreenType (ApplicationStatusScreenState -> ApplicationStatusScreenState)
-  | EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
-  | EnterOTPScreenType (EnterOTPScreenState -> EnterOTPScreenState)
-  | UploadDrivingLicenseScreenStateType (UploadDrivingLicenseState -> UploadDrivingLicenseState)
-  | RegisterScreenStateType (RegistrationScreenState -> RegistrationScreenState)
-  | UploadAdhaarScreenStateType (UploadAdhaarScreenState -> UploadAdhaarScreenState)
-  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState)
-  | DriverDetailsScreenStateType (DriverDetailsScreenState -> DriverDetailsScreenState)
-  | VehicleDetailsScreenStateType (VehicleDetailsScreenState -> VehicleDetailsScreenState)
-  | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
-  | SelectLanguageScreenStateType (SelectLanguageScreenState -> SelectLanguageScreenState)
-  | HelpAndSupportScreenStateType (HelpAndSupportScreenState -> HelpAndSupportScreenState)
-  | WriteToUsScreenStateType (WriteToUsScreenState -> WriteToUsScreenState)
-  | BankDetailScreenStateType (BankDetailScreenState -> BankDetailScreenState)
-  | HomeScreenStateType (HomeScreenState -> HomeScreenState)
-  | RideHistoryScreenStateType (RideHistoryScreenState -> RideHistoryScreenState)
-  | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
-  | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
-  | PermissionsScreenStateType (PermissionsScreenState -> PermissionsScreenState)
-  | EditBankDetailsScreenStateType (EditBankDetailsScreenState -> EditBankDetailsScreenState)
-  | EditAadhaarDetailsScreenStateType (EditAadhaarDetailsScreenState -> EditAadhaarDetailsScreenState)
-  | TripDetailsScreenStateType (TripDetailsScreenState -> TripDetailsScreenState)
-  | PopUpScreenStateType (PopUpScreenState -> PopUpScreenState)
-  | DriverRideRatingScreenStateType (DriverRideRatingScreenState -> DriverRideRatingScreenState)
-  | NotificationsScreenStateType (NotificationsScreenState -> NotificationsScreenState)
-  | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
-  | BookingOptionsScreenType (BookingOptionsScreenState -> BookingOptionsScreenState)
-  | AppUpdatePopUpScreenType (AppUpdatePopUpScreenState -> AppUpdatePopUpScreenState)
-  | AcknowledgementScreenType (AcknowledgementScreenState -> AcknowledgementScreenState)
-  | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
-  | GlobalPropsType (GlobalProps -> GlobalProps)
-  | SubscriptionScreenStateType (SubscriptionScreenState -> SubscriptionScreenState)
-  | OnBoardingSubscriptionScreenStateType (OnBoardingSubscriptionScreenState -> OnBoardingSubscriptionScreenState)
-  | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
-  | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
-  | ChooseCityScreenStateType (ChooseCityScreenState -> ChooseCityScreenState)
-  | WelcomeScreenStateType (WelcomeScreenState -> WelcomeScreenState)
-  
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -416,3 +374,45 @@ data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
 data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
 data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState
+
+data ScreenType =
+   SplashScreenStateType (SplashScreenState -> SplashScreenState)
+  | ChooseLanguageScreenStateType (ChooseLanguageScreenState -> ChooseLanguageScreenState)
+  | DriverProfileScreenStateType (DriverProfileScreenState -> DriverProfileScreenState)
+  | ApplicationStatusScreenType (ApplicationStatusScreenState -> ApplicationStatusScreenState)
+  | EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
+  | EnterOTPScreenType (EnterOTPScreenState -> EnterOTPScreenState)
+  | UploadDrivingLicenseScreenStateType (UploadDrivingLicenseState -> UploadDrivingLicenseState)
+  | RegisterScreenStateType (RegistrationScreenState -> RegistrationScreenState)
+  | UploadAdhaarScreenStateType (UploadAdhaarScreenState -> UploadAdhaarScreenState)
+  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState)
+  | DriverDetailsScreenStateType (DriverDetailsScreenState -> DriverDetailsScreenState)
+  | VehicleDetailsScreenStateType (VehicleDetailsScreenState -> VehicleDetailsScreenState)
+  | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
+  | SelectLanguageScreenStateType (SelectLanguageScreenState -> SelectLanguageScreenState)
+  | HelpAndSupportScreenStateType (HelpAndSupportScreenState -> HelpAndSupportScreenState)
+  | WriteToUsScreenStateType (WriteToUsScreenState -> WriteToUsScreenState)
+  | BankDetailScreenStateType (BankDetailScreenState -> BankDetailScreenState)
+  | HomeScreenStateType (HomeScreenState -> HomeScreenState)
+  | RideHistoryScreenStateType (RideHistoryScreenState -> RideHistoryScreenState)
+  | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
+  | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
+  | PermissionsScreenStateType (PermissionsScreenState -> PermissionsScreenState)
+  | EditBankDetailsScreenStateType (EditBankDetailsScreenState -> EditBankDetailsScreenState)
+  | EditAadhaarDetailsScreenStateType (EditAadhaarDetailsScreenState -> EditAadhaarDetailsScreenState)
+  | TripDetailsScreenStateType (TripDetailsScreenState -> TripDetailsScreenState)
+  | PopUpScreenStateType (PopUpScreenState -> PopUpScreenState)
+  | DriverRideRatingScreenStateType (DriverRideRatingScreenState -> DriverRideRatingScreenState)
+  | NotificationsScreenStateType (NotificationsScreenState -> NotificationsScreenState)
+  | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
+  | BookingOptionsScreenType (BookingOptionsScreenState -> BookingOptionsScreenState)
+  | AppUpdatePopUpScreenType (AppUpdatePopUpScreenState -> AppUpdatePopUpScreenState)
+  | AcknowledgementScreenType (AcknowledgementScreenState -> AcknowledgementScreenState)
+  | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
+  | GlobalPropsType (GlobalProps -> GlobalProps)
+  | SubscriptionScreenStateType (SubscriptionScreenState -> SubscriptionScreenState)
+  | OnBoardingSubscriptionScreenStateType (OnBoardingSubscriptionScreenState -> OnBoardingSubscriptionScreenState)
+  | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
+  | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState) 
+  | ChooseCityScreenStateType (ChooseCityScreenState -> ChooseCityScreenState)
+  | WelcomeScreenStateType (WelcomeScreenState -> WelcomeScreenState)
