@@ -65,6 +65,7 @@ initData = {
     vehicleAge : 0,
     vehicleName : "",
     languagesSpoken : [],
+    profileImg : Nothing,
     analyticsData : {
         totalEarnings : ""
       , bonusEarned : ""
@@ -81,6 +82,7 @@ initData = {
       , totalDistanceTravelled : ""
       }
     },
+
   props: {
     logoutModalView: false,
     showLiveDashboard : false,
