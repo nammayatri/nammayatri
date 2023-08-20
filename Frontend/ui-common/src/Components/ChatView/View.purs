@@ -370,7 +370,7 @@ chatComponent state push config isLastItem userType =
                  , width $ V 180
                  , id (getNewIDWithTag config.message)
                  , afterRender (\action -> do
-                                renderBase64Image config.message (getNewIDWithTag config.message) true
+                                renderBase64Image config.message (getNewIDWithTag config.message) true "FIT_CENTER"
                  ) (const NoAction)
                  , onClick push (const $ OnImageClick config.message)
                  , height $ V 180

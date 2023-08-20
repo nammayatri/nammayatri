@@ -444,30 +444,28 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void renderBase64Image(String url, String id, boolean fitCenter) {
+    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
         if (url.contains("http"))
             url = getAPIResponse(url);
-        renderBase64ImageFile(url, id, fitCenter);
+        renderBase64ImageFile(url, id, fitCenter, imgScaleType);
     }
 
     @JavascriptInterface
-    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter) {
+    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
                     LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                    byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                    ImageView imageView = new ImageView(bridgeComponents.getContext());
-                    imageView.setImageBitmap(decodedByte);
-                    if (fitCenter) {
-                        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                    } else {
-                        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                    }
-                    imageView.setAdjustViewBounds(true);
-                    imageView.setClipToOutline(true);
-                    if (layout != null) {
+                    if (layout != null){
+                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        ImageView imageView = new ImageView(bridgeComponents.getContext());
+                        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
+                        imageView.setLayoutParams(layoutParams);
+                        imageView.setImageBitmap(decodedByte);
+                        imageView.setScaleType(getScaleTypes(imgScaleType));
+                        imageView.setAdjustViewBounds(true);
+                        imageView.setClipToOutline(true);
                         layout.removeAllViews();
                         layout.addView(imageView);
                     }

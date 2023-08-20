@@ -276,7 +276,8 @@ type DriverProfileScreenData = {
   openInactiveRCViewOrNotArray :: Array Int,
   logField :: Object Foreign,
   analyticsData :: AnalyticsData,
-  fromHomeScreen :: Boolean
+  fromHomeScreen :: Boolean,
+  profileImg :: Maybe String
 }
 
 type RcData = {
@@ -752,7 +753,8 @@ type HomeScreenData =  {
   messageToBeSent :: String,
   driverAlternateMobile :: Maybe String,
   logField :: Object Foreign,
-  paymentState :: PaymentState
+  paymentState :: PaymentState,
+  profileImg :: Maybe String
  }
 
 type PaymentState = {

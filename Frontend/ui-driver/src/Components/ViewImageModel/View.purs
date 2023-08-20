@@ -52,7 +52,7 @@ view push state =
    , gravity CENTER
    ][ linearLayout
     [ onClick push (const NoAction)
-    , afterRender (\action -> do renderBase64Image state.image (getNewIDWithTag "view_image_model_image") false) (const NoAction)
+    , afterRender (\action -> do renderBase64Image state.image (getNewIDWithTag "view_image_model_image") false "CENTER_CROP") (const NoAction)
     , id (getNewIDWithTag "view_image_model_image")
     ][ progressBar
        [ width WRAP_CONTENT
