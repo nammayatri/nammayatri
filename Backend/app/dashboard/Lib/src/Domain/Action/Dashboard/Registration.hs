@@ -90,13 +90,15 @@ login LoginReq {..} = do
       (isToken, msg) <-
         if merchant.is2faMandatory && _merchantAccess.is2faEnabled
           then handle2FA _merchantAccess.secretKey otp
-          else pure (True, "Logged in successfully")
+          else do
+            if _merchantAccess.is2faEnabled
+              then handle2FA _merchantAccess.secretKey otp
+              else pure (True, "Logged in successfully")
       token <- if isToken then generateToken person.id merchant.id else pure ""
       pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg
 
 handle2FA ::
-  ( EncFlow m r
-  ) =>
+  (EncFlow m r) =>
   Maybe Text ->
   Maybe Text ->
   m (Bool, Text)
