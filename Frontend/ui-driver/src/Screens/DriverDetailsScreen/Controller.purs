@@ -130,7 +130,7 @@ eval (CallBackImageUpload image imageName imagePath) state = if (image /= "") th
                                               continue state
 
 eval RenderBase64Image state = continueWithCmd state [do
-  _ <- liftEffect $ renderBase64Image state.data.base64Image (getNewIDWithTag "EditProfileImage") true
+  _ <- liftEffect $ renderBase64Image state.data.base64Image (getNewIDWithTag "EditProfileImage") true "CENTER_CROP"
   pure NoAction]
 eval AfterRender state = continue state
 

@@ -78,7 +78,8 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
-import Components.RateCard as RateCard
+import Components.RateCard as RateCard 
+import Engineering.Helpers.Commons (getNewIDWithTag)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -553,12 +554,25 @@ driverDetail push state =
       [ width WRAP_CONTENT
       , height MATCH_PARENT
       , padding (Padding 16 20 12 16)
-      ][ imageView
-         [ width $ V 42
-         , height $ V 42
-         , onClick push $ const GoToProfile
-         , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
-         ]
+      ][ linearLayout [
+          width $ V 42
+        , height $ V 42
+        , onClick push $ const GoToProfile
+        ][
+          (if state.data.profileImg == Nothing then 
+            imageView
+              [ width $ V 42
+              , height $ V 42
+              , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+              ]
+          else
+            linearLayout
+              [ width $ V 42
+              , height $ V 42
+              , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "home_driver_prof_img") true "FIT_CENTER") (const NoAction)
+              , id (getNewIDWithTag "home_driver_prof_img")
+              ][])
+        ]  
       ]
     , linearLayout
       [ width MATCH_PARENT

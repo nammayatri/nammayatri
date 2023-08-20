@@ -107,7 +107,7 @@ view push state =
                                           case mediaType of
                                             VideoLink -> pure $ setYoutubePlayer (youtubeData state "VIDEO") id (show PLAY)
                                             PortraitVideoLink -> pure $ setYoutubePlayer (youtubeData state "PORTRAIT_VIDEO") id (show PLAY)
-                                            Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true
+                                            Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
                                             Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             _ -> pure unit

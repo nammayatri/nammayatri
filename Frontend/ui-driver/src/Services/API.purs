@@ -400,6 +400,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
     , subscribed            :: Boolean
+    , mediaUrl              :: Maybe String
     }
 
 
