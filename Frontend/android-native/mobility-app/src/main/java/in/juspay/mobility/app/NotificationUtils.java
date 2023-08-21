@@ -301,7 +301,7 @@ public class NotificationUtils {
         String notificationType = data.getString("notification_type");
         String channelId;
         String merchantType = context.getString(R.string.service);
-        String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
+        String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
         if (ALLOCATION_TYPE.equals(notificationType)) {
             System.out.println("showNotification:- " + notificationType);
@@ -359,14 +359,6 @@ public class NotificationUtils {
 //                    mBuilder.setTimeoutAfter(20000);
             System.out.println("In clean notification if");
         }
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            Log.e(LOG_TAG, "no notification permission");
-            return;
-        } else {
-            notificationManager.notify(notificationId, mBuilder.build());
-        }
-
-
         if (TRIP_CHANNEL_ID.equals(notificationType)) {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -420,6 +412,11 @@ public class NotificationUtils {
             for (int i = 0; i < callBack.size(); i++) {
                 callBack.get(i).customerCallBack(notificationType);
             }
+        }
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG, "no notification permission");
+        } else {
+            notificationManager.notify(notificationId, mBuilder.build());
         }
     }
 
