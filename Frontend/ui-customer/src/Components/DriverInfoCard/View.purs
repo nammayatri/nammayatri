@@ -28,7 +28,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
+import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber)
@@ -37,7 +37,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<),(-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width,  horizontalScrollView, scrollBarX, layoutGravity)
+import PrestoDOM (Gravity(..), Gradient(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width,  horizontalScrollView, scrollBarX, layoutGravity, textFromHtml, relativeLayout, id, gradient, alignParentRight)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -309,7 +309,127 @@ mapOptionsView push state =
    ][ 
     ]
     ]
-
+supportButton2 :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+supportButton2 push state =
+  relativeLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , gravity CENTER
+    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+    , margin $ Margin 16 0 16 10
+    , background Color.white900
+    , margin $ MarginTop 10
+    , cornerRadius 9.0
+    ][ horizontalScrollView [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER
+      , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+      , scrollBarX false
+      , margin $ Margin 0 0 35 0
+      , id (getNewIDWithTag "SupportButtonScrollView")
+      ][
+        linearLayout[
+          orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        , margin $ Margin 6 0 16 10
+        , cornerRadius 9.0
+        , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+        , margin $ MarginTop 10
+        ][
+          linearLayout
+          [ orientation HORIZONTAL
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , cornerRadius 32.0
+            , stroke $ "1,"<> Color.grey900
+            , onClick push $ const ShareRide
+            , margin $ Margin 6 10 0 6
+          ]
+          [imageView
+            [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
+            , height $ V 18
+            , width $ V 18
+            , margin $ Margin 10 12 10 10
+            , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
+            , onClick push $ const ShareRide
+            ]
+          ,textView 
+          [ text $ getString SHARE_RIDE
+            , width MATCH_PARENT
+            , margin (Margin 0 10 8 4)
+            , color Color.black900
+          ]
+          ]
+          ,linearLayout
+          [ orientation HORIZONTAL
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , margin $ Margin 6 10 0 6
+            , cornerRadius 32.0
+            , stroke $ "1,"<> Color.grey900
+            , onClick push $ const Support
+          ]
+          [ imageView
+          [ imageWithFallback $ "ny_ic_contact_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_contact_support.png"
+          , height $ V 18
+          , width $ V 18
+          , margin $ Margin 10 12 10 10
+          ]
+          ,textView 
+          [ text $ getString CUSTOMER_SUPPORT
+          , gravity CENTER_VERTICAL
+          , margin (Margin 0 10 8 4)
+          , color Color.black900
+          ]
+          ]
+          , linearLayout
+          [ orientation HORIZONTAL
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , cornerRadius 32.0
+            , stroke $ "1,"<> Color.grey900
+            , margin $ Margin 6 10 12 6
+          , onClick push $ const $ LiveDashboardAction
+          ]
+          [ imageView
+            [ imageWithFallback $ "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png"
+            , height $ V 18
+            , width $ V 18
+            , margin $ Margin 10 12 10 10
+            ]
+            ,textView 
+            [ text $ getString LIVE_STATS
+            , margin (Margin 0 10 8 4)
+            , color Color.black900
+            ]
+          ]
+      ]
+   ]
+  ,linearLayout
+  [
+    height $ V 50
+  , width $ V 15
+  , alignParentRight "true,-1"
+  , margin (Margin 0 9 10 0)
+  , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
+  ][]
+, linearLayout
+  [ height MATCH_PARENT
+  , width WRAP_CONTENT
+  , alignParentRight "true,-1"
+  , margin (Margin 0 18  6 0) 
+  ][  imageView
+    [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+    , height (V 27)
+    , width (V 27)
+    , alpha $ 0.6
+    , onClick push $ const $ ScrollSupportButton
+    ]
+  ]
+]
 
 supportButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 supportButton push state =
@@ -621,10 +741,10 @@ waitTimeView push state =
       , padding $ Padding 16 16 16 16
       , width MATCH_PARENT
       , gravity LEFT
-      ][  textView $
+      ][  textView 
           [ text $ getString CHARGES_APPLICABLE_AFTER_3_MINS
-          , color Color.black700
-          ] <> FontStyle.body3 TypoGraphy
+          , color Color.black900
+          ] 
        , linearLayout
          [ orientation HORIZONTAL
           , onClick push (const WaitingInfo)
@@ -710,7 +830,7 @@ driverInfoView push state =
          , height WRAP_CONTENT
          , width MATCH_PARENT
          , margin $ MarginTop 14
-         , background if state.props.zoneType == METRO then Color.blue800 else Color.grey900
+         , background if state.props.zoneType == METRO then Color.blue800 else Color.grey700
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ state.data.config.driverInfoConfig.cardStroke
@@ -761,7 +881,7 @@ driverInfoView push state =
               , separator (Margin 16 (if(state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility) then 16 else 0) 16 0) (V 1) Color.grey900 $ ((state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.data.config.nyBrandingVisibility) || (state.props.currentStage == RideAccepted && not state.data.config.showPickUpandDrop)
               , driverDetailsView push state
               , paymentMethodView push state (getString RIDE_FARE) true
-              , supportButton push state
+              , supportButton2 push state
               , (if os == "IOS" then scrollView else linearLayout)
                 [ width MATCH_PARENT
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
@@ -801,7 +921,7 @@ cancelRideLayout push state =
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , gravity CENTER
- , margin $ if state.data.config.showPickUpandDrop then MarginTop 16 else MarginTop 0
+ , margin $ if state.data.config.showPickUpandDrop then MarginTop 6 else MarginTop 0
  , padding $ PaddingBottom if os == "IOS" then (if safeMarginBottom == 0 then 24 else safeMarginBottom) else 0
  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
  ][ linearLayout
@@ -813,8 +933,9 @@ cancelRideLayout push state =
   ][ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
-     , text $ getString CANCEL_RIDE
+     , textFromHtml $ "<u>" <> (getString CANCEL_RIDE) <> "</u>"
      , alpha $ if (getMerchant FunctionCall) == MOBILITY_PM then 0.54 else 1.0
+     
      ] <> FontStyle.subHeading1 TypoGraphy)
    ]
  ]
@@ -1012,7 +1133,7 @@ driverDetailsView push state =
               , width MATCH_PARENT
               , gravity BOTTOM
               ][  linearLayout
-                  [ height $ V 30
+                  [ height $ V 33
                   , width MATCH_PARENT
                   , background state.data.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
@@ -1022,7 +1143,7 @@ driverDetailsView push state =
                   , alignParentBottom "true,-1"
                   ][
                     linearLayout
-                    [ height $ V 27
+                    [ height $ V 29
                     , width MATCH_PARENT
                     , stroke $ "2," <> Color.black
                     , cornerRadius 4.0
@@ -1035,13 +1156,13 @@ driverDetailsView push state =
                         , height MATCH_PARENT
                         , width $ V 22
                         ]
-                        , textView $
+                        , textView 
                         [ weight 2.0
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
                         , color Color.black
-                        , gravity CENTER
-                        ] <> FontStyle.body7 TypoGraphy
+                        , gravity CENTER_VERTICAL
+                        ] 
                         , imageView
                         [ imageWithFallback $ "ny_ic_number_plate_suffix," <> (getAssetStoreLink FunctionCall) <> "ny_ic_number_plate_suffix.png"
                         , gravity RIGHT
@@ -1172,15 +1293,17 @@ sourceDistanceView push state =
       , margin $ MarginLeft 3
     ] <> FontStyle.body3 TypoGraphy
   ]
-  , textView $
+  , textView 
   [ text state.data.source
   , maxLines 1
   , ellipsize true
   , width $ V 240
   , height MATCH_PARENT
   , gravity LEFT
-  , color Color.black800
-  ] <> FontStyle.body7 TypoGraphy
+  , textSize FontSize.a_16
+  , color Color.black900
+  , margin $ MarginTop 6
+  ] 
   ]
   , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
   ,linearLayout
@@ -1203,17 +1326,20 @@ sourceDistanceView push state =
     , textView $ 
     [ text $ getString DROP
     , margin $ MarginLeft 3
+   
     ] <> FontStyle.body3 TypoGraphy
     ]
-    , textView $
+    , textView 
     [ text state.data.destination
     , maxLines 1
     , ellipsize true
     , width $ V 240
     , height MATCH_PARENT
-    , color Color.black800
     , gravity LEFT
-    ] <> FontStyle.body7 TypoGraphy
+    , textSize FontSize.a_16
+    , margin $ MarginTop 6
+    , color Color.black900
+    ]
     ]
   ]
 

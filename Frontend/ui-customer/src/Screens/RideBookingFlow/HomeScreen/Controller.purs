@@ -754,6 +754,10 @@ eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
   continue state
 
+eval (DriverInfoCardActionController (DriverInfoCardController.ScrollSupportButton )) state = do
+  _ <- pure $ scrollToEnd (getNewIDWithTag "SupportButtonScrollView") false
+  continue state
+
 eval InitializeChat state = do
   continue state {props { chatcallbackInitiated = true } }
 
@@ -1162,6 +1166,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
 
 eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) state = do
   continue state{data{waitTimeInfo  = true }}
+
 
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data  {waitTimeInfo =false}}
 
