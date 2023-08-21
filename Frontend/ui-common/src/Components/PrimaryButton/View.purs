@@ -17,7 +17,7 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Shadow(..), Margin(..), Accessiblity(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, shadow)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
@@ -70,7 +70,13 @@ view push config =
               <> (case config.weight of
                 Nothing -> [width config.width]
                 Just value ->  [weight value])
-              <> (if config.enableButtonLayoutId then [id $ getNewIDWithTag (config.id <> "_buttonLayout")] else []))
+              <> (if config.enableButtonLayoutId then [id $ getNewIDWithTag (config.id <> "_buttonLayout")] else [])
+              <> (if config.shadow.isShadowEnabled then
+                [
+                    margin $ Margin 15 15 15 15 -- TODO: Should be configured according to shadow blur value
+                  , shadow $ Shadow config.shadow.xAxis config.shadow.yAxis config.shadow.blur config.shadow.spread config.shadow.shadowColor config.shadow.opacity
+                ] else [])
+              )
             [ linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT

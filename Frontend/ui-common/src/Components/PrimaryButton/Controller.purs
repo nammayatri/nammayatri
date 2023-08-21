@@ -53,6 +53,7 @@ type Config =
     , lottieConfig :: LottieConfig
     , weight :: Maybe Number
     , enableButtonLayoutId :: Boolean
+    , shadow :: ShadowConfig
   }
 
 type TextConfig =
@@ -83,6 +84,17 @@ type LottieConfig =
   , width :: Length
   , lottieURL :: String
   }
+type ShadowConfig = 
+  {
+    xAxis :: Number
+  , yAxis :: Number
+  , blur :: Number
+  , spread :: Number
+  , shadowColor :: String
+  , opacity :: Number
+  , isShadowEnabled :: Boolean
+  }
+
 
 config :: Config
 config =   {
@@ -139,5 +151,15 @@ config =   {
     height : V 30
   , width : V 150
   , lottieURL : getValueFromConfig "apiLoaderLottie"
-  }
+  }, 
+  shadow : 
+    {
+      xAxis : 0.1
+    , yAxis : 0.1
+    , blur : 10.0
+    , spread : 24.0
+    , shadowColor : "#8B8B8B"
+    , opacity :  0.5
+    , isShadowEnabled : false
+    }
   }

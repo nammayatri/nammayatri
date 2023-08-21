@@ -44,6 +44,7 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
+  , "unsafe-coerce"
   , "lite-decode"
   ]
 , packages = ../packages.dhall

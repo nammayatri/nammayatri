@@ -51,8 +51,8 @@
     "axios": "^0.27.1",
     "core-js": "^2.6.11",
     "presto-ui": "git+https://github.com/juspay/presto-ui.git#fix/bundle-update",
-    "ramda": "^0.26.1",
     "purty": "^7.0.0",
+    "ramda": "^0.26.1",
     "regenerator-runtime": "^0.13.5"
   },
   "config": {

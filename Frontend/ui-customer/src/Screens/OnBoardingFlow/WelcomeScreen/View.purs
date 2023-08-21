@@ -7,7 +7,7 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen,Accessiblity(..),afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, clipChildren, accessibilityHint, accessibility)
 import Screens.OnBoardingFlow.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
 import Screens.Types (WelcomeScreenState)
@@ -44,6 +44,7 @@ view push state =
         , afterRender push $ const AfterRender
         , background "#FFFAED"
         , padding $ PaddingBottom 24
+        , clipChildren false
         ][  imageView
             [ height $ V 50
             , width $ V 147
