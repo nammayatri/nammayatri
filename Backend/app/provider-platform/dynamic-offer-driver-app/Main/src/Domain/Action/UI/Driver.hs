@@ -145,6 +145,7 @@ import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverLocation as QDriverLocation
+import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as QAV
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -197,7 +198,8 @@ data DriverInformationRes = DriverInformationRes
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
-    mediaUrl :: Maybe Text
+    mediaUrl :: Maybe Text,
+    profilePhoto :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -231,7 +233,8 @@ data DriverEntityRes = DriverEntityRes
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
-    mediaUrl :: Maybe Text
+    mediaUrl :: Maybe Text,
+    profilePhoto :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -585,6 +588,8 @@ buildDriverEntityRes (person, driverInfo) = do
   mediaUrl <- forM person.faceImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
     return mediaEntry.url
+  aadhaarVerification <- QAV.findByDriverId person.id
+  let profilePhoto = join $ (.driverImage) <$> aadhaarVerification
   return $
     DriverEntityRes
       { id = person.id,
@@ -612,7 +617,8 @@ buildDriverEntityRes (person, driverInfo) = do
         clientVersion = person.clientVersion,
         bundleVersion = person.bundleVersion,
         gender = Just person.gender,
-        mediaUrl = mediaUrl
+        mediaUrl = mediaUrl,
+        profilePhoto = profilePhoto
       }
 
 changeDriverEnableState ::
