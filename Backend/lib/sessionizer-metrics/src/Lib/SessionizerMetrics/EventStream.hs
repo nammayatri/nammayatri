@@ -17,6 +17,7 @@ module Lib.SessionizerMetrics.EventStream where
 import Kernel.Prelude hiding (at, traceId)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Kafka.Internal
+import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 
 triggerEvent ::
@@ -34,6 +35,11 @@ triggerEvent event = do
       KAFKA_STREAM -> do
         let KafkaStream matchedConfig = stream.streamConfig
         fork "updating in kafka" $ streamUpdates event matchedConfig
+      PROMETHEUS_STREAM -> do
+        let merchantId = event.merchantId
+        let eventType = show event.eventType
+        let deploymentVersion = event.deploymentVersion
+        fork "updating in prometheus" $ incrementCounter merchantId eventType deploymentVersion
       _ -> logDebug "Default stream"
 
 createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> m (Event p)

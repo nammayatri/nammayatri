@@ -44,10 +44,10 @@ instance FromJSON p => FromJSON (Event p)
 data EventTriggeredBy = User | System
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
-data EventStreamConfig = KafkaStream KafkaConfig | LogStream Text
+data EventStreamConfig = KafkaStream KafkaConfig | PrometheusStream Text | LogStream Text
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
-data EventStreamName = KAFKA_STREAM | REDIS_STREAM | LOG_STREAM
+data EventStreamName = KAFKA_STREAM | REDIS_STREAM | PROMETHEUS_STREAM | LOG_STREAM
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
 data Service = DYNAMIC_OFFER_DRIVER_APP | RIDER_APP

@@ -75,6 +75,10 @@ let sampleLogConfig
     : Text
     = "log-stream"
 
+let samplePrometheusConfig
+    : Text
+    = "prometheus-stream"
+
 let eventStreamMappings =
       [ { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
         , streamConfig = globalCommon.streamConfig.KafkaStream sampleKafkaConfig
@@ -96,6 +100,14 @@ let eventStreamMappings =
         , eventTypes =
           [ globalCommon.eventType.RideEnded
           , globalCommon.eventType.RideCancelled
+          ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.PROMETHEUS_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.PrometheusStream samplePrometheusConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideCreated
+          , globalCommon.eventType.SearchRequest
           ]
         }
       ]
