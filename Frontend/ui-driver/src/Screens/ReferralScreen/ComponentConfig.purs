@@ -44,6 +44,7 @@ passwordPopUpConfig state = let
     margin = (MarginHorizontal 16 16),
     buttonLayoutMargin = (Margin 0 16 16 0),
     editTextVisibility = VISIBLE,
+    backgroundClickable = false,
     dismissPopupConfig {visibility = VISIBLE, height = V 12 , width = V 12, margin = (Margin 0 26 22 0)},
     eTextConfig { editText{text = "" ,placeholder= (getString ENTER_PASSWORD), pattern = Just "[^\n]*,5"}, topLabel{ text = (getString PASSWORD) ,  color = Color.black900}, margin = (Margin 16 16 16 0), type = ""},
     primaryText {text = (getString REFERRAL_CODE_LINKING) , gravity = LEFT ,margin = (Margin 16 21 0 0)},
@@ -51,7 +52,9 @@ passwordPopUpConfig state = let
     option1 {visibility = false},
     option2 {text = (getString CONFIRM_PASSWORD), background = Color.white900, color=Color.blue800, strokeColor = Color.white900, padding = (PaddingHorizontal 16 16)
     ,  isClickable = state.props.confirmBtnActive},
-    cornerRadius = (Corners 15.0 true true true true)
+    cornerRadius = (Corners 15.0 true true true true),
+    popUpStatus = if state.props.passwordPopUpVisible then state.data.popUpConfig.status else CLOSED,
+    actionType = if state.props.passwordPopUpVisible then state.data.popUpConfig.actionType else Nothing
   }
   in popUpConfig'
 
@@ -77,6 +80,8 @@ contactSupportConfig state  =
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
     , cornerRadius = (Corners 20.0 true true true true)
+    , popUpStatus = if state.props.callSupportPopUpVisible then state.data.popUpConfig.status else CLOSED
+    , actionType = if state.props.callSupportPopUpVisible then state.data.popUpConfig.actionType else Nothing
   }
   in popUpConfig'
 

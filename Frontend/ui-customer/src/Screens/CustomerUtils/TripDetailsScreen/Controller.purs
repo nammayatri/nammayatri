@@ -30,6 +30,8 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (TripDetailsScreenState, TripDetailsGoBackType)
+import Common.Types.App(PopUpStatus(..))
+import Data.Maybe( Maybe(..)) as Mb
 
 instance showAction :: Show Action where
     show _ = ""
@@ -64,6 +66,7 @@ instance loggableAction :: Loggable Action where
             PopUpModalController.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
             PopUpModalController.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
             PopUpModalController.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
+            PopUpModalController.OnClose actionType -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_closed"
         SourceToDestinationActionController (SourceToDestinationController.Dummy) -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination"
         NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
 
@@ -86,11 +89,13 @@ eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetails
 
 eval BackPressed state = exit $ GoBack state.props.fromMyRides
 
-eval ShowPopUp state = continue state{props{showConfirmationPopUp = true}}
+eval ShowPopUp state = continue state{props{showConfirmationPopUp = true}, data{popUpConfig{status = OPEN, actionType = Mb.Nothing}}}
 
-eval (PopUpModalAction (PopUpModalController.OnButton1Click)) state = continue state{props{showConfirmationPopUp = false}}
+eval (PopUpModalAction (PopUpModalController.OnButton1Click)) state = continue state{props{showConfirmationPopUp = false}, data {popUpConfig{status = CLOSED}}}
 
-eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ ConnectWithDriver state{props{showConfirmationPopUp = false}}
+eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ ConnectWithDriver state{props{showConfirmationPopUp = false}, data{popUpConfig{status = CLOSED}}}
+
+eval (PopUpModalAction (PopUpModalController.OnClose buttonClick)) state = continue state{data{popUpConfig{status = CLOSING, actionType = Mb.Just buttonClick}}}
 
 eval ViewInvoice state = exit $ GoToInvoice state
 

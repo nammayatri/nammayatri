@@ -17,7 +17,7 @@ module Screens.DriverProfileScreen.ScreenData where
 
 import Data.Maybe
 
-import Common.Types.App (CheckBoxOptions, LazyCheck(..))
+import Common.Types.App (CheckBoxOptions, LazyCheck(..), PopUpStatus(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
@@ -81,7 +81,11 @@ initData = {
       , cancellationRate : 0
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
-      }
+      },
+    popUpConfig : {
+      status : CLOSED,
+      actionType : Nothing
+    }
     },
 
   props: {

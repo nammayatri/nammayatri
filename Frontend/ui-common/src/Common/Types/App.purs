@@ -268,3 +268,20 @@ data OTPChannel = WHATSAPP | SMS
 derive instance genericOTPChannel :: Generic OTPChannel _
 instance showOTPChannel :: Show OTPChannel where show = genericShow
 instance encodeOTPChannel  :: Encode OTPChannel where encode = defaultEncode
+
+data PopUpStatus = OPEN | CLOSING | CLOSED
+
+derive instance genericPopUpStatus :: Generic PopUpStatus _
+instance eqPopUpStatus :: Eq PopUpStatus where eq = genericEq
+instance encodePopUpStatus  :: Encode PopUpStatus where encode = defaultEnumEncode
+
+type PopUpConfig  = {
+  status :: PopUpStatus 
+, actionType :: Maybe PopUpAction
+}
+
+data PopUpAction = Button1Click | Button2Click | OnImageClick | DismissPopUp 
+
+derive instance genericPopUpAction :: Generic PopUpAction _
+instance eqPopUpAction :: Eq PopUpAction where eq = genericEq
+instance encodePopUpAction  :: Encode PopUpAction where encode = defaultEnumEncode

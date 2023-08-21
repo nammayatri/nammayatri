@@ -84,7 +84,7 @@ view push state =
 
         ]]
     , issueReportedView state push
-    , lostAndFoundPopUpView push state
+    , if state.props.showConfirmationPopUp then lostAndFoundPopUpView push state else textView[height $ V 0]
     ]
 
 tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -201,7 +201,6 @@ lostAndFoundPopUpView push state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility if state.props.showConfirmationPopUp then VISIBLE else GONE
     ][PopUpModal.view (push <<< PopUpModalAction) (confirmLostAndFoundConfig state)]
 
 ---------------------- tripDetails ---------------------------

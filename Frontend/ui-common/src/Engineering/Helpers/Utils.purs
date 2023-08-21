@@ -15,7 +15,7 @@
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..)) as Mb
 import Data.Time.Duration (Milliseconds(..))
 import Presto.Core.Types.Language.Flow (delay)
 import Effect.Aff (launchAff)
@@ -25,7 +25,6 @@ import LoaderOverlay.Handler as UI
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState)
 import PrestoDOM.Core (terminateUI)
 import Types.App (GlobalState(..))
-import Debug (spy)
 import Engineering.Helpers.Commons (os)
 import Effect (Effect (..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
@@ -38,7 +37,7 @@ import MerchantConfig.DefaultConfig as DefaultConfig
 import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
-import Common.Types.App (MobileNumberValidatorResp(..))
+import Common.Types.App (MobileNumberValidatorResp(..), PopUpConfig, PopUpStatus(..), PopUpAction(..))
 import Foreign (Foreign)
 import Effect.Uncurried (mkEffectFn1)
 import Log (printLog)
@@ -60,7 +59,7 @@ toggleLoader flag = do
     _ <- liftFlow $ launchAff $ flowRunner state UI.loaderScreen
     pure unit
   else do
-    doAff $ liftEffect $ terminateUI $ Just "LoaderOverlay"
+    doAff $ liftEffect $ terminateUI $ Mb.Just "LoaderOverlay"
 
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = do
@@ -96,18 +95,18 @@ mobileNumberValidator country countryShortCode mobileNumber =
   in if len <=  maxLen then 
       case countryShortCode of 
         "IN" -> case (charAt 0 mobileNumber) of
-                  Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then Invalid
+                  Mb.Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then Invalid
                             else if a=='5' then if mobileNumber=="5000500050" then Valid else Invalid
                                  else if len == maxLen then Valid else ValidPrefix 
-                  Nothing -> ValidPrefix 
+                  Mb.Nothing -> ValidPrefix 
         "FR" -> case (charAt 0 mobileNumber) of 
-                  Just a -> if a == '6' || a == '7' then if len == maxLen then Valid else ValidPrefix
+                  Mb.Just a -> if a == '6' || a == '7' then if len == maxLen then Valid else ValidPrefix
                             else Invalid 
-                  Nothing -> ValidPrefix
+                  Mb.Nothing -> ValidPrefix
         "BD" -> case (charAt 0 mobileNumber) of 
-                  Just a -> if a == '1' then if len == maxLen then Valid else ValidPrefix 
+                  Mb.Just a -> if a == '1' then if len == maxLen then Valid else ValidPrefix 
                             else Invalid
-                  Nothing -> ValidPrefix
+                  Mb.Nothing -> ValidPrefix
         _ -> Invalid
       else MaxLengthExceeded
 
@@ -130,3 +129,15 @@ getAppConfigImpl =
       Left err -> do
         _ <- pure $ printLog ("Not able to decode config" <> show err) config
         pure $ DefaultConfig.config
+
+defaultPopUpConfig :: PopUpConfig
+defaultPopUpConfig = {
+  status : CLOSED ,
+  actionType : Mb.Nothing
+  }
+
+closePopUpConfig :: Mb.Maybe PopUpAction -> PopUpConfig 
+closePopUpConfig buttonClick = {
+  status : CLOSING ,
+  actionType : buttonClick
+}

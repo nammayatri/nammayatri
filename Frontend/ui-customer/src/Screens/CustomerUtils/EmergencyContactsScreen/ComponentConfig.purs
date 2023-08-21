@@ -18,6 +18,7 @@ import Screens.Types (EmergencyContactsScreenState)
 import Styles.Colors as Color
 import Data.Show (show)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Debug(spy)
 
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
@@ -71,7 +72,6 @@ removeContactPopUpModelConfig :: EmergencyContactsScreenState -> PopUpModal.Conf
 removeContactPopUpModelConfig state =
   let
     config' = PopUpModal.config
-
     popUpConfig' =
       config'
         { primaryText { text = (getString REMOVE) <> " " <> state.data.removedContactDetail.name }
@@ -86,8 +86,9 @@ removeContactPopUpModelConfig state =
           , color = Color.white900
           , strokeColor = Color.red
           }
-        , backgroundClickable = false
         , buttonLayoutMargin = MarginBottom if os == "IOS" then 0 else 24
+        , popUpStatus = spy "PopUPStatus updated to" state.data.popUpConfig.status
+        , actionType = state.data.popUpConfig.actionType
         }
   in
     popUpConfig'

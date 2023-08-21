@@ -16,8 +16,6 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
-
-import Common.Types.App (LazyCheck(..))
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
 import Components.ChatView as ChatView
@@ -93,7 +91,9 @@ endRidePopUp state = let
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
     option1 {text =(getString GO_BACK)},
-    option2 {text = (getString END_RIDE)}
+    option2 {text = (getString END_RIDE)},
+    popUpStatus = if state.props.endRidePopUp then state.data.popUpConfig.status else CommonTypes.CLOSED,
+    actionType = if state.props.endRidePopUp then state.data.popUpConfig.actionType else Nothing
   }
   in popUpConfig'
 
@@ -176,12 +176,12 @@ linkAadhaarPopupConfig state = let
     secondaryText {
       text = (getString AADHAAR_LINKING_REQUIRED_DESCRIPTION)
     , margin = MarginBottom 24},
-    option1 {
+    option2 {
       text = (getString LINK_AADHAAR_ID)
     , background = Color.black900
     , color = Color.yellow900
     },
-    option2 {
+    option1 {
       visibility = false
     },
     backgroundClickable = true,
@@ -192,7 +192,9 @@ linkAadhaarPopupConfig state = let
     , visibility = VISIBLE
     , height = V 178
     , width = V 204
-    }
+    },
+    popUpStatus = if state.props.showlinkAadhaarPopup && state.props.showAadharPopUp then state.data.popUpConfig.status else CommonTypes.CLOSED,
+    actionType = if state.props.showlinkAadhaarPopup && state.props.showAadharPopUp then state.data.popUpConfig.actionType else Nothing
   }
   in popUpConfig'
 
@@ -272,12 +274,14 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing || HU.getRequiredTag "" state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention," <> (getAssetStoreLink CommonTypes.FunctionCall) <> "ny_ic_cancel_prevention.png"
                   else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
-    }
+    },
+    popUpStatus = if state.props.cancelConfirmationPopup then state.data.popUpConfig.status else CommonTypes.CLOSED,
+    actionType = if state.props.cancelConfirmationPopup then state.data.popUpConfig.actionType else Nothing
   }
   in popUpConfig'
 
@@ -350,6 +354,8 @@ silentModeConfig state = let
       width = (V 170)
       , text =  getString GO_SILENT
     }
+  , popUpStatus = if state.props.silentPopUpView then state.data.popUpConfig.status else CommonTypes.CLOSED
+  , actionType = if state.props.silentPopUpView then state.data.popUpConfig.actionType else Nothing
   }
   in popUpConfig'
 
@@ -422,7 +428,7 @@ mapRouteConfig srcIcon destIcon = {
   , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
 }
 
-requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+requestInfoCardConfig :: CommonTypes.LazyCheck -> RequestInfoCard.Config
 requestInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
@@ -447,7 +453,7 @@ requestInfoCardConfig _ = let
   }
   in requestInfoCardConfig'
 
-waitTimeInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+waitTimeInfoCardConfig :: CommonTypes.LazyCheck -> RequestInfoCard.Config
 waitTimeInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{

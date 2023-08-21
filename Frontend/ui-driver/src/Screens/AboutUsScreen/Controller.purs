@@ -26,6 +26,8 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Data.String (length)
 import JBridge (toast)
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
+import Common.Types.App(PopUpStatus(..))
+import Data.Maybe(Maybe(..)) as Mb
 
 instance showAction :: Show Action where
   show _ = ""
@@ -50,6 +52,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown seconds id status timerID -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal_cancel_confirmation" "countdown_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose _ -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "popup_closed"
     TermsAndConditionAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "t_&_c"
     NoAction -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "in_screen" "no_action"
     
@@ -61,7 +64,7 @@ eval AfterRender state = continue state
 eval ShowDemoPopUp state = do
   if (state.props.enableDemoModeCount == 4 && getValueToLocalStore DRIVER_STATUS == "true") then do
     _ <- pure $ toast $ "Demo mode activated, enter password to enable demo mode!!"
-    continue state {props {demoModePopup = true}}
+    continue state {props {demoModePopup = true}, data{popUpConfig{status = OPEN}}}
     else do
       -- _ <- pure $ toast $ "You are " <> show (4 - state.props.enableDemoModeCount) <> " steps away to enable demo mode!!"
       continue state {props {enableDemoModeCount = state.props.enableDemoModeCount + 1}}
@@ -69,9 +72,11 @@ eval (BackPressed flag) state =  if state.props.demoModePopup then continue stat
 eval NoAction state = continue state
 eval (PopUpModalDemoModeAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED  "true"
-  updateAndExit state {props{enableConfirmPassword = false,demoModePopup = false}} $ GoToHome state {props{enableConfirmPassword = false,demoModePopup = false}}
-eval (PopUpModalDemoModeAction (PopUpModal.OnButton1Click)) state = continue state --{props{enableConfirmPassword=false,demoModePopup = false}}
-eval (PopUpModalDemoModeAction (PopUpModal.OnImageClick)) state = continue state {props{demoModePopup = false}}
+  updateAndExit state {props{enableConfirmPassword = false,demoModePopup = false}, data{popUpConfig {status = CLOSED , actionType = Mb.Nothing}}} $ GoToHome state {props{enableConfirmPassword = false,demoModePopup = false}, data{popUpConfig {status = CLOSED , actionType = Mb.Nothing}}}
+eval (PopUpModalDemoModeAction (PopUpModal.OnButton1Click)) state = continue state{data{popUpConfig {status = CLOSED , actionType = Mb.Nothing}}} --{props{enableConfirmPassword=false,demoModePopup = false}}
+eval (PopUpModalDemoModeAction (PopUpModal.OnClose actionType)) state = continue state{data{popUpConfig{status = CLOSING , actionType = Mb.Just actionType}}}
+
+eval (PopUpModalDemoModeAction (PopUpModal.OnImageClick)) state = continue state {props{demoModePopup = false},data{ popUpConfig {status = CLOSED , actionType = Mb.Nothing}}}
 eval (PopUpModalDemoModeAction (PopUpModal.ETextController (PrimaryEditTextController.TextChanged valId newVal))) state = do
   _ <- pure $ setValueToLocalStore DEMO_MODE_PASSWORD newVal
   continue state{ props{ enableConfirmPassword = (validateDemoMode newVal) }}

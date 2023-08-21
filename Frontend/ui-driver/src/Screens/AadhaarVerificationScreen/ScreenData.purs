@@ -15,6 +15,8 @@
 module Screens.AadhaarVerificationScreen.ScreenData where
 
 import Screens.Types (AadhaarStage(..), AadhaarVerificationScreenState)
+import Common.Types.App (PopUpStatus(..))
+import Data.Maybe(Maybe(..)) as Mb
 
 initData :: AadhaarVerificationScreenState
 initData =
@@ -25,6 +27,10 @@ initData =
       , driverName : ""
       , driverGender : ""
       , driverDob : ""
+      , popUpConfig :{
+        status : CLOSED
+      , actionType : Mb.Nothing
+      }
       }
   , props:
       { btnActive: false

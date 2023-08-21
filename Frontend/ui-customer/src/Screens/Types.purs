@@ -17,7 +17,7 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (OptionButtonList, RateCardType, CountryCodeObj, OTPChannel)
+import Common.Types.App (OptionButtonList, RateCardType, CountryCodeObj, OTPChannel, PopUpStatus, PopUpConfig)
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
@@ -235,6 +235,7 @@ type AccountSetUpScreenStateData =
     , gender :: Maybe Gender
     , nameErrorMessage :: Maybe ErrorType
     , config :: AppConfig
+    , popUpConfig :: PopUpConfig
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
@@ -266,7 +267,8 @@ type TripDetailsScreenData =
     selectedItem :: IndividualRideCardState,
     tripId :: String,
     config :: AppConfig,
-    vehicleVariant :: Maybe VehicleVariant
+    vehicleVariant :: Maybe VehicleVariant,
+    popUpConfig :: PopUpConfig
     -- bookingId :: String
   }
 
@@ -364,7 +366,8 @@ type HelpAndSupportScreenData =
     description :: String,
     accountStatus :: DeleteStatus ,
     config :: AppConfig,
-    vehicleVariant :: Maybe VehicleVariant
+    vehicleVariant :: Maybe VehicleVariant,
+    popUpConfig :: PopUpConfig
   }
 
 type HelpAndSuportScreenProps =
@@ -583,6 +586,7 @@ type HomeScreenStateData =
   , ratingViewState :: RatingViewState
   , config :: AppConfig
   , logField :: Object Foreign
+  , popUpConfig :: PopUpConfig
   }
 
 type HomeScreenStateProps =
@@ -753,7 +757,8 @@ type EmergencyHelpModelState = {
    isSelectEmergencyContact :: Boolean,
    showContactSupportPopUp :: Boolean,
    showCallPolicePopUp :: Boolean,
-   emergencyContactData :: Array Contact
+   emergencyContactData :: Array Contact,
+   popUpConfig :: PopUpConfig
 }
 
 type RecentlySearchedObject =
@@ -808,7 +813,8 @@ type EmergencyContactsScreenData = {
   removedContactDetail :: NewContacts,
   offsetForEmergencyContacts :: Int,
   limitForEmergencyContacts :: Int,
-  editedText :: String
+  editedText :: String,
+  popUpConfig :: PopUpConfig
 }
 
 type EmergencyContactsScreenProps = {
@@ -974,6 +980,7 @@ type SavedLocationScreenData =
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
   , config :: AppConfig
+  , popUpConfig :: PopUpConfig
   }
 
 type DistInfo =

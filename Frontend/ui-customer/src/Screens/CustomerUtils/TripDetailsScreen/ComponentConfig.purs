@@ -77,6 +77,8 @@ confirmLostAndFoundConfig state = let
         , text = (getString REQUEST_CALLBACK)
         , margin = MarginLeft 12
         }
+      , popUpStatus = state.data.popUpConfig.status 
+      , actionType = state.data.popUpConfig.actionType
     }
     in popUpConfig'
 

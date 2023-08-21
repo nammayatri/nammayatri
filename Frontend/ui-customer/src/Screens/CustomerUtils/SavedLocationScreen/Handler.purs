@@ -35,7 +35,9 @@ savedLocationScreen = do
     AddLocation updatedState -> do 
       modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
       App.BackT $  App.BackPoint <$> ( pure $ ADD_NEW_LOCATION updatedState)
-    DeleteLocation tagName -> App.BackT $ App.NoBack <$> (pure $ DELETE_LOCATION tagName)
+    DeleteLocation tagName updatedState ->  do 
+      modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DELETE_LOCATION tagName)
     EditLocation cardState -> App.BackT $ App.BackPoint <$> (pure $ EDIT_LOCATION cardState)
     GoBack -> do
      _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"

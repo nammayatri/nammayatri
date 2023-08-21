@@ -18,7 +18,7 @@ module Flow where
 import Engineering.Helpers.LogEvent
 
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..))
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), PopUpStatus(..))
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
@@ -1563,7 +1563,7 @@ helpAndSupportScreenFlow = do
       helpAndSupportScreenFlow
     DELETE_USER_ACCOUNT updatedState -> do
       _ <- Remote.sendIssueBT (Remote.makeSendIssueReq (Just updatedState.data.email) Nothing "Request To Delete Account" updatedState.data.description )
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props{showDeleteAccountView = true}, data {accountStatus = DEL_REQUESTED}})
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props{showDeleteAccountView = true}, data {accountStatus = DEL_REQUESTED, popUpConfig{status = OPEN, actionType = Nothing}}})
       helpAndSupportScreenFlow
 
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit

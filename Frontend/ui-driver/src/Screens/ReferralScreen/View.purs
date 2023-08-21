@@ -169,12 +169,12 @@ view push state =
           <> if state.props.stage == ST.ComingSoonScreen then [commonView push "ny_ic_comming_soon_poster" (getString COMING_SOON) (getString COMING_SOON_DESCRIPTION) state] else []
           <> if state.props.stage == ST.ReferralFlow then  [referralEnrolmentFlow push state, continueButtonView push state] else []
           <> if state.props.stage == ST.QRScreen then [qrScreen push state] else []
-          <> if state.props.stage == ST.LeaderBoard then [leaderBoard push state] else [])
+          <> if state.props.stage == ST.LeaderBoard then [leaderBoard push state] else []
+          )
         , bottomNavBarView push state
         ]
-        , passwordPopUpView push state
-        , customerSupportPopUpView state push
-    ] <> if state.props.passwordPopUpVisible then [passwordPopUpView push state] else [])
+    ] <> if state.props.passwordPopUpVisible then [passwordPopUpView push state] else []
+      <> if state.props.callSupportPopUpVisible then [customerSupportPopUpView state push] else [])
 
 shimmerView :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =

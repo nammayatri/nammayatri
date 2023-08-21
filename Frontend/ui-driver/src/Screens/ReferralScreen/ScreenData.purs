@@ -19,6 +19,7 @@ import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), 
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
+import Common.Types.App (PopUpStatus(..))
 
 initData :: ReferralScreenState
 initData =  {
@@ -39,6 +40,10 @@ initData =  {
     }
 }
   , logField : empty
+  , popUpConfig : {
+      status : CLOSED,
+      actionType : Nothing
+  }
   }
 ,  props: {
       primarybtnActive :false

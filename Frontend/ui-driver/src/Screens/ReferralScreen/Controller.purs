@@ -26,7 +26,10 @@ import Data.Array (length) as DA
 import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe)
 import Data.String (length)
-import Debug (spy)
+import Screens.ReferralScreen.ScreenData as RSD
+import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Utils (defaultPopUpConfig, closePopUpConfig)
+import Common.Types.App (PopUpStatus(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -87,6 +90,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose _-> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_closed"
     SuccessScreenExpireCountDwon seconds id status timerId -> do
       if status == "EXPIRED" then trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_expired"
         else trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_updated"
@@ -99,6 +103,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "no_action"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_closed"
     GoToAlertScreen -> do
       trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "for_updates_see_alerts"
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
@@ -207,7 +212,7 @@ eval EnableReferralFlow state = do
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = continue state { props = state.props { passwordPopUpVisible = not state.props.passwordPopUpVisible }}
+eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = continue state { props = state.props { passwordPopUpVisible = not state.props.passwordPopUpVisible }, data{popUpConfig {status = if (state.props.passwordPopUpVisible ) then CLOSED else OPEN}}}
 
 eval GoToAlertScreen state = do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
@@ -230,24 +235,25 @@ eval (PrimaryEditTextAction2 (PrimaryEditText.TextChanged valId newVal)) state =
 
 eval (PasswordModalAction (PopUpModal.OnImageClick)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
-    continue state { data = state.data{ password = "" }, props = state.props { passwordPopUpVisible = not state.props.passwordPopUpVisible , confirmBtnActive = false }}
+    continue state { data = state.data{ password = "", popUpConfig{status = if state.props.passwordPopUpVisible then OPEN else CLOSED } }, props = state.props { passwordPopUpVisible = not state.props.passwordPopUpVisible , confirmBtnActive = false }}
 
 
 eval (PasswordModalAction (PopUpModal.OnButton2Click)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
-    exit $ LinkReferralApi state
+    updateAndExit state $ LinkReferralApi state
 
-
+eval (PasswordModalAction (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonClick)}}
 eval (PasswordModalAction (PopUpModal.ETextController (PrimaryEditTextController.TextChanged valId newVal))) state = do
   _ <- if length newVal >= 5 then do
             pure $ hideKeyboardOnNavigation true
             else pure unit
   continue state{ data{ password = newVal } , props { confirmBtnActive = (length newVal == 5)}}
 
-eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
+eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = continue state { data{popUpConfig {status = if state.props.callSupportPopUpVisible then OPEN else CLOSED}}, props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
     void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
-    continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
+    continue state { data{popUpConfig {status = if state.props.callSupportPopUpVisible then OPEN else CLOSED}},props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
+eval (ContactSupportAction (PopUpModal.OnClose actionType)) state = continue state{data{popUpConfig = closePopUpConfig (Just actionType)}}
 
 eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status == "EXPIRED" then do
   _ <- pure $ clearTimer timerId

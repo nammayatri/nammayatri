@@ -15,7 +15,7 @@
 
 module Screens.ApplicationStatusScreen.Controller where
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), PopUpStatus(..))
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
@@ -26,6 +26,7 @@ import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, getExpiryTime, setText)
+import Engineering.Helpers.Utils (defaultPopUpConfig, closePopUpConfig)
 import JBridge (hideKeyboardOnNavigation, minimizeApp, openWhatsAppSupport, showDialer, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -68,6 +69,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.OnClose buttonClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "popup_closed"
     ExitGoToEnterOtp ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "enter_otp"
     CompleteOnBoardingAction PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "onboardingview"
     CompleteOnBoardingAction PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "na_action"
@@ -105,7 +107,7 @@ eval BackPressed state = do
 eval (PrimaryButtonActionController) state = exit GoToHomeScreen
 eval (CompleteOnBoardingAction PrimaryButtonController.OnClick) state = do 
   let timelimit = (getExpiryTime (getValueToLocalStore INVALID_OTP_TIME) true)/60
-  if state.props.onBoardingFailure then  continue state{props{popupview = true}} else do
+  if state.props.onBoardingFailure then  continue state{props{popupview = true}, data{popUpConfig{status = OPEN}}} else do
     if not (timelimit<=10)||(getValueToLocalStore INVALID_OTP_TIME == "__failed") then continue state{props{enterMobileNumberView =true,isValidOtp = false,isAlternateMobileNumberExists = false , isValidAlternateNumber = false},data{mobileNumber=""}}
     else continueWithCmd state [do
       _ <- pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_RESENDING_OTP
@@ -133,10 +135,11 @@ eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state 
       let timeDifference = (getExpiryTime (getValueToLocalStore DOCUMENT_UPLOAD_TIME) true)/3600
       if (timeDifference>=48 && (resp.dlVerificationStatus == "PENDING" || resp.rcVerificationStatus == "PENDING")) then continue state{data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus},props{onBoardingFailure = true,isVerificationFailed = false}}
       else continue state { data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus}, props{onBoardingFailure = onBoardingStatus, isVerificationFailed = popup_visibility}}
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{popupview=false}}
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{popupview=false}, data{popUpConfig = defaultPopUpConfig}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state
+eval (PopUpModalAction (PopUpModal.OnClose buttonType)) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonType)}}
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
   if state.props.enterOtp then do
     continueWithCmd state{props{enterOtp = false, buttonVisibilty = true}} [do

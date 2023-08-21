@@ -39,7 +39,7 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppBackPress, trackAppS
 import Screens (ScreenName(..), getScreen)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Engineering.Helpers.Utils as EHU
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), PopUpStatus(..))
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -79,13 +79,14 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose actionType -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "popup_closed"
     SavedLocationListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "saved_location_list"
     NoAction -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "no_action"
 
     
 
 data ScreenOutput = EditLocation LocationListItemState
-                  | DeleteLocation String
+                  | DeleteLocation String SavedLocationScreenState
                   | AddLocation SavedLocationScreenState
                   | GoBack
 
@@ -104,14 +105,17 @@ eval :: Action -> SavedLocationScreenState -> Eval Action ScreenOutput SavedLoca
 eval (SavedLocationCardAction (SavedLocationCardController.EditLocation cardState)) state = exit $ EditLocation cardState
 
 eval (BackPressed flag) state = do 
-  if state.props.showDeleteLocationModel then continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
+  if state.props.showDeleteLocationModel then continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing, popUpConfig{status = CLOSED}}}
     else exit $ GoBack
 
 eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagName)) state = do 
-  continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName)}}
+  continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName) , popUpConfig{status = OPEN}}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
+eval (PopUpModalAction (PopUpModal.OnClose actionType)) state = continue state{data{popUpConfig{status = CLOSING, actionType = Just actionType}}}
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing, popUpConfig{ status = CLOSED}}}
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
+  let updatedState = state{data{popUpConfig {status = CLOSED}}, props{showDeleteLocationModel = false}}
+  updateAndExit updatedState $ DeleteLocation (fromMaybe "" state.data.deleteTag) updatedState
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
 
 eval (SavedLocationListAPIResponseAction respList) state = do 

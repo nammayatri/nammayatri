@@ -130,7 +130,9 @@ callConfirmationPopup state = let
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
-      }
+      },
+      popUpStatus = state.data.popUpConfig.status,
+      actionType = state.data.popUpConfig.actionType 
     }
   in popUpConfig'
 
@@ -259,7 +261,9 @@ requestDeletePopUp state = let
       option2 {text = getString YES_DELETE_IT
       , background = Color.red
       , color = Color.white900
-      , strokeColor = Color.red }
+      , strokeColor = Color.red },
+      popUpStatus = state.data.popUpConfig.status,
+      actionType = state.data.popUpConfig.actionType 
      
     }
   in popUpConfig'
@@ -278,7 +282,9 @@ accountDeletedPopUp state = let
       option2 {
         text = getString OKAY_GOT_IT,
         margin = MarginHorizontal 16 16
-      }
+      },
+      popUpStatus = state.data.popUpConfig.status,
+      actionType = state.data.popUpConfig.actionType 
     }
     in popUpConfig'
 

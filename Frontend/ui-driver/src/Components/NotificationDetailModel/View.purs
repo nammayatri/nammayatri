@@ -360,6 +360,7 @@ addCommentModelConfig state =
         , primaryText { text = (getString ADD_A_COMMENT), gravity = LEFT, margin = (Margin 16 21 0 0) }
         , secondaryText { visibility = GONE }
         , option1 { visibility = false }
+        , backgroundClickable = false
         , option2
           { text = (getString POST_COMMENT)
           , background = Color.white900
@@ -369,6 +370,8 @@ addCommentModelConfig state =
           , isClickable = state.commentBtnActive
           }
         , cornerRadius = (Corners 15.0 true true true true)
+        , popUpStatus = state.popUpConfig.status 
+        , actionType = state.popUpConfig.actionType
         }
   in
     popUpConfig'

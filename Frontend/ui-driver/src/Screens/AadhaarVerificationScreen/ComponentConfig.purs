@@ -135,4 +135,6 @@ logOutPopUpModelConfig state = PopUpModal.config
             , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
             , option1 { text = (getString GO_BACK) }
             , option2 { text = (getString LOGOUT) }
+            , popUpStatus = state.data.popUpConfig.status
+            , actionType = state.data.popUpConfig.actionType
             }

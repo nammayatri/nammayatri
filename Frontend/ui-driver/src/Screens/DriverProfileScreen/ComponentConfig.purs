@@ -32,7 +32,7 @@ import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), PopUpStatus(..))
 import Data.Maybe(fromMaybe, Maybe(..), isJust)
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
@@ -56,7 +56,9 @@ logoutPopUp  state = let
     primaryText {text = (getString LOGOUT)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
     option1 {text = (getString GO_BACK)},
-    option2 {text = (getString LOGOUT)}
+    option2 {text = (getString LOGOUT)},
+    popUpStatus = if state.props.logoutModalView  then state.data.popUpConfig.status else CLOSED,
+    actionType = if state.props.logoutModalView  then state.data.popUpConfig.actionType else Nothing
   }
   in popUpConfig'
 
@@ -219,7 +221,9 @@ removeAlternateNumberConfig state = let
         text = getString YES_REMOVE_IT
       , background = Color.red
       , color = Color.white900
-      , strokeColor = Color.red}
+      , strokeColor = Color.red},
+      popUpStatus = if state.props.removeAlternateNumber  then state.data.popUpConfig.status else CLOSED,
+      actionType = if state.props.removeAlternateNumber  then state.data.popUpConfig.actionType else Nothing
     }
   in popUpConfig'
 
@@ -291,6 +295,7 @@ activateAndDeactivateRcPopUpConfig push state =
         { primaryText { text = if state.data.isRCActive then (getString DEACTIVATE_RC) else (getString ACTIVATE_RC)}
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
+        , backgroundClickable = false
         , optionButtonOrientation = "VERTICAL"
         , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black700}
         , option1 {
@@ -309,6 +314,8 @@ activateAndDeactivateRcPopUpConfig push state =
           , color = Color.black650
           , margin = (MarginBottom 16)
           }
+        , popUpStatus = if state.props.activateOrDeactivateRcView  then state.data.popUpConfig.status else CLOSED
+        , actionType = if state.props.activateOrDeactivateRcView  then state.data.popUpConfig.actionType else Nothing
         }
   in
     popUpConfig'
@@ -324,6 +331,7 @@ callDriverPopUpConfig push state =
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , backgroundColor = Color.transparent
+        , backgroundClickable = false
         , cornerRadius = (Corners 24.0 true true true true)
         , optionButtonOrientation = "VERTICAL"
         , secondaryText { text = (getString CONNECT_CALL_ANONYMOUSLY), color = Color.black700}
@@ -344,6 +352,8 @@ callDriverPopUpConfig push state =
           , color = Color.black650
           , padding = (PaddingBottom 12)
           }
+        , popUpStatus = if state.props.callDriver  then state.data.popUpConfig.status else CLOSED
+        , actionType = if state.props.callDriver  then state.data.popUpConfig.actionType else Nothing
         }
   in
     popUpConfig'
@@ -389,6 +399,8 @@ deleteRcPopUpConfig state =
           , color = Color.black650
           , margin = (MarginBottom 16)
           }
+        , popUpStatus = if state.props.deleteRcView  then state.data.popUpConfig.status else CLOSED
+        , actionType = if state.props.deleteRcView  then state.data.popUpConfig.actionType else Nothing
         }
   in
     popUpConfig'

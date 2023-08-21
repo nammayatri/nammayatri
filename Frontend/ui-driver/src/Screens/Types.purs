@@ -277,7 +277,8 @@ type DriverProfileScreenData = {
   logField :: Object Foreign,
   analyticsData :: AnalyticsData,
   fromHomeScreen :: Boolean,
-  profileImg :: Maybe String
+  profileImg :: Maybe String,
+  popUpConfig :: Common.PopUpConfig
 }
 
 type RcData = {
@@ -376,7 +377,8 @@ type ApplicationStatusScreenData =  {
   rcVerificationStatus :: String,
   dlVerificationStatus :: String,
   mobileNumber :: String,
-  otpValue :: String
+  otpValue :: String,
+  popUpConfig :: Common.PopUpConfig
 }
 type ApplicationStatusScreenProps =  {
   isSelected :: Boolean,
@@ -553,6 +555,7 @@ type ReferralScreenStateData = {
       }
     }
   , logField :: Object Foreign
+  , popUpConfig :: Common.PopUpConfig
 }
 
 type ReferralScreenStateProps = {
@@ -700,7 +703,8 @@ type AboutUsScreenState = {
 }
 
 type AboutUsScreenData = {
-  versionNumber :: String
+  versionNumber :: String,
+  popUpConfig :: Common.PopUpConfig 
 }
 
 type AboutUsScreenProps = {
@@ -754,7 +758,8 @@ type HomeScreenData =  {
   driverAlternateMobile :: Maybe String,
   logField :: Object Foreign,
   paymentState :: PaymentState,
-  profileImg :: Maybe String
+  profileImg :: Maybe String,
+  popUpConfig :: Common.PopUpConfig
  }
 
 type PaymentState = {
@@ -1356,7 +1361,8 @@ type NotificationDetailModelState = {
   mediaType :: Maybe MediaType,
   likeCount :: Int,
   likeStatus :: Boolean,
-  viewCount :: Int
+  viewCount :: Int,
+  popUpConfig :: Common.PopUpConfig
 }
 
 type YoutubeData = {
@@ -1471,6 +1477,7 @@ type EnterAadhaarNumberScreenStateData = {
   , driverName :: String
   , driverGender :: String
   , driverDob :: String
+  , popUpConfig :: Common.PopUpConfig
 }
 
 type EnterAadhaarNumberScreenStateProps = {

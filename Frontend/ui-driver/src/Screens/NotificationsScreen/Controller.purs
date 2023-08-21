@@ -34,6 +34,7 @@ import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
+import Engineering.Helpers.Utils (defaultPopUpConfig, closePopUpConfig)
 import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer, parseNumber)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent)
 import Language.Strings (getString)
@@ -45,6 +46,7 @@ import Services.API (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityRe
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
+import Common.Types.App (PopUpStatus(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -129,7 +131,7 @@ eval (NotificationDetailModelAC (NotificationDetailModel.LikeMessage)) state = d
 
 eval (NotificationDetailModelAC NotificationDetailModel.AddCommentClick) state = do
   _ <- pure $ requestKeyboardShow $ getNewIDWithTag "NotificationDetailModel"
-  continue state { notificationDetailModelState { addCommentModelVisibility = VISIBLE } }
+  continue state { notificationDetailModelState { addCommentModelVisibility = VISIBLE , popUpConfig {status = OPEN}} }
 
 eval (NotificationDetailModelAC NotificationDetailModel.IncreaseViewCount) state = do
   let views = state.notificationDetailModelState.viewCount + 1
@@ -139,7 +141,7 @@ eval (NotificationDetailModelAC NotificationDetailModel.IncreaseViewCount) state
 
 eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction PopUpModal.OnImageClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing } }
+  continue state { notificationDetailModelState { popUpConfig = defaultPopUpConfig ,addCommentModelVisibility = GONE, comment = Nothing } }
 
 eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction (PopUpModal.ETextController (PrimaryEditText.TextChanged id text)))) state =
   continue
@@ -152,10 +154,11 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction (
 
 eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction PopUpModal.OnButton2Click)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  let newState = state{notificationDetailModelState{popUpConfig = defaultPopUpConfig}}
   case state.notificationDetailModelState.comment of
     Just comment -> do
       let updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{comment = Just comment } else item)state.notificationList)
-      continueWithCmd state { notificationDetailModelState { addCommentModelVisibility = GONE }, notificationList = updatedNotificationList }
+      continueWithCmd newState { notificationDetailModelState { addCommentModelVisibility = GONE }, notificationList = updatedNotificationList }
         [ do
             void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
@@ -163,7 +166,11 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction P
                   pure unit
             pure NoAction
         ]
-    Nothing -> continue state
+    Nothing -> continue newState
+
+eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction (PopUpModal.OnClose actionType))) state = continue state{notificationDetailModelState{popUpConfig = closePopUpConfig (Just actionType)}}
+
+eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction (PopUpModal.NoAction))) state = continue state{notificationDetailModelState{popUpConfig {status = OPEN, actionType = Nothing}}}
 
 eval (NotificationDetailModelAC NotificationDetailModel.AfterRender) state = do
   let
@@ -270,6 +277,7 @@ notifisDetailStateTransformer selectedItem =
   , likeCount : selectedItem.likeCount
   , likeStatus : selectedItem.likeStatus
   , viewCount: selectedItem.viewCount
+  , popUpConfig : defaultPopUpConfig
   }
 
 notificationListTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardState

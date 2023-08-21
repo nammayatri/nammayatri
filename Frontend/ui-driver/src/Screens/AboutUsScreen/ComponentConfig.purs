@@ -35,6 +35,7 @@ demoModePopUpConfig state = let
     margin = (MarginHorizontal 16 16),
     buttonLayoutMargin = (Margin 0 16 16 0),
     editTextVisibility = VISIBLE,
+    backgroundClickable = false,
     dismissPopupConfig {
       visibility = VISIBLE, 
       height = V 12,
@@ -70,6 +71,8 @@ demoModePopUpConfig state = let
       padding = (Padding 16 0 16 0), 
       isClickable = state.props.enableConfirmPassword
     },
+    popUpStatus = state.data.popUpConfig.status,
+    actionType = state.data.popUpConfig.actionType,
     cornerRadius = (PTD.Corners 15.0 true true true true)
   }
   in popUpConfig'

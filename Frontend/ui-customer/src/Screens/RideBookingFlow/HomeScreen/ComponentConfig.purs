@@ -74,6 +74,7 @@ import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipV
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Debug(spy)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -111,7 +112,10 @@ shareAppConfig state = let
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
       , height = V 200
-      }
+      },
+      popUpStatus = state.data.popUpConfig.status,
+      actionType = state.data.popUpConfig.actionType
+
   }
   in popUpConfig'
 
@@ -153,7 +157,9 @@ cancelAppConfig state = let
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
       , height = V 200
-      }
+      },
+      popUpStatus = state.data.popUpConfig.status,
+      actionType = state.data.popUpConfig.actionType
   }
   in popUpConfig'
       where distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
@@ -415,6 +421,8 @@ logOutPopUpModelConfig state =
               , background = state.data.config.primaryBackground
               , text = (getString LOGOUT_)
               }
+            , popUpStatus = spy "logOutPopUpModelConfig state::" state.data.popUpConfig.status
+            , actionType = state.data.popUpConfig.actionType
             }
       in
         popUpConfig'
@@ -422,13 +430,13 @@ logOutPopUpModelConfig state =
           optionButtonOrientation = "VERTICAL"
           , dismissIconMargin = Margin 0 0 14 13
           , dismissIconVisibility = if isLocalStageOn ST.QuoteList then GONE else VISIBLE
-          , backgroundClickable = true
+          , backgroundClickable = false
           , customerTipAvailable = true
           , fareEstimateText = getString FARE_ESTIMATE
           , tipSelectedText = getString TIP_SELECTED
           , fareEstimate = getValueToLocalStore FARE_ESTIMATE_DATA
           , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))
-          , dismissPopup = true
+          , dismissPopup = false
           , customerTipArray = [(getString NO_TIP), "₹10 🙂", "₹20 😄", "₹30 🤩"]
           , customerTipArrayWithValues = [0,10, 20, 30]
           , primaryText {
@@ -465,6 +473,8 @@ logOutPopUpModelConfig state =
           , color = Color.black650
           , height = WRAP_CONTENT
           },
+          popUpStatus = state.data.popUpConfig.status,
+          actionType = state.data.popUpConfig.actionType,
           cornerRadius = (Corners 15.0 true true false false)
 
       }
@@ -494,7 +504,9 @@ logOutPopUpModelConfig state =
               , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
               , color = Color.black650
               , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
-             }
+             },
+            popUpStatus = state.data.popUpConfig.status,
+            actionType = state.data.popUpConfig.actionType
             }
       in
         popUpConfig'
@@ -526,6 +538,8 @@ distanceOusideLimitsConfig state =
           , text = (getString CHANGE_DROP_LOCATION)
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
           }
+        , popUpStatus = state.data.popUpConfig.status
+        , actionType = state.data.popUpConfig.actionType
         }
   in
     popUpConfig'
@@ -557,6 +571,8 @@ shortDistanceConfig state =
           , background = state.data.config.primaryBackground
           , text = (getString BOOK_RIDE_)
           }
+        , popUpStatus = state.data.popUpConfig.status
+        , actionType = state.data.popUpConfig.actionType
         }
   in
     popUpConfig'
@@ -704,6 +720,8 @@ estimateChangedPopupConfig state =
           , background = state.data.config.primaryBackground
           , text = (getString CONTINUE)
           }
+        , popUpStatus = state.data.popUpConfig.status
+        , actionType = state.data.popUpConfig.actionType
         }
   in
     popUpConfig'
@@ -826,6 +844,8 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 , currentlySelectedContact: state.props.emergencyHelpModelState.currentlySelectedContact
                                 , showCallSuccessfulPopUp : state.props.emergencyHelpModelState.showCallSuccessfulPopUp
                                 , config : state.data.config
+                                , popUpStatus : state.data.popUpConfig.status 
+                                , actionType : state.data.popUpConfig.actionType
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
@@ -927,6 +947,8 @@ callSupportConfig state = let
     , background = state.data.config.primaryBackground
     , margin = (MarginLeft 12)
     }
+  , popUpStatus = state.data.popUpConfig.status
+  , actionType = state.data.popUpConfig.actionType
   }
   in popUpConfig'
 
@@ -953,6 +975,8 @@ zoneTimerExpiredConfig state = let
       text =  getString OK_GOT_IT
     , margin = (MarginHorizontal 16 16)
     }
+  , popUpStatus = state.data.popUpConfig.status
+  , actionType = state.data.popUpConfig.actionType
   }
   in popUpConfig'
   

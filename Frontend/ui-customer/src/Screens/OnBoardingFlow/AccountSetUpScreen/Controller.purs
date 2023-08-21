@@ -32,6 +32,8 @@ import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSet
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Data.Maybe(Maybe(..))
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
+import Engineering.Helpers.Utils as EHU
+import Common.Types.App as Common
 
 instance showAction :: Show Action where
   show _ = ""
@@ -65,6 +67,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose actionType -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "popup_closed"
     ShowOptions -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "show_options"
     EditTextFocusChanged -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
@@ -127,11 +130,13 @@ eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
 eval BackPressed state = do
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ clearCountDownTimer ""
-  continue state { props { backPressed = true } }
+  continue state { props { backPressed = true }, data{popUpConfig{status = Common.OPEN}} }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false } }
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false }, data{popUpConfig = EHU.defaultPopUpConfig} }
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
+
+eval (PopUpModalAction (PopUpModal.OnClose actionType)) state = continue state{data{popUpConfig = EHU.closePopUpConfig (Just actionType)}}
 
 eval _ state = continue state
 

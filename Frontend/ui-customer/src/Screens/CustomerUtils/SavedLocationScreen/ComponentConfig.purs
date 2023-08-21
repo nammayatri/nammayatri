@@ -57,8 +57,9 @@ requestDeletePopUp state = let
       , color = Color.white900
       , strokeColor = Color.red
       , margin = (MarginLeft 12)
-      }
-     
+      },
+      popUpStatus = state.data.popUpConfig.status,
+      actionType = state.data.popUpConfig.actionType
     }
   in popUpConfig'
 

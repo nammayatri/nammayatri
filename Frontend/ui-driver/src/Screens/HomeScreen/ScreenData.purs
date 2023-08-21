@@ -100,7 +100,11 @@ initData = {
           blockedDueToPayment : false,
           laterButtonVisibility : false
         },
-        profileImg : Nothing
+        profileImg : Nothing,
+        popUpConfig : {
+          status : Common.CLOSED 
+        , actionType : Nothing
+        }
     },
     props: {
         statusOnline : true,

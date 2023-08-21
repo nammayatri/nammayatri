@@ -29,7 +29,7 @@ import Prelude ((/=), negate)
 import PrestoDOM (Length(..), Margin(..))
 import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
+import Common.Types.App as Common
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
@@ -57,7 +57,7 @@ genericHeaderConfig =
         , prefixImageConfig
           { height = V 25
           , width = V 25
-          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink Common.FunctionCall) <> "ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
         , background = Color.white900
@@ -86,6 +86,8 @@ goBackPopUpModelConfig state =
           , background = state.data.config.primaryBackground
           , text = (getString YES)
           }
+        , popUpStatus = if state.props.backPressed then state.data.popUpConfig.status else Common.CLOSED 
+        , actionType = if state.props.backPressed then state.data.popUpConfig.actionType else Nothing
         }
   in
     popUpConfig

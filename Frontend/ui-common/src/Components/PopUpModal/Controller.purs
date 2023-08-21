@@ -25,6 +25,8 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
 import Data.Maybe as Mb
+import Common.Types.App (PopUpStatus(..))
+import Data.Maybe as Mb
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -34,6 +36,7 @@ data Action = OnButton1Click
             | OnImageClick
             | Tipbtnclick Int Int
             | DismissPopup
+            | OnClose PopUpAction 
 
 type Config = {
     primaryText :: TextConfig,
@@ -69,8 +72,11 @@ type Config = {
     tipSelectedText :: String,
     backgroundColor  :: String,
     dismisText :: Mb.Maybe String,
-    topTitle :: Mb.Maybe String
+    topTitle :: Mb.Maybe String,
+    popUpStatus :: PopUpStatus,
+    actionType :: Mb.Maybe PopUpAction 
 }
+
 
 type ContactViewConfig = {
   visibility :: Visibility,
@@ -244,4 +250,6 @@ config = {
     , tipSelected : ""
     , fareEstimateText : ""
     , tipSelectedText : ""
+    , popUpStatus : OPEN
+    , actionType : Mb.Nothing
 }

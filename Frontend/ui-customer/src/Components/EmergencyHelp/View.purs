@@ -49,7 +49,7 @@ view push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , afterRender (\_ -> push StoreContacts) (const NoAction)
-  ][  linearLayout
+  ]([  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -80,11 +80,11 @@ view push state =
               ]
             ]
           ]
-          , popUpViewCustomerSupport state push
-          , popUpViewCallPolice state push
-          , popUpViewCallEmergencyContact state push
-          , popUpViewCallSuccessful state push
-       ]
+        ] <> if state.showContactSupportPopUp then [popUpViewCustomerSupport state push] else []
+          <> if state.showCallPolicePopUp then [popUpViewCallPolice state push] else []
+          <> if state.showCallContactPopUp then [popUpViewCallEmergencyContact state push] else []
+          <> if state.showCallSuccessfulPopUp then [popUpViewCallSuccessful state push] else [])
+       
 
 supportButtonView :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 supportButtonView state push =
@@ -198,6 +198,8 @@ callPoliceConfig state  =
     , gravity = CENTER
     , margin = (Margin 16 0 16 0)
     , cornerRadius = (Corners 15.0 true true true true)
+    , popUpStatus = if state.showCallPolicePopUp then state.popUpStatus else CLOSED 
+    , actionType = if state.showCallPolicePopUp then state.actionType else Nothing
   }
   in popUpConfig'
 
@@ -229,6 +231,8 @@ contactSupportConfig state  =
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
     , cornerRadius = (Corners 20.0 true true true true)
+    , popUpStatus = if state.showContactSupportPopUp then state.popUpStatus else CLOSED
+    , actionType = if state.showContactSupportPopUp then state.actionType else Nothing
   }
   in popUpConfig'
 
@@ -265,6 +269,8 @@ callEmergencyContactConfig state  =
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
     , cornerRadius = (Corners 20.0 true true true true)
+    , popUpStatus = if state.showCallContactPopUp then state.popUpStatus else CLOSED
+    , actionType = if state.showCallContactPopUp then state.actionType else Nothing
   }
   in popUpConfig'
 
@@ -297,6 +303,8 @@ callSuccessfulConfig state  =
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
     , cornerRadius = (Corners 20.0 true true true true)
+    , popUpStatus = if state.showCallSuccessfulPopUp then state.popUpStatus else CLOSED
+    , actionType = if state.showCallSuccessfulPopUp then state.actionType else Nothing
   }
   in popUpConfig'
 
@@ -306,7 +314,6 @@ popUpViewCustomerSupport state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , visibility if state.showContactSupportPopUp then VISIBLE else GONE
   ][PopUpModal.view (push <<< ContactSupport) (contactSupportConfig state)]
 
 popUpViewCallPolice :: forall w. EmergencyHelpModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -315,7 +322,6 @@ popUpViewCallPolice state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , visibility if state.showCallPolicePopUp then VISIBLE else GONE
   ][PopUpModal.view (push <<< CallPolice) (callPoliceConfig state)]
 
 popUpViewCallEmergencyContact :: forall w. EmergencyHelpModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -324,7 +330,6 @@ popUpViewCallEmergencyContact state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , visibility if state.showCallContactPopUp then VISIBLE else GONE
   ][PopUpModal.view (push <<< CallEmergencyContact) (callEmergencyContactConfig state)]
 
 
@@ -334,7 +339,6 @@ popUpViewCallSuccessful state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , visibility if state.showCallSuccessfulPopUp then VISIBLE else GONE
   ][PopUpModal.view (push <<< CallSuccessful) (callSuccessfulConfig state)]
 
 showEmergencyContact :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w

@@ -16,11 +16,17 @@
 module Screens.AboutUsScreen.ScreenData where
 
 import Screens.Types(AboutUsScreenState)
+import Common.Types.App(PopUpStatus(..))
+import Data.Maybe(Maybe(..)) as Mb
 
 initData :: AboutUsScreenState
 initData = {
   data:  { 
-    versionNumber : ""
+    versionNumber : "",
+    popUpConfig : {
+      status : CLOSED,
+      actionType : Mb.Nothing
+    }
   },
   props: { 
     demoModePopup : false,

@@ -11,12 +11,56 @@
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+  
 -}
+
+
+------------------------ Steps To Implement Animation for PopUpModal -------------------------------------
+{- 
+    
+    Animation for Pop Up Modal is being handled using the popUpStatus which is of three types : 
+        - OPEN
+        - CLOSING 
+        - CLOSED 
+    
+    - OPEN : To start the Slide in Animation 
+    - CLOSING : To Start the closing Animation 
+    - CLOSED : Default State
+
+    OnClick of any of the buttons , OnClose Action is triggered , This action needs to be handled in the
+    controller of the screen where this component is being used. 
+
+    As the animations are being handled using popUpStatus so in each screen's state variable wherever popUpModal
+    is being used we need to declare a variable popUpConfig of the following type. 
+        popUpConfig :: PopUpConfig 
+
+        type PopUpConfig  = {
+            status :: PopUpStatus 
+            , actionType :: Maybe PopUpAction   ----> This is to maintain which action triggered the closing animation
+            }
+
+    this variable would be sent in config so that the PopUpStatus can change in the popUpView 
+
+    Inside OnClose Action do the following changes : 
+
+    eval (DistanceOutsideLimitsActionController (PopUpModal.OnClose actionType)) state = continue state{data{popUpConfig = closePopUpConfig (Just actionType)}}
+
+    There are two functions : closePopUpConfig and defaultPopUpConfig. 
+
+    closePopUpConfig will make the changes to trigger the closing animation
+    defaultPopUpConfig will restore the popUpStatus to default.
+
+    In order to trigger the opening animation i.e slide in animation , explicitly change the value of
+    the state's popUpConfig's status to OPEN.
+
+-}
+
+
 module Components.PopUpModal.View where
 
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), not, (<<<), bind, discard, show, pure)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, onAnimationEnd)
 import Components.PopUpModal.Controller (Action(..), Config)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -25,24 +69,30 @@ import Common.Styles.Colors as Color
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
 import PrestoDOM.Properties (cornerRadii)
-import Common.Types.App
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, clearTimer, countDown)
 import Data.Array ((!!), mapWithIndex)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isNothing, Maybe(..))
 import Control.Monad.Trans.Class (lift)
 import JBridge (startTimerWithTime)
 import Data.Maybe (Maybe(..))
+import PrestoDOM.Animation as PrestoAnim
+import Animation (fadeIn, fadeOut, translateYAnimFromTop)
+import Common.Animation.Config as AnimConfig
+import Common.Types.App(PopUpStatus(..), PopUpAction(..), LazyCheck(..)) as Common
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  PrestoAnim.animationSet 
+    [ AnimConfig.fadeIn (state.popUpStatus == Common.OPEN) 
+    , AnimConfig.fadeOut (state.popUpStatus == Common.CLOSING)  
+    ] $ 
+    linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , clickable true
     , background state.backgroundColor
     , afterRender
         ( \action -> do
@@ -63,57 +113,55 @@ view push state =
             _ <- push action
             clearTheTimer state
             pure unit
-        )
-        if state.backgroundClickable && state.dismissPopup then const DismissPopup else if state.backgroundClickable then const OnButton1Click else const NoAction
+        ) (const $ if state.backgroundClickable && state.dismissPopup then OnClose Common.DismissPopUp else if state.backgroundClickable then OnClose Common.Button1Click else NoAction )
     , gravity state.gravity
-    ][ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , margin state.dismissIconMargin
-        , gravity RIGHT
-        , visibility state.dismissIconVisibility
-        ][ imageView
-            [ height $ V 21
-            , width $ V 21
-            , imageWithFallback "ny_ic_dismiss,https://assets.juspay.in/nammayatri/images/user/ny_ic_dismiss.png" 
-            ]
-        ]
-     , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , cornerRadii state.cornerRadius
-        , orientation VERTICAL
-        , background Color.white900
-        , margin state.margin
-        , padding state.padding
-        , clickable true
-        ]
-        [ linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER
-            , visibility state.coverImageConfig.visibility
-            , cornerRadii state.cornerRadius
-            , orientation VERTICAL
-            ][  textView $
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , margin $ MarginVertical 10 10
-                , color Color.black800
-                ] <> (case state.topTitle of
-                        Just txt -> [text txt]
-                        Nothing -> [visibility GONE])
-                  <> (FontStyle.h2 LanguageStyle)
-              , imageView
-                [ height state.coverImageConfig.height
-                , width state.coverImageConfig.width
-                , margin state.coverImageConfig.margin
-                , padding state.coverImageConfig.padding
-                , imageWithFallback state.coverImageConfig.imageUrl
-                , visibility state.coverImageConfig.visibility
+    ][ (PrestoAnim.animationSet if (state.popUpStatus == Common.OPEN) then [ translateYAnimFromTop $ AnimConfig.translateYAnimConfig AnimConfig.BOTTOM_TOP] else [ AnimConfig.fadeOut ( state.popUpStatus == Common.CLOSING)] ) $ linearLayout
+        [height WRAP_CONTENT
+        , onAnimationEnd push $ if (state.popUpStatus == Common.CLOSING) then 
+                                                if state.actionType == Just Common.Button2Click then const OnButton2Click
+                                                else if state.actionType == Just Common.Button1Click then const OnButton1Click
+                                                else if state.actionType == Just Common.OnImageClick then const OnImageClick
+                                                else if state.backgroundClickable && state.dismissPopup || (isNothing state.actionType)  then const DismissPopup
+                                                else const NoAction
+                                            else const NoAction
+        , width MATCH_PARENT
+        ][  linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin state.dismissIconMargin
+            , gravity RIGHT
+            , visibility state.dismissIconVisibility
+            ][ imageView
+                [ height $ V 21
+                , width $ V 21
+                , imageWithFallback "ny_ic_dismiss,https://assets.juspay.in/nammayatri/images/user/ny_ic_dismiss.png" 
                 ]
             ]
-        , linearLayout
+        ,   linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , cornerRadii state.cornerRadius
+            , orientation VERTICAL
+            , background Color.white900
+            , margin state.margin
+            , padding state.padding
+            , clickable true
+            ][  linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                , visibility state.coverImageConfig.visibility
+                , cornerRadii state.cornerRadius
+                ][  imageView
+                    [ height state.coverImageConfig.height
+                    , width state.coverImageConfig.width
+                    , margin state.coverImageConfig.margin
+                    , padding state.coverImageConfig.padding
+                    , imageWithFallback state.coverImageConfig.imageUrl
+                    , visibility state.coverImageConfig.visibility
+                    ]
+                ]
+          , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
@@ -126,7 +174,7 @@ view push state =
                 , width if state.dismissPopupConfig.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
                 , height WRAP_CONTENT
                 , visibility $ state.primaryText.visibility
-                ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
+                ] <> (FontStyle.getFontStyle state.primaryText.textStyle Common.LanguageStyle)
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -137,7 +185,7 @@ view push state =
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     , margin state.dismissPopupConfig.margin
-                    , onClick push $ const OnImageClick
+                    , onClick push $ const (OnClose Common.OnImageClick )--OnImageClick
                     , padding state.dismissPopupConfig.padding
                     ]
                     [ imageView
@@ -158,7 +206,7 @@ view push state =
             , margin $ state.secondaryText.margin
             , text $ state.secondaryText.text
             , visibility $ state.secondaryText.visibility
-            ] <> FontStyle.body1 TypoGraphy
+            ] <> FontStyle.body1 Common.TypoGraphy
         , contactView push state
         , linearLayout
             [ height WRAP_CONTENT
@@ -197,7 +245,7 @@ view push state =
                             clearTheTimer state
                             pure unit
                         )
-                        (const OnButton1Click)
+                        (const $ OnClose Common.Button1Click)
                     ]
                     [ textView $
                         [ width WRAP_CONTENT
@@ -205,7 +253,7 @@ view push state =
                         , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
                         , color $ state.option1.color
                         , gravity CENTER
-                        ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
+                        ] <> (FontStyle.getFontStyle state.option1.textStyle Common.LanguageStyle)
                     ]
                 , linearLayout
                     [ if state.option1.visibility then width state.option2.width else weight 1.0
@@ -221,8 +269,8 @@ view push state =
                             _ <- push action
                             clearTheTimer state
                             pure unit
-                        )
-                        (const OnButton2Click)
+                        )(const $ OnClose Common.Button2Click)
+                        -- (const OnButton2Click)
                     , padding state.option2.padding
                     , orientation VERTICAL
                     , clickable state.option2.isClickable
@@ -234,7 +282,7 @@ view push state =
                         , text $ if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else state.option2.text
                         , color state.option2.color
                         , gravity CENTER
-                        ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)
+                        ] <> (FontStyle.getFontStyle state.option2.textStyle Common.LanguageStyle)
                     ]
                 ]
             ]
@@ -244,12 +292,13 @@ view push state =
             , gravity CENTER
             , margin $ MarginTop 5
             , padding $ Padding 5 5 5 10
-            , onClick push $ const DismissPopup
+            , onClick push $ const $ OnClose Common.DismissPopUp
             ] <> (case state.dismisText of
                     Just txt -> [text txt]
                     Nothing -> [visibility GONE]) 
-              <> (FontStyle.subHeading2 LanguageStyle)
+              <> (FontStyle.subHeading2 Common.LanguageStyle)
         ]
+      ]
     ]
 
 tipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -286,7 +335,7 @@ tipsView push state =
                   , padding state.tipButton.padding
                   , onClick push $ const $ Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                   , background (if (state.activeIndex == index) then Color.blue600 else state.tipButton.background)
-                  ] <> (FontStyle.getFontStyle state.tipButton.textStyle LanguageStyle)
+                  ] <> (FontStyle.getFontStyle state.tipButton.textStyle Common.LanguageStyle)
               ]
         ) state.customerTipArray)
     ,   linearLayout
@@ -390,7 +439,7 @@ contactView push state =
             [ textView $
                 [ text state.contactViewConfig.nameInitials
                 , color Color.black800
-                ] <> FontStyle.body3 TypoGraphy
+                ] <> FontStyle.body3 Common.TypoGraphy
             ]
         , linearLayout
             [ height WRAP_CONTENT
@@ -400,7 +449,7 @@ contactView push state =
             [ textView $
                 [ text state.contactViewConfig.fullName
                 , color Color.black800
-                ] <> FontStyle.subHeading1 TypoGraphy
+                ] <> FontStyle.subHeading1 Common.TypoGraphy
             ]
         ]
     ]

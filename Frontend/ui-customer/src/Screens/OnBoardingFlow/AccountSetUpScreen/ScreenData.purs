@@ -16,26 +16,31 @@
 module Screens.AccountSetUpScreen.ScreenData where
 
 import Screens.Types (AccountSetUpScreenState)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..)) as Mb
 import MerchantConfig.DefaultConfig as DC
+import Common.Types.App (PopUpStatus(..))
 
 initData :: AccountSetUpScreenState
 initData =
   { data:
       { name: ""
       , email: ""
-      , gender: Nothing
-      , nameErrorMessage: Nothing
+      , gender: Mb.Nothing
+      , nameErrorMessage: Mb.Nothing
       , config : DC.config
+      , popUpConfig : {
+        status : CLOSED 
+      , actionType :  Mb.Nothing
+      }
       }
   , props:
       { btnActive: false
       , backPressed: false
-      , genderSelected: Nothing
+      , genderSelected: Mb.Nothing
       , genderOptionExpanded: false
       , expandEnabled : false
       , showOptions : false
-      , activeField : Nothing
+      , activeField : Mb.Nothing
       , isNameValid : false
       }
   }

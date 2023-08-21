@@ -21,28 +21,16 @@ import Screens.DriverProfileScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.BottomNavBar.Controller (navData)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.CheckListView.View as CheckListView
-import Components.CheckListView.View as CheckListView
-import Components.GenericHeader.View as GenericHeader
 import Components.GenericHeader.View as GenericHeader
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
-import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
-import Components.PopUpModal as PopUpModal
-import Components.PopUpModal as PopUpModal
-import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Components.PrimaryEditText as PrimaryEditText
-import Components.PrimaryEditText.View as PrimaryEditText
-import Components.PrimaryEditText.View as PrimaryEditText
-import Control.Applicative (unless)
 import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -51,11 +39,6 @@ import Data.Array (length, mapWithIndex, null, any, (!!), take)
 import Data.Either (Either(..))
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Maybe (Maybe(..), isJust)
-import Data.Maybe (fromMaybe)
-import Debug (spy)
-import Debug (spy)
-import Debug (spy)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -67,7 +50,6 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (getVehicleType)
-import Helpers.Utils (getVehicleType)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -77,30 +59,17 @@ import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bi
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, url, visibility, webView, weight, width)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
-import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
-import Screens as ScreenNames
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
-import Screens.Types as ST
-import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
 import Services.Backend as Remote
-import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
-import Storage (isLocalStageOn)
-import Styles.Colors as Color
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
@@ -150,12 +119,12 @@ view push state =
         , visibility if state.props.updateLanguages ||  state.props.updateDetails then GONE else VISIBLE
         ][  settingsView state push
           , profileView push state]
-      , linearLayout
-        [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , background Color.lightBlack900
-          , visibility if state.props.logoutModalView == true then VISIBLE else GONE
-          ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
+      , if state.props.logoutModalView == true then 
+          ( linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]) 
+            else dummyTextView
         , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
         , if state.props.showGenderView || state.props.alternateNumberView then driverNumberGenderView state push else dummyTextView
         , if state.props.removeAlternateNumber then PopUpModal.view (push <<<  RemoveAlternateNumberAC) (removeAlternateNumberConfig state ) else dummyTextView

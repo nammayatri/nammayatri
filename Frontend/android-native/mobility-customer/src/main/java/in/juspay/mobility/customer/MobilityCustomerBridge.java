@@ -255,9 +255,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     googleMap.setOnCameraMoveListener(null);
                     googleMap.setOnCameraIdleListener(null);
                 }
-                for (Marker m : pickupPointsZoneMarkers) {
-                    m.setVisible(false);
-                }
+                if(pickupPointsZoneMarkers != null)
+                    for (Marker m : pickupPointsZoneMarkers) {
+                        m.setVisible(false);
+                    }
 
                 if (layer != null) {
                     layer.removeLayerFromMap();

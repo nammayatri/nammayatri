@@ -20,7 +20,6 @@ import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
 
 import Animation as Anim
 import Components.GenericHeader as GenericHeader
-import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (lift, runExceptT)

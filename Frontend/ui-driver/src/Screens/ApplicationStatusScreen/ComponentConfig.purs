@@ -63,5 +63,7 @@ completeOnboardingConfig state = let
   , option2 {
       text =  getString CALL_SUPPORT
     }
+  , popUpStatus = state.data.popUpConfig.status 
+  , actionType = state.data.popUpConfig.actionType
   }
   in popUpConfig'

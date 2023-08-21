@@ -16,6 +16,8 @@
 module Screens.ApplicationStatusScreen.ScreenData where
 
 import Screens.Types
+import Common.Types.App (PopUpStatus(..))
+import Data.Maybe(Maybe(..)) as Mb
 
 initData :: ApplicationStatusScreenState
 initData = {
@@ -23,7 +25,11 @@ initData = {
     dlVerificationStatus : "",
     rcVerificationStatus : "",
     mobileNumber : "",
-    otpValue : ""
+    otpValue : "",
+    popUpConfig : {
+      status : CLOSED ,
+      actionType : Mb.Nothing
+      }
     },
   props : {
       isSelected : true,

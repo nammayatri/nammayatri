@@ -402,7 +402,6 @@ cancelConfirmation push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalCancelConfirmationAction) (cancelConfirmationConfig state )]
 
 linkAadhaarPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -546,7 +545,6 @@ popupModelSilentAsk push state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , background Color.blackLessTrans
     ][PopUpModal.view (push <<< PopUpModalSilentAction) (silentModeConfig state )]
 
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

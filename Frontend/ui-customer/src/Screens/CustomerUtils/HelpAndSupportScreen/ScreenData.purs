@@ -19,7 +19,8 @@ import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (DeleteStatus(..))
 import MerchantConfig.DefaultConfig as DC
-import Data.Maybe(Maybe(..))
+import Data.Maybe(Maybe(..)) as Mb
+import Common.Types.App (PopUpStatus(..), PopUpConfig)
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -44,7 +45,8 @@ initData = {
     description : "",
     accountStatus : ACTIVE,
     config : DC.config,
-    vehicleVariant : Nothing
+    vehicleVariant : Mb.Nothing,
+    popUpConfig : popUpConfig
   },
   props:{
     apiFailure : false
@@ -53,4 +55,10 @@ initData = {
   , btnActive : false
   }
 
+}
+
+popUpConfig :: PopUpConfig 
+popUpConfig = {
+  status : OPEN ,
+  actionType : Mb.Nothing
 }

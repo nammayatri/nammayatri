@@ -15,11 +15,11 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..))
+import Common.Types.App (RateCardType(..), PopUpStatus(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
-import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
-import Data.Maybe (Maybe(..))
+import Components.SettingSideBar.Controller (SettingSideBarState, Status(..)) as SSB
+import Data.Maybe (Maybe(..)) as Mb
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
 import Prelude (($) ,negate)
@@ -54,7 +54,7 @@ initData = {
     , settingSideBar : dummySettingBar
     , sourceAddress : dummyAddress
     , destinationAddress : dummyAddress
-    , route : Nothing
+    , route : Mb.Nothing
     , startedAtUTC : ""
     , rateCard : { 
        additionalFare : 0,
@@ -68,7 +68,7 @@ initData = {
        vehicleVariant : ""
        }
     , speed : 0
-    , selectedLocationListItem : Nothing
+    , selectedLocationListItem : Mb.Nothing
     , saveFavouriteCard : {
         address : ""
       , tag : ""
@@ -87,8 +87,8 @@ initData = {
     , nearByPickUpPoints : []
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
-    , specialZoneSelectedQuote : Nothing
-    , specialZoneSelectedVariant : Nothing
+    , specialZoneSelectedQuote : Mb.Nothing
+    , specialZoneSelectedVariant : Mb.Nothing
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
@@ -112,17 +112,21 @@ initData = {
     , ratingViewState : {
         selectedYesNoButton : -1,
         selectedRating : -1,
-        issueReportActiveIndex : Nothing ,
-        issueReasonCode : Nothing,
+        issueReportActiveIndex : Mb.Nothing ,
+        issueReasonCode : Mb.Nothing,
         openReportIssue : false,
         doneButtonVisibility : false,
         issueFacedView : false,
-        issueReason : Nothing,
+        issueReason : Mb.Nothing,
         issueDescription : "",
         rideBookingRes : dummyRideBooking
     }
     , config : DC.config
     , logField : empty
+    , popUpConfig : {
+        status : OPEN 
+      , actionType : Mb.Nothing
+    }
     },
     props: {
       rideRequestFlow : false
@@ -130,14 +134,14 @@ initData = {
     , currentStage : HomeScreen
     , showCallPopUp : false
     , sourceLat : 0.0
-    , isSource : Nothing
+    , isSource : Mb.Nothing
     , sourceLong : 0.0
     , destinationLat : 0.0
     , destinationLong : 0.0
-    , sourcePlaceId : Nothing
-    , destinationPlaceId : Nothing
+    , sourcePlaceId : Mb.Nothing
+    , destinationPlaceId : Mb.Nothing
     , estimateId : ""
-    , selectedQuote : Nothing
+    , selectedQuote : Mb.Nothing
     , locationRequestCount : 0
     , zoneTimerExpired : false
     , customerTip : {
@@ -151,7 +155,7 @@ initData = {
     , expiredQuotes : []
     , isCancelRide : false
     , cancellationReasons : []
-    , cancelRideActiveIndex : Nothing
+    , cancelRideActiveIndex : Mb.Nothing
     , cancelDescription : ""
     , cancelReasonCode : ""
     , isPopUp : NoPopUp
@@ -174,9 +178,9 @@ initData = {
     , sendMessageActive : false
     , chatcallbackInitiated : false
     , emergencyHelpModal : false
-    , estimatedDistance : Nothing
+    , estimatedDistance : Mb.Nothing
     , waitingTimeTimerIds : []
-    , tagType : Nothing
+    , tagType : Mb.Nothing
     , isSaveFavourite : false
     , showShareAppPopUp : false
     , showMultipleRideInfo : false
@@ -212,7 +216,7 @@ initData = {
       }
     , timerId : ""
     , findingRidesAgain : false
-    , routeEndPoints : Nothing
+    , routeEndPoints : Mb.Nothing
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
     , canSendSuggestion : true
@@ -242,7 +246,11 @@ emergencyHelpModalData = {
   currentlySelectedContact : selectedContactData,
   sosId : "",
   sosStatus : "",
-  isSelectEmergencyContact : false
+  isSelectEmergencyContact : false,
+  popUpConfig :  {
+        status : OPEN 
+      , actionType : Mb.Nothing
+    }
 }
 
 
@@ -298,44 +306,44 @@ dummyDriverInfo =
   , estimatedDistance : ""
   , driverArrivalTime : 0
   , bppRideId : ""
-  , driverNumber : Nothing
+  , driverNumber : Mb.Nothing
   , merchantExoPhone : ""
   , createdAt : ""
-  , initDistance : Nothing
+  , initDistance : Mb.Nothing
   , config : DC.config
   , vehicleVariant : ""
   }
 
-dummySettingBar :: SettingSideBarState
+dummySettingBar :: SSB.SettingSideBarState
 dummySettingBar = {
     name : ""
   , number : ""
-  , opened : CLOSED
-  , email : Nothing
-  , gender : Nothing
+  , opened : SSB.CLOSED
+  , email : Mb.Nothing
+  , gender : Mb.Nothing
   , appConfig : DC.config
   , sideBarList : ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
 }
 
 dummyAddress :: Address
 dummyAddress = {
-              "area" : Nothing
-            , "state" : Nothing
-            , "country" : Nothing
-            , "building" : Nothing
-            , "door" : Nothing
-            , "street" : Nothing
-            , "city" : Nothing
-            , "areaCode" : Nothing
-            , "ward" : Nothing
-            , "placeId" : Nothing
+              "area" : Mb.Nothing
+            , "state" : Mb.Nothing
+            , "country" : Mb.Nothing
+            , "building" : Mb.Nothing
+            , "door" : Mb.Nothing
+            , "street" : Mb.Nothing
+            , "city" : Mb.Nothing
+            , "areaCode" : Mb.Nothing
+            , "ward" : Mb.Nothing
+            , "placeId" : Mb.Nothing
             }
 
 dummyQuoteAPIEntity :: QuoteAPIEntity
 dummyQuoteAPIEntity = QuoteAPIEntity {
   agencyNumber : "",
   createdAt : "",
-  discount : Nothing,
+  discount : Mb.Nothing,
   estimatedTotalFare : 0,
   agencyName : "",
   vehicleVariant : "",
@@ -350,7 +358,7 @@ dummyDriverOfferAPIEntity :: QuoteAPIContents
 dummyDriverOfferAPIEntity =
   DRIVER_OFFER
     $ DriverOfferAPIEntity
-        { rating: Nothing
+        { rating: Mb.Nothing
         , validTill: ""
         , driverName: ""
         , distanceToPickup: 0.0
@@ -364,7 +372,7 @@ dummyLocationName = PlaceName {
     "lat" : 0.0,
     "lon" : 0.0
   },
-  "plusCode" : Nothing,
+  "plusCode" : Mb.Nothing,
   "addressComponents" : []
 }
 
@@ -380,7 +388,7 @@ dummyLocation = {
    place : "",
    lat : 0.0,
    lng : 0.0,
-   address : Nothing
+   address : Mb.Nothing
  }
 
 
@@ -389,12 +397,12 @@ dummyRideBooking = RideBookingRes
   {
   agencyNumber : "",
   status : "",
-  rideStartTime : Nothing,
-  rideEndTime : Nothing,
-  duration : Nothing,
+  rideStartTime : Mb.Nothing,
+  rideEndTime : Mb.Nothing,
+  duration : Mb.Nothing,
   fareBreakup :[],
   createdAt : "",
-  discount : Nothing ,
+  discount : Mb.Nothing ,
   estimatedTotalFare : 0,
   agencyName : "",
   rideList :[] ,
@@ -405,7 +413,7 @@ dummyRideBooking = RideBookingRes
   bookingDetails : dummyRideBookingAPIDetails ,
   fromLocation :  dummyBookingDetails,
   merchantExoPhone : "",
-  specialLocationTag : Nothing
+  specialLocationTag : Mb.Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -417,6 +425,6 @@ dummyRideBookingAPIDetails= RideBookingAPIDetails{
 dummyRideBookingDetails :: RideBookingDetails
 dummyRideBookingDetails = RideBookingDetails {
   toLocation : dummyBookingDetails,
-  estimatedDistance : Nothing,
-  otpCode : Nothing
+  estimatedDistance : Mb.Nothing,
+  otpCode : Mb.Nothing
 }

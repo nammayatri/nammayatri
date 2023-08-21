@@ -2,6 +2,8 @@ module Screens.EmergencyContactsScreen.ScreenData where
 
 import Prelude
 import Screens.Types (EmergencyContactsScreenState(..))
+import Common.Types.App (PopUpStatus(..))
+import Data.Maybe (Maybe(..)) as Mb
 
 initData :: EmergencyContactsScreenState
 initData = {
@@ -20,6 +22,10 @@ initData = {
                               , number : ""
                               }
     , editedText : ""
+    , popUpConfig : {
+        status : OPEN
+      , actionType : Mb.Nothing
+    }
     },
     props:{
         showContactList : false

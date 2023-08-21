@@ -351,7 +351,6 @@ popupmodal push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalAction) (completeOnboardingConfig state )]
 
 alternateNumber :: forall w . (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w

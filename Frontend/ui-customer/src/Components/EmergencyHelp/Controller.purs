@@ -25,6 +25,8 @@ import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import Screens.Types (Contact)
 import Styles.Colors as Color
 import MerchantConfig.DefaultConfig as DC
+import Common.Types.App(PopUpStatus(..), PopUpAction(..))
+import Data.Maybe (Maybe(..)) as Mb
 
 data Action = NoAction 
             | CallPolicePopup
@@ -46,7 +48,9 @@ type EmergencyHelpModelState = {
      showCallSuccessfulPopUp :: Boolean,
      emergencyContactData :: Array Contact,
      currentlySelectedContact :: Contact,
-     config :: AppConfig
+     config :: AppConfig,
+     popUpStatus :: PopUpStatus,
+     actionType :: Mb.Maybe PopUpAction
 }
 
 config :: EmergencyHelpModelState 
@@ -58,6 +62,8 @@ config = {
    , emergencyContactData : []
    , currentlySelectedContact : selectedContactData
    , config : DC.config
+   , popUpStatus : OPEN 
+   , actionType : Mb.Nothing
 }
 
 selectedContactData ::  Contact

@@ -84,7 +84,7 @@ view push state =
   , orientation VERTICAL
   , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
   , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
-  ][  linearLayout
+  ]([  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -126,13 +126,11 @@ view push state =
           ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
         ]
       ]
-      , linearLayout
+    ] <> if (state.props.showDeleteLocationModel) then [linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , background Color.lightBlack900
-          , visibility if (state.props.showDeleteLocationModel) then VISIBLE else GONE
-          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]
-    ]
+          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]] else [])
 
 savedLocationsView :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 savedLocationsView push state =

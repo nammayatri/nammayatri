@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.Controller where
 
-import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..)) as Common
+import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), PopUpAction(..), PopUpStatus) as Common
 import Components.BottomNavBar as BottomNavBar
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -57,6 +57,7 @@ import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..)
 import Types.ModifyScreenState (modifyScreenState)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
+import Engineering.Helpers.Utils (defaultPopUpConfig, closePopUpConfig)
 import Effect.Unsafe (unsafePerformEffect)
 import Components.RateCard as RateCard
 import Common.Styles.Colors as Color
@@ -518,10 +519,11 @@ eval (WaitTimerCallback timerID timeInMinutes seconds) state = do
         pure unit
       continue state { data {activeRide { waitingTime = timeInMinutes} } ,props {timerRefresh = false} }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}, data{popUpConfig = defaultPopUpConfig}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ removeAllPolylines ""
-  updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}}
+  updateAndExit state {props {endRidePopUp = false, rideActionModal = false}, data{popUpConfig = defaultPopUpConfig}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}, data{popUpConfig = defaultPopUpConfig}}
+eval (PopUpModalAction (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonClick)}}
 
 eval (CancelRideModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode = (fromMaybe dummyCancelReason $ state.data.cancelRideModal.selectionOptions Array.!!indexValue).reasonCode } } }
 eval (CancelRideModalAction (SelectListModal.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
@@ -551,13 +553,15 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
+eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {popUpConfig = defaultPopUpConfig, cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status timerID)) state = do
   if status == "EXPIRED" && seconds == 0 then do
     _ <- pure $ clearTimer timerID
-    continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
-    else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = (seconds+1), timerID = timerID, continueEnabled = false}}}
+    continue state { data { popUpConfig = defaultPopUpConfig, cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
+    else continue state { data {popUpConfig = defaultPopUpConfig, cancelRideConfirmationPopUp{delayInSeconds = (seconds+1), timerID = timerID, continueEnabled = false}}}
+
+eval (PopUpModalCancelConfirmationAction (PopUpModal.OnClose buttonClick )) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonClick)}}
 
 eval (CancelRideModalAction SelectListModal.NoAction) state = do
   _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.selectionOptions
@@ -609,9 +613,13 @@ eval (SwitchDriverStatus status) state = do
             let checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
             continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
 
-eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
-eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
-
+eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = do 
+  let newState = state{props{silentPopUpView = false}, data{popUpConfig = defaultPopUpConfig}}
+  updateAndExit newState $ (DriverAvailabilityStatus newState ST.Offline) 
+eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state =do 
+  let newState = state{props{silentPopUpView = false}, data{popUpConfig = defaultPopUpConfig}}
+  updateAndExit newState $ (DriverAvailabilityStatus newState ST.Silent)
+eval (PopUpModalSilentAction (PopUpModal.OnClose buttonClick)) state = continue state{data {popUpConfig = closePopUpConfig (Just buttonClick)}}
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
   _ <- pure $ hideKeyboardOnNavigation true
@@ -651,9 +659,16 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
-eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
+eval (LinkAadhaarPopupAC PopUpModal.OnButton2Click) state = exit $ AadhaarVerificationFlow state
 
-eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
+eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}, data{popUpConfig = defaultPopUpConfig}}
+
+eval (LinkAadhaarPopupAC (PopUpModal.OnClose buttonClick)) state = continueWithCmd state [
+  if (buttonClick == Common.Button2Click) then 
+    pure (LinkAadhaarPopupAC PopUpModal.OnButton2Click)
+    else 
+      pure (LinkAadhaarPopupAC PopUpModal.DismissPopup)
+]
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"

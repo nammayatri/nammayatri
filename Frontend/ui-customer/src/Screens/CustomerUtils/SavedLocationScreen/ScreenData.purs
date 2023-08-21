@@ -16,15 +16,20 @@
 module Screens.SavedLocationScreen.ScreenData where
 
 import Screens.Types(SavedLocationScreenState)
-import Data.Maybe(Maybe(..))
+import Data.Maybe(Maybe(..)) as Mb
 import MerchantConfig.DefaultConfig as DC
+import Common.Types.App (PopUpStatus(..)) as Status
 
 initData :: SavedLocationScreenState
 initData = {
   data: {
     savedLocations : []
-  , deleteTag : Nothing
+  , deleteTag : Mb.Nothing
   , config : DC.config
+  , popUpConfig : {
+      status : Status.OPEN
+    , actionType : Mb.Nothing
+  }
   }
   , props : {
       showDeleteLocationModel : false

@@ -36,6 +36,7 @@ import Data.String (split, Pattern(..), Replacement(..), replaceAll)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Data.Ord (min)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Common.Types.App(PopUpStatus(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -122,7 +123,11 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
   exit $ PostContacts state{data{contactsList = newContacts}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}, data{popUpConfig{status = CLOSED}}}
+
+eval (PopUpModalAction (PopUpModal.OnClose buttonClicked)) state = continue state{data{popUpConfig {status = CLOSING, actionType = Just buttonClicked}}}
+
+eval (PopUpModalAction (PopUpModal.NoAction)) state = continue state{data {popUpConfig{status = CLOSED}}}
 
 eval (ContactsCallback allContacts) state = do
   let flag = case last allContacts of
@@ -180,7 +185,7 @@ eval (ContactsCallback allContacts) state = do
         else contact
 
 
-eval (RemoveButtonClicked contactDetail) state = continue state{props{showInfoPopUp = true}, data{removedContactDetail = contactDetail}}
+eval (RemoveButtonClicked contactDetail) state = continue state{props{showInfoPopUp = true}, data{popUpConfig{status = OPEN},removedContactDetail = contactDetail}}
 
 eval RefreshScreen state = do
   continueWithCmd state
@@ -204,7 +209,7 @@ eval BackPressed state =
           pure LoadMoreContacts
         ]
   else if (state.props.showInfoPopUp == true) then
-    continue state{props{showInfoPopUp = false, showContactList = false}}
+    continue state{props{showInfoPopUp = false, showContactList = false}, data{popUpConfig{status = CLOSED}}}
   else
     exit $ GoToHomeScreen
 

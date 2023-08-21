@@ -19,6 +19,7 @@ import Data.Maybe (Maybe(..))
 import PrestoDOM (Visibility(..), toPropValue)
 import Screens.Types (AnimationState(..), NotificationCardPropState, NotificationsScreenState, NotificationCardState)
 import Services.API (MediaType(..))
+import Common.Types.App(PopUpStatus(..))
 
 initData :: NotificationsScreenState
 initData = {
@@ -46,7 +47,11 @@ initData = {
     mediaType : Nothing,
     likeCount : 0,
     likeStatus : false,
-    viewCount : 0
+    viewCount : 0,
+    popUpConfig : {
+      status : CLOSED,
+      actionType : Nothing
+    }
   },
   notifsDetailModelVisibility : GONE,
   loadMore : false,

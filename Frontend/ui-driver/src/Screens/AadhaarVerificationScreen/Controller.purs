@@ -20,15 +20,17 @@ import Debug
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Common.Types.App (PopUpStatus(..))
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), Replacement(..), length, replace, replaceAll)
 import Data.String.CodeUnits (charAt)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
+import Engineering.Helpers.Utils (defaultPopUpConfig, closePopUpConfig)
 import JBridge (requestKeyboardShow, hideKeyboardOnNavigation, minimizeApp)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (&&), (<=), (==), (>), (||), (<>), (+), show)
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddVehicleDetailsScreen.Controller (dateFormat)
@@ -119,9 +121,10 @@ eval action state = case action of
   ResendOTP -> exit $ ResendAadhaarOTP state {props{resendEnabled = false}}
   Logout -> do
     pure $ hideKeyboardOnNavigation true
-    continue state{props{showLogoutPopup = true}}
-  PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state {props {showLogoutPopup = false}})
+    continue state{props{showLogoutPopup = true}, data{popUpConfig{status = OPEN}}}
+  PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state {props {showLogoutPopup = false}, data{popUpConfig = defaultPopUpConfig}})
   PopUpModalAC (PopUpModal.OnButton2Click) -> exit $ LogOut state
+  PopUpModalAC (PopUpModal.OnClose buttonClick) -> continue state{data{popUpConfig = closePopUpConfig ( Just buttonClick)}}
 
   DatePicker _ resp year month date -> do 
     case resp of 

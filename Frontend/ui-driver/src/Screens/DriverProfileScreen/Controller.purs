@@ -15,7 +15,7 @@
 module Screens.DriverProfileScreen.Controller where
 
 import Common.Types.App (CheckBoxOptions)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), PopUpStatus(..))
 import Components.BottomNavBar.Controller as BottomNavBar
 import Components.CheckListView as CheckList
 import Components.GenericHeader.Controller as GenericHeaderController
@@ -35,6 +35,7 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText)
 import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Utils ( defaultPopUpConfig, closePopUpConfig)
 import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings)
 import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation)
@@ -43,7 +44,7 @@ import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||))
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import PrestoDOM.Utils (updateWithCmdAndExit)
 import Screens (ScreenName(..), getScreen)
@@ -84,6 +85,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose buttonClick-> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_closed"
     ActivateOrDeactivateRcPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "on_goback"
       PopUpModal.OnButton2Click -> do
@@ -95,6 +97,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose buttonClick-> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_closed"
     DeleteRcPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "on_goback"
       PopUpModal.OnButton2Click -> do
@@ -106,6 +109,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose _ -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_closed"
     CallDriverPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "on_goback"
       PopUpModal.OnButton2Click -> do
@@ -117,6 +121,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose _ -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_closed"
     PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "primary_button" "go_home_or_submit"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "primary_button" "no_action"
@@ -148,6 +153,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
+      PopUpModal.OnClose _-> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "popup_closed"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_selection"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickBack text) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_back"
     InAppKeyboardModalOtp (InAppKeyboardModal.BackPressed) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_backpressed"
@@ -284,7 +290,7 @@ eval (OptionClick optionIndex) state = do
     Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
     Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
     Data.ABOUT_APP -> exit $ GoToAboutUsScreen
-    Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
+    Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}, data{popUpConfig{status = OPEN}}})
     Data.REFER -> exit $ OnBoardingFlow
     Data.APP_INFO_SETTINGS -> do
       _ <- pure $ launchAppSettings unit
@@ -293,9 +299,10 @@ eval (OptionClick optionIndex) state = do
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}})
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}, data{popUpConfig{status = CLOSED , actionType = Nothing}}})
 
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = updateAndExit state{props {logoutModalView = false},data{popUpConfig{status = CLOSED , actionType = Nothing}}} $ GoToLogout
+eval (PopUpModalAction (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig {status = CLOSING , actionType = Just buttonClick}}}
 
 eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
   let (SA.Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject driverProfileResp.linkedVehicle)
@@ -390,10 +397,12 @@ eval EditNumberText state = do
 
 eval RemoveAlterNumber state = continue state {props = state.props {removeAlternateNumber = true}}
 
-eval (RemoveAlternateNumberAC (PopUpModal.OnButton1Click)) state = continue state {props{ removeAlternateNumber = false}}
+eval (RemoveAlternateNumberAC (PopUpModal.OnButton1Click)) state = continue state {props{ removeAlternateNumber = false}, data{popUpConfig = defaultPopUpConfig }}
 
 eval (RemoveAlternateNumberAC (PopUpModal.OnButton2Click)) state =
-  exit (RemoveAlternateNumber state {props{removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true},data{driverEditAlternateMobile = Nothing}})
+  exit (RemoveAlternateNumber state {props{removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true},data{driverEditAlternateMobile = Nothing, popUpConfig = defaultPopUpConfig}})
+
+eval (RemoveAlternateNumberAC (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonClick)}}
 
 eval ( CheckBoxClick genderType ) state = do
   continue state{data{genderTypeSelect = getGenderValue genderType}}
@@ -427,15 +436,15 @@ eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
 eval ActivateRc state = continue state{props{activateRcView = true}}
 
 eval CallDriver state =
-  continue state{props{callDriver = true}}
+  continue state{props{callDriver = true}, data{popUpConfig {status = OPEN}}}
 
 eval CallCustomerSupport state = do
   void $ pure $ showDialer (getSupportNumber "") false
   continue state
 
 eval (DeactivateRc rcType) state = do
-  if rcType == DEACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}}
-  else if rcType == ACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}}
+  if rcType == DEACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{popUpConfig{status = OPEN}}}
+  else if rcType == ACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}, data{popUpConfig{status = OPEN}}}
   else
     if (length state.data.rcDataArray == 1)
       then do
@@ -451,18 +460,23 @@ eval (OpenRcView idx) state  = do
   let val = if elem idx state.data.openInactiveRCViewOrNotArray then filter(\x -> x/=idx) state.data.openInactiveRCViewOrNotArray else state.data.openInactiveRCViewOrNotArray <> [idx]
   continue state{props{openRcView = not state.props.openRcView}, data{openInactiveRCViewOrNotArray = val}}
 
-eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton1Click)) state =   exit $ ActivatingOrDeactivatingRC state
+eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  exit $ ActivatingOrDeactivatingRC state
 
-eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{activateOrDeactivateRcView=false}}
+eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{activateOrDeactivateRcView=false}, data{popUpConfig = defaultPopUpConfig}}
 
-eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  exit $ DeletingRc state
+eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonClick)}}
 
-eval (DeleteRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{deleteRcView=false}}
+eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit state{data{popUpConfig = defaultPopUpConfig}} $ DeletingRc state{data{popUpConfig = defaultPopUpConfig}}
 
-eval (CallDriverPopUpModalAction (PopUpModal.OnButton1Click)) state =  do
-   exit $ CallingDriver state
+eval (DeleteRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{deleteRcView=false}, data{popUpConfig = defaultPopUpConfig}}
 
-eval (CallDriverPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state { props {callDriver = false}}
+eval (DeleteRcPopUpModalAction (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonClick)}}
+
+eval (CallDriverPopUpModalAction (PopUpModal.OnButton1Click)) state = exit $ CallingDriver state
+
+eval (CallDriverPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state { props {callDriver = false}, data{popUpConfig = defaultPopUpConfig}}
+
+eval (CallDriverPopUpModalAction (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig = closePopUpConfig (Just buttonClick)}}
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { screenType = VEHICLE_DETAILS }}
 

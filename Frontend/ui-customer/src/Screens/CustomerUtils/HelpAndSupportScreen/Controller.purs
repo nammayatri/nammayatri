@@ -39,11 +39,12 @@ import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Screens.HelpAndSupportScreen.ScreenData (popUpConfig)
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Data.String (length, trim)
 import Storage (getValueToLocalStore, KeyStore(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), PopUpStatus(..))
 import Screens.HelpAndSupportScreen.ScreenData (initData)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (getValueFromConfig)
@@ -98,6 +99,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "popup_dismissed"
+        PopUpModal.OnClose actionType -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "popup_closed"
       SourceToDestinationActionController (SourceToDestination.Dummy) -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "source_to_destination_updated"
       FAQs -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "faq_action"
       RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_booking_list_api_response"
@@ -125,6 +127,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
+        PopUpModal.OnClose actionType -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_closed"
       AccountDeletedModalAction act -> case act of
         PopUpModal.OnButton1Click -> do
           trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "account_deleted"
@@ -136,6 +139,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
+        PopUpModal.OnClose actionType -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_closed"
 
 
 data Action = BackPressed Boolean
@@ -180,7 +184,7 @@ eval ContactUs state = exit $ GoToSupportScreen state.data.bookingId
 
 eval ReportIssue state = exit $ GoToTripDetails state
 
-eval CallSupport state = continue state{props{isCallConfirmation = true}}
+eval CallSupport state = continue state{props{isCallConfirmation = true},data{ popUpConfig{status = OPEN , actionType = Nothing}}}
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed state.props.isCallConfirmation]
 
@@ -202,11 +206,13 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
       "failure"   -> continue updatedState{props{apiFailure = true}}
       _           -> continue updatedState
 
-eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
+eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}, data{popUpConfig {status = CLOSED}}}
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
   void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
-  continue state{props{isCallConfirmation = false}}
+  continue state{props{isCallConfirmation = false}, data{popUpConfig {status = CLOSED}}}
+
+eval (PopupModelActionController (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig{status = CLOSING, actionType = Just buttonClick}}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack   
 
@@ -225,14 +231,17 @@ eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = continue s
 
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state{ data { accountStatus = CONFIRM_REQ} }
+  continue state{ data { accountStatus = CONFIRM_REQ , popUpConfig{status = OPEN, actionType = Nothing}} }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE, popUpConfig {status = CLOSED}}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
   let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
-  exit $ ConfirmDeleteAccount state{data{email=email}}
-eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
-eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
+  updateAndExit state{data{email=email, accountStatus= ACTIVE, popUpConfig {status = CLOSED}}} $ ConfirmDeleteAccount state{data{email=email}}
+eval (PopUpModalAction (PopUpModal.OnClose actionType)) state = continue state{data{popUpConfig{status = CLOSING , actionType = Just actionType}}}
+
+eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE, popUpConfig{status = CLOSED}}} ) $ GoHome
+eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE, popUpConfig{status = CLOSED}}} ) $ GoHome
+eval (AccountDeletedModalAction (PopUpModal.OnClose buttonClick)) state = continue state{data{popUpConfig{status = CLOSING , actionType = Just buttonClick}}}
 
 eval _ state = continue state
 
@@ -264,7 +273,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           email : "",
           description : "",
           accountStatus : ACTIVE,
-          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)
+          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant),
+          popUpConfig : popUpConfig
           },
       props : {
         apiFailure : false
