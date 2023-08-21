@@ -21,27 +21,23 @@ import Kernel.Types.Common
 -- import Lib.SessionizerMetrics.Types.Event
 
 import Kernel.Utils.Common (logDebug)
-import Lib.SessionizerMetrics.Prometheus.CounterConfig
 import Prometheus as P
 
 incrementCounter ::
   ( MonadReader r1 m,
     MonadGuid m,
     MonadTime m,
-    HasField "getDeploymentVersion" r2 Text,
-    HasField "version" r1 r2,
     MonadIO m,
     Log m
   ) =>
-  P.Vector P.Label3 P.Counter ->
-  PrometheusCounterConfig ->
+  Text ->
+  Text ->
+  Text ->
   m ()
-incrementCounter counterName promConfig = do
+incrementCounter merchantId event deploymentVersion = do
   logDebug " Rupak Prometheus Increment Counter"
-  version <- asks (.version)
-  let event = promConfig.event
-  let merchantName = promConfig.merchantName
-  liftIO $ P.withLabel counterName (event, merchantName, version.getDeploymentVersion) P.incCounter
+  counterName <- liftIO registerEventRequestCounterMetric
+  liftIO $ P.withLabel counterName (event, merchantId, deploymentVersion) P.incCounter
 
 type EventCounterMetric = P.Vector P.Label3 P.Counter
 

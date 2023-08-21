@@ -76,8 +76,8 @@ let sampleLogConfig
     = "log-stream"
 
 let samplePrometheusConfig
-    : globalCommon.prometheusCounterConfig
-    = { merchantName = "NAMMA_YATRI", event = "RideCreated" }
+    : Text
+    = "prometheus-stream"
 
 let eventStreamMap =
       [ { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM

@@ -34,16 +34,11 @@ let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE >
 
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 
-let prometheusCounterConfig = { merchantName : Text, event : Text }
-
 let eventStreamNameType =
       < KAFKA_STREAM | LOG_STREAM | PROMETHEUS_STREAM | REDIS_STREAM >
 
 let streamConfig =
-      < KafkaStream : kafkaConfig
-      | LogStream : Text
-      | PrometheusStream : prometheusCounterConfig
-      >
+      < KafkaStream : kafkaConfig | LogStream : Text | PrometheusStream : Text >
 
 let eventType =
       < RideCreated
@@ -81,7 +76,6 @@ in  { smsSessionConfig
     , periodType = PeriodType
     , consumerType = ConsumerType
     , kafkaConfig
-    , prometheusCounterConfig
     , streamConfig
     , eventStreamNameType
     , eventType

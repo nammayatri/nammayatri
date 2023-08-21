@@ -24,7 +24,6 @@ library
       Lib.SessionizerMetrics.EventStream
       Lib.SessionizerMetrics.Kafka.Config
       Lib.SessionizerMetrics.Kafka.Internal
-      Lib.SessionizerMetrics.Prometheus.CounterConfig
       Lib.SessionizerMetrics.Prometheus.Internal
       Lib.SessionizerMetrics.Types.Event
   other-modules:

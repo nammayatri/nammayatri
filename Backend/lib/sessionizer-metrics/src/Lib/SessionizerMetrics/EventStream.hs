@@ -22,14 +22,12 @@ import Lib.SessionizerMetrics.Types.Event
 
 triggerEvent ::
   ( EventStreamFlow m r,
-    ToJSON p,
-    Show p
+    ToJSON p
   ) =>
   Event p ->
   m ()
 triggerEvent event = do
   allEventStream <- asks (.eventStreamMap)
-  logDebug $ "Rupak's Log" <> show event
   let streamNames = filter (elem (eventType event) . eventTypes) allEventStream
   logDebug $ "my filtered stream map" <> show streamNames
   forM_ streamNames $ \stream -> do
@@ -38,9 +36,10 @@ triggerEvent event = do
         let KafkaStream matchedConfig = stream.streamConfig
         fork "updating in kafka" $ streamUpdates event matchedConfig
       PROMETHEUS_STREAM -> do
-        let PrometheusStream matchedConfig = stream.streamConfig
-        eventCounter <- liftIO registerEventRequestCounterMetric
-        fork "updating in prometheus" $ incrementCounter eventCounter matchedConfig
+        let merchantId = event.merchantId
+        let eventType = show event.eventType
+        let deploymentVersion = event.deploymentVersion
+        fork "updating in prometheus" $ incrementCounter merchantId eventType deploymentVersion
       _ -> logDebug "Default stream"
 
 createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> m (Event p)
