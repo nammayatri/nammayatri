@@ -309,8 +309,8 @@ mapOptionsView push state =
    ][ 
     ]
     ]
-supportButton2 :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-supportButton2 push state =
+supportButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+supportButton push state =
   relativeLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -431,98 +431,6 @@ supportButton2 push state =
   ]
 ]
 
-supportButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-supportButton push state =
-  horizontalScrollView[
-   width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
-  , margin $ Margin 16 0 16 10
-  , background Color.white900
-  , scrollBarX false
-  , margin $ MarginTop 10
-  , cornerRadius 9.0
-  ][
- linearLayout
-  [ orientation HORIZONTAL
-  , gravity CENTER_VERTICAL
-  , margin $ Margin 6 0 16 10
-  , background Color.white900
-  , cornerRadius 9.0
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
-  , background Color.white900
-  , margin $ MarginTop 10
-  ]
-  [
-    linearLayout
-    [ orientation HORIZONTAL
-      , width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , cornerRadius 32.0
-      , stroke $ "1,"<> Color.grey900
-      , onClick push $ const ShareRide
-      , margin $ Margin 6 10 0 6
-     ]
-    [imageView
-      [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
-      , height $ V 18
-      , width $ V 18
-      , margin $ Margin 10 12 10 10
-      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
-      , onClick push $ const ShareRide
-      ]
-      ,textView 
-      [ text $ getString SHARE_RIDE
-        , width MATCH_PARENT
-        , margin (Margin 0 10 8 4)
-      ]
-    ]
-     ,linearLayout
-    [ orientation HORIZONTAL
-      , width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , margin $ Margin 6 10 0 6
-      , cornerRadius 32.0
-      , stroke $ "1,"<> Color.grey900
-      , onClick push $ const Support
-    ]
-    [
-      imageView
-      [ imageWithFallback $ "ny_ic_contact_support," <> (getAssetStoreLink FunctionCall) <> "ny_ic_contact_support.png"
-      , height $ V 18
-      , width $ V 18
-      , margin $ Margin 10 12 10 10
-       ]
-      ,textView 
-      [ text $ getString CUSTOMER_SUPPORT
-      , gravity CENTER_VERTICAL
-      , margin (Margin 0 10 8 4)
-      ]
-    ]
-    , linearLayout
-    [ orientation HORIZONTAL
-      , width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , cornerRadius 32.0
-      , stroke $ "1,"<> Color.grey900
-      , margin $ Margin 6 10 12 6
-    , onClick push $ const $ LiveDashboardAction
-    ]
-    [ imageView
-      [ imageWithFallback $ "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png"
-      , height $ V 18
-      , width $ V 18
-      , margin $ Margin 10 12 10 10
-      ]
-      ,textView 
-      [ text $ getString LIVE_STATS
-       , margin (Margin 0 10 8 4)
-      ]
-    ]
-  ]
-  ]
 
 locationTrackButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 locationTrackButton push state =
@@ -881,7 +789,7 @@ driverInfoView push state =
               , separator (Margin 16 (if(state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility) then 16 else 0) 16 0) (V 1) Color.grey900 $ ((state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.data.config.nyBrandingVisibility) || (state.props.currentStage == RideAccepted && not state.data.config.showPickUpandDrop)
               , driverDetailsView push state
               , paymentMethodView push state (getString RIDE_FARE) true
-              , supportButton2 push state
+              , supportButton push state
               , (if os == "IOS" then scrollView else linearLayout)
                 [ width MATCH_PARENT
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
