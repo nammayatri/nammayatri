@@ -97,7 +97,10 @@ data CurrentPlanRes = CurrentPlanRes
     mandateDetails :: Maybe MandateDetailsEntity,
     orderId :: Maybe (Id DOrder.PaymentOrder),
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
-    subscribed :: Bool
+    subscribed :: Bool,
+    planRegistrationDate :: Maybe UTCTime,
+    latestAutopayPaymentDate :: Maybe UTCTime,
+    latestManualPaymentDate :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -114,7 +117,8 @@ data MandateDetailsEntity = MandateDetails
     mandateId :: Text,
     payerVpa :: Maybe Text,
     frequency :: Text,
-    maxAmount :: Money
+    maxAmount :: Money,
+    autopaySetupDate :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -143,7 +147,8 @@ currentPlan (driverId, _merchantId) = do
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
   currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId >=> (pure . Just)) mPlan
-
+  latestManualPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId
+  latestAutopayPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_EXECUTION_INVOICE [DF.CLEARED] driverId
   orderId <-
     if driverInfo.autoPayStatus == Just DI.PENDING
       then do
@@ -151,7 +156,17 @@ currentPlan (driverId, _merchantId) = do
         return (mbOrder <&> (.id))
       else return Nothing
 
-  return CurrentPlanRes {currentPlanDetails = currentPlanEntity, mandateDetails = mandateDetailsEntity, autoPayStatus = driverInfo.autoPayStatus, subscribed = driverInfo.subscribed, orderId}
+  return $
+    CurrentPlanRes
+      { currentPlanDetails = currentPlanEntity,
+        mandateDetails = mandateDetailsEntity,
+        autoPayStatus = driverInfo.autoPayStatus,
+        subscribed = driverInfo.subscribed,
+        orderId,
+        latestManualPaymentDate = latestManualPayment <&> (.updatedAt),
+        latestAutopayPaymentDate = latestAutopayPayment <&> (.updatedAt),
+        planRegistrationDate = mDriverPlan <&> (.createdAt)
+      }
   where
     getDriverPaymentMode = \case
       Just DI.ACTIVE -> AUTOPAY
@@ -415,6 +430,7 @@ mkMandateDetailEntity mandateId = do
               mandateId = mandate.id.getId,
               payerVpa = mandate.payerVpa,
               frequency = "Aspresented",
-              maxAmount = round mandate.maxAmount
+              maxAmount = round mandate.maxAmount,
+              autopaySetupDate = mandate.createdAt
             }
     Nothing -> return Nothing

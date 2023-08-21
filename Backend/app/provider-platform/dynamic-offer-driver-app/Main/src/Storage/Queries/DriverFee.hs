@@ -171,6 +171,20 @@ updateStatusByIds status driverFeeIds now =
 findAllPendingAndDueDriverFeeByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [DriverFee]
 findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE, Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
+findLatestByFeeTypeAndStatus :: (L.MonadFlow m, Log m) => Domain.FeeType -> [Domain.DriverFeeStatus] -> Id Person -> m (Maybe DriverFee)
+findLatestByFeeTypeAndStatus feeType status driverId = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.Eq feeType,
+          Se.Is BeamDF.status $ Se.In status,
+          Se.Is BeamDF.driverId $ Se.Eq driverId.getId
+        ]
+    ]
+    (Se.Desc BeamDF.updatedAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
 updateStatus :: (L.MonadFlow m, Log m) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now = do
   updateOneWithKV
