@@ -14,57 +14,21 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
-import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString)
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
-import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Lib.Utils ()
 import Sequelize
-
-fromFieldSWC ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion SWC.SlidingWindowOptions
-fromFieldSWC f mbValue = do
-  value <- fromField f mbValue
-  case A.fromJSON value of
-    A.Success a -> pure a
-    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
-
-instance IsString Minutes where
-  fromString = show
-
-instance FromField SWC.SlidingWindowOptions where
-  fromField = fromFieldSWC
-
-instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be SWC.SlidingWindowOptions where
-  sqlValueSyntax = sqlValueSyntax . A.toJSON
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SWC.SlidingWindowOptions
-
-instance FromBackendRow Postgres SWC.SlidingWindowOptions
-
-instance IsString SWC.SlidingWindowOptions where
-  fromString = show
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
@@ -95,12 +59,6 @@ instance B.Table DriverIntelligentPoolConfigT where
   primaryKey = Id . merchantId
 
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigT Identity
-
-deriving stock instance Ord SWC.SlidingWindowOptions
-
-deriving stock instance Eq SWC.SlidingWindowOptions
-
-deriving stock instance Ord PeriodType
 
 driverIntelligentPoolConfigTMod :: DriverIntelligentPoolConfigT (B.FieldModification (B.TableField DriverIntelligentPoolConfigT))
 driverIntelligentPoolConfigTMod =

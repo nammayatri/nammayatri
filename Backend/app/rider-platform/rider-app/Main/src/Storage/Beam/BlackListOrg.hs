@@ -15,39 +15,19 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BlackListOrg where
 
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.BlackListOrg as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.BlackListOrgType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.BlackListOrgType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BlackListOrgType
-
-instance FromBackendRow Postgres Domain.BlackListOrgType
-
-instance IsString Domain.BlackListOrgType where
-  fromString = show
 
 data BlackListOrgT f = BlackListOrgT
   { id :: B.C f Text,
@@ -63,8 +43,6 @@ instance B.Table BlackListOrgT where
   primaryKey = Id . id
 
 type BlackListOrg = BlackListOrgT Identity
-
-deriving stock instance Ord Domain.BlackListOrgType
 
 blackListOrgTMod :: BlackListOrgT (B.FieldModification (B.TableField BlackListOrgT))
 blackListOrgTMod =

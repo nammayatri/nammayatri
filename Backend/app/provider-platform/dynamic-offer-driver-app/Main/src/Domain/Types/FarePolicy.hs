@@ -11,9 +11,15 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
+import qualified Data.Aeson as A
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
@@ -66,6 +72,29 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 data FarePolicyType = Progressive | Slabs deriving (Show, Read, Generic)
+
+instance FromField FarePolicyType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be FarePolicyType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be FarePolicyType
+
+instance FromBackendRow Postgres FarePolicyType
+
+instance IsString FarePolicyType where
+  fromString = show
+
+instance FromJSON FarePolicyType where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON FarePolicyType where
+  toJSON = A.genericToJSON A.defaultOptions
+
+deriving stock instance Ord FarePolicyType
+
+deriving stock instance Eq FarePolicyType
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

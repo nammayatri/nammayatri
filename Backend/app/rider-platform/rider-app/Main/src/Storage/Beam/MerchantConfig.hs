@@ -15,61 +15,19 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.MerchantConfig where
 
-import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString)
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Lib.Utils ()
 import Sequelize
-
-fromFieldSWC ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion SWC.SlidingWindowOptions
-fromFieldSWC f mbValue = do
-  value <- fromField f mbValue
-  case A.fromJSON value of
-    A.Success a -> pure a
-    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
-
-instance IsString Minutes where
-  fromString = show
-
-instance FromField SWC.SlidingWindowOptions where
-  fromField = fromFieldSWC
-
-instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be SWC.SlidingWindowOptions where
-  sqlValueSyntax = sqlValueSyntax . A.toJSON
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SWC.SlidingWindowOptions
-
-instance FromBackendRow Postgres SWC.SlidingWindowOptions
-
-instance IsString SWC.SlidingWindowOptions where
-  fromString = show
-
-deriving stock instance Ord SWC.PeriodType
-
-deriving stock instance Ord SWC.SlidingWindowOptions
-
-deriving stock instance Eq SWC.SlidingWindowOptions
 
 data MerchantConfigT f = MerchantConfigT
   { id :: B.C f Text,

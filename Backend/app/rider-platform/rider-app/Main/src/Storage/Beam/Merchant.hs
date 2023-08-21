@@ -16,26 +16,17 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant where
 
-import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Serialize
-import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import qualified Data.Vector as V
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Database.PostgreSQL.Simple.FromField (fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import Debug.Trace as T
 import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -56,46 +47,6 @@ fromFieldEnum' ::
 fromFieldEnum' f mbValue = case mbValue of
   Nothing -> pure Geo.Unrestricted
   Just _ -> Geo.Regions . V.toList <$> fromField f mbValue
-
-deriving newtype instance FromField Base64
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Base64 where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Base64
-
-instance FromBackendRow Postgres Base64
-
-instance FromField GeoRestriction where
-  fromField = fromFieldEnum'
-
-instance HasSqlValueSyntax be (Maybe [Text]) => HasSqlValueSyntax be GeoRestriction where
-  sqlValueSyntax = sqlValueSyntax . Geo.geoRestrictionToMaybeList
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be GeoRestriction
-
-instance FromBackendRow Postgres GeoRestriction
-
-deriving stock instance Eq GeoRestriction
-
-deriving stock instance Ord GeoRestriction
-
-deriving stock instance Ord Base64
-
-deriving stock instance Read Base64
-
-instance IsString GeoRestriction where
-  fromString = show
-
-deriving stock instance Ord Context.City
-
-deriving stock instance Ord Context.Country
-
-instance IsString Context.City where
-  fromString = show
-
-instance IsString Context.Country where
-  fromString = show
 
 data MerchantT f = MerchantT
   { id :: B.C f Text,
@@ -131,42 +82,6 @@ instance B.Table MerchantT where
   primaryKey = Id . id
 
 type Merchant = MerchantT Identity
-
-fromFieldJSON' ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion [Domain.Slot]
-fromFieldJSON' f mbValue = case mbValue of
-  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
-  Just value' -> case (A.decode $ fromStrict value' :: Maybe (V.Vector Domain.Slot)) of
-    Just res -> pure $ V.toList res
-    Nothing -> DPSF.returnError DPSF.ConversionFailed f ("Could not 'read'" <> show value')
-
-fromFieldSlots ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion [Domain.Slot]
-fromFieldSlots f mbValue = do
-  value <- fromField f mbValue
-  case (A.fromJSON value :: A.Result (V.Vector Domain.Slot)) of
-    A.Success a -> pure $ V.toList a
-    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed for"
-
-instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be [Domain.Slot] where
-  sqlValueSyntax = sqlValueSyntax . (A.String . TE.decodeUtf8 . toStrict . A.encode . A.toJSON)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.Slot]
-
-instance FromBackendRow Postgres [Domain.Slot] where
-  fromBackendRow = do
-    textVal <- fromBackendRow
-    case T.trace (show textVal) $ A.fromJSON textVal of
-      A.Success (jsonVal :: Text) -> case A.eitherDecode (fromStrict $ TE.encodeUtf8 jsonVal) of
-        Right val -> pure val
-        Left err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
-      A.Error err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
-
-deriving stock instance Ord Domain.Slot
 
 merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
 merchantTMod =

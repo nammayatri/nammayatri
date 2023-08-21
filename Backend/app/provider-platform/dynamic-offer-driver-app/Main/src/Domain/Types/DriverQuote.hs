@@ -15,6 +15,10 @@
 
 module Domain.Types.DriverQuote where
 
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Estimate
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.Merchant as DMerchant
@@ -31,6 +35,19 @@ import Kernel.Utils.GenericPretty
 data DriverQuoteStatus = Active | Inactive
   deriving (Show, Read, Eq, Generic, Ord, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable DriverQuoteStatus
+
+instance FromField DriverQuoteStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverQuoteStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverQuoteStatus
+
+instance FromBackendRow Postgres DriverQuoteStatus
+
+instance IsString DriverQuoteStatus where
+  fromString = show
 
 data DriverQuote = DriverQuote
   { id :: Id DriverQuote,

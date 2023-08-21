@@ -15,8 +15,14 @@
 
 module Domain.Types.Feedback.FeedbackForm where
 
+import qualified Database.Beam as B
+import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax, autoSqlValueSyntax)
+import Database.Beam.Backend.SQL.SQL2003 (HasSqlValueSyntax (sqlValueSyntax))
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Ride (Ride)
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data FeedbackFormReq = FeedbackFormReq
@@ -43,6 +49,19 @@ data FeedbackFormAPIEntity = FeedbackFormAPIEntity
 data Category = RIDE | DRIVER | VEHICLE
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read)
 
+instance FromField Category where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Category
+
+instance FromBackendRow Postgres Category
+
+instance IsString Category where
+  fromString = show
+
 deriving stock instance Ord Category
 
 data FeedbackFormItem = FeedbackFormItem
@@ -56,6 +75,19 @@ data FeedbackFormItem = FeedbackFormItem
 
 data AnswerType = Text | Checkbox | Radio
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read)
+
+instance FromField AnswerType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerType
+
+instance FromBackendRow Postgres AnswerType
+
+instance IsString AnswerType where
+  fromString = show
 
 deriving stock instance Ord AnswerType
 

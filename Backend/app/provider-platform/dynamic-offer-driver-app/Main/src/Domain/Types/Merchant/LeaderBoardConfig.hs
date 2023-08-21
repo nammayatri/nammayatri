@@ -14,6 +14,10 @@
 
 module Domain.Types.Merchant.LeaderBoardConfig where
 
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -23,6 +27,19 @@ data LeaderBoardType
   = WEEKLY
   | DAILY
   deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show, Ord, Eq)
+
+instance FromField LeaderBoardType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be LeaderBoardType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be LeaderBoardType
+
+instance FromBackendRow Postgres LeaderBoardType
+
+instance IsString LeaderBoardType where
+  fromString = show
 
 data LeaderBoardConfigs = LeaderBoardConfigs
   { id :: Id LeaderBoardConfigs,

@@ -15,7 +15,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.OnboardingDocumentConfig where
 
@@ -32,9 +31,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Sequelize
-
-instance IsString Domain.VehicleClassCheckType where
-  fromString = show
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,

@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab where
 
@@ -23,7 +22,6 @@ import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import Database.Beam.MySQL ()
 import qualified Domain.Types.FarePolicy as Domain
-import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
@@ -32,17 +30,6 @@ import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
 import Sequelize as Se
-
-instance IsString Vehicle.Variant where
-  fromString = show
-
-deriving stock instance Ord Domain.WaitingCharge
-
-deriving stock instance Ord Domain.WaitingChargeInfo
-
-deriving stock instance Ord Domain.NightShiftCharge
-
-deriving stock instance Ord Domain.PlatformFeeCharge
 
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),

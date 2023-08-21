@@ -14,20 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequestForDriver where
 
-import qualified Data.Aeson as A
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -38,26 +31,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.DriverSearchRequestStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DriverSearchRequestStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverSearchRequestStatus
-
-instance FromBackendRow Postgres Domain.DriverSearchRequestStatus
-
-instance FromField Domain.SearchRequestForDriverResponse where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchRequestForDriverResponse where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRequestForDriverResponse
-
-instance FromBackendRow Postgres Domain.SearchRequestForDriverResponse
 
 data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,
@@ -91,15 +64,6 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Domain.DriverSearchRequestStatus where
-  fromString = show
-
-instance IsString Domain.SearchRequestForDriverResponse where
-  fromString = show
-
-instance IsString Variant.Variant where
-  fromString = show
-
 instance B.Table SearchRequestForDriverT where
   data PrimaryKey SearchRequestForDriverT f
     = Id (B.C f Text)
@@ -107,16 +71,6 @@ instance B.Table SearchRequestForDriverT where
   primaryKey = Id . id
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity
-
-instance FromJSON Domain.DriverSearchRequestStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Domain.DriverSearchRequestStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord Domain.DriverSearchRequestStatus
-
-deriving stock instance Ord Domain.SearchRequestForDriverResponse
 
 searchRequestForDriverTMod :: SearchRequestForDriverT (B.FieldModification (B.TableField SearchRequestForDriverT))
 searchRequestForDriverTMod =

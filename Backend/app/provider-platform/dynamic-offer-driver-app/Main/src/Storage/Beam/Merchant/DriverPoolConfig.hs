@@ -14,20 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.DriverPoolConfig where
 
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
@@ -36,34 +29,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType (..))
-
-instance FromField PoolSortingType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be PoolSortingType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be PoolSortingType
-
-instance FromBackendRow Postgres PoolSortingType
-
-instance FromField BatchSplitByPickupDistance where
-  fromField = fromFieldEnum
-
-instance FromField [BatchSplitByPickupDistance] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
-  sqlValueSyntax batchList =
-    let x = (show <$> batchList :: [Text])
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistance]
-
-instance FromBackendRow Postgres [BatchSplitByPickupDistance]
-
-instance IsString PoolSortingType where
-  fromString = show
 
 data DriverPoolConfigT f = DriverPoolConfigT
   { merchantId :: B.C f Text,
@@ -97,12 +62,6 @@ instance B.Table DriverPoolConfigT where
   primaryKey = Id . merchantId
 
 type DriverPoolConfig = DriverPoolConfigT Identity
-
-deriving stock instance Ord PoolSortingType
-
-deriving stock instance Eq PoolSortingType
-
-deriving stock instance Ord BatchSplitByPickupDistance
 
 driverPoolConfigTMod :: DriverPoolConfigT (B.FieldModification (B.TableField DriverPoolConfigT))
 driverPoolConfigTMod =

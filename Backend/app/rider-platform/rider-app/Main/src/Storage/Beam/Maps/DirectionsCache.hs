@@ -15,80 +15,20 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Maps.DirectionsCache where
 
 import Data.Aeson
-import qualified Data.Aeson as A
-import Data.ByteString.Lazy (fromStrict)
-import Data.ByteString.Lazy.Char8 (toStrict)
 import Data.Serialize
-import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import Debug.Trace as T
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
-import Kernel.External.Maps (BoundingBoxWithoutCRS (..), LatLong (..), PointXY (..), PointXYZ (..), PointXYZM (..), RouteInfo (..))
+import Kernel.External.Maps (RouteInfo (..))
 import Kernel.Prelude hiding (Generic)
 import Sequelize
-
-instance FromField RouteInfo where
-  fromField f mbValue = case mbValue of
-    Nothing -> DPSF.returnError UnexpectedNull f mempty
-    Just value' ->
-      case T.trace ("text val" <> show value') $ A.eitherDecode $ fromStrict value' of
-        Right jsonVal -> case T.trace ("text val" <> show value') $ A.eitherDecode (fromStrict $ TE.encodeUtf8 jsonVal) of
-          Right val -> pure val
-          _ -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
-        _ -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
-
-instance FromBackendRow Postgres RouteInfo
-
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be RouteInfo where
-  sqlValueSyntax = sqlValueSyntax . (stringify . A.String . stringify . A.toJSON)
-    where
-      stringify = TE.decodeUtf8 . toStrict . A.encode
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be RouteInfo
-
-instance IsString RouteInfo where
-  fromString = show
-
-deriving stock instance Eq RouteInfo
-
-deriving stock instance Read RouteInfo
-
-deriving stock instance Ord RouteInfo
-
-deriving stock instance Ord LatLong
-
-deriving stock instance Ord BoundingBoxWithoutCRS
-
-deriving stock instance Ord PointXY
-
-deriving stock instance Ord PointXYZ
-
-deriving stock instance Ord PointXYZM
-
-deriving stock instance Read LatLong
-
-deriving stock instance Read BoundingBoxWithoutCRS
-
-deriving stock instance Read PointXY
-
-deriving stock instance Read PointXYZ
-
-deriving stock instance Read PointXYZM
 
 data DirectionsCacheT f = DirectionsCacheT
   { id :: B.C f Text,

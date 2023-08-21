@@ -28,8 +28,6 @@ import qualified Lib.Types.SpecialLocation as Domain
 derivePersistField "LatLong"
 derivePersistField "Domain.GatesInfo"
 
-deriving instance Read LatLong
-
 deriving instance Read Domain.GatesInfo
 
 mkPersist

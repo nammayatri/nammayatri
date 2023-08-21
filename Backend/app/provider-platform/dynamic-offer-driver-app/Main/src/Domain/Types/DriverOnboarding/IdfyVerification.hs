@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.DriverOnboarding.IdfyVerification where
 
@@ -31,6 +32,8 @@ import Kernel.Types.Id
 data VerificationStatus = PENDING | VALID | INVALID
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
 
+deriving stock instance Ord VerificationStatus
+
 data ImageExtractionValidation = Success | Skipped | Failed
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
 
@@ -40,9 +43,24 @@ instance FromField VerificationStatus where
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be VerificationStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
+instance FromField ImageExtractionValidation where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be ImageExtractionValidation where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be ImageExtractionValidation
+
+instance FromBackendRow Postgres ImageExtractionValidation
+
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be VerificationStatus
 
 instance FromBackendRow Postgres VerificationStatus
+
+deriving stock instance Ord ImageExtractionValidation
+
+instance IsString ImageExtractionValidation where
+  fromString = show
 
 data IdfyVerificationE e = IdfyVerification
   { id :: Id IdfyVerification,

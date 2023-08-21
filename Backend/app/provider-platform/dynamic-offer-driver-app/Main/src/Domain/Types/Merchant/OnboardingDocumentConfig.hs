@@ -21,7 +21,13 @@ import Kernel.Types.Id
 
 data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show, Ord, Eq)
 
+instance IsString VehicleClassCheckType where
+  fromString = show
+
 data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
+
+instance IsString DocumentType where
+  fromString = show
 
 data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap] deriving (Generic, ToJSON, FromJSON, Show)
 

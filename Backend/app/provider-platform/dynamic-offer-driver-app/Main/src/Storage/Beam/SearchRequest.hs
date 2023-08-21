@@ -24,7 +24,6 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import qualified Domain.Types.FareProduct as FareProductD
-import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
@@ -61,9 +60,6 @@ data SearchRequestT f = SearchRequestT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Variant.Variant where
-  fromString = show
-
 instance B.Table SearchRequestT where
   data PrimaryKey SearchRequestT f
     = Id (B.C f Text)
@@ -71,10 +67,6 @@ instance B.Table SearchRequestT where
   primaryKey = Id . id
 
 type SearchRequest = SearchRequestT Identity
-
-deriving stock instance Ord Context.City
-
-deriving stock instance Ord Context.Country
 
 searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
 searchRequestTMod =
