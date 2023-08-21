@@ -16,22 +16,19 @@ module Lib.SessionizerMetrics.Prometheus.Internal where
 
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Utils.Common (logDebug)
 import Prometheus as P
 
 incrementCounter ::
   ( MonadReader r1 m,
     MonadGuid m,
     MonadTime m,
-    MonadIO m,
-    Log m
+    MonadIO m
   ) =>
   Text ->
   Text ->
   Text ->
   m ()
 incrementCounter merchantId event deploymentVersion = do
-  logDebug " Rupak Prometheus Increment Counter"
   counterName <- liftIO registerEventRequestCounterMetric
   liftIO $ P.withLabel counterName (event, merchantId, deploymentVersion) P.incCounter
 
