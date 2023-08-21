@@ -97,7 +97,7 @@ window.onMerchantEvent = function (event, payload) {
   var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
     var isInit = "in.juspay.hyperpay" in top.window.mapps;
-    if (clientId == "open-kochi") {
+    if (clientId == "yatriprovider") {
       window.merchantID = "YATRI"
     } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
       window.merchantID = "YATRISATHI"
@@ -254,8 +254,8 @@ function refreshFlow(){
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
   let token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
   if ((diff > refreshThreshold) && (token != "__failed")){
-    if(JBridge.removeChatMessageCallback){
-      JBridge.removeChatMessageCallback();
+    if(window.storeCallBackMessageUpdated){
+      window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
     if(JBridge.removeCallBackOpenChatScreen) {
       JBridge.removeCallBackOpenChatScreen();
