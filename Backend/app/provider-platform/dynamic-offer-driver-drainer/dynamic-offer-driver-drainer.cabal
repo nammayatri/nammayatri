@@ -21,16 +21,12 @@ source-repository head
 
 library
   exposed-modules:
-      Config.Config
       Config.Env
       Constants
       DBSync.Create
       DBSync.DBSync
       DBSync.Delete
       DBSync.Update
-      Errors.Errors
-      Errors.PredefinedErrors
-      Errors.Types
       Event.Event
       Types.Config
       Types.DBSync

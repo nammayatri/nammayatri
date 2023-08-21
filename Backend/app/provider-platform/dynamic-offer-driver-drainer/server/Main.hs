@@ -2,7 +2,7 @@
 
 module Main where
 
-import Config.Config as Config
+-- import Config.Config as Config
 import Config.Env as Env
 import qualified Constants as C
 import Control.Concurrent.Async (async, cancel)
@@ -30,33 +30,14 @@ import Utils.Utils
 
 main :: IO ()
 main = do
-  config <- Config.config'
-  logFilepath <- Env.getLogFilePath
-  logFile <- case logFilepath of
-    Just path -> return path
-    Nothing -> do
-      _ <- SD.createDirectoryIfMissing True "app/logs/"
-      return "app/logs/app.log"
-
-  logToFile <- Env.getLogToFile
-  logAsync <- Env.getLogAsync
-  logToConsole <- Env.getLogToConsole
-  logRawSql <- Env.getLogRawSql
-  logAPI' <- Env.getLogAPI
-  logLevel <- Env.getLogLevel
-  logFormatter <- Env.getLogFormatter
-  let shouldLogSql =
-        if logRawSql
-          then ET.UnsafeLogSQL_DO_NOT_USE_IN_PRODUCTION
-          else ET.SafelyOmitSqlLogs
-
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "dynamic-offer-driver-app"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
 
   bracket (async NW.runMetricServer) cancel $ \_ -> do
-    R.withFlowRuntime (Just loggerRt) $
-      ( \_config flowRt -> do
+    R.withFlowRuntime
+      (Just loggerRt)
+      ( \flowRt -> do
           putStrLn @String "Initializing DB and KV Connections..."
           runFlow
             flowRt
@@ -72,7 +53,5 @@ main = do
             )
           dbSyncMetric <- Event.mkDBSyncMetric
           let environment = Env (T.pack C.kvRedis) dbSyncMetric
-          threadPerPodCount <- Env.getThreadPerPodCount
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )
-        config
