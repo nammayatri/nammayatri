@@ -364,7 +364,6 @@ library
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
-      Storage.CachedQueries.Issue.IssueReport
       Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.MediaFile
