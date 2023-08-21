@@ -62,8 +62,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FeeType
 
 instance FromBackendRow Postgres Domain.FeeType
 
-deriving stock instance Ord Domain.FeeType
-
 data DriverFeeT f = DriverFeeT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
