@@ -30,6 +30,6 @@ data DBSyncMetric
   | ParseDBCommandError Action ModelName
   | QueryExecutionFailure Action ModelName
   | DuplicateEntryCreate ModelName
-  | -- | QueryDrainLatency Action Latency
-    DrainerQueryExecutes Action Word
+  | QueryDrainLatency Action Latency
+  | DrainerQueryExecutes Action Word
   | DrainerStopStatus Status
