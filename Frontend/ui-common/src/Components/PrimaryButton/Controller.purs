@@ -47,6 +47,7 @@ type Config =
     , enableLoader :: Boolean
     , isGradient :: Boolean
     , gradient :: Gradient
+    , shadow :: ShadowConfig
   }
 
 type TextConfig =
@@ -67,6 +68,17 @@ type ImageConfig =
   , margin :: Margin
   , padding :: Padding
   , gravity :: Gravity
+  }
+
+type ShadowConfig = 
+  {
+    xAxis :: Number
+  , yAxis :: Number
+  , blur :: Number
+  , spread :: Number
+  , shadowColor :: String
+  , opacity :: Number
+  , isShadowEnabled :: Boolean
   }
 
 
@@ -114,4 +126,14 @@ config =   {
   , enableLoader : false
   , isGradient : if (getValueFromConfig "isGradient") == "true" then true else false
   , gradient : (Linear 90.0 (getValueFromConfig "gradient"))
+  , shadow : 
+    {
+      xAxis : 0.1
+    , yAxis : 0.1
+    , blur : 10.0
+    , spread : 24.0
+    , shadowColor : "#8B8B8B"
+    , opacity :  0.5
+    , isShadowEnabled : false
+    }
   }

@@ -38,8 +38,6 @@ import Data.Eq.Generic (genericEq)
 import Debug (spy)
 import Data.Maybe
 
-
-
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
 instance decodeErrorPayloadWrapper :: Decode ErrorPayloadWrapper

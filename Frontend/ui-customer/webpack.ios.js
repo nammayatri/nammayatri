@@ -34,6 +34,15 @@ module.exports = (env, argv) => {
         }
       }),
     ]
+  if (argv.mode != "development"){
+    // plugins.push(new JusPayJSAZipPlugin({
+    //   bundleInputFile: "./dist/" + getOutputFileLocation(argv.mode),
+    //   jsaOutputFile: "./dist/" + getOutputFileDir(argv.mode) + "v1-index_bundle.jsa",
+    //   zipOutputFile: "./dist/" + getOutputFileDir(argv.mode) + "v1-index_bundle.zip",
+    //   keyFile: (typeof (argv.mode) == "string" && (argv.mode == "development")) ?
+    //   "./dev.key" : "/home/jenkins/.juspay/remote_asset_private.key"
+    // }))
+  }
   return merge(common(env), {
     output: {
       filename: getOutputFileLocation(argv.mode),

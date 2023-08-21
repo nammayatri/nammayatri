@@ -70,7 +70,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), Shadow(..) , shadow,  afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width ,gradient , adjustViewWithKeyboard, layoutGravity, clipChildren)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -568,17 +568,21 @@ recenterButtonView push state =
         , background Color.transparent
         , visibility if state.props.rideRequestFlow && state.props.currentStage /= ConfirmingLocation then GONE else VISIBLE
         , gravity RIGHT
+        , clipChildren false
         , alignParentBottom "true,-1"
-        , padding $ Padding 0 0 16 14
+        , padding $ PaddingRight 16
         , disableClickFeedback true
         , margin if ((state.props.showlocUnserviceablePopUp) && state.props.currentStage == HomeScreen) then (MarginBottom (360 + safeMarginBottom)) else (Margin 0 0 0 0) --else if (state.props.currentStage == ConfirmingLocation) then (Margin ((screenWidth unit) - 66) 0 0 270) else(Margin ((screenWidth unit) - 66) 0 0 120)
         ]
-        [ -- linearLayout
-          --   [ width WRAP_CONTENT
-          --   , height WRAP_CONTENT
-          --   , stroke ("1," <> Color.grey900)
-          --   , cornerRadii $ Corners 24.0 true true true true
-          --   ][
+        [ linearLayout
+            [ width $ V 48
+            , height $ V 48
+            , margin $ Margin 10 10 10 10 
+            , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+            , background Color.white900
+            , gravity CENTER
+            , cornerRadius 24.0
+            ][
           imageView
             [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
             , onClick
@@ -593,7 +597,7 @@ recenterButtonView push state =
             , width $ V 40
             ]
         ]
--- ]
+]
 
 referralView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 referralView push state =
@@ -661,6 +665,7 @@ sourceUnserviceableView push state =
         , orientation VERTICAL
         , alignParentBottom "true,-1"
         , gravity BOTTOM
+        , clipChildren false
         ]
         [ recenterButtonView push state
         , ErrorModal.view (push <<< SourceUnserviceableActionController) (sourceUnserviceableConfig state)
@@ -692,12 +697,14 @@ buttonLayout state push =
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
         , orientation VERTICAL
+        , clipChildren false
         ]
         [
           linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
+          , clipChildren false
           ][
             referralView push state
           , recenterButtonView push state
@@ -818,6 +825,7 @@ homeScreenView push state =
         , width MATCH_PARENT
         , padding (Padding 0 safeMarginTop 0 safeMarginBottom)
         , orientation VERTICAL
+        , clipChildren false
         ]
         [ if (not state.props.rideRequestFlow) then homeScreenTopIconView push state else emptyTextView state ]
 
@@ -830,11 +838,11 @@ homeScreenTopIconView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , clipChildren false
         ]
         [ linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , background Color.white900
             , orientation HORIZONTAL
             , gravity LEFT
             , visibility if state.data.config.terminateBtnConfig.visibility then VISIBLE else GONE
@@ -870,9 +878,10 @@ homeScreenTopIconView push state =
             , cornerRadius 8.0
             , background Color.white900
             , visibility if state.props.rideRequestFlow then GONE else VISIBLE
-            , stroke $ "1," <> Color.grey900
+            , clipChildren false
+            , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
             , gravity CENTER_VERTICAL
-            , margin (Margin 16 26 16 0)
+            , margin (Margin 16 26 16 15)
             , padding (Padding 0 16 16 16)
             ]
             [ linearLayout
@@ -961,6 +970,7 @@ rideRequestFlowView push state =
         , width MATCH_PARENT
         , cornerRadii $ Corners 24.0 true true false false
         , background Color.transparent
+        , clipChildren false
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
@@ -998,8 +1008,10 @@ rateExperienceView state push =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , cornerRadius 8.0
-  , stroke $ "1,"<>Color.grey800
+  , margin (Margin 15 15 15 15)
   , padding $ Padding 10 10 10 10
+  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+  , background Color.white900
   , gravity CENTER
   ][ commonTextView state push ((getString RATE_YOUR_RIDE_WITH) <> state.data.driverInfoCardState.driverName) Color.black800 (FontStyle.h3 TypoGraphy) 10
     , commonTextView state push (getString YOUR_FEEDBACK_HELPS_US) Color.black800 (FontStyle.paragraphText TypoGraphy) 10
@@ -1178,6 +1190,7 @@ rideCompletedCardView state push =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , clipChildren false
       ][ completedRideDetails state push
       , issueFacedAndRateView state push
       ]
@@ -1229,7 +1242,8 @@ issueFacedAndRateView state push =
   , padding $ Padding 16 16 16 16
   , background Color.white900
   , weight 1.0
-  ][  if state.data.ratingViewState.issueFacedView then didYouFaceIssue state push
+  , clipChildren false
+  ][  if state.data.ratingViewState.issueFacedView then didYouFaceIssue state push 
         else rateExperienceView state push
     , linearLayout
       [ width MATCH_PARENT
@@ -1288,11 +1302,13 @@ topLeftIconView state push =
       , orientation HORIZONTAL
       , visibility if state.data.config.showHamMenu then VISIBLE else GONE
       , margin (Margin 16 48 0 0)
+      , clipChildren false
       ][
         linearLayout
           [ height $ V 48
           , width $ V 48
-          , stroke ("1," <> Color.grey900)
+          , margin $ Margin 15 15 15 15 
+          , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
           , background Color.white900
           , gravity CENTER
           , cornerRadius 24.0
@@ -1323,12 +1339,13 @@ suggestedPriceView push state =
   [ orientation VERTICAL
   , height WRAP_CONTENT
   , width MATCH_PARENT
-  , background Color.blue800
+  , background if state.props.zoneType.priorityTag == NOZONE then Color.white900 else Color.blue800
   , clickable true
   , visibility if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
-  , stroke ("1," <> Color.grey900)
   , gravity CENTER
   , cornerRadii $ Corners 24.0 true true false false
+  , margin $ MarginTop 30
+  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
   , afterRender
         ( \action -> do
             let fareEstimate = if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
@@ -1365,7 +1382,6 @@ suggestedPriceView push state =
       , clickable true
       , visibility if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
       , padding (Padding 16 16 16 24)
-      , stroke ("1," <> Color.grey900)
       , gravity CENTER
       , cornerRadii $ Corners 24.0 true true false false
       ][  textView
@@ -1714,13 +1730,15 @@ confirmPickUpLocationView push state =
     , padding $ PaddingTop 16
     , cornerRadii $ Corners 24.0 true true false false
     , gravity CENTER
+    , clipChildren false
     ]
     [ recenterButtonView push state
     , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , stroke $ "1," <> Color.grey900
+        , margin $ MarginTop 15
+        , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
         , cornerRadii $ Corners 24.0 true true false false
         , background Color.blue800
         ]
@@ -1780,6 +1798,8 @@ loaderView push state =
     , padding (Padding 0 40 0 24)
     , background Color.white900
     , cornerRadii $ Corners 24.0 true true false false
+    , margin $ MarginTop 30
+    , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
     , stroke ("1," <> Color.grey900)
     , clickable true
     , gravity CENTER_HORIZONTAL
@@ -2380,6 +2400,7 @@ confirmingLottieView push state =
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
     , alignParentBottom "true,-1"
+    , clipChildren false
     ][ relativeLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT

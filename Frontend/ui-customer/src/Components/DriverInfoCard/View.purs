@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, clipChildren, shadow)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -63,6 +63,7 @@ view push state =
       , width MATCH_PARENT 
       , gravity RIGHT
       , padding $ PaddingHorizontal 16 16
+      , clipChildren false
       ][supportButton push state]  
     , mapOptionsView push state
     , messageNotificationView push state
@@ -610,8 +611,8 @@ driverInfoView push state =
          , margin $ MarginTop 14
          , background if state.props.zoneType == METRO then Color.blue800 else Color.grey900
          , gravity CENTER
-         , cornerRadii $ Corners 24.0 true true false false
-         , stroke $ state.data.config.driverInfoConfig.cardStroke
+         , clipChildren false
+         , cornerRadii $ Corners 25.0 true true false false
          ][ linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -643,7 +644,8 @@ driverInfoView push state =
             , background Color.white900
             , gravity CENTER
             , cornerRadii $ Corners 24.0 true true false false
-            , stroke $ "1," <> Color.grey900
+            , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+            , margin $ MarginTop 14
             ][ linearLayout
               [ gravity CENTER
               , background Color.transparentGrey

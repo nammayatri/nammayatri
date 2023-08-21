@@ -167,8 +167,8 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/Vignesh-772/purescript-presto-dom.git"
-    , version = "Add-font-weight"
+    , repo = "https://github.com/juspay/purescript-presto-dom.git"
+    , version = "Update-main-22-aug"
     }
   with halogen-vdom =
     { dependencies =
