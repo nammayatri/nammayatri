@@ -37,7 +37,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Lens ((^.))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number (fromString, pi, sin, cos, sqrt, asin)
+import Data.Number (fromString, pi, sin, cos, sqrt, asin, abs)
 import Data.Ord (comparing)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
@@ -67,7 +67,7 @@ import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Services.API (Prediction)
 import Services.API (Prediction)
@@ -498,3 +498,9 @@ triggerRideStatusEvent status amount bookingId screen = do
     event : "process_result"
   , payload : Just payload
   }
+
+fetchDefaultPickupPoint :: Array Location -> Number -> Number -> String
+fetchDefaultPickupPoint locations lati longi =
+  case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
+    [foundLocation] -> foundLocation.place
+    _ -> ""

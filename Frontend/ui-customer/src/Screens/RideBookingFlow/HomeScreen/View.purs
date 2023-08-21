@@ -281,7 +281,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if showLabel then (if os == "IOS" then 90 else 70) else (if os == "IOS" then 20 else 34))
+                    , padding (PaddingBottom if showLabel then (if os == "IOS" then 46 else 70) else (if os == "IOS" then 10 else 34))
                     , gravity CENTER
                     , orientation VERTICAL
                     ]
@@ -1708,7 +1708,7 @@ locationTrackingData lazyCheck =
 ----------- confirmPickUpLocationView -------------
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
-  let zonePadding = (ceil (toNumber (screenWidth unit))/8)
+  let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
   in
   linearLayout
     [ orientation VERTICAL
@@ -1737,7 +1737,7 @@ confirmPickUpLocationView push state =
             , gravity CENTER
             , padding (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
-            , visibility if state.props.confirmLocationCategory /= "" && os /= "IOS" then VISIBLE else GONE
+            , visibility if state.props.confirmLocationCategory /= "" then VISIBLE else GONE
             ] [ imageView
                 [ width (V 20)
                 , height (V 20)
