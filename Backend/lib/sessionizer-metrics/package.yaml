@@ -68,6 +68,9 @@ dependencies:
   - exceptions
   - http-client
   - containers
+  - prometheus-client
+  - wai-middleware-prometheus
+  - prometheus-metrics-ghc
 
 ghc-options:
   - -fwrite-ide-info

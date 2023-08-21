@@ -24,6 +24,7 @@ library
       Lib.SessionizerMetrics.EventStream
       Lib.SessionizerMetrics.Kafka.Config
       Lib.SessionizerMetrics.Kafka.Internal
+      Lib.SessionizerMetrics.Prometheus.Internal
       Lib.SessionizerMetrics.Types.Event
   other-modules:
       Paths_sessionizer_metrics
@@ -75,6 +76,8 @@ library
     , http-client
     , http-types
     , mobility-core
+    , prometheus-client
+    , prometheus-metrics-ghc
     , record-dot-preprocessor
     , record-hasfield
     , servant
@@ -83,4 +86,5 @@ library
     , text
     , time
     , uri-encode
+    , wai-middleware-prometheus
   default-language: Haskell2010
