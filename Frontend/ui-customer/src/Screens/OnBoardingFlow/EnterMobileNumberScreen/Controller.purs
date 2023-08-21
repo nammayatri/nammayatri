@@ -139,11 +139,11 @@ eval (MobileNumberEditTextAction (MobileNumberEditorController.TextChanged id va
             pure $ hideKeyboardOnNavigation true
             else pure unit
     let validatorResp = mobileNumberValidator state.data.countryObj.countryCode state.data.countryObj.countryShortCode value 
-    let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber validatorResp
-                                        , btnActiveMobileNumber = btnActiveMobileNumber validatorResp
+    let newState = state { props = state.props { isValidMobileNumber = isValidPrefixMobileNumber validatorResp
+                                        , btnActiveMobileNumber = isValidMobileNumber validatorResp
                                         , countryCodeOptionExpended = false}
                                          , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else value}}
-    if  validatorResp == MVR.Valid then do 
+    if  isValidMobileNumber validatorResp then do 
          let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
          pure unit
      else pure unit
@@ -158,9 +158,9 @@ eval (MobileNumberEditTextAction (MobileNumberEditorController.CountryCodeSelect
     let validatorResp = mobileNumberValidator country.countryCode country.countryShortCode state.data.mobileNumber 
     let newState = state {data {countryObj = country} 
                         , props {countryCodeOptionExpended = false, mNumberEdtFocused = true
-                        , isValidMobileNumber = isValidMobileNumber validatorResp
-                        , btnActiveMobileNumber = btnActiveMobileNumber validatorResp }}
-    if validatorResp == MVR.Valid then do  
+                        , isValidMobileNumber = isValidPrefixMobileNumber validatorResp
+                        , btnActiveMobileNumber = isValidMobileNumber validatorResp }}
+    if isValidMobileNumber validatorResp then do  
          let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
          pure unit
     else pure unit
@@ -232,8 +232,8 @@ eval AfterRender state = continue state
 eval _ state = continue state
 
 
-isValidMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
-isValidMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)
+isValidPrefixMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
+isValidPrefixMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)
 
-btnActiveMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
-btnActiveMobileNumber resp = (resp == MVR.Valid)
+isValidMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
+isValidMobileNumber resp = (resp == MVR.Valid)
