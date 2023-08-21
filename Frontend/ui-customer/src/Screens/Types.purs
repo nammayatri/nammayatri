@@ -454,7 +454,7 @@ type IndividualRideCardState =
   }
 
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS 
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -513,6 +513,7 @@ data Stage = HomeScreen
            | ChatWithDriver
            | FindEstimateAndSearch
            | RetryFindingQuote
+           | InitialStage
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -939,7 +940,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
-  , feedbackList :: Array FeedbackAnswer 
+  , feedbackList :: Array FeedbackAnswer
   , appConfig :: AppConfig
   }
 

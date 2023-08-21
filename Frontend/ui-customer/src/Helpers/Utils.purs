@@ -313,9 +313,9 @@ addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array 
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addToRecentSearches prediction predictionArr = 
+addToRecentSearches prediction predictionArr =
     let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr) 
+      in (if (checkPrediction prediction' predictionArr)
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
 
@@ -427,7 +427,7 @@ reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
 
 getMerchantVechicleSize :: Unit -> Int
-getMerchantVechicleSize unit = 
+getMerchantVechicleSize unit =
  case getMerchant FunctionCall of
    YATRI -> 160
    _ -> 90
@@ -456,6 +456,7 @@ getScreenFromStage stage = case stage of
   DistanceOutsideLimits -> "finding_driver_loader"
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"
+  InitialStage -> "home_screen"
 
 getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
 getGlobalPayload _ = do
@@ -463,29 +464,29 @@ getGlobalPayload _ = do
   pure $ hush payload
 
 getSearchType :: Unit -> String
-getSearchType _ = do 
+getSearchType _ = do
   let payload = unsafePerformEffect $ getGlobalPayload unit
   case payload of
     Just (GlobalPayload payload') -> do
       let (Payload innerPayload) = payload'.payload
       case innerPayload.search_type of
-        Just a -> a 
+        Just a -> a
         Nothing -> "normal_search"
     Nothing -> "normal_search"
 
 getPaymentMethod :: Unit -> String
-getPaymentMethod _ = do 
+getPaymentMethod _ = do
   let payload = unsafePerformEffect $ getGlobalPayload unit
   case payload of
     Just (GlobalPayload payload') -> do
       let (Payload innerPayload) = payload'.payload
       case innerPayload.payment_method of
-        Just a -> a 
+        Just a -> a
         Nothing -> "cash"
     Nothing -> "cash"
 
 
-triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 
+triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit
 triggerRideStatusEvent status amount bookingId screen = do
   let (payload :: InnerPayload) = { action : "trip_status"
     , ride_status : Just status

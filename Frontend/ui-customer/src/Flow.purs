@@ -146,8 +146,10 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   else pure unit
   if (getMerchant FunctionCall) == PASSCULTURE then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
     else pure unit
-  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" &&  (isNothing $ (gPayload.payload)^._signatureAuthData)
-    then currentFlowStatus
+  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" &&  (isNothing $ (gPayload.payload)^._signatureAuthData) then do
+    _ <- pure $ spy "debug perf" "inside update InitialStage"
+    updateLocalStage InitialStage
+    homeScreenFlow
     else do
       let (Payload payload) = gPayload.payload
       case payload.signatureAuthData of
@@ -505,7 +507,7 @@ chooseLanguageScreenFlow = do
 
 updateCustomerVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateCustomerVersion dbClientVersion dbBundleVersion = do
-  if (isJust dbClientVersion 
+  if (isJust dbClientVersion
   && isJust dbBundleVersion) then do
     let versionName = getValueToLocalStore VERSION_NAME
         bundle = getValueToLocalStore BUNDLE_VERSION
@@ -2020,7 +2022,7 @@ isForLostAndFound = true
 
 checkAndUpdateSavedLocations :: HomeScreenState -> FlowBT String Unit
 checkAndUpdateSavedLocations state = do
-  if (getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)
+  if ((getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)) && not (isLocalStageOn InitialStage)
     then do
       recentPredictionsObject <- lift $ lift $ getObjFromLocal state
       (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""

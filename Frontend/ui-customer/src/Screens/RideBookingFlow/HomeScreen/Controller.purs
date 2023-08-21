@@ -619,9 +619,15 @@ data Action = NoAction
             | TerminateApp
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
+            | UpdateData
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval UpdateData state = do
+  if (isLocalStageOn InitialStage) then do
+    exit $ CheckFlowStatus state
+  else continue state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
