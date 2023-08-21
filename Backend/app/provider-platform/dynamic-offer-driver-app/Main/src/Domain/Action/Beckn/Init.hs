@@ -99,7 +99,7 @@ cancelBooking ::
   ) =>
   DRB.Booking ->
   Id DM.Merchant ->
-  m AckResponse
+  m BecknAPIResponse -- prash check this
 cancelBooking booking transporterId = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   let transporterId' = booking.providerId
@@ -110,7 +110,7 @@ cancelBooking booking transporterId = do
   _ <- QRB.updateStatus booking.id DRB.CANCELLED
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
-  pure Ack
+  pure getSuccessRes
   where
     buildBookingCancellationReason = do
       return $
@@ -168,7 +168,7 @@ handler merchantId req eitherReq = do
     buildBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
-        HasField "transactionId" sr Text,
+        HasField "transactionId" sr Text, -- Remove prash
         HasField "fromLocation" sr DLoc.SearchReqLocation,
         HasField "toLocation" sr DLoc.SearchReqLocation,
         HasField "estimatedDuration" sr Seconds,

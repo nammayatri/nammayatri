@@ -50,11 +50,11 @@ buildSearchReq subscriber req = do
   unless (subscriber.subscriber_url == context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
   let messageId = context.message_id
-  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
+  -- transactionId <- context.transaction_id -- & fromMaybeM (InvalidRequest "Missing transaction_id") -- check prash
   pure
     DSearch.DSearchReq
       { messageId = messageId,
-        transactionId = transactionId,
+        transactionId = context.transaction_id,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = context.city,

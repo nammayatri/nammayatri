@@ -21,7 +21,7 @@ import qualified EulerHS.Types as ET
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.JSONBS
@@ -31,7 +31,7 @@ import Servant
 handler :: FlowServer API.API
 handler = trigger :<|> callbackReceiver
 
-trigger :: Text -> BS.ByteString -> FlowHandler AckResponse
+trigger :: Text -> BS.ByteString -> FlowHandler BecknAPIResponse
 trigger urlText body = withFlowHandlerBecknAPI $ do
   url <- parseBaseUrl urlText
   logInfo $ decodeUtf8 body
@@ -44,16 +44,16 @@ callBAP ::
   ) =>
   BaseUrl ->
   BS.ByteString ->
-  m AckResponse
+  m BecknAPIResponse
 callBAP uri body = do
   selfId <- asks (.selfId)
   let authKey = getHttpManagerKey selfId
   Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri body
   where
-    fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
+    fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] BecknAPIResponse)
     fakeAPI = Proxy
 
-callbackReceiver :: SignatureAuthResult -> Text -> BS.ByteString -> FlowHandler AckResponse
+callbackReceiver :: SignatureAuthResult -> Text -> BS.ByteString -> FlowHandler BecknAPIResponse
 callbackReceiver _ action body = withFlowHandlerBecknAPI $ do
   logInfo $ "Received " <> action <> " callback with body: " <> decodeUtf8 body
-  return Ack
+  return getSuccessRes

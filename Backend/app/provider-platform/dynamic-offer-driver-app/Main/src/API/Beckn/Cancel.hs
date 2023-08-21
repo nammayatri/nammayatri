@@ -23,7 +23,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -41,7 +41,7 @@ cancel ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   Cancel.CancelReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 cancel transporterId subscriber req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Cancel API Flow" "Reached"
@@ -56,7 +56,7 @@ cancel transporterId subscriber req =
         searchReq <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
         fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
           DCancel.cancelSearch transporterId cancelSearchReq searchReq
-    return Ack
+    return getSuccessRes
 
 cancelLockKey :: Text -> Text
 cancelLockKey id = "Driver:Cancel:BookingId-" <> id

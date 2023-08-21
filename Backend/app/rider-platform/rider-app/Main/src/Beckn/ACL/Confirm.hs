@@ -26,17 +26,26 @@ import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.Quote as QQ
+
+-- import Data.Time (getCurrentTime)
 
 buildConfirmReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOnInit.OnInitRes ->
   m (BecknReq Confirm.ConfirmMessage)
 buildConfirmReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  booking <- QB.findById res.bookingId >>= fromMaybeM (BookingDoesNotExist res.bookingId.getId)
+  quoteId <- booking.quoteId & fromMaybeM (InvalidRequest "QuoteId does not exist")
+  _ <- QQ.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId) -- get valid till from somewhere
+  validTill <- getCurrentTime -- correct this
+  context <- buildTaxiContext Context.CONFIRM messageId res.transactionId res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False (Just validTill)
   message <- mkConfirmMessage res
   pure $ BecknReq context message
 

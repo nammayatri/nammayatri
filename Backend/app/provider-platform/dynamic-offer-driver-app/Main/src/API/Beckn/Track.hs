@@ -23,7 +23,7 @@ import qualified Domain.Action.Beckn.Track as DTrack
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
-import Kernel.Types.Beckn.Ack
+import Kernel.Types.Beckn.BecknAPIResponse
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -42,7 +42,7 @@ track ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   Track.TrackReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 track transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "track API Flow" "Reached"

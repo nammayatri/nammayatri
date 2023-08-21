@@ -44,7 +44,7 @@ buildStatusReq DStatusReq {..} = do
     buildTaxiContext
       Context.STATUS
       messageId
-      (Just booking.transactionId)
+      booking.transactionId
       merchant.bapId
       bapUrl
       (Just merchant.id.getId)
@@ -52,6 +52,7 @@ buildStatusReq DStatusReq {..} = do
       merchant.city
       merchant.country
       False
+      Nothing
   pure $
     BecknReq context $
       Status.StatusMessage

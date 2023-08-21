@@ -77,10 +77,11 @@ buildContext' config action txnId bapId bapUri bppId bppUri = do
         bap_uri = bapUri,
         bpp_id = bppId,
         bpp_uri = bppUri,
-        transaction_id = Just txnId,
+        transaction_id = txnId,
         message_id = message_id,
         timestamp = timestamp,
-        max_callbacks = Nothing
+        max_callbacks = Nothing,
+        ttl = Nothing
       }
 
 validateContext' :: (MonadThrow m, Log m) => CoreConfig -> Context.Action -> Context.Context -> m ()

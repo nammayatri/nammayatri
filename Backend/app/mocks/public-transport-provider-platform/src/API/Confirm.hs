@@ -25,7 +25,7 @@ import ExternalAPI
 import Kernel.Mock.App
 import Kernel.Mock.Utils
 import Kernel.Prelude
-import Kernel.Types.Beckn.Ack
+import Kernel.Types.Beckn.BecknAPIResponse
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Utils.Time
@@ -33,7 +33,7 @@ import MockData.OnConfirm
 import qualified Redis
 import Relude.Monad.Either
 
-confirmServer :: BecknReq Confirm.ConfirmMessage -> MockM AppEnv AckResponse
+confirmServer :: BecknReq Confirm.ConfirmMessage -> MockM AppEnv BecknAPIResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do
   logOutput INFO $ "got confirm request: " <> show confirmReq
 
@@ -49,7 +49,7 @@ confirmServer confirmReq@(BecknReq ctx msg) = do
       Redis.writeOrder context' onConfirmOrder
       trackPayment onConfirmOrder.id
 
-  pure Ack
+  pure getSuccessRes
 
 data HandlingWay = Success | FailedPayment | LinkExpired
   deriving (Show)

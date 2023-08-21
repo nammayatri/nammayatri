@@ -19,16 +19,16 @@ import "public-transport-rider-platform" Beckn.Spec.Search
 import Environment
 import ExternalAPI
 import Kernel.Mock.App
-import Kernel.Types.Beckn.Ack (AckResponse (..))
+-- import Kernel.Types.Beckn.BecknAPIResponse (BecknAPIResponse)
 import Kernel.Types.Beckn.Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
-import Kernel.Utils.Common (logPretty)
-import Kernel.Utils.Time
+import Kernel.Utils.Common
+-- import Kernel.Utils.Time
 import MockData.OnSearch
 import Relude
 
-searchServer :: BecknReq SearchMessage -> MockM AppEnv AckResponse
+searchServer :: BecknReq SearchMessage -> MockM AppEnv BecknAPIResponse
 searchServer becknReq@(BecknReq ctx req) = do
   logPretty DEBUG "request body" becknReq
   _ <- fork "call on_search" $ do
@@ -38,4 +38,4 @@ searchServer becknReq@(BecknReq ctx req) = do
     let callbackData = onSearchCatalog req.intent.fulfillment.start.time.range.start
     _ <- callGatewayOnSearch $ BecknCallbackReq context' $ Right callbackData
     pure ()
-  pure Ack
+  pure getSuccessRes

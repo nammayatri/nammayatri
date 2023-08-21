@@ -37,9 +37,9 @@ buildOnUpdateReq ::
   m (Maybe DOnUpdate.OnUpdateReq)
 buildOnUpdateReq req = do
   validateContext Context.ON_UPDATE $ req.context
-  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "transaction_id is not present.")
+  -- transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "transaction_id is not present.")
   handleError req.contents $ \message -> do
-    parseEvent transactionId message.order
+    parseEvent req.context.transaction_id message.order
 
 handleError ::
   (MonadFlow m) =>

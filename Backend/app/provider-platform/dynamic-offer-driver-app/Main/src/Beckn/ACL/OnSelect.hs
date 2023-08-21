@@ -16,13 +16,14 @@ module Beckn.ACL.OnSelect where
 
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
-import qualified Data.Text as T
-import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
+-- import qualified Data.Text as T
+-- import Data.Time (diffUTCTime)
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
+import Kernel.Utils.Time (diffUTCTime, formatTimeDifference)
 import SharedLogic.FareCalculator (mkBreakupList)
 
 data DOnSelectReq = DOnSelectReq
@@ -169,7 +170,7 @@ mkQuote driverQuote now = do
   let nominalDifferenceTime = diffUTCTime driverQuote.validTill now
   OS.Quote
     { price = mkPrice driverQuote,
-      ttl = Just $ T.pack $ formatTimeDifference nominalDifferenceTime, --------- todo
+      ttl = Just $ formatTimeDifference nominalDifferenceTime, --------- todo -- create like this and add in kernel (isTtlExpired that takes ttl and expiry time)
       breakup = breakup_
     }
   where
@@ -180,8 +181,9 @@ mkQuote driverQuote now = do
         || breakup.title == "DRIVER_SELECTED_FARE"
         || breakup.title == "CUSTOMER_SELECTED_FARE"
         || breakup.title == "TOTAL_FARE"
-    formatTimeDifference duration =
-      let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
-          (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
-          (minutes, seconds) = divMod remainingSeconds 60
-       in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"
+
+-- formatTimeDifference duration =
+--   let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
+--       (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
+--       (minutes, seconds) = divMod remainingSeconds 60
+--    in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"

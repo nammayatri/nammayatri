@@ -19,7 +19,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Domain.Action.Beckn.OnTrack as DOnTrack
 import Environment
 import Kernel.Prelude
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 
@@ -31,11 +31,11 @@ handler = onTrack
 onTrack ::
   SignatureAuthResult ->
   OnTrack.OnTrackReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onTrack _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnTrackReq <- ACL.buildOnTrackReq req
   whenJust mbDOnTrackReq \onTrackReq -> do
     validatedReq <- DOnTrack.validateRequest onTrackReq
     fork "on track processing" $
       DOnTrack.onTrack validatedReq
-  pure Ack
+  pure getSuccessRes

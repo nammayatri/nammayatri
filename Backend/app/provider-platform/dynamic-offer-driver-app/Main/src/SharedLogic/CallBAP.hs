@@ -72,17 +72,18 @@ callOnSelect ::
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
+  UTCTime ->
   DST.SearchTry ->
   OnSelect.OnSelectMessage ->
   m ()
-callOnSelect transporter searchRequest searchTry content = do
+callOnSelect transporter searchRequest validTill searchTry content = do
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   let msgId = searchTry.estimateId.getId
-  context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
+  context <- buildTaxiContext Context.ON_SELECT msgId searchRequest.transactionId bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False (Just validTill)
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
 
@@ -105,7 +106,7 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
-  context <- buildTaxiContext Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
+  context <- buildTaxiContext Context.ON_UPDATE msgId transactionId bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False Nothing
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
@@ -127,7 +128,7 @@ callOnConfirm transporter contextFromConfirm content = do
       bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
-  context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
+  context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False Nothing -- send validTill
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::
@@ -254,7 +255,7 @@ sendDriverOffer ::
   m ()
 sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
-  callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
+  callOnSelect transporter searchReq driverQuote.validTill searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>

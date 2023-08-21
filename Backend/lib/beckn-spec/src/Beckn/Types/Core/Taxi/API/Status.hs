@@ -16,13 +16,13 @@ module Beckn.Types.Core.Taxi.API.Status where
 
 import Beckn.Types.Core.Taxi.Status (StatusMessage)
 import EulerHS.Prelude
-import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.BecknAPIResponse (BecknAPIResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type StatusReq = BecknReq StatusMessage
 
-type StatusRes = AckResponse
+type StatusRes = BecknAPIResponse
 
 type StatusAPI =
   "status"

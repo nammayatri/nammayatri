@@ -36,9 +36,9 @@ onSearch ::
   SignatureAuthResult ->
   SignatureAuthResult ->
   OnSearch.OnSearchReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   let searchReqId = Id req.context.message_id
   mbMetroOffers <- MetroACL.buildMetroOffers req
   whenJust mbMetroOffers $ MetroOffers.cacheMetroOffers searchReqId
-  pure Ack
+  pure getSuccessRes
