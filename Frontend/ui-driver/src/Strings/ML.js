@@ -711,5 +711,6 @@ const mlStrings = {
   DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത ഓഫറുകൾ ഈ പ്ലാനിൽ ബാധകമല്ല!", 
   NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day" ,
   GET_SPECIAL_OFFERS : "Get Special Offers",
-  VALID_ONLY_IF_PAYMENT : "valid only if payment is completed"
+  VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
+  HELP_STR : "HELP"
 }

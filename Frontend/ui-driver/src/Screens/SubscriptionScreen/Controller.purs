@@ -10,11 +10,11 @@ import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
 import Data.String (toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp)
+import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard)
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, continue, exit, updateAndExit)
+import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
@@ -107,11 +107,15 @@ eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selecte
 
 eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state
 
-eval HeaderRightClick state = do
-    -- case state.props.subView of
-    -- MyPlan -> exit $ PaymentHistory state 
+eval HeaderRightClick state =  do
     _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
-    updateAndExit state { props{showShimmer = true, subView = ManagePlan}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
+    case state.props.subView of
+    -- MyPlan -> exit $ PaymentHistory state 
+      JoinPlan -> continueWithCmd state [do
+          _ <- openUrlInApp "https://nammayatri.in/plans/"
+          pure NoAction
+        ]
+      _ -> updateAndExit state { props{showShimmer = true, subView = ManagePlan}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
