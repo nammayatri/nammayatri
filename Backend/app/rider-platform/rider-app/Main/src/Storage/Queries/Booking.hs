@@ -44,10 +44,10 @@ import qualified Storage.Queries.Quote ()
 import Storage.Queries.RentalSlab as QueryRS
 import qualified Storage.Queries.TripTerms as QTT
 
-createBooking :: (L.MonadFlow m, Log m) => Booking -> m ()
+createBooking :: MonadFlow m => Booking -> m ()
 createBooking = createWithKV
 
-create :: (L.MonadFlow m, Log m) => Booking -> m ()
+create :: MonadFlow m => Booking -> m ()
 create dBooking = do
   _ <- QBBL.create (dBooking.fromLocation)
   _ <- case dBooking.bookingDetails of
@@ -57,7 +57,7 @@ create dBooking = do
     OneWaySpecialZoneDetails toLoc -> void $ QBBL.create toLoc.toLocation
   void $ createBooking dBooking
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
+updateStatus :: MonadFlow m => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
   updateOneWithKV
@@ -66,7 +66,7 @@ updateStatus rbId rbStatus = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateBPPBookingId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id BPPBooking -> m ()
+updateBPPBookingId :: MonadFlow m => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -75,7 +75,7 @@ updateBPPBookingId rbId bppRbId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateOtpCodeBookingId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
+updateOtpCodeBookingId :: MonadFlow m => Id Booking -> Text -> m ()
 updateOtpCodeBookingId rbId otp = do
   now <- getCurrentTime
   updateOneWithKV
@@ -84,7 +84,7 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
+findLatestByRiderIdAndStatus :: MonadFlow m => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
 findLatestByRiderIdAndStatus (Id riderId) bookingStatusList =
   do
     let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.In bookingStatusList]]
@@ -94,22 +94,22 @@ findLatestByRiderIdAndStatus (Id riderId) bookingStatusList =
     <&> listToMaybe
     <&> (Domain.status <$>)
 
-findById :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
+findById :: MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
-findByBPPBookingId :: (L.MonadFlow m, Log m) => Id BPPBooking -> m (Maybe Booking)
+findByBPPBookingId :: MonadFlow m => Id BPPBooking -> m (Maybe Booking)
 findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
 
-findByIdAndMerchantId :: (L.MonadFlow m, Log m) => Id Booking -> Id Merchant -> m (Maybe Booking)
+findByIdAndMerchantId :: MonadFlow m => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
-findAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
+findAllByRiderId :: MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
   let limit' = fmap fromIntegral $ mbLimit <|> Just 10
       offset' = fmap fromIntegral $ mbOffset <|> Just 0
   findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
 
-findCountByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
+findCountByRiderIdAndStatus :: MonadFlow m => Id Person -> BookingStatus -> m Int
 findCountByRiderIdAndStatus (Id personId) status = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -123,7 +123,7 @@ findCountByRiderIdAndStatus (Id personId) status = do
 
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-findCountByRideIdStatusAndTime :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
+findCountByRideIdStatusAndTime :: MonadFlow m => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -137,20 +137,20 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-findByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m [Booking]
+findByRiderIdAndStatus :: MonadFlow m => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
 
-findAssignedByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Booking)
+findAssignedByRiderId :: MonadFlow m => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
-findBookingIdAssignedByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe (Id Booking))
+findBookingIdAssignedByEstimateId :: MonadFlow m => Id Estimate -> m (Maybe (Id Booking))
 findBookingIdAssignedByEstimateId (Id estimateId) = do
   driverOffer <- findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
   quote <- findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In $ map (\x -> Just (getId x.id)) driverOffer]
   booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]
   return $ listToMaybe $ Domain.id <$> booking
 
-updatePaymentInfo :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
+updatePaymentInfo :: MonadFlow m => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
   updateOneWithKV
@@ -162,7 +162,7 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = 
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updatePaymentUrl :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
+updatePaymentUrl :: MonadFlow m => Id Booking -> Text -> m ()
 updatePaymentUrl bookingId paymentUrl = do
   now <- getCurrentTime
   updateOneWithKV
@@ -171,13 +171,13 @@ updatePaymentUrl bookingId paymentUrl = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-findAllByPersonIdLimitOffset :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
+findAllByPersonIdLimitOffset :: MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
 findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
   let limit' = fmap fromIntegral $ mlimit <|> Just 100
       offset' = fmap fromIntegral $ moffset <|> Just 0
   findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
 
-findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings :: MonadFlow m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 findStuckBookings (Id merchantId) bookingIds now =
   do
     let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
@@ -191,7 +191,7 @@ findStuckBookings (Id merchantId) bookingIds now =
       ]
     <&> (Domain.id <$>)
 
-findAllCancelledBookingIdsByRider :: (L.MonadFlow m, Log m) => Id Person -> m [Id Booking]
+findAllCancelledBookingIdsByRider :: MonadFlow m => Id Person -> m [Id Booking]
 findAllCancelledBookingIdsByRider (Id riderId) =
   findAllWithDb
     [ Se.And
@@ -201,7 +201,7 @@ findAllCancelledBookingIdsByRider (Id riderId) =
     ]
     <&> (Domain.id <$>)
 
-cancelBookings :: (L.MonadFlow m, MonadTime m, Log m) => [Id Booking] -> UTCTime -> m ()
+cancelBookings :: MonadFlow m => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
   updateWithKV
     [ Se.Set BeamB.status CANCELLED,

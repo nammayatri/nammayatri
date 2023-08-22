@@ -17,7 +17,6 @@ module Storage.Queries.Estimate where
 
 import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -27,28 +26,28 @@ import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
 import qualified Storage.Queries.TripTerms as QTT
 
-createEstimate :: (L.MonadFlow m, Log m) => Estimate -> m ()
+createEstimate :: MonadFlow m => Estimate -> m ()
 createEstimate = createWithKV
 
-create :: (L.MonadFlow m, Log m) => Estimate -> m ()
+create :: MonadFlow m => Estimate -> m ()
 create estimate = do
   _ <- traverse_ QTT.createTripTerms estimate.tripTerms
   _ <- createEstimate estimate
   traverse_ QEB.create estimate.estimateBreakupList
 
-createMany :: (L.MonadFlow m, Log m) => [Estimate] -> m ()
+createMany :: MonadFlow m => [Estimate] -> m ()
 createMany = traverse_ create
 
-findById :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
+findById :: MonadFlow m => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
 
-findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Estimate]
+findAllBySRId :: MonadFlow m => Id SearchRequest -> m [Estimate]
 findAllBySRId (Id searchRequestId) = findAllWithKV [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
 
-findByBPPEstimateId :: (L.MonadFlow m, Log m) => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId :: MonadFlow m => Id BPPEstimate -> m (Maybe Estimate)
 findByBPPEstimateId (Id bppEstimateId_) = findOneWithKV [Se.Is BeamE.bppEstimateId $ Se.Eq bppEstimateId_]
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Estimate -> EstimateStatus -> m ()
+updateStatus :: MonadFlow m => Id Estimate -> EstimateStatus -> m ()
 updateStatus (Id estimateId) status_ = do
   now <- getCurrentTime
   updateOneWithKV
@@ -57,10 +56,10 @@ updateStatus (Id estimateId) status_ = do
     ]
     [Se.Is BeamE.id (Se.Eq estimateId)]
 
-getStatus :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe EstimateStatus)
+getStatus :: MonadFlow m => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)
 
-updateStatusByRequestId :: (L.MonadFlow m, MonadTime m, Log m) => Id SearchRequest -> EstimateStatus -> m ()
+updateStatusByRequestId :: MonadFlow m => Id SearchRequest -> EstimateStatus -> m ()
 updateStatusByRequestId (Id searchId) status_ = do
   now <- getCurrentTime
   updateWithKV

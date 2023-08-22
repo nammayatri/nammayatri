@@ -18,7 +18,6 @@ module Storage.Queries.DriverOffer where
 import Database.Beam.MySQL ()
 import Domain.Types.DriverOffer
 import Domain.Types.Estimate
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
@@ -26,16 +25,16 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 
-createDriverOffer :: (L.MonadFlow m, Log m) => DriverOffer -> m ()
+createDriverOffer :: MonadFlow m => DriverOffer -> m ()
 createDriverOffer = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id DriverOffer -> m (Maybe DriverOffer)
+findById :: MonadFlow m => Id DriverOffer -> m (Maybe DriverOffer)
 findById (Id driverOfferId) = findOneWithKV [Se.Is BeamDO.id $ Se.Eq driverOfferId]
 
-findByBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> m [DriverOffer]
+findByBPPQuoteId :: MonadFlow m => Text -> m [DriverOffer]
 findByBPPQuoteId bppQuoteId = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Estimate -> DriverOfferStatus -> m ()
+updateStatus :: MonadFlow m => Id Estimate -> DriverOfferStatus -> m ()
 updateStatus (Id estimateId) status = do
   now <- getCurrentTime
   updateWithKV

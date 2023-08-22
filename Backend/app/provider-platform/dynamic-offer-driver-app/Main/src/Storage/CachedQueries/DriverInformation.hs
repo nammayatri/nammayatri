@@ -19,7 +19,6 @@ module Storage.CachedQueries.DriverInformation where
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
-import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -30,36 +29,36 @@ import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.DriverInformation as Queries
 import qualified Storage.Queries.Person as QueriesPerson
 
-create :: (L.MonadFlow m, Log m) => DriverInformation -> m ()
+create :: MonadFlow m => DriverInformation -> m ()
 create = Queries.create
 
-findById :: (CacheFlow m r, L.MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
+findById :: (CacheFlow m r, MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeDriverInformationIdKey id) >>= \case
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 
-updateActivity :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
+updateActivity :: (CacheFlow m r, MonadFlow m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
 updateActivity driverId isActive mode = do
   clearDriverInfoCache driverId
   Queries.updateActivity driverId isActive mode
 
-updateEnabledState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
+updateEnabledState :: (CacheFlow m r, MonadFlow m) => Id Person.Driver -> Bool -> m ()
 updateEnabledState driverId isEnabled = do
   clearDriverInfoCache driverId
   Queries.updateEnabledState driverId isEnabled
 
-updateAadhaarVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
+updateAadhaarVerifiedState :: (CacheFlow m r, MonadFlow m) => Id Person.Driver -> Bool -> m ()
 updateAadhaarVerifiedState driverId isVerified = do
   clearDriverInfoCache driverId
   void $ Queries.updateAadhaarVerifiedState driverId isVerified
 
-updateEnabledVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Bool -> m ()
+updateEnabledVerifiedState :: (CacheFlow m r, MonadFlow m) => Id Person.Driver -> Bool -> Bool -> m ()
 updateEnabledVerifiedState driverId isEnabled isVerified = do
   clearDriverInfoCache driverId
   Queries.updateEnabledVerifiedState driverId isEnabled isVerified
 
-updateBlockedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
+updateBlockedState :: (CacheFlow m r, MonadFlow m) => Id Person.Driver -> Bool -> m ()
 updateBlockedState driverId isBlocked = do
   clearDriverInfoCache driverId
   Queries.updateBlockedState driverId isBlocked
@@ -69,22 +68,22 @@ updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked = do
   Queries.updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked
   clearDriverInfoCache driverId
 
-verifyAndEnableDriver :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> m ()
+verifyAndEnableDriver :: (CacheFlow m r, MonadFlow m) => Id Person -> m ()
 verifyAndEnableDriver driverId = do
   clearDriverInfoCache (cast driverId)
   Queries.verifyAndEnableDriver driverId
 
-updateOnRide :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
+updateOnRide :: (CacheFlow m r, MonadFlow m) => Id Person.Driver -> Bool -> m ()
 updateOnRide driverId onRide = do
   clearDriverInfoCache driverId
   Queries.updateOnRide driverId onRide
 
-updatePendingPayment :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
+updatePendingPayment :: (CacheFlow m r, MonadFlow m) => Bool -> Id Person.Driver -> m ()
 updatePendingPayment isPending driverId = do
   clearDriverInfoCache driverId
   void $ Queries.updatePendingPayment isPending driverId
 
-updateSubscription :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
+updateSubscription :: (CacheFlow m r, MonadFlow m) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed driverId = do
   clearDriverInfoCache driverId
   void $ Queries.updateSubscription isSubscribed driverId
@@ -95,7 +94,7 @@ updateAutoPayStatus driverAutoPayStatus driverId = do
   clearDriverInfoCache driverId
 
 -- this function created because all queries wishfully should be in one transaction
-updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m, Log m) => [Id Person.Driver] -> m ()
+updateNotOnRideMultiple :: MonadFlow m => [Id Person.Driver] -> m ()
 updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
 
 deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
@@ -117,18 +116,18 @@ findAllWithLimitOffsetByMerchantId = Queries.findAllWithLimitOffsetByMerchantId
 -- getDriversWithOutdatedLocationsToMakeInactive :: Esq.Transactionable m => UTCTime -> m [Person]
 -- getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
 
-getDriversWithOutdatedLocationsToMakeInactive :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: MonadFlow m => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive = QueriesPerson.getDriversWithOutdatedLocationsToMakeInactive
 
-addReferralCode :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
+addReferralCode :: (CacheFlow m r, MonadFlow m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
 addReferralCode personId code = do
   clearDriverInfoCache (cast personId)
   Queries.addReferralCode personId code
 
-countDrivers :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
+countDrivers :: MonadFlow m => Id Merchant -> m (Int, Int)
 countDrivers = Queries.countDrivers
 
-updateDowngradingOptions :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> Bool -> Bool -> m ()
+updateDowngradingOptions :: MonadFlow m => Id Person -> Bool -> Bool -> Bool -> m ()
 updateDowngradingOptions = Queries.updateDowngradingOptions
 
 --------- Caching logic -------------------

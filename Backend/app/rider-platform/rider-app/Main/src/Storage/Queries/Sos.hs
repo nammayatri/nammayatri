@@ -4,7 +4,6 @@ module Storage.Queries.Sos where
 
 import Domain.Types.Person as Person ()
 import Domain.Types.Sos as Sos
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -12,10 +11,10 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as BeamS
 
-create :: (L.MonadFlow m, Log m) => Sos.Sos -> m ()
+create :: MonadFlow m => Sos.Sos -> m ()
 create = createWithKV
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Sos.Sos -> Sos.SosStatus -> m ()
+updateStatus :: MonadFlow m => Id Sos.Sos -> Sos.SosStatus -> m ()
 updateStatus sosId status = do
   now <- getCurrentTime
   updateOneWithKV
@@ -24,7 +23,7 @@ updateStatus sosId status = do
     ]
     [Se.Is BeamS.id $ Se.Eq (getId sosId)]
 
-findById :: (L.MonadFlow m, Log m) => Id Sos.Sos -> m (Maybe Sos)
+findById :: MonadFlow m => Id Sos.Sos -> m (Maybe Sos)
 findById sosId = findOneWithKV [Se.Is BeamS.id $ Se.Eq (getId sosId)]
 
 instance FromTType' BeamS.Sos Sos where

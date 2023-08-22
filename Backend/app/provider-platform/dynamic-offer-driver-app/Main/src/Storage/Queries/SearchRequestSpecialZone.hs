@@ -17,39 +17,38 @@ module Storage.Queries.SearchRequestSpecialZone where
 
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import Kernel.Utils.Error
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
-createSearchRequestSpecialZone :: (L.MonadFlow m, Log m) => SearchRequestSpecialZone -> m ()
+createSearchRequestSpecialZone :: MonadFlow m => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone = createWithKV
 
-create :: (L.MonadFlow m, Log m) => SearchRequestSpecialZone -> m ()
+create :: MonadFlow m => SearchRequestSpecialZone -> m ()
 create srsz = QSRL.create srsz.fromLocation >> QSRL.create srsz.toLocation >> createSearchRequestSpecialZone srsz
 
-findById :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+findById :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById (Id searchRequestSpecialZoneId) = findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
 
-getRequestIdfromTransactionId :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
+getRequestIdfromTransactionId :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
 getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSRSZ.transactionId $ Se.Eq tId] <&> (Domain.id <$>)
 
-findByMsgIdAndBapIdAndBppId :: (L.MonadFlow m, Log m) => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByMsgIdAndBapIdAndBppId :: MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
 findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
 
 findByTransactionId ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id SearchRequestSpecialZone ->
   m (Maybe (Id SearchRequestSpecialZone))
 findByTransactionId (Id tId) = findOneWithKV [Se.Is BeamSRSZ.transactionId $ Se.Eq tId] <&> (Domain.id <$>)
 
-getValidTill :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
+getValidTill :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do
   findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId] <&> (Domain.validTill <$>)
 

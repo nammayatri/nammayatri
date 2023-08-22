@@ -26,7 +26,6 @@ import qualified Data.List
 import Domain.Types.Merchant
 import Domain.Types.Merchant.OnboardingDocumentConfig
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -35,13 +34,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.OnboardingDocumentConfig as BeamODC
 
-create :: (L.MonadFlow m, Log m) => OnboardingDocumentConfig -> m ()
+create :: MonadFlow m => OnboardingDocumentConfig -> m ()
 create = createWithKV
 
-findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [OnboardingDocumentConfig]
+findAllByMerchantId :: MonadFlow m => Id Merchant -> m [OnboardingDocumentConfig]
 findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamODC.merchantId $ Se.Eq merchantId]
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => OnboardingDocumentConfig -> m ()
+update :: MonadFlow m => OnboardingDocumentConfig -> m ()
 update config = do
   let supportedClassJson = BeamODC.getConfigJSON config.supportedVehicleClasses
   now <- getCurrentTime

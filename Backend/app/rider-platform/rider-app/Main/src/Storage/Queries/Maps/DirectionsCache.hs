@@ -21,18 +21,17 @@ module Storage.Queries.Maps.DirectionsCache
 where
 
 import Domain.Types.Maps.DirectionsCache
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Maps.DirectionsCache as BeamDC
 
-create :: (L.MonadFlow m, Log m) => DirectionsCache -> m ()
+create :: MonadFlow m => DirectionsCache -> m ()
 create = createWithKV
 
-findRoute :: (L.MonadFlow m, Log m) => Text -> Text -> Int -> m (Maybe DirectionsCache)
+findRoute :: MonadFlow m => Text -> Text -> Int -> m (Maybe DirectionsCache)
 findRoute originHash destHash slot = findOneWithKV [Se.And [Se.Is BeamDC.originHash $ Se.Eq originHash, Se.Is BeamDC.destHash $ Se.Eq destHash, Se.Is BeamDC.slot $ Se.Eq slot]]
 
 instance FromTType' BeamDC.DirectionsCache DirectionsCache where

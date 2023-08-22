@@ -16,7 +16,6 @@
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
 import qualified Domain.Types.FarePolicy as DFP
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id as KTI
@@ -24,18 +23,16 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 
-findById' :: (L.MonadFlow m, Log m) => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
+findById' :: MonadFlow m => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findById' farePolicyId' = findOneWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
 
 findAll' ::
-  ( L.MonadFlow m,
-    Log m
-  ) =>
+  MonadFlow m =>
   Id DFP.FarePolicy ->
   m [BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
 
-deleteAll' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
+deleteAll' :: MonadFlow m => Id DFP.FarePolicy -> m ()
 deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]
 
 instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where

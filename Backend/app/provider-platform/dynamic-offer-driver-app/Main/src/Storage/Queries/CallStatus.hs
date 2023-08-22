@@ -22,26 +22,26 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 import qualified Storage.Beam.Common as BeamCommon
 
-create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
+create :: MonadFlow m => CallStatus -> m ()
 create cs = do
   callS <- findByCallSid (cs.callId)
   case callS of
     Nothing -> createWithKV cs
     Just _ -> pure ()
 
-findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
+findById :: MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCT.id $ Se.Eq callStatusId]
 
-findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
+findByCallSid :: MonadFlow m => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 
-updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
+updateCallStatus :: MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Set BeamCT.conversationDuration conversationDuration,
@@ -50,7 +50,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
     ]
     [Is BeamCT.id (Se.Eq callId)]
 
-countCallsByEntityId :: (L.MonadFlow m) => Id Ride -> m Int
+countCallsByEntityId :: MonadFlow m => Id Ride -> m Int
 countCallsByEntityId entityID = do
   dbConf <- getMasterBeamConfig
   resp <-

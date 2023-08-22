@@ -17,7 +17,6 @@ module Storage.Queries.MetaData where
 
 import Domain.Types.MetaData
 import Domain.Types.Person
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -25,10 +24,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.MetaData as BeamMD
 
-create :: (L.MonadFlow m, Log m) => MetaData -> m ()
+create :: MonadFlow m => MetaData -> m ()
 create = createWithKV
 
-updateMetaData :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> m ()
+updateMetaData :: MonadFlow m => Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> m ()
 updateMetaData personId device deviceOS deviceDateTime appPermissions = do
   now <- getCurrentTime
   updateOneWithKV

@@ -21,7 +21,6 @@ where
 
 import Data.Singletons
 import qualified Data.UUID as UU
--- import EulerHS.Language as L
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))

@@ -16,18 +16,17 @@
 module Storage.Queries.Feedback.FeedbackForm where
 
 import Domain.Types.Feedback.FeedbackForm
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Feedback.FeedbackForm as BFF
 
-findAllFeedback :: (L.MonadFlow m, Log m) => m [FeedbackFormRes]
+findAllFeedback :: MonadFlow m => m [FeedbackFormRes]
 findAllFeedback = findAllWithDb [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
 
-findAllFeedbackByRating :: (L.MonadFlow m, Log m) => Int -> m [FeedbackFormRes]
+findAllFeedbackByRating :: MonadFlow m => Int -> m [FeedbackFormRes]
 findAllFeedbackByRating rating = findAllWithDb [Se.Or [Se.Is BFF.rating $ Se.Eq $ Just rating, Se.Is BFF.rating $ Se.Eq Nothing]]
 
 instance FromTType' BFF.FeedbackForm FeedbackFormRes where

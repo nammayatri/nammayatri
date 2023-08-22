@@ -17,19 +17,18 @@ module Storage.Queries.PlanTranslation where
 
 import qualified Domain.Types.Plan as Plan
 import Domain.Types.PlanTranslation
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.PlanTranslation as BeamPT
 
-create :: (L.MonadFlow m, Log m) => PlanTranslation -> m ()
+create :: MonadFlow m => PlanTranslation -> m ()
 create = createWithKV
 
-findByPlanIdAndLanguage :: (L.MonadFlow m, Log m) => Id Plan.Plan -> Language -> m (Maybe PlanTranslation)
+findByPlanIdAndLanguage :: MonadFlow m => Id Plan.Plan -> Language -> m (Maybe PlanTranslation)
 findByPlanIdAndLanguage (Id planId) language = findOneWithKV [Se.And [Se.Is BeamPT.planId $ Se.Eq planId, Se.Is BeamPT.language $ Se.Eq language]]
 
 instance FromTType' BeamPT.PlanTranslation PlanTranslation where

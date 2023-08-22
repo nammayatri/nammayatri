@@ -24,7 +24,6 @@ import qualified Data.Aeson as A
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
@@ -43,13 +42,13 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Tools.Error
 
-findByMerchantIdAndService :: (L.MonadFlow m, Log m) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService :: MonadFlow m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService (Id merchantId) serviceName = findOneWithKV [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
 
-findOne :: (L.MonadFlow m, Log m) => ServiceName -> m (Maybe MerchantServiceConfig)
+findOne :: MonadFlow m => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = findAllWithOptionsKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName] (Se.Desc BeamMSC.createdAt) (Just 1) Nothing <&> listToMaybe
 
-upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig :: MonadFlow m => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig

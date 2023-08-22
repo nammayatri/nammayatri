@@ -21,7 +21,6 @@ where
 
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -42,7 +41,7 @@ data RideInfo = RideInfo
     rideStatus :: DRide.RideStatus
   }
 
-onStatus :: (L.MonadFlow m, MonadTime m, Log m) => OnStatusReq -> m ()
+onStatus :: MonadFlow m => OnStatusReq -> m ()
 onStatus OnStatusReq {..} = do
   booking <- QBooking.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   case mbRideInfo of

@@ -17,15 +17,14 @@ module Storage.Queries.HotSpotConfig where
 
 import Domain.Types.HotSpotConfig
 import Domain.Types.Merchant (Merchant)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.HotSpotConfig as BeamHSC
 
-findConfigByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe HotSpotConfig)
+findConfigByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe HotSpotConfig)
 findConfigByMerchantId merchantId = findOneWithKV [Se.Is BeamHSC.id $ Se.Eq $ getId merchantId]
 
 instance FromTType' BeamHSC.HotSpotConfig HotSpotConfig where

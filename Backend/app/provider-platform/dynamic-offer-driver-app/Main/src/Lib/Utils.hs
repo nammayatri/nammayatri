@@ -436,7 +436,7 @@ buildRadiusWithin'' (lat, lon) rad =
 
 -- instance OptionEntity ReplicaEnabled Bool
 
--- runInReplica :: (L.MonadFlow m, Log m) => m a -> m a
+-- runInReplica :: MonadFlow m => m a -> m a
 -- runInReplica m = do
 --   L.setOption ReplicaEnabled True
 --   res <- m

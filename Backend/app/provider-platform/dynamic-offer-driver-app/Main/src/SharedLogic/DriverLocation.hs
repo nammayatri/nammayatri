@@ -17,7 +17,6 @@ module SharedLogic.DriverLocation where
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
-import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -30,7 +29,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.Queries.DriverLocation as DLQueries
 
-upsertGpsCoord :: (CacheFlow m r, L.MonadFlow m, MonadTime m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+upsertGpsCoord :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 upsertGpsCoord driverId latLong calculationTime merchantId = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
@@ -50,7 +49,7 @@ upsertGpsCoord driverId latLong calculationTime merchantId = do
 makeDriverLocationKey :: Id Person -> Text
 makeDriverLocationKey id = "DriverLocation:PersonId-" <> id.getId
 
-findById :: (CacheFlow m r, L.MonadFlow m, MonadTime m, EsqLocRepDBFlow m r) => Id Merchant -> Id Person -> m (Maybe DriverLocation)
+findById :: (CacheFlow m r, MonadFlow m, EsqLocRepDBFlow m r) => Id Merchant -> Id Person -> m (Maybe DriverLocation)
 findById merchantId id =
   Hedis.safeGet (makeDriverLocationKey id) >>= \case
     Just a ->
@@ -64,7 +63,7 @@ findById merchantId id =
           -- flip whenJust cacheDriverLocation /=<< DLQueries.findByIdInReplica id
           flip whenJust cacheDriverLocation /=<< DLQueries.findById id
 
-getDriverLocationWithoutMerchantId :: (CacheFlow m r, L.MonadFlow m) => Id Person -> m (Maybe DriverLocationWithoutMerchantId)
+getDriverLocationWithoutMerchantId :: (CacheFlow m r, MonadFlow m) => Id Person -> m (Maybe DriverLocationWithoutMerchantId)
 getDriverLocationWithoutMerchantId = Hedis.safeGet . makeDriverLocationKey
 
 mkDriverLocation :: DriverLocationWithoutMerchantId -> Id Merchant -> DriverLocation
@@ -91,7 +90,7 @@ cacheDriverLocation driverLocation = do
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
   Hedis.setExp driverLocationKey driverLocation expTime
 
-updateOnRide :: (CacheFlow m r, L.MonadFlow m, MonadTime m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person.Driver -> Bool -> Id Merchant -> m ()
+updateOnRide :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person.Driver -> Bool -> Id Merchant -> m ()
 updateOnRide driverId onRide merchantId = do
   if onRide
     then do

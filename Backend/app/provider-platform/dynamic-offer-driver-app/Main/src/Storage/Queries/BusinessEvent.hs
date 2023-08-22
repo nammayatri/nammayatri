@@ -20,7 +20,6 @@ import Domain.Types.BusinessEvent
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant (Variant)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -28,7 +27,7 @@ import Kernel.Types.Id
 import qualified Storage.Beam.BusinessEvent as BeamBE
 
 logBusinessEvent ::
-  (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) =>
+  MonadFlow m =>
   Maybe (Id Driver) ->
   EventType ->
   Maybe (Id Booking) ->
@@ -56,7 +55,7 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
           }
   createWithKV bE
 
-logDriverAssignedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Driver -> Id Booking -> Id Ride -> m ()
+logDriverAssignedEvent :: MonadFlow m => Id Driver -> Id Booking -> Id Ride -> m ()
 logDriverAssignedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -68,7 +67,7 @@ logDriverAssignedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Booking -> m ()
+logRideConfirmedEvent :: MonadFlow m => Id Booking -> m ()
 logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
@@ -80,7 +79,7 @@ logRideConfirmedEvent bookingId = do
     Nothing
     Nothing
 
-logRideCommencedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Driver -> Id Booking -> Id Ride -> m ()
+logRideCommencedEvent :: MonadFlow m => Id Driver -> Id Booking -> Id Ride -> m ()
 logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)

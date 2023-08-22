@@ -20,16 +20,15 @@ import Data.Foldable
 import Data.Function hiding (id)
 import Data.Maybe
 import Domain.Types.Feedback.Feedback
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Storage.Beam.Feedback.Feedback as BeamF
 
-create :: (L.MonadFlow m, Log m) => Feedback -> m ()
+create :: MonadFlow m => Feedback -> m ()
 create = createWithKV
 
-createMany :: (L.MonadFlow m, Log m) => [Feedback] -> m ()
+createMany :: MonadFlow m => [Feedback] -> m ()
 createMany = traverse_ create
 
 instance FromTType' BeamF.Feedback Feedback where

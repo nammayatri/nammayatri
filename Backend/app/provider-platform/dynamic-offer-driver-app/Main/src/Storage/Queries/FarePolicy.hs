@@ -25,7 +25,6 @@ where
 
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
   ( FromTType' (fromTType'),
     ToTType' (toTType'),
@@ -43,10 +42,10 @@ import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 
-findById :: (L.MonadFlow m, Log m) => Id FarePolicy -> m (Maybe FarePolicy)
+findById :: MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
 findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId]
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => FarePolicy -> m ()
+update :: MonadFlow m => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
   void $
@@ -75,7 +74,7 @@ update farePolicy = do
       _ <- QueriesFPSDS.deleteAll' farePolicy.id
       mapM_ (create'' farePolicy.id) slabs
   where
-    create'' :: (L.MonadFlow m, Log m) => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
+    create'' :: MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = createWithKV (id', slab)
 
 instance ToTType' BeamFP.FarePolicy FarePolicy where

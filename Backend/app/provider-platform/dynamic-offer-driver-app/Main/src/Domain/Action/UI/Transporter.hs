@@ -24,7 +24,6 @@ where
 import Control.Applicative
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id (Id (..))
@@ -56,7 +55,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m, MonadTime m) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin merchantId req = do
   unless (merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req

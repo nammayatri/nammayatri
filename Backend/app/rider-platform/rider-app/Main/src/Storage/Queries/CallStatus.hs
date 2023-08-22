@@ -16,29 +16,28 @@
 module Storage.Queries.CallStatus where
 
 import Domain.Types.CallStatus
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
 import qualified Tools.Call as Call
 
-create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
+create :: MonadFlow m => CallStatus -> m ()
 create cs = do
   callS <- findByCallSid (cs.callId)
   case callS of
     Nothing -> createWithKV cs
     Just _ -> pure ()
 
-findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
+findById :: MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCS.id $ Se.Eq callStatusId]
 
-findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
+findByCallSid :: MonadFlow m => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
 
-updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
+updateCallStatus :: MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Se.Set BeamCS.conversationDuration conversationDuration,

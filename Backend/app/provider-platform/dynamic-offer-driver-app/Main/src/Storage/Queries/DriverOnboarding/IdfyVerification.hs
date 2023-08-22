@@ -18,7 +18,6 @@ module Storage.Queries.DriverOnboarding.IdfyVerification where
 import Domain.Types.DriverOnboarding.IdfyVerification as DDIV
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,36 +26,36 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
 
-create :: (L.MonadFlow m, Log m) => IdfyVerification -> m ()
+create :: MonadFlow m => IdfyVerification -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id IdfyVerification -> m (Maybe IdfyVerification)
+findById :: MonadFlow m => Id IdfyVerification -> m (Maybe IdfyVerification)
 findById (Id idfvId) = findOneWithKV [Se.Is BeamIV.id $ Se.Eq idfvId]
 
-findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [IdfyVerification]
+findAllByDriverId :: MonadFlow m => Id Person -> m [IdfyVerification]
 findAllByDriverId (Id driverId) = findAllWithKV [Se.Is BeamIV.driverId $ Se.Eq driverId]
 
-findLatestByDriverIdAndDocType :: (L.MonadFlow m, Log m) => Id Person -> ImageType -> m (Maybe IdfyVerification)
+findLatestByDriverIdAndDocType :: MonadFlow m => Id Person -> ImageType -> m (Maybe IdfyVerification)
 findLatestByDriverIdAndDocType (Id driverId) imgType = findAllWithOptionsKV [Se.And [Se.Is BeamIV.driverId $ Se.Eq driverId, Se.Is BeamIV.docType $ Se.Eq imgType]] (Se.Desc BeamIV.createdAt) Nothing Nothing <&> listToMaybe
 
-findByRequestId :: (L.MonadFlow m, Log m) => Text -> m (Maybe IdfyVerification)
+findByRequestId :: MonadFlow m => Text -> m (Maybe IdfyVerification)
 findByRequestId requestId = findOneWithKV [Se.Is BeamIV.requestId $ Se.Eq requestId]
 
-updateResponse :: (L.MonadFlow m, MonadTime m, Log m) => Text -> Text -> Text -> m ()
+updateResponse :: MonadFlow m => Text -> Text -> Text -> m ()
 updateResponse requestId status resp = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set BeamIV.status status, Se.Set BeamIV.idfyResponse $ Just resp, Se.Set BeamIV.updatedAt now]
     [Se.Is BeamIV.requestId (Se.Eq requestId)]
 
-updateExtractValidationStatus :: (L.MonadFlow m, MonadTime m, Log m) => Text -> ImageExtractionValidation -> m ()
+updateExtractValidationStatus :: MonadFlow m => Text -> ImageExtractionValidation -> m ()
 updateExtractValidationStatus requestId status = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set BeamIV.imageExtractionValidation status, Se.Set BeamIV.updatedAt now]
     [Se.Is BeamIV.requestId (Se.Eq requestId)]
 
-deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId :: MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamIV.driverId (Se.Eq personId)]
 
 instance FromTType' BeamIV.IdfyVerification IdfyVerification where

@@ -22,15 +22,14 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantPaymentMethod
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
 
-findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [MerchantPaymentMethod]
+findAllByMerchantId :: MonadFlow m => Id Merchant -> m [MerchantPaymentMethod]
 findAllByMerchantId (Id merchantId) = findAllWithOptionsKV [Se.Is BeamMPM.merchantId $ Se.Eq merchantId] (Se.Desc BeamMPM.priority) Nothing Nothing
 
 instance FromTType' BeamMPM.MerchantPaymentMethod MerchantPaymentMethod where

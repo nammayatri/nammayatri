@@ -24,7 +24,6 @@ where
 import Control.Applicative
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
-import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
@@ -63,7 +62,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, L.MonadFlow m) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =
