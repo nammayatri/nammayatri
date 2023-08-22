@@ -271,6 +271,7 @@ startDBSync = do
     rateLimit config history count = do
       time <- EL.getCurrentDateInMillis
       let (history', waitTime) = tryRateLimiter (_rateLimitN config) (_rateLimitWindow config) history time count
+      EL.runIO $ delay 20000 -- forcing the delay to slow down the drainer
       void $
         if waitTime == 0
           then pure ()
