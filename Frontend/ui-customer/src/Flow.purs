@@ -1393,7 +1393,7 @@ rideSearchFlow flowType = do
   let finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
   if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "")
     then do
-      case ((not finalState.props.isSpecialZone) && finalState.props.sourceSelectedOnMap) of
+      case finalState.props.sourceSelectedOnMap of
         false -> do
           pure $ removeAllPolylines ""
           liftFlowBT $ runEffectFn5 locateOnMap false finalState.props.sourceLat finalState.props.sourceLong finalState.data.polygonCoordinates finalState.data.nearByPickUpPoints

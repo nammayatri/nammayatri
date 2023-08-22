@@ -102,7 +102,7 @@ export const storeCallBackLocateOnMap = function (cb) {
           window.y = action;
           timerIdDebounce = setTimeout(() => {
             cb(action (key) (lat) (lon))();
-          }, 300);
+          }, 200);
         });
           console.log("In storeCallBackLocateOnMap ---------- + " + action);
           window.JBridge.storeCallBackLocateOnMap(callback);
@@ -132,7 +132,7 @@ export const storeCallBackCustomer = function (cb) {
           console.log("Error occurred in storeCallBackCustomer ------", error);
       }
     }}
-    
+
 }
 
 export const storeCallBackContacts = function (cb) {
