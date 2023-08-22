@@ -626,7 +626,8 @@ rateCardConfig state =
 
         , otherOptions  = [
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
-          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
+          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+          {key : "WAITING_CHARGES", val : (getString WAITING_CHARGES)}]
         
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
@@ -635,7 +636,9 @@ rateCardConfig state =
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
-          {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))}]
+          {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
+          {key : "WAITING_CHARGE_AFTER_3_MINUTES", val : (getString WAITING_CHARGE_AFTER_3_MINUTES)},
+          {key : "WAITING_CHARGES", val : (getString WAITING_CHARGES)}]
         }
   in
     rateCardConfig'
