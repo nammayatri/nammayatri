@@ -140,7 +140,7 @@ screen initialState =
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
-              SettingPrice -> do 
+              SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 pure unit
               RideAccepted -> do
@@ -249,9 +249,9 @@ view push state =
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
                 if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then do
-                  let delay = if os == "IOS" then 2000.0 else 5000.0 
+                  let delay = if os == "IOS" then 2000.0 else 5000.0
                   if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState else pure unit
-                  push OpenChatScreen 
+                  push OpenChatScreen
                 else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
@@ -307,7 +307,7 @@ view push state =
                             false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dest_marker.png"
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
-                    ] 
+                    ]
                 ]
             , homeScreenView push state
             , buttonLayoutParentView push state
@@ -1714,7 +1714,7 @@ confirmPickUpLocationView push state =
     [ orientation VERTICAL
     , height WRAP_CONTENT
     , width MATCH_PARENT
-    , clickable true
+    , disableClickFeedback true
     , background Color.transparent
     , visibility if state.props.currentStage == ConfirmingLocation then VISIBLE else GONE
     , padding $ PaddingTop 16
