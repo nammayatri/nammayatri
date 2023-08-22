@@ -982,3 +982,12 @@ makePlaceNameReqByPlaceId placeId language = GetPlaceNameReq
           "contents" : (PlaceId placeId)
       }
     }
+
+-------------------------------------------Driver Go To--------------------------------------------------
+
+-- driverGoToActivateBT :: String -> FlowBT String DriverGoToActivateResp
+-- driverGoToActivateBT homeLocationId = do
+--      headers <- lift $ lift $ getHeaders ""
+--      withAPIResultBT (EP.driverGoToActivate homeLocationId) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverGoToActivateReq homeLocationId))
+--     where
+--     errorHandler errorPayload = BackT $ pure GoBack

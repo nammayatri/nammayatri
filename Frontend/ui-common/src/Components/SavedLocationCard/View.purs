@@ -130,7 +130,7 @@ savedLocationView state push =
                     ] 
               ]
           ]
-        
+
     , textView $
       [ text state.savedLocation
       , maxLines 2

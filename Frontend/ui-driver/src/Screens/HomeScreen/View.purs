@@ -214,12 +214,12 @@ view push state =
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
-      , gotoModel push state
-      , if state.props.goToInfo then gotoKnowMoreView push state else dummyTextView
+      , gotoModel push state  --devansh:directly displayed
+      , if state.props.goToInfo then gotoKnowMoreView push state else dummyTextView --displayed with conditions
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
-      --, gotoRequestPopupConfigView push state
-      --, gotoCancellationPreventionView push state
-      --, gotoLocInRangeView push state 
+      -- , gotoRequestPopupConfigView push state
+      -- , gotoCancellationPreventionView push state
+      -- , gotoLocInRangeView push state
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

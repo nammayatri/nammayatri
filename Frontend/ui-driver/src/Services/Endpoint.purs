@@ -183,3 +183,22 @@ getPlaceName _ = (getBaseUrl "") <> "/maps/getPlaceName"
 
 profileSummary :: String -> String
 profileSummary _ = getBaseUrl "" <> "/driver/profile/summary"
+
+activateDriverGoTo :: String -> String
+activateDriverGoTo homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/activate?homeLocationId=" <> homeLocationId
+
+deactivateDriverGoTo :: String -> String
+deactivateDriverGoTo _ = getBaseUrl "" <> "/driver/goHomeFeature/deactivate"
+
+
+addDriverHomeLocation :: String -> String
+addDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHomeFeature/add"
+
+getDriverHomeLocation :: String -> String
+getDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHomeFeature/get"
+
+deleteDriverHomeLocation :: String -> String
+deleteDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/delete?driverHomeLocationId=" <> homeLocationId
+
+updateDriverHomeLocation :: String -> String
+updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/update?driverHomeLocationId=" <> homeLocationId

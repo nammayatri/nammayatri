@@ -2105,3 +2105,161 @@ instance standardEncodeBadges :: StandardEncode Badges where standardEncode (Bad
 instance showDBadges :: Show Badges where show = genericShow
 instance decodeBadges :: Decode Badges where decode = defaultDecode
 instance encodeBadges :: Encode Badges where encode = defaultEncode
+
+
+
+----------------------------------------------------------- driverGoTo ------------------------------------------------------------------
+newtype ActivateDriverGoToReq = ActivateDriverGoToReq String
+
+newtype ActivateDriverGoToResp = ActivateDriverGoToResp ApiSuccessResult
+
+
+instance makeActivateDriverGoToReq :: RestEndpoint ActivateDriverGoToReq ActivateDriverGoToResp where
+  makeRequest reqBody@(ActivateDriverGoToReq homeLocationId) headers = defaultMakeRequest POST (EP.activateDriverGoTo homeLocationId) headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericActivateDriverGoToReq :: Generic ActivateDriverGoToReq _
+derive instance newtypeActivateDriverGoToReq :: Newtype ActivateDriverGoToReq _
+instance standardActivateDriverGoToReq :: StandardEncode ActivateDriverGoToReq where standardEncode (ActivateDriverGoToReq payload) = standardEncode payload
+instance showActivateDriverGoToReq :: Show ActivateDriverGoToReq where show = genericShow
+instance decodeActivateDriverGoToReq :: Decode ActivateDriverGoToReq where decode = defaultDecode
+instance encodeActivateDriverGoToReq :: Encode ActivateDriverGoToReq where encode = defaultEncode
+
+derive instance genericActivateDriverGoToResp :: Generic ActivateDriverGoToResp _
+derive instance newtypeActivateDriverGoToResp :: Newtype ActivateDriverGoToResp _
+instance standardEncodeActivateDriverGoToResp :: StandardEncode ActivateDriverGoToResp where standardEncode (ActivateDriverGoToResp body) = standardEncode body
+instance showActivateDriverGoToResp :: Show ActivateDriverGoToResp where show = genericShow
+instance decodeActivateDriverGoToResp :: Decode ActivateDriverGoToResp where decode = defaultDecode
+instance encodeActivateDriverGoToResp  ::Encode ActivateDriverGoToResp where encode = defaultEncode
+
+data DeactivateDriverGoToReq = DeactivateDriverGoToReq
+
+newtype DeactivateDriverGoToResp = DeactivateDriverGoToResp ApiSuccessResult
+
+instance makeDeactivateDriverGoToReq :: RestEndpoint DeactivateDriverGoToReq DeactivateDriverGoToResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.deactivateDriverGoTo "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericDeactivateDriverGoToReq :: Generic DeactivateDriverGoToReq _
+instance showDeactivateDriverGoToReq :: Show DeactivateDriverGoToReq where show = genericShow
+instance decodeDeactivateDriverGoToReq :: Decode DeactivateDriverGoToReq where decode = defaultDecode
+instance encodeDeactivateDriverGoToReq :: Encode DeactivateDriverGoToReq where encode = defaultEncode
+instance standardDeactivateDriverGoToReq :: StandardEncode DeactivateDriverGoToReq where standardEncode body = standardEncode {}
+
+derive instance genericDeactivateDriverGoToResp :: Generic DeactivateDriverGoToResp _
+derive instance newtypeDeactivateDriverGoToResp :: Newtype DeactivateDriverGoToResp _
+instance standardDeactivateDriverGoToResp :: StandardEncode DeactivateDriverGoToResp where standardEncode (DeactivateDriverGoToResp body) = standardEncode body
+instance showDeactivateDriverGoToResp :: Show DeactivateDriverGoToResp where show = genericShow
+instance decodeDeactivateDriverGoToResp :: Decode DeactivateDriverGoToResp where decode = defaultDecode
+instance encodeDeactivateDriverGoToResp  :: Encode DeactivateDriverGoToResp where encode = defaultEncode
+
+
+
+newtype AddHomeLocationReq = AddHomeLocationReq
+  { position :: LatLong,
+    address :: String,
+    tag :: String
+  }
+
+newtype AddHomeLocationResp = AddHomeLocationResp ApiSuccessResult
+
+instance makeAddHomeLocationReq :: RestEndpoint AddHomeLocationReq AddHomeLocationResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.addDriverHomeLocation "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericAddHomeLocationReq :: Generic AddHomeLocationReq _
+derive instance newtypeAddHomeLocationReq :: Newtype AddHomeLocationReq _
+instance standardEncodeAddHomeLocationReq :: StandardEncode AddHomeLocationReq where standardEncode (AddHomeLocationReq payload) = standardEncode payload
+instance showAddHomeLocationReq :: Show AddHomeLocationReq where show = genericShow
+instance decodeAddHomeLocationReq :: Decode AddHomeLocationReq where decode = defaultDecode
+instance encodeAddHomeLocationReq :: Encode AddHomeLocationReq where encode = defaultEncode
+
+derive instance genericAddHomeLocationResp :: Generic AddHomeLocationResp _
+derive instance newtypeAddHomeLocationResp :: Newtype AddHomeLocationResp _
+instance standardAddHomeLocationResp :: StandardEncode AddHomeLocationResp where standardEncode (AddHomeLocationResp body) = standardEncode body
+instance showAddHomeLocationResp :: Show AddHomeLocationResp where show = genericShow
+instance decodeAddHomeLocationResp :: Decode AddHomeLocationResp where decode = defaultDecode
+instance encodeAddHomeLocationResp  :: Encode AddHomeLocationResp where encode = defaultEncode
+
+
+data GetHomeLocationReq = GetHomeLocationReq
+newtype GetHomeLocationsRes = GetHomeLocationsRes
+  { locations :: Array DriverHomeLocationAPIEntity
+  }
+
+newtype DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
+  { id :: String,
+    lat :: Number,
+    lon :: Number,
+    address :: String,
+    tag :: String
+  }
+
+
+instance makeGetHomeLocationReq :: RestEndpoint GetHomeLocationReq GetHomeLocationsRes where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getDriverHomeLocation "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetHomeLocationReq :: Generic GetHomeLocationReq _
+instance showGetHomeLocationReq :: Show GetHomeLocationReq where show = genericShow
+instance decodeGetHomeLocationReq :: Decode GetHomeLocationReq where decode = defaultDecode
+instance encodeGetHomeLocationReq :: StandardEncode GetHomeLocationReq where standardEncode req = standardEncode {}
+
+derive instance genericGetHomeLocationsRes :: Generic GetHomeLocationsRes _
+derive instance newtypeGetHomeLocationsRes :: Newtype GetHomeLocationsRes _
+instance standardGetHomeLocationsRes :: StandardEncode GetHomeLocationsRes where standardEncode (GetHomeLocationsRes id) = standardEncode id
+instance showGetHomeLocationsRes :: Show GetHomeLocationsRes where show = genericShow
+instance decodeGetHomeLocationsRes :: Decode GetHomeLocationsRes where decode = defaultDecode
+instance encodeGetHomeLocationsRes :: Encode GetHomeLocationsRes where encode = defaultEncode
+
+derive instance genericDriverHomeLocationAPIEntity :: Generic DriverHomeLocationAPIEntity _
+derive instance newtypeDriverHomeLocationAPIEntity :: Newtype DriverHomeLocationAPIEntity _
+instance standardDriverHomeLocationAPIEntity :: StandardEncode DriverHomeLocationAPIEntity where standardEncode (DriverHomeLocationAPIEntity id) = standardEncode id
+instance showDriverHomeLocationAPIEntity :: Show DriverHomeLocationAPIEntity where show = genericShow
+instance decodeDriverHomeLocationAPIEntity :: Decode DriverHomeLocationAPIEntity where decode = defaultDecode
+instance encodeDriverHomeLocationAPIEntity :: Encode DriverHomeLocationAPIEntity where encode = defaultEncode
+
+newtype DeleteDriverHomeLocationReq = DeleteDriverHomeLocationReq String
+
+instance makeDeleteDriverHomeLocationReq :: RestEndpoint DeleteDriverHomeLocationReq ApiSuccessResult where
+  makeRequest reqBody@(DeleteDriverHomeLocationReq id) headers = defaultMakeRequest POST (EP.deleteDriverHomeLocation id) headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+
+derive instance genericDeleteDriverHomeLocationReq :: Generic DeleteDriverHomeLocationReq _
+derive instance newtypeDeleteDriverHomeLocationReq :: Newtype DeleteDriverHomeLocationReq _
+instance standardDeleteDriverHomeLocationReq :: StandardEncode DeleteDriverHomeLocationReq where standardEncode (DeleteDriverHomeLocationReq id) = standardEncode id
+instance showDeleteDriverHomeLocationReq :: Show DeleteDriverHomeLocationReq where show = genericShow
+instance decodeDeleteDriverHomeLocationReq :: Decode DeleteDriverHomeLocationReq where decode = defaultDecode
+instance encodeDeleteDriverHomeLocationReq :: Encode DeleteDriverHomeLocationReq where encode = defaultEncode
+
+newtype UpdateHomeLocationReq = UpdateHomeLocationReq --String AddHomeLocationReq
+                                  {
+                                    qParam :: String,
+                                    body :: AddHomeLocationReq
+                                  }
+
+newtype UpdateHomeLocationResp = UpdateHomeLocationResp ApiSuccessResult
+
+instance makeUpdateHomeLocationReq :: RestEndpoint UpdateHomeLocationReq UpdateHomeLocationResp where
+  makeRequest (UpdateHomeLocationReq req) headers = defaultMakeRequest POST (EP.updateDriverHomeLocation req.qParam) headers req.body
+  decodeResponse = decodeJSON
+  encodeRequest (UpdateHomeLocationReq req) = standardEncode req.body
+
+derive instance genericUpdateHomeLocationReq :: Generic UpdateHomeLocationReq _
+derive instance newtypeUpdateHomeLocationReq :: Newtype UpdateHomeLocationReq _
+instance standardUpdateHomeLocationReq :: StandardEncode UpdateHomeLocationReq where standardEncode (UpdateHomeLocationReq id) = standardEncode id
+instance showUpdateHomeLocationReq :: Show UpdateHomeLocationReq where show = genericShow
+instance decodeUpdateHomeLocationReq :: Decode UpdateHomeLocationReq where decode = defaultDecode
+instance encodeUpdateHomeLocationReq :: Encode UpdateHomeLocationReq where encode = defaultEncode
+
+derive instance genericUpdateHomeLocationResp :: Generic UpdateHomeLocationResp _
+instance standardUpdateHomeLocationResp :: StandardEncode UpdateHomeLocationResp where standardEncode (UpdateHomeLocationResp body) = standardEncode body
+instance showUpdateHomeLocationResp :: Show UpdateHomeLocationResp where show = genericShow
+instance decodeUpdateHomeLocationResp :: Decode UpdateHomeLocationResp where decode = defaultDecode
+instance encodeUpdateHomeLocationResp  :: Encode UpdateHomeLocationResp where encode = defaultEncode
