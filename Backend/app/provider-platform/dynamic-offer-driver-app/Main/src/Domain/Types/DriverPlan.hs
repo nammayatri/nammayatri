@@ -25,6 +25,7 @@ data DriverPlan = DriverPlan
     planId :: Id DPlan.Plan,
     planType :: DPlan.PaymentMode,
     mandateId :: Maybe (Id DM.Mandate),
+    mandateSetupDate :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

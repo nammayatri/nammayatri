@@ -100,16 +100,14 @@ updatePaymentModeByDriverId driverId paymentMode = do
     ]
     [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
 
--- updatePaymentModeByDriverId :: Id Person -> PaymentMode -> SqlDB ()
--- updatePaymentModeByDriverId driverId paymentMode = do
---   now <- getCurrentTime
---   update $ \tbl -> do
---     set
---       tbl
---       [ DriverPlanPlanType =. val paymentMode,
---         DriverPlanUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverPlanDriverId ==. val (toKey driverId)
+updateMandateSetupDateByDriverId :: (L.MonadFlow m, Log m, MonadTime m) => Id Person -> m ()
+updateMandateSetupDateByDriverId driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.mandateSetupDate (Just now),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
 
 instance FromTType' BeamDF.DriverPlan DriverPlan where
   fromTType' BeamDF.DriverPlanT {..} = do
@@ -120,6 +118,7 @@ instance FromTType' BeamDF.DriverPlan DriverPlan where
             planId = Id planId,
             planType = planType,
             mandateId = Id <$> mandateId,
+            mandateSetupDate = mandateSetupDate,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -131,6 +130,7 @@ instance ToTType' BeamDF.DriverPlan DriverPlan where
         BeamDF.planId = getId planId,
         BeamDF.planType = planType,
         BeamDF.mandateId = getId <$> mandateId,
+        BeamDF.mandateSetupDate = mandateSetupDate,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt
       }

@@ -204,6 +204,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa payerApp payerAppName
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
+      QDP.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
       CDI.updateSubscription True (cast driverPlan.driverId)
       CDI.updateAutoPayStatus (castAutoPayStatus mandateStatus) (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
