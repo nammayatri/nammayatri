@@ -492,5 +492,7 @@ export function getStringValue(key) {
     "AC_TAXI" : "AC Taxi",
     "NON_AC_TAXI" : "Taxi non climatisé",
     "GET_OTP_VIA_WHATSAPP" : "Obtenez OTP via WhatsApp",
-    "OR" : "ou"
+    "OR" : "ou",
+    "WAITING_CHARGE_AFTER_3_MINUTES" : "Les frais d'attente sont nuls pendant les 3 premières minutes. Vous serez facturé 1 ₹ par minute d'attente après cela",
+  "WAITING_CHARGES" : "Frais d'attente"
   }

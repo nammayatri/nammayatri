@@ -119,25 +119,27 @@ fareList push config =
         , orientation HORIZONTAL
         , margin $ MarginTop 10
         ][ textView
-            [ width $ V ((3 * screenWidth unit) /5 )
+            [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , textSize FontSize.a_16
             , lineHeight "18"
             , singleLine false
             , maxLines 2
             , fontStyle $ FontStyle.medium LanguageStyle
-            , color Color.black700
+            , color Color.black900
             , text item.key
             ]
+          , linearLayout
+            [ height MATCH_PARENT
+            , weight 1.0][]
           , textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , textSize FontSize.a_16
-            , color Color.black800
+            , color Color.black900
             , text item.val
             , gravity RIGHT
-            , singleLine false
-            , maxLines 2
+            , singleLine true
             , weight 1.0
             ]
           ]
