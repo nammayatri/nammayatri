@@ -15,13 +15,12 @@
 module Mobility.AppBackend.Queries where
 
 import qualified "rider-app" Domain.Types.Merchant as DM
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Geofencing (GeoRestriction (Regions))
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as K
-import Kernel.Types.Logging (Log)
 import Sequelize as Se
 import "rider-app" Storage.Beam.Merchant as BeamM
 
@@ -35,7 +34,7 @@ import "rider-app" Storage.Beam.Merchant as BeamM
 --       ]
 --     where_ $ tbl ^. MerchantTId ==. val (toKey merchantId)
 
-updateOrigAndDestRestriction :: (L.MonadFlow m, Log m) => Id DM.Merchant -> [Text] -> [Text] -> m ()
+updateOrigAndDestRestriction :: MonadFlow m => Id DM.Merchant -> [Text] -> [Text] -> m ()
 updateOrigAndDestRestriction (K.Id merchantId) originList destinationList =
   updateWithKV
     [ Se.Set BeamM.originRestriction $ Regions originList,

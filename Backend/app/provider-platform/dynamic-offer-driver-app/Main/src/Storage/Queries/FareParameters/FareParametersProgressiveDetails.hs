@@ -16,18 +16,17 @@
 module Storage.Queries.FareParameters.FareParametersProgressiveDetails where
 
 import qualified Domain.Types.FareParameters as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import qualified Kernel.Types.Id as KTI
-import Kernel.Types.Logging (Log)
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 
-create :: (L.MonadFlow m, Log m) => Domain.FullFareParametersProgressiveDetails -> m ()
+create :: MonadFlow m => Domain.FullFareParametersProgressiveDetails -> m ()
 create = createWithKV
 
-findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersProgressiveDetails)
+findById' :: MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersProgressiveDetails)
 findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
 instance FromTType' BeamFPPD.FareParametersProgressiveDetails Domain.FullFareParametersProgressiveDetails where

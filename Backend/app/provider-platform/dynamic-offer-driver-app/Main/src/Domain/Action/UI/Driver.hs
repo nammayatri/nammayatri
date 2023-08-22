@@ -917,7 +917,7 @@ respondQuote ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasPrettyLogger m r,
-    L.MonadFlow m,
+    MonadFlow m,
     EventStreamFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->

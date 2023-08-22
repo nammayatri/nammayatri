@@ -16,21 +16,20 @@
 module Storage.Queries.Estimate where
 
 import Domain.Types.Estimate as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 
-create :: (L.MonadFlow m, Log m) => Domain.Estimate -> m ()
+create :: MonadFlow m => Domain.Estimate -> m ()
 create = createWithKV
 
-createMany :: (L.MonadFlow m, Log m) => [Estimate] -> m ()
+createMany :: MonadFlow m => [Estimate] -> m ()
 createMany = traverse_ create
 
-findById :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
+findById :: MonadFlow m => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
 
 instance FromTType' BeamE.Estimate Estimate where

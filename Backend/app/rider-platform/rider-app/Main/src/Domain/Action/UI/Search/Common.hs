@@ -25,7 +25,6 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
-import qualified EulerHS.Language as L
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Version
@@ -36,7 +35,7 @@ buildSearchRequest ::
   ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),
     EsqDBFlow m r,
     CoreMetrics m,
-    L.MonadFlow m
+    MonadFlow m
   ) =>
   DPerson.Person ->
   Location.SearchReqLocation ->

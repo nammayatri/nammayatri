@@ -18,7 +18,6 @@ module Storage.Queries.SearchTry where
 import qualified Database.Beam.Query ()
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -26,26 +25,26 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 
-create :: (L.MonadFlow m, Log m) => SearchTry -> m ()
+create :: MonadFlow m => SearchTry -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id SearchTry -> m (Maybe SearchTry)
+findById :: MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTry]
 
 findLastByRequestId ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 findActiveTryByRequestId ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findActiveTryByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.And [Se.Is BeamST.requestId $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 cancelActiveTriesByRequestId ::
-  (L.MonadFlow m, MonadTime m, Log m) =>
+  MonadFlow m =>
   Id SearchRequest ->
   m ()
 cancelActiveTriesByRequestId (Id searchId) = do
@@ -61,7 +60,7 @@ cancelActiveTriesByRequestId (Id searchId) = do
     ]
 
 updateStatus ::
-  (L.MonadFlow m, MonadTime m, Log m) =>
+  MonadFlow m =>
   Id SearchTry ->
   SearchTryStatus ->
   m ()
@@ -74,7 +73,7 @@ updateStatus (Id searchId) status_ = do
     [Se.Is BeamST.id $ Se.Eq searchId]
 
 getSearchTryStatusAndValidTill ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
 getSearchTryStatusAndValidTill (Id searchTryId) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTryId] <&> fmap (\st -> (Domain.validTill st, Domain.status st))

@@ -22,22 +22,22 @@ import Domain.Types.Merchant
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 
-create :: (L.MonadFlow m, Log m) => OperatingCity -> m ()
+create :: MonadFlow m => OperatingCity -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id OperatingCity -> m (Maybe OperatingCity)
+findById :: MonadFlow m => Id OperatingCity -> m (Maybe OperatingCity)
 findById (Id ocId) = findOneWithKV [Se.Is BeamOC.id $ Se.Eq ocId]
 
-findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe OperatingCity)
+findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe OperatingCity)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
 
-findEnabledCityByName :: (L.MonadFlow m, Log m) => Text -> m [OperatingCity]
+findEnabledCityByName :: MonadFlow m => Text -> m [OperatingCity]
 findEnabledCityByName city = do
   dbConf <- getMasterBeamConfig
   operatingCities <-
@@ -48,7 +48,7 @@ findEnabledCityByName city = do
             B.all_ (BeamCommon.operatingCity BeamCommon.atlasDB)
   either (pure . const []) ((catMaybes <$>) . mapM fromTType') operatingCities
 
-findEnabledCityByMerchantIdAndName :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m [OperatingCity]
+findEnabledCityByMerchantIdAndName :: MonadFlow m => Id Merchant -> Text -> m [OperatingCity]
 findEnabledCityByMerchantIdAndName (Id mId) city = do
   dbConf <- getMasterBeamConfig
   operatingCities <-

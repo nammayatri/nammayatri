@@ -18,18 +18,17 @@ module Storage.Queries.FareParameters.FareParametersSlabDetails where
 
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import qualified Kernel.Types.Id as KTI
-import Kernel.Types.Logging (Log)
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersSlabDetails as BeamFPSD
 
-create :: (L.MonadFlow m, Log m) => FullFareParametersSlabDetails -> m ()
+create :: MonadFlow m => FullFareParametersSlabDetails -> m ()
 create = createWithKV
 
-findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FareParameters -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
+findById' :: MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
 findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
 instance ToTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetails where

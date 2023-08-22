@@ -19,7 +19,6 @@ import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -31,28 +30,28 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
-createDSReq :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
+createDSReq :: MonadFlow m => SearchRequest -> m ()
 createDSReq = createWithKV
 
-create :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
+create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
   _ <- QSRL.create dsReq.fromLocation
   _ <- traverse_ QSRL.create dsReq.toLocation
   createDSReq dsReq
 
-findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
+findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
-findByPersonId :: (L.MonadFlow m, Log m) => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
+findByPersonId :: MonadFlow m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 findByPersonId (Id personId) (Id searchRequestId) = findOneWithKV [Se.And [Se.Is BeamSR.id $ Se.Eq searchRequestId, Se.Is BeamSR.riderId $ Se.Eq personId]]
 
-findAllByPerson :: (L.MonadFlow m, Log m) => Id Person -> m [SearchRequest]
+findAllByPerson :: MonadFlow m => Id Person -> m [SearchRequest]
 findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq personId]
 
 findLatestSearchRequest :: MonadFlow m => Id Person -> m (Maybe SearchRequest)
 findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderId $ Se.Eq riderId] (Se.Desc BeamSR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateCustomerExtraFeeAndPaymentMethod :: (L.MonadFlow m, Log m) => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m ()
+updateCustomerExtraFeeAndPaymentMethod :: MonadFlow m => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m ()
 updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId =
   updateOneWithKV
     [ Se.Set BeamSR.customerExtraFee customerExtraFee,
@@ -60,7 +59,7 @@ updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee payment
     ]
     [Se.Is BeamSR.id (Se.Eq searchReqId)]
 
-updateAutoAssign :: (L.MonadFlow m, Log m) => Id SearchRequest -> Bool -> Bool -> m ()
+updateAutoAssign :: MonadFlow m => Id SearchRequest -> Bool -> Bool -> m ()
 updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 = do
   updateOneWithKV
     [ Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled,
@@ -68,7 +67,7 @@ updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 
     ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
 
-updatePaymentMethods :: (L.MonadFlow m, Log m) => Id SearchRequest -> [Id MerchantPaymentMethod] -> m ()
+updatePaymentMethods :: MonadFlow m => Id SearchRequest -> [Id MerchantPaymentMethod] -> m ()
 updatePaymentMethods (Id searchReqId) availablePaymentMethods =
   updateOneWithKV
     [ Se.Set BeamSR.availablePaymentMethods (getId <$> availablePaymentMethods)

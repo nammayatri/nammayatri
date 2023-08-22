@@ -25,7 +25,6 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
@@ -58,5 +57,5 @@ clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById fid = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fid)
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => FarePolicy -> m ()
+update :: MonadFlow m => FarePolicy -> m ()
 update = Queries.update

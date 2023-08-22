@@ -16,7 +16,6 @@
 module Storage.Queries.Mandate where
 
 import Domain.Types.Mandate as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -24,16 +23,16 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Mandate as BeamM hiding (Id)
 
-create :: (L.MonadFlow m, Log m) => Domain.Mandate -> m ()
+create :: MonadFlow m => Domain.Mandate -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id Domain.Mandate -> m (Maybe Domain.Mandate)
+findById :: MonadFlow m => Id Domain.Mandate -> m (Maybe Domain.Mandate)
 findById (Id mandateId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq mandateId]
 
-findByStatus :: (L.MonadFlow m, Log m) => Text -> [MandateStatus] -> m (Maybe Domain.Mandate)
+findByStatus :: MonadFlow m => Text -> [MandateStatus] -> m (Maybe Domain.Mandate)
 findByStatus mandateId status = findOneWithKV [Se.And [Se.Is BeamM.id $ Se.Eq mandateId, Se.Is BeamM.status $ Se.In status]]
 
-updateMandateDetails :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Mandate -> MandateStatus -> Maybe Text -> Maybe Text -> Maybe Text -> m ()
+updateMandateDetails :: MonadFlow m => Id Domain.Mandate -> MandateStatus -> Maybe Text -> Maybe Text -> Maybe Text -> m ()
 updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName = do
   now <- getCurrentTime
   updateOneWithKV
@@ -44,7 +43,7 @@ updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName = do
     )
     [Se.Is BeamM.id (Se.Eq mandateId)]
 
-updateStatus :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Mandate -> MandateStatus -> m ()
+updateStatus :: MonadFlow m => Id Domain.Mandate -> MandateStatus -> m ()
 updateStatus (Id mandateId) status = do
   now <- getCurrentTime
   updateOneWithKV

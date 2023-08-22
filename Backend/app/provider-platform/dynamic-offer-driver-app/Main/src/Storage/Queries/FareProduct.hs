@@ -24,23 +24,22 @@ import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle.Variant (Variant (..))
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as BeamFP
 
 findAllFareProductForVariants ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id Merchant ->
   Domain.Area ->
   m [Domain.FareProduct]
 findAllFareProductForVariants (Id merchantId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.area $ Se.Eq area]]
 
 findByMerchantVariantArea ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id Merchant ->
   Variant ->
   Domain.Area ->

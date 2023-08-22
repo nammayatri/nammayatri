@@ -18,25 +18,24 @@ module Storage.Queries.Message.MessageTranslation where
 import qualified Data.Time as T
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageTranslation
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 
-create :: (L.MonadFlow m, Log m) => MessageTranslation -> m ()
+create :: MonadFlow m => MessageTranslation -> m ()
 create = createWithKV
 
-createMany :: (L.MonadFlow m, Log m) => [MessageTranslation] -> m ()
+createMany :: MonadFlow m => [MessageTranslation] -> m ()
 createMany = traverse_ createWithKV
 
-findByMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
+findByMessageIdAndLanguage :: MonadFlow m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
 findByMessageIdAndLanguage (Id messageId) language = findOneWithKV [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
 
-findByMessageId :: (L.MonadFlow m, Log m) => Id Msg.Message -> m [MessageTranslation]
+findByMessageId :: MonadFlow m => Id Msg.Message -> m [MessageTranslation]
 findByMessageId (Id messageId) = findAllWithKV [Se.Is BeamMT.messageId $ Se.Eq messageId]
 
 instance FromTType' BeamMT.MessageTranslation MessageTranslation where

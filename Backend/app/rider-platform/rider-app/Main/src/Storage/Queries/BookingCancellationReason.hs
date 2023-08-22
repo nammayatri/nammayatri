@@ -22,19 +22,19 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import qualified Storage.Beam.Common as BeamCommon
 
-create :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
+create :: MonadFlow m => BookingCancellationReason -> m ()
 create = createWithKV
 
-findByRideBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
+findByRideBookingId :: MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
 findByRideBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
-upsert :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
+upsert :: MonadFlow m => BookingCancellationReason -> m ()
 upsert cancellationReason = do
   res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
   if isJust res
@@ -50,7 +50,7 @@ upsert cancellationReason = do
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
 
-countCancelledBookingsByBookingIds :: (L.MonadFlow m, Log m) => [Id Booking] -> CancellationSource -> m Int
+countCancelledBookingsByBookingIds :: MonadFlow m => [Id Booking] -> CancellationSource -> m Int
 countCancelledBookingsByBookingIds bookingIds cancellationSource = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $

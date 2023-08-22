@@ -7,19 +7,17 @@ import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueReport as IssueReport
 import qualified Domain.Types.Person as SP
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
-import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueReport as BeamIR
 
-create :: (L.MonadFlow m, Log m) => IssueReport.IssueReport -> m ()
+create :: MonadFlow m => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
+findAllWithOptions :: MonadFlow m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
 findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
   findAllWithOptionsKV conditions (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
   where
@@ -34,24 +32,24 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
             ]
       ]
 
-findById :: (L.MonadFlow m, Log m) => Id IssueReport -> m (Maybe IssueReport)
+findById :: MonadFlow m => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
-findAllByDriver :: (L.MonadFlow m, Log m) => Id SP.Person -> m [IssueReport]
+findAllByDriver :: MonadFlow m => Id SP.Person -> m [IssueReport]
 findAllByDriver (Id driverId) = findAllWithKV [Se.And [Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
-safeToDelete :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
+safeToDelete :: MonadFlow m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id driverId) = findOneWithKV [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
 
-isSafeToDelete :: (L.MonadFlow m, Log m) => Id IssueReport -> Id SP.Person -> m Bool
+isSafeToDelete :: MonadFlow m => Id IssueReport -> Id SP.Person -> m Bool
 isSafeToDelete issueReportId driverId = do
   findSafeToDelete <- safeToDelete issueReportId driverId
   return $ isJust findSafeToDelete
 
-deleteByPersonId :: (L.MonadFlow m, Log m) => Id SP.Person -> m ()
+deleteByPersonId :: MonadFlow m => Id SP.Person -> m ()
 deleteByPersonId (Id driverId) = deleteWithKV [Se.Is BeamIR.driverId (Se.Eq driverId)]
 
-updateAsDeleted :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> m ()
+updateAsDeleted :: MonadFlow m => Id IssueReport -> m ()
 updateAsDeleted issueReportId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -60,35 +58,35 @@ updateAsDeleted issueReportId = do
     ]
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
 
-updateStatusAssignee :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
+updateStatusAssignee :: MonadFlow m => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
   updateOneWithKV
     ([Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> ([Se.Set BeamIR.assignee assignee | isJust assignee]))
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
 
-updateOption :: (L.MonadFlow m, MonadTime m, Log m) => Id IssueReport -> Id IssueOption -> m ()
+updateOption :: MonadFlow m => Id IssueReport -> Id IssueOption -> m ()
 updateOption issueReportId (Id optionId) = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamIR.optionId (Just optionId), Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
 
-updateIssueStatus :: (L.MonadFlow m, Log m, MonadTime m) => Text -> IssueStatus -> m ()
+updateIssueStatus :: MonadFlow m => Text -> IssueStatus -> m ()
 updateIssueStatus ticketId status = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamIR.status status, Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Se.Is BeamIR.ticketId (Se.Eq (Just ticketId))]
 
-updateTicketId :: (L.MonadFlow m, Log m, MonadTime m) => Id IssueReport -> Text -> m ()
+updateTicketId :: MonadFlow m => Id IssueReport -> Text -> m ()
 updateTicketId issueId ticketId = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamIR.ticketId (Just ticketId), Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Se.Is BeamIR.id (Se.Eq $ getId issueId)]
 
-findByTicketId :: (L.MonadFlow m, Log m) => Text -> m (Maybe IssueReport)
+findByTicketId :: MonadFlow m => Text -> m (Maybe IssueReport)
 findByTicketId ticketId = findOneWithKV [Se.Is BeamIR.ticketId $ Se.Eq (Just ticketId)]
 
 instance FromTType' BeamIR.IssueReport IssueReport where

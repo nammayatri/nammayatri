@@ -27,7 +27,6 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
@@ -35,13 +34,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant as Queries
 
-findById :: (CacheFlow m r, L.MonadFlow m) => Id Merchant -> m (Maybe Merchant)
+findById :: (CacheFlow m r, MonadFlow m) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
-findBySubscriberId :: (CacheFlow m r, L.MonadFlow m) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: (CacheFlow m r, MonadFlow m) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
@@ -52,7 +51,7 @@ findBySubscriberId subscriberId =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
 
-findByShortId :: (CacheFlow m r, L.MonadFlow m) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: (CacheFlow m r, MonadFlow m) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeShortIdKey shortId) >>= \case
     Nothing -> findAndCache
@@ -89,8 +88,8 @@ makeSubscriberIdKey subscriberId = "driver-offer:CachedQueries:Merchant:Subscrib
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
+update :: MonadFlow m => Merchant -> m ()
 update = Queries.update
 
-loadAllProviders :: (L.MonadFlow m, Log m) => m [Merchant]
+loadAllProviders :: MonadFlow m => m [Merchant]
 loadAllProviders = Queries.loadAllProviders

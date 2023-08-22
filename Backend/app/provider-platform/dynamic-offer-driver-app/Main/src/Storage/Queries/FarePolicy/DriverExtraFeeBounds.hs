@@ -17,7 +17,6 @@ module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -25,34 +24,22 @@ import Kernel.Types.Id as KTI
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 
-create :: (L.MonadFlow m, Log m) => DFP.FullDriverExtraFeeBounds -> m ()
+create :: MonadFlow m => DFP.FullDriverExtraFeeBounds -> m ()
 create = createWithKV
 
-findByFarePolicyIdAndStartDistance :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
+findByFarePolicyIdAndStartDistance :: MonadFlow m => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
 findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> listToMaybe
 
-update :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
+update :: MonadFlow m => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
 update (Id farePolicyId) startDistance minFee maxFee =
   updateWithKV
     [Se.Set BeamDEFB.minFee minFee, Se.Set BeamDEFB.maxFee maxFee]
     [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
 
-findAll' ::
-  ( L.MonadFlow m,
-    MonadThrow m,
-    Log m
-  ) =>
-  Id DFP.FarePolicy ->
-  m [DFP.FullDriverExtraFeeBounds]
+findAll' :: MonadFlow m => Id DFP.FarePolicy -> m [DFP.FullDriverExtraFeeBounds]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
 
-deleteAll' ::
-  ( L.MonadFlow m,
-    MonadThrow m,
-    Log m
-  ) =>
-  Id DFP.FarePolicy ->
-  m ()
+deleteAll' :: MonadFlow m => Id DFP.FarePolicy -> m ()
 deleteAll' farePolicyId = deleteWithKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)]
 
 instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where

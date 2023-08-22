@@ -20,7 +20,6 @@ import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver as Domain
 import Domain.Types.SearchTry
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -28,13 +27,13 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 
-createMany :: (L.MonadFlow m, Log m) => [SearchRequestForDriver] -> m ()
+createMany :: MonadFlow m => [SearchRequestForDriver] -> m ()
 createMany = traverse_ createOne
   where
-    createOne :: (L.MonadFlow m, Log m) => SearchRequestForDriver -> m ()
+    createOne :: MonadFlow m => SearchRequestForDriver -> m ()
     createOne = createWithKV
 
-findAllActiveBySTId :: (L.MonadFlow m, Log m) => Id SearchTry -> m [SearchRequestForDriver]
+findAllActiveBySTId :: MonadFlow m => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySTId (Id searchTryId) =
   findAllWithKV
     [ Se.And
@@ -43,7 +42,7 @@ findAllActiveBySTId (Id searchTryId) =
         ]
     ]
 
-findAllActiveBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId :: MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
 findAllActiveBySRId (Id searchReqId) =
   findAllWithKV
     [ Se.And
@@ -52,7 +51,7 @@ findAllActiveBySRId (Id searchReqId) =
         ]
     ]
 
-findAllActiveWithoutRespBySearchTryId :: (L.MonadFlow m, MonadTime m, Log m) => Id SearchTry -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchTryId :: MonadFlow m => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
   findAllWithKV
     [ Se.And
@@ -62,7 +61,7 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
         )
     ]
 
-findByDriverAndSearchTryId :: (L.MonadFlow m, Log m) => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchTryId :: MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV
     [ Se.And
@@ -73,29 +72,29 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
     ]
 
 -- Should not support driver Id as a key in index, since it will be 1 to many; routing these queries through DB
-findByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m [SearchRequestForDriver]
+findByDriver :: MonadFlow m => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
 
-deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByDriverId :: MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id personId) =
   deleteWithKV
     [Se.Is BeamSRFD.driverId (Se.Eq personId)]
 
-setInactiveBySTId :: (L.MonadFlow m, Log m) => Id SearchTry -> m ()
+setInactiveBySTId :: MonadFlow m => Id SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) =
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
-setInactiveBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m ()
+setInactiveBySRId :: MonadFlow m => Id SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) =
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.requestId (Se.Eq searchReqId)]
 
-updateDriverResponse :: (L.MonadFlow m, Log m) => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
+updateDriverResponse :: MonadFlow m => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
 updateDriverResponse (Id id) response =
   updateOneWithKV
     [Se.Set BeamSRFD.response (Just response)]

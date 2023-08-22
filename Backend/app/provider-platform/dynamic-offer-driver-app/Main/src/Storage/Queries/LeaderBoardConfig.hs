@@ -17,15 +17,14 @@ module Storage.Queries.LeaderBoardConfig where
 
 import Domain.Types.LeaderBoardConfig
 import Domain.Types.Merchant
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Logging
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.LeaderBoardConfig as BeamLBC
 
-findLeaderBoardConfigbyType :: (L.MonadFlow m, Log m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType :: MonadFlow m => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
 findLeaderBoardConfigbyType leaderBType (Id merchantId) =
   findOneWithKV
     [ Se.And

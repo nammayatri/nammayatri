@@ -4,31 +4,29 @@ module Storage.Queries.Invoice where
 
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging
-import Kernel.Types.Time
 import qualified Sequelize as Se
 import Storage.Beam.Invoice as BeamI hiding (Id)
 
-create :: (L.MonadFlow m, Log m) => Domain.Invoice -> m ()
+create :: MonadFlow m => Domain.Invoice -> m ()
 create = createWithKV
 
-createMany :: (L.MonadFlow m, Log m) => [Domain.Invoice] -> m ()
+createMany :: MonadFlow m => [Domain.Invoice] -> m ()
 createMany = traverse_ create
 
-findByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
+findByDriverFeeId :: MonadFlow m => Id DriverFee -> m (Maybe Domain.Invoice)
 findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
 
-findAllByInvoiceId :: (L.MonadFlow m, Log m) => Id Domain.Invoice -> m [Domain.Invoice]
+findAllByInvoiceId :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.And [Se.Is BeamI.id $ Se.Eq invoiceId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
 
-findByDriverFeeIdAndActiveStatus :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
+findByDriverFeeIdAndActiveStatus :: MonadFlow m => Id DriverFee -> m (Maybe Domain.Invoice)
 findByDriverFeeIdAndActiveStatus (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
 
-updateInvoiceStatusByInvoiceId :: (L.MonadFlow m, Log m, MonadTime m) => Id Domain.Invoice -> Domain.InvoiceStatus -> m ()
+updateInvoiceStatusByInvoiceId :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> m ()
 updateInvoiceStatusByInvoiceId invoiceId invoiceStatus = do
   now <- getCurrentTime
   updateWithKV

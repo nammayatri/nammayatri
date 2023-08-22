@@ -16,21 +16,20 @@
 module Storage.Queries.Webengage where
 
 import Domain.Types.Webengage
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Webengage as BeamW
 
-create :: (L.MonadFlow m, Log m) => Webengage -> m ()
+create :: MonadFlow m => Webengage -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id Webengage -> m (Maybe Webengage)
+findById :: MonadFlow m => Id Webengage -> m (Maybe Webengage)
 findById webengageId = findOneWithKV [Se.Is BeamW.id $ Se.Eq (getId webengageId)]
 
-findByInfoMsgId :: (L.MonadFlow m, Log m) => Text -> m (Maybe Webengage)
+findByInfoMsgId :: MonadFlow m => Text -> m (Maybe Webengage)
 findByInfoMsgId infoMessageId = findOneWithKV [Se.Is BeamW.infoMessageId $ Se.Eq infoMessageId]
 
 instance FromTType' BeamW.Webengage Webengage where

@@ -31,10 +31,10 @@ import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Vehicle as BeamV
 
-create :: (L.MonadFlow m, Log m) => Vehicle -> m ()
+create :: MonadFlow m => Vehicle -> m ()
 create = createWithKV
 
-upsert :: (L.MonadFlow m, Log m) => Vehicle -> m ()
+upsert :: MonadFlow m => Vehicle -> m ()
 upsert a@Vehicle {..} = do
   res <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq a.registrationNo]
   if isJust res
@@ -57,7 +57,7 @@ upsert a@Vehicle {..} = do
 findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
 findById (Id driverId) = findOneWithKV [Se.Is BeamV.driverId $ Se.Eq driverId]
 
-updateVehicleRec :: (L.MonadFlow m, MonadTime m, Log m) => Vehicle -> m ()
+updateVehicleRec :: MonadFlow m => Vehicle -> m ()
 updateVehicleRec vehicle = do
   now <- getCurrentTime
   updateOneWithKV
@@ -83,10 +83,10 @@ updateVehicleName vehicleName (Id driverId) = do
     [Se.Set BeamV.updatedAt now, Se.Set BeamV.vehicleName vehicleName]
     [Se.Is BeamV.driverId (Se.Eq driverId)]
 
-deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
 
-findByAnyOf :: (L.MonadFlow m, Log m) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
+findByAnyOf :: MonadFlow m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =
   findOneWithKV
     [ Se.And
@@ -99,7 +99,7 @@ findByAnyOf registrationNoM vehicleIdM =
         )
     ]
 
-findAllByVariantRegNumMerchantId :: (L.MonadFlow m, Log m) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantId :: MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId') = do
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'

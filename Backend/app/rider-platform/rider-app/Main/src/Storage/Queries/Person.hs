@@ -36,33 +36,33 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 
-create :: (L.MonadFlow m, Log m) => Person -> m ()
+create :: MonadFlow m => Person -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findById :: MonadFlow m => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
-findByMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchantId :: MonadFlow m => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByEmailAndPassword :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> Text -> m (Maybe Person)
+findByEmailAndPassword :: (MonadFlow m, EncFlow m r) => Text -> Text -> m (Maybe Person)
 findByEmailAndPassword email_ password = do
   emailDbHash <- getDbHash email_
   passwordDbHash <- getDbHash password
   findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash), Se.Is BeamP.passwordHash $ Se.Eq (Just passwordDbHash)]]
 
-findByEmail :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> m (Maybe Person)
+findByEmail :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe Person)
 findByEmail email_ = do
   emailDbHash <- getDbHash email_
   findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash)]
 
-findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId :: MonadFlow m => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdWithoutCC :: MonadFlow m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
+updateMultiple :: MonadFlow m => Id Person -> Person -> m ()
 updateMultiple (Id personId) person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -81,7 +81,7 @@ updateMultiple (Id personId) person = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (L.MonadFlow m, MonadTime m, Log m) => Person -> Maybe Version -> Maybe Version -> m ()
+updatePersonVersions :: MonadFlow m => Person -> Maybe Version -> Maybe Version -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
@@ -96,7 +96,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
-updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
+updateDeviceToken :: MonadFlow m => Id Person -> Maybe Text -> m ()
 updateDeviceToken (Id personId) mbDeviceToken = do
   now <- getCurrentTime
   updateWithKV
@@ -105,7 +105,7 @@ updateDeviceToken (Id personId) mbDeviceToken = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
+updateWhatsappNotificationEnrollStatus :: MonadFlow m => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   now <- getCurrentTime
   updateWithKV
@@ -114,7 +114,7 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-setIsNewFalse :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
+setIsNewFalse :: MonadFlow m => Id Person -> m ()
 setIsNewFalse (Id personId) = do
   now <- getCurrentTime
   updateWithKV
@@ -124,7 +124,7 @@ setIsNewFalse (Id personId) = do
     [Se.Is BeamP.id (Se.Eq personId)]
 
 updatePersonalInfo ::
-  (L.MonadFlow m, MonadTime m, Log m) =>
+  MonadFlow m =>
   Id Person ->
   Maybe Text ->
   Maybe Text ->
@@ -160,10 +160,10 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
 
-updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
+updateHasTakenValidRide :: MonadFlow m => Id Person -> m ()
 updateHasTakenValidRide (Id personId) = do
   now <- getCurrentTime
   updateWithKV
@@ -172,7 +172,7 @@ updateHasTakenValidRide (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateReferralCodeAndReferredAt :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
+updateReferralCodeAndReferredAt :: MonadFlow m => Id Person -> Maybe Text -> m ()
 updateReferralCodeAndReferredAt (Id personId) referralCode = do
   now <- getCurrentTime
   updateWithKV
@@ -183,16 +183,16 @@ updateReferralCodeAndReferredAt (Id personId) referralCode = do
     [Se.Is BeamP.id (Se.Eq personId)]
 
 findByReferralCode ::
-  (L.MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r) =>
   Text ->
   m (Maybe Person)
 findByReferralCode referralCode = findOneWithKV [Se.Is BeamP.referralCode (Se.Eq (Just referralCode))]
 
-findBlockedByDeviceToken :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
+findBlockedByDeviceToken :: (MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
-updateBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> m ()
+updateBlockedState :: MonadFlow m => Id Person -> Bool -> m ()
 updateBlockedState (Id personId) isBlocked = do
   now <- getCurrentTime
   updateWithKV
@@ -201,7 +201,7 @@ updateBlockedState (Id personId) isBlocked = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatingEnabledAndBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
+updatingEnabledAndBlockedState :: MonadFlow m => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
   now <- getCurrentTime
   updateWithKV
@@ -214,7 +214,7 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-findAllCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
+findAllCustomers :: MonadFlow m => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
 findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
   findAllWithOptionsKV
     [ Se.And
@@ -230,7 +230,7 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
     (Just limitVal)
     (Just offsetVal)
 
-countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
+countCustomers :: MonadFlow m => Id Merchant -> m Int
 countCustomers (Id merchantId) = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -243,7 +243,7 @@ countCustomers (Id merchantId) = do
               B.all_ (BeamCommon.person BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-fetchRidesCount :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Int)
+fetchRidesCount :: MonadFlow m => Id Person -> m (Maybe Int)
 fetchRidesCount personId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $

@@ -17,7 +17,6 @@ module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Vehicle as Vehicle
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -26,10 +25,10 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 
-create :: (L.MonadFlow m, Log m) => VehicleRegistrationCertificate -> m ()
+create :: MonadFlow m => VehicleRegistrationCertificate -> m ()
 create = createWithKV
 
-upsert :: (L.MonadFlow m, Log m) => VehicleRegistrationCertificate -> m ()
+upsert :: MonadFlow m => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
   res <- findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry]]
   if isJust res
@@ -52,7 +51,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
         [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry]]
     else createWithKV a
 
-findById :: (L.MonadFlow m, Log m) => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
+findById :: MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
 findById (Id vrcID) = findOneWithKV [Se.Is BeamVRC.id $ Se.Eq vrcID]
 
 findLastVehicleRC :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
@@ -65,12 +64,12 @@ updateVehicleVariant (Id vehicleRegistrationCertificateId) variant = do
     [Se.Set BeamVRC.vehicleVariant variant]
     [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 
-findByRCAndExpiry :: (L.MonadFlow m, Log m) => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
+findByRCAndExpiry :: MonadFlow m => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
 findByRCAndExpiry certNumber expiry = do
   let certNumberHash = certNumber & (.hash)
   findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fitnessExpiry $ Se.Eq expiry]]
 
-findAllById :: (L.MonadFlow m, Log m) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+findAllById :: MonadFlow m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
 findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
 
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)

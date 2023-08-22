@@ -19,7 +19,6 @@ import Domain.Types.DriverReferral
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RiderDetails as DRDD
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -28,18 +27,18 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as BeamRD
 
-create :: (L.MonadFlow m, Log m) => DRDD.RiderDetails -> m ()
+create :: MonadFlow m => DRDD.RiderDetails -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id RiderDetails -> m (Maybe RiderDetails)
+findById :: MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
 findById (Id riderDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
 
-findByMobileNumberAndMerchant :: (L.MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberAndMerchant :: (MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberAndMerchant mobileNumber_ (Id merchantId) = do
   mobileNumberDbHash <- getDbHash mobileNumber_
   findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
-updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m, Log m) => Id RiderDetails -> m ()
+updateHasTakenValidRide :: MonadFlow m => Id RiderDetails -> m ()
 updateHasTakenValidRide (Id riderId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -49,13 +48,13 @@ updateHasTakenValidRide (Id riderId) = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
-findAllReferredByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m [RiderDetails]
+findAllReferredByDriverId :: MonadFlow m => Id Person -> m [RiderDetails]
 findAllReferredByDriverId (Id driverId) = findAllWithDb [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
 
-findByMobileNumberHashAndMerchant :: (L.MonadFlow m, Log m) => DbHash -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberHashAndMerchant :: MonadFlow m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
-updateReferralInfo :: (L.MonadFlow m, MonadTime m, Log m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m ()
+updateReferralInfo :: MonadFlow m => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m ()
 updateReferralInfo customerNumberHash merchantId referralId driverId = do
   now <- getCurrentTime
   updateWithKV

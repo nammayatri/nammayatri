@@ -71,10 +71,10 @@ import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Ride ()
 import Storage.Queries.Vehicle ()
 
-create :: (L.MonadFlow m, Log m) => Person.Person -> m ()
+create :: MonadFlow m => Person.Person -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findById :: MonadFlow m => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
 data FullDriver = FullDriver
@@ -88,7 +88,7 @@ mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriv
 mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDriversWithInfoAndVehicle ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id Merchant ->
   Int ->
   Int ->
@@ -137,18 +137,18 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
     thd' (_, _, z) = z
 
 getDriversList ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [DriverInformation] ->
   m [Person]
 getDriversList driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personsKeys]
   where
     personsKeys = getId <$> fetchDriverIDsFromInfo driverInfos
 
-getDriversByIdIn :: (L.MonadFlow m, Log m) => [Id Person] -> m [Person]
+getDriversByIdIn :: MonadFlow m => [Id Person] -> m [Person]
 getDriversByIdIn personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
 
 getDriverInformations ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInformations driverLocations =
@@ -161,13 +161,13 @@ getDriverInformations driverLocations =
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
 
-getDriversWithOutdatedLocationsToMakeInactive :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: MonadFlow m => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- QueriesDL.getDriverLocations before
   driverInfos <- getDriverInformations driverLocations
   getDriversList driverInfos
 
-getDriversWithOutdatedLocationsToMakeInactive' :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive' :: MonadFlow m => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive' before = do
   driverLocations <- QueriesDL.getDriverLocations before
   driverInfos <- getDriverInfos driverLocations
@@ -222,7 +222,7 @@ buildFullDriver personHashMap vehicleHashMap driverInfoHashMap location = do
   Just $ mkFullDriver (person, location, info, vehicle)
 
 getDriverInfos ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocs = do
@@ -230,13 +230,13 @@ getDriverInfos driverLocs = do
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
 
-getOnRideStuckDriverIds :: (L.MonadFlow m, Log m) => m [DriverInformation]
+getOnRideStuckDriverIds :: MonadFlow m => m [DriverInformation]
 getOnRideStuckDriverIds = do
   driverIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.driverId <$>)
   findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
 
 getVehicles ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [DriverInformation] ->
   m [Vehicle]
 getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
@@ -244,7 +244,7 @@ getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
 getDrivers ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [Vehicle] ->
   m [Person]
 getDrivers vehicles = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In personKeys, Se.Is BeamP.role $ Se.Eq Person.DRIVER]]
@@ -252,7 +252,7 @@ getDrivers vehicles = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In personKeys, 
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
 getDriverQuote ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [Person] ->
   m [DriverQuote]
 getDriverQuote persons =
@@ -263,7 +263,7 @@ getDriverQuote persons =
     personKeys = getId <$> fetchDriverIDsFromPersons persons
 
 getBookingInfo ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [DriverQuote] ->
   m [Booking.Booking]
 getBookingInfo driverQuote =
@@ -274,7 +274,7 @@ getBookingInfo driverQuote =
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
 
 getBookingLocs ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs bookings = findAllWithKV [Se.Is BeamBL.id $ Se.In bookingKeys]
@@ -305,22 +305,22 @@ fetchDriverIDsFromVehicle = map (.driverId)
 fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
 fetchDriverIDsTextFromQuote = map (.driverId.getId)
 
-findAllDriverInformationWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
+findAllDriverInformationWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
 findAllDriverInformationWithSeConditions = findAllWithKV
 
-findAllVehiclesWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamV.VehicleT] -> m [Vehicle]
+findAllVehiclesWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamV.VehicleT] -> m [Vehicle]
 findAllVehiclesWithSeConditions = findAllWithKV
 
-findAllBookingsWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking.Booking]
+findAllBookingsWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking.Booking]
 findAllBookingsWithSeConditions = findAllWithKV
 
-findAllDriverQuoteWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDQ.DriverQuoteT] -> m [DriverQuote]
+findAllDriverQuoteWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamDQ.DriverQuoteT] -> m [DriverQuote]
 findAllDriverQuoteWithSeConditions = findAllWithKV
 
-findAllPersonWithSeConditionsNameAsc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
+findAllPersonWithSeConditionsNameAsc :: MonadFlow m => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
 findAllPersonWithSeConditionsNameAsc conditions = findAllWithOptionsKV conditions (Se.Asc BeamP.firstName) Nothing Nothing
 
-findAllPersonWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
+findAllPersonWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
 findAllPersonWithSeConditions = findAllWithKV
 
 data DriverWithRidesCount = DriverWithRidesCount
@@ -333,12 +333,12 @@ data DriverWithRidesCount = DriverWithRidesCount
 mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
 mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
 
-fetchDriverInfoWithRidesCount :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount :: MonadFlow m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
 fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
   mbDriverInfo <- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash
   addRidesCount `mapM` mbDriverInfo
   where
-    addRidesCount :: L.MonadFlow m => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
+    addRidesCount :: MonadFlow m => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
     addRidesCount (person, info, vehicle) = do
       dbConf <- getMasterBeamConfig
       resp <-
@@ -351,7 +351,7 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
       let ridesCount = either (const (Just 0)) (snd <$>) resp
       pure (mkDriverWithRidesCount (person, info, vehicle, ridesCount))
 
-fetchDriverInfo :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
+fetchDriverInfo :: MonadFlow m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
 fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
   dbConf <- getMasterBeamConfig
   now <- getCurrentTime
@@ -399,16 +399,16 @@ fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbD
     joinOnlyWhenJustFalse mbFilter cond = maybe (B.val_ False) (const cond) mbFilter
     joinOnlyWhenJustTrue mbFilter cond = maybe (B.val_ True) (const cond) mbFilter
 
-findByIdAndRoleAndMerchantId :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
+findByIdAndRoleAndMerchantId :: MonadFlow m => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
 findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findAllByMerchantId :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
+findAllByMerchantId :: MonadFlow m => [Person.Role] -> Id Merchant -> m [Person]
 findAllByMerchantId roles (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
 
-findAdminsByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
+findAdminsByMerchantId :: MonadFlow m => Id Merchant -> m [Person]
 findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
-findByMobileNumberAndMerchant :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchant :: MonadFlow m => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
   findOneWithKV
     [ Se.And
@@ -418,13 +418,13 @@ findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
         ]
     ]
 
-findByIdentifierAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByIdentifierAndMerchant :: MonadFlow m => Id Merchant -> Text -> m (Maybe Person)
 findByIdentifierAndMerchant (Id merchantId) identifier_ = findOneWithKV [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByEmailAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
+findByEmailAndMerchant :: MonadFlow m => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchant (Id merchantId) email_ = findOneWithKV [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id merchantId) = do
   mobileNumberDbHash <- getDbHash mobileNumber
   findOneWithKV
@@ -436,7 +436,7 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id mercha
         ]
     ]
 
-findAllDriverIdExceptProvided :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided :: MonadFlow m => Id Merchant -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
   dbConf <- getMasterBeamConfig
   result <- L.runDB dbConf $
@@ -464,7 +464,7 @@ findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
     personIdToDrivrId :: Id Person -> Id Driver
     personIdToDrivrId = cast
 
-updateMerchantIdAndMakeAdmin :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Id Merchant -> m ()
+updateMerchantIdAndMakeAdmin :: MonadFlow m => Id Person -> Id Merchant -> m ()
 updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -474,7 +474,7 @@ updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateName :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Text -> m ()
+updateName :: MonadFlow m => Id Person -> Text -> m ()
 updateName (Id personId) name = do
   now <- getCurrentTime
   updateOneWithKV
@@ -483,7 +483,7 @@ updateName (Id personId) name = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonRec :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
+updatePersonRec :: MonadFlow m => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -507,7 +507,7 @@ updatePersonRec (Id personId) person = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (L.MonadFlow m, MonadTime m, Log m) => Person -> Maybe Version -> Maybe Version -> m ()
+updatePersonVersions :: MonadFlow m => Person -> Maybe Version -> Maybe Version -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
@@ -522,7 +522,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         ]
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe FCMRecipientToken -> m ()
+updateDeviceToken :: MonadFlow m => Id Person -> Maybe FCMRecipientToken -> m ()
 updateDeviceToken (Id personId) mbDeviceToken = do
   now <- getCurrentTime
   updateOneWithKV
@@ -531,7 +531,7 @@ updateDeviceToken (Id personId) mbDeviceToken = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
+updateWhatsappNotificationEnrollStatus :: MonadFlow m => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   now <- getCurrentTime
   updateOneWithKV
@@ -540,7 +540,7 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m ()
+updateMobileNumberAndCode :: (MonadFlow m, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -552,7 +552,7 @@ updateMobileNumberAndCode person = do
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-setIsNewFalse :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
+setIsNewFalse :: MonadFlow m => Id Person -> m ()
 setIsNewFalse (Id personId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -561,10 +561,10 @@ setIsNewFalse (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
 
-updateAverageRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Centesimal -> m ()
+updateAverageRating :: MonadFlow m => Id Person -> Centesimal -> m ()
 updateAverageRating (Id personId) newAverageRating = do
   now <- getCurrentTime
   updateOneWithKV
@@ -587,7 +587,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (MonadTime m, L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -652,7 +652,7 @@ getDriverLocsWithCond ::
   m [DriverLocation]
 getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
 
-getDriverInfosWithCond :: (L.MonadFlow m, Log m) => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
+getDriverInfosWithCond :: MonadFlow m => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
 getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
   findAllWithKV
     [ Se.And
@@ -680,7 +680,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
     personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
 
 getVehiclesWithCond ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [DriverInformation] ->
   m [Vehicle]
 getVehiclesWithCond driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personsKeys]
@@ -704,7 +704,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (MonadTime m, L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -800,7 +800,7 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
     then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
     else Nothing
 
-updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m) => Person -> m ()
+updateAlternateMobileNumberAndCode :: MonadFlow m => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -811,14 +811,14 @@ updateAlternateMobileNumberAndCode person = do
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-findAllPersonWithDriverInfos :: (L.MonadFlow m, Log m) => [DriverInformation] -> Id Merchant -> m [Person]
+findAllPersonWithDriverInfos :: MonadFlow m => [DriverInformation] -> Id Merchant -> m [Person]
 findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In (getId . DriverInfo.driverId <$> dInfos), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
 
-updateMediaId :: (MonadFlow m) => Id Person -> Maybe (Id MediaFile) -> m ()
+updateMediaId :: MonadFlow m => Id Person -> Maybe (Id MediaFile) -> m ()
 updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
 
 instance FromTType' BeamP.Person Person where
-  fromTType' :: (MonadThrow m, L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
+  fromTType' :: MonadFlow m => BeamP.Person -> m (Maybe Person)
   fromTType' BeamP.PersonT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion

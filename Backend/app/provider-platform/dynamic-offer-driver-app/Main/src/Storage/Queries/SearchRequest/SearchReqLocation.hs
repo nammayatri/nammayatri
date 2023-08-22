@@ -17,18 +17,17 @@
 module Storage.Queries.SearchRequest.SearchReqLocation where
 
 import Domain.Types.SearchRequest.SearchReqLocation
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 
-create :: (L.MonadFlow m, Log m) => SearchReqLocation -> m ()
+create :: MonadFlow m => SearchReqLocation -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id SearchReqLocation -> m (Maybe SearchReqLocation)
+findById :: MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
 findById (Id searchReqLocationId) = findOneWithKV [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
 
 instance FromTType' BeamSRL.SearchReqLocation SearchReqLocation where
