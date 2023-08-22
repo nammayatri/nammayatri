@@ -36,6 +36,7 @@ import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Payment as Payment
 import qualified API.UI.Performance as Performance
 import qualified API.UI.Plan as Plan
+import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
@@ -70,6 +71,7 @@ type API =
            :<|> Whatsapp.API
            :<|> Message.API
            :<|> Performance.API
+           :<|> Rating.API
            :<|> DriverReferral.API
            :<|> Issue.API
            :<|> ExotelEndRide.API
@@ -100,6 +102,7 @@ handler =
     :<|> Whatsapp.handler
     :<|> Message.handler
     :<|> Performance.handler
+    :<|> Rating.handler
     :<|> DriverReferral.handler
     :<|> Issue.handler
     :<|> ExotelEndRide.handler

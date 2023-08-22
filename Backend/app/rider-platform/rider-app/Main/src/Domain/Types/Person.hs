@@ -29,7 +29,7 @@ import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMet
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version
-import Kernel.Utils.Common (maskText)
+import Kernel.Utils.Common (Centesimal, maskText)
 import Servant.API
 
 data Role
@@ -92,7 +92,10 @@ data PersonE e = Person
     mobileCountryCode :: Maybe Text,
     passwordHash :: Maybe DbHash,
     identifier :: Maybe Text,
-    rating :: Maybe Text,
+    rating :: Maybe Centesimal,
+    totalRatings :: Int,
+    totalRatingScore :: Int,
+    isValidRating :: Bool,
     language :: Maybe Maps.Language,
     isNew :: Bool,
     enabled :: Bool,

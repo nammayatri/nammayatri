@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.Feedback
+module API.UI.Rating
   ( API,
     handler,
     DFeedback.FeedbackReq (..),
@@ -42,10 +42,10 @@ type API =
        )
 
 handler :: App.FlowServer API
-handler = feedback
+handler = rating
 
-feedback :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
-feedback (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
+rating (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReq dFeedbackRes
   void $ withLongRetry $ CallBPP.feedback dFeedbackRes.providerUrl becknReq

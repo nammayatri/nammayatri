@@ -5,4 +5,5 @@
 , encHashSalt =
     "How wonderful it is that nobody need wait a single moment before starting to improve the world"
 , dashboardToken = "some-secret-dashboard-token-for-rider-app"
+, internalAPIKey = "test-bap-api-key"
 }

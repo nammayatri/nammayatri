@@ -15,15 +15,18 @@
 module Domain.Action.Beckn.Rating where
 
 import qualified Domain.Types.Booking as DBooking
+import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
@@ -36,9 +39,10 @@ data DRatingReq = DRatingReq
     feedbackDetails :: Maybe Text
   }
 
-handler :: DRatingReq -> DRide.Ride -> Flow ()
-handler req ride = do
-  rating <- QRating.findRatingForRide ride.id
+handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
+handler merchantId req ride = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
       feedbackDetails = req.feedbackDetails
@@ -52,20 +56,20 @@ handler req ride = do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
-  calculateAverageRating driverId
+  calculateAverageRating driverId merchant.minimumDriverRatesCount
 
 calculateAverageRating ::
-  (EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   Id DP.Person ->
+  Int ->
   m ()
-calculateAverageRating personId = do
+calculateAverageRating personId minimumDriverRatesCount = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
-  allRatings <- QRating.findAllRatingsForPerson personId
+  allRatings <- B.runInReplica $ QRating.findAllRatingsForPerson personId
   let ratingsSum = fromIntegral $ sum (allRatings <&> (.ratingValue))
   let ratingCount = length allRatings
   when (ratingCount == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
-  minimumDriverRatesCount <- asks (.minimumDriverRatesCount)
   when (ratingCount >= minimumDriverRatesCount) $ do
     let newAverage = ratingsSum / fromIntegral ratingCount
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
@@ -81,7 +85,7 @@ buildRating rideId driverId ratingValue feedbackDetails = do
 
 validateRequest :: DRatingReq -> Flow DRide.Ride
 validateRequest req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  booking <- B.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   ride <-
     QRide.findActiveByRBId booking.id
       >>= fromMaybeM (RideNotFound booking.id.getId)

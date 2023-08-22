@@ -141,6 +141,13 @@ let tables =
       , enableKVForRead = [] : List Text
       }
 
+let appBackendBapInternal =
+      { name = "APP_BACKEND"
+      , url = "http://localhost:8013/"
+      , apiKey = sec.appBackendApikey
+      , internalKey = sec.internalKey
+      }
+
 let registryMap =
       [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
         , mapValue = "http://localhost:8020/"
@@ -184,11 +191,11 @@ in  { esqDBCfg
             }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
+    , appBackendBapInternal
     , graceTerminationPeriod = +90
     , registryMap
     , encTools
     , authTokenCacheExpiry = +600
-    , minimumDriverRatesCount = +5
     , disableSignatureAuth = False
     , httpClientOptions = common.httpClientOptions
     , shortDurationRetryCfg = common.shortDurationRetryCfg
