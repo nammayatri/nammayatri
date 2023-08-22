@@ -16,20 +16,22 @@ module Lib.SessionizerMetrics.Prometheus.Internal where
 
 import Kernel.Prelude
 import Kernel.Types.Common
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Prometheus as P
 
 incrementCounter ::
   ( MonadReader r1 m,
     MonadGuid m,
     MonadTime m,
-    MonadIO m
+    MonadIO m,
+    EventStreamFlow m r
   ) =>
   Text ->
   Text ->
   Text ->
   m ()
 incrementCounter merchantId event deploymentVersion = do
-  counterName <- liftIO registerEventRequestCounterMetric
+  counterName <- asks (.eventRequestCounter)
   liftIO $ P.withLabel counterName (event, merchantId, deploymentVersion) P.incCounter
 
 type EventCounterMetric = P.Vector P.Label3 P.Counter

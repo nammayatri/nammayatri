@@ -21,6 +21,7 @@ import Kernel.Types.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.SessionizerMetrics.Kafka.Config
+import Prometheus
 
 data Event p = Event
   { id :: Text, -- id of the event
@@ -63,4 +64,4 @@ data EventStreamMap = EventStreamMap
 data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
-type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap])
+type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasField "eventRequestCounter" r (Vector (Text, Text, Text) Counter))
