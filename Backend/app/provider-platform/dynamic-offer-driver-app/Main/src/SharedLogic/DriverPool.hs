@@ -54,7 +54,6 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -94,7 +93,7 @@ mkOldRatioKey driverId ratioType = "driver-offer:DriverPool:" <> ratioType <> ":
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
-windowFromIntelligentPoolConfig :: (L.MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
+windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig merchantId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantId merchantId
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
@@ -430,7 +429,7 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    L.MonadFlow m,
+    MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -512,7 +511,7 @@ calculateDriverPoolCurrentlyOnRide ::
     EsqDBFlow m r,
     EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    L.MonadFlow m,
+    MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->

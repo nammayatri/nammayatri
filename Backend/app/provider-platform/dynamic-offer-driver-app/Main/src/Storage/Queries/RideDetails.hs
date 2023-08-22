@@ -17,19 +17,18 @@ module Storage.Queries.RideDetails where
 
 import qualified Domain.Types.Ride as SR
 import Domain.Types.RideDetails as DRD
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
 
-create :: (L.MonadFlow m, Log m) => DRD.RideDetails -> m ()
+create :: MonadFlow m => DRD.RideDetails -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id SR.Ride -> m (Maybe RideDetails)
+findById :: MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
 findById (Id rideDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
 
 instance FromTType' BeamRD.RideDetails RideDetails where

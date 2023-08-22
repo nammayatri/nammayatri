@@ -19,7 +19,6 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
-import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
@@ -47,8 +46,7 @@ sendSearchRequestToDrivers ::
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    Log m,
-    L.MonadFlow m
+    MonadFlow m
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult

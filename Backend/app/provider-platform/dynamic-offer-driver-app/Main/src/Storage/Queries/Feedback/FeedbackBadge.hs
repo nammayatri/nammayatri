@@ -18,22 +18,21 @@ module Storage.Queries.Feedback.FeedbackBadge where
 import Data.Text
 import Domain.Types.Feedback.Feedback
 import Domain.Types.Person (Person)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Types.Id
 import Kernel.Types.Time
-import Kernel.Utils.Logging (Log)
+import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.Feedback.FeedbackBadge as BFFB
 import Prelude hiding (id)
 
-createFeedbackBadge :: (L.MonadFlow m, Log m) => FeedbackBadge -> m ()
+createFeedbackBadge :: MonadFlow m => FeedbackBadge -> m ()
 createFeedbackBadge = createWithKV
 
-findFeedbackBadgeForDriver :: (L.MonadFlow m, Log m) => Id Person -> Text -> m (Maybe FeedbackBadge)
+findFeedbackBadgeForDriver :: MonadFlow m => Id Person -> Text -> m (Maybe FeedbackBadge)
 findFeedbackBadgeForDriver (Id driverId) badge = findOneWithKV [Se.And [Se.Is BFFB.driverId $ Se.Eq driverId, Se.Is BFFB.badge $ Se.Eq badge]]
 
-updateFeedbackBadge :: (L.MonadFlow m, Log m, MonadTime m) => FeedbackBadge -> Int -> m ()
+updateFeedbackBadge :: MonadFlow m => FeedbackBadge -> Int -> m ()
 updateFeedbackBadge feedbackBadge newBadgeCount = do
   now <- getCurrentTime
   updateWithKV
@@ -42,7 +41,7 @@ updateFeedbackBadge feedbackBadge newBadgeCount = do
     ]
     [Se.And [Se.Is BFFB.id $ Se.Eq $ getId feedbackBadge.id, Se.Is BFFB.driverId $ Se.Eq $ getId feedbackBadge.driverId]]
 
-findAllFeedbackBadgeForDriver :: (L.MonadFlow m, Log m) => Id Person -> m [FeedbackBadge]
+findAllFeedbackBadgeForDriver :: MonadFlow m => Id Person -> m [FeedbackBadge]
 findAllFeedbackBadgeForDriver (Id driverId) = findAllWithKV [Se.Is BFFB.driverId $ Se.Eq driverId]
 
 instance FromTType' BFFB.FeedbackBadge FeedbackBadge where

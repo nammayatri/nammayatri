@@ -22,7 +22,6 @@ where
 
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceUsageConfig
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -30,10 +29,10 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 
-findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
 
-updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m, Log m) => MerchantServiceUsageConfig -> m ()
+updateMerchantServiceUsageConfig :: MonadFlow m => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
   updateWithKV

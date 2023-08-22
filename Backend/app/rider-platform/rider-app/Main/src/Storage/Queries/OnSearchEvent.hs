@@ -16,14 +16,13 @@
 module Storage.Queries.OnSearchEvent where
 
 import Domain.Types.OnSearchEvent
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Storage.Beam.OnSearchEvent as BeamOSE
 
-create :: (L.MonadFlow m, Log m) => OnSearchEvent -> m ()
+create :: MonadFlow m => OnSearchEvent -> m ()
 create = createWithKV
 
 instance FromTType' BeamOSE.OnSearchEvent OnSearchEvent where

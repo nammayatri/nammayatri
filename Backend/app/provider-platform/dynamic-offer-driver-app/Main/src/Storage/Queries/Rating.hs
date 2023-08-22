@@ -28,10 +28,10 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Rating as BeamR
 
-create :: (L.MonadFlow m, Log m) => DR.Rating -> m ()
+create :: MonadFlow m => DR.Rating -> m ()
 create = createWithKV
 
-updateRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
+updateRating :: MonadFlow m => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
 updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
   updateOneWithKV
@@ -41,13 +41,13 @@ updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
     ]
     [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.driverId (Se.Eq driverId)]]
 
-findAllRatingsForPerson :: (L.MonadFlow m, Log m) => Id Person -> m [Rating]
+findAllRatingsForPerson :: MonadFlow m => Id Person -> m [Rating]
 findAllRatingsForPerson driverId = findAllWithDb [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
 
-findRatingForRide :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
+findRatingForRide :: MonadFlow m => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]
 
-findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
+findAllRatingUsersCountByPerson :: MonadFlow m => Id Person -> m Int
 findAllRatingUsersCountByPerson (Id driverId) = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $

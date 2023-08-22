@@ -22,25 +22,23 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common (Meters, MonadTime (getCurrentTime))
+import Kernel.Types.Common (Meters, MonadFlow, MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 
-create :: (L.MonadFlow m, Log m) => DriverPoolConfig -> m ()
+create :: MonadFlow m => DriverPoolConfig -> m ()
 create = createWithKV
 
-findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [DriverPoolConfig]
+findAllByMerchantId :: MonadFlow m => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId (Id merchantId) = findAllWithOptionsKV [Se.Is BeamDPC.merchantId $ Se.Eq merchantId] (Se.Desc BeamDPC.tripDistance) Nothing Nothing
 
-findByMerchantIdAndTripDistance :: (L.MonadFlow m, Log m) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantIdAndTripDistance :: MonadFlow m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantId) tripDistance = findOneWithKV [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => DriverPoolConfig -> m ()
+update :: MonadFlow m => DriverPoolConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateWithKV

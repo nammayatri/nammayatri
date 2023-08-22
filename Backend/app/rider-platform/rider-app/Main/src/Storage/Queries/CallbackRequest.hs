@@ -16,15 +16,14 @@
 module Storage.Queries.CallbackRequest where
 
 import Domain.Types.CallbackRequest
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Storage.Beam.CallbackRequest as BeamCR
 
-create :: (L.MonadFlow m, Log m) => CallbackRequest -> m ()
+create :: MonadFlow m => CallbackRequest -> m ()
 create = createWithKV
 
 instance FromTType' BeamCR.CallbackRequest CallbackRequest where

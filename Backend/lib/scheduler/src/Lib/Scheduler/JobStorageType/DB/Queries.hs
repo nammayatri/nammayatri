@@ -17,21 +17,13 @@
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
 import Data.Singletons (SingI)
--- import qualified Database.Beam as B
--- import qualified EulerHS.Language as L
--- import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (MonadTime (getCurrentTime))
--- import Kernel.Types.Error
 import Kernel.Types.Id
--- import Kernel.Types.Logging
--- import Kernel.Types.MonadGuid
--- import Kernel.Utils.Error
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.DB.Table
--- import qualified Lib.Scheduler.JobStorageType.DB.TableB as BeamSJ
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types as ST
 
@@ -62,7 +54,7 @@ createJobIn inTime maxShards jobData = do
 --           maxErrors = 5
 --         }
 
--- create'' :: (L.MonadFlow m, Log m) => AnyJob t -> m ()
+-- create'' :: MonadFlow m => AnyJob t -> m ()
 -- create'' (ST.AnyJob ST.Job {..}) = do
 --   let storedJobInfo = ST.storeJobInfo jobInfo
 --   dbConf <- L.getOption KBT.PsqlDbCfg >>= fromMaybeM (InternalError "distance is null for one way booking")

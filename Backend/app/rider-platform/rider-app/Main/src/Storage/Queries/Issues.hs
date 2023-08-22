@@ -22,21 +22,19 @@ module Storage.Queries.Issues where
 import Domain.Types.Issue as Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
-import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
+import Kernel.Utils.Common (MonadFlow, MonadTime (..), getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue as BeamI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.Person ()
 
-insertIssue :: (L.MonadFlow m, Log m) => Issue -> m ()
+insertIssue :: MonadFlow m => Issue -> m ()
 insertIssue = createWithKV
 
-findByCustomerId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findByCustomerId :: MonadFlow m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
   let limitVal = min (maybe 10 fromIntegral mbLimit) 10
       offsetVal = maybe 0 fromIntegral mbOffset
@@ -58,7 +56,7 @@ findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
        in acc <> ((\p -> (issue, p)) <$> persons')
 
 -- Finding issues over non-Id; do it through DB
-findAllIssue :: (L.MonadFlow m, Log m) => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findAllIssue :: MonadFlow m => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
   let limitVal = min (maybe 10 fromIntegral mbLimit) 10
       offsetVal = maybe 0 fromIntegral mbOffset
@@ -108,19 +106,19 @@ instance ToTType' BeamI.Issue Issue where
         BeamI.updatedAt = updatedAt
       }
 
-updateIssueStatus :: (L.MonadFlow m, Log m, MonadTime m) => Text -> IssueStatus -> m ()
+updateIssueStatus :: MonadFlow m => Text -> IssueStatus -> m ()
 updateIssueStatus ticketId status = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamI.status status, Se.Set BeamI.updatedAt now]
     [Se.Is BeamI.ticketId (Se.Eq (Just ticketId))]
 
-updateTicketId :: (L.MonadFlow m, Log m, MonadTime m) => Id Issue -> Text -> m ()
+updateTicketId :: MonadFlow m => Id Issue -> Text -> m ()
 updateTicketId issueId ticketId = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamI.ticketId (Just ticketId), Se.Set BeamI.updatedAt now]
     [Se.Is BeamI.id (Se.Eq $ getId issueId)]
 
-findByTicketId :: (L.MonadFlow m, Log m) => Text -> m (Maybe Issue)
+findByTicketId :: MonadFlow m => Text -> m (Maybe Issue)
 findByTicketId ticketId = findOneWithKV [Se.Is BeamI.ticketId $ Se.Eq (Just ticketId)]

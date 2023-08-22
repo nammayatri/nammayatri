@@ -7,24 +7,23 @@ import Database.Beam.Postgres (Postgres)
 import Domain.Types.Issue.IssueCategory
 import qualified Domain.Types.Issue.IssueCategory as DomainIC
 import Domain.Types.Issue.IssueTranslation as DomainIT
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 import Storage.Queries.Issue.IssueTranslation ()
 
-findAllIssueTranslationWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
+findAllIssueTranslationWithSeCondition :: MonadFlow m => [Se.Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
 findAllIssueTranslationWithSeCondition = findAllWithKV
 
-findAllIssueCategoryWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamIC.IssueCategoryT] -> m [IssueCategory]
+findAllIssueCategoryWithSeCondition :: MonadFlow m => [Se.Clause Postgres BeamIC.IssueCategoryT] -> m [IssueCategory]
 findAllIssueCategoryWithSeCondition = findAllWithKV
 
-findAllByLanguage :: (L.MonadFlow m, Log m) => Language -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllByLanguage :: MonadFlow m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllByLanguage language = do
   iTranslations <- findAllIssueTranslationWithSeCondition [Se.Is BeamIT.language $ Se.Eq language]
   iCategorys <- findAllIssueCategoryWithSeCondition [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
@@ -34,10 +33,10 @@ findAllByLanguage language = do
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iCategory, Just iTranslation'')) <$> iTranslations' else [(iCategory, Nothing)]
 
-findById :: (L.MonadFlow m, Log m) => Id IssueCategory -> m (Maybe IssueCategory)
+findById :: MonadFlow m => Id IssueCategory -> m (Maybe IssueCategory)
 findById (Id issueCategoryId) = findOneWithKV [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
 
-findByIdAndLanguage :: (L.MonadFlow m, Log m) => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
+findByIdAndLanguage :: MonadFlow m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage (Id issueCategoryId) language = do
   iCategory <- findAllIssueCategoryWithSeCondition [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
   iTranslations <- findAllIssueTranslationWithSeCondition [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIC.category <$> iCategory)]]

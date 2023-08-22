@@ -16,18 +16,17 @@
 module Storage.Queries.RentalSlab where
 
 import Domain.Types.RentalSlab
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RentalSlab as BeamRS
 
-createRentalSlab :: (L.MonadFlow m, Log m) => RentalSlab -> m ()
+createRentalSlab :: MonadFlow m => RentalSlab -> m ()
 createRentalSlab = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id RentalSlab -> m (Maybe RentalSlab)
+findById :: MonadFlow m => Id RentalSlab -> m (Maybe RentalSlab)
 findById rentalSlabId = findOneWithKV [Se.Is BeamRS.id $ Se.Eq (getId rentalSlabId)]
 
 instance FromTType' BeamRS.RentalSlab RentalSlab where

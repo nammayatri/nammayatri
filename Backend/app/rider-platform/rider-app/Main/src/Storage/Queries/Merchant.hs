@@ -21,7 +21,6 @@ module Storage.Queries.Merchant
 where
 
 import Domain.Types.Merchant as DOrg
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Geofencing as Geo
@@ -31,19 +30,19 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
-findById :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe Merchant)
+findById :: MonadFlow m => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
-findByShortId :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
 
-findBySubscriberId :: (L.MonadFlow m, Log m) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq $ getShortId subscriberId]
 
-findAll :: (L.MonadFlow m, Log m) => m [Merchant]
+findAll :: MonadFlow m => m [Merchant]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
+update :: MonadFlow m => Merchant -> m ()
 update org = do
   now <- getCurrentTime
   updateOneWithKV

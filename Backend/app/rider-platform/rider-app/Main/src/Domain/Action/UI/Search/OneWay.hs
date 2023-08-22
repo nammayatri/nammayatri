@@ -32,7 +32,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Serviceability
@@ -120,7 +119,7 @@ oneWaySearch ::
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     EsqDBFlow m r,
     HasBAPMetrics m r,
-    L.MonadFlow m,
+    MonadFlow m,
     EventStreamFlow m r
   ) =>
   Id Person.Person ->

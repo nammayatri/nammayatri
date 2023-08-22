@@ -17,7 +17,6 @@ module Storage.Queries.RegistrationToken where
 
 import Domain.Types.Person
 import Domain.Types.RegistrationToken as DRT
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -25,13 +24,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
-create :: (L.MonadFlow m, Log m) => DRT.RegistrationToken -> m ()
+create :: MonadFlow m => DRT.RegistrationToken -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById :: MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = findOneWithKV [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
 
-setVerified :: (L.MonadFlow m, MonadTime m, Log m) => Id RegistrationToken -> m ()
+setVerified :: MonadFlow m => Id RegistrationToken -> m ()
 setVerified (Id rtId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -40,10 +39,10 @@ setVerified (Id rtId) = do
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
 
-findByToken :: (L.MonadFlow m, Log m) => RegToken -> m (Maybe RegistrationToken)
+findByToken :: MonadFlow m => RegToken -> m (Maybe RegistrationToken)
 findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 
-updateAttempts :: (L.MonadFlow m, MonadTime m, Log m) => Int -> Id RegistrationToken -> m ()
+updateAttempts :: MonadFlow m => Int -> Id RegistrationToken -> m ()
 updateAttempts attempts (Id rtId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -52,16 +51,16 @@ updateAttempts attempts (Id rtId) = do
     ]
     [Se.Is BeamRT.id (Se.Eq rtId)]
 
-deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId :: MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamRT.entityId (Se.Eq personId)]
 
-deleteByPersonIdExceptNew :: (L.MonadFlow m, Log m) => Id Person -> Id RegistrationToken -> m ()
+deleteByPersonIdExceptNew :: MonadFlow m => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
 
-findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [RegistrationToken]
+findAllByPersonId :: MonadFlow m => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
 
-getAlternateNumberAttempts :: (L.MonadFlow m, Log m) => Id Person -> m Int
+getAlternateNumberAttempts :: MonadFlow m => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
 
 instance FromTType' BeamRT.RegistrationToken RegistrationToken where

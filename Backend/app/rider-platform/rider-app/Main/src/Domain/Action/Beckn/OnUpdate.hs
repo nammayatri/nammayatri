@@ -40,7 +40,6 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment ()
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -235,7 +234,7 @@ onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CacheFlow m r,
     EsqDBFlow m r,
-    L.MonadFlow m,
+    MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,

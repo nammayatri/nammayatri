@@ -33,9 +33,8 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Types
 import Kernel.Prelude
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common (MonadFlow, MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Kernel.Types.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Message.Message as BeamM
@@ -46,13 +45,13 @@ import qualified Storage.Queries.Message.Message ()
 import Storage.Queries.Message.MessageTranslation as QMMT hiding (create)
 import qualified Storage.Queries.Person ()
 
-createMany :: (L.MonadFlow m, Log m) => [MessageReport] -> m ()
+createMany :: MonadFlow m => [MessageReport] -> m ()
 createMany = traverse_ create
 
-create :: (L.MonadFlow m, Log m) => MessageReport -> m ()
+create :: MonadFlow m => MessageReport -> m ()
 create = createWithKV
 
-findByDriverIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguage :: MonadFlow m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
@@ -99,16 +98,16 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
     snd' (_, y, _) = y
     thd' (_, _, z) = z
 
-findById :: (L.MonadFlow m, Log m) => Id MessageReport -> m (Maybe MessageReport)
+findById :: MonadFlow m => Id MessageReport -> m (Maybe MessageReport)
 findById (Id id) = findOneWithKV [Se.Is BeamMR.messageId $ Se.Eq id]
 
-findAllMessageWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
+findAllMessageWithSeConditionCreatedAtdesc :: MonadFlow m => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
 findAllMessageWithSeConditionCreatedAtdesc conditions = findAllWithOptionsDb conditions (Se.Desc BeamM.createdAt) Nothing Nothing
 
-findAllMessageTranslationWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
+findAllMessageTranslationWithSeConditionCreatedAtdesc :: MonadFlow m => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
 findAllMessageTranslationWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamMT.createdAt) Nothing Nothing
 
-findByDriverIdMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
+findByDriverIdMessageIdAndLanguage :: MonadFlow m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
   maybeMessageReport <- findByMessageIdAndDriverId messageId driverId
   maybeRawMessage <- QMM.findById messageId
@@ -119,10 +118,10 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
     _ ->
       pure Nothing
 
-findByMessageIdAndDriverId :: (L.MonadFlow m, Log m) => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
+findByMessageIdAndDriverId :: MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 findByMessageIdAndDriverId (Id messageId) (Id driverId) = findOneWithKV [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
 
-findByMessageIdAndStatusWithLimitAndOffset :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Id Msg.Message -> Maybe DeliveryStatus -> m [(MessageReport, P.Person)]
+findByMessageIdAndStatusWithLimitAndOffset :: MonadFlow m => Maybe Int -> Maybe Int -> Id Msg.Message -> Maybe DeliveryStatus -> m [(MessageReport, P.Person)]
 findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageId) mbDeliveryStatus = do
   dbConf <- getMasterBeamConfig
   resp <-
@@ -153,7 +152,7 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageId) mbDel
     limitVal = min (maybe 10 fromIntegral mbLimit) 20
     offsetVal = maybe 0 fromIntegral mbOffset
 
-getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
+getMessageCountByStatus :: MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
   dbConf <- getMasterBeamConfig
   resp <-
@@ -165,7 +164,7 @@ getMessageCountByStatus (Id messageID) status = do
               B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
-getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
+getMessageCountByReadStatus :: MonadFlow m => Id Msg.Message -> m Int
 getMessageCountByReadStatus (Id messageID) = do
   dbConf <- getMasterBeamConfig
   resp <-
@@ -177,7 +176,7 @@ getMessageCountByReadStatus (Id messageID) = do
               B.all_ (BeamCommon.messageReport BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
-updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m ()
+updateSeenAndReplyByMessageIdAndDriverId :: MonadFlow m => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m ()
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
   now <- getCurrentTime
   updateOneWithKV
@@ -187,7 +186,7 @@ updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = d
     ]
     [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
-updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> m ()
+updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: MonadFlow m => Id Msg.Message -> Id P.Driver -> m ()
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
   findByMessageIdAndDriverId messageId driverId >>= \case
     Just report -> do
@@ -200,7 +199,7 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
         [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId, Se.Is BeamMR.readStatus $ Se.Eq True]]
     Nothing -> pure ()
 
-updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m ()
+updateDeliveryStatusByMessageIdAndDriverId :: MonadFlow m => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m ()
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   now <- getCurrentTime
   updateOneWithKV
@@ -209,7 +208,7 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     ]
     [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
-deleteByPersonId :: (L.MonadFlow m, Log m) => Id P.Person -> m ()
+deleteByPersonId :: MonadFlow m => Id P.Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamMR.driverId (Se.Eq personId)]
 
 instance FromTType' BeamMR.MessageReport MessageReport where

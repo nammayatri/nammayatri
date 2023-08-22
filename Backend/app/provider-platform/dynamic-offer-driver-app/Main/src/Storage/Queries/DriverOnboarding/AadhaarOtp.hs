@@ -17,25 +17,24 @@ module Storage.Queries.DriverOnboarding.AadhaarOtp where
 
 import Domain.Types.DriverOnboarding.AadhaarOtp
 import Domain.Types.Person
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV
 
-createForGenerate :: (L.MonadFlow m, Log m) => AadhaarOtpReq -> m ()
+createForGenerate :: MonadFlow m => AadhaarOtpReq -> m ()
 createForGenerate = createWithKV
 
-createForVerify :: (L.MonadFlow m, Log m) => AadhaarOtpVerify -> m ()
+createForVerify :: MonadFlow m => AadhaarOtpVerify -> m ()
 createForVerify = createWithKV
 
-deleteByPersonIdForGenerate :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonIdForGenerate :: MonadFlow m => Id Person -> m ()
 deleteByPersonIdForGenerate personId = deleteWithKV [Se.Is BeamAOR.driverId (Se.Eq (getId personId))]
 
-deleteByPersonIdForVerify :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonIdForVerify :: MonadFlow m => Id Person -> m ()
 deleteByPersonIdForVerify personId = deleteWithKV [Se.Is BeamAOV.driverId (Se.Eq (getId personId))]
 
 instance FromTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where

@@ -43,7 +43,6 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import qualified EulerHS.Language as L
 import EulerHS.Prelude (Alternative (empty), whenJustM)
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
@@ -395,7 +394,7 @@ validateRequest merchantId sReq = do
   return merchant
   where
     rideServiceable' ::
-      L.MonadFlow m =>
+      MonadFlow m =>
       GeofencingConfig ->
       (LatLong -> [Text] -> m Bool) ->
       LatLong ->

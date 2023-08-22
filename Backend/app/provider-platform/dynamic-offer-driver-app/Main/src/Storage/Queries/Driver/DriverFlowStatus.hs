@@ -18,7 +18,6 @@ module Storage.Queries.Driver.DriverFlowStatus where
 import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -26,22 +25,22 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 
-create :: (L.MonadFlow m, Log m) => DDFS.DriverFlowStatus -> m ()
+create :: MonadFlow m => DDFS.DriverFlowStatus -> m ()
 create = createWithKV
 
-deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDFS.personId (Se.Eq driverId)]
 
-getStatus :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DDFS.FlowStatus)
+getStatus :: MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
 getStatus (Id personId) = findOneWithKV [Se.Is BeamDFS.personId $ Se.Eq personId] <&> (DDFS.flowStatus <$>)
 
-clearPaymentStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> m ()
+clearPaymentStatus :: MonadFlow m => Id Person -> Bool -> m ()
 clearPaymentStatus personId isActive = updateStatus' False personId (if isActive then DDFS.ACTIVE else DDFS.IDLE)
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> DDFS.FlowStatus -> m ()
+updateStatus :: MonadFlow m => Id Person -> DDFS.FlowStatus -> m ()
 updateStatus = updateStatus' True
 
-updateStatus' :: (L.MonadFlow m, MonadTime m, Log m) => Bool -> Id Person -> DDFS.FlowStatus -> m ()
+updateStatus' :: MonadFlow m => Bool -> Id Person -> DDFS.FlowStatus -> m ()
 updateStatus' checkForPayment personId flowStatus = do
   getStatus personId >>= \case
     Just ds | not checkForPayment || not (isPaymentOverdue ds) -> do

@@ -17,34 +17,33 @@ module Storage.Queries.SavedReqLocation where
 
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SavedReqLocation as BeamSRL
 
-create :: (L.MonadFlow m, Log m) => SavedReqLocation -> m ()
+create :: MonadFlow m => SavedReqLocation -> m ()
 create = createWithKV
 
-findAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m [SavedReqLocation]
+findAllByRiderId :: MonadFlow m => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId = findAllWithOptionsKV [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)] (Se.Desc BeamSRL.updatedAt) Nothing Nothing
 
-deleteByRiderIdAndTag :: (L.MonadFlow m, Log m) => Id Person -> Text -> m ()
+deleteByRiderIdAndTag :: MonadFlow m => Id Person -> Text -> m ()
 deleteByRiderIdAndTag perId addressTag = deleteWithKV [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
 
-findAllByRiderIdAndTag :: (L.MonadFlow m, Log m) => Id Person -> Text -> m [SavedReqLocation]
+findAllByRiderIdAndTag :: MonadFlow m => Id Person -> Text -> m [SavedReqLocation]
 findAllByRiderIdAndTag perId addressTag = findAllWithKV [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
 
-findByLatLonAndRiderId :: (L.MonadFlow m, Log m) => Id Person -> LatLong -> m (Maybe SavedReqLocation)
+findByLatLonAndRiderId :: MonadFlow m => Id Person -> LatLong -> m (Maybe SavedReqLocation)
 findByLatLonAndRiderId personId LatLong {..} = findOneWithKV [Se.And [Se.Is BeamSRL.lat (Se.Eq lat), Se.Is BeamSRL.lon (Se.Eq lon), Se.Is BeamSRL.riderId (Se.Eq (getId personId))]]
 
-countAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m Int
+countAllByRiderId :: MonadFlow m => Id Person -> m Int
 countAllByRiderId perId = findAllWithKV [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)] <&> length
 
-deleteAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteAllByRiderId :: MonadFlow m => Id Person -> m ()
 deleteAllByRiderId personId = deleteWithKV [Se.Is BeamSRL.riderId (Se.Eq (getId personId))]
 
 instance FromTType' BeamSRL.SavedReqLocation SavedReqLocation where

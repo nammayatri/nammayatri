@@ -31,7 +31,6 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -347,11 +346,11 @@ callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
   void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
-checkRegistrationTokenExists :: (L.MonadFlow m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: MonadFlow m => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: (L.MonadFlow m, MonadThrow m, Log m) => Text -> m SP.Person
+checkPersonExists :: MonadFlow m => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 

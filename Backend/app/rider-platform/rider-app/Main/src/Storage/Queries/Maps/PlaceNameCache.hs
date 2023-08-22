@@ -21,21 +21,20 @@ module Storage.Queries.Maps.PlaceNameCache
 where
 
 import Domain.Types.Maps.PlaceNameCache
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 
-create :: (L.MonadFlow m, Log m) => PlaceNameCache -> m ()
+create :: MonadFlow m => PlaceNameCache -> m ()
 create = createWithKV
 
-findPlaceByPlaceId :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
+findPlaceByPlaceId :: MonadFlow m => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId = findAllWithKV [Se.Is BeamPNC.placeId $ Se.Eq (Just placeId)]
 
-findPlaceByGeoHash :: (L.MonadFlow m, Log m) => Text -> m [PlaceNameCache]
+findPlaceByGeoHash :: MonadFlow m => Text -> m [PlaceNameCache]
 findPlaceByGeoHash geoHash = findAllWithKV [Se.Is BeamPNC.geoHash $ Se.Eq (Just geoHash)]
 
 instance FromTType' BeamPNC.PlaceNameCache PlaceNameCache where

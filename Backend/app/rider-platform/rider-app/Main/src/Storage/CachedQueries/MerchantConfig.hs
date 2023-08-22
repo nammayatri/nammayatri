@@ -21,14 +21,13 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.MerchantConfig
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantConfig as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m) => Id Merchant -> m [MerchantConfig]
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m [MerchantConfig]
 findAllByMerchantId id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return a

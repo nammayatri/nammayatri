@@ -16,18 +16,17 @@
 module Storage.Queries.SpecialZoneQuote where
 
 import Domain.Types.SpecialZoneQuote
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialZoneQuote as BeamSZQ
 
-createSpecialZoneQuote :: (L.MonadFlow m, Log m) => SpecialZoneQuote -> m ()
+createSpecialZoneQuote :: MonadFlow m => SpecialZoneQuote -> m ()
 createSpecialZoneQuote = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
+findById :: MonadFlow m => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
 findById specialZoneQuoteId = findOneWithKV [Se.Is BeamSZQ.id $ Se.Eq (getId specialZoneQuoteId)]
 
 instance FromTType' BeamSZQ.SpecialZoneQuote SpecialZoneQuote where

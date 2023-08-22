@@ -17,19 +17,18 @@ module Storage.Queries.DriverOnboarding.DriverLicense where
 
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.Person (Person)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 
-create :: (L.MonadFlow m, Log m) => DriverLicense -> m ()
+create :: MonadFlow m => DriverLicense -> m ()
 create = createWithKV
 
-upsert :: (L.MonadFlow m, Log m) => DriverLicense -> m ()
+upsert :: MonadFlow m => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
   res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
   if isJust res
@@ -46,18 +45,18 @@ upsert a@DriverLicense {..} = do
         [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
     else createWithKV a
 
-findById :: (L.MonadFlow m, Log m) => Id DriverLicense -> m (Maybe DriverLicense)
+findById :: MonadFlow m => Id DriverLicense -> m (Maybe DriverLicense)
 findById (Id dlId) = findOneWithKV [Se.Is BeamDL.id $ Se.Eq dlId]
 
-findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverLicense)
+findByDriverId :: MonadFlow m => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq personId]
 
-findByDLNumber :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
+findByDLNumber :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
   dlNumberHash <- getDbHash dlNumber
   findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
 
-deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByDriverId :: MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDL.driverId (Se.Eq driverId)]
 
 instance FromTType' BeamDL.DriverLicense DriverLicense where

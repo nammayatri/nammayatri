@@ -20,7 +20,6 @@ import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -32,47 +31,47 @@ import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
 
-createBooking :: (L.MonadFlow m, Log m) => Booking -> m ()
+createBooking :: MonadFlow m => Booking -> m ()
 createBooking = createWithKV
 
-create :: (L.MonadFlow m, Log m) => Booking -> m ()
+create :: MonadFlow m => Booking -> m ()
 create dBooking = QBBL.create dBooking.fromLocation >> QBBL.create dBooking.toLocation >> createBooking dBooking
 
-findById :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
+findById :: MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
-findBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m (Maybe Booking)
+findBySTId :: MonadFlow m => Id DST.SearchTry -> m (Maybe Booking)
 findBySTId searchTryId = do
   mbDriverQuote <- QDQuote.findDriverQuoteBySTId searchTryId
   maybe (pure Nothing) (\dQ -> findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq $ getId $ DDQ.id dQ]) mbDriverQuote
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
+updateStatus :: MonadFlow m => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateRiderId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id RiderDetails -> m ()
+updateRiderId :: MonadFlow m => Id Booking -> Id RiderDetails -> m ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamB.riderId $ Just $ getId riderId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateRiderName :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
+updateRiderName :: MonadFlow m => Id Booking -> Text -> m ()
 updateRiderName bookingId riderName = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateSpecialZoneOtpCode :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
+updateSpecialZoneOtpCode :: MonadFlow m => Id Booking -> Text -> m ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings :: MonadFlow m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 findStuckBookings (Id merchantId) bookingIds now = do
   let updatedTimestamp = addUTCTime (- (6 * 60 * 60)) now
   (Domain.Types.Booking.id <$>)
@@ -85,7 +84,7 @@ findStuckBookings (Id merchantId) bookingIds now = do
           ]
       ]
 
-findBookingBySpecialZoneOTP :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP :: MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
   maybe
@@ -93,12 +92,12 @@ findBookingBySpecialZoneOTP merchantId otpCode now = do
     findById
     bookingId
 
-findBookingIdBySpecialZoneOTP :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
+findBookingIdBySpecialZoneOTP :: MonadFlow m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
 findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now = do
   let otpExpiryCondition = addUTCTime (- (30 * 60) :: NominalDiffTime) now
   (Domain.Types.Booking.id <$>) <$> findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
 
-cancelBookings :: (L.MonadFlow m, Log m) => [Id Booking] -> UTCTime -> m ()
+cancelBookings :: MonadFlow m => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
   updateWithKV
     [Se.Set BeamB.status CANCELLED, Se.Set BeamB.updatedAt now]
