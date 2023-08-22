@@ -588,8 +588,7 @@ const frenchStrings = {
   PAUSED_STR : "En pause",
   PENDING_STR : "En attente",
   SWITCH_PLAN_STR : "Plan de commutation?",
-  PLAN_SWITCHED_TO : "Plan Switched to ",
+  PLAN_SWITCHED_TO : "le plan est passé à",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Remarque: Offre applicable uniquement si AutoPay est configuré sur le plan illimité quotidien.",
-  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Remarque: les offres illimitées quotidiennes ne sont pas applicables sur ce plan!" 
 }

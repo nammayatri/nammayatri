@@ -745,9 +745,8 @@ const bengaliStrings = {
 	OFFERS_NOT_APPLICABLE : "সম্পূর্ণ না হলে অফার প্রযোজ্য নয়",
 	PAUSED_STR : "বিরতি দেওয়া হয়েছে",
 	PENDING_STR : "বিচারাধীন",
-	PLAN_SWITCHED_TO : "Plan Switched to ",
+	PLAN_SWITCHED_TO : "পরিকল্পনা স্যুইচ করা",
 	SWITCH_PLAN_STR : "স্যুইচ প্ল্যান?",
 	OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "দ্রষ্টব্য: অফারগুলি শুধুমাত্র ডেইলি আনলিমিটেড প্ল্যানে প্রযোজ্য",
-	OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
-  	DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
+	DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "দ্রষ্টব্য: প্রতিদিনের সীমাহীন অফারগুলি এই পরিকল্পনায় প্রযোজ্য নয়!" 
 	}
