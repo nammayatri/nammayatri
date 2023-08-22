@@ -761,5 +761,8 @@ const englishStrings = {
   SWITCH_PLAN_STR : "Switch Plan?",
   PLAN_SWITCHED_TO : "Plan Switched to ",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
-}
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!", 
+  NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
+  GET_SPECIAL_OFFERS : "Get Special Offers",
+  VALID_ONLY_IF_PAYMENT : "valid only if payment is completed"
+} 

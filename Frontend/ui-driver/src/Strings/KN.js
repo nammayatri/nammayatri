@@ -733,5 +733,8 @@ const kannadaStrings = {
   PENDING_STR : "ಬಾಕಿಯಿದೆ",
   SWITCH_PLAN_STR : "ಪ್ಲಾನ್ ಬದಲಾಯಿಸುವುದೇ?",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "ಗಮನಿಸಿ: ದೈನಂದಿನ ಅನಿಯಮಿತ ಯೋಜನೆಯಲ್ಲಿ ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಸೆಟಪ್ ಮಾಡಿದರೆ ಮಾತ್ರ ಆಫರ್‌ಗಳು ಅನ್ವಯಿಸುತ್ತವೆ",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "ಗಮನಿಸಿ: ಈ ಪ್ಲಾನ್ ನಲ್ಲಿ  ದೈನಂದಿನ ಅನಿಯಮಿತ ಪ್ಲಾನ್ ಆಫರ್ಗಳು ಅನ್ವಯಿಸುವುದಿಲ್ಲ" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "ಗಮನಿಸಿ: ಈ ಪ್ಲಾನ್ ನಲ್ಲಿ  ದೈನಂದಿನ ಅನಿಯಮಿತ ಪ್ಲಾನ್ ಆಫರ್ಗಳು ಅನ್ವಯಿಸುವುದಿಲ್ಲ", 
+  NO_RIDES_NO_CHARGE : "ಸವಾರಿಗಳಿಲ್ಲ = ದಿನಕ್ಕೆ ಚಾರ್ಜ್ ಇಲ್ಲ" ,
+  GET_SPECIAL_OFFERS : "ಸ್ಪೆಷಲ್ ಆಫರ್ಗಳು ಪಡೆಯಿರಿ",
+  VALID_ONLY_IF_PAYMENT : "ಪಾವತಿ ಪೂರ್ಣಗೊಂಡರೆ ಮಾತ್ರ ಮಾನ್ಯವಾಗಿರುತ್ತದೆ"
 }

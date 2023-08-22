@@ -90,22 +90,24 @@ loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (Global
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
     let globalProp = globalState.globalProps
     let (GetDriverInfoResp driverInfo) = globalProp.driverInformation
-    if any ( _ == driverInfo.autoPayStatus )[Mb.Nothing] then do --Need to check for PENDING
-      uiPlans <- Remote.getUiPlans ""
-      case uiPlans of
-        Right resp -> doAff do liftEffect $ push $ loadPlans resp
-        Left err -> doAff do liftEffect $ push $ errorAction err
-    else do
+    if isJust driverInfo.autoPayStatus then do 
       currentPlan <- Remote.getCurrentPlan ""
       case currentPlan of
         Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
-    pure unit
-  -- else if state.props.subView == ManagePlan then do -- TODO:: Refactor this function for better error handling
-  --   uiPlans <- Remote.getUiPlans ""
-  --   case uiPlans of
-  --     Right resp -> doAff do liftEffect $ push $ loadAlternatePlans resp
-  --     Left err -> doAff do liftEffect $ push $ errorAction err
+    else do
+      currentPlan <- Remote.getCurrentPlan ""
+      case currentPlan of
+        Right resp' -> do
+          let (GetCurrentPlanResp resp) = resp'
+          case resp.currentPlanDetails of
+            Nothing -> do
+              uiPlans <- Remote.getUiPlans ""
+              case uiPlans of
+                Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
+                Left err -> doAff do liftEffect $ push $ errorAction err
+            Just _ -> doAff do liftEffect $ push $ loadMyPlans resp'
+        Left err -> doAff do liftEffect $ push $ errorAction err 
   else pure unit
 
 paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
@@ -230,9 +232,17 @@ enjoyBenefitsView push state =
                           ] <> FontStyle.body1 TypoGraphy
                       ]
                 )
-              [(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW), (getString PAY_ONLY_IF_YOU_TAKE_RIDES)]
-            )
+              [(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW), (getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString GET_SPECIAL_OFFERS]
+            ) 
+            , textView [
+            text $ getString VALID_ONLY_IF_PAYMENT
+            , textSize if state.props.isSelectedLangTamil then FontSize.a_8 else FontSize.a_10
+            , fontStyle $ FontStyle.medium LanguageStyle
+            , color Color.black700
+            , margin $ MarginLeft 22
+          ]
         ]
+        
     ]
 
 paymentPendingView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
@@ -330,11 +340,11 @@ plansBottomView push state =
       ][ linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
               , width $ V $ getWidthFromPercent 70
-              , gravity LEFT
               , text (getString CHOOSE_YOUR_PLAN)
               , color Color.black800
               ] <> FontStyle.body8 TypoGraphy
@@ -358,6 +368,7 @@ plansBottomView push state =
               , gravity LEFT
               , text ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨")
               , color Color.black800
+              , visibility GONE
               ] <> FontStyle.body1 TypoGraphy 
             , textView $
               [ weight 1.0
@@ -452,7 +463,7 @@ myPlanView push state visibility' =
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
   , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
-  ][ headerView push (getString PLAN) (getString MANAGE_PLAN) false state.props.isSelectedLangTamil -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
+  ][ headerView push (getString PLAN) (getString MANAGE_PLAN ) false state.props.isSelectedLangTamil -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
    , paymentPendingView push state
    , myPlanBodyview push state
   ]
@@ -541,12 +552,25 @@ myPlanBodyview push state =
            ]
          , paymentMethodView push state.data.myPlanData
        ]
-     , planDescriptionView push state.data.myPlanData.planEntity (state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing) state.props.isSelectedLangTamil
+      , textView [
+          textFromHtml $ getString NO_RIDES_NO_CHARGE
+          , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
+          , fontStyle $ FontStyle.semiBold LanguageStyle
+          , color Color.white900
+          , background Color.green600
+          , cornerRadius 4.0
+          , width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin $ Margin 16 0 16 16
+          , padding $ PaddingVertical 8 8
+          , gravity CENTER
+         ]
+     , planDescriptionView push state.data.myPlanData.planEntity  (state.data.myPlanData.autoPayStatus == PENDING) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil
-    --  , duesView push state
+     , duesView push state
     ]
   ]
 
@@ -627,7 +651,7 @@ planDescriptionView push state isFreezed isSelectedLangTamil =
               ]
             ]
          )state.offers)
-     , arrowButtonView push (getString MANAGE_PLAN) true (if isFreezed then NoAction else ManagePlanAC) isSelectedLangTamil
+    --  , arrowButtonView push (getString MANAGE_PLAN) true (if isFreezed then NoAction else ManagePlanAC) isSelectedLangTamil -- TODO: Removing this for now.
   ]
 
 duesView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
@@ -641,6 +665,7 @@ duesView push state =
   , cornerRadius 8.0
   , stroke $ "1," <> Color.grey900
   , margin $ Margin 16 16 16 0
+  , visibility if (state.data.myPlanData.autoPayStatus == PENDING) then GONE else VISIBLE
   ][ 
     linearLayout[
         gravity CENTER
@@ -842,7 +867,7 @@ duesView push state =
            ]
       ] 
    ]
-   , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING] then  PrimaryButton.view (push <<< ResumeAutoPay) (clearDueButtonConfig state) else dummyView
+   , if state.data.myPlanData.autoPayStatus `elem` [SUSPENDED, CANCELLED_PSP, PAUSED_PSP, PENDING, NO_AUTOPAY] then  PrimaryButton.view (push <<< ResumeAutoPay) (clearDueButtonConfig state) else dummyView
    , if false then arrowButtonView push (getString SETUP_AUTOPAY) false NoAction state.props.isSelectedLangTamil else dummyView
   ]
 

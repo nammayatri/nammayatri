@@ -590,5 +590,8 @@ const frenchStrings = {
   SWITCH_PLAN_STR : "Plan de commutation?",
   PLAN_SWITCHED_TO : "le plan est passé à",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Remarque: Offre applicable uniquement si AutoPay est configuré sur le plan illimité quotidien.",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Remarque: les offres illimitées quotidiennes ne sont pas applicables sur ce plan!" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Remarque: les offres illimitées quotidiennes ne sont pas applicables sur ce plan!" , 
+  NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
+  GET_SPECIAL_OFFERS : "Get Special Offers",
+  VALID_ONLY_IF_PAYMENT : "valid only if payment is completed"
 }

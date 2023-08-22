@@ -2477,7 +2477,7 @@ instance encodeSelectPlanResp :: Encode SelectPlanResp where encode = defaultEnc
 data GetCurrentPlanReq = GetCurrentPlanReq String
 
 newtype GetCurrentPlanResp = GetCurrentPlanResp {
-  currentPlanDetails :: PlanEntity,
+  currentPlanDetails :: Maybe PlanEntity,
   mandateDetails :: Maybe MandateData,
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,

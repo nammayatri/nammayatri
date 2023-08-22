@@ -728,5 +728,8 @@ const tamilStrings = {
   PLAN_SWITCHED_TO : "திட்டம் மாறியது",
   SWITCH_PLAN_STR : "ஸ்விட்ச் பிளான்?",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "குறிப்பு: தினசரி வரம்பற்ற திட்டத்தில் மட்டுமே பொருந்தும்",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "குறிப்பு: இந்த திட்டத்தில் தினசரி வரம்பற்ற சலுகைகள் பொருந்தாது!" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "குறிப்பு: இந்த திட்டத்தில் தினசரி வரம்பற்ற சலுகைகள் பொருந்தாது!" ,
+  NO_RIDES_NO_CHARGE : "சவாரிகள் இல்லை = நாள் கட்டணம் இல்லை",
+  GET_SPECIAL_OFFERS : "சிறப்பு சலுகைகளைப் பெறுங்கள்",
+  VALID_ONLY_IF_PAYMENT : "பணம் செலுத்தினால் மட்டுமே செல்லுபடியாகும்"
 }

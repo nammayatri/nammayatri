@@ -708,5 +708,8 @@ const mlStrings = {
   PLAN_SWITCHED_TO : "പ്ലാൻ സ്വിച്ചുചെയ്തു",
   SWITCH_PLAN_STR : "സ്വിച്ച് പ്ലാൻ?",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത പ്ലാനിൽ ഓട്ടോപെ സജ്ജമാക്കിയിട്ടുണ്ടെങ്കിൽ മാത്രമേ ബാധകമായ ഓഫറുകൾ.",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത ഓഫറുകൾ ഈ പ്ലാനിൽ ബാധകമല്ല!" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത ഓഫറുകൾ ഈ പ്ലാനിൽ ബാധകമല്ല!", 
+  NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day" ,
+  GET_SPECIAL_OFFERS : "Get Special Offers",
+  VALID_ONLY_IF_PAYMENT : "valid only if payment is completed"
 }
