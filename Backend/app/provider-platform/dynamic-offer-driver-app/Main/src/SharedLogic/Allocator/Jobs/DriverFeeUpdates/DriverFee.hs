@@ -67,14 +67,14 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         logInfo "Driver Not found. This should not be possible."
         throwError (InternalError "Driver Not Found") -- Unreachable
       Just driver -> do
+        overdueFeeNotif <- B.runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
         let paymentTitle = "Bill generated"
-            paymentMessage = "You have taken " <> show driverFee.numRides <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
+            paymentMessage = "You have taken " <> show (driverFee.numRides + maybe 0 (.numRides) overdueFeeNotif) <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
-      overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
-      -- overdueFee <- findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
       Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
+        overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
         case overdueFee of
           Nothing -> do
             -- Esq.runTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
