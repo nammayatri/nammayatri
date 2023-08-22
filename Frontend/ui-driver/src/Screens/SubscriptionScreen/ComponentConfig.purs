@@ -104,7 +104,7 @@ popupModalConfig state = let
                   Mb.Just FailedPopup -> (getString PAYMENT_FAILED)
                   Mb.Just DuesClearedPopup -> (getString DUES_CLEARED_SUCCESSFULLY)
                   Mb.Just CancelAutoPay -> (getString NOT_PLANNING_TO_TAKE_RIDES)
-                  Mb.Just SwitchedPlan -> (getString PLAN_SWITCHED_TO) <> (if state.data.managePlanData.currentPlan.title == "DAILY UNLIMITED" then getString DAILY_UNLIMITED else getString DAILY_PER_RIDE)
+                  Mb.Just SwitchedPlan -> (getString PLAN_SWITCHED_TO) <> (if state.data.managePlanData.currentPlan.title == getString DAILY_UNLIMITED then getString DAILY_UNLIMITED else getString DAILY_PER_RIDE)
                   Mb.Nothing -> ""
       , margin = Margin 16 16 16 0
       , visibility = VISIBLE
@@ -137,7 +137,7 @@ popupModalConfig state = let
       , height = V 114
       },
     secondaryText {
-      text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else if state.data.managePlanData.currentPlan.title == "DAILY PER RIDE" then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE else ""
+      text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else if state.data.managePlanData.currentPlan.title == getString DAILY_PER_RIDE then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE else ""
       , color = Color.black700
       , margin = Margin 16 4 16 0
       , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan] then VISIBLE else GONE

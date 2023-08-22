@@ -758,8 +758,7 @@ const hindiStrings = {
   PAUSED_STR : "रोके गए",
   PENDING_STR : "लंबित",
   SWITCH_PLAN_STR : "योजना बदलें?",
-  PLAN_SWITCHED_TO : "Plan Switched to ",
+  PLAN_SWITCHED_TO : "योजना को अद्यतन किया गया",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।",
-  OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।" 
 }

@@ -703,10 +703,10 @@ const mlStrings = {
   DAILY_PER_RIDE_PLAN_DESC : "പ്രതിദിനം പരമാവധി ₹35 വരെ",
   PAY_TO_JOIN_THIS_PLAN : "ഈ പ്ലാനിൽ ചേരാൻ ₹1 അടയ്ക്കുക",
 	OFFERS_NOT_APPLICABLE : "പൂർത്തിയാക്കിയില്ലെങ്കിൽ ഓഫറുകൾ ബാധകമല്ല",
-  PAUSED_STR : "Paused",
-  PENDING_STR : "Pending",
-  PLAN_SWITCHED_TO : "Plan Switched to ",
+  PAUSED_STR : "താൽക്കാലികമായി നിർത്തി",
+  PENDING_STR : "തീർപ്പാക്കാത്തത്",
+  PLAN_SWITCHED_TO : "പ്ലാൻ സ്വിച്ചുചെയ്തു",
   SWITCH_PLAN_STR : "സ്വിച്ച് പ്ലാൻ?",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത പ്ലാനിൽ ഓട്ടോപെ സജ്ജമാക്കിയിട്ടുണ്ടെങ്കിൽ മാത്രമേ ബാധകമായ ഓഫറുകൾ.",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത ഓഫറുകൾ ഈ പ്ലാനിൽ ബാധകമല്ല!" 
 }

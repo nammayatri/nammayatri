@@ -725,8 +725,8 @@ const tamilStrings = {
 	OFFERS_NOT_APPLICABLE : "பூர்த்தி செய்யாத வரை சலுகைகள் பொருந்தாது",
   PAUSED_STR : "இடைநிறுத்தப்பட்டது",
   PENDING_STR : "நிலுவையில் உள்ளது",
-  PLAN_SWITCHED_TO : "Plan Switched to ",
+  PLAN_SWITCHED_TO : "திட்டம் மாறியது",
   SWITCH_PLAN_STR : "ஸ்விட்ச் பிளான்?",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "குறிப்பு: தினசரி வரம்பற்ற திட்டத்தில் மட்டுமே பொருந்தும்",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "குறிப்பு: இந்த திட்டத்தில் தினசரி வரம்பற்ற சலுகைகள் பொருந்தாது!" 
 }
