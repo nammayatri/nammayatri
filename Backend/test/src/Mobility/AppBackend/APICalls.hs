@@ -17,7 +17,7 @@ module Mobility.AppBackend.APICalls where
 import qualified "rider-app" API.UI.Booking as AppBooking
 import qualified "rider-app" API.UI.Cancel as CancelAPI
 import qualified "rider-app" API.UI.Confirm as ConfirmAPI
-import qualified "rider-app" API.UI.Feedback as AppFeedback
+import qualified "rider-app" API.UI.Rating as AppFeedback
 import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ

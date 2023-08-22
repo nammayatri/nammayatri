@@ -21,6 +21,7 @@ import Storage.Beam.BookingCancellationReason
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry as BeamG
 import Storage.Beam.Person
+import Storage.Beam.Rating (RatingT, ratingTable)
 import Storage.Beam.Ride
 
 atlasDB :: B.DatabaseSettings be AtlasDB
@@ -32,7 +33,8 @@ atlasDB =
         booking = bookingTable,
         ride = rideTable,
         person = personTable,
-        bookingCancellationReason = bookingCancellationReasonTable
+        bookingCancellationReason = bookingCancellationReasonTable,
+        rating = ratingTable
       }
 
 data AtlasDB f = AtlasDB
@@ -41,6 +43,7 @@ data AtlasDB f = AtlasDB
     booking :: f (B.TableEntity BookingT),
     ride :: f (B.TableEntity RideT),
     person :: f (B.TableEntity PersonT),
-    bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT)
+    bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),
+    rating :: f (B.TableEntity RatingT)
   }
   deriving (Generic, B.Database be)

@@ -74,7 +74,6 @@ updateMultiple (Id personId) person = do
       Se.Set BeamP.description $ person.description,
       Se.Set BeamP.role $ person.role,
       Se.Set BeamP.identifier $ person.identifier,
-      Se.Set BeamP.rating $ person.rating,
       Se.Set BeamP.deviceToken $ person.deviceToken,
       Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
       Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
@@ -96,7 +95,18 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
-updateDeviceToken :: MonadFlow m => Id Person -> Maybe Text -> m ()
+updateAverageRating :: (MonadFlow m) => Id Person -> Int -> Int -> Bool -> m ()
+updateAverageRating (Id personId) totalRatingsCount' totalRatingScore' isValidRating' = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set (\BeamP.PersonT {..} -> totalRatings) totalRatingsCount',
+      Se.Set (\BeamP.PersonT {..} -> totalRatingScore) totalRatingScore',
+      Se.Set BeamP.isValidRating isValidRating',
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
 updateDeviceToken (Id personId) mbDeviceToken = do
   now <- getCurrentTime
   updateWithKV
@@ -168,6 +178,15 @@ updateHasTakenValidRide (Id personId) = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamP.hasTakenValidRide True,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateIsValidRating :: MonadFlow m => Id Person -> Bool -> m ()
+updateIsValidRating (Id personId) isValidRating = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.isValidRating isValidRating,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
@@ -267,37 +286,15 @@ instance FromTType' BeamP.Person Person where
       Just $
         Person
           { id = Id id,
-            firstName = firstName,
-            middleName = middleName,
-            lastName = lastName,
-            role = role,
-            gender = gender,
-            identifierType = identifierType,
             email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
-            unencryptedMobileNumber = unencryptedMobileNumber,
             mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-            mobileCountryCode = mobileCountryCode,
-            passwordHash = passwordHash,
-            identifier = identifier,
-            rating = rating,
-            language = language,
-            isNew = isNew,
-            enabled = enabled,
-            blocked = blocked,
-            deviceToken = deviceToken,
-            notificationToken = notificationToken,
-            description = description,
             merchantId = Id merchantId,
-            whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-            referralCode = referralCode,
-            referredAt = referredAt,
-            hasTakenValidRide = hasTakenValidRide,
             blockedAt = T.localTimeToUTC T.utc <$> blockedAt,
             blockedByRuleId = Id <$> blockedByRuleId,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
             bundleVersion = bundleVersion',
-            clientVersion = clientVersion'
+            clientVersion = clientVersion',
+            rating = Just $ fromIntegral totalRatingScore / fromIntegral totalRatings,
+            ..
           }
 
 instance ToTType' BeamP.Person Person where
@@ -318,7 +315,9 @@ instance ToTType' BeamP.Person Person where
         BeamP.mobileCountryCode = mobileCountryCode,
         BeamP.passwordHash = passwordHash,
         BeamP.identifier = identifier,
-        BeamP.rating = rating,
+        BeamP.totalRatings = totalRatings,
+        BeamP.totalRatingScore = totalRatingScore,
+        BeamP.isValidRating = isValidRating,
         BeamP.language = language,
         BeamP.isNew = isNew,
         BeamP.enabled = enabled,

@@ -15,7 +15,6 @@
 
 module Storage.Queries.Rating where
 
-import qualified Database.Beam as B
 import Domain.Types.Person
 import Domain.Types.Rating as DR
 import Domain.Types.Ride
@@ -25,40 +24,29 @@ import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Rating as BeamR
 
-create :: MonadFlow m => DR.Rating -> m ()
+create :: (L.MonadFlow m, Log m) => DR.Rating -> m ()
 create = createWithKV
 
-updateRating :: MonadFlow m => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
-updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
+updateRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
+updateRating (Id ratingId) (Id riderId) newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.ratingValue newRatingValue,
       Se.Set BeamR.feedbackDetails newFeedbackDetails,
       Se.Set BeamR.updatedAt now
     ]
-    [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.driverId (Se.Eq driverId)]]
+    [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.riderId (Se.Eq riderId)]]
 
-findAllRatingsForPerson :: MonadFlow m => Id Person -> m [Rating]
-findAllRatingsForPerson driverId = findAllWithDb [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
+findAllRatingsForPerson :: (MonadFlow m, Log m) => Id Person -> m [Rating]
+findAllRatingsForPerson riderId = findAllWithDb [Se.Is BeamR.riderId $ Se.Eq $ getId riderId]
 
-findRatingForRide :: MonadFlow m => Id Ride -> m (Maybe Rating)
+findRatingForRide :: (MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.rideId $ Se.Eq rideId]
 
-findAllRatingUsersCountByPerson :: MonadFlow m => Id Person -> m Int
-findAllRatingUsersCountByPerson (Id driverId) = do
-  dbConf <- getMasterBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-          B.filter_'
-            (\rating' -> BeamR.driverId rating' B.==?. B.val_ driverId)
-            do
-              B.all_ (BeamCommon.rating BeamCommon.atlasDB)
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+-- findAllRatingUsersCountByPerson :: (L.MonadFlow m, Log m) => Id Person -> m Int
+-- findAllRatingUsersCountByPerson (Id riderId) = findAllWithKV [Se.Is BeamR.riderId $ Se.Eq riderId] <&> length
 
 instance FromTType' BeamR.Rating Rating where
   fromTType' BeamR.RatingT {..} = do
@@ -67,7 +55,7 @@ instance FromTType' BeamR.Rating Rating where
         Rating
           { id = Id id,
             rideId = Id rideId,
-            driverId = Id driverId,
+            riderId = Id riderId,
             ratingValue = ratingValue,
             feedbackDetails = feedbackDetails,
             createdAt = createdAt,
@@ -79,7 +67,7 @@ instance ToTType' BeamR.Rating Rating where
     BeamR.RatingT
       { BeamR.id = getId id,
         BeamR.rideId = getId rideId,
-        BeamR.driverId = getId driverId,
+        BeamR.riderId = getId riderId,
         BeamR.ratingValue = ratingValue,
         BeamR.feedbackDetails = feedbackDetails,
         BeamR.createdAt = createdAt,

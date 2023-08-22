@@ -48,6 +48,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferApiKey :: Text,
     driverOfferMerchantId :: Text,
     geoHashPrecisionValue :: Int,
+    minimumDriverRatesCount :: Int,
     signingPublicKey :: Base64,
     cipherText :: Maybe Base64,
     signatureExpiry :: Int,
