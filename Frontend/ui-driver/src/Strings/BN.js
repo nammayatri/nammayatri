@@ -748,5 +748,8 @@ const bengaliStrings = {
 	PLAN_SWITCHED_TO : "পরিকল্পনা স্যুইচ করা",
 	SWITCH_PLAN_STR : "স্যুইচ প্ল্যান?",
 	OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "দ্রষ্টব্য: অফারগুলি শুধুমাত্র ডেইলি আনলিমিটেড প্ল্যানে প্রযোজ্য",
-	DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "দ্রষ্টব্য: প্রতিদিনের সীমাহীন অফারগুলি এই পরিকল্পনায় প্রযোজ্য নয়!" 
+	DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "দ্রষ্টব্য: প্রতিদিনের সীমাহীন অফারগুলি এই পরিকল্পনায় প্রযোজ্য নয়!" , 
+	NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
+	GET_SPECIAL_OFFERS : "Get Special Offers",
+	VALID_ONLY_IF_PAYMENT : "valid only if payment is completed"
 	}

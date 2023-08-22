@@ -48,7 +48,7 @@ getMultiLanguagePlanData isLocalized planData = do
 getPromoConfig :: Array OfferEntity -> Array PromoConfig
 getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {     
     title : Just $ decodeOfferDescription (fromMaybe "" item.title) ,
-    isGradient : true ,
+    isGradient : false ,
     gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
     hasImage : true ,
     imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png" ,
@@ -56,11 +56,10 @@ getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {
     addedFromUI : false
     }) offerEntityArr)
 
-myPlanListTransformer :: GetCurrentPlanResp -> PlanCardConfig
-myPlanListTransformer (GetCurrentPlanResp getCurrentPlanResp) = do 
-    let (PlanEntity planEntity) = getCurrentPlanResp.currentPlanDetails
-    let isLocalized = fromMaybe false getCurrentPlanResp.isLocalized 
-    getPlanCardConfig getCurrentPlanResp.currentPlanDetails isLocalized
+myPlanListTransformer :: PlanEntity -> Maybe Boolean -> PlanCardConfig
+myPlanListTransformer planEntity isLocalized' = do 
+    let isLocalized = fromMaybe false isLocalized' 
+    getPlanCardConfig planEntity isLocalized
 
 
 

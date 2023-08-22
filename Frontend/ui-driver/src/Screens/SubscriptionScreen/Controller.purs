@@ -12,7 +12,7 @@ import Data.String (toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==))
+import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -21,7 +21,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAut
 import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), PlanCardConfig)
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
-import Storage (KeyStore(..), setValueToLocalNativeStore)
+import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -152,6 +152,7 @@ eval ViewPaymentHistory state = exit $ PaymentHistory state
 
 eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
+  _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
   continue state {
       data{ joinPlanData {allPlans = planListTransformer plans,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
@@ -160,34 +161,39 @@ eval (LoadPlans plans) state = do
 
 eval (LoadMyPlans plans) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
-      (PlanEntity planEntity) = currentPlanResp.currentPlanDetails
-      newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ orderId = currentPlanResp.orderId, planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer plans, maxDueAmount = planEntity.totalPlanCreditLimit, currentDueAmount = planEntity.currentDues, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
+  case currentPlanResp.currentPlanDetails of
+    Mb.Just (planEntity') -> do
+      _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "true"
+      let (PlanEntity planEntity) = planEntity'
+      let newState = state{ props{ showShimmer = false, subView = MyPlan }, data{ orderId = currentPlanResp.orderId, planId = planEntity.id, myPlanData{planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized, maxDueAmount = planEntity.totalPlanCreditLimit, currentDueAmount = planEntity.currentDues, autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus}}}
+      _ <- pure $ setCleverTapUserProp "Plan" planEntity.name
+      _ <- pure $ setCleverTapUserProp "Subscription Offer" $ show $ map (\(OfferEntity offer) -> offer.title) planEntity.offers
+      _ <- pure $ setCleverTapUserProp "Due Amount" $ show planEntity.currentDues
+      _ <- pure $ setCleverTapUserProp "Autopay status" $ fromMaybe "Nothing" currentPlanResp.autoPayStatus
 
-  _ <- pure $ setCleverTapUserProp "Plan" planEntity.name
-  _ <- pure $ setCleverTapUserProp "Subscription Offer" $ show $ map (\(OfferEntity offer) -> offer.title) planEntity.offers
-  _ <- pure $ setCleverTapUserProp "Due Amount" $ show planEntity.currentDues
-  _ <- pure $ setCleverTapUserProp "Autopay status" $ fromMaybe "Nothing" currentPlanResp.autoPayStatus
 
-
-  case currentPlanResp.mandateDetails of 
-    Mb.Nothing -> continue newState
-    Mb.Just (MandateData mandateDetails) -> do
-      _ <- pure $ setCleverTapUserProp "Mandate status" mandateDetails.status
-      _ <- pure $ setCleverTapUserProp "Autopay Max Amount Registered" $ show mandateDetails.maxAmount
-      _ <- pure $ setCleverTapUserProp "Payment method" if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"
-      _ <- pure $ setCleverTapUserProp "UPI ID availability" if isNothing mandateDetails.payerVpa then "FALSE" else "TRUE"
-      continue newState 
-        {data {
-            myPlanData {
-              mandateStatus = toLower mandateDetails.status
+      case currentPlanResp.mandateDetails of 
+        Mb.Nothing -> continue newState
+        Mb.Just (MandateData mandateDetails) -> do
+          _ <- pure $ setCleverTapUserProp "Mandate status" mandateDetails.status
+          _ <- pure $ setCleverTapUserProp "Autopay Max Amount Registered" $ show mandateDetails.maxAmount
+          _ <- pure $ setCleverTapUserProp "Payment method" if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"
+          _ <- pure $ setCleverTapUserProp "UPI ID availability" if isNothing mandateDetails.payerVpa then "FALSE" else "TRUE"
+          continue newState 
+            {data {
+                myPlanData {
+                  mandateStatus = toLower mandateDetails.status
+                }
+              , autoPayDetails {
+                  detailsList = getAutoPayDetailsList (MandateData mandateDetails)
+                , pspLogo = getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
+                , payerUpiId = mandateDetails.payerVpa
+                }
+              }
             }
-          , autoPayDetails {
-              detailsList = getAutoPayDetailsList (MandateData mandateDetails)
-            , pspLogo = getPspIcon (Mb.fromMaybe "" mandateDetails.payerVpa)
-            , payerUpiId = mandateDetails.payerVpa
-            }
-          }
-        }
+    Mb.Nothing -> do
+      _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
+      continue state
 
 eval CheckPaymentStatus state = case state.data.orderId of
   Mb.Just id -> updateAndExit state { props{refreshPaymentStatus = true}} $ CheckOrderStatus state id

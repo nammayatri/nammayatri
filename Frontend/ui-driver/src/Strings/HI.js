@@ -760,5 +760,8 @@ const hindiStrings = {
   SWITCH_PLAN_STR : "योजना बदलें?",
   PLAN_SWITCHED_TO : "योजना को अद्यतन किया गया",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।",
-  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।" 
+  DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।" , 
+  NO_RIDES_NO_CHARGE : "कोई सवारी नहीं = दिन के लिए कोई शुल्क नहीं",
+  GET_SPECIAL_OFFERS : "विशेष ऑफ़र प्राप्त करें",
+  VALID_ONLY_IF_PAYMENT : "भुगतान पूरा होने पर ही मान्य"
 }

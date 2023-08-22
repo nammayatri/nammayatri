@@ -2115,6 +2115,7 @@ subScriptionFlow = do
         CANCELLED_PSP -> nyPaymentFlow state.data.myPlanData.planEntity false
         PAUSED_PSP -> nyPaymentFlow state.data.myPlanData.planEntity false
         PENDING -> nyPaymentFlow state.data.myPlanData.planEntity false
+        NO_AUTOPAY -> nyPaymentFlow state.data.myPlanData.planEntity false
         _ -> do
           resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId
           case resumeMandate of 
