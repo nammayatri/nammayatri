@@ -1826,6 +1826,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     }}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
+  _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   if state.data.currentSearchResultType == QUOTES then  do
     _ <- pure $ updateLocalStage ConfirmingRide
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}

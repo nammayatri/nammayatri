@@ -114,9 +114,10 @@ export const storeCallBackLocateOnMap = function (cb) {
 }
 
 export const storeCallBackCustomer = function (cb) {
-    try {
+
     return function (action) {
         return function () {
+          try {
             var callback = callbackMapper.map(function (notificationType) {
                 cb(action (notificationType))();
             });
@@ -127,10 +128,11 @@ export const storeCallBackCustomer = function (cb) {
             console.log("In storeCallBackCustomer ---------- + " + action);
             JBridge.storeCallBackCustomer(callback);
         }
+        catch (error){
+          console.log("Error occurred in storeCallBackCustomer ------", error);
+      }
     }}
-    catch (error){
-        console.log("Error occurred in storeCallBackCustomer ------", error);
-    }
+    
 }
 
 export const storeCallBackContacts = function (cb) {
