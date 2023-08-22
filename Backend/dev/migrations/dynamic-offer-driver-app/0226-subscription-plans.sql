@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_plan
         updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
 ALTER TABLE atlas_driver_offer_bpp.driver_plan OWNER TO atlas_driver_offer_bpp_user;
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN mandate_setup_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.mandate
     (   id text NOT NULL PRIMARY KEY,
@@ -57,6 +58,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.invoice
         PRIMARY KEY(id, driver_fee_id)
     );
 ALTER TABLE atlas_driver_offer_bpp.invoice OWNER TO atlas_driver_offer_bpp_user;
+ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN max_mandate_amount integer;
 
 -- This is to backfill existing 1 to 1 mapped yatri saathi entries of driver fees to invoice table
 INSERT INTO atlas_driver_offer_bpp.invoice (id, invoice_short_id, driver_fee_id) SELECT PO.id, PO.short_id, PO.id FROM atlas_driver_offer_bpp.payment_order AS PO INNER JOIN atlas_driver_offer_bpp.driver_fee AS DF ON DF.short_id = PO.short_id;
@@ -89,3 +91,6 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ALTER COLUMN short_id DROP NOT NUL
 ---------------------------------- DROP ---------------------------------------
 -------------------------------------------------------------------------------
 ALTER TABLE atlas_driver_offer_bpp.driver_fee DROP COLUMN IF EXISTS short_id;
+
+UPDATE atlas_driver_offer_bpp.driver_plan as dp
+SET mandate_setup_date = (SELECT updated_at FROM atlas_driver_offer_bpp.driver_fee as df WHERE df.driver_id = dp.driver_id AND df.fee_type = "MANDATE_REGISTRATION" AND df.status = "CLEARED" order by updated_at desc limit 1)
