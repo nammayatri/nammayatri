@@ -83,7 +83,7 @@ view push config =
         [ textView
             $ [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text "You earned"
+              , text (getString YOU_EARNED)
               , color Color.black700
               ]
             <> FontStyle.tags LanguageStyle
@@ -171,17 +171,17 @@ getPaymentCardConfig status = case status of
   Pending ->{
     textColor : Color.yellow900 
   , bgColor : Color.yellow100
-  , paymentStatusText : "Payment Pending"
+  , paymentStatusText : (getString PAYMENT_PENDING)
   } 
   Success -> {
     textColor : Color.darkMint
   , bgColor : Color.green100
-  , paymentStatusText : "Payment Success"
+  , paymentStatusText : (getString PAYMENT_SUCCESS)
   }
   Failed -> {
     textColor : Color.red 
   , bgColor : Color.red100
-  , paymentStatusText : "Payment Failed"
+  , paymentStatusText : (getString PAYMENT_FAILED)
   }
 
 type PaymentCardConfig =  {

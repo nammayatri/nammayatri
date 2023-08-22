@@ -9,7 +9,8 @@ initData = {
     vehicleNumber : "",
     vehicleName : "",
     vehicleCapacity : 0,
-    downgradeOptions : []
+    downgradeOptions : [],
+    downgradeOriginal : []
   },
   props: { 
     isBtnActive : false

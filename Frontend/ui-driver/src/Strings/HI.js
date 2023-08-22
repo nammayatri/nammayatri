@@ -780,5 +780,7 @@ const hindiStrings = {
 	NEED_HELP_JOINING_THE_PLAN : "योजना या ऑटोपे में शामिल होने में मदद चाहिए?",
   NEED_HELP_CALL_SUPPORT : "मदद की ज़रूरत है? <span style='color:#2194FF'>सहायता को कॉल करें</span>",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "विशेष छूट पाने के लिए अभी ऑटोपे सेटअप करें",
-	SETUP_NOW : "अभी सेटअप करें"
+	SETUP_NOW : "अभी सेटअप करें",
+  YOU_EARNED : "आपकी कमाई",
+  PAYMENT_SUCCESS : "भुगतान सफल"
 }

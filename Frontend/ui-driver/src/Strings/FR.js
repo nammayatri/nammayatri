@@ -484,6 +484,8 @@ const frenchStrings = {
   RATED_BY_USERS2 : "UTILISATRICES Évalué par",
   MONTHS : "Mois",
   RC_ADDED_SUCCESSFULLY : "Certificat d'enregistrement ajouté avec succès",
+  YOU_EARNED : "Vos gains",
+  PAYMENT_SUCCESS : "Paiement réussi",
   OFFER_APPLIED : "Offre appliquée",
   YOUR_EARNINGS : "Vos gains",
   NUMBER_OF_RIDES : "Nombre de trajets",

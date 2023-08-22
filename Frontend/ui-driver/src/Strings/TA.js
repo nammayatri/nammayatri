@@ -748,5 +748,7 @@ const tamilStrings = {
 	NEED_HELP_JOINING_THE_PLAN : "திட்டம் அல்லது ஆட்டோ பே இல் சேர உதவி தேவையா?",
   NEED_HELP_CALL_SUPPORT : "திட்டத்தில் சேர உதவி வேண்டுமா? <span style='color:#2194FF'>எங்களை தொடர்பு கொள்ளவும்</span>",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "சிறப்பு தள்ளுபடியைப் பெற இப்போதே ஆட்டோ பேயை அமைக்கவும்",
-	SETUP_NOW : "இப்போதே அமைக்கவும்"
+	SETUP_NOW : "இப்போதே அமைக்கவும்",
+  YOU_EARNED : "உங்கள் வருவாய்",
+  PAYMENT_SUCCESS : "பணம் செலுத்துதல் வெற்றி"
 }

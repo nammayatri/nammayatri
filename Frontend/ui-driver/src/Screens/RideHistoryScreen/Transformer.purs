@@ -33,9 +33,7 @@ getPaymentHistoryItem (PaymentDetailsEntity item) =
                                         STARTED -> Pending
                                         AUTO_REFUNDED -> Pending
                 Nothing -> Pending
-    , id : case firstTxnInfo of
-                Just (TxnInfo item) -> item.id
-                Nothing -> ""
+    , id : item.driverFeeId
     , paymentBreakUp : (\(PaymentBreakUp charge) -> {
         description: charge.component
         , amount : charge.amount

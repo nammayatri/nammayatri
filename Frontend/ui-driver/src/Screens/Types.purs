@@ -1399,7 +1399,8 @@ type BookingOptionsScreenData = {
   vehicleNumber :: String,
   vehicleName :: String,
   vehicleCapacity :: Int,
-  downgradeOptions :: Array ChooseVehicle.Config
+  downgradeOptions :: Array ChooseVehicle.Config,
+  downgradeOriginal ::  Array ChooseVehicle.Config
 }
 
 type BookingOptionsScreenProps = {

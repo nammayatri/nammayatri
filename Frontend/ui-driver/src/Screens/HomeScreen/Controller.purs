@@ -284,9 +284,10 @@ eval BackPressed state = do
                     continue state { data { paymentState{ showRateCard = false } } }
                       else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
                         else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
-                          else do
-                            _ <- pure $ minimizeApp ""
-                            continue state
+                          else if (state.props.silentPopUpView) then continue state {props{silentPopUpView = false}}
+                            else do
+                              _ <- pure $ minimizeApp ""
+                              continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon

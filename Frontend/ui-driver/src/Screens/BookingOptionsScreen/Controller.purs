@@ -2,15 +2,16 @@ module Screens.BookingOptionsScreen.Controller where
 
 import Components.ChooseVehicle as ChooseVehicle
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (filter, length, (!!))
+import Data.Array (filter, length,mapWithIndex, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppScreenRender)
-import Prelude (class Show, map, pure, show, unit, (<>), (==), not, ($), (>))
+import Prelude (class Show, map, pure, show, unit,(<>), (==), not, ($), (>))
 import PrestoDOM (Eval, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (BookingOptionsScreenState, VehicleP)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Data.Foldable (and)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -32,8 +33,9 @@ eval BackPressed state = exit GoBack
 eval (ChooseVehicleAC (ChooseVehicle.OnSelect config)) state = do
   let updatedConfig = map (\item -> item{isSelected = if item.vehicleVariant == config.vehicleVariant then (not item.isSelected) else item.isSelected}) state.data.downgradeOptions
       -- btnActive = length (filter (\item -> item.isSelected) updatedConfig) > 0
-  continue state{data{downgradeOptions = updatedConfig}, props {isBtnActive = true}}
+  continue state{data{downgradeOptions = updatedConfig}, props {isBtnActive = not (buttonState updatedConfig state)}}
 eval (PrimaryButtonAC PrimaryButton.OnClick) state = exit $ SelectCab state
+eval AfterRender state = continue state {data{downgradeOriginal = state.data.downgradeOptions}}
 eval _ state = continue state
 
 downgradeOptionsConfig :: Array VehicleP -> String -> ChooseVehicle.Config
@@ -69,3 +71,7 @@ dummyVehicleP = {
   vehicleName : "",
   isSelected : false
 }
+
+buttonState :: Array ChooseVehicle.Config -> BookingOptionsScreenState -> Boolean
+buttonState config state = do
+  and $ mapWithIndex (\ idx item -> item.isSelected == (fromMaybe (ChooseVehicle.config) (state.data.downgradeOriginal !! idx)).isSelected) config
