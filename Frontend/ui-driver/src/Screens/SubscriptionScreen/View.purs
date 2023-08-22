@@ -178,7 +178,7 @@ joinPlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  ][ headerView push (getString NAMMA_YATRI_PLANS) "" false state.props.isSelectedLangTamil
+  ][ headerView push (getString NAMMA_YATRI_PLANS) (getString HELP_STR) false state.props.isSelectedLangTamil true
     , relativeLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -432,7 +432,7 @@ managePlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  ][ headerView push (getString MANAGE_PLAN) "" true state.props.isSelectedLangTamil
+  ][ headerView push (getString MANAGE_PLAN) "" true state.props.isSelectedLangTamil false
    , managePlanBodyView push state
    , linearLayout
      [ height $ V 45
@@ -463,13 +463,13 @@ myPlanView push state visibility' =
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
   , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
-  ][ headerView push (getString PLAN) (getString MANAGE_PLAN ) false state.props.isSelectedLangTamil -- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
+  ][ headerView push (getString PLAN) (getString MANAGE_PLAN ) false state.props.isSelectedLangTamil false-- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
    , paymentPendingView push state
    , myPlanBodyview push state
   ]
 
-headerView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
-headerView push title actionText backbutton isSelectedLangTamil =
+headerView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
+headerView push title actionText backbutton isSelectedLangTamil showIcon =
   linearLayout
   [ height $ V 55
   , width MATCH_PARENT
@@ -494,9 +494,17 @@ headerView push title actionText backbutton isSelectedLangTamil =
      , padding $ PaddingBottom 4
      , weight 1.0
      ]
+   , imageView [
+      imageWithFallback "ny_ic_warning_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_warning_unfilled.png"
+      , height $ V 20
+      , width $ V 20
+      , onClick push $ const HeaderRightClick
+      , visibility if showIcon then VISIBLE else GONE
+      , margin $ MarginRight 3
+   ]
    , textView
      [ textFromHtml actionText
-     , textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
+     , textSize if showIcon then if isSelectedLangTamil then FontSize.a_14 else FontSize.a_16 else if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
      , visibility if (DS.length actionText > 0) then VISIBLE else GONE
      , fontStyle $ FontStyle.medium LanguageStyle
      , onClick push $ const HeaderRightClick
@@ -1188,7 +1196,7 @@ autoPayDetailsView push state visibility' =
      [ height MATCH_PARENT
      , width MATCH_PARENT
      , orientation VERTICAL
-     ][ headerView push (getString AUTOPAY_DETAILS) "" true state.props.isSelectedLangTamil
+     ][ headerView push (getString AUTOPAY_DETAILS) "" true state.props.isSelectedLangTamil false
       , autoPayPGView push state
       , scrollView
         [ height WRAP_CONTENT

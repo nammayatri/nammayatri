@@ -773,6 +773,7 @@ data STR = LETS_GET_STARTED
         | NO_RIDES_NO_CHARGE
         | GET_SPECIAL_OFFERS
         | VALID_ONLY_IF_PAYMENT
+        | HELP_STR
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1534,3 +1535,4 @@ getStringFromEnum key = case key of
     NO_RIDES_NO_CHARGE -> "NO_RIDES_NO_CHARGE"
     GET_SPECIAL_OFFERS -> "GET_SPECIAL_OFFERS"
     VALID_ONLY_IF_PAYMENT -> "VALID_ONLY_IF_PAYMENT"
+    HELP_STR -> "HELP_STR"

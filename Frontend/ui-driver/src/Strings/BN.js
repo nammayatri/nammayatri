@@ -751,5 +751,6 @@ const bengaliStrings = {
 	DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "দ্রষ্টব্য: প্রতিদিনের সীমাহীন অফারগুলি এই পরিকল্পনায় প্রযোজ্য নয়!" , 
 	NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
 	GET_SPECIAL_OFFERS : "Get Special Offers",
-	VALID_ONLY_IF_PAYMENT : "valid only if payment is completed"
+	VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
+	HELP_STR : "HELP"
 	}

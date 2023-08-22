@@ -731,5 +731,6 @@ const tamilStrings = {
   DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "குறிப்பு: இந்த திட்டத்தில் தினசரி வரம்பற்ற சலுகைகள் பொருந்தாது!" ,
   NO_RIDES_NO_CHARGE : "சவாரிகள் இல்லை = நாள் கட்டணம் இல்லை",
   GET_SPECIAL_OFFERS : "சிறப்பு சலுகைகளைப் பெறுங்கள்",
-  VALID_ONLY_IF_PAYMENT : "பணம் செலுத்தினால் மட்டுமே செல்லுபடியாகும்"
+  VALID_ONLY_IF_PAYMENT : "பணம் செலுத்தினால் மட்டுமே செல்லுபடியாகும்",
+  HELP_STR : "உதவி"
 }

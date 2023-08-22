@@ -341,6 +341,7 @@
       "ny_ic_waiting_auto" : true,
       "ny_ic_warning_blue" : true,
       "ny_ic_warning_red" : true,
+      "ny_ic_warning_unfilled" : true,
       "ny_ic_welcome" : true,
       "ny_ic_whatsapp_logo" : true,
       "ny_ic_zone_pickup_marker" : true,

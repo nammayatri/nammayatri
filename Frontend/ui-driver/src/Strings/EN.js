@@ -764,5 +764,6 @@ const englishStrings = {
   DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!", 
   NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
   GET_SPECIAL_OFFERS : "Get Special Offers",
-  VALID_ONLY_IF_PAYMENT : "valid only if payment is completed"
+  VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
+  HELP_STR : "HELP"
 } 
