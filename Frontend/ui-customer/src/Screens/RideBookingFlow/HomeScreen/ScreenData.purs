@@ -213,6 +213,7 @@ initData = {
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
+    , canSendSuggestion : true
     }
 }
 

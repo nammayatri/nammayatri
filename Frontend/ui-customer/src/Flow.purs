@@ -123,7 +123,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   if ((getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")) then do
     setValueToLocalStore COUNTRY_CODE "+91" 
   else pure unit
-  _ <- pure $ setValueToLocalStore MESSAGES_DELAY "5000"
+  _ <- pure $ setValueToLocalStore MESSAGES_DELAY "0"
   _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
   _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
   when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do

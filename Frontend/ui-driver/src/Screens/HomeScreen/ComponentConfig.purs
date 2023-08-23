@@ -252,7 +252,7 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , suggestionsList = if (state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) || state.data.messagesSize == "-1") then getDriverSuggestions state else getSuggestionsfromKey "driverDefaultBP" 
+    , suggestionsList = if (state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) || state.data.messagesSize == "-1") then getDriverSuggestions state else []
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
@@ -269,6 +269,7 @@ chatViewConfig state = let
     , white900 = Color.white900
     , black800 = Color.black800
     , black700 = Color.black700
+    , canSendSuggestion = state.props.canSendSuggestion
   }
   in chatViewConfig'
 

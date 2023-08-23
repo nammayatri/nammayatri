@@ -248,10 +248,7 @@ view push state =
             ( \action -> do
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
-                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then do
-                  let delay = if os == "IOS" then 2000.0 else 5000.0
-                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState else pure unit
-                  push OpenChatScreen
+                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen 
                 else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit

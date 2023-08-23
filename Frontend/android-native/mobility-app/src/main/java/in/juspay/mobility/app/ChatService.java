@@ -1,7 +1,6 @@
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.startMediaPlayer;
-
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -11,14 +10,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
-
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -26,9 +22,7 @@ import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-
 import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -42,9 +36,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
-
 import javax.net.ssl.HttpsURLConnection;
-
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 
@@ -64,14 +56,10 @@ public class ChatService extends Service {
     public boolean sessionCreated = false;
     public boolean shouldNotify = true;
     private final ArrayList<Message> messages = new ArrayList<>();
-    private final Handler handler = new Handler();
     private String merchant = null;
     private String baseUrl;
     static Random random = new Random();
     String merchantType = "";
-    private int delay = 5000;
-    private long start = System.currentTimeMillis();
-    private long end = 0;
     MobilityAppBridge.SendMessageCallBack sendMessageCallBack;
     MessageOverlayService.SendMessageCallBack sendMessageCallBackOverlay;
 
@@ -105,7 +93,6 @@ public class ChatService extends Service {
         if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
-            delay = Integer.parseInt(sharedPrefs.getString("MESSAGES_DELAY", "5000"));
         }
         isSessionCreated();
         sendMessageCallBack = this::sendMessages;
@@ -127,9 +114,7 @@ public class ChatService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.startForeground(serviceNotificationID, createNotification());
-        start = System.currentTimeMillis();
-        end = start + delay;
-        handler.postDelayed(this::handleMessages, delay);
+        handleMessages();
         return START_STICKY;
     }
 
@@ -151,7 +136,7 @@ public class ChatService extends Service {
     }
 
     private void startChatService() {
-        handler.postDelayed(this::addChatListener, delay);
+        addChatListener();
     }
 
     private void signInAnonymously() {
@@ -269,7 +254,6 @@ public class ChatService extends Service {
 
     private void handleMessage(Message newMessage, String len) {
         try {
-            if(System.currentTimeMillis() < end) return;
             String _dateFormatted = newMessage.timestamp;
             String _message = newMessage.message;
             String _sentBy = newMessage.sentBy;
