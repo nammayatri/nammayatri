@@ -48,7 +48,7 @@ getMultiLanguagePlanData isLocalized planData = do
 getPromoConfig :: Array OfferEntity -> Array PromoConfig
 getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {     
     title : Just $ decodeOfferDescription (fromMaybe "" item.title) ,
-    isGradient : false ,
+    isGradient : if item.title == Just "Freedom Offer: 96% off APPLIED-*$*-ಫ್ರೀಡಮ್ ಆಫರ್: 96% ರಷ್ಟು ರಿಯಾಯಿತಿ" then true else false,
     gradient : ["#FFE7C2", "#FFFFFF", "#DDFFEB"],
     hasImage : true ,
     imageURL : "ny_ic_discount,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_discount.png" ,

@@ -574,10 +574,10 @@ myPlanBodyview push state =
           , gravity CENTER
          ]
      , planDescriptionView push state.data.myPlanData.planEntity  (state.data.myPlanData.autoPayStatus == PENDING) state.props.isSelectedLangTamil
-     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil
-     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP) state.props.isSelectedLangTamil
-     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance state.props.isSelectedLangTamil
-     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil
+     , alertView push (getImageURL "ny_ic_about,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_about.png") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true
+     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP) state.props.isSelectedLangTamil false
+     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance state.props.isSelectedLangTamil false
+     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil false
      , duesView push state
     ]
   ]
@@ -910,8 +910,8 @@ promoCodeView push state =
             Mb.Just txt -> [text txt]
   ]
 
-alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> String -> Action -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
-alertView push image primaryColor title description buttonText action visible isSelectedLangTamil = 
+alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> String -> Action -> Boolean -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+alertView push image primaryColor title description buttonText action visible isSelectedLangTamil showRefresh = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -942,13 +942,32 @@ alertView push image primaryColor title description buttonText action visible is
         ]
       ] 
    , textView
-     [ text description
+     [ textFromHtml description
      , textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
      , fontStyle $ FontStyle.medium LanguageStyle
      , color Color.black600
      , margin $ if buttonText /= "" then MarginBottom 12 else MarginBottom 0
      ]
    , if buttonText /= "" then arrowButtonView push buttonText true action isSelectedLangTamil else dummyView
+   , linearLayout [
+      width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginTop 14
+      , onClick push $ const RefreshPage
+      , visibility if showRefresh then VISIBLE else GONE
+   ][ imageView [
+        imageWithFallback "ny_ic_refresh"
+        , height $ V 16
+        , width $ V 16
+      ]
+      , textView [
+          text $ getString REFRESH_STRING
+          , color Color.blue800
+          , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
+          , fontStyle $ FontStyle.semiBold LanguageStyle
+          , margin $ MarginLeft 4
+      ]
+   ]
   ]
 
 arrowButtonView :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Action -> Boolean -> PrestoDOM (Effect Unit) w

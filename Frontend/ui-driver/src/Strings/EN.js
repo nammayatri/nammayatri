@@ -687,7 +687,7 @@ const englishStrings = {
   SWITCH_AND_SAVE_DESC : "You have completed over 7 rides today. Save up to ₹10 by switching to the DAILY UNLIMITED plan",
   SWITCH_NOW : "Switch Now",
   PAYMENT_MODE_CHANGED_TO_MANUAL : "Payment mode changed to manual",
-  PAYMENT_MODE_CHANGED_TO_MANUAL_DESC : "You have paused your UPI Autopay. You can clear your dues manually.",
+  PAYMENT_MODE_CHANGED_TO_MANUAL_DESC : "<b>You have paused your UPI Autopay. It can be resumed from your UPI app.</b><br>You can also clear your dues manually.",
   AUTOPAY_PAYMENTS : "Autopay Payments",
   TRANSACTION_ON : "Transaction On",
   SUCCESS : "SUCCESS",
@@ -765,5 +765,6 @@ const englishStrings = {
   NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
-  HELP_STR : "HELP"
+  HELP_STR : "HELP",
+  REFRESH_STRING : "Refresh"
 } 
