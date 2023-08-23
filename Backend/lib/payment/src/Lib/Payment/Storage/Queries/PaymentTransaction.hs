@@ -63,6 +63,7 @@ findAllByOrderId orderId =
   findAll $ do
     transaction <- from $ table @PaymentTransactionT
     where_ $ transaction ^. PaymentTransactionOrderId ==. val (toKey orderId)
+    orderBy [desc $ transaction ^. PaymentTransactionCreatedAt]
     return transaction
 
 findNewTransactionByOrderId :: Transactionable m => Id PaymentOrder -> m (Maybe PaymentTransaction)
