@@ -718,6 +718,27 @@ export const startPP = function (payload) {
 	}
 }
 
+
+export const initiatePP = function () {
+    var cb = function (code) {
+      return function (_response) {
+        return function () {
+          var response = JSON.parse(_response);
+          console.log("%cHyperpay initiate Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                               
+        }
+      }
+    }
+    if (JOS) {      
+      try {
+        console.log("%cHyperpay initiate Request ", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
+        JOS.startApp("in.juspay.hyperpay")(window.__payload)(cb)();
+      } catch (err) {
+        console.error("Hyperpay initiate Request not sent : ", err);
+      }
+    }else{
+      }
+}
+
 export const consumeBP = function (unit){
   var jpConsumingBackpress = {
     event: "jp_consuming_backpress",

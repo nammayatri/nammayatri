@@ -109,9 +109,7 @@ window.onMerchantEvent = function (event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
-    if (!isInit) {
-      callInitiateResult();
-    }
+    callInitiateResult();
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
@@ -232,7 +230,7 @@ window["onEvent'"] = function (event, args) {
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
   if ((JSON.parse(jsonPayload)).event == "initiate_result"){
-    callInitiateResult();
+    // callInitiateResult(); // TODO Handle the PP callback properly.
     
   }
 }
