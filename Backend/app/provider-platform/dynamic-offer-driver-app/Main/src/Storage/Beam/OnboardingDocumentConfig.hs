@@ -26,10 +26,11 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT

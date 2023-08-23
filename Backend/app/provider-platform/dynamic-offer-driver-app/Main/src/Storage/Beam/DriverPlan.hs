@@ -33,10 +33,11 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data DriverPlanT f = DriverPlanT

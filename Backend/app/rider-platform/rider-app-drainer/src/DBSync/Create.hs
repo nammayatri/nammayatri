@@ -67,7 +67,7 @@ runCreateCommands cmds = do
       if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
 
     runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
-      res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates
+      res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates [(Nothing, Nothing)]
       case (res, index) of
         (Right _, _) -> do
           pure [Right entryIds]

@@ -31,11 +31,12 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH (enableKVPG)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH (enableKVPG)
 import Sequelize
 
 instance FromField Domain.RegistrationCategory where

@@ -10,6 +10,7 @@ import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils as EKU
 import qualified EulerHS.Language as EL
+import EulerHS.PIIEncryption
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types as ET
 import qualified Kernel.Beam.Types as KBT
@@ -27,6 +28,8 @@ updateDB ::
     MeshMeta be table,
     B.HasQBuilder be,
     EL.MonadFlow m,
+    PII table,
+    PIIUpdate be table,
     ToJSON (table Identity),
     FromJSON (table Identity)
   ) =>
@@ -37,15 +40,15 @@ updateDB ::
   ByteString ->
   m (Either MeshError [A.Value])
 updateDB dbConf _ setClause whereClause bts = do
-  either (pure . Left) ((Right <$>) . mapM updateModel') . mapLeft MDBError
+  either (pure . Left) ((Right <$>) . mapM updateModel'') . mapLeft MDBError
     =<< runExceptT
       ( do
           updateObj <- ExceptT $ CDB.findAll dbConf Nothing whereClause
-          ExceptT $ CDB.updateOneWoReturning dbConf Nothing setClause whereClause
+          ExceptT $ CDB.updateOneWoReturning dbConf Nothing setClause whereClause Nothing
           pure updateObj
       )
   where
-    updateModel' model = do
+    updateModel'' model = do
       let val = (EKU.updateModel @be @table) model (EKU.jsonKeyValueUpdates setClause)
       case val of
         Right obj -> pure obj

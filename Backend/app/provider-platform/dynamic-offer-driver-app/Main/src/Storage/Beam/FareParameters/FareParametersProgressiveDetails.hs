@@ -26,11 +26,12 @@ import Database.Beam.Backend ()
 import Database.Beam.MySQL ()
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common (Money)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize as Se
 
 instance IsString Vehicle.Variant where

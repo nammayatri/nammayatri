@@ -509,16 +509,16 @@
         "sequelize": "sequelize"
       },
       "locked": {
-        "lastModified": 1690897493,
-        "narHash": "sha256-50FaBXBH5qc9LHp4en4lE/scjs2wUsl3wDk3ioJBVBY=",
-        "owner": "juspay",
+        "lastModified": 1692796055,
+        "narHash": "sha256-FaMkl8qGpHgXlnkzwHHCvi4qEXi6xcSuJQrKC0atRYA=",
+        "owner": "vijaygupta18",
         "repo": "euler-hs",
-        "rev": "3fb3536479b4525384d0aeac93a1ffe5c5bf47f8",
+        "rev": "00fb731a8e09b13d312bef4d96668a21f1bf4351",
         "type": "github"
       },
       "original": {
-        "owner": "juspay",
-        "ref": "ag/open-source",
+        "owner": "vijaygupta18",
+        "ref": "updated-master",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -2359,15 +2359,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1692722229,
-        "narHash": "sha256-ATVvhMHvD2gcPJ2T+zGT8gx2cGUrfdypmgZfMdNKHYY=",
+        "lastModified": 1692796707,
+        "narHash": "sha256-GP/LtM1+6pddBPc/7hdx2Gq1RH8xiL6HuL73f86A/2s=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "3d2b3660afc3c8394c0fb8e564ed4e06b0794f66",
+        "rev": "ceb5c374604a92b91754abe8f961cafab283733e",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "Refactor/Backend-Eulerhs-Rebase-and-template-haskell",
         "repo": "shared-kernel",
         "type": "github"
       }

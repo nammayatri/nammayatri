@@ -27,12 +27,13 @@ import Database.Beam.MySQL ()
 import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data QuoteSpecialZoneT f = QuoteSpecialZoneT

@@ -101,7 +101,7 @@ runCreateCommands cmds = do
       if null object then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
 
     runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
-      res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates
+      res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates [(Nothing, Nothing)]
       case (res, index) of -- Ignore duplicate entry
         (Right _, _) -> do
           -- EL.logInfoV ("Drainer Info" :: Text) $ createDBLogEntry model "CREATE" (t2 - t1) (cpuT2 - cpuT1) dbObjects -- Logging group latencies

@@ -36,10 +36,11 @@ import Database.PostgreSQL.Simple.FromField
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Debug.Trace as T
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Maps (BoundingBoxWithoutCRS (..), LatLong (..), PointXY (..), PointXYZ (..), PointXYZM (..), RouteInfo (..))
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField RouteInfo where

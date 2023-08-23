@@ -194,7 +194,6 @@ library
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
       Environment
-      Lib.Mesh
       Lib.Utils
       Lib.UtilsTH
       SharedLogic.CallBPP

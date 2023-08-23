@@ -11,6 +11,7 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL (MySQL)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), PrimaryKey (..), SecondaryKey (..), TermWrap (..))
+import EulerHS.PIIEncryption (PII (..), PIIUpdate (..))
 import EulerHS.Prelude hiding (Type, words)
 import Language.Haskell.TH
 import qualified Sequelize as S
@@ -27,11 +28,32 @@ enableKV name pKeyN sKeysN = do
 
 enableKVPG :: Name -> [Name] -> [[Name]] -> Q [Dec]
 enableKVPG name pKeyN sKeysN = do
+  [piiInstances] <- mkPiiInstances name
+  [piiUpdateInstances] <- mkPiiUpdateInstances name
   [tModeMeshSig, tModeMeshDec] <- tableTModMeshD name
   [kvConnectorDec] <- kvConnectorInstancesD name pKeyN sKeysN
   [meshMetaDec] <- meshMetaInstancesDPG name
-  --   cerealDec <- cerealInstancesD name
-  pure $ [tModeMeshSig, tModeMeshDec, meshMetaDec, kvConnectorDec] -- ++ cerealDec
+
+  pure [tModeMeshSig, tModeMeshDec, meshMetaDec, piiInstances, piiUpdateInstances, kvConnectorDec] -- ++ cerealDec
+
+mkPiiInstances :: Name -> Q [Dec]
+mkPiiInstances typeName = do
+  let encName = mkName "encryptRow"
+      decName = mkName "decryptRow"
+      setPri = mkName "setPrimaryKey"
+      varY = mkName "y"
+      var = mkName "x"
+  let enc = FunD encName [Clause [VarP var, WildP, WildP] (NormalB (AppE (VarE 'pure) (AppE (ConE 'Right) (VarE var)))) []]
+      dec = FunD decName [Clause [VarP var, WildP] (NormalB (AppE (VarE 'pure) (AppE (ConE 'Right) (VarE var)))) []]
+      set = FunD setPri [Clause [WildP, VarP varY] (NormalB (VarE varY)) []]
+  return [InstanceD Nothing [] (AppT (ConT ''PII) (ConT typeName)) [enc, dec, set]]
+
+mkPiiUpdateInstances :: Name -> Q [Dec]
+mkPiiUpdateInstances typeName = do
+  let transfrom = mkName "transformSetClause"
+      var = mkName "x"
+      treanfromSet = FunD transfrom [Clause [VarP var, WildP, WildP] (NormalB (AppE (VarE 'pure) (AppE (ConE 'Right) (VarE var)))) []]
+  return [InstanceD Nothing [] (AppT (AppT (ConT ''PIIUpdate) (ConT ''Postgres)) (ConT typeName)) [treanfromSet]]
 
 -- DB.OrderReferenceT (B.FieldModification (B.TableField DB.OrderReferenceT)) add signature
 tableTModMeshD :: Name -> Q [Dec]

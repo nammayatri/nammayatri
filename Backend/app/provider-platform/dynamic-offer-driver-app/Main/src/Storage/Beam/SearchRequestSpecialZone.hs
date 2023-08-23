@@ -28,11 +28,12 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import qualified Domain.Types.FareProduct as FareProductD
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where

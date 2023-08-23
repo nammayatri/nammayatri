@@ -37,12 +37,13 @@ import Domain.Types.Common
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.PIIEncryption
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromBackendRow Postgres [Domain.EstimateBreakup]
