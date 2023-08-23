@@ -326,3 +326,4 @@ screenAnimationFadeInOut screen =
     $ PrestoAnim.entryAnimationSetBackward [fadeIn true]
     $ PrestoAnim.exitAnimationSetBackward [fadeOut true]
       screen
+

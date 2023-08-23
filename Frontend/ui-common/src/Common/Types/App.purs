@@ -249,3 +249,14 @@ type CountryCodeObj = {
   , countryCode :: String 
   , countryShortCode :: String
 }
+
+data MobileNumberValidatorResp = Invalid | Valid | MaxLengthExceeded | ValidPrefix
+
+derive instance genericMobileNumberValidatorResp :: Generic MobileNumberValidatorResp _ 
+instance eqMobileNumberValidatorResp :: Eq MobileNumberValidatorResp where eq = genericEq
+
+data OTPChannel = WHATSAPP | SMS 
+
+derive instance genericOTPChannel :: Generic OTPChannel _
+instance showOTPChannel :: Show OTPChannel where show = genericShow
+instance encodeOTPChannel  :: Encode OTPChannel where encode = defaultEncode

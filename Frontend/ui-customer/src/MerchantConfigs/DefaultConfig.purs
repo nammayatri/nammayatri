@@ -117,4 +117,5 @@ config =
   , showGenderBanner : true
   , enableMockLocation : false
   , specialLocationView : false
+  , internationalNumberEnabled : false
   }
