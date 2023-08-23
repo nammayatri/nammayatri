@@ -59,7 +59,7 @@ initData = {
   }
   }
   , data : {
-    pastDays : 7
+    pastDays : 30
   , paymentHistory : {
     paymentHistoryList : []
   }
