@@ -244,6 +244,7 @@ function refreshFlow(){
     if(window.storeCallBackMessageUpdated){
       window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
+    window.chatMessages = undefined;
     purescript.onConnectivityEvent("REFRESH")();
   }
 }

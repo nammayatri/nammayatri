@@ -2,6 +2,8 @@ import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
 const { JBridge } = window;
 var mainFiber = null;
+let suggestions = require("../Engineering.Helpers.Suggestions")
+var timer;
 
 // exports._keyStoreEntryPresent = function(alias) {
 //   return function() {
@@ -575,25 +577,35 @@ export const updateRoute = function (data) {
 };
 
 export const storeCallBackMessageUpdated = function (cb) {
-      return function (chatChannelID) {
-        return function(chatUserId) {
-          return function(action) {
-              return function (){
-                var callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize){
-                  if(messagesSize == undefined) {
-                    messagesSize = "-1"
-                  }
-                  cb(action (message) (sentBy) (timeStamp) (messagesSize))();
-                });
-                window.storeCallBackMessageUpdated = callback;
-                if(JBridge.storeCallBackMessageUpdated) {
-                  JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
-                }
-              };
-            };
-          };
+  return function (chatChannelID) {
+    return function (chatUserId) {
+      return function (action) {
+        return function () {
+          var callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
+            if (messagesSize == undefined) {
+              messagesSize = "-1"
+            }
+            let decodedMessage = suggestions.getMessageFromKey(message)(getKeyInSharedPrefKeys("LANGUAGE_KEY"))
+            let messageObj = { "message": decodedMessage, "sentBy": sentBy, "timeStamp": timeStamp, type: "Text", delay: 0 }
+            window.chatMessages = window.chatMessages || [];
+            window.chatMessages.push(messageObj);
+            if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
+              cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+            }
+          });
+          window.storeCallBackMessageUpdated = callback;
+          if (JBridge.storeCallBackMessageUpdated) {
+            JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+          }
         };
       };
+    };
+  };
+};
+
+export const getChatMessages = function(string) {
+    return [].concat(window.chatMessages !== undefined ? window.chatMessages : []);
+}
 
 export const dateCallback = function (cb, action) {
     var callback = function (){
@@ -649,14 +661,18 @@ export const startChatListenerService = function() {
 
 export const stopChatListenerService = function () {
   if (JBridge.stopChatListenerService) {
+    window.chatMessages = undefined;
     JBridge.stopChatListenerService();
   }
 }
 
 export const sendMessage = function (message) {
-  console.log("Send Message Called");
   if (JBridge.sendMessage) {
-    JBridge.sendMessage(message);
+    if(timer) clearTimeout(timer);
+    const fn = function () {
+      return JBridge.sendMessage(message);
+    }
+    timer = setTimeout(fn, 200);
   }
 };
 

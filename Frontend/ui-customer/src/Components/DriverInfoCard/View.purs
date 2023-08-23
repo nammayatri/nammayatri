@@ -424,12 +424,7 @@ messageNotificationView push state =
       , padding $ PaddingHorizontal 12 16
       , orientation HORIZONTAL
       , clickable true
-      , onClick (\action -> do
-                  let delay = if os == "IOS" then 2000.0 else 5000.0
-                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
-                  else pure unit
-                  push action
-                ) (const MessageDriver)
+      , onClick push $ const $ MessageDriver
       , gravity CENTER_VERTICAL
       ][ linearLayout
          [ height MATCH_PARENT
@@ -756,12 +751,8 @@ contactView push state =
               , cornerRadius 20.0
               , background state.data.config.driverInfoConfig.callBackground
               , stroke state.data.config.driverInfoConfig.callButtonStroke
-              , onClick (\action -> do
-                  let delay = if os == "IOS" then 2000.0 else 5000.0
-                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
-                  else pure unit
-                  push action
-              ) (const MessageDriver)
+              , afterRender push $ const $ LoadMessages
+              , onClick push $ const $ MessageDriver
               ][ imageView
                   [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
                   , height $ V state.data.config.driverInfoConfig.callHeight

@@ -250,6 +250,14 @@ type CountryCodeObj = {
   , countryShortCode :: String
 }
 
+type ChatComponent = {
+    message :: String 
+  , sentBy :: String 
+  , timeStamp :: String
+  , type :: String
+  , delay :: Int
+}
+
 data MobileNumberValidatorResp = Invalid | Valid | MaxLengthExceeded | ValidPrefix
 
 derive instance genericMobileNumberValidatorResp :: Generic MobileNumberValidatorResp _ 

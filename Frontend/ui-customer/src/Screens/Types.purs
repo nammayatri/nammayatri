@@ -661,6 +661,7 @@ type HomeScreenStateProps =
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
+  , canSendSuggestion :: Boolean
   }
 
 type RouteEndPoints = {
