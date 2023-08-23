@@ -40,6 +40,7 @@ data DriverOnboardingError
   | RCActiveOnOtherAccount
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
+  | RCActivationFailedPaymentDue Text
   deriving (Generic, Eq, Show, Read, IsBecknAPIError, ToSchema, ToJSON, FromJSON)
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
@@ -67,6 +68,7 @@ instance IsBaseError DriverOnboardingError where
     ActiveRCNotFound -> Just "Vehicle Registration Certificate is not active with any driver."
     RCVehicleOnRide -> Just "Vehicle on ride. Please try again later."
     RCActiveOnOtherAccount -> Just "RC active on another driver account."
+    RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -91,6 +93,7 @@ instance IsHTTPError DriverOnboardingError where
     ActiveRCNotFound -> "ACTIVE_RC_NOT_FOUND"
     RCVehicleOnRide -> "RC_Vehicle_ON_RIDE"
     RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -113,5 +116,6 @@ instance IsHTTPError DriverOnboardingError where
     ActiveRCNotFound -> E400
     RCVehicleOnRide -> E400
     RCActiveOnOtherAccount -> E400
+    RCActivationFailedPaymentDue _ -> E400
 
 instance IsAPIError DriverOnboardingError
