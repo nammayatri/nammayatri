@@ -58,6 +58,7 @@ data Action = BackPressed
             | ConfirmCancelPopup PopUpModal.Action
             | TryAgainButtonAC PrimaryButton.Action
             | RetryPaymentAC
+            | RefreshPage
 
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
@@ -153,6 +154,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     _ -> continue state
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state
+
+eval RefreshPage state = exit $ Refresh
 
 eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans

@@ -608,7 +608,7 @@ const kannadaStrings = {
   YOUR_EARNINGS : "ನಿಮ್ಮ ಗಳಿಕೆ",
   NUMBER_OF_RIDES : "ಸವಾರಿಗಳ ಸಂಖ್ಯೆ",
   FARE_BREAKUP : "ಶುಲ್ಕ ವಿಭಜನೆ",
-  MY_PLAN : "ನನ್ನ ಯೋಜನೆ",
+  MY_PLAN : "ನನ್ನ ಪ್ಲಾನ್",
   YOUR_DUES : "ನಿಮ್ಮ ಬಾಕಿಗಳು",
   YOUR_DUES_DESCRIPTION : "ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಲು ನೀವು ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಹೊಂದಿಸಿರುವಿರಿ. ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ಯಾವಾಗಲೂ ಸಮಯಕ್ಕೆ ಪಾವತಿಸಲಾಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ನಾವು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಪ್ರಯತ್ನಿಸುತ್ತೇವೆ.",
   CURRENT_DUES : "ಪ್ರಸ್ತುತ ಬಾಕಿಗಳು",
@@ -737,5 +737,6 @@ const kannadaStrings = {
   NO_RIDES_NO_CHARGE : "ಸವಾರಿಗಳಿಲ್ಲ = ದಿನಕ್ಕೆ ಚಾರ್ಜ್ ಇಲ್ಲ" ,
   GET_SPECIAL_OFFERS : "ಸ್ಪೆಷಲ್ ಆಫರ್ಗಳು ಪಡೆಯಿರಿ",
   VALID_ONLY_IF_PAYMENT : "ಪಾವತಿ ಪೂರ್ಣಗೊಂಡರೆ ಮಾತ್ರ ಮಾನ್ಯವಾಗಿರುತ್ತದೆ",
-  HELP_STR : "ಸಹಾಯ"
+  HELP_STR : "ಸಹಾಯ",
+  REFRESH_STRING : "ರಿಫ್ರೆಶ್"
 }

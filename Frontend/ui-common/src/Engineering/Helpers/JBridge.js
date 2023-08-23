@@ -1642,11 +1642,9 @@ export const cleverTapCustomEvent = function(event){
 export const cleverTapCustomEventWithParams = function (event) {
   return function (paramKey) {
     return function (paramValue) {
-      return function () {
-        if(window.JBridge.cleverTapCustomEventWithParams){
-            window.JBridge.cleverTapCustomEventWithParams(event, paramKey,paramValue);
-        }
-    };
+      if(window.JBridge.cleverTapCustomEventWithParams){
+          window.JBridge.cleverTapCustomEventWithParams(event, paramKey,paramValue);
+      }
   };
  };
 };

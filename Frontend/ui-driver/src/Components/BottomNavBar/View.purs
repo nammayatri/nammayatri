@@ -55,7 +55,7 @@ view push state =
           , gravity CENTER
           , onClick push (const (OnNavigate item.text))
           ][ linearLayout
-              [ width $ V 50
+              [ width $ V 60
               , height WRAP_CONTENT
               , gravity CENTER
               , orientation VERTICAL

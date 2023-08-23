@@ -764,5 +764,6 @@ const hindiStrings = {
   NO_RIDES_NO_CHARGE : "कोई सवारी नहीं = दिन के लिए कोई शुल्क नहीं",
   GET_SPECIAL_OFFERS : "विशेष ऑफ़र प्राप्त करें",
   VALID_ONLY_IF_PAYMENT : "भुगतान पूरा होने पर ही मान्य",
-  HELP_STR : "सहायता"
+  HELP_STR : "सहायता",
+  REFRESH_STRING : "पुनः लोड करें"
 }

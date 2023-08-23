@@ -1791,7 +1791,9 @@ homeScreenFlow = do
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
         let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
         if (isJust getDriverInfoResp.numberOfRides && (fromMaybe 0 getDriverInfoResp.numberOfRides == 1))
-          then liftFlowBT $ logEvent logField_ "ny_driver_first_ride_completed"
+          then do
+            _ <- pure $ cleverTapCustomEvent "ny_driver_first_ride_completed"
+            liftFlowBT $ logEvent logField_ "ny_driver_first_ride_completed"
           else pure unit
         setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
         else pure unit
@@ -1931,10 +1933,11 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
   response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
   case response of
     Right (SubscribePlanResp listResp) -> do
-      _ <- when fromJoinPlan do
+      if fromJoinPlan then do
         _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "selected_plan" planCardConfig.title
         _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "offer" $ show $ map (\offer -> offer.title) planCardConfig.offers
         pure unit 
+      else pure unit
       let (CreateOrderRes orderResp) = listResp.orderResp
           (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
           (PayPayload innerpayload) = sdk_payload.payload

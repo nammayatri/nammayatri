@@ -645,7 +645,7 @@ const tamilStrings = {
   ZERO_COMMISION : "ஜீரோ கமிஷன்",
   EARN_TODAY_PAY_TOMORROW : "இன்று சம்பாதிக்கவும், நாளை செலுத்தவும்",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "நீங்கள் சவாரி செய்தால் மட்டும் பணம் செலுத்துங்கள்",
-  PLANS : "சேர",
+  PLANS : "திட்டம்",
   PLAN : "திட்டம்",
   DAY : "நாள்",
   MANAGE_PLAN : "திட்டத்தை நிர்வகிக்க",
@@ -732,5 +732,6 @@ const tamilStrings = {
   NO_RIDES_NO_CHARGE : "சவாரிகள் இல்லை = நாள் கட்டணம் இல்லை",
   GET_SPECIAL_OFFERS : "சிறப்பு சலுகைகளைப் பெறுங்கள்",
   VALID_ONLY_IF_PAYMENT : "பணம் செலுத்தினால் மட்டுமே செல்லுபடியாகும்",
-  HELP_STR : "உதவி"
+  HELP_STR : "உதவி",
+  REFRESH_STRING : "புதுப்பிப்பு"
 }

@@ -752,5 +752,6 @@ const bengaliStrings = {
 	NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
 	GET_SPECIAL_OFFERS : "Get Special Offers",
 	VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
-	HELP_STR : "HELP"
+	HELP_STR : "HELP",
+	REFRESH_STRING : "Refresh"
 	}
