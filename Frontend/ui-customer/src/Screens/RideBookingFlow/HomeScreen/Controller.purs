@@ -684,6 +684,7 @@ eval (RateClick index) state = do
             { driverName = state.data.driverInfoCardState.driverName
             , rideId = state.data.driverInfoCardState.rideId
             , rating = index
+            , feedbackList = state.data.rideRatingState.feedbackList
             }
           , ratingViewState { selectedRating = index }
         }
