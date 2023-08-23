@@ -11,66 +11,72 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Payment.Storage.Queries.PaymentTransaction where
 
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, updateWithKV)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common (getCurrentTime)
+import Kernel.Utils.Common (MonadFlow, getCurrentTime)
 import Lib.Payment.Domain.Types.PaymentOrder (PaymentOrder)
-import Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
-import Lib.Payment.Storage.Tabular.PaymentTransaction
+import Lib.Payment.Domain.Types.PaymentTransaction
+import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Sequelize as Se
 
-create :: PaymentTransaction -> SqlDB ()
-create = Esq.create
+create :: MonadFlow m => PaymentTransaction -> m ()
+create = createWithKV
 
-updateMultiple :: PaymentTransaction -> SqlDB ()
+updateMultiple :: MonadFlow m => PaymentTransaction -> m ()
 updateMultiple transaction = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PaymentTransactionStatusId =. val transaction.statusId,
-        PaymentTransactionStatus =. val transaction.status,
-        PaymentTransactionPaymentMethodType =. val transaction.paymentMethodType,
-        PaymentTransactionPaymentMethod =. val transaction.paymentMethod,
-        PaymentTransactionRespMessage =. val transaction.respMessage,
-        PaymentTransactionRespCode =. val transaction.respCode,
-        PaymentTransactionGatewayReferenceId =. val transaction.gatewayReferenceId,
-        PaymentTransactionAmount =. val transaction.amount,
-        PaymentTransactionCurrency =. val transaction.currency,
-        PaymentTransactionJuspayResponse =. val transaction.juspayResponse,
-        PaymentTransactionMandateStatus =. val transaction.mandateStatus,
-        PaymentTransactionMandateStartDate =. val transaction.mandateStartDate,
-        PaymentTransactionMandateEndDate =. val transaction.mandateEndDate,
-        PaymentTransactionMandateId =. val transaction.mandateId,
-        PaymentTransactionMandateFrequency =. val transaction.mandateFrequency,
-        PaymentTransactionMandateMaxAmount =. val transaction.mandateMaxAmount,
-        PaymentTransactionUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PaymentTransactionId ==. val transaction.id.getId
+  updateWithKV
+    [ Se.Set BeamPT.statusId transaction.statusId,
+      Se.Set BeamPT.status transaction.status,
+      Se.Set BeamPT.paymentMethodType transaction.paymentMethodType,
+      Se.Set BeamPT.paymentMethodType transaction.paymentMethodType,
+      Se.Set BeamPT.paymentMethod transaction.paymentMethod,
+      Se.Set BeamPT.respMessage transaction.respMessage,
+      Se.Set BeamPT.respCode transaction.respCode,
+      Se.Set BeamPT.gatewayReferenceId transaction.gatewayReferenceId,
+      Se.Set BeamPT.amount transaction.amount,
+      Se.Set BeamPT.currency transaction.currency,
+      Se.Set BeamPT.juspayResponse transaction.juspayResponse,
+      Se.Set BeamPT.mandateStatus transaction.mandateStatus,
+      Se.Set BeamPT.mandateStartDate transaction.mandateStartDate,
+      Se.Set BeamPT.mandateEndDate transaction.mandateEndDate,
+      Se.Set BeamPT.mandateId transaction.mandateId,
+      Se.Set BeamPT.mandateFrequency transaction.mandateFrequency,
+      Se.Set BeamPT.mandateMaxAmount transaction.mandateMaxAmount,
+      Se.Set BeamPT.updatedAt now
+    ]
+    [Se.Is BeamPT.id $ Se.Eq $ transaction.id.getId]
 
-findByTxnUUID :: Transactionable m => Text -> m (Maybe PaymentTransaction)
-findByTxnUUID txnUUID =
-  findOne $ do
-    transaction <- from $ table @PaymentTransactionT
-    where_ $ transaction ^. PaymentTransactionTxnUUID ==. val (Just txnUUID)
-    return transaction
+findByTxnUUID :: MonadFlow m => Text -> m (Maybe PaymentTransaction)
+findByTxnUUID txnUUID = findAllWithOptionsKV [Se.Is BeamPT.txnUUID $ Se.Eq $ Just txnUUID] (Se.Desc $ BeamPT.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findAllByOrderId :: Transactionable m => Id PaymentOrder -> m [PaymentTransaction]
-findAllByOrderId orderId =
-  findAll $ do
-    transaction <- from $ table @PaymentTransactionT
-    where_ $ transaction ^. PaymentTransactionOrderId ==. val (toKey orderId)
-    return transaction
+findAllByOrderId :: MonadFlow m => Id PaymentOrder -> m [PaymentTransaction]
+findAllByOrderId (Id orderId) = findAllWithKV [Se.Is BeamPT.orderId $ Se.Eq orderId]
 
-findNewTransactionByOrderId :: Transactionable m => Id PaymentOrder -> m (Maybe PaymentTransaction)
-findNewTransactionByOrderId orderId =
-  findOne $ do
-    transaction <- from $ table @PaymentTransactionT
-    where_ $
-      Esq.isNothing (transaction ^. PaymentTransactionTxnUUID)
-        &&. transaction ^. PaymentTransactionOrderId ==. val (toKey orderId)
-    limit 1
-    return transaction
+findNewTransactionByOrderId :: MonadFlow m => Id PaymentOrder -> m (Maybe PaymentTransaction)
+findNewTransactionByOrderId (Id orderId) = findAllWithOptionsKV [Se.Is BeamPT.txnUUID $ Se.Eq Nothing, Se.Is BeamPT.orderId $ Se.Eq orderId] (Se.Desc BeamPT.createdAt) (Just 1) Nothing <&> listToMaybe
+
+instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
+  fromTType' BeamPT.PaymentTransactionT {..} = do
+    pure $
+      Just
+        PaymentTransaction
+          { id = Id id,
+            orderId = Id orderId,
+            merchantId = Id merchantId,
+            ..
+          }
+
+instance ToTType' BeamPT.PaymentTransaction PaymentTransaction where
+  toTType' PaymentTransaction {..} =
+    BeamPT.PaymentTransactionT
+      { BeamPT.id = getId id,
+        BeamPT.orderId = getId orderId,
+        BeamPT.merchantId = merchantId.getId,
+        ..
+      }

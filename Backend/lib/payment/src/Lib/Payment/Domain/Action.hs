@@ -73,14 +73,16 @@ createOrderService merchantId personId createOrderReq createOrderCall = do
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
       paymentOrder <- buildPaymentOrder merchantId personId createOrderReq createOrderResp
-      Esq.runTransaction $
-        QOrder.create paymentOrder
+      -- Esq.runTransaction $
+      --   QOrder.create paymentOrder
+      QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
       isOrderExpired <- checkIfExpired existingOrder.clientAuthTokenExpiry
       if isOrderExpired
         then do
-          Esq.runTransaction $ QOrder.updateStatusToExpired existingOrder.id
+          -- Esq.runTransaction $ QOrder.updateStatusToExpired existingOrder.id
+          QOrder.updateStatusToExpired existingOrder.id
           return Nothing
         else do
           sdk_payload <- buildSDKPayload createOrderReq existingOrder
@@ -265,9 +267,11 @@ updateOrderTransaction order resp respDump = do
   case mbTransaction of
     Nothing -> do
       transaction <- buildPaymentTransaction order resp respDump
-      Esq.runTransaction $ do
-        QTransaction.create transaction
-        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+      -- Esq.runTransaction $ do
+      --   QTransaction.create transaction
+      --   when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+      QTransaction.create transaction
+      when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
     Just transaction -> do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
@@ -287,10 +291,14 @@ updateOrderTransaction order resp respDump = do
                         mandateMaxAmount = resp.mandateMaxAmount,
                         juspayResponse = respDump
                        }
-      Esq.runTransaction $ do
-        -- Avoid updating status if already in CHARGED state to handle race conditions
-        when (transaction.status /= Payment.CHARGED) $ QTransaction.updateMultiple updTransaction
-        when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+      -- Esq.runTransaction $ do
+      --   -- Avoid updating status if already in CHARGED state to handle race conditions
+      --   when (transaction.status /= Payment.CHARGED) $ QTransaction.updateMultiple updTransaction
+      --   when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
+
+      -- Avoid updating status if already in CHARGED state to handle race conditions
+      when (transaction.status /= Payment.CHARGED) $ QTransaction.updateMultiple updTransaction
+      when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatus updOrder
 
 buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
 buildPaymentTransaction order OrderTxn {..} respDump = do
