@@ -122,7 +122,7 @@ eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput Enter
 
 eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_otp_triggered"
-    let newState = state {data {otpChannel = OTP.SMS}}
+    let newState = state {data {otpChannel = OTP.SMS}, props{btnActiveOTP = false}}
     pure $ hideKeyboardOnNavigation true
     pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
     exit $ GoToOTP newState

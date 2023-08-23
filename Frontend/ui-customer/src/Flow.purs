@@ -789,7 +789,7 @@ homeScreenFlow = do
         (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
         let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", defaultPickUpPoint = pickUpLoc, findingQuotesProgress = 0.0 }})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", defaultPickUpPoint = pickUpLoc, findingQuotesProgress = 0.0, sourceSelectedOnMap = false }})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           else pure unit
@@ -1578,7 +1578,7 @@ myRidesScreenFlow fromNavBar = do
                                               address : item.address
                                             }) srcSpecialLocation.gates
       if(state.data.selectedItem.isSpecialZone) then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{sourceSelectedOnMap = false},data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints}})
         pure unit
         else pure unit
       rideSearchFlow "REPEAT_RIDE_FLOW"
@@ -1750,7 +1750,7 @@ savedLocationFlow = do
               , showSavePlaceView = true
               , editLocation= true
               , editSavedLocation = true
-              , isBtnActive = (serviceabilityRes.serviceable)
+              , isBtnActive = false
               , isLocateOnMap = false
               , isLocationServiceable = (serviceabilityRes.serviceable)
               , fromHome = false

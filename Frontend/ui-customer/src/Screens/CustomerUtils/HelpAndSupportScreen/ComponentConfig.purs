@@ -75,6 +75,7 @@ sourceToDestinationConfig state = let
       , maxLines = 1
       , ellipsize = true
       }
+    , overrideSeparatorCount = 2
     }
   in sourceToDestinationConfig'
 

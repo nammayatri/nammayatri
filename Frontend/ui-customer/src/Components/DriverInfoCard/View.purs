@@ -66,7 +66,8 @@ view push state =
       ][supportButton push state]  
     , mapOptionsView push state
     , messageNotificationView push state
-    , if state.props.currentSearchResultType == QUOTES then driverInfoViewSpecialZone push state else driverInfoView push state
+    , driverInfoViewSpecialZone push state
+    , driverInfoView push state
     ]
 
 driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
@@ -74,6 +75,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
+  , visibility if state.props.currentSearchResultType == QUOTES then VISIBLE else GONE
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -601,6 +603,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
+  , visibility if state.props.currentSearchResultType == QUOTES then GONE else VISIBLE
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT

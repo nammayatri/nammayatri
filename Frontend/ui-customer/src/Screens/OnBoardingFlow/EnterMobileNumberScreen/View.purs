@@ -41,7 +41,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -157,7 +157,8 @@ whatsAppOTPButtonView state push =
   linearLayout [
     height WRAP_CONTENT,
     width MATCH_PARENT, 
-    orientation VERTICAL
+    orientation VERTICAL,
+    gravity CENTER
   ][PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpanded] $ 
     textView $ [
       height WRAP_CONTENT
@@ -173,7 +174,8 @@ whatsAppOTPButtonView state push =
     ] $
     linearLayout
       [ height WRAP_CONTENT
-      , width MATCH_PARENT
+      , width $ V (EHC.screenWidth unit - 32)
+      , gravity CENTER
       ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state)]
     ]
 

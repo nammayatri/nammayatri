@@ -1023,7 +1023,7 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
   _ <- pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
   if os == "IOS" then do
     continueWithCmd state [do
-      _ <- openUrlInApp "https://nammayatri.in/open?source=in-app"
+      _ <- openUrlInApp state.data.config.dashboardUrl 
       pure NoAction
     ]
   else continue state {props {showLiveDashboard = true}}
