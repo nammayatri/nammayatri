@@ -587,14 +587,12 @@ getNearestDrivers ::
   MonadFlow m =>
   Maybe Variant ->
   LatLong ->
-  Int ->
-  Id Merchant ->
   Bool ->
-  Maybe Seconds ->
+  [DriverLocation] ->
   m [NearestDriversResult]
-getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
+getNearestDrivers mbVariant LatLong {..} onlyNotOnRide driverLocs = do
   res <- do
-    driverLocs <- QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
+    -- driverLocs <- getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
     driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
     vehicle <- getVehiclesWithCond driverInfos
     drivers <- getDrivers vehicle

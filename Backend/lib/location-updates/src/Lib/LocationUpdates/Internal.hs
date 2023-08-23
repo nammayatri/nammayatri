@@ -29,6 +29,7 @@ module Lib.LocationUpdates.Internal
     wrapDistanceCalculationImplementation,
     processWaypoints,
     mkRideInterpolationHandler,
+    processBulkWaypoints,
   )
 where
 
@@ -94,6 +95,28 @@ processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints = do
       addPoints driverId waypoints
       recalcDistanceBatches ih ending driverId
 
+processBulkWaypoints ::
+  (Log m, MonadThrow m) =>
+  RideInterpolationHandler person m ->
+  Id person ->
+  NonEmpty LatLong ->
+  m ()
+processBulkWaypoints ih@RideInterpolationHandler {..} driverId waypoints = do
+  calculationFailed <- ih.isDistanceCalculationFailed driverId
+  if calculationFailed
+    then logWarning "Failed to calculate actual distance for this ride, ignoring"
+    else ih.wrapDistanceCalculation driverId $ do
+      distanceToUpdate <- recalcDistanceBatches' (take (fromIntegral batchSize) (toList waypoints)) (drop (fromIntegral batchSize) (toList waypoints)) 0
+      updateDistance driverId distanceToUpdate
+      pure ()
+  where
+    recalcDistanceBatches' currWayPoints remWayPoints acc = do
+      if not $ null currWayPoints
+        then do
+          dist <- interpolateWayPoints ih driverId currWayPoints
+          recalcDistanceBatches' (take (fromIntegral batchSize) remWayPoints) (drop (fromIntegral batchSize) remWayPoints) (acc + dist)
+        else pure acc
+
 recalcDistanceBatches ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
@@ -124,15 +147,19 @@ recalcDistanceBatchStep ::
   RideInterpolationHandler person m ->
   Id person ->
   m HighPrecMeters
-recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
+recalcDistanceBatchStep h@RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  updateRouteDeviation driverId (toList batchWaypoints)
-  (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
+  distance <- interpolateWayPoints h driverId batchWaypoints
+  deleteFirstNwaypoints driverId batchSize
+  pure distance
+
+interpolateWayPoints :: (Monad m, Log m) => RideInterpolationHandler person m -> Id person -> [LatLong] -> m HighPrecMeters
+interpolateWayPoints RideInterpolationHandler {..} driverId waypoints = do
+  (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance waypoints
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps
-  logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
+  logInfo $ mconcat ["points interpolation: input=", show waypoints, "; output=", show interpolatedWps]
   logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
-  deleteFirstNwaypoints driverId batchSize
   pure distance
 
 -------------------------------------------------------------------------

@@ -37,6 +37,7 @@ module SharedLogic.DriverPool
     getDriverAverageSpeed,
     mkAvailableTimeKey,
     mkBlockListedDriversKey,
+    getNearestDriversLocs,
     PoolCalculationStage (..),
     module Reexport,
   )
@@ -46,6 +47,7 @@ import Data.Fixed
 import Data.List (partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
+import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
@@ -56,10 +58,12 @@ import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -68,8 +72,11 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
+import Storage.Queries.Person
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
 
@@ -429,8 +436,11 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
+    CoreMetrics m,
     MonadFlow m,
-    HasCoordinates a
+    HasCoordinates a,
+    HasField "enableLocationTrackingService" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -446,7 +456,7 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      QP.getNearestDrivers
+      getNearestDriversLocs
         mbVariant
         coord
         radius
@@ -475,13 +485,39 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
           ..
         }
 
+getNearestDriversLocs ::
+  (Transactionable m, MonadTime m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r, HasField "enableLocationTrackingService" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], CoreMetrics m) =>
+  Maybe Variant ->
+  LatLong ->
+  Int ->
+  Id Merchant ->
+  Bool ->
+  Maybe Seconds ->
+  m [NearestDriversResult]
+getNearestDriversLocs mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  driverLocs <- do
+    if enableLocationTrackingService
+      then do
+        ltsCfg <- asks (.ltsCfg)
+        LF.nearBy ltsCfg lat lon mbVariant radiusMeters merchantId
+      else getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
+  QP.getNearestDrivers
+    mbVariant
+    LatLong {..}
+    onlyNotOnRide
+    driverLocs
+
 calculateDriverPoolWithActualDist ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    HasCoordinates a
+    CoreMetrics m,
+    HasCoordinates a,
+    HasField "enableLocationTrackingService" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->

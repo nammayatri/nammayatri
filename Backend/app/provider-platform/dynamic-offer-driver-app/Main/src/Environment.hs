@@ -45,6 +45,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -114,7 +115,9 @@ data AppCfg = AppCfg
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    enableLocationTrackingService :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -183,7 +186,9 @@ data AppEnv = AppEnv
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     locationTrackingServiceKey :: Text,
-    eventRequestCounter :: EventCounterMetric
+    eventRequestCounter :: EventCounterMetric,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    enableLocationTrackingService :: Bool
   }
   deriving (Generic)
 

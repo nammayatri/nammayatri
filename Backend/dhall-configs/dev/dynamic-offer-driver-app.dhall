@@ -158,6 +158,8 @@ let registryMap =
       , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
       ]
 
+let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -225,4 +227,6 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , ltsCfg = LocationTrackingeServiceConfig
+    , enableLocationTrackingService = True
     }

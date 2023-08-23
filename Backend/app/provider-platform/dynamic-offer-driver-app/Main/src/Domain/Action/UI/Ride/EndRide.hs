@@ -49,8 +49,11 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Lib.LocationUpdates.Internal as I
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified Storage.CachedQueries.Merchant as MerchantS
@@ -95,7 +98,8 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DM.Merchant -> m (Maybe DMPM.MerchantPaymentMethod),
-    sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m ()
+    sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
+    processBulkWaypoints :: Id DP.Person -> NonEmpty LatLong -> m ()
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -120,10 +124,11 @@ buildEndRideHandle merchantId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantId,
-        sendDashboardSms = Sms.sendDashboardSms
+        sendDashboardSms = Sms.sendDashboardSms,
+        processBulkWaypoints = I.processBulkWaypoints defaultRideInterpolationHandler
       }
 
-type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool)
+type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "enableLocationTrackingService" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig])
 
 driverEndRide ::
   EndRideFlow m r =>
@@ -195,8 +200,17 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       pure $ getCoordinates booking.toLocation
 
   whenWithLocationUpdatesLock driverId $ do
+    ltsCfg <- asks (.ltsCfg)
+    enableLocationTrackingService <- asks (.enableLocationTrackingService)
+    if enableLocationTrackingService
+      then do
+        res <- LF.rideEnd ltsCfg rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
+        whenJust (nonEmpty res.loc) $ \locs -> do
+          processBulkWaypoints driverId locs
+      else do
+        withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint
+
     -- here we update the current ride, so below we fetch the updated version
-    withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint
     ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
     now <- getCurrentTime

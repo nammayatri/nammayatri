@@ -134,6 +134,8 @@ import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool as DP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -556,7 +558,7 @@ getInformation (personId, merchantId) = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   pure $ makeDriverInformationRes driverEntity organization driverReferralCode driverStats
 
-setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
+setActivity :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["enableLocationTrackingService" ::: Bool], HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig]) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _) isActive mode = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
@@ -568,6 +570,12 @@ setActivity (personId, _) isActive mode = do
     unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   _ <- QDriverInformation.updateActivity driverId isActive mode
+  ltsCfg <- asks (.ltsCfg)
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  when enableLocationTrackingService do
+    whenJust mode $ \md -> do
+      _ <- LF.driverDetails ltsCfg personId md
+      return ()
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do

@@ -47,6 +47,8 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
@@ -103,6 +105,8 @@ handler ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["enableLocationTrackingService" ::: Bool],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r
   ) =>
@@ -122,6 +126,11 @@ handler transporter req quote = do
         Left (driver, driverQuote) -> do
           ride <- buildRide driver.id booking req.customerPhoneNumber
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
+          ltsCfg <- asks (.ltsCfg)
+          enableLocationTrackingService <- asks (.enableLocationTrackingService)
+          when enableLocationTrackingService $ do
+            _ <- LF.rideDetails ltsCfg ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+            return ()
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
