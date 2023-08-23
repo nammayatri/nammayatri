@@ -31,6 +31,7 @@ view push config =
   ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
+      , afterRender push (const NoAction)
       ][ imageView
           [ imageWithFallback config.vehicleImage
           , height $ V 48
@@ -52,6 +53,7 @@ view push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity RIGHT
+      , afterRender push (const NoAction)
       , visibility if config.isCheckBox then VISIBLE else GONE
       ][checkBox push config]
 

@@ -993,7 +993,8 @@ chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    quoteList = state.data.specialZoneQuoteList
+    quoteList = state.data.specialZoneQuoteList,
+    showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText
   }
 
 specialLocationIcons :: ZoneType -> String

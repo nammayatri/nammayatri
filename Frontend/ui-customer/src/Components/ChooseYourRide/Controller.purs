@@ -2,6 +2,8 @@ module Components.ChooseYourRide.Controller where
 
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Types
 
 data Action
   = NoAction
@@ -13,6 +15,7 @@ type Config
     , rideDuration :: String
     , activeIndex :: Int
     , quoteList :: Array ChooseVehicleController.Config
+    , showTollExtraCharges :: Boolean
     }
 
 config :: Config
@@ -21,4 +24,5 @@ config =
   , rideDuration: ""
   , activeIndex: 0
   , quoteList: []
+  , showTollExtraCharges : DC.config.searchLocationConfig.showAdditionalChargesText
   }

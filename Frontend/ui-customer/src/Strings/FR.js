@@ -496,5 +496,6 @@ export function getStringValue(key) {
     "HELPS_DRIVER_CONFIRM_ITS_YOU": "(Aide le conducteur à confirmer qu'il s'agit bien de vous)",
     "LETS_GET_YOU_TRIP_READY": "Préparons-nous pour le voyage!",
     "GOT_AN_OTP": "Vous avez un OTP?",
-    "JUST_ONE_LAST_THING": "Juste une dernière chose"
+    "JUST_ONE_LAST_THING": "Juste une dernière chose",
+    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément"
   }

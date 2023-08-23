@@ -589,5 +589,6 @@ const englishStrings = {
   "LETS_GET_YOU_TRIP_READY" : "Let’s get you trip-ready!", 
   "GOT_AN_OTP" : "Got an OTP?",
   "JUST_ONE_LAST_THING" : "Just one last thing",
-  "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience"
+  "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional"
 }
