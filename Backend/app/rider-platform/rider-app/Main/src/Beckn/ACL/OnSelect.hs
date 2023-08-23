@@ -56,7 +56,7 @@ buildOnSelectReq req = do
             }
     pure
       DOnSelect.DOnSelectReq
-        { bppEstimateId = Id context.message_id,
+        { bppEstimateId = Id message.order.fulfillment.id,
           ..
         }
 

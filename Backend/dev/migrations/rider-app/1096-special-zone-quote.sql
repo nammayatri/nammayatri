@@ -1,6 +1,6 @@
 CREATE TABLE atlas_app.special_zone_quote (
     id character(36) NOT NULL PRIMARY KEY,
-    quote_id character(100) NOT NULL
+    quote_id character varying(100) NOT NULL
 );
 
 ALTER TABLE

@@ -152,7 +152,7 @@ handler merchant sReq = do
     case allFarePoliciesProduct.flow of
       DFareProduct.RIDE_OTP -> do
         whenJustM
-          (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
+          (QSearchRequestSpecialZone.findByTxnIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId) -- need to change sReq.messageId to sReq.transactionId after changing type of transactionId from maybe Text to Text
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
         searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
         triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}

@@ -74,7 +74,7 @@ searchCbService context catalog = do
   let paymentMethodsInfo = [] ----------TODO----------Need to remove it or make it maybe in db
   pure
     DOnSearch.DOnSearchReq
-      { requestId = Id context.message_id,
+      { requestId = Id context.message_id, -- needs to be replaced with transaction id
         ..
       }
 
@@ -106,7 +106,7 @@ buildEstimateOrQuoteInfo provider item = do
       descriptions = []
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
-      driversLocation = provider.locations
+      driversLocation = fromMaybe [] provider.locations
       specialLocationTag = buildSpecialLocationTag =<< item.tags
   validatePrices estimatedFare estimatedTotalFare
   let totalFareRange =
