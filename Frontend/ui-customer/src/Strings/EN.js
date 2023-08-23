@@ -588,5 +588,6 @@ const englishStrings = {
   "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(Helps driver confirm it is you)",
   "LETS_GET_YOU_TRIP_READY" : "Let’s get you trip-ready!", 
   "GOT_AN_OTP" : "Got an OTP?",
-  "JUST_ONE_LAST_THING" : "Just one last thing"
+  "JUST_ONE_LAST_THING" : "Just one last thing",
+  "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience"
 }

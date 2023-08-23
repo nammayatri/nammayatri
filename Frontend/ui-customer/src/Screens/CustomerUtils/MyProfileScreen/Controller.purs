@@ -112,12 +112,19 @@ eval (UserProfile (GetProfileRes profile)) state = do
         _ -> Nothing
   continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email} }
 eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do
-  if (value == "" || length (trim value) < 3) then continue state {data {editedName = value, nameErrorMessage = checkError "name" (Just state.data.name) value}, props{isNameValid = false, isBtnEnabled = ( (state.data.emailErrorMessage == Nothing) && ((checkError "name" (Just state.data.name) value) == Nothing) && (length (trim value) >=3) && state.props.isEmailValid && state.props.isNameValid && ((trim value) /= state.data.name) ) }}
-    else continue state { data { editedName = trim value, nameErrorMessage = Nothing }, props{isNameValid = true, isBtnEnabled = ((state.data.emailErrorMessage == Nothing) && ((checkError "name" (Just state.data.name) value) == Nothing) && (length value >=3) && state.props.isEmailValid && ((trim value) /= state.data.name) ||(state.data.emailId /= state.data.editedEmailId))} }
+  if (length (trim value) < 3) then continue state {data {editedName = value, nameErrorMessage = checkError "name" (Just state.data.name) value}, props{isNameValid = false, isBtnEnabled = false }}
+    else do 
+      let isBtnActive = state.data.emailErrorMessage == Nothing && state.props.isEmailValid && ((trim value) /= state.data.name) ||(state.data.emailId /= state.data.editedEmailId)
+      continue state { data { editedName = trim value, nameErrorMessage = Nothing }, props{isNameValid = true, isBtnEnabled = isBtnActive} }
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
-  if (state.data.emailId == Nothing) then continue state {data {editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}, props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = ( state.data.nameErrorMessage == Nothing) && checkValid state.data.emailId value && (state.data.emailId /= Just value || state.data.name /= state.data.editedName) && state.data.nameErrorMessage == Nothing}}
-    else if (value == "" && state.data.emailErrorMessage == Just EMAIL_EXISTS) then continue state {props{isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
-    else continue state {data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value },props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = ((length (trim state.data.editedName) >=3)  && ( state.data.nameErrorMessage == Nothing) && checkValid state.data.emailId value && (state.data.emailId /= Just value ||state.data.name /= state.data.editedName) && state.data.nameErrorMessage == Nothing), genderOptionExpanded = false}}
+  let isButtonActive = state.data.nameErrorMessage == Nothing && checkValid state.data.emailId value && (state.data.emailId /= Just value || state.data.name /= state.data.editedName)
+  if (state.data.emailId == Nothing) then  continue state {  data { editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}
+                    , props { isEmailValid = checkValid state.data.emailId value, isBtnEnabled = isButtonActive}}
+    else if (value == "" && state.data.emailErrorMessage == Just EMAIL_EXISTS) then 
+      continue state{props  { isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
+    else continue state { data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value }
+                        , props{isEmailValid = checkValid state.data.emailId value, 
+                          isBtnEnabled =  isButtonActive && (length (trim state.data.editedName) >=3) , genderOptionExpanded = false}}
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.data.gender /= state.data.editedGender then do

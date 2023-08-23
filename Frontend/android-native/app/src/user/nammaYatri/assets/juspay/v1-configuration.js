@@ -137,7 +137,7 @@ window.getMerchantConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subTitle": ""
+      "subTitle": "ಆಂಗ್ಲ"
     }, {
       "name": "ಕನ್ನಡ",
       "value": "KN_IN",

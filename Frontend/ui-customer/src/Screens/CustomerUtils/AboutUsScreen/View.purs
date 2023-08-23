@@ -133,8 +133,8 @@ logoView state =
         , gravity CENTER
         , margin $ MarginTop 48
         ][  imageView
-              [ height $ V 48
-              , width $ V 60
+              [ height $ V 52
+              , width $ V 176
               , imageWithFallback state.appConfig.merchantLogo
               ]
           ]

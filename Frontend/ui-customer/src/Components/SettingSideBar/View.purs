@@ -95,13 +95,11 @@ settingsView state push =
         case item of
         "MyRides" -> settingsMenuView {imageUrl : "ic_past_rides," <> (getAssetStoreLink FunctionCall) <> "ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : "ic_fav," <> (getAssetStoreLink FunctionCall) <> "ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
-        "EmergencyContacts" ->  if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
-                                else settingsMenuView {imageUrl : "ny_ic_emergency_contacts," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+        "EmergencyContacts" ->  settingsMenuView {imageUrl : "ny_ic_emergency_contacts," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
         "HelpAndSupport" -> settingsMenuView {imageUrl : "ic_help," <> (getAssetStoreLink FunctionCall) <> "ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
         "Language" -> settingsMenuView {imageUrl : "ic_change_language," <> (getAssetStoreLink FunctionCall) <> "ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
         "ShareApp" -> settingsMenuView {imageUrl : "ic_share," <> (getAssetStoreLink FunctionCall) <> "ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
-        "LiveStatsDashboard" -> if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
-                                else settingsMenuView {imageUrl : "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon," <> (getAssetStoreLink FunctionCall) <> "ic_red_icon.png"} push
+        "LiveStatsDashboard" -> settingsMenuView {imageUrl : "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon," <> (getAssetStoreLink FunctionCall) <> "ic_red_icon.png"} push
         "About" -> settingsMenuView {imageUrl : "ic_info," <> (getAssetStoreLink FunctionCall) <> "ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
         "Logout" -> logoutView state push
         "Separator" -> separator
@@ -117,6 +115,7 @@ getPreviousVersion _ =
       _ -> "0.0.0"
     else do 
       case getMerchant FunctionCall of 
+        NAMMAYATRI -> "1.2.1"
         YATRISATHI -> "0.0.0"
         _ -> "0.0.0"
 

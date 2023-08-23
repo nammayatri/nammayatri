@@ -92,6 +92,7 @@ savedLocationView state push =
                       OTHER_TAG -> state.tagName
                     Nothing -> state.tagName
               , ellipsize true
+              , weight 1.0
               , maxLines 2
               , color Color.black800
               ] <> FontStyle.subHeading1 LanguageStyle

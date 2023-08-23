@@ -168,7 +168,7 @@ window.getMerchantConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subTitle": ""
+      "subTitle": "ഇംഗ്ലീഷ്"
     }, {
       "name": "മലയാളം",
       "value": "ML_IN",
