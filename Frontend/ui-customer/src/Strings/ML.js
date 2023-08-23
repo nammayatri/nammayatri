@@ -603,5 +603,6 @@ const malayalamStrings = {
   "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(ഇത് നിങ്ങളാണെന്ന് സ്ഥിരീകരിക്കാൻ ഡ്രൈവറെ സഹായിക്കുന്നു)",
   "LETS_GET_YOU_TRIP_READY" : "നിങ്ങളെ യാത്ര-തയ്യാറാക്കാം!",
   "GOT_AN_OTP" : "ഒരു OTP കിട്ടിയോ?",
-  "JUST_ONE_LAST_THING" : "അവസാനമായി ഒരു കാര്യം മാത്രം"
+  "JUST_ONE_LAST_THING" : "അവസാനമായി ഒരു കാര്യം മാത്രം",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ടോൾ/പാർക്കിംഗ് നിരക്കുകൾ അധികമായിരിക്കും"
 }

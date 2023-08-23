@@ -98,6 +98,7 @@ type SearchLocationConfig = {
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
   showRateCardDetails :: Boolean,
+  showAdditionalChargesText :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
   primaryButtonHeight :: Int

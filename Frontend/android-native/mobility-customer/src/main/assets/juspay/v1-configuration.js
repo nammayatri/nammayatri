@@ -54,6 +54,7 @@ window.getMerchantConfig = function () {
       "enableLocationTagbar" : "false",
       "resultsCardCornerRadius" : 8.0,
       "showRateCardDetails" : false,
+      "showAdditionalChargesText" : false,
       "lottieHeight": 40,
       "lottieWidth": 40,
       "primaryButtonHeight": 48

@@ -589,5 +589,6 @@ const hindiStrings = {
   "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(ड्राइवर को यह पुष्टि करने में मदद करता है कि यह आप ही हैं)",
   "LETS_GET_YOU_TRIP_READY" : "आइए हम आपको यात्रा के लिए तैयार करें!",
   "GOT_AN_OTP" : "एक OTP मिला?",
-  "JUST_ONE_LAST_THING" : "बस एक आखिरी चीज़"
+  "JUST_ONE_LAST_THING" : "बस एक आखिरी चीज़",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा"
 }

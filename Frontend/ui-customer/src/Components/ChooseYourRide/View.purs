@@ -2,7 +2,9 @@ module Components.ChooseYourRide.View where
 
 import Common.Types.App
 import Debug
-
+import Animation (translateYAnim,translateYAnimFromTop, fadeIn)
+import PrestoDOM.Animation as PrestoAnim
+import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
@@ -17,13 +19,15 @@ import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, not, (<<<), (==), (>=), (*), (+), (<=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
+  PrestoAnim.animationSet (if EHC.os == "IOS" then [fadeIn true] 
+  else [ translateYAnimFromTop $ Animation.translateYAnimHomeConfig Animation.BOTTOM_TOP ]) $
   linearLayout
     [ orientation VERTICAL
     , height WRAP_CONTENT
@@ -35,7 +39,7 @@ view push config =
     , stroke $ "1," <> Color.grey900
     , gravity CENTER
     , cornerRadii $ Corners 24.0 true true false false
-    , afterRender push (const NoAction)
+    , onAnimationEnd push (const NoAction)
     ]
     [ textView (
         [ text (getString CHOOSE_YOUR_RIDE)
@@ -45,6 +49,14 @@ view push config =
         , width MATCH_PARENT
         ] <> FontStyle.h1 TypoGraphy)
     , estimatedTimeAndDistanceView push config
+    , textView $
+        [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
+        , color Color.black650
+        , gravity CENTER_HORIZONTAL
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , visibility if config.showTollExtraCharges then VISIBLE else GONE
+        ] <> FontStyle.paragraphText TypoGraphy
     , quoteListView push config
     , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
     ]
@@ -106,7 +118,7 @@ getQuoteListViewHeight :: Config -> Length
 getQuoteListViewHeight config =
     let len = length config.quoteList
         height = getHeightOfEstimateItem config
-    in V $ if height <= 15 then 300 else if len >= 4 then 3 * height else len * height
+    in V $ if len >= 4 then 3 * height else len * height
 
 getHeightOfEstimateItem :: Config -> Int
 getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (fromMaybe ChooseVehicle.config (config.quoteList !! 0)).id).height + 5
@@ -121,3 +133,4 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   , background = Color.black900
   , margin = Margin 16 16 16 15
   }
+

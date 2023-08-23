@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
-import Data.String (Pattern(..), split, length, take, drop)
+import Data.String (Pattern(..), split, length, take, drop, toLower, contains)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
@@ -830,7 +830,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback (getVehicleImage state.data.vehicleVariant)
+              [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails)
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -1169,11 +1169,11 @@ configurations =
               , paddingOTP : Padding 11 0 11 7
               }
 
-getVehicleImage :: String -> String 
-getVehicleImage variant = do
+getVehicleImage :: String -> String -> String
+getVehicleImage variant vehicleDetail = do
   let url = getAssetStoreLink FunctionCall
-  case variant of 
-    "TAXI" -> "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
-    "TAXI_PLUS" -> "ic_white_taxi," <> url <> "ic_white_taxi.png"
-    "AUTO_RICKSHAW" -> "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
-    _ ->  "ic_white_taxi," <> url <> "ic_white_taxi.png"
+  let details = (toLower vehicleDetail)
+  if (variant == "AUTO_RICKSHAW") then "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
+  else 
+    if contains (Pattern "ambassador") details then "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
+    else "ic_white_taxi," <> url <> "ic_white_taxi.png"
