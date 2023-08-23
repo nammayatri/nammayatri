@@ -37,8 +37,12 @@ import Screens.Types (AllocationData)
 import Types.ModifyScreenState (modifyScreenState)
 import Types.App (FlowBT, ScreenType(..))
 import JBridge as JBridge
+import Helpers.Utils as Utils
 import Effect.Exception (error)
 import Data.Function.Uncurried (runFn2)
+import Screens (ScreenName(..)) as ScreenNames
+import Data.Array as DA
+import Effect.Uncurried (runEffectFn1)
 
 main :: Event -> Effect Unit
 main event = do
@@ -47,9 +51,8 @@ main event = do
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
-      Left error -> do
-        _ <- pure $ printLog "printLog error in main" error
-        liftFlow $ main event
+      Left error -> liftFlow $ main event
+  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ runEffectFn1 Utils.initiatePP unit
   JBridge.storeMainFiberOb mainFiber
   pure unit
 
