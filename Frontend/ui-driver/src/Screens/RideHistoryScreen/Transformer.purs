@@ -9,10 +9,19 @@ import Data.Array as DA
 import Data.Maybe (Maybe(..))
 
 getPaymentHistoryItemList :: Array PaymentDetailsEntity -> Array PaymentHistoryListItem.Config
-getPaymentHistoryItemList arr = map (\item -> getPaymentHistoryItem item) arr
+getPaymentHistoryItemList arr = appendArray $ map (\item -> let (PaymentDetailsEntity x) = item
+    in (map (\(TxnInfo txnInfo) -> getPaymentHistoryItemm item txnInfo.status ) x.txnInfo)
+    ) arr
 
-getPaymentHistoryItem :: PaymentDetailsEntity -> PaymentHistoryListItem.Config
-getPaymentHistoryItem (PaymentDetailsEntity item) =
+appendArray :: Array (Array PaymentHistoryListItem.Config) -> Array PaymentHistoryListItem.Config
+appendArray item = case (DA.head item) of
+  Nothing -> []
+  Just a -> a <> (appendArray (case (DA.tail item) of
+    Nothing -> []
+    Just b -> b))
+
+getPaymentHistoryItemm :: PaymentDetailsEntity -> APIPaymentStatus -> PaymentHistoryListItem.Config
+getPaymentHistoryItemm (PaymentDetailsEntity item) payStatus =
   let firstTxnInfo = DA.last item.txnInfo
   in  {
     isSelected : false
@@ -20,22 +29,20 @@ getPaymentHistoryItem (PaymentDetailsEntity item) =
     , totalEarning : item.totalEarnings
     , totalRides : item.totalRides
     , date : item.date
-    , status : case firstTxnInfo of
-                Just (TxnInfo item) -> case item.status of
-                                        NEW -> Pending
-                                        PENDING_VBV -> Pending
-                                        CHARGED -> Success
-                                        AUTHENTICATION_FAILED -> Failed
-                                        AUTHORIZATION_FAILED -> Failed
-                                        JUSPAY_DECLINED -> Failed
-                                        AUTHORIZING -> Pending
-                                        COD_INITIATED -> Pending
-                                        STARTED -> Pending
-                                        AUTO_REFUNDED -> Pending
-                Nothing -> Pending
+    , status :  case payStatus of
+                  NEW -> Pending
+                  PENDING_VBV -> Pending
+                  CHARGED -> Success
+                  AUTHENTICATION_FAILED -> Failed
+                  AUTHORIZATION_FAILED -> Failed
+                  JUSPAY_DECLINED -> Failed
+                  AUTHORIZING -> Pending
+                  COD_INITIATED -> Pending
+                  STARTED -> Pending
+                  AUTO_REFUNDED -> Pending
     , id : case firstTxnInfo of
-                Just (TxnInfo item) -> item.id
-                Nothing -> ""
+                Just (TxnInfo txn) -> txn.id
+                Nothing -> item.driverFeeId
     , paymentBreakUp : (\(PaymentBreakUp charge) -> {
         description: charge.component
         , amount : charge.amount

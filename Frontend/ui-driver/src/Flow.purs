@@ -1308,8 +1308,9 @@ myRidesScreenFlow = do
       resp <- lift $ lift $ Remote.getPaymentHistory (getcurrentdate "") (getDatebyCount state.data.pastDays) Nothing
       case resp of
         Right (GetPaymentHistoryResp response) -> do
-          let paymentHistory = getPaymentHistoryItemList response
-          modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistory}}})
+          let paymentHistoryArray = getPaymentHistoryItemList response
+          let x = if (length paymentHistoryArray) >= 15 then take 15 paymentHistoryArray else take (length paymentHistoryArray) paymentHistoryArray
+          modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = x}}})
         Left err -> pure unit
       myRidesScreenFlow
 
