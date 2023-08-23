@@ -670,8 +670,9 @@ homeScreenFlow = do
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{updateProfile = updateProfile , fromHomeScreen = updateProfile , isBtnEnabled = not updateProfile , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState-> do
+      let currentLocationText = getString CURRENT_LOCATION
       case updatedState.data.source of
-        "Current Location" -> do
+        currentLocationText -> do
           PlaceName address <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation
           modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing } })
         _ -> pure unit
