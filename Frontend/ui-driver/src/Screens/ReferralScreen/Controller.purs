@@ -16,7 +16,7 @@
 module Screens.ReferralScreen.Controller where
 
 import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void, (<>), when, map, (-), (>))
-import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
+import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData, LeaderBoardRankType)
 import Components.BottomNavBar as BottomNavBar
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryEditText.Controllers as PrimaryEditText
@@ -28,7 +28,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress , trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Data.String (length)
-import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd)
+import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, shareImageMessage, shareTextMessage, startLottieProcess, lottieAnimationConfig)
 import Services.Config (getSupportNumber)
 import Debug (spy)
 import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
@@ -37,11 +37,12 @@ import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Data.Array (last, (!!), init, replicate, filter, sortWith, any)
 import Data.Array (length) as DA
 import Data.Maybe (Maybe(..))
-import Services.API (LeaderBoardRes(..), DriversInfo(..))
+import Services.API (LeaderBoardRes(..), DriversInfo(..), GetPerformanceRes(..))
 import Data.Maybe (fromMaybe)
 import Screens.ReferralScreen.ScreenData as RSD
 import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe (unsafePerformEffect)
+import MerchantConfig.Utils (getValueFromConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -52,7 +53,9 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen REFERRAL_SCREEN)
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
-    RefreshScreen -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "refresh"
+    ShareQRAppClick -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "share_qr_app_click"
+    ShareOptions -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "share_options"
+    RefreshScreen _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "refresh"
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
       trackAppActionClick appId (getScreen REFERRAL_SCREEN) "bottom_nav_bar" "on_navigate"
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
@@ -90,6 +93,7 @@ instance loggableAction :: Loggable Action where
     SuccessScreenExpireCountDwon seconds id status timerId -> do
       if status == "EXPIRED" then trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_expired"
         else trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_updated"
+    QRScreenModalAction act -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "QR_Screen_Modal_Action"
     ContactSupportAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "cancel"
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "call_support"
@@ -106,6 +110,7 @@ instance loggableAction :: Loggable Action where
     EnableReferralFlowNoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "enable_referral_flow_no_action"
     SuccessScreenRenderAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "your_referral_code_is_linked"
     ChangeLeaderBoardtab _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "change_leader_board_tab"
+    ChangeLeaderBoardType _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "change_leader_board_type"
     DateSelectorAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "date_selector_clicked"
     ChangeDate date ->
       case date of
@@ -113,6 +118,10 @@ instance loggableAction :: Loggable Action where
         WeekSelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "week_changed"
     UpdateLeaderBoard _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard"
     UpdateLeaderBoardFailed -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard_failed"
+    UpdateRanks _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_ranks"
+    UpdateRanksFailed _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_ranks_failed"
+    GenerateReferralCode -> pure unit
+    GoToFlowForGenerateReferralCode -> pure unit
 
 data Action = BottomNavBarAction BottomNavBar.Action
             | GenericHeaderActionController GenericHeader.Action
@@ -122,24 +131,34 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | PasswordModalAction PopUpModal.Action
             | SuccessScreenExpireCountDwon Int String String String
             | ContactSupportAction PopUpModal.Action
+            | QRScreenModalAction PopUpModal.Action
             | GoToAlertScreen
             | EnableReferralFlow
             | BackPressed
-            | RefreshScreen
+            | ShareQRAppClick
+            | RefreshScreen ReferralType
             | EnableReferralFlowNoAction
             | SuccessScreenRenderAction
             | ChangeLeaderBoardtab LeaderBoardType
+            | ChangeLeaderBoardType LeaderBoardRankType
             | DateSelectorAction
             | ChangeDate DateSelector
             | UpdateLeaderBoard LeaderBoardRes
+            | UpdateRanks GetPerformanceRes
             | AfterRender
             | UpdateLeaderBoardFailed
+            | UpdateRanksFailed Int
+            | ShareOptions
+            | GenerateReferralCode
+            | GoToFlowForGenerateReferralCode
 
 data ScreenOutput = GoToHomeScreen
                   | GoBack
                   | GoToRidesScreen
                   | GoToProfileScreen
                   | GoToNotifications
+                  | GoToLeaderBoard ReferralScreenState
+                  | GoToGenerateReferralCode
                   | LinkReferralApi ReferralScreenState
                   | Refresh ReferralScreenState
 
@@ -148,8 +167,8 @@ eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreen
 eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_leaderboard"
   let dataLength = DA.length leaderBoardRes.driverList
-      rankersData = sortWith (_.rank) (transformLeaderBoardList (filter (\(DriversInfo info) -> info.rank <= 10 && info.totalRides > 0 && info.rank > 0) leaderBoardRes.driverList)) <> (replicate (10 - dataLength) RSD.dummyRankData)
-      currentDriverData = case (filter (\(DriversInfo info) -> info.isCurrentDriver && info.rank > 0 && info.totalRides > 0) leaderBoardRes.driverList) !! 0 of
+      rankersData = sortWith (_.rank) (transformLeaderBoardList (filter filterLeaderBoardRes leaderBoardRes.driverList)) <> (replicate (10 - dataLength) RSD.dummyRankData)
+      currentDriverData = case (filter filterLeaderBoardResCurrentDriver leaderBoardRes.driverList) !! 0 of
                             Just driverData -> transformLeaderBoard driverData
                             Nothing         -> RSD.dummyRankData
       lastUpdatedAt = convertUTCtoISC (fromMaybe (getCurrentUTC "") leaderBoardRes.lastUpdatedAt) "h:mm A"
@@ -170,6 +189,43 @@ eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
 eval UpdateLeaderBoardFailed state = do 
   _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
   continue state{ props{ showShimmer = false, noData = true } }
+
+eval (UpdateRanks (GetPerformanceRes performanceRes)) state = do
+  _ <- pure $ spy "performance res" performanceRes
+  let driverPerformanceData = {
+    currReferralRank: performanceRes.currReferralRank,
+    currRideRank: 5,
+    referralCode: performanceRes.referralCode,
+    referrals: performanceRes.referrals,
+    totalDriver: performanceRes.totalDriver
+  }
+  continue state{ data { driverPerformance = driverPerformanceData}, props {noContestData = false, showContestShimmer = false}}
+
+eval (UpdateRanksFailed code) state = do 
+  continue state { props {showContestShimmer = false, noContestData = true, errorCode = code}}
+
+eval ShareQRAppClick state = do
+   _ <- pure $ spy "Hello" "Sharing ...."
+   continue state {props {qrScreenPopUpVisible = true}}
+
+eval ShareOptions state = do
+  _ <- pure $ spy "Hello" "Sharing Options"
+  _ <- pure $ shareImageMessage ("👋 Hey,\n\nMy Namma Yatri Referral Code is " <> ( fromMaybe "" state.data.driverInfo.referralCode)  <> ".\n\nScan the QR code and download Namma Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!") ( fromMaybe "" state.data.driverInfo.referralCode)
+  continue state
+
+eval GenerateReferralCode state = 
+  continueWithCmd state [do
+    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "generateReferralCodeAnimation", scaleType = "CENTER_CROP", repeat = true}
+    pure $ GoToFlowForGenerateReferralCode
+  ]
+
+eval GoToFlowForGenerateReferralCode state = do
+  exit $ GoToGenerateReferralCode
+
+eval (ChangeLeaderBoardType leaderBoardType) state = do
+  _ <- pure $ spy "Hello" leaderBoardType
+  let newState = state { props { leaderBoardRankType = leaderBoardType, noContestData = false} }
+  updateAndExit newState $ GoToLeaderBoard newState
 
 eval (ChangeDate (DaySelector item)) state = do
   if state.props.selectedDay == item then
@@ -196,7 +252,7 @@ eval (ChangeLeaderBoardtab tab) state = do
 
 eval BackPressed state = exit $ GoBack
 
-eval RefreshScreen state = exit $ Refresh state
+eval (RefreshScreen refreshStage ) state = exit $ Refresh state {props {stage = refreshStage}}
 
 eval EnableReferralFlow state = do
   if (state.props.enableReferralFlowCount >= 5 ) then do
@@ -248,6 +304,8 @@ eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
     void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
     continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 
+eval (QRScreenModalAction (PopUpModal.OnButton1Click)) state = continue state { props {qrScreenPopUpVisible = false}}
+
 eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status == "EXPIRED" then do
   _ <- pure $ clearTimer timerId
   continue state{props {stage = QRScreen}} else continue state
@@ -271,9 +329,23 @@ transformLeaderBoardList :: (Array DriversInfo) -> Array RankCardData
 transformLeaderBoardList driversList = map (\x -> transformLeaderBoard x) driversList
 
 transformLeaderBoard :: DriversInfo -> RankCardData
-transformLeaderBoard (DriversInfo driversInfo) = {
+transformLeaderBoard (RideInfo driversInfo) = {
     goodName : driversInfo.name
   , profileUrl : Nothing
   , rank : driversInfo.rank
   , rides : driversInfo.totalRides
 }
+transformLeaderBoard (ReferralInfo driversInfo) = {
+    goodName : driversInfo.name
+  , profileUrl : Nothing
+  , rank : driversInfo.rank
+  , rides : driversInfo.totalReferrals
+}
+
+filterLeaderBoardRes :: DriversInfo -> Boolean
+filterLeaderBoardRes (RideInfo info) = info.rank <= 10 && info.totalRides > 0 && info.rank > 0
+filterLeaderBoardRes (ReferralInfo info) = info.rank <= 10 && info.totalReferrals > 0 && info.rank > 0
+
+filterLeaderBoardResCurrentDriver :: DriversInfo -> Boolean
+filterLeaderBoardResCurrentDriver (RideInfo info) = info.isCurrentDriver && info.rank > 0 && info.totalRides > 0
+filterLeaderBoardResCurrentDriver (ReferralInfo info) = info.isCurrentDriver && info.rank > 0 && info.totalReferrals > 0

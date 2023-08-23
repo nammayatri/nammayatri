@@ -34,6 +34,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.icu.util.Calendar;
@@ -47,12 +48,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Environment;
+import android.os.Parcelable;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -72,6 +75,13 @@ import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.HorizontalScrollView;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -120,6 +130,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -1644,21 +1655,43 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void shareImageMessage(String message, String imageName) {
+    public void shareImageMessage(String message, String referralCode) {
         ExecutorManager.runOnMainThread(() -> {
-            Intent sendIntent = new Intent();
-            @SuppressLint("DiscouragedApi") int image = bridgeComponents.getContext().getResources().getIdentifier(imageName, "drawable", bridgeComponents.getContext().getPackageName());
-            @SuppressLint("UseCompatLoadingForDrawables") BitmapDrawable bitmapDrawable = (BitmapDrawable) bridgeComponents.getContext().getResources().getDrawable(image);
-            Bitmap bitmap = bitmapDrawable.getBitmap();
-            Uri uri = Uri.parse(MediaStore.Images.Media.insertImage(bridgeComponents.getContext().getContentResolver(), bitmap, "qrCode", null));
-            sendIntent.setAction(Intent.ACTION_SEND);
-            sendIntent.putExtra(Intent.EXTRA_STREAM, uri);
-            sendIntent.putExtra(Intent.EXTRA_TEXT, message);
-            sendIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            sendIntent.setType("image/*");
-            Intent shareIntent = Intent.createChooser(sendIntent, null);
-            shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            bridgeComponents.getContext().startActivity(shareIntent);
+            try {
+                Intent sendIntent = new Intent();
+//                @SuppressLint("DiscouragedApi") int image = bridgeComponents.getContext().getResources().getIdentifier(imageName, "drawable", bridgeComponents.getContext().getPackageName());
+//                @SuppressLint("UseCompatLoadingForDrawables") BitmapDrawable bitmapDrawable = (BitmapDrawable) bridgeComponents.getContext().getResources().getDrawable(image);
+//                Bitmap bitmap = bitmapDrawable.getBitmap();
+
+                @SuppressLint("InflateParams") View referralCodeLayout = LayoutInflater.from(bridgeComponents.getContext()).inflate(R.layout.referral_code, null, false);
+                TextView code = referralCodeLayout.findViewById(R.id.code);
+                code.setText(referralCode);
+
+                referralCodeLayout.measure(360,440);
+                referralCodeLayout.layout(0,0,referralCodeLayout.getMeasuredWidth(),referralCodeLayout.getMeasuredHeight());
+                Bitmap bitmap2 = Bitmap.createBitmap(referralCodeLayout.getMeasuredWidth(), referralCodeLayout.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+
+                Canvas canvas = new Canvas(bitmap2);
+                referralCodeLayout.draw(canvas);
+                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                bitmap2.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+                String imagePath = MediaStore.Images.Media.insertImage(bridgeComponents.getContext().getContentResolver(), bitmap2, "IMG_" + "hadlfjjl", null);
+                Uri uri2 = Uri.parse(imagePath);
+
+//                Uri uri = Uri.parse(MediaStore.Images.Media.insertImage(bridgeComponents.getContext().getContentResolver(), bitmap2, "qrCode", null));
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.setType("image/*");
+                sendIntent.putExtra(Intent.EXTRA_STREAM, uri2);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, message);
+                sendIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Intent shareIntent = Intent.createChooser(sendIntent, null);
+                shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                bridgeComponents.getContext().startActivity(shareIntent);
+            }catch (Exception e) {
+                Toast.makeText(bridgeComponents.getContext(), "Something went wrong. Please try again later!", Toast.LENGTH_SHORT).show();
+                Log.e("Error in sending the share message", "shareImageMessage: ", e);
+            }
         });
     }
 

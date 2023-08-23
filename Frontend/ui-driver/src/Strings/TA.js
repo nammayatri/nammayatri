@@ -603,5 +603,18 @@ const tamilStrings = {
   MONTHS : "மாதங்கள்",
   ENTER_AADHAAR_DETAILS : "ஆதார் விவரங்களை உள்ளிடவும்",
   CALL_REQUEST_HAS_BEEN_PLACED : "உங்கள் அழைப்பு கோரிக்கை வைக்கப்பட்டுள்ளது",
-  RC_ADDED_SUCCESSFULLY : "பதிவுச் சான்றிதழ் வெற்றிகரமாக சேர்க்கப்பட்டது"
+  RC_ADDED_SUCCESSFULLY : "பதிவுச் சான்றிதழ் வெற்றிகரமாக சேர்க்கப்பட்டது",
+  REFER_CUSTOMERS_TO_ENTER_RANKINGS : "தரவரிசையில் நுழைய வாடிக்கையாளர்களைப் பார்க்கவும்",
+  ACTIVE : "செயலில்",
+  VIEW_ALL_RANKINGS : "அனைத்து தரவரிசைகளையும் காண்க",
+  LEARN_MORE : "மேலும் அறிக",
+  NOT_AVAILABLE_YET : "இன்னும் கிடைக்கவில்லை",
+  YOUR_RANK : "உங்கள் தரவரிசை",
+  GET_MY_REFERRAL_CODE : "எனது பரிந்துரை குறியீட்டைப் பெறவும்",
+  RIDE_LEADERBOARD : "சவாரி லீடர்போர்டு", // translation is wrong
+  REFERRAL_LEADERBOARD : "பரிந்துரை லீடர்போர்டு",
+  JOIN_THE_REFERRAL_PROGRAM : "பரிந்துரை திட்டத்தில் சேர்ந்து வாடிக்கையாளர்களை நம்ம யாத்ரி பயனர்கள் என்று குறிப்பிடவும்",
+  START_TAKING_RIDES_AND_REFER_CUSTOMERS_TO_JOIN_NAMMA_YATRI : "நம்ம யாத்ரியில் சேருவதற்கு சவாரி செய்து வாடிக்கையாளர்களைப் பரிந்துரைக்கவும்",
+  APP_QR_CODE : "பயன்பாட்டு QR குறியீடு",
+  DOWNLOAD_NAMMA_YATRI : "நம்ம யாத்ரியைப் பதிவிறக்கவும்"
 }

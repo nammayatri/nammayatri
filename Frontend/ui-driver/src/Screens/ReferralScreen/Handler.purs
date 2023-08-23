@@ -33,7 +33,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreenData
 referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = LeaderBoard } }
+  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = state.referralScreen.props.stage } }
   case action of
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
@@ -51,6 +51,12 @@ referralScreen = do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN)
     LinkReferralApi updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_FLOW_AND_COME_BACK updatedState)
+    GoToLeaderBoard updatedState -> do
+      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_LEADERBOARD)
+    GoToGenerateReferralCode -> do
+      modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{props {lottieVisible = true}})
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_GENERATE_REFERRAL_CODE)
     Refresh updatedState -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ REFRESH_LEADERBOARD)
+      App.BackT $ App.NoBack <$> (pure $ REFRESH_LEADERBOARD )

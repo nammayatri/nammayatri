@@ -551,6 +551,10 @@ type ReferralScreenStateData = {
         totalActivatedCustomers :: Int,
         totalReferredCustomers :: Int
       }
+    , referralCode :: String
+    , totalDriver :: Int
+    , currRideRank :: Int
+    , currReferralRank :: Int
     }
   , logField :: Object Foreign
 }
@@ -560,12 +564,14 @@ type ReferralScreenStateProps = {
   , passwordPopUpVisible  :: Boolean
   , callSupportPopUpVisible :: Boolean
   , confirmBtnActive :: Boolean
+  , qrScreenPopUpVisible :: Boolean
   , enableReferralFlowCount :: Int
   , stage :: ReferralType
   , seconds :: Int
   , id :: String
   , firstTime :: Boolean
   , leaderBoardType :: LeaderBoardType
+  , leaderBoardRankType :: LeaderBoardRankType
   , showDateSelector :: Boolean
   , days :: Array LeaderBoardDay
   , weeks :: Array LeaderBoardWeek
@@ -574,8 +580,12 @@ type ReferralScreenStateProps = {
   , rankersData :: Array RankCardData
   , currentDriverData :: RankCardData
   , showShimmer :: Boolean
+  , showContestShimmer :: Boolean
   , noData :: Boolean
+  , noContestData :: Boolean
   , lastUpdatedAt :: String
+  , errorCode :: Int
+  , lottieVisible :: Boolean
 }
 
 -- ################################################ IndividualRideCardState ##################################################
@@ -1375,7 +1385,7 @@ instance showYoutubeVideoStatus :: Show YoutubeVideoStatus where show = genericS
 instance eqYoutubeVideoStatus :: Eq YoutubeVideoStatus where eq = genericEq
 
 
-data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen | LeaderBoard
+data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen | LeaderBoard | Contest
 
 derive instance genericReferralType :: Generic ReferralType _
 instance eqReferralType :: Eq ReferralType where eq = genericEq
@@ -1400,8 +1410,13 @@ type BookingOptionsScreenProps = {
 
 data LeaderBoardType = Daily | Weekly
 
+data LeaderBoardRankType = Ride | Referral
+
 derive instance genericLeaderBoardType :: Generic LeaderBoardType _
 instance eqLeaderBoardType :: Eq LeaderBoardType where eq = genericEq
+
+derive instance genericLeaderBoardRankType :: Generic LeaderBoardRankType _
+instance eqLeaderBoardRankType :: Eq LeaderBoardRankType where eq = genericEq
 
 type LeaderBoardDay = {
     date :: Int

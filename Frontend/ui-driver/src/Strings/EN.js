@@ -634,5 +634,18 @@ const englishStrings = {
   RATED_BY_USERS2 : "Users",
   MONTHS : "Months",
   CALL_REQUEST_HAS_BEEN_PLACED : "Your call request has been placed",
-  RC_ADDED_SUCCESSFULLY : "RC added Successfully"
+  RC_ADDED_SUCCESSFULLY : "RC added Successfully",
+  REFER_CUSTOMERS_TO_ENTER_RANKINGS : "Refer customers to enter rankings!",
+  ACTIVE : "Active",
+  VIEW_ALL_RANKINGS : "View All Rankings",
+  LEARN_MORE : "Learn More",
+  NOT_AVAILABLE_YET : "Not available yet",
+  YOUR_RANK : "Your rank",
+  GET_MY_REFERRAL_CODE : "Get My Referral Code",
+  RIDE_LEADERBOARD : "Ride Leaderboard",
+  REFERRAL_LEADERBOARD : "Referral Leaderboard",
+  JOIN_THE_REFERRAL_PROGRAM : "Join the Referral Program and refer customers as Namma Yatri users",
+  START_TAKING_RIDES_AND_REFER_CUSTOMERS_TO_JOIN_NAMMA_YATRI : "Start taking rides and referring customers to join Namma Yatri",
+  APP_QR_CODE : "App QR Code",
+  DOWNLOAD_NAMMA_YATRI : "Downdload Namma Yatri"
 }

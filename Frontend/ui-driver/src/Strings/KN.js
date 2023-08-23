@@ -603,5 +603,18 @@ const kannadaStrings = {
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "ಬಳಕೆದಾರರು ಇವರಿಂದ ರೇಟ್ ಮಾಡಲಾಗಿದೆ",
   MONTHS : "ತಿಂಗಳುಗಳು",
-  RC_ADDED_SUCCESSFULLY : "ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸೇರಿಸಲಾಗಿದೆ"
+  RC_ADDED_SUCCESSFULLY : "ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸೇರಿಸಲಾಗಿದೆ",
+  REFER_CUSTOMERS_TO_ENTER_RANKINGS : "ಶ್ರೇಯಾಂಕಗಳನ್ನು ನಮೂದಿಸಲು ಗ್ರಾಹಕರನ್ನು ಉಲ್ಲೇಖಿಸಿ",
+  ACTIVE : "ಸಕ್ರಿಯ",
+  VIEW_ALL_RANKINGS : "ಎಲ್ಲಾ ಶ್ರೇಯಾಂಕಗಳನ್ನು ವೀಕ್ಷಿಸಿ",
+  LEARN_MORE : "ಇನ್ನಷ್ಟು ತಿಳಿಯಿರಿ",
+  NOT_AVAILABLE_YET : "ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ",
+  YOUR_RANK : "ನಿಮ್ಮ ಶ್ರೇಣಿ",
+  GET_MY_REFERRAL_CODE : "ನನ್ನ ರೆಫರಲ್ ಕೋಡ್ ಪಡೆಯಿರಿ",
+  RIDE_LEADERBOARD : "ರೈಡ್ ಲೀಡರ್‌ಬೋರ್ಡ್", // translation is wrong
+  REFERRAL_LEADERBOARD : "ರೆಫರಲ್ ಲೀಡರ್‌ಬೋರ್ಡ್",
+  JOIN_THE_REFERRAL_PROGRAM : "ರೆಫರಲ್ ಪ್ರೋಗ್ರಾಂಗೆ ಸೇರಿ ಮತ್ತು ಗ್ರಾಹಕರನ್ನು ನಮ್ಮ ಯಾತ್ರಿ ಬಳಕೆದಾರರೆಂದು ಉಲ್ಲೇಖಿಸಿ",
+  START_TAKING_RIDES_AND_REFER_CUSTOMERS_TO_JOIN_NAMMA_YATRI : "ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸೇರಲು ಸವಾರಿಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ಮತ್ತು ಗ್ರಾಹಕರನ್ನು ಉಲ್ಲೇಖಿಸಲು ಪ್ರಾರಂಭಿಸಿ",
+  APP_QR_CODE : "ಅಪ್ಲಿಕೇಶನ್ QR ಕೋಡ್",
+  DOWNLOAD_NAMMA_YATRI : "ನಮ್ಮ ಯಾತ್ರಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"
 }

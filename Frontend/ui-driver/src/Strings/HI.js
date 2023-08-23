@@ -633,5 +633,18 @@ const hindiStrings = {
   MONTHS : "महीने",
   ENTER_AADHAAR_DETAILS : "आधार विवरण दर्ज करें",
   CALL_REQUEST_HAS_BEEN_PLACED : "आपका कॉल अनुरोध रख दिया गया है",
-  RC_ADDED_SUCCESSFULLY : "पंजीकरण प्रमाणपत्र सफलतापूर्वक जोड़ा गया"
+  RC_ADDED_SUCCESSFULLY : "पंजीकरण प्रमाणपत्र सफलतापूर्वक जोड़ा गया",
+  REFER_CUSTOMERS_TO_ENTER_RANKINGS : "रैंकिंग दर्ज करने के लिए ग्राहकों को रेफर करें",
+  ACTIVE : "सक्रिय",
+  VIEW_ALL_RANKINGS : "सभी रैंकिंग देखें",
+  LEARN_MORE : "और अधिक जानें",
+  NOT_AVAILABLE_YET : "अभी तक उपलब्ध नहीं",
+  YOUR_RANK : "आपका रैंक",
+  GET_MY_REFERRAL_CODE : "मेरा रेफरल कोड प्राप्त करें",
+  RIDE_LEADERBOARD : "सवारी लीडरबोर्ड", // translation is not good
+  REFERRAL_LEADERBOARD : "रेफरल लीडरबोर्ड",
+  JOIN_THE_REFERRAL_PROGRAM : "रेफरल कार्यक्रम में शामिल हों और ग्राहकों को नम्मा यात्री उपयोगकर्ताओं के रूप में संदर्भित करें",
+  START_TAKING_RIDES_AND_REFER_CUSTOMERS_TO_JOIN_NAMMA_YATRI : "नम्मा यात्री में शामिल होने के लिए सवारी लेना और ग्राहकों को रेफर करना शुरू करें",
+  APP_QR_CODE : "ऐप क्यूआर कोड",
+  DOWNLOAD_NAMMA_YATRI : "नम्मा यात्री डाउनलोड करें"
 }

@@ -24,6 +24,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
+import Font.Style as FontStyle
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -66,6 +67,7 @@ type Config = {
     tipSelected :: String,
     fareEstimateText :: String,
     tipSelectedText :: String,
+    topText :: TopTextConfig,
     backgroundColor  :: String
 }
 
@@ -120,6 +122,16 @@ type CoverImageConfig =
   , width :: Length
   , margin :: Margin
   , padding :: Padding
+  }
+
+type TopTextConfig =
+  {
+    visibility :: Visibility
+  , margin :: Margin
+  , text :: String
+  , color :: String
+  , textSize :: Int
+  , fontStyle :: String
   }
 
 config :: Config
@@ -222,8 +234,17 @@ config = {
     , width : WRAP_CONTENT
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
-    },
-    contactViewConfig :
+    }
+    , topText :
+    { 
+      visibility : GONE
+    , margin : (Margin 0 0 0 0)
+    , text : ""
+    , color : Color.black800
+    , textSize : FontSize.a_16
+    , fontStyle : FontStyle.bold LanguageStyle
+    }
+    , contactViewConfig :
     {
        nameInitials: "",
        fullName: "",

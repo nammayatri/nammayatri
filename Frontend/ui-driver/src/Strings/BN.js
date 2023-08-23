@@ -641,5 +641,18 @@ const bengaliStrings = {
 	MONTHS : "মাস",
 	ENTER_AADHAAR_DETAILS : "আধার বিবরণ লিখুন",
 	CALL_REQUEST_HAS_BEEN_PLACED : "আপনার কলের অনুরোধ করা হয়েছে",
-	RC_ADDED_SUCCESSFULLY : "নিবন্ধন শংসাপত্র সফলভাবে যোগ করা হয়েছে"
+	RC_ADDED_SUCCESSFULLY : "নিবন্ধন শংসাপত্র সফলভাবে যোগ করা হয়েছে",
+	REFER_CUSTOMERS_TO_ENTER_RANKINGS : "র্যাঙ্কিং লিখতে গ্রাহকদের পড়ুন",
+	ACTIVE : "সক্রিয়",
+	VIEW_ALL_RANKINGS : "সমস্ত র‌্যাঙ্কিং দেখুন",
+	LEARN_MORE : "আরও জানুন",
+	NOT_AVAILABLE_YET : "না পাওয়া এখনো",
+	YOUR_RANK : "তোমার পদ",
+	GET_MY_REFERRAL_CODE : "আমার রেফারেল কোড পান",
+	RIDE_LEADERBOARD : "রাইড লিডারবোর্ড", // this translation is wrong
+	REFERRAL_LEADERBOARD : "রেফারেল লিডারবোর্ড",
+	JOIN_THE_REFERRAL_PROGRAM : "রেফারেল প্রোগ্রামে যোগ দিন এবং গ্রাহকদের নম্মা যাত্রী ব্যবহারকারী হিসাবে উল্লেখ করুন",
+	START_TAKING_RIDES_AND_REFER_CUSTOMERS_TO_JOIN_NAMMA_YATRI : "রাইড নেওয়া শুরু করুন এবং নম্মা যাত্রীতে যোগ দিতে গ্রাহকদের উল্লেখ করুন",
+	APP_QR_CODE : "অ্যাপের QR কোড",
+	DOWNLOAD_NAMMA_YATRI : "নম্মা যাত্রী ডাউনলোড করুন"
 }

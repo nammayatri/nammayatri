@@ -93,12 +93,16 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = "ny_ic_chevron_left"
-      , margin = (Margin 12 12 12 12)
-      , visibility = if state.props.stage == ST.ReferralFlow then VISIBLE else GONE
+      , margin = if state.props.stage == ST.ReferralFlow then Margin 12 12 12 12 else Margin 0 0 12 0
+      , visibility = if (state.props.stage == ST.ReferralFlow || state.props.stage == ST.LeaderBoard)then VISIBLE else GONE
       }
     , padding = if state.props.stage == ST.ReferralFlow then (Padding 0 5 0 5) else (Padding 16 16 0 16)
     , textConfig {
-        text = if state.props.stage == ST.LeaderBoard then (getString RANKINGS) else if state.props.stage == ST.ReferralFlow then (getString REFERRAL_ENROLMENT) else (getString REFERRALS)
+        text = case state.props.stage of
+          ST.LeaderBoard -> getString RANKINGS
+          ST.Contest -> getString CONTEST
+          ST.ReferralFlow -> getString REFERRAL_ENROLMENT
+          _ -> getString REFERRALS
       , color = Color.darkDescriptionText
       }
     , suffixImageConfig {
@@ -123,3 +127,44 @@ primaryButtonViewConfig state = let
       , margin = (Margin 0 0 0 0)
       }
   in primaryButtonConfig'
+
+qrScreenPopupConfig :: ST.ReferralScreenState->  PopUpModal.Config
+qrScreenPopupConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    topText {
+        visibility = VISIBLE
+      , text = (getString DOWNLOAD_NAMMA_YATRI)
+      , margin = MarginBottom 0
+      , color = Color.black800
+      , textSize = FontSize.a_20
+      , fontStyle = FontStyle.bold LanguageStyle
+    }
+  , primaryText {
+        visibility = GONE
+    }
+  , secondaryText {
+        visibility = GONE
+    }
+  , option1 {
+        text = (getString GO_BACK)
+      , margin = (Margin 0 20 0 0 ) 
+      , background = Color.black900
+      , color = Color.yellow900
+    }
+  , option2 {
+        visibility = false
+  }
+  , backgroundClickable = true
+  , gravity = CENTER
+  , margin = (MarginHorizontal 16 16)
+  , padding = (Padding 24 24 24 0)
+  , cornerRadius = (Corners 20.0 true true true true)
+  , coverImageConfig {
+      imageUrl = "ny_ic_qr_code"
+    , visibility = VISIBLE
+    , width = V 280
+    , height = V 280
+    }
+  }
+  in popUpConfig'

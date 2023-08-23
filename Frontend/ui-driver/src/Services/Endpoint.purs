@@ -19,7 +19,6 @@ import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
 import Data.Maybe(Maybe(..))
 
-
 triggerOTP :: String -> String
 triggerOTP  dummy = (getBaseUrl "" ) <> "/auth"
 
@@ -115,6 +114,9 @@ messageResponse messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/res
 linkReferralCode :: String -> String
 linkReferralCode dummyString = (getBaseUrl "") <> "/driver/linkReferralCode"
 
+generateReferralCode :: String -> String
+generateReferralCode dummyString = (getBaseUrl "") <> "/driver/generateReferralCode"
+
 getPerformance :: String -> String
 getPerformance dummyString = (getBaseUrl "") <> "/driver/performance"
 
@@ -164,11 +166,11 @@ onCall _ = (getBaseUrl "") <> "/onCall"
 likeMessage :: String -> String
 likeMessage messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/like"
 
-leaderBoardDaily :: String -> String
-leaderBoardDaily date = (getBaseUrl "") <> "/driver/leaderBoard/daily?date=" <> date
-
-leaderBoardWeekly :: String -> String -> String
-leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
+leaderBoardDaily :: String -> String -> String
+leaderBoardDaily date leaderBoardType = (getBaseUrl "") <> "/driver/" <> leaderBoardType <> "leaderBoard/daily?date=" <> date
+ 
+leaderBoardWeekly :: String -> String -> String -> String
+leaderBoardWeekly fromDate toDate leaderBoardType = (getBaseUrl "") <> "/driver/" <> leaderBoardType <> "leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
 
 currentDateAndTime :: String -> String
 currentDateAndTime _ = "https://tools.aimylogic.com/api/now"

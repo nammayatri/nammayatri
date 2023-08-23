@@ -482,5 +482,18 @@ const frenchStrings = {
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "UTILISATRICES Évalué par",
   MONTHS : "Mois",
-  RC_ADDED_SUCCESSFULLY : "Certificat d'enregistrement ajouté avec succès"
+  RC_ADDED_SUCCESSFULLY : "Certificat d'enregistrement ajouté avec succès",
+  REFER_CUSTOMERS_TO_ENTER_RANKINGS : "recommander aux clients d'entrer dans les classements",
+  ACTIVE : "Active",
+  VIEW_ALL_RANKINGS : "Voir tous les classements",
+  LEARN_MORE : "Apprendre encore plus",
+  NOT_AVAILABLE_YET : "Pas encore disponible",
+  YOUR_RANK : "Ton rang",
+  GET_MY_REFERRAL_CODE : "Obtenir mon code de parrainage",
+  RIDE_LEADERBOARD : "Classement des courses", // this translation is wrong
+  REFERRAL_LEADERBOARD : "Classement des références",
+  JOIN_THE_REFERRAL_PROGRAM : "Rejoignez le programme de parrainage et parrainez des clients en tant qu'utilisateurs de Namma Yatri",
+  START_TAKING_RIDES_AND_REFER_CUSTOMERS_TO_JOIN_NAMMA_YATRI : "Commencez à faire des courses et à inciter les clients à rejoindre Namma Yatri",
+  APP_QR_CODE : "Code QR de l'application",
+  DOWNLOAD_NAMMA_YATRI : "Télécharger Namma Yatri"
 }

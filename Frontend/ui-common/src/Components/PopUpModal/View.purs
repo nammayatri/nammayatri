@@ -91,10 +91,22 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
+            , orientation VERTICAL
             , visibility state.coverImageConfig.visibility
             , cornerRadii state.cornerRadius
             ]
-            [ imageView
+            [  textView
+               [ height WRAP_CONTENT
+               , width MATCH_PARENT
+               , visibility state.topText.visibility
+               , margin state.topText.margin
+               , text state.topText.text
+               , color state.topText.color
+               , textSize state.topText.textSize
+               , fontStyle state.topText.fontStyle
+               , gravity CENTER
+               ]
+             , imageView
                 [ height state.coverImageConfig.height
                 , width state.coverImageConfig.width
                 , margin state.coverImageConfig.margin

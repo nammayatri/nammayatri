@@ -599,5 +599,18 @@ const mlStrings = {
   RATED_BY_USERS1 : "",
   RATED_BY_USERS2 : "ഉപയോക്താക്കൾ റേറ്റുചെയ്തത്",
   MONTHS : "മാസങ്ങൾ",
-  RC_ADDED_SUCCESSFULLY : "രജിസ്ട്രേഷൻ സർട്ടിഫിക്കറ്റ് വിജയകരമായി ചേർത്തു"
+  RC_ADDED_SUCCESSFULLY : "രജിസ്ട്രേഷൻ സർട്ടിഫിക്കറ്റ് വിജയകരമായി ചേർത്തു",
+  REFER_CUSTOMERS_TO_ENTER_RANKINGS : "റാങ്കിംഗിൽ പ്രവേശിക്കാൻ ഉപഭോക്താക്കളെ റഫർ ചെയ്യുക",
+  ACTIVE : "സജീവം",
+  VIEW_ALL_RANKINGS : "എല്ലാ റാങ്കിംഗുകളും കാണുക",
+  LEARN_MORE : "കൂടുതലറിയുക",
+  NOT_AVAILABLE_YET : "ഇതുവരെ ലഭ്യമല്ല",
+  YOUR_RANK : "നിങ്ങളുടെ റാങ്ക്",
+  GET_MY_REFERRAL_CODE : "എന്റെ റഫറൽ കോഡ് നേടുക",
+  RIDE_LEADERBOARD : "സവാരി ലീഡർബോർഡ്", // translation is wrong
+  REFERRAL_LEADERBOARD : "റഫറൽ ലീഡർബോർഡ്",
+  JOIN_THE_REFERRAL_PROGRAM : "റഫറൽ പ്രോഗ്രാമിൽ ചേരുക, ഉപഭോക്താക്കളെ നമ്മ യാത്രി ഉപയോക്താക്കൾ എന്ന് റഫർ ചെയ്യുക",
+  START_TAKING_RIDES_AND_REFER_CUSTOMERS_TO_JOIN_NAMMA_YATRI : "നമ്മ യാത്രിയിൽ ചേരാൻ റൈഡുകൾ എടുക്കാനും ഉപഭോക്താക്കളെ റഫർ ചെയ്യാനും ആരംഭിക്കുക",
+  APP_QR_CODE : "ആപ്പ് QR കോഡ്",
+  DOWNLOAD_NAMMA_YATRI : "നമ്മ യാത്രി ഡൗൺലോഡ് ചെയ്യുക"
 }

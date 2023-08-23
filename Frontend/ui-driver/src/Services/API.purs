@@ -1250,7 +1250,11 @@ newtype GetPerformanceRes = GetPerformanceRes {
   referrals :: {
     totalActivatedCustomers :: Int,
     totalReferredCustomers :: Int
-  }
+  },
+  referralCode :: String,
+  totalDriver :: Int,
+  currRideRank :: Int,
+  currReferralRank :: Int
 }
 
 instance makeGetPerformanceReq :: RestEndpoint GetPerformanceReq GetPerformanceRes where
@@ -1269,6 +1273,33 @@ instance showGetGetPerformanceRes :: Show GetPerformanceRes where show = generic
 instance standardEncodeGetPerformanceRes :: StandardEncode GetPerformanceRes where standardEncode (GetPerformanceRes req) = standardEncode req
 instance decodeGetPerformanceRes :: Decode GetPerformanceRes where decode = defaultDecode
 instance encodeGetPerformanceRes :: Encode GetPerformanceRes where encode = defaultEncode
+
+--------------------------------------------------- generateReferralCode ----------------------------------------------------
+
+newtype GenerateReferralCodeReq = GenerateReferralCodeReq {}
+
+newtype GenerateReferralCodeRes = GenerateReferralCodeRes {
+  referralCode :: String
+}
+
+instance makeGenerateReferralCodeReq :: RestEndpoint GenerateReferralCodeReq GenerateReferralCodeRes where
+    makeRequest reqBody@(GenerateReferralCodeReq date) headers = defaultMakeRequest POST (EP.generateReferralCode "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericGenerateReferralCodeReq :: Generic GenerateReferralCodeReq _
+instance showGenerateReferralCodeReq :: Show GenerateReferralCodeReq where show = genericShow
+instance standardGenerateReferralCodeReq :: StandardEncode GenerateReferralCodeReq where standardEncode (GenerateReferralCodeReq req) = standardEncode req
+instance decodeGenerateReferralCodeReq :: Decode GenerateReferralCodeReq where decode = defaultDecode
+instance encodeGenerateReferralCodeReq :: Encode GenerateReferralCodeReq where encode = defaultEncode
+
+derive instance genericGenerateReferralCodeRes :: Generic GenerateReferralCodeRes _
+derive instance newtypeGenerateReferralCodeRes :: Newtype GenerateReferralCodeRes _
+instance showGenerateReferralCodeRes :: Show GenerateReferralCodeRes where show = genericShow
+instance standardEncodeGenerateReferralCodeRes :: StandardEncode GenerateReferralCodeRes where standardEncode (GenerateReferralCodeRes req) = standardEncode req
+instance decodeGenerateReferralCodeRes :: Decode GenerateReferralCodeRes where decode = defaultDecode
+instance encodeGenerateReferralCodeRes :: Encode GenerateReferralCodeRes where encode = defaultEncode
+
 
 ----------------------------------- driverAlternateNumber ----------------------------------------
 
@@ -1677,25 +1708,33 @@ instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
 instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
 ------------------------------------------------------ leaderBoard -----------------------------------------------
 
-data LeaderBoardReq = DailyRequest String
-                    | WeeklyRequest String String
+data LeaderBoardReq = DailyRequest String String
+                    | WeeklyRequest String String String
 
 newtype LeaderBoardRes = LeaderBoardRes {
     lastUpdatedAt :: Maybe String
   , driverList :: Array DriversInfo
 }
 
-newtype DriversInfo = DriversInfo
+data DriversInfo 
+  = RideInfo
   { name :: String
-  , totalRides :: Int
   , rank :: Int
   , isCurrentDriver :: Boolean
+  , totalRides :: Int
   , totalDistance :: Int
+  }
+  | ReferralInfo
+  { name :: String
+  , rank :: Int
+  , isCurrentDriver :: Boolean
+  , totalValidCustomers :: Int
+  , totalReferrals :: Int
   }
 
 instance makeLeaderBoardReq :: RestEndpoint LeaderBoardReq LeaderBoardRes where
-    makeRequest reqBody@(DailyRequest date) headers = defaultMakeRequest GET (EP.leaderBoardDaily date) headers reqBody Nothing
-    makeRequest reqBody@(WeeklyRequest fromDate toDate) headers = defaultMakeRequest GET (EP.leaderBoardWeekly fromDate toDate) headers reqBody Nothing
+    makeRequest reqBody@(DailyRequest date leaderBoardType) headers = defaultMakeRequest GET (EP.leaderBoardDaily date leaderBoardType) headers reqBody Nothing
+    makeRequest reqBody@(WeeklyRequest fromDate toDate leaderBoardType) headers = defaultMakeRequest GET (EP.leaderBoardWeekly fromDate toDate leaderBoardType) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
@@ -1703,8 +1742,8 @@ derive instance genericLeaderBoardReq :: Generic LeaderBoardReq _
 instance showLeaderBoardReq :: Show LeaderBoardReq where show = genericShow
 instance standardEncodeLeaderBoardReq :: StandardEncode LeaderBoardReq
   where
-    standardEncode (DailyRequest _) = standardEncode {}
-    standardEncode (WeeklyRequest _ _) = standardEncode {}
+    standardEncode (DailyRequest _ _) = standardEncode {}
+    standardEncode (WeeklyRequest _ _ _) = standardEncode {}
 instance decodeLeaderBoardReq :: Decode LeaderBoardReq where decode = defaultDecode
 instance encodeLeaderBoardReq :: Encode LeaderBoardReq where encode = defaultEncode
 
@@ -1716,12 +1755,21 @@ instance decodeLeaderBoardRes :: Decode LeaderBoardRes where decode = defaultDec
 instance encodeLeaderBoardRes :: Encode LeaderBoardRes where encode = defaultEncode
 
 derive instance genericDriversInfo :: Generic DriversInfo _
-derive instance newtypeDriversInfo :: Newtype DriversInfo _
 instance showDriversInfo :: Show DriversInfo where show = genericShow
-instance standardEncodeDriversInfo :: StandardEncode DriversInfo where standardEncode (DriversInfo res) = standardEncode res
-instance decodeDriversInfo :: Decode DriversInfo where decode = defaultDecode
-instance encodeDriversInfo :: Encode DriversInfo where encode = defaultEncode
+instance decodeDriversInfo :: Decode DriversInfo 
+  where
+    decode body = (RideInfo <$> decode body) <|> (ReferralInfo <$> decode body) <|> (fail $ ForeignError "Unknown response")
 
+instance encodeDriversInfo :: Encode DriversInfo
+  where
+    encode (RideInfo body) = encode body
+    encode (ReferralInfo body) = encode body
+
+instance standardEncodeDriversInfo :: StandardEncode DriversInfo
+  where
+    standardEncode (RideInfo body) = standardEncode body
+    standardEncode (ReferralInfo body) = standardEncode body
+    
 ------------------------------------------ currentDateAndTime --------------------------------------
 
 newtype CurrentDateAndTimeReq = CurrentDateAndTimeReq String

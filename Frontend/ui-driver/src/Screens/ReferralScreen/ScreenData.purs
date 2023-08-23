@@ -15,7 +15,7 @@
 
 module Screens.ReferralScreen.ScreenData where
 
-import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), LeaderBoardType(..), LeaderBoardDay, LeaderBoardWeek, RankCardData)
+import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), LeaderBoardType(..), LeaderBoardRankType(..), LeaderBoardDay, LeaderBoardWeek, RankCardData)
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
@@ -36,8 +36,12 @@ initData =  {
       referrals : {
         totalActivatedCustomers : 0,
         totalReferredCustomers : 0
+      }
+    , referralCode : ""
+    , totalDriver : 0
+    , currRideRank : 0
+    , currReferralRank : 0
     }
-}
   , logField : empty
   }
 ,  props: {
@@ -45,12 +49,14 @@ initData =  {
     , confirmBtnActive : false
     , passwordPopUpVisible : false
     , callSupportPopUpVisible : false
+    , qrScreenPopUpVisible : false
     , enableReferralFlowCount : 0
-    , stage : LeaderBoard
+    , stage : Contest
     , seconds : 4
     , id : "SuccessScreenTimerId"
     , firstTime : false
     , leaderBoardType : Daily
+    , leaderBoardRankType : Ride
     , showDateSelector : false
     , days : []
     , weeks : []
@@ -59,8 +65,12 @@ initData =  {
     , rankersData : []
     , currentDriverData : dummyCurrentDriverData
     , showShimmer : true
+    , showContestShimmer : true
     , noData : false
+    , noContestData : false
     , lastUpdatedAt : ""
+    , errorCode : 200
+    , lottieVisible : false
   }
 }
 

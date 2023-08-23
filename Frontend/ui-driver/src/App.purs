@@ -199,7 +199,9 @@ data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_FLOW_AND_COME_BACK ReferralScreenState
-                            | REFRESH_LEADERBOARD
+                            | REFRESH_LEADERBOARD 
+                            | GO_TO_LEADERBOARD
+                            | GO_TO_GENERATE_REFERRAL_CODE
 
 data RIDES_SELECTION_SCREEN_OUTPUT = REFRESH_RIDES RideSelectionScreenState
                                    | LOADER_RIDES_OUTPUT RideSelectionScreenState

@@ -39,7 +39,7 @@ import Log (printLog)
 import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>))
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
-import Screens.Types (DriverStatus)
+import Screens.Types (DriverStatus, LeaderBoardRankType(..))
 import Services.Config as SC
 import Services.EndPoints as EP
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
@@ -752,6 +752,27 @@ getPerformanceBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+getPerformance payload = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getPerformance "") unwrapResponse (callAPI headers payload)
+    where
+        unwrapResponse x = x
+
+---------------------------------------- generateReferralCode ---------------------------------------------
+generateReferralCodeBT :: GenerateReferralCodeReq -> FlowBT String GenerateReferralCodeRes
+generateReferralCodeBT payload = do
+     headers <- getHeaders' "" false
+     withAPIResultBT (EP.generateReferralCode "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
+generateReferralCode payload = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.generateReferralCode "") unwrapResponse (callAPI headers payload)
+    where
+        unwrapResponse x = x
+
 ----------------------------------- validateAlternateNumber --------------------------
 
 validateAlternateNumber payload = do
@@ -904,10 +925,10 @@ leaderBoardBT :: LeaderBoardReq -> FlowBT String LeaderBoardRes
 leaderBoardBT request = do
     headers <- getHeaders' "" true
     case request of
-        (DailyRequest date) ->
-            withAPIResultBT (EP.leaderBoardDaily date) (\x → x) errorHandler (lift $ lift $ callAPI headers request)
-        (WeeklyRequest fromDate toDate) ->
-            withAPIResultBT (EP.leaderBoardWeekly fromDate toDate) (\x → x) errorHandler (lift $ lift $ callAPI headers request)
+        (DailyRequest date leaderBoardType) ->
+            withAPIResultBT (EP.leaderBoardDaily date leaderBoardType) (\x → x) errorHandler (lift $ lift $ callAPI headers request)
+        (WeeklyRequest fromDate toDate leaderBoardType) ->
+            withAPIResultBT (EP.leaderBoardWeekly fromDate toDate leaderBoardType) (\x → x) errorHandler (lift $ lift $ callAPI headers request)
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
@@ -915,10 +936,10 @@ leaderBoardBT request = do
 leaderBoard request = do
     headers <- getHeaders "" true
     case request of
-        (DailyRequest date) ->
-            withAPIResult (EP.leaderBoardDaily date) unwrapResponse (callAPI headers request)
-        (WeeklyRequest fromDate toDate) ->
-            withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
+        (DailyRequest date leaderBoardType) ->
+            withAPIResult (EP.leaderBoardDaily date leaderBoardType) unwrapResponse (callAPI headers request)
+        (WeeklyRequest fromDate toDate leaderBoardType) ->
+            withAPIResult (EP.leaderBoardWeekly fromDate toDate leaderBoardType) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
 

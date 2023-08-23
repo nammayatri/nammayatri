@@ -338,6 +338,12 @@ hintText =  "#E5E7E8"
 whiteGrey :: Color
 whiteGrey = "#F2F6F9"
 
+whiteGreyText :: Color
+whiteGreyText = "#FCFFF5"
+
+whiteAlpha :: Color
+whiteAlpha = "#24FFFFFF"
+
 lightBlack :: Color
 lightBlack = "#4E4E4E"
 

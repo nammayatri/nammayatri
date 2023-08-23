@@ -194,6 +194,7 @@
       "ny_ic_contest_active" : true,
       "ny_ic_contest_alert" : true,
       "ny_ic_contest_inactive" : true,
+      "ny_ic_contest_no_data" : true,
       "ny_ic_copy" : true,
       "ny_ic_cross_round" : true,
       "ny_ic_customer_current_location" : true,
