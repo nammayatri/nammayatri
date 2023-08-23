@@ -140,6 +140,10 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   when (not refreshFlow) $ void $ UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_entered_app"
+  if (getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)") 
+  then do
+    setValueToLocalStore COUNTRY_CODE "+91"
+  else pure unit
   if (getMerchant FunctionCall) == PASSCULTURE then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
     else pure unit
   if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" &&  (isNothing $ (gPayload.payload)^._signatureAuthData)
@@ -571,7 +575,7 @@ enterMobileNumberScreenFlow = do
             setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
             setValueToLocalStore COUNTRY_CODE (state.data.countryObj.countryCode)
             void $ pure $ setCleverTapUserData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
-            (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode)
+            (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode (show state.data.otpChannel))
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts}, props {enterOTP = true,resendEnable = false}})
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{number = state.data.mobileNumber}}})
             enterMobileNumberScreenFlow

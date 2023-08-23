@@ -19,7 +19,7 @@ import Prelude (Unit, ($), (<>), (==), (&&), not, negate, const, bind, pure, uni
 import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
-import Components.MobileNumberEditor.Controller (Action(..), Config, listExpandingAnimationConfig, listClosingAnimationConfig)
+import Components.MobileNumberEditor.Controller (Action(..), Config)
 import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Margin(..), Padding(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, relativeLayout, scrollView, onClick, onChange, onAnimationEnd, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat,imageWithFallback)
 import Font.Style as FontStyle
 import Common.Types.App
@@ -35,13 +35,15 @@ import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..)) 
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
-import MerchantConfig.Utils (getMerchant, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
+import Common.Animation.Config (listExpandingAnimationConfig)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
-  relativeLayout[
+  linearLayout[
     height WRAP_CONTENT
     ,width MATCH_PARENT
+    ,orientation VERTICAL
   ][
     linearLayout 
       [ width MATCH_PARENT
@@ -52,7 +54,7 @@ view push config =
         , editTextLayout push config
         , errorLabelLayout config
         ]
-    , if config.countryCodeField.countryCodeOptionExpended then countryCodeOptionView  push config else textView[height $ V 0]
+    , if config.countryCodeField.countryCodeOptionExpanded then countryCodeOptionView  push config else textView[height $ V 0]
   ]
       
 
@@ -94,11 +96,11 @@ countryCodeCaptureView push config  =
     , margin config.countryCodeCaptureConfig.margin
     , background config.countryCodeCaptureConfig.background
     , orientation HORIZONTAL
-    , stroke if config.countryCodeField.countryCodeOptionExpended then config.focusedStroke else config.stroke 
+    , stroke if config.countryCodeField.countryCodeOptionExpanded then config.focusedStroke else config.stroke 
     , gravity CENTER
     , cornerRadius config.countryCodeCaptureConfig.cornerRadius
-    , onClick  push $ const $ (if not config.countryCodeField.countryCodeOptionExpended then  ShowOptions else CloseOptions)
-    , clickable $ (getMerchant FunctionCall) == (YATRISATHI)
+    , onClick  push $ const $ (if not config.countryCodeField.countryCodeOptionExpanded then  ShowOptions else CloseOptions)
+    , clickable $ getValueFromConfig "internationalNumberEnabled"
     ] $
     [ 
       textView $
@@ -114,10 +116,10 @@ countryCodeCaptureView push config  =
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity RIGHT
-          , visibility if (getMerchant FunctionCall) == (YATRISATHI) then VISIBLE else GONE
+          , visibility if getValueFromConfig "internationalNumberEnabled" then VISIBLE else GONE
           ]
           [ imageView
-            [ imageWithFallback if config.countryCodeField.countryCodeOptionExpended then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
+            [ imageWithFallback if config.countryCodeField.countryCodeOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
             , height $ V 24
             , width $ V 15
             ]
@@ -127,19 +129,12 @@ countryCodeCaptureView push config  =
 countryCodeOptionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 countryCodeOptionView push config =
   PrestoAnim.animationSet
-  ([] <> if EHC.os == "IOS" then
-        [Anim.fadeIn config.countryCodeField.countryCodeOptionExpended
-        , Anim.fadeOut  (not config.countryCodeField.countryCodeOptionExpended)]
-        else if config.countryCodeField.countryCodeOptionExpended then
-          [Anim.listExpandingAnimation $  listExpandingAnimationConfig config] 
-          else [Anim.listExpandingAnimation $  listClosingAnimationConfig config
-               ,Anim.fadeOut true])
-            $
-  scrollView[
-      height WRAP_CONTENT 
-    , width MATCH_PARENT
-    , margin config.countryCodeOptionConfig.margin
-  ][
+   (if EHC.os == "IOS" then
+        [ Anim.fadeIn config.countryCodeField.countryCodeOptionExpanded
+        , Anim.fadeOut (not config.countryCodeField.countryCodeOptionExpanded)]
+      else 
+        [ Anim.listExpandingAnimation $ listExpandingAnimationConfig config.countryCodeField.countryCodeOptionExpanded]
+    ) $
     linearLayout
       [ height config.countryCodeOptionConfig.height
       , width config.countryCodeOptionConfig.width
@@ -147,6 +142,7 @@ countryCodeOptionView push config =
       , orientation VERTICAL
       , stroke config.countryCodeOptionConfig.stroke
       , cornerRadius config.countryCodeOptionConfig.cornerRadius
+      , margin config.countryCodeOptionConfig.margin
       ]
       (mapWithIndex (\index item ->
         linearLayout
@@ -181,9 +177,8 @@ countryCodeOptionView push config =
             , visibility if ((length getCountryCodesObj)-1) == index  && config.countryCodeOptionElementConfig.lineVisibility then GONE else VISIBLE 
             ][]
           ]
-        )(getCountryCodesObj)
+        ) getCountryCodesObj
       )
-  ]
 
 
 

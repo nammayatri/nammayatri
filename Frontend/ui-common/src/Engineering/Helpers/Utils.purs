@@ -14,30 +14,35 @@
 -}module Engineering.Helpers.Utils where
 
 import Prelude
-import Control.Monad.Except (runExcept)
-import Data.Either (Either(..))
+
 import Data.Maybe (Maybe(..))
-import Data.String (length)
-import Data.String.CodeUnits (charAt)
 import Data.Time.Duration (Milliseconds(..))
-import Debug (spy)
-import Effect (Effect(..))
+import Presto.Core.Types.Language.Flow (delay)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (EffectFn1(..), EffectFn2(..), EffectFn3, mkEffectFn1, runEffectFn1, runEffectFn2, runEffectFn3)
-import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
-import Engineering.Helpers.Commons (os)
-import Foreign.Generic (Foreign, decode, encode)
 import LoaderOverlay.Handler as UI
-import Log (printLog)
-import MerchantConfig.DefaultConfig as DefaultConfig
-import MerchantConfig.Types (AppConfig)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState)
-import Presto.Core.Types.Language.Flow (delay)
 import PrestoDOM.Core (terminateUI)
-import Types.App (FlowBT)
 import Types.App (GlobalState(..))
+import Debug (spy)
+import Engineering.Helpers.Commons (os)
+import Effect (Effect (..))
+import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
+import Data.String (length)
+import Data.String.CodeUnits (charAt)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Foreign.Generic (decode, encode)
+import MerchantConfig.Types (AppConfig)
+import MerchantConfig.DefaultConfig as DefaultConfig
+import Types.App (FlowBT)
+import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
+import Common.Types.App (MobileNumberValidatorResp(..))
+import Foreign (Foreign)
+import Effect.Uncurried (mkEffectFn1)
+import Log (printLog)
+
 
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
 
@@ -84,30 +89,27 @@ showAndHideLoader delayInMs title description state = do
           pure unit
   pure unit
 
-mobileNumberValidator :: String -> String -> String -> Boolean
-mobileNumberValidator country countryShortCode mobileNumber = case countryShortCode of
-  "IN" ->
-    (length mobileNumber == 10)
-      && case (charAt 0 mobileNumber) of
-          Just a ->
-            if a == '0' || a == '1' || a == '2' || a == '3' || a == '4' then
-              false
-            else if a == '5' then
-              if mobileNumber == "5000500050" then true else false
-            else
-              true
-          Nothing -> true
-  "FR" ->
-    (length mobileNumber == 9)
-      && case (charAt 0 mobileNumber) of
-          Just a -> a == '6' || a == '7'
-          Nothing -> false
-  "BD" ->
-    (length mobileNumber == 10)
-      && case (charAt 0 mobileNumber) of
-          Just a -> a == '1'
-          Nothing -> false
-  _ -> false
+mobileNumberValidator :: String -> String -> String -> MobileNumberValidatorResp 
+mobileNumberValidator country countryShortCode mobileNumber = 
+  let len = length mobileNumber
+      maxLen = mobileNumberMaxLength countryShortCode
+  in if len <=  maxLen then 
+      case countryShortCode of 
+        "IN" -> case (charAt 0 mobileNumber) of
+                  Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then Invalid
+                            else if a=='5' then if mobileNumber=="5000500050" then Valid else Invalid
+                                 else if len == maxLen then Valid else ValidPrefix 
+                  Nothing -> ValidPrefix 
+        "FR" -> case (charAt 0 mobileNumber) of 
+                  Just a -> if a == '6' || a == '7' then if len == maxLen then Valid else ValidPrefix
+                            else Invalid 
+                  Nothing -> ValidPrefix
+        "BD" -> case (charAt 0 mobileNumber) of 
+                  Just a -> if a == '1' then if len == maxLen then Valid else ValidPrefix 
+                            else Invalid
+                  Nothing -> ValidPrefix
+        _ -> Invalid
+      else MaxLengthExceeded
 
 mobileNumberMaxLength :: String -> Int
 mobileNumberMaxLength countryShortCode = case countryShortCode of

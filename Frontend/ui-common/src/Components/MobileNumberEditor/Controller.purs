@@ -61,7 +61,7 @@ type CountryCodeFieldConfig = {
   , color :: String
   , padding :: Padding
   , margin :: Margin
-  , countryCodeOptionExpended :: Boolean
+  , countryCodeOptionExpanded :: Boolean
   , countryCode :: String
 }
 
@@ -202,16 +202,16 @@ config = {
     , color : Color.black800
     , padding : Padding 0 0 0 0
     , margin : Margin 10 0 0 0
-    , countryCodeOptionExpended : false
+    , countryCodeOptionExpanded : false
     , countryCode : "+91"
   }
   , countryCodeOptionConfig : {
-      height : V 394 
+      height : WRAP_CONTENT
     , width : MATCH_PARENT
     , background : Color.white900
     , stroke : "1,"<>Color.grey900
     , cornerRadius : 8.0 
-    , margin : MarginTop 110
+    , margin : MarginTop 0
   }
   , countryCodeOptionElementConfig :{ 
     height : WRAP_CONTENT
@@ -235,24 +235,3 @@ config = {
 }
 
 
-listExpandingAnimationConfig :: Config -> AnimConfig
-listExpandingAnimationConfig config =  animConfig 
-          { fromScaleY = 0.0
-          , toScaleY = 1.0
-          , fromY = -100
-          , toY = 0
-          , repeatCount = (PrestoAnim.Repeat 0)
-          , ifAnim =  true
-          , duration = 200
-          } 
-
-listClosingAnimationConfig :: Config -> AnimConfig
-listClosingAnimationConfig config = animConfig
-          { fromScaleY = 1.0
-          , toScaleY = 0.0
-          , fromY = 0
-          , toY = -100
-          , repeatCount = (PrestoAnim.Repeat 0)
-          , ifAnim =  true
-          , duration = 200
-          }
