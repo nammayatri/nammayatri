@@ -59,15 +59,13 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.src_lat state.data.activeRide.src_lon
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : lat , lon : lon } state) 
-
     StartZoneRide  state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
-      LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+      LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.src_lat state.data.activeRide.src_lon
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : lat , lon : lon }) 
-
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon
+      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon
       App.BackT $ App.NoBack <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon})
     SelectListModal state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → state)
