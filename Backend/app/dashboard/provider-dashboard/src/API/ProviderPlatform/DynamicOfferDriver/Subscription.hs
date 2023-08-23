@@ -39,6 +39,7 @@ type API =
            :<|> SuspendPlan
            :<|> SubscribePlan
            :<|> CurrentPlan
+           :<|> ResumePlan
        )
 
 type ListPlan =
@@ -61,6 +62,10 @@ type CurrentPlan =
   ApiAuth 'DRIVER_OFFER_BPP 'SUBSCRIPTION 'CURRENT_PLAN
     :> SD.CurrentPlan
 
+type ResumePlan =
+  ApiAuth 'DRIVER_OFFER_BPP 'SUBSCRIPTION 'RESUME_PLAN
+    :> SD.ResumePlan
+
 buildTransaction ::
   ( MonadFlow m
   ) =>
@@ -78,6 +83,7 @@ handler merchantId =
     :<|> planSuspend merchantId
     :<|> planSubscribe merchantId
     :<|> currentPlan merchantId
+    :<|> planResume merchantId
 
 planList :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler DTPlan.PlanListAPIRes
 planList merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
@@ -109,3 +115,10 @@ currentPlan :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver ->
 currentPlan merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.subscription.currentPlan) driverId
+
+planResume :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+planResume merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction SD.ResumePlanEndpoint apiTokenInfo (Just driverId)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.subscription.planResume) driverId

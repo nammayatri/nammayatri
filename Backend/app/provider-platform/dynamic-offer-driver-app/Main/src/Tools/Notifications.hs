@@ -572,6 +572,35 @@ notifyPaymentModeManualOnSuspend merchantId personId mbDeviceToken = do
           [ "Your UPI Autopay has been suspended. You can clear your dues manually from the Plan page."
           ]
 
+notifyPaymentModeAutopayOnResume ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyPaymentModeAutopayOnResume merchantId personId mbDeviceToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.PAYMENT_MODE_MANUAL
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = personId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "Payment mode changed to Autopay"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "Your UPI Autopay has been resumed."
+          ]
+
 notifyLowAccountBalance ::
   ( CacheFlow m r,
     EsqDBFlow m r

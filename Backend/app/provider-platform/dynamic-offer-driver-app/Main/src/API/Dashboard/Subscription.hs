@@ -32,6 +32,7 @@ data SubscriptionEndpoint
   = SelectPlanEndpoint
   | SubscribePlanEndpoint
   | SuspendPlanEndpoint
+  | ResumePlanEndpoint
   deriving (Show, Read)
 
 derivePersistField "SubscriptionEndpoint"
@@ -43,6 +44,7 @@ type API =
            :<|> SuspendPlan
            :<|> SubscribePlan
            :<|> CurrentPlan
+           :<|> ResumePlan
        )
 
 type ListPlan =
@@ -71,6 +73,11 @@ type CurrentPlan =
   Capture "driverId" (Id DP.Driver)
     :> Get '[JSON] DTPlan.CurrentPlanRes
 
+type ResumePlan =
+  Capture "driverId" (Id DP.Driver)
+    :> "resume"
+    :> Put '[JSON] APISuccess
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   planList merchantId
@@ -78,6 +85,7 @@ handler merchantId =
     :<|> planSuspend merchantId
     :<|> planSubscribe merchantId
     :<|> currentPlan merchantId
+    :<|> planResume merchantId
 
 planList :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
 planList merchantShortId driverId = do
@@ -103,3 +111,8 @@ currentPlan :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler DTPlan.Current
 currentPlan merchantShortId driverId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   DPlan.currentPlan (cast driverId, m.id)
+
+planResume :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler APISuccess
+planResume merchantShortId driverId = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  DTPlan.planResume True (cast driverId, m.id)

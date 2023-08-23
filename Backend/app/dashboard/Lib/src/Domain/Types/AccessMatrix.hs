@@ -155,6 +155,7 @@ data UserActionType
   | SUSPEND_PLAN
   | SUBSCRIBE_PLAN
   | CURRENT_PLAN
+  | RESUME_PLAN
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

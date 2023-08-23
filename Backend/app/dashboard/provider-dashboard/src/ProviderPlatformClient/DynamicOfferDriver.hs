@@ -181,7 +181,8 @@ data SubscriptionAPIs = SubscriptionAPIs
     planSelect :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient APISuccess,
     planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,
-    currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes
+    currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes,
+    planResume :: Id Driver.Driver -> Euler.EulerClient APISuccess
   }
 
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
@@ -213,7 +214,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> planSelect
       :<|> planSuspend
       :<|> planSubscribe
-      :<|> currentPlan = subscriptionClient
+      :<|> currentPlan
+      :<|> planResume = subscriptionClient
 
     driverDocumentsInfo
       :<|> driverAadhaarInfo

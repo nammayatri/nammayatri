@@ -68,7 +68,7 @@ planSuspend :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
 planSuspend = withFlowHandlerAPI . DPlan.planSuspend False
 
 planResume :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
-planResume = withFlowHandlerAPI . DPlan.planResume
+planResume = withFlowHandlerAPI . DPlan.planResume False
 
 currentPlan :: (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.CurrentPlanRes
 currentPlan = withFlowHandlerAPI . DPlan.currentPlan
