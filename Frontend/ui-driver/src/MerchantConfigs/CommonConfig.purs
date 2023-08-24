@@ -33,4 +33,5 @@ commonConfig =
         , primaryBackground: "#2C2F3A"
         , showCorporateAddress: false
         , imageUploadOptional: true
+        , autoPayBanner: true
         }

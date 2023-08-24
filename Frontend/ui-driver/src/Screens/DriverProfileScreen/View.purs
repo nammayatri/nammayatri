@@ -60,7 +60,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, liftFlow)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, liftFlow, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
@@ -163,7 +163,9 @@ view push state =
         , if state.props.updateLanguages then updateLanguageView state push else dummyTextView
         , if  any (_ == state.props.detailsUpdationType) [Just ST.VEHICLE_AGE , Just ST.VEHICLE_NAME] then updateDetailsView state push else dummyTextView
         , if state.props.activateRcView then rcEditPopUpView push state else dummyTextView
-        , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView]
+        , if state.props.alreadyActive then rcActiveOnAnotherDriverProfilePopUpView push state else dummyTextView
+        , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
+    ]
 
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
@@ -1100,11 +1102,43 @@ getRcDetails state = do
      else [])
   <>[{ key :(getString MODEL_NAME) , value : if config.rcStatus then config.rcDetails.vehicleModel else Just "NA", action :  NoAction , isEditable : false}
   , { key : (getString COLOUR) , value : if config.rcStatus then config.rcDetails.vehicleColor else Just "NA", action :NoAction , isEditable : false } ]
-  <> (if not null state.data.rcDataArray then
-      [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }]
-    else [])
   )
 
+bottomPill :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bottomPill state push = 
+  linearLayout[
+    width MATCH_PARENT,
+    height WRAP_CONTENT,
+    padding $ PaddingVertical 20 20
+  ][
+    linearLayout [
+      width $ V $ ((screenWidth unit)-32)/2 ,
+      height WRAP_CONTENT,
+      gravity CENTER ,
+      onClick push $ const $ DirectActivateRc $ if state.data.activeRCData.rcStatus then ST.DEACTIVATING_RC else ST.ACTIVATING_RC
+    ][
+      textView $ [
+        color Color.blue900,
+        text $ if state.data.activeRCData.rcStatus then (getString DEACTIVATE_RC) else (getString ACTIVATE_RC)
+      ] <> FontStyle.body6 TypoGraphy
+    ]
+  , linearLayout[
+      width $ V 1, 
+      height MATCH_PARENT ,
+      background Color.grey700
+    ][]
+  , linearLayout [
+      width $ V (((screenWidth unit)-32)/2) ,
+      height WRAP_CONTENT,
+      gravity CENTER,
+      onClick push $ const $ UpdateRC  state.data.activeRCData.rcDetails.certificateNumber  state.data.activeRCData.rcStatus
+    ][
+      textView $ [
+        color Color.blue900,
+        text $ getString EDIT_RC
+      ] <> FontStyle.body6 TypoGraphy
+    ]
+  ]
 ----------------------------------------------- INFO TILE VIEW COMPONENT -------------------------------------------------------
 infoTileView :: forall w. ST.DriverProfileScreenState -> {primaryText :: String, subText :: String, postImgVisibility :: Boolean, seperatorView :: Boolean, margin :: Margin } -> PrestoDOM (Effect Unit) w
 infoTileView state config =
@@ -1216,7 +1250,7 @@ detailsListViewComponent state push config =
   , margin $ Margin 0 0 0 0
   , orientation VERTICAL
   , cornerRadius 10.0
-  ](mapWithIndex(\ index item ->
+  ]$(mapWithIndex(\ index item ->
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -1264,10 +1298,10 @@ detailsListViewComponent state push config =
             [ height $ V 1
             , width MATCH_PARENT
             , background config.separatorColor
-            , visibility if index == length (config.arrayList) - 1 then GONE else VISIBLE
+            , visibility if index == length (config.arrayList) - 1 && state.props.screenType == ST.VEHICLE_DETAILS then VISIBLE else GONE
             ][]
             ]
-        ) (config.arrayList))
+        ) (config.arrayList)) <> (if state.props.screenType == ST.VEHICLE_DETAILS then [(bottomPill state push)] else [])
 
 ----------------------------------------------- INFO CARD COMPONENT ---------------------------------------------------------------
 infoCard :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {key :: String, value :: String , value1 :: String , infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , valueColor :: String, action :: Action } -> PrestoDOM (Effect Unit) w

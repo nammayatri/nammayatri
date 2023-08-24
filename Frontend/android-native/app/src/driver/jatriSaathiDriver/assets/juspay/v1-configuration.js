@@ -97,5 +97,6 @@ window.getMerchantConfig = function () {
     , "packageName" : "com.google.android.apps.maps"
     }
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "autoPayBanner" : false
   })
 }
