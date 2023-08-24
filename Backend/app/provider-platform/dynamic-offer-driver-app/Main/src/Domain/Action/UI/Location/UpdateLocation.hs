@@ -140,23 +140,24 @@ streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy stat
 handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Seconds -> m ()
 handleDriverPayments driverId diffUtc = do
   now <- getLocalCurrentTime diffUtc
-  ongoingAfterEndTime <- B.runInReplica $ findOngoingAfterEndTime driverId now
-  overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
+  Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
+    ongoingAfterEndTime <- B.runInReplica $ findOngoingAfterEndTime driverId now
+    overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
 
-  case (ongoingAfterEndTime, overdueFee) of
-    (Nothing, _) -> pure ()
-    (Just df, Nothing) -> do
-      _ <- updateStatus PAYMENT_PENDING df.id now
-      updatePendingPayment True (cast driverId)
-    (Just dGFee, Just oDFee) -> mergeDriverFee oDFee dGFee now
+    case (ongoingAfterEndTime, overdueFee) of
+      (Nothing, _) -> pure ()
+      (Just df, Nothing) -> do
+        _ <- updateStatus PAYMENT_PENDING df.id now
+        updatePendingPayment True (cast driverId)
+      (Just dGFee, Just oDFee) -> mergeDriverFee oDFee dGFee now
 
-  unpaidAfterdeadline <- findUnpaidAfterPayBy driverId now
-  case unpaidAfterdeadline of
-    Nothing -> pure ()
-    Just df -> do
-      _ <- updateStatus PAYMENT_OVERDUE df.id now
-      QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
-      updateSubscription False (cast driverId)
+    unpaidAfterdeadline <- findUnpaidAfterPayBy driverId now
+    case unpaidAfterdeadline of
+      Nothing -> pure ()
+      Just df -> do
+        _ <- updateStatus PAYMENT_OVERDUE df.id now
+        QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
+        updateSubscription False (cast driverId)
 
 updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],

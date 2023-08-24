@@ -39,7 +39,6 @@ import Data.List (find)
 import Data.Text as T hiding (find, length, map, null, zip)
 import qualified Data.Time as DT
 import qualified Data.Time.Calendar.OrdinalDate as TO
-import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
@@ -65,7 +64,6 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as SCO
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
-import qualified Storage.Queries.DriverFee as DV
 import Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverOnboarding.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
@@ -270,9 +268,8 @@ compareRegistrationDates actualDate providedDate =
 
 linkRCStatus :: (Id Person.Person, Id DM.Merchant) -> RCStatusReq -> Flow APISuccess
 linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
-  mdriverFee <- DV.findPendingFeesByDriverId (cast driverId)
-  whenJust mdriverFee $ \driverFee -> do
-    when (driverFee.status == DF.PAYMENT_OVERDUE && req.isActivate) $ throwError (RCActivationFailedPaymentDue driverId.getId)
+  driverInfo <- DriverInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  unless (driverInfo.subscribed) $ throwError (RCActivationFailedPaymentDue driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
