@@ -66,6 +66,7 @@ import Storage.Queries.Booking ()
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
+import qualified Tools.Maps as Maps
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
   { dwTable1 :: f (B.TableEntity table1),
@@ -168,10 +169,13 @@ findOneByDriverId (Id personId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq pe
 getInProgressByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
-getInProgressOrNewRideIdAndStatusByDriverId :: MonadFlow m => Id Person -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverId ::
+  MonadFlow m =>
+  Id Person ->
+  m (Maybe (Id Ride, RideStatus, Maybe (Maps.SMapsService 'Maps.SnapToRoad)))
 getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
   ride' <- findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
-  let rideData = (,) <$> (DR.id <$> ride') <*> (DR.status <$> ride')
+  let rideData = ride' <&> \ride -> (ride.id, ride.status, ride.mapsServices.snapToRoad)
   pure rideData
 
 getActiveByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
@@ -183,6 +187,19 @@ updateStatus rideId status = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.status status,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateMapsServices ::
+  MonadFlow m =>
+  Id Ride ->
+  RideMapsServices ->
+  m ()
+updateMapsServices rideId rideMapsServices = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.mapsServiceGetDistancesForCancelRide rideMapsServices.getDistancesForCancelRide,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -235,6 +252,7 @@ updateAll rideId ride = do
       Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
       Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
       Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
+      Se.Set BeamR.mapsServiceGetRoutes ride.mapsServices.getRoutes,
       Se.Set BeamR.updatedAt now,
       Se.Set BeamR.numberOfDeviation ride.numberOfDeviation
     ]
@@ -462,7 +480,13 @@ instance FromTType' BeamR.Ride Ride where
             distanceCalculationFailed = distanceCalculationFailed,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            numberOfDeviation = numberOfDeviation
+            numberOfDeviation = numberOfDeviation,
+            mapsServices =
+              RideMapsServices
+                { getDistancesForCancelRide = mapsServiceGetDistancesForCancelRide,
+                  getRoutes = mapsServiceGetRoutes,
+                  snapToRoad = mapsServiceSnapToRoad
+                }
           }
 
 instance ToTType' BeamR.Ride Ride where
@@ -486,10 +510,13 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.tripEndLat = lat <$> tripEndPos,
         BeamR.tripStartLon = lon <$> tripStartPos,
         BeamR.tripEndLon = lon <$> tripEndPos,
-        pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+        BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
         BeamR.fareParametersId = getId <$> fareParametersId,
         BeamR.distanceCalculationFailed = distanceCalculationFailed,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
-        BeamR.numberOfDeviation = numberOfDeviation
+        BeamR.numberOfDeviation = numberOfDeviation,
+        BeamR.mapsServiceGetDistancesForCancelRide = mapsServices.getDistancesForCancelRide,
+        BeamR.mapsServiceGetRoutes = mapsServices.getRoutes,
+        BeamR.mapsServiceSnapToRoad = mapsServices.snapToRoad
       }

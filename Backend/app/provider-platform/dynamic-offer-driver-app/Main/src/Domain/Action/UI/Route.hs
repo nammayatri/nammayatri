@@ -29,12 +29,15 @@ import qualified Tools.Maps as Maps
 
 getRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes (_, merchantId) req = do
-  Maps.getRoutes merchantId req
+  service <- Maps.pickService @'Maps.GetRoutes merchantId
+  Maps.getRoutes merchantId service req
 
 getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (_, merchantId) req = do
-  Maps.getPickupRoutes merchantId req
+  service <- Maps.pickService @'Maps.GetPickupRoutes merchantId
+  Maps.getPickupRoutes merchantId service req
 
 getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getTripRoutes (_, merchantId) req = do
-  Maps.getTripRoutes merchantId req
+  service <- Maps.pickService @'Maps.GetTripRoutes merchantId
+  Maps.getTripRoutes merchantId service req

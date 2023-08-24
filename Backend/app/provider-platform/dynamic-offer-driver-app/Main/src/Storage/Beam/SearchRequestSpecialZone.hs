@@ -34,6 +34,7 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
+import qualified Tools.Maps as Maps
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax :: HasSqlValueSyntax be String => BaseUrl -> be
@@ -55,6 +56,8 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
+    mapsServiceGetDistances :: B.C f (Maybe (Maps.SMapsService 'Maps.GetDistances)),
+    mapsServiceGetPlaceName :: B.C f (Maybe (Maps.SMapsService 'Maps.GetPlaceName)),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -97,6 +100,8 @@ searchRequestSpecialZoneTMod =
       bapUri = B.fieldNamed "bap_uri",
       estimatedDistance = B.fieldNamed "estimated_distance",
       estimatedDuration = B.fieldNamed "estimated_duration",
+      mapsServiceGetDistances = B.fieldNamed "maps_service_get_distances",
+      mapsServiceGetPlaceName = B.fieldNamed "maps_service_get_place_name",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

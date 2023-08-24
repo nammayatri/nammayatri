@@ -54,7 +54,6 @@ import Kernel.Utils.SlidingWindowLimiter
 import Lib.SessionizerMetrics.Types.Event
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
--- import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
 import qualified Storage.Queries.Person as Person
 import Tools.Auth

@@ -42,6 +42,7 @@ import EulerHS.Prelude hiding (foldr, id, length, null)
 import GHC.Float (double2Int)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
@@ -89,13 +90,12 @@ endRideTransaction ::
   Id DP.Driver ->
   SRB.Booking ->
   Ride.Ride ->
-  Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
   Id Merchant ->
   m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+endRideTransaction driverId booking ride mbRiderDetailsId newFareParams thresholdConfig merchantId = do
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -126,7 +126,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     else QDFS.updateStatus ride.driverId DDFS.IDLE
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   SRide.clearCache $ cast driverId
-  whenJust mbFareParams QFare.create
+  QFare.create newFareParams
   whenJust mbRiderDetails $ \riderDetails ->
     when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
   _ <- QRide.updateAll ride.id ride
@@ -224,21 +224,19 @@ putDiffMetric merchantId money mtrs = do
   Metrics.putFareAndDistanceDeviations org.name money mtrs
 
 getDistanceBetweenPoints ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  ServiceFlow m r =>
   Id Merchant ->
   LatLong ->
   LatLong ->
   [LatLong] ->
-  m Meters
+  m (Meters, Maps.SMapsService 'Maps.GetRoutes)
 getDistanceBetweenPoints merchantId origin destination interpolatedPoints = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
+  mapsService <- Maps.pickService @'Maps.GetRoutes merchantId
   routeResponse <-
-    Maps.getRoutes merchantId $
+    Maps.getRoutes merchantId mapsService $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,
@@ -246,7 +244,8 @@ getDistanceBetweenPoints merchantId origin destination interpolatedPoints = do
         }
   let mbShortestRouteDistance = (.distance) =<< getRouteInfoWithShortestDuration routeResponse
   -- Next error is impossible, because we never receive empty list from directions api
-  mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
+  distance <- mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
+  pure (distance, mapsService)
 
 -- TODO reuse code from rider-app
 getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo

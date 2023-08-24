@@ -87,19 +87,26 @@ cancel bookingId _ req = do
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
-  cancellationReason <-
+  (cancellationReason, mbUpdRide) <-
     case mRide of
       Just ride -> do
         res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
         case res of
           Right res' -> do
-            disToPickup <- driverDistanceToPickup booking.merchantId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
-            buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
+            mapsService <- Maps.pickService @'Maps.GetDistancesForCancelRide booking.merchantId
+            let updRide = ride{mapsServices = ride.mapsServices{getDistancesForCancelRide = Just mapsService}}
+            disToPickup <- driverDistanceToPickup booking.merchantId mapsService (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
+            cReason <- buildBookingCancellationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
+            pure (cReason, Just updRide)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
-            buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
-      Nothing -> buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
+            cReason <- buildBookingCancellationReason Nothing Nothing (Just booking.merchantId)
+            pure (cReason, Nothing)
+      Nothing -> do
+        cReason <- buildBookingCancellationReason Nothing Nothing (Just booking.merchantId)
+        pure (cReason, Nothing)
   QBCR.upsert cancellationReason
+  whenJust mbUpdRide QR.updateMapsServices
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -110,7 +117,7 @@ cancel bookingId _ req = do
         merchant = merchant
       }
   where
-    buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
+    buildBookingCancellationReason currentDriverLocation disToPickup merchantId = do
       let CancelReq {..} = req
       return $
         SBCR.BookingCancellationReason
@@ -188,12 +195,13 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripEndPos
   ) =>
   Id Merchant.Merchant ->
+  Maps.SMapsService 'Maps.GetDistancesForCancelRide ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId tripStartPos tripEndPos = do
+driverDistanceToPickup merchantId mapsService tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId $
+    Maps.getDistanceForCancelRide merchantId mapsService $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

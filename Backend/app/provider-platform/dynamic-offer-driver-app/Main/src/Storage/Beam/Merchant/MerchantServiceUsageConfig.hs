@@ -58,9 +58,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be VerificationService
 
 instance FromBackendRow Postgres VerificationService
 
-instance FromField MapsService where
-  fromField = fromFieldEnum
-
 instance FromField AadhaarVerificationService where
   fromField = fromFieldEnum
 
@@ -73,13 +70,6 @@ instance FromBackendRow Postgres AadhaarVerificationService
 
 instance IsString AadhaarVerificationService where
   fromString = show
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be MapsService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be MapsService
-
-instance FromBackendRow Postgres MapsService
 
 instance FromField CallService where
   fromField = fromFieldEnum
@@ -152,16 +142,26 @@ instance IsString CallService where
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
     initiateCall :: B.C f CallService,
-    getDistances :: B.C f MapsService,
-    getEstimatedPickupDistances :: B.C f MapsService,
-    getRoutes :: B.C f MapsService,
-    getPickupRoutes :: B.C f MapsService,
-    getTripRoutes :: B.C f MapsService,
-    snapToRoad :: B.C f MapsService,
-    getPlaceName :: B.C f MapsService,
-    getPlaceDetails :: B.C f MapsService,
-    autoComplete :: B.C f MapsService,
-    getDistancesForCancelRide :: B.C f MapsService,
+    getDistances :: B.C f (SMapsService 'GetDistances),
+    getDistancesPercentage :: B.C f Text,
+    getEstimatedPickupDistances :: B.C f (SMapsService 'GetEstimatedPickupDistances),
+    getEstimatedPickupDistancesPercentage :: B.C f Text,
+    getRoutes :: B.C f (SMapsService 'GetRoutes),
+    getRoutesPercentage :: B.C f Text,
+    getPickupRoutes :: B.C f (SMapsService 'GetPickupRoutes),
+    getPickupRoutesPercentage :: B.C f Text,
+    getTripRoutes :: B.C f (SMapsService 'GetTripRoutes),
+    getTripRoutesPercentage :: B.C f Text,
+    snapToRoad :: B.C f (SMapsService 'SnapToRoad),
+    snapToRoadPercentage :: B.C f Text,
+    getPlaceName :: B.C f (SMapsService 'GetPlaceName),
+    getPlaceNamePercentage :: B.C f Text,
+    getPlaceDetails :: B.C f (SMapsService 'GetPlaceDetails),
+    getPlaceDetailsPercentage :: B.C f Text,
+    autoComplete :: B.C f (SMapsService 'AutoComplete),
+    autoCompletePercentage :: B.C f Text,
+    getDistancesForCancelRide :: B.C f (SMapsService 'GetDistancesForCancelRide),
+    getDistancesForCancelRidePercentage :: B.C f Text,
     smsProvidersPriorityList :: B.C f [SmsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     verificationService :: B.C f VerificationService,
@@ -200,15 +200,25 @@ merchantServiceUsageConfigTMod =
     { merchantId = B.fieldNamed "merchant_id",
       initiateCall = B.fieldNamed "initiate_call",
       getDistances = B.fieldNamed "get_distances",
+      getDistancesPercentage = B.fieldNamed "get_distances_percentage",
       getEstimatedPickupDistances = B.fieldNamed "get_estimated_pickup_distances",
+      getEstimatedPickupDistancesPercentage = B.fieldNamed "get_estimated_pickup_distances_percentage",
       getRoutes = B.fieldNamed "get_routes",
+      getRoutesPercentage = B.fieldNamed "get_routes_percentage",
       getPickupRoutes = B.fieldNamed "get_pickup_routes",
+      getPickupRoutesPercentage = B.fieldNamed "get_pickup_routes_percentage",
       getTripRoutes = B.fieldNamed "get_trip_routes",
+      getTripRoutesPercentage = B.fieldNamed "get_trip_routes_percentage",
       snapToRoad = B.fieldNamed "snap_to_road",
+      snapToRoadPercentage = B.fieldNamed "snap_to_road_percentage",
       getPlaceName = B.fieldNamed "get_place_name",
+      getPlaceNamePercentage = B.fieldNamed "get_place_name_percentage",
       getPlaceDetails = B.fieldNamed "get_place_details",
+      getPlaceDetailsPercentage = B.fieldNamed "get_place_details_percentage",
       autoComplete = B.fieldNamed "auto_complete",
+      autoCompletePercentage = B.fieldNamed "auto_complete_percentage",
       getDistancesForCancelRide = B.fieldNamed "get_distances_for_cancel_ride",
+      getDistancesForCancelRidePercentage = B.fieldNamed "get_distances_for_cancel_ride_percentage",
       smsProvidersPriorityList = B.fieldNamed "sms_providers_priority_list",
       whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
       verificationService = B.fieldNamed "verification_service",

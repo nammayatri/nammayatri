@@ -113,6 +113,15 @@ findLatestCompletedRide riderId = do
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
   findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
+updateMapsServices :: MonadFlow m => Ride -> m ()
+updateMapsServices ride = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.mapsServiceGetDistancesForCancelRide ride.mapsServices.getDistancesForCancelRide,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq ride.id.getId)]
+
 updateDriverArrival :: MonadFlow m => Id Ride -> m ()
 updateDriverArrival rideId = do
   now <- getCurrentTime
@@ -321,7 +330,12 @@ instance FromTType' BeamR.Ride Ride where
             rideRating = rideRating,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            driverMobileCountryCode = driverMobileCountryCode
+            driverMobileCountryCode = driverMobileCountryCode,
+            mapsServices =
+              RideMapsServices
+                { getDistancesForCancelRide = mapsServiceGetDistancesForCancelRide,
+                  getTripRoutes = mapsServiceGetTripRoutes
+                }
           }
 
 instance ToTType' BeamR.Ride Ride where
@@ -353,7 +367,9 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.rideRating = rideRating,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
-        BeamR.driverMobileCountryCode = driverMobileCountryCode
+        BeamR.driverMobileCountryCode = driverMobileCountryCode,
+        BeamR.mapsServiceGetDistancesForCancelRide = mapsServices.getDistancesForCancelRide,
+        BeamR.mapsServiceGetTripRoutes = mapsServices.getTripRoutes
       }
 
 countRidesByRiderId :: MonadFlow m => Id Person -> m Int

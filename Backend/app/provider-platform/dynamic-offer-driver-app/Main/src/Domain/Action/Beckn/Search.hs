@@ -119,20 +119,22 @@ data EstimateInfo = EstimateInfo
 
 data DistanceAndDuration = DistanceAndDuration
   { distance :: Meters,
-    duration :: Seconds
+    duration :: Seconds,
+    mapsServiceGetDistances :: Maybe (Maps.SMapsService 'Maps.GetDistances)
   }
 
 getDistanceAndDuration :: Id DM.Merchant -> LatLong -> LatLong -> Maybe Meters -> Maybe Seconds -> Flow DistanceAndDuration
-getDistanceAndDuration _ _ _ (Just distance) (Just duration) = return $ DistanceAndDuration {distance, duration}
+getDistanceAndDuration _ _ _ (Just distance) (Just duration) = return $ DistanceAndDuration {distance, duration, mapsServiceGetDistances = Nothing}
 getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
+  service <- Maps.pickService @'Maps.GetDistances merchantId
   response <-
-    Maps.getDistance merchantId $
+    Maps.getDistance merchantId service $
       Maps.GetDistanceReq
         { origin = fromLocation,
           destination = toLocation,
           travelMode = Just Maps.CAR
         }
-  return DistanceAndDuration {distance = response.distance, duration = response.duration}
+  return DistanceAndDuration {distance = response.distance, duration = response.duration, mapsServiceGetDistances = Just service}
 
 handler :: DM.Merchant -> DSearchReq -> Flow DSearchRes
 handler merchant sReq = do
@@ -140,11 +142,13 @@ handler merchant sReq = do
   let fromLocationLatLong = sReq.pickupLocation
       toLocationLatLong = sReq.dropLocation
       merchantId = merchant.id
+
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
   logDebug $ "distance: " <> show result.distance
   sessiontoken <- generateGUIDText
-  fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
+  mapsService <- Maps.pickService @'Maps.GetPlaceName merchant.id
+  fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation mapsService
+  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation mapsService
 
   allFarePoliciesProduct <- getAllFarePoliciesProduct merchantId fromLocationLatLong toLocationLatLong
   let farePolicies = selectFarePolicy result.distance allFarePoliciesProduct.farePolicies
@@ -154,7 +158,7 @@ handler merchant sReq = do
         whenJustM
           (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
-        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
+        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result allFarePoliciesProduct.area mapsService
         triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
         _ <- QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
@@ -182,16 +186,16 @@ handler merchant sReq = do
               allFarePoliciesProduct.specialLocationTag
         for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
+      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area mapsService RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
   let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
   buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
-    buildEstimates farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do
+    buildEstimates farePolicies result fromLocation toLocation specialLocationTag area mapsService routeInfo = do
       driverPoolCfg <- getDriverPoolConfig merchant.id result.distance
-      estimateInfos <- buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo
+      estimateInfos <- buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area mapsService routeInfo
       return (Nothing, Just estimateInfos)
 
     selectFarePolicy distance farePolicies = do
@@ -219,9 +223,10 @@ handler merchant sReq = do
       [DFP.FullFarePolicy] ->
       Maybe Text ->
       DFareProduct.Area ->
+      Maps.SMapsService 'Maps.GetPlaceName ->
       RouteInfo ->
       Flow [EstimateInfo]
-    buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo = do
+    buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area mapsService routeInfo = do
       let merchantId = merchant.id
       if null farePolicies
         then do
@@ -242,7 +247,7 @@ handler merchant sReq = do
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
-          searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
+          searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result specialLocationTag area mapsService
           Redis.setExp (searchRequestKey $ getId searchReq.id) routeInfo 3600
           estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
           triggerSearchEvent SearchEventData {searchRequest = Left searchReq, merchantId = merchantId}
@@ -290,18 +295,18 @@ buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchM
       }
 
 buildSearchRequest ::
-  ( MonadFlow m
-  ) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   DSearchReq ->
   Id DM.Merchant ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
-  Meters ->
-  Seconds ->
+  DistanceAndDuration ->
   Maybe Text ->
   DFareProduct.Area ->
+  Maps.SMapsService 'Maps.GetPlaceName ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialLocationTag area = do
+buildSearchRequest DSearchReq {..} providerId fromLocation toLocation distanceAndDuration specialLocationTag area mapsService = do
+  getEstimatedPickupDistances <- Just <$> Maps.pickService @'Maps.GetEstimatedPickupDistances providerId
   uuid <- generateGUID
   now <- getCurrentTime
   pure
@@ -312,6 +317,14 @@ buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedD
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         autoAssignEnabled = Nothing,
+        estimatedDistance = distanceAndDuration.distance,
+        estimatedDuration = distanceAndDuration.duration,
+        mapsServices =
+          DSR.SearchRequestMapsServices
+            { getDistances = distanceAndDuration.mapsServiceGetDistances,
+              getEstimatedPickupDistances,
+              getPlaceName = Just mapsService
+            },
         ..
       }
 
@@ -325,11 +338,11 @@ buildSearchRequestSpecialZone ::
   Id DM.Merchant ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
-  Meters ->
-  Seconds ->
+  DistanceAndDuration ->
   DFareProduct.Area ->
+  Maps.SMapsService 'Maps.GetPlaceName ->
   m DSRSZ.SearchRequestSpecialZone
-buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration area = do
+buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation distanceAndDuration area mapsService = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -341,6 +354,13 @@ buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation
         createdAt = now,
         updatedAt = now,
         area = Just area,
+        estimatedDistance = distanceAndDuration.distance,
+        estimatedDuration = distanceAndDuration.duration,
+        mapsServices =
+          DSRSZ.SearchRequestSpecialZoneMapsServices
+            { getDistances = distanceAndDuration.mapsServiceGetDistances,
+              getPlaceName = Just mapsService
+            },
         ..
       }
 
@@ -412,8 +432,16 @@ validateRequest merchantId sReq = do
             maybe (pure True) (`someGeometriesContain` regions) mbDestination
       pure $ originServiceable && destinationServiceable
 
-buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
-buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
+buildSearchReqLocation ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Text ->
+  Maybe BA.Address ->
+  Maybe Maps.Language ->
+  LatLong ->
+  Maps.SMapsService 'Maps.GetPlaceName ->
+  m DLoc.SearchReqLocation
+buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} mapsService = do
   updAddress <- case address of
     Just loc
       | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
@@ -429,7 +457,7 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
               area = loc.ward,
               full_address = decodeAddress loc
             }
-    _ -> getAddressByGetPlaceName merchantId sessionToken latLong
+    _ -> getAddressByGetPlaceName merchantId mapsService sessionToken latLong
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
@@ -448,10 +476,16 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
         ..
       }
 
-getAddressByGetPlaceName :: ServiceFlow m r => Id DM.Merchant -> Text -> LatLong -> m Address
-getAddressByGetPlaceName merchantId sessionToken latLong = do
+getAddressByGetPlaceName ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Maps.SMapsService 'Maps.GetPlaceName ->
+  Text ->
+  LatLong ->
+  m Address
+getAddressByGetPlaceName merchantId mapsService sessionToken latLong = do
   pickupRes <-
-    DMaps.getPlaceName merchantId $
+    DMaps.getPlaceName merchantId (Just mapsService) $
       Maps.GetPlaceNameReq
         { getBy = Maps.ByLatLong latLong,
           sessionToken = Just sessionToken,

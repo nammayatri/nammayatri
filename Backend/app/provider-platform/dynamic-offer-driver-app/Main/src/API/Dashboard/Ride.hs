@@ -86,7 +86,7 @@ rideStart merchantShortId reqRideId Common.StartRideReq {point} = withFlowHandle
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
   let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId}
-  shandle <- SHandler.buildStartRideHandle merchantId
+  shandle <- SHandler.buildStartRideHandle merchantId rideId
   SHandler.dashboardStartRide shandle rideId dashboardReq
 
 rideEnd :: ShortId DM.Merchant -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
@@ -95,14 +95,13 @@ rideEnd merchantShortId reqRideId Common.EndRideReq {point} = withFlowHandlerAPI
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId}
-  shandle <- EHandler.buildEndRideHandle merchantId
-  EHandler.dashboardEndRide shandle rideId dashboardReq
+  shandle <- EHandler.buildEndRideHandle merchantId rideId
+  EHandler.dashboardEndRide shandle dashboardReq
 
 multipleRideEnd :: ShortId DM.Merchant -> Common.MultipleRideEndReq -> FlowHandler Common.MultipleRideEndResp
 multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideEndReq req
   merchant <- findMerchantByShortId merchantShortId
-  shandle <- EHandler.buildEndRideHandle merchant.id
   logTagInfo "dashboard -> multipleRideEnd : " $ show (req.rides <&> (.rideId))
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
@@ -112,7 +111,8 @@ multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
               { point = reqItem.point,
                 merchantId = merchant.id
               }
-      Success <- EHandler.dashboardEndRide shandle rideId dashboardReq
+      shandle <- EHandler.buildEndRideHandle merchant.id rideId
+      Success <- EHandler.dashboardEndRide shandle dashboardReq
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}

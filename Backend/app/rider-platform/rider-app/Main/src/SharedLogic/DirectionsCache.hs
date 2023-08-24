@@ -1,6 +1,17 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
 
-{-# HLINT ignore "Use lambda-case" #-}
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module SharedLogic.DirectionsCache
   ( Maps.GetRoutesReq,
     Maps.GetRoutesResp,
@@ -32,8 +43,9 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import Tools.Error (GenericError (..))
 import qualified Tools.Maps as Maps
 
-getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getRoutes merchantId req = do
+-- FIXME Cached response should be specific for each maps service
+getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => Id Merchant.Merchant -> Maps.SMapsService 'Maps.GetRoutes -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes merchantId mapsService req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let origin = NE.head req.waypoints
   let dest = NE.last req.waypoints
@@ -46,15 +58,15 @@ getRoutes merchantId req = do
         cachedResp <- DQ.findRoute originGeoHash destGeoHash tmeSlt
         case cachedResp of
           Just resp -> return [resp.response]
-          Nothing -> callDirectionsApi merchantId req originGeoHash destGeoHash tmeSlt
+          Nothing -> callDirectionsApi merchantId mapsService req originGeoHash destGeoHash tmeSlt
     Nothing ->
-      Maps.getRoutes merchantId req
+      Maps.getRoutes merchantId mapsService req
 
-callDirectionsApi :: ServiceFlow m r => Id Merchant.Merchant -> Maps.GetRoutesReq -> Text -> Text -> Int -> m Maps.GetRoutesResp
-callDirectionsApi merchantId req originGeoHash destGeoHash timeSlot = do
-  resp <- Maps.getRoutes merchantId req
+callDirectionsApi :: ServiceFlow m r => Id Merchant.Merchant -> Maps.SMapsService 'Maps.GetRoutes -> Maps.GetRoutesReq -> Text -> Text -> Int -> m Maps.GetRoutesResp
+callDirectionsApi merchantId mapsService req originGeoHash destGeoHash timeSlot = do
+  resp <- Maps.getRoutes merchantId mapsService req
   if null resp
-    then throwError $ InternalError "Null response from Directions API" -- This case will never occure unless Google's Direction API Fails.
+    then throwError $ InternalError "Null response from Directions API" -- This case will never occurs unless Google's Direction API Fails.
     else do
       let (cachedResp : _) = resp
       directionsCache <- convertToDirCache originGeoHash destGeoHash timeSlot cachedResp

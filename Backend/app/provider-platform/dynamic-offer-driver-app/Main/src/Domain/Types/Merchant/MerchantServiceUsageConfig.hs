@@ -18,7 +18,8 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.External.AadhaarVerification.Types (AadhaarVerificationService)
 import Kernel.External.Call (CallService)
-import Kernel.External.Maps.Types (MapsService)
+import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Types (MapsServiceUsage)
 import Kernel.External.SMS.Types
 import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Verification.Types (VerificationService)
@@ -29,16 +30,16 @@ import Kernel.Types.Id
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,
     initiateCall :: CallService,
-    getDistances :: MapsService,
-    getEstimatedPickupDistances :: MapsService,
-    getRoutes :: MapsService,
-    getPickupRoutes :: MapsService,
-    getTripRoutes :: MapsService,
-    snapToRoad :: MapsService,
-    getPlaceName :: MapsService,
-    getPlaceDetails :: MapsService,
-    autoComplete :: MapsService,
-    getDistancesForCancelRide :: MapsService,
+    getDistances :: MapsServiceUsage 'Maps.GetDistances,
+    getEstimatedPickupDistances :: MapsServiceUsage 'Maps.GetEstimatedPickupDistances,
+    getRoutes :: MapsServiceUsage 'Maps.GetRoutes,
+    getPickupRoutes :: MapsServiceUsage 'Maps.GetPickupRoutes,
+    getTripRoutes :: MapsServiceUsage 'Maps.GetTripRoutes,
+    snapToRoad :: MapsServiceUsage 'Maps.SnapToRoad,
+    getPlaceName :: MapsServiceUsage 'Maps.GetPlaceName,
+    getPlaceDetails :: MapsServiceUsage 'Maps.GetPlaceDetails,
+    autoComplete :: MapsServiceUsage 'Maps.AutoComplete,
+    getDistancesForCancelRide :: MapsServiceUsage 'Maps.GetDistancesForCancelRide,
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
     verificationService :: VerificationService,

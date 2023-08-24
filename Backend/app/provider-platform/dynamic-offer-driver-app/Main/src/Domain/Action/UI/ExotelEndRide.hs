@@ -12,33 +12,30 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.ExotelEndRide
-  ( AckResp,
-    callBasedEndRide,
-  )
-where
+module Domain.Action.UI.ExotelEndRide (buildCallBasedEndRideHandle) where
 
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
-import Domain.Types.Merchant
+import qualified Domain.Types.Person as DP
+import Environment (Flow)
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
+import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
-import Kernel.Types.Beckn.Ack
-import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-type AckResp = AckResponse
-
-callBasedEndRide :: (EsqDBFlow m r, CacheFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasFlowEnv m r '["smsCfg" ::: SmsConfig]) => EndRide.ServiceHandle m -> Id Merchant -> DbHash -> Text -> m AckResp
-callBasedEndRide shandle merchantId mobileNumberHash callFrom = do
-  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  _ <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
-  _ <- QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
-  _ <- EndRide.callBasedEndRide shandle activeRide.id (EndRide.CallBasedEndRideReq driver)
-  return Ack
+buildCallBasedEndRideHandle :: Text -> Text -> Flow (EndRide.ServiceHandle Flow, DP.Person)
+buildCallBasedEndRideHandle callFrom_ callTo_ = do
+  let callFrom = dropFirstZero callFrom_
+  let callTo = dropFirstZero callTo_
+  mobileNumberHash <- getDbHash callFrom
+  exophone <- CQExophone.findByEndRidePhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
+  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash exophone.merchantId >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound driver.id.getId)
+  shandler <- EndRide.buildCommonEndRideHandler exophone.merchantId activeRide
+  pure (shandler, driver)
+  where
+    dropFirstZero = T.dropWhile (== '0')

@@ -38,6 +38,7 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
+import qualified Tools.Maps as Maps
 
 instance FromField Domain.RideStatus where
   fromField = fromFieldEnum
@@ -57,6 +58,9 @@ data RideT f = RideT
     bookingId :: B.C f Text,
     shortId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    mapsServiceGetDistancesForCancelRide :: B.C f (Maybe (Maps.SMapsService 'Maps.GetDistancesForCancelRide)),
+    mapsServiceGetRoutes :: B.C f (Maybe (Maps.SMapsService 'Maps.GetRoutes)),
+    mapsServiceSnapToRoad :: B.C f (Maybe (Maps.SMapsService 'Maps.SnapToRoad)),
     status :: B.C f Domain.RideStatus,
     driverId :: B.C f Text,
     otp :: B.C f Text,
@@ -114,6 +118,9 @@ rideTMod =
       bookingId = B.fieldNamed "booking_id",
       shortId = B.fieldNamed "short_id",
       merchantId = B.fieldNamed "merchant_id",
+      mapsServiceGetDistancesForCancelRide = B.fieldNamed "maps_service_get_distances_for_cancel_ride",
+      mapsServiceGetRoutes = B.fieldNamed "maps_service_get_routes",
+      mapsServiceSnapToRoad = B.fieldNamed "maps_service_snap_to_road",
       status = B.fieldNamed "status",
       driverId = B.fieldNamed "driver_id",
       otp = B.fieldNamed "otp",

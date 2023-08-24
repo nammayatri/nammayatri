@@ -23,11 +23,12 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.Ride as RQueries
+import qualified Tools.Maps as Maps
 
 makeAssignedRideIdAndStatusKey :: Id Person -> Text
 makeAssignedRideIdAndStatusKey id = "RideAssignToDriver:IdAndStatus:DriverId-" <> id.getId
 
-cacheAssignedRideIdAndStatus :: (CacheFlow m r) => Id Person -> (Id Ride, RideStatus) -> m ()
+cacheAssignedRideIdAndStatus :: (CacheFlow m r) => Id Person -> (Id Ride, RideStatus, Maybe (Maps.SMapsService 'Maps.SnapToRoad)) -> m ()
 cacheAssignedRideIdAndStatus driverId rideIdAndStatus = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAssignedRideIdAndStatusKey driverId) rideIdAndStatus expTime
@@ -35,7 +36,10 @@ cacheAssignedRideIdAndStatus driverId rideIdAndStatus = do
 clearCache :: (CacheFlow m r) => Id Person -> m ()
 clearCache = Hedis.del . makeAssignedRideIdAndStatusKey
 
-getInProgressOrNewRideIdAndStatusByDriverId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverId ::
+  (CacheFlow m r, EsqDBReplicaFlow m r) =>
+  Id Person ->
+  m (Maybe (Id Ride, RideStatus, Maybe (Maps.SMapsService 'Maps.SnapToRoad)))
 getInProgressOrNewRideIdAndStatusByDriverId driverId =
   Hedis.get (makeAssignedRideIdAndStatusKey driverId) >>= \case
     Just a ->

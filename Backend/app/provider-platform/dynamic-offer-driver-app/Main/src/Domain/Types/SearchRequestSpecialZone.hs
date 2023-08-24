@@ -22,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import qualified Tools.Maps as Maps
 
 data SearchRequestSpecialZone = SearchRequestSpecialZone
   { id :: Id SearchRequestSpecialZone,
@@ -37,7 +38,14 @@ data SearchRequestSpecialZone = SearchRequestSpecialZone
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
+    mapsServices :: SearchRequestSpecialZoneMapsServices,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
+  }
+  deriving (Generic, PrettyShow, Show)
+
+data SearchRequestSpecialZoneMapsServices = SearchRequestSpecialZoneMapsServices
+  { getDistances :: Maybe (Maps.SMapsService 'Maps.GetDistances),
+    getPlaceName :: Maybe (Maps.SMapsService 'Maps.GetPlaceName)
   }
   deriving (Generic, PrettyShow, Show)

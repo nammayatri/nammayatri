@@ -38,10 +38,18 @@ data SearchRequest = SearchRequest
     bapCountry :: Maybe Context.Country,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
+    mapsServices :: SearchRequestMapsServices,
     specialLocationTag :: Maybe Text,
     autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     createdAt :: UTCTime
+  }
+  deriving (Generic, PrettyShow, Show)
+
+data SearchRequestMapsServices = SearchRequestMapsServices
+  { getDistances :: Maybe (Maps.SMapsService 'Maps.GetDistances),
+    getEstimatedPickupDistances :: Maybe (Maps.SMapsService 'Maps.GetEstimatedPickupDistances),
+    getPlaceName :: Maybe (Maps.SMapsService 'Maps.GetPlaceName)
   }
   deriving (Generic, PrettyShow, Show)

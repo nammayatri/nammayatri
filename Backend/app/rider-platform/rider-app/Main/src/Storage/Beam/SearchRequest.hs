@@ -26,6 +26,7 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Maps (Language)
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
@@ -46,6 +47,7 @@ data SearchRequestT f = SearchRequestT
     merchantId :: B.C f Text,
     language :: B.C f (Maybe Language),
     customerExtraFee :: B.C f (Maybe Money),
+    mapsServiceGetRoutes :: B.C f (Maybe (Maps.SMapsService 'Maps.GetRoutes)),
     availablePaymentMethods :: B.C f [Text],
     selectedPaymentMethodId :: B.C f (Maybe Text),
     autoAssignEnabled :: B.C f (Maybe Bool),
@@ -80,6 +82,7 @@ searchRequestTMod =
       merchantId = B.fieldNamed "merchant_id",
       language = B.fieldNamed "language",
       customerExtraFee = B.fieldNamed "customer_extra_fee",
+      mapsServiceGetRoutes = B.fieldNamed "maps_service_get_routes",
       availablePaymentMethods = B.fieldNamed "available_payment_methods",
       selectedPaymentMethodId = B.fieldNamed "selected_payment_method_id",
       autoAssignEnabled = B.fieldNamed "auto_assign_enabled",

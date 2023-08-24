@@ -25,6 +25,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Servant.API
+import qualified Tools.Maps as Maps
 
 data RideStatus
   = NEW
@@ -71,6 +72,7 @@ data Ride = Ride
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    mapsServices :: RideMapsServices,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -113,3 +115,9 @@ makeRideAPIEntity Ride {..} =
           chargeableRideDistance = chargeableDistance,
           ..
         }
+
+data RideMapsServices = RideMapsServices
+  { getDistancesForCancelRide :: Maybe (Maps.SMapsService 'Maps.GetDistancesForCancelRide),
+    getTripRoutes :: Maybe (Maps.SMapsService 'Maps.GetTripRoutes)
+  }
+  deriving (Generic, Show)

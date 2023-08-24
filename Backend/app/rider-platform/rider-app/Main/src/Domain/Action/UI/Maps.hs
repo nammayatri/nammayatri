@@ -56,8 +56,10 @@ data AutoCompleteReq = AutoCompleteReq
 autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete merchantId AutoCompleteReq {..} = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  mapsService <- Maps.pickService @'Maps.AutoComplete merchantId
   Maps.autoComplete
     merchantId
+    mapsService
     Maps.AutoCompleteReq
       { country = toInterfaceCountry merchant.country,
         ..
@@ -70,7 +72,8 @@ autoComplete merchantId AutoCompleteReq {..} = do
 
 getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails (_, merchantId) req = do
-  Maps.getPlaceDetails merchantId req
+  mapsService <- Maps.pickService @'Maps.GetPlaceDetails merchantId
+  Maps.getPlaceDetails merchantId mapsService req
 
 getPlaceName :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName (_, merchantId) req = do
@@ -91,9 +94,10 @@ getPlaceName (_, merchantId) req = do
         then callMapsApi merchantId req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: (MonadFlow m, ServiceFlow m r) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId req geoHashPrecisionValue = do
-  res <- Maps.getPlaceName merchantId req
+  mapsService <- Maps.pickService @'Maps.GetPlaceName merchantId
+  res <- Maps.getPlaceName merchantId mapsService req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do

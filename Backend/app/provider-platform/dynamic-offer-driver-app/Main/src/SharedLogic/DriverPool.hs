@@ -488,15 +488,16 @@ calculateDriverPoolWithActualDist ::
   Maybe Variant ->
   a ->
   Id DM.Merchant ->
+  Maps.SMapsService 'Maps.GetEstimatedPickupDistances ->
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId mapsService onlyNotOnRide mRadiusStep = do
   driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      driverPoolWithActualDist <- computeActualDistance merchantId pickup (a :| pprox)
+      driverPoolWithActualDist <- computeActualDistance merchantId mapsService pickup (a :| pprox)
       let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
             Nothing -> NE.toList driverPoolWithActualDist
             Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
@@ -570,17 +571,18 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   Maybe Variant ->
   a ->
   Id DM.Merchant ->
+  Maps.SMapsService 'Maps.GetEstimatedPickupDistances ->
   Maybe PoolRadiusStep ->
   Int ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep reduceRadiusValue = do
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId mapsService mRadiusStep reduceRadiusValue = do
   driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep reduceRadiusValue
   case driverPool of
     [] -> return []
     (a : pprox) -> do
       let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
-      driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
+      driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId mapsService pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = NE.zipWith (curry combine) driverPoolWithActualDistFromDestinationLocation driverPoolWithActualDistFromCurrentLocation
           filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
@@ -617,7 +619,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
                 isPartOfIntelligentPool = False,
                 keepHiddenForSeconds = Seconds 0
               }
-        else computeActualDistanceOneToOne merchantId (LatLong destinationLat destinationLon) temp
+        else computeActualDistanceOneToOne merchantId mapsService (LatLong destinationLat destinationLon) temp
     combine (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y}, DriverPoolWithActualDistResult {..}) =
       DriverPoolWithActualDistResult
         { actualDistanceToPickup = x + actualDistanceToPickup,
@@ -632,11 +634,12 @@ computeActualDistanceOneToOne ::
     HasCoordinates a
   ) =>
   Id DM.Merchant ->
+  Maps.SMapsService 'Maps.GetEstimatedPickupDistances ->
   a ->
   DriverPoolResult ->
   m DriverPoolWithActualDistResult
-computeActualDistanceOneToOne merchantId pickup driverPoolResult = do
-  (ele :| _) <- computeActualDistance merchantId pickup (driverPoolResult :| [])
+computeActualDistanceOneToOne merchantId mapsService pickup driverPoolResult = do
+  (ele :| _) <- computeActualDistance merchantId mapsService pickup (driverPoolResult :| [])
   pure ele
 
 computeActualDistance ::
@@ -646,14 +649,16 @@ computeActualDistance ::
     HasCoordinates a
   ) =>
   Id DM.Merchant ->
+  Maps.SMapsService 'Maps.GetEstimatedPickupDistances ->
   a ->
   NonEmpty DriverPoolResult ->
   m (NonEmpty DriverPoolWithActualDistResult)
-computeActualDistance orgId pickup driverPoolResults = do
+computeActualDistance orgId mapsService pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
+
   transporter <- CTC.findByMerchantId orgId >>= fromMaybeM (TransporterConfigDoesNotExist orgId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId $
+    Maps.getEstimatedPickupDistances orgId mapsService $
       Maps.GetDistancesReq
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],

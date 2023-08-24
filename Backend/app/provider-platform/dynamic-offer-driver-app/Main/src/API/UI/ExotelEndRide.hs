@@ -18,16 +18,12 @@ module API.UI.ExotelEndRide
   )
 where
 
-import qualified Data.Text as T
 import qualified Domain.Action.UI.ExotelEndRide as DExotelEndRide
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Environment
-import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
-import qualified Storage.CachedQueries.Exophone as CQExophone
-import Tools.Error
 
 type API = CallBasedEndRideAPI
 
@@ -41,19 +37,14 @@ type CallBasedEndRideAPI =
     :> ( "end"
            :> MandatoryQueryParam "CallFrom" Text
            :> MandatoryQueryParam "CallTo" Text
-           :> Get '[JSON] DExotelEndRide.AckResp
+           :> Get '[JSON] AckResponse
        )
 
 callBasedEndRidelHandler :: FlowServer CallBasedEndRideAPI
 callBasedEndRidelHandler = callBasedEndRide
 
-callBasedEndRide :: Text -> Text -> FlowHandler DExotelEndRide.AckResp
+callBasedEndRide :: Text -> Text -> FlowHandler AckResponse
 callBasedEndRide callFrom_ callTo_ = withFlowHandlerAPI $ do
-  let callFrom = dropFirstZero callFrom_
-  let callTo = dropFirstZero callTo_
-  mobileNumberHash <- getDbHash callFrom
-  exophone <- CQExophone.findByEndRidePhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
-  shandle <- EndRide.buildEndRideHandle exophone.merchantId
-  DExotelEndRide.callBasedEndRide shandle exophone.merchantId mobileNumberHash callFrom
-  where
-    dropFirstZero = T.dropWhile (== '0')
+  (shandle, driver) <- DExotelEndRide.buildCallBasedEndRideHandle callFrom_ callTo_
+  _ <- EndRide.callBasedEndRide shandle (EndRide.CallBasedEndRideReq driver)
+  return Ack

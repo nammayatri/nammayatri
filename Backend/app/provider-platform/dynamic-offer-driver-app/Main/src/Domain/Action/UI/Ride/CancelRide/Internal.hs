@@ -59,6 +59,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
+import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
@@ -80,15 +81,16 @@ cancelRideImpl ::
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
+  Maybe (Maps.SMapsService 'Maps.GetDistancesForCancelRide) ->
   m ()
-cancelRideImpl rideId bookingCReason = do
+cancelRideImpl rideId bookingCReason mbMapsService = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let merchantId = booking.providerId
   merchant <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  cancelRideTransaction booking.id ride bookingCReason merchantId
+  cancelRideTransaction booking.id ride bookingCReason merchantId mbMapsService
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
   fork "cancelRide - Notify driver" $ do
@@ -144,12 +146,15 @@ cancelRideTransaction ::
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
   Id DMerc.Merchant ->
+  Maybe (Maps.SMapsService 'Maps.GetDistancesForCancelRide) ->
   m ()
-cancelRideTransaction bookingId ride bookingCReason merchantId = do
+cancelRideTransaction bookingId ride bookingCReason merchantId mbMapService = do
   let driverId = cast ride.driverId
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   _ <- QDI.updateOnRide driverId False
   _ <- QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
+  whenJust mbMapService $ \mapService -> do
+    QRide.updateMapsServices ride.id ride.mapsServices{getDistancesForCancelRide = Just mapService}
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   _ <- QRB.updateStatus bookingId SRB.CANCELLED
   QBCR.upsert bookingCReason

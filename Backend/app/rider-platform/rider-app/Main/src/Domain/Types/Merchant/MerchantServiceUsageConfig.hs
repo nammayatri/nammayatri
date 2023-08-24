@@ -17,6 +17,7 @@ module Domain.Types.Merchant.MerchantServiceUsageConfig where
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.External.Call.Types (CallService)
+import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.Types
 import Kernel.External.SMS.Types
@@ -29,15 +30,15 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,
     initiateCall :: CallService,
     notifyPerson :: NotificationService,
-    getDistances :: MapsService,
-    getRoutes :: MapsService,
-    snapToRoad :: MapsService,
-    getPlaceName :: MapsService,
-    getPickupRoutes :: MapsService,
-    getTripRoutes :: MapsService,
-    getPlaceDetails :: MapsService,
-    autoComplete :: MapsService,
-    getDistancesForCancelRide :: MapsService,
+    getDistances :: MapsServiceUsage 'Maps.GetDistances,
+    getRoutes :: MapsServiceUsage 'Maps.GetRoutes,
+    snapToRoad :: MapsServiceUsage 'Maps.SnapToRoad,
+    getPlaceName :: MapsServiceUsage 'Maps.GetPlaceName,
+    getPickupRoutes :: MapsServiceUsage 'Maps.GetPickupRoutes,
+    getTripRoutes :: MapsServiceUsage 'Maps.GetTripRoutes,
+    getPlaceDetails :: MapsServiceUsage 'Maps.GetPlaceDetails,
+    autoComplete :: MapsServiceUsage 'Maps.AutoComplete,
+    getDistancesForCancelRide :: MapsServiceUsage 'Maps.GetDistancesForCancelRide,
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
     issueTicketService :: IssueTicketService,

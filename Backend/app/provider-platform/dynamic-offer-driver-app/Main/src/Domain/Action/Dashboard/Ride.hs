@@ -413,5 +413,5 @@ bookingWithVehicleNumberAndPhone merchantShortId req = do
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Flow ()
 endActiveRide rideId merchantId = do
   let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId}
-  shandle <- EHandler.buildEndRideHandle merchantId
-  void $ EHandler.dashboardEndRide shandle rideId dashboardReq
+  shandle <- EHandler.buildEndRideHandle merchantId rideId
+  void $ EHandler.dashboardEndRide shandle dashboardReq

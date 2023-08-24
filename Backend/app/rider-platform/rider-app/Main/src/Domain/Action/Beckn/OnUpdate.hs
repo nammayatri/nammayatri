@@ -61,6 +61,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
 import Tools.Maps (LatLong)
+import qualified Tools.Maps as Maps
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 
@@ -257,11 +258,12 @@ onUpdate ValidatedRideAssignedReq {..} = do
   Notify.notifyOnRideAssigned booking ride
   withLongRetry $ CallBPP.callTrack booking ride
   where
-    buildRide :: MonadFlow m => m SRide.Ride
+    buildRide :: (CacheFlow m r, EsqDBFlow m r) => m SRide.Ride
     buildRide = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
+      getTripRoutes <- Just <$> (Maps.pickService @'Maps.GetTripRoutes booking.merchantId)
       return
         SRide.Ride
           { id = guid,
@@ -280,6 +282,11 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideStartTime = Nothing,
             rideEndTime = Nothing,
             rideRating = Nothing,
+            mapsServices =
+              SRide.RideMapsServices
+                { getDistancesForCancelRide = Nothing,
+                  getTripRoutes
+                },
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do

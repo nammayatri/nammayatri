@@ -74,7 +74,12 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
             estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            mapsServices =
+              SearchRequestSpecialZoneMapsServices
+                { getDistances = mapsServiceGetDistances,
+                  getPlaceName = mapsServiceGetPlaceName
+                }
           }
 
 instance ToTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
@@ -94,5 +99,7 @@ instance ToTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone whe
         BeamSRSZ.estimatedDistance = estimatedDistance,
         BeamSRSZ.estimatedDuration = estimatedDuration,
         BeamSRSZ.createdAt = createdAt,
-        BeamSRSZ.updatedAt = updatedAt
+        BeamSRSZ.updatedAt = updatedAt,
+        BeamSRSZ.mapsServiceGetDistances = mapsServices.getDistances,
+        BeamSRSZ.mapsServiceGetPlaceName = mapsServices.getPlaceName
       }
