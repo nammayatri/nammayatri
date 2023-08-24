@@ -7,6 +7,7 @@ import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
+import qualified Kernel.Storage.Beam.BecknRequestRider as BecknRequest
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
@@ -95,6 +96,7 @@ data DeleteModel
   | WebengageDelete
   | FeedbackFormDelete
   | HotSpotConfigDelete
+  | BecknRequestDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -140,6 +142,7 @@ getTagDelete TripTermsDelete = "TripTermsOptions"
 getTagDelete WebengageDelete = "WebengageOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
+getTagDelete BecknRequestDelete = "BecknRequestOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -184,6 +187,7 @@ parseTagDelete "TripTermsOptions" = return TripTermsDelete
 parseTagDelete "WebengageOptions" = return WebengageDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
+parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -229,6 +233,7 @@ data DBDeleteObject
   | WebengageDeleteOptions DeleteModel (Where Postgres Webengage.WebengageT)
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigDeleteOptions DeleteModel (Where Postgres HotSpotConfig.HotSpotConfigT)
+  | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -364,3 +369,6 @@ instance FromJSON DBDeleteObject where
       HotSpotConfigDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ HotSpotConfigDeleteOptions deleteModel whereClause
+      BecknRequestDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ BecknRequestDeleteOptions deleteModel whereClause

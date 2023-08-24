@@ -5,6 +5,7 @@ import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
+import qualified Kernel.Storage.Beam.BecknRequestRider as BecknRequest
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
@@ -96,6 +97,7 @@ data UpdateModel
   | WebengageUpdate
   | FeedbackFormUpdate
   | HotSpotConfigUpdate
+  | BecknRequestUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -141,6 +143,7 @@ getTagUpdate TripTermsUpdate = "TripTermsOptions"
 getTagUpdate WebengageUpdate = "WebengageOptions"
 getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
+getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -185,6 +188,7 @@ parseTagUpdate "TripTermsOptions" = return TripTermsUpdate
 parseTagUpdate "WebengageOptions" = return WebengageUpdate
 parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
+parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -230,6 +234,7 @@ data DBUpdateObject
   | WebengageOptions UpdateModel [Set Postgres Webengage.WebengageT] (Where Postgres Webengage.WebengageT)
   | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigOptions UpdateModel [Set Postgres HotSpotConfig.HotSpotConfigT] (Where Postgres HotSpotConfig.HotSpotConfigT)
+  | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -367,3 +372,6 @@ instance FromJSON DBUpdateObject where
       HotSpotConfigUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ HotSpotConfigOptions updateModel updVals whereClause
+      BecknRequestUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ BecknRequestOptions updateModel updVals whereClause
