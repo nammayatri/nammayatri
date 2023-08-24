@@ -519,6 +519,8 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject innerPayload = new JSONObject();
                 JSONObject jsonData = new JSONObject(data);
                 if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
+                    NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    notificationManager.cancel(NotificationUtils.chatNotificationId);
                     innerPayload.put("action", "OpenChatScreen")
                             .put("notification_type", "CHAT_MESSAGE");
                 }
