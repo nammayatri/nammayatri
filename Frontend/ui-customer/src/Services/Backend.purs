@@ -249,10 +249,10 @@ verifyToken payload token = do
         unwrapResponse (x) = x
 
 makeVerifyOTPReq :: String -> String -> VerifyTokenReq
-makeVerifyOTPReq otp defaultId = 
+makeVerifyOTPReq otp defaultId =
     let token = getValueToLocalNativeStore FCM_TOKEN
         deviceToken = if any (_ == token) ["__failed", "", " ", "null", "(null)"] then defaultId <> token else token
-    in 
+    in
         VerifyTokenReq {
             "otp": otp,
             "deviceToken": deviceToken,
@@ -522,7 +522,7 @@ editProfileRequest firstName middleName lastName emailID gender =
     UpdateProfileReq{
           middleName : middleName
         , lastName : lastName
-        , deviceToken : Just Nothing
+        , deviceToken : Nothing
         , firstName : firstName
         , email : emailID
         , referralCode : Nothing
