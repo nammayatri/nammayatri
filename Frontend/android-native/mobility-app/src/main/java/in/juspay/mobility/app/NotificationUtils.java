@@ -300,7 +300,7 @@ public class NotificationUtils {
         String notificationType = data.getString("notification_type");
         String channelId;
         String merchantType = context.getString(R.string.service);
-        String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
+        String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
         if (ALLOCATION_TYPE.equals(notificationType)) {
             System.out.println("showNotification:- " + notificationType);
