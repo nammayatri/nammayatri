@@ -182,8 +182,8 @@ skipButtonConfig state =
           { text = getString DONE
           , color = state.data.config.primaryTextColor
           }
-        , background = Color.black900
         , margin = MarginTop 22
+        , background = state.data.config.primaryBackground
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
         }
@@ -829,7 +829,7 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating, feedbackList = state.data.rideRatingState.feedbackList}}
+ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating, appConfig = state.data.config, feedbackList = state.data.rideRatingState.feedbackList}}
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation

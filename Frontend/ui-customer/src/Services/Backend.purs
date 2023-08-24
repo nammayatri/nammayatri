@@ -37,7 +37,7 @@ import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (Address, Stage(..))
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
-import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>), (/=))
+import Prelude (Unit, bind, discard, map, pure, unit, void, when, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>), (/=))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
@@ -51,6 +51,8 @@ import Services.Config as SC
 import Data.Lens ((^.))
 import Engineering.Helpers.Utils as EHU
 import Accessor (_deviceToken)
+import Constants as Constants
+import Debug (spy)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -170,7 +172,10 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    config <- EHU.getAppConfig Constants.appConfig
+    lift $ lift $ when (config.options.enableAutoReadOtp) $ do
+        _ <- doAff Readers.initiateSMSRetriever
+        pure unit
     headers <- getHeaders' "" false
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where

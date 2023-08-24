@@ -46,7 +46,8 @@ commonConfig =
             , secondaryButtonStroke: "1,#00B8F5"
             , buttonCornerRadius: 8.0
             }
-        , logs: [ "JUSPAY" ]
-        , djd: "sdvs"
         , internationalNumberEnabled : false
+        , options:
+            { enableAutoReadOtp: true
+            }
         }

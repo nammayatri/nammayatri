@@ -51,6 +51,7 @@ type AppConfig =
   , specialLocationView :: Boolean
   , internationalNumberEnabled :: Boolean
   , dashboardUrl :: String
+  , options :: Options
   } 
 
 type QuoteListItemConfig = {
@@ -59,6 +60,10 @@ type QuoteListItemConfig = {
   driverImagebg :: String,
   vehicleHeight :: Int,
   vehicleWidth :: Int
+}
+
+type Options = {
+  enableAutoReadOtp :: Boolean
 }
 
 type RatingConfig = {

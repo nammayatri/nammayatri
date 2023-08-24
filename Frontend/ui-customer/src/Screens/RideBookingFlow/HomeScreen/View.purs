@@ -45,7 +45,7 @@ import Components.SettingSideBar as SettingSideBar
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!))
+import Data.Array (any, length, mapWithIndex, null, (!!), all)
 import Data.Either (Either(..))
 import Data.Int (toNumber, fromString, ceil)
 import Data.Lens ((^.))
@@ -961,7 +961,7 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if ((getMerchant FunctionCall) /= NAMMAYATRI) then
+                if (all (_ /= (getMerchant FunctionCall)) [NAMMAYATRI, MOBILITY_PM, MOBILITY_RS]) then
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
                 else
                 suggestedPriceView push state
@@ -1088,7 +1088,7 @@ completedRideDetails state push =
   , height $ V ((screenHeight unit)/ 2)
   , orientation VERTICAL
   , padding $ Padding 16 16 16 16
-  , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) [Color.black900, Color.black900, Color.pickledBlue, Color.black900]
+  , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) [state.data.config.primaryBackground, state.data.config.primaryBackground, (getValueFromConfig "rideCompletedGradient"), state.data.config.primaryBackground]
   , gravity CENTER
   ][  linearLayout
       [ width MATCH_PARENT

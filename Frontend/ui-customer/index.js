@@ -121,7 +121,7 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = "YATRI"
     } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
       window.merchantID = "YATRISATHI"
-    } else if (clientId.includes("mobility")) {
+    } else if (clientId.includes("mobility") || clientId == "redbus") {
       var merchant = clientId.replace("mobility","")
       merchant = merchant.replace("consumer","")
       merchant = merchant.toUpperCase();
