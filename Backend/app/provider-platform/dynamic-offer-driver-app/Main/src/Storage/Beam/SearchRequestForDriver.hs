@@ -19,6 +19,7 @@
 module Storage.Beam.SearchRequestForDriver where
 
 import qualified Data.Aeson as A
+import Data.ByteString
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -32,12 +33,20 @@ import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import EulerHS.Types
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
+
+extractValue :: KVDBAnswer [ByteString] -> [ByteString]
+extractValue (Right value) = value
+extractValue _ = []
+
+searchReqestForDriverkey :: Text -> Text
+searchReqestForDriverkey prefix = "searchRequestForDriver_" <> prefix
 
 instance FromField Domain.DriverSearchRequestStatus where
   fromField = fromFieldEnum
