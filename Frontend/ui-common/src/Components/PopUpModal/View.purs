@@ -87,7 +87,24 @@ view push state =
         , padding state.padding
         , clickable true
         ]
-        [ linearLayout
+        [   linearLayout
+            [ height WRAP_CONTENT
+             , width MATCH_PARENT
+             , gravity CENTER
+             , visibility state.title.visibility
+            ]
+            [    textView 
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , color $ state.title.color
+                , gravity $ state.title.gravity
+                , padding state.title.padding
+                , margin $ state.title.margin
+                , text $ state.title.text
+                , visibility $ state.title.visibility
+                ] 
+            ]
+            ,linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER

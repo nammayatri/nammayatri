@@ -122,6 +122,7 @@ initData = {
     , config : DC.config
     , logField : empty
     , waitTimeInfo : false
+    , shareRideInfo : false
     },
     props: {
       rideRequestFlow : false
@@ -214,6 +215,7 @@ initData = {
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
+    , shareRidePopUp : false
     , canSendSuggestion : true
     }
 }

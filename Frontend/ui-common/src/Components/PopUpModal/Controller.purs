@@ -35,6 +35,7 @@ data Action = OnButton1Click
             | DismissPopup
 
 type Config = {
+    title :: TextConfig,
     primaryText :: TextConfig,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
@@ -138,6 +139,15 @@ config = {
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
+  , title : {
+      text : "Title",
+      color : Color.black900,
+      gravity : CENTER,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 0),
+      visibility : VISIBLE,
+      textStyle : Heading0
+    }
   , primaryText : {
       text : "Text1",
       color : Color.black800,

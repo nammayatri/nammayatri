@@ -345,7 +345,7 @@ supportButton push state =
             , height WRAP_CONTENT
             , cornerRadius 32.0
             , stroke $ "1,"<> Color.grey900
-            , onClick push $ const ShareRide
+            , onClick push $ const ShareRidePopUP
             , margin $ Margin 6 10 0 6
           ]
           [imageView
@@ -354,7 +354,6 @@ supportButton push state =
             , width $ V 18
             , margin $ Margin 10 12 10 10
             , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
-            , onClick push $ const ShareRide
             ]
           ,textView 
           [ text $ getString SHARE_RIDE

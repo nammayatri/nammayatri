@@ -584,7 +584,8 @@ type HomeScreenStateData =
   , config :: AppConfig
   , logField :: Object Foreign
   --,activeRideWaitTimeInfo :: Boolean
-  ,waitTimeInfo :: Boolean
+  , waitTimeInfo :: Boolean
+  , shareRideInfo :: Boolean
   }
 
 type HomeScreenStateProps =
@@ -663,6 +664,7 @@ type HomeScreenStateProps =
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
+  , shareRidePopUp :: Boolean
   , canSendSuggestion :: Boolean
   }
 

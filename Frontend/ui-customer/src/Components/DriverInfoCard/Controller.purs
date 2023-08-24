@@ -38,7 +38,9 @@ data Action = NoAction
             | CallDriver
             | LiveDashboardAction
             | WaitingInfo  
-            | ScrollSupportButton      
+            | ScrollSupportButton  
+            | ShareRidePopUP
+
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

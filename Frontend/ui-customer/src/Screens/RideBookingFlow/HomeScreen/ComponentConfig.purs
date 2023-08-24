@@ -930,6 +930,58 @@ callSupportConfig state = let
   }
   in popUpConfig'
 
+shareRideCardConfig :: ST.HomeScreenState ->  PopUpModal.Config
+shareRideCardConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    optionButtonOrientation = "VERTICAL"
+  , gravity = CENTER
+  , cornerRadius = (Corners 15.0 true true true true)
+  , margin = (MarginHorizontal 16 16)
+  , padding = (Padding 20 20 20 20)
+  , dismissPopup = true
+  , backgroundClickable = true
+  , primaryText {
+      visibility = GONE
+    }
+  , secondaryText {
+      text = getString SHARE_RIDE_DESCRIPTION
+    , color = Color.black700
+    }
+  , option2 {
+      text =  getString MAYBE_LATER
+    , background = state.data.config.popupBackground
+    , strokeColor = state.data.config.primaryBackground
+    , color = state.data.config.primaryBackground
+    , width = MATCH_PARENT
+    , margin = (MarginLeft 0)
+    }
+  , option1 {
+      text =  getString SHARE_THIS_RIDE
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , background = state.data.config.primaryBackground
+    , width = MATCH_PARENT
+    , margin = (MarginBottom 10)
+    
+
+    }
+  , coverImageConfig {
+     imageUrl = "ny_ic_share_ride," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_ride.png",
+     visibility = VISIBLE
+    , height = V 280
+    , width = MATCH_PARENT
+    }
+  , title {
+    text = getString SHARING_YOUR_RIDE_NOW_IS_THAN_EVER
+   -- , margin = (Margin 24 12 24 32)
+    , color = Color.black800
+    , gravity = CENTER
+    , margin = (MarginBottom 5)
+    }
+  }
+  in popUpConfig'
+
 
 zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
 zoneTimerExpiredConfig state = let
@@ -1105,6 +1157,9 @@ waitTimeInfoCardConfig _ = let
     }
   }
   in requestInfoCardConfig'
+
+
+
 
 reportIssueOptions :: Array OptionButtonList -- need to modify
 reportIssueOptions =

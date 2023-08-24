@@ -620,7 +620,7 @@ data Action = NoAction
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
             | OpenEmergencyHelp
-
+            | ShareRideAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -882,6 +882,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else if state.data.ratingViewState.openReportIssue then continue state {data {ratingViewState {openReportIssue = false}}}
+                          else if state.props.shareRidePopUp then continue state {props {shareRidePopUp = false}}
                           else do
                               pure $ terminateApp state.props.currentStage false
                               continue state
@@ -1164,9 +1165,9 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) state = do
-  continue state{data{waitTimeInfo  = true }}
-
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRidePopUP)) state = do
+  _ <- pure $ performHapticFeedback unit
+  continue state{props{shareRidePopUp = true}}
 
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data  {waitTimeInfo =false}}
 
@@ -1779,6 +1780,20 @@ eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_support_click"
   continue state{props{callSupportPopUp=false}}
+
+eval (ShareRideAction PopUpModal.OnButton2Click) state = do
+    continue state{props{shareRidePopUp=false}}
+
+eval (ShareRideAction PopUpModal.DismissPopup) state = do
+    continue state{props{shareRidePopUp=false}}
+
+eval (ShareRideAction PopUpModal.OnButton1Click) state= do
+  continueWithCmd state
+        [ do
+            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            pure NoAction
+         ]
+
 
 eval (UpdateETA currentETA currentDistance) state = do
   let initDistance = state.data.driverInfoCardState.initDistance
