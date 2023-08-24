@@ -86,6 +86,10 @@ import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
+import in.juspay.mobility.customer.DatabaseHelper;
+import android.content.ContentValues;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
@@ -134,6 +138,64 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         }
     }
 
+    @JavascriptInterface
+    public void saveOfflineDriverInfo(String _Driverinfo){
+        try {
+            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext());
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            // JSONObject driverInfo = new JSONObject(_Driverinfo);
+            // ContentValues contentValues = new ContentValues();
+            // contentValues.put("otp",driverInfo.getString("otp"));
+            // contentValues.put("driverName",driverInfo.getString("driverName"));
+            // contentValues.put("vehicleDetails",driverInfo.getString("vehicleDetails"));
+            // contentValues.put("registrationNumber",driverInfo.getString("registrationNumber"));
+            // contentValues.put("rating",driverInfo.getString("rating"));
+            // contentValues.put("source",driverInfo.getString("source"));
+            // contentValues.put("destination",driverInfo.getString("destination"));
+            // contentValues.put("price",driverInfo.getString("price"));
+            // contentValues.put("distance",driverInfo.getString("distance"));
+            // contentValues.put("estimatedDistance",driverInfo.getString("estimatedDistance"));
+            // contentValues.put("driverNumber",driverInfo.getString("driverNumber"));
+            // contentValues.put("merchantExoPhone",driverInfo.getString("merchantExoPhone"));
+            // contentValues.put("vehicleVariant",driverInfo.getString("vehicleVariant"));
+            // remove existing driverinfo
+            // dbHelper.deleteAllRows(db);
+            // write new driver info
+            // db.insert(dbHelper.DRIVERINFO_TABLE_NAME, null, contentValues);
+            // List<String> record = dbHelper.getAllRows(db).get(0);
+            // Log.i(LOCATION, "dhruv record " + record.get(0) + record.get(1) + " 1");
+            Log.i(LOCATION, "dhruv saving record ");
+        } catch (Exception e) {
+            Log.i(OTHERS, "Dhruv Error writing driver info to sqlite db:" + e);
+        }
+    }
+
+    @JavascriptInterface
+    public String getOfflineDriverInfo(){
+    try{
+        DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext());
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        List<String> record = dbHelper.getAllRows(db).get(0);
+        JSONObject driverInfoObj = new JSONObject();
+        // driverInfoObj.put("otp", record.get(0));
+        // driverInfoObj.put("driverName", record.get(1));
+        // driverInfoObj.put("vehicleDetails", record.get(2));
+        // driverInfoObj.put("registrationNumber", record.get(3));
+        // driverInfoObj.put("rating", record.get(4));
+        // driverInfoObj.put("source", record.get(5));
+        // driverInfoObj.put("destination", record.get(6));
+        // driverInfoObj.put("price", record.get(7));
+        // driverInfoObj.put("distance", record.get(8));
+        // driverInfoObj.put("estimatedDistance", record.get(9));
+        // driverInfoObj.put("driverNumber", record.get(10));
+        // driverInfoObj.put("merchantExoPhone", record.get(11));
+        // driverInfoObj.put("vehicleVariant", record.get(12));
+        return driverInfoObj.toString();
+      } catch(Exception e){
+         Log.i(OTHERS, "Dhruv Error reading driver info from sqlite db:" + e);
+         return "NULL";
+      }
+    }
 
     //region Store and Trigger CallBack
     @JavascriptInterface

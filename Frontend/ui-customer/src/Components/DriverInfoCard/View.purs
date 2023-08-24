@@ -297,6 +297,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
+  , visibility if state.data.isOffline then GONE else VISIBLE
   ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then textView[] else sosView push state
     , linearLayout
       [ height WRAP_CONTENT
@@ -320,7 +321,7 @@ supportButton push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+  , visibility if (not state.data.isOffline) && (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
   , margin $ MarginTop 10
@@ -706,10 +707,23 @@ contactView push state =
     , gravity CENTER_VERTICAL
     , padding $ Padding 16 20 16 16
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
-    ][  linearLayout
+    ][  linearLayout 
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility if state.data.isOffline then VISIBLE else GONE
+        , gravity CENTER_HORIZONTAL
+        ][ textView $ 
+            [ text $ "Reconnect to the network to see live updates"
+            , color Color.black800
+            , singleLine true
+            , gravity CENTER_HORIZONTAL
+            ] <> FontStyle.subHeading1 TypoGraphy
+        ]
+        ,linearLayout
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
         , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
+        , visibility if state.data.isOffline then GONE else VISIBLE
         ][  textView $
             [ text $ state.data.driverName <> " "
             , color Color.black800
@@ -727,43 +741,14 @@ contactView push state =
                 ] <> FontStyle.subHeading1 TypoGraphy
               , textView $
                 [ text case state.data.distance > 1000 of
-                    true -> getString AWAY
-                    false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
+                            true -> getString AWAY
+                            false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
                 , color Color.black800
                 ] <> FontStyle.subHeading1 TypoGraphy
               ]
           ]
-      , linearLayout[
-          width MATCH_PARENT
-        , gravity RIGHT
-        , height WRAP_CONTENT
-        ][linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , gravity RIGHT
-          ] [ linearLayout
-              [ height $ V 40
-              , width $ V 64
-              , gravity CENTER
-              , cornerRadius 20.0
-              , background state.data.config.driverInfoConfig.callBackground
-              , stroke state.data.config.driverInfoConfig.callButtonStroke
-              , onClick (\action -> do
-                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
-                  else pure unit
-                  push action
-              ) (const MessageDriver)
-              ][ imageView
-                  [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
-                  , height $ V state.data.config.driverInfoConfig.callHeight
-                  , width $ V state.data.config.driverInfoConfig.callWidth
-                  ]
-              ]
-            ]
-          ]
     ]
     
-
 ---------------------------------- driverDetailsView ---------------------------------------
 
 
@@ -792,6 +777,41 @@ driverDetailsView push state =
               , padding $ Padding 2 3 2 1
               , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
               ]  
+            ,linearLayout
+              [ height $ V 45
+              , width $ V 45
+              , gravity CENTER
+              , cornerRadius 25.0
+              , margin $ Margin 8 3 2 1
+              , background state.data.config.driverInfoConfig.callBackground
+              , stroke state.data.config.driverInfoConfig.callButtonStroke
+              , onClick push (const CallDriver)
+              ][ imageView
+                  [ imageWithFallback $ "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                  , height $ V state.data.config.driverInfoConfig.callHeight
+                  , width $ V state.data.config.driverInfoConfig.callWidth
+                  ]
+              ]
+            ,linearLayout
+              [ height $ V 45
+              , width $ V 45
+              , gravity CENTER
+              , cornerRadius 25.0
+              , margin $ Margin 2 3 2 1
+              , background state.data.config.driverInfoConfig.callBackground
+              , stroke state.data.config.driverInfoConfig.callButtonStroke
+              , visibility if state.data.isOffline then GONE else VISIBLE
+              , onClick (\action -> do
+                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                  else pure unit
+                  push action
+              ) (const MessageDriver)
+              ][ imageView
+                  [ imageWithFallback $ if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png"
+                  , height $ V state.data.config.driverInfoConfig.callHeight
+                  , width $ V state.data.config.driverInfoConfig.callWidth
+                  ]
+              ]
           ]
         , textView $
           [ text state.data.driverName

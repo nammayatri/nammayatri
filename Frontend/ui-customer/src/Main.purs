@@ -27,16 +27,21 @@ import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import Effect.Ref (new)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Flow as Flow
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import JBridge as JBridge
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), discard)
+import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), discard, not)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
+import Storage (isLocalStageOn, getValueToLocalStore, setValueToLocalStore, KeyStore(..))
+import Screens.Types (Stage(..))
+import Debug (spy)
+import Types.App (GlobalState(..))
 
 main :: Event -> Effect Unit
 main event = do
@@ -80,7 +85,9 @@ onConnectivityEvent triggertype = do
             Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
           _ ← runExceptT $ runBackT $ case triggertype of 
               "LOCATION_DISABLED" -> Flow.permissionScreenFlow triggertype
-              "INTERNET_ACTION" -> Flow.permissionScreenFlow triggertype
+              "INTERNET_ACTION" -> do 
+                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ isOffline = true } })
+                 Flow.permissionScreenFlow triggertype
               "REFRESH" -> Flow.baseAppFlow payload' true
               _ -> Flow.baseAppFlow payload' true
           pure unit

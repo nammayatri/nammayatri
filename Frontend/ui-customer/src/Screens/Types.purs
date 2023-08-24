@@ -659,6 +659,7 @@ type HomeScreenStateProps =
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
+  , isOffline :: Boolean
   }
 
 type RouteEndPoints = {
@@ -913,6 +914,23 @@ type DriverInfoCard =
   , createdAt :: String
   , initDistance :: Maybe Int
   , config :: AppConfig
+  , vehicleVariant :: String
+  , isOffline :: Boolean
+  }
+
+type OfflineDriverInfoCard = 
+  { otp :: String
+  , driverName :: String
+  , vehicleDetails :: String
+  , registrationNumber :: String
+  , rating :: Number
+  , source :: String
+  , destination :: String
+  , price :: Int
+  , distance :: Int
+  , estimatedDistance :: String
+  , driverNumber :: Maybe String
+  , merchantExoPhone :: String
   , vehicleVariant :: String
   }
 

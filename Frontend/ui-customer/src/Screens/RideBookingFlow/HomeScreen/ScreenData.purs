@@ -213,6 +213,7 @@ initData = {
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
+    , isOffline : false
     }
 }
 
@@ -301,6 +302,7 @@ dummyDriverInfo =
   , initDistance : Nothing
   , config : DC.config
   , vehicleVariant : ""
+  , isOffline : false
   }
 
 dummySettingBar :: SettingSideBarState

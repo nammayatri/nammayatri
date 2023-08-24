@@ -120,13 +120,18 @@ cancelAppConfig state = let
   config' = PopUpModal.config
   popUpConfig' = config'{
       gravity = BOTTOM,
-      dismissPopup =true,
+      dismissPopup = true,
       optionButtonOrientation = "VERTICAL",
       buttonLayoutMargin = Margin 16 0 16 20,
       primaryText {
-        text = distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
-      , margin = Margin 16 20 16 20},
-      secondaryText { visibility = GONE },
+        text = if state.props.isOffline then "Looks like you are offline!" else distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
+      , margin = Margin 16 20 16 20
+      },
+      secondaryText { 
+        text = "Your driver might be still on the way Reconnect to the network to cancle the ride"
+      , visibility = if state.props.isOffline then VISIBLE else GONE
+      , margin = Margin 16 0 16 20
+        },
       option1 {
         text = getString CALL_DRIVER
       , color = Color.yellow900
@@ -134,9 +139,10 @@ cancelAppConfig state = let
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
+      , margin = Margin 16 0 16 20
       },
       option2 {
-        text = getString CANCEL_RIDE
+        text = if state.props.isOffline then "Back to ride details" else getString CANCEL_RIDE
       , textStyle = FontStyle.SubHeading1
       , color = Color.black700
       , background = Color.white900
@@ -816,6 +822,7 @@ driverInfoTransformer state =
     , lastMessage : state.data.lastMessage
     , config : state.data.config
     , vehicleVariant : cardState.vehicleVariant
+    , isOffline : state.props.isOffline
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

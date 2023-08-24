@@ -514,6 +514,7 @@ data ScreenOutput = LogoutUser
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
+                  | InternetCallBack_ HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -619,9 +620,15 @@ data Action = NoAction
             | TerminateApp
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
+            | InternetCallBackCustomer_ String
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval (InternetCallBackCustomer_ isInternetAvailable) state = do
+  if( isInternetAvailable == "true") then do
+    updateAndExit state (InternetCallBack_ state)
+    else continue state  
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -1148,12 +1155,15 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
-eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
+eval (CancelSearchAction PopUpModal.DismissPopup) state = continue state {props { cancelSearchCallDriver = false }} 
 
 eval (CancelSearchAction PopUpModal.OnButton1Click) state = continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
-  continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
+  if state.props.isOffline then 
+    continue state {props { cancelSearchCallDriver = false }}
+    else
+    continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
   if state.data.config.driverInfoConfig.showCancelPrevention && not state.props.isSpecialZone then

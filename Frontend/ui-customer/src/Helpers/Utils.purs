@@ -75,6 +75,8 @@ import Types.App (GlobalState(..))
 import Types.App (GlobalState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
+import Services.API (RideBookingRes(..))
+import Screens.Types (OfflineDriverInfoCard(..), DriverInfoCard(..))
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -175,6 +177,8 @@ foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
+foreign import saveDriverInfo :: DriverInfoCard -> Unit
+foreign import getOfflineDriverInfo :: Unit -> OfflineDriverInfoCard
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
 foreign import getMobileNumber :: EffectFn2 String String String

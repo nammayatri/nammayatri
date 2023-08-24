@@ -146,6 +146,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                            case vehicleVariant of
                             Just variant -> variant
                             Nothing -> ""
+      , isOffline : false
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

@@ -1,3 +1,4 @@
+import { WindowsBalloon } from 'node-notifier';
 import { callbackMapper } from 'presto-ui';
 
 var timerIdDebounce = null;
@@ -502,4 +503,33 @@ export const getMobileNumber = function (signatureAuthData, maskedNumber) {
   } catch (err) {
     console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
+}
+
+export const saveDriverInfo = function(driverInfo){
+  var _driverInfo = JSON.stringify(driverInfo);
+  window.JBridge.saveDriverInfo(_driverInfo);
+  window.JBridge.setKeysInSharedPrefs("driverinfo", _driverInfo);
+  // window.JBridge.saveOfflineDriverInfo(_driverInfo);
+}
+
+export const getOfflineDriverInfo = function(){
+  var jsDriverInfo = JBridge.getFromSharedPrefs("driverinfo");
+  var driverInfo = JSON.parse(jsDriverInfo);
+  var offlineDriverInfo =
+    { otp : driverInfo["otp"]
+     ,driverName : driverInfo["driverName"]
+     ,vehicleDetails : driverInfo["vehicleDetails"]
+     ,registrationNumber : driverInfo["registrationNumber"]
+     ,rating : driverInfo["rating"]
+     ,source : driverInfo["source"]
+     ,destination : driverInfo["destination"]
+     ,price : driverInfo["price"]
+     ,distance : driverInfo["distance"]
+     ,estimatedDistance : driverInfo["estimatedDistance"]
+     ,driverNumber : driverInfo["driverNumber"]
+     ,merchantExoPhone : driverInfo["merchantExoPhone"]
+     ,vehicleVariant : driverInfo["vehicleVariant"]
+    };
+  //console.log("dhruv got this from sqlite: ", window.JBridge.getOfflineDriverInfo());
+  return offlineDriverInfo;
 }
