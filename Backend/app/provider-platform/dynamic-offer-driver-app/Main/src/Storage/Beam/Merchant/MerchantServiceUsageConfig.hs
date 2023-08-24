@@ -53,6 +53,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     faceVerificationService :: B.C f VerificationService,
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
     issueTicketService :: B.C f IssueTicketService,
+    getExophone :: B.C f CallService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }

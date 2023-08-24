@@ -15,6 +15,7 @@
 module Domain.Types.Exophone where
 
 import qualified Domain.Types.Merchant as DM
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
@@ -26,6 +27,8 @@ data Exophone = Exophone
     backupPhone :: Text,
     isPrimaryDown :: Bool,
     exophoneType :: ExophoneType,
+    -- isBackupDown Bool -- do we need this?
+    callService :: CallService,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

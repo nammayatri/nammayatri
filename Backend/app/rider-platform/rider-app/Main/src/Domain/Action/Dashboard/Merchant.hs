@@ -90,6 +90,7 @@ buildExophone merchantId now req = do
         primaryPhone = req.primaryPhone,
         backupPhone = req.backupPhone,
         isPrimaryDown = False,
+        callService = req.callService,
         updatedAt = now,
         createdAt = now
       }

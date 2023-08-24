@@ -21,10 +21,11 @@ module Storage.Queries.Exophone
 where
 
 import qualified Database.Beam as B
-import Domain.Types.Exophone as DE (Exophone (..))
+import Domain.Types.Exophone as DE (Exophone (..), ExophoneType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -49,6 +50,9 @@ findAllByMerchantId (Id merchantId) = do
 
 findAllExophones :: MonadFlow m => m [Exophone]
 findAllExophones = findAllWithDb [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
+
+findByMerchantServiceAndExophoneType :: MonadFlow m => Id DM.Merchant -> CallService -> DE.ExophoneType -> m [Exophone]
+findByMerchantServiceAndExophoneType merchantId service exophoneType = findAllWithKV [Se.And [Se.Is BeamE.merchantId $ Se.Eq merchantId.getId, Se.Is BeamE.callService $ Se.Eq service, Se.Is BeamE.exophoneType $ Se.Eq exophoneType]]
 
 updateAffectedPhones :: MonadFlow m => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
@@ -87,6 +91,7 @@ instance FromTType' BeamE.Exophone Exophone where
             backupPhone = backupPhone,
             isPrimaryDown = isPrimaryDown,
             exophoneType = exophoneType,
+            callService = callService,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -100,6 +105,7 @@ instance ToTType' BeamE.Exophone Exophone where
         BeamE.backupPhone = backupPhone,
         BeamE.isPrimaryDown = isPrimaryDown,
         BeamE.exophoneType = exophoneType,
+        BeamE.callService = callService,
         BeamE.createdAt = createdAt,
         BeamE.updatedAt = updatedAt
       }
