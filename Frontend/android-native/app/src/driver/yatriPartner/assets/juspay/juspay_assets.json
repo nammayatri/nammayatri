@@ -352,6 +352,7 @@
       "ny_namma_yatri" : true,
       "ny_no_automatic_payments" : true,
       "ny_no_manual_payments" : true,
+      "ny_rc_deactivated" : true,
       "popup_background" : true,
       "progress_circle" : true,
       "progress_loader" : true,

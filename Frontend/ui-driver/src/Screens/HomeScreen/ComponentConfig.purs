@@ -286,6 +286,53 @@ cancelConfirmationConfig state = let
   }
   in popUpConfig'
 
+driverRCPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config 
+driverRCPopUpConfig state = let 
+  config' = PopUpModal.config 
+  popUpConfig' = config'{
+    backgroundClickable = false,
+    gravity = CENTER,
+    buttonLayoutMargin =(Margin 0 0 0 0),
+    cornerRadius = (PTD.Corners 16.0 true true true true), 
+    padding = Padding 16 24 16 16,
+    optionButtonOrientation = "VERTICAL",
+    margin = (Margin 24 164 24 164), 
+    primaryText {
+      text =  getString RC_DEACTIVATED, 
+      margin = MarginTop 16 
+    }, 
+    secondaryText {
+      text = getString RC_DEACTIVATED_DETAILS, 
+      color = Color.black700,
+      margin = (Margin 0 0 0 0)
+    } ,
+    option1 {
+      background = Color.black900,
+      text = getString GO_TO_VEHICLE_DETAILS,
+      color = Color.yellow900, 
+      margin = MarginTop 24,
+      width = MATCH_PARENT, 
+      height = WRAP_CONTENT 
+    } , 
+    option2 {
+      background = Color.white900, 
+      text = getString CLOSE,
+      width = MATCH_PARENT, 
+      height = WRAP_CONTENT ,
+      color =  Color.black650,
+      strokeColor = Color.white900, 
+      padding = Padding 16 6 16 6, 
+      margin = Margin 0 8 0 0
+    }, 
+    coverImageConfig {
+      visibility = VISIBLE,
+      imageUrl = "ny_rc_deactivated," <> (getAssetStoreLink FunctionCall) <> "ny_rc_deactivated.png", 
+      height = V 182,
+      width = V 280
+    }
+  }
+  in popUpConfig' 
+
 ------------------------------------ chatViewConfig -----------------------------
 chatViewConfig :: ST.HomeScreenState -> ChatView.Config
 chatViewConfig state = let

@@ -228,6 +228,7 @@ data Action = BackPressed
             | AddRcButtonAC PrimaryButtonController.Action
             | SkipActiveRc
             | RemoveEditRC
+            | DirectActivateRc EditRc
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -471,6 +472,8 @@ eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton1Click)) state 
 
 eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{activateOrDeactivateRcView=false}}
 
+eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{activateOrDeactivateRcView=false}}
+
 eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  exit $ DeletingRc state
 
 eval (DeleteRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{deleteRcView=false}}
@@ -498,6 +501,10 @@ eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
   if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age
     else if (state.props.detailsUpdationType == Just VEHICLE_NAME) then continue state{props{detailsUpdationType = Nothing}} -- update name
     else continue state
+
+eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = state.data.activeRCData.rcDetails.certificateNumber, isRCActive = state.data.activeRCData.rcStatus}} [
+    pure $ DeactivateRc rcType
+  ]
 
 eval _ state = continue state
 

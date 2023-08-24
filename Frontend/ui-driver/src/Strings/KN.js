@@ -751,5 +751,10 @@ const kannadaStrings = {
 	NEED_HELP_JOINING_THE_PLAN : "ಯೋಜನೆ ಅಥವಾ ಆಟೋಪೇಗೆ ಸೇರಲು ಸಹಾಯ ಬೇಕೇ?",
   NEED_HELP_CALL_SUPPORT : "ಸಹಾಯ ಬೇಕೇ? <span style='color:#2194FF'>ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ</span>",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "ವಿಶೇಷ ರಿಯಾಯಿತಿಗಳನ್ನು ಪಡೆಯಲು ಈಗಲೇ ಆಟೋಪೇ ಸೆಟಪ್ ಮಾಡ",
-	SETUP_NOW : "ಈಗಲೇ ಸೆಟಪ್ ಮಾಡಿ"
+  SETUP_NOW : "ಈಗಲೇ ಸೆಟಪ್ ಮಾಡಿ",
+  HELP_STR : "ಸಹಾಯ", 
+  GO_TO_VEHICLE_DETAILS : "ವಾಹನದ ವಿವರಗಳಿಗೆ ಹೋಗಿ",
+  CLOSE: "ಮುಚ್ಚಿ", 
+  RC_DEACTIVATED : "RC ನಿಷ್ಕ್ರಿಯಗೊಂಡಿದೆ", 
+  RC_DEACTIVATED_DETAILS : "ನಿಮ್ಮ RC ಪ್ರಸ್ತುತ ಮತ್ತೊಂದು ಚಾಲಕ ಖಾತೆಯಲ್ಲಿ ಸಕ್ರಿಯವಾಗಿದೆ. ಸವಾರಿಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು RC ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ"
 }

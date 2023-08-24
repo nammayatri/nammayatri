@@ -300,6 +300,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | ON_CALL HomeScreenState
                           | OPEN_PAYMENT_PAGE HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
+                          | GO_TO_VEHICLE_DETAILS_SCREEN
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

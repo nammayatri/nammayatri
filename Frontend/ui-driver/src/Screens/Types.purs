@@ -887,7 +887,9 @@ type HomeScreenProps =  {
   showAadharPopUp :: Boolean,
   canSendSuggestion :: Boolean,
   showOffer :: Boolean,
-  autoPayBanner :: Boolean
+  autoPayBanner :: Boolean,
+  rcActive :: Boolean, 
+  rcDeactivePopup :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
