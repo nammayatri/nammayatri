@@ -69,6 +69,7 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
             issueTicketService = issueTicketService,
             useFraudDetection = useFraudDetection,
             enableDashboardSms = enableDashboardSms,
+            getExophone = getExophone,
             updatedAt = updatedAt,
             createdAt = createdAt
           }
@@ -93,6 +94,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.issueTicketService = issueTicketService,
         BeamMSUC.useFraudDetection = useFraudDetection,
         BeamMSUC.enableDashboardSms = enableDashboardSms,
+        BeamMSUC.getExophone = getExophone,
         BeamMSUC.updatedAt = updatedAt,
         BeamMSUC.createdAt = createdAt
       }

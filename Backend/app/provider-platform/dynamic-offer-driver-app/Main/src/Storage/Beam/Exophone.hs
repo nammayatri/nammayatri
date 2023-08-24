@@ -33,6 +33,7 @@ import qualified Domain.Types.Exophone as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
@@ -55,6 +56,7 @@ data ExophoneT f = ExophoneT
     backupPhone :: B.C f Text,
     exophoneType :: B.C f Domain.ExophoneType,
     isPrimaryDown :: B.C f Bool,
+    callService :: B.C f CallService,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -77,6 +79,7 @@ exophoneTMod =
       backupPhone = B.fieldNamed "backup_phone",
       isPrimaryDown = B.fieldNamed "is_primary_down",
       exophoneType = B.fieldNamed "exophone_type",
+      callService = B.fieldNamed "call_service",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

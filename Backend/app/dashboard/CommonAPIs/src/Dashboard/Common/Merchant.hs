@@ -25,6 +25,7 @@ import Data.Aeson
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
+import Kernel.External.Call.Types
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Flow as FCM
@@ -66,7 +67,8 @@ derivePersistField "MerchantEndpoint"
 
 data ExophoneReq = ExophoneReq
   { primaryPhone :: Text,
-    backupPhone :: Text
+    backupPhone :: Text,
+    callService :: CallService
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

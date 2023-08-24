@@ -79,16 +79,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be MapsService
 
 instance FromBackendRow Postgres MapsService
 
-instance FromField CallService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CallService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be CallService
-
-instance FromBackendRow Postgres CallService
-
 instance FromField [SmsService] where
   fromField = fromFieldSmsService
 
@@ -144,9 +134,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [WhatsappService]
 
 instance FromBackendRow Postgres [WhatsappService]
 
-instance IsString CallService where
-  fromString = show
-
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
     initiateCall :: B.C f CallService,
@@ -166,6 +153,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     faceVerificationService :: B.C f VerificationService,
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
     issueTicketService :: B.C f IssueTicketService,
+    getExophone :: B.C f CallService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }
@@ -200,6 +188,7 @@ merchantServiceUsageConfigTMod =
       faceVerificationService = B.fieldNamed "face_verification_service",
       aadhaarVerificationService = B.fieldNamed "aadhaar_verification_service",
       issueTicketService = B.fieldNamed "issue_ticket_service",
+      getExophone = B.fieldNamed "get_exophone",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }

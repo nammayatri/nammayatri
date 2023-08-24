@@ -26,6 +26,7 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
@@ -36,6 +37,7 @@ data ExophoneT f = ExophoneT
     primaryPhone :: B.C f Text,
     backupPhone :: B.C f Text,
     isPrimaryDown :: B.C f Bool,
+    callService :: B.C f CallService,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -57,6 +59,7 @@ exophoneTMod =
       primaryPhone = B.fieldNamed "primary_phone",
       backupPhone = B.fieldNamed "backup_phone",
       isPrimaryDown = B.fieldNamed "is_primary_down",
+      callService = B.fieldNamed "call_service",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

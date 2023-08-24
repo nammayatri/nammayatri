@@ -75,19 +75,6 @@ instance FromBackendRow Postgres NotificationService
 instance IsString NotificationService where
   fromString = show
 
-instance FromField CallService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CallService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be CallService
-
-instance FromBackendRow Postgres CallService
-
-instance IsString CallService where
-  fromString = show
-
 instance FromField MapsService where
   fromField = fromFieldEnum
 
@@ -158,6 +145,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     issueTicketService :: B.C f IssueTicketService,
     enableDashboardSms :: B.C f Bool,
+    getExophone :: B.C f CallService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }
@@ -191,6 +179,7 @@ merchantServiceUsageConfigTMod =
       whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
       issueTicketService = B.fieldNamed "issue_ticket_service",
       enableDashboardSms = B.fieldNamed "enable_dashboard_sms",
+      getExophone = B.fieldNamed "get_exophone",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
