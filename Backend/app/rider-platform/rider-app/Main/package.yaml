@@ -6,9 +6,7 @@ author: "nammayatri"
 maintainer: "nammayatri"
 copyright: "2023 Juspay Technologies Private Limited"
 
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis: The nammayatri rider application
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
