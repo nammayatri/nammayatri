@@ -5,6 +5,7 @@ import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
+import qualified Kernel.Storage.Beam.BecknRequestDriver as BecknRequest
 import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
@@ -163,6 +164,7 @@ data UpdateModel
   | FeedbackFormUpdate
   | FeedbackUpdate
   | FeedbackBadgeUpdate
+  | BecknRequestUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -242,6 +244,7 @@ getTagUpdate VehicleUpdate = "VehicleOptions"
 getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate FeedbackUpdate = "FeedbackOptions"
 getTagUpdate FeedbackBadgeUpdate = "FeedbackBadgeOptions"
+getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "BapMetadataOptions" = return BapMetadataUpdate
@@ -320,6 +323,7 @@ parseTagUpdate "VehicleOptions" = return VehicleUpdate
 parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "FeedbackOptions" = return FeedbackUpdate
 parseTagUpdate "FeedbackBadgeOptions" = return FeedbackBadgeUpdate
+parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -399,6 +403,7 @@ data DBUpdateObject
   | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
   | FeedbackOptions UpdateModel [Set Postgres Feedback.FeedbackT] (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeOptions UpdateModel [Set Postgres FeedbackBadge.FeedbackBadgeT] (Where Postgres FeedbackBadge.FeedbackBadgeT)
+  | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -638,3 +643,6 @@ instance FromJSON DBUpdateObject where
       FeedbackBadgeUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ FeedbackBadgeOptions updateModel updVals whereClause
+      BecknRequestUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ BecknRequestOptions updateModel updVals whereClause

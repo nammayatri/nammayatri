@@ -57,6 +57,7 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("Webengage" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
     |::| runCreate dbConf ("FeedbackForm" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreate dbConf ("HotSpotConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
+    |::| runCreate dbConf ("BecknRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
   where
     runCreate dbConf model object = do
       let dbObjects = map (\(dbObject, _, _) -> dbObject) object

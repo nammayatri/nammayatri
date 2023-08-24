@@ -4,6 +4,7 @@
 module Types.DBSync.Create where
 
 import EulerHS.Prelude
+import qualified Kernel.Storage.Beam.BecknRequestRider as BecknRequest
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
@@ -90,6 +91,7 @@ data DBCreateObject
   | WebengageObject Webengage.Webengage
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | HotSpotConfigObject HotSpotConfig.HotSpotConfig
+  | BecknRequestObject BecknRequest.BecknRequest
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -135,3 +137,4 @@ modelName (TripTermsObject _) = "TripTerms"
 modelName (WebengageObject _) = "Webengage"
 modelName (FeedbackFormObject _) = "FeedbackForm"
 modelName (HotSpotConfigObject _) = "HotSpotConfig"
+modelName (BecknRequestObject _) = "BecknRequest"

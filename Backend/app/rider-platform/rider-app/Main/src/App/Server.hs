@@ -31,7 +31,7 @@ run :: Env -> Application
 run = withModifiedEnv $ \modifiedEnv ->
   BU.run appAPI API.handler context modifiedEnv
     & logRequestAndResponse modifiedEnv
-    & logBecknRequest modifiedEnv.appEnv
+    & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version appAPI
     & hashBodyForSignature
     & supportProxyAuthorization
