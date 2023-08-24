@@ -765,5 +765,10 @@ const hindiStrings = {
   GET_SPECIAL_OFFERS : "विशेष ऑफ़र प्राप्त करें",
   VALID_ONLY_IF_PAYMENT : "भुगतान पूरा होने पर ही मान्य",
   HELP_STR : "सहायता",
-  REFRESH_STRING : "पुनः लोड करें"
+  REFRESH_STRING : "पुनः लोड करें",
+  HELP_STR : "सहायता", 
+  GO_TO_VEHICLE_DETAILS : "वाहन विवरण पर जाएं",
+  CLOSE: "बंद करना", 
+  RC_DEACTIVATED : "आरसी निष्क्रिय है", 
+  RC_DEACTIVATED_DETAILS : "आपकी आरसी वर्तमान में किसी अन्य ड्राइवर के खाते पर सक्रिय है। सवारी लेना शुरू करने के लिए आरसी सक्रिय करें"
 }

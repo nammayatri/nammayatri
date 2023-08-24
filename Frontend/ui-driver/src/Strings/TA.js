@@ -733,5 +733,10 @@ const tamilStrings = {
   GET_SPECIAL_OFFERS : "சிறப்பு சலுகைகளைப் பெறுங்கள்",
   VALID_ONLY_IF_PAYMENT : "பணம் செலுத்தினால் மட்டுமே செல்லுபடியாகும்",
   HELP_STR : "உதவி",
-  REFRESH_STRING : "புதுப்பிப்பு"
+  REFRESH_STRING : "புதுப்பிப்பு",
+  HELP_STR : "உதவி", 
+  GO_TO_VEHICLE_DETAILS : "வாகன விவரங்களுக்குச் செல்லவும்",
+  CLOSE: "மூடு", 
+  RC_DEACTIVATED : "RC செயலிழக்கப்பட்டது", 
+  RC_DEACTIVATED_DETAILS : "உங்கள் RC தற்போது மற்றொரு டிரைவரின் கணக்கில் செயலில் உள்ளது. ரைடுகளைத் தொடங்க RC ஐச் செயல்படுத்தவும்"
 }

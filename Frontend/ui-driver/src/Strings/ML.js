@@ -713,5 +713,9 @@ const mlStrings = {
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
   HELP_STR : "HELP",
-  REFRESH_STRING : "Refresh"
+  REFRESH_STRING : "Refresh",
+  GO_TO_VEHICLE_DETAILS : "വാഹന വിശദാംശങ്ങളിലേക്ക് പോകുക",
+  CLOSE: "അടയ്ക്കുക", 
+  RC_DEACTIVATED : "RC നിർജ്ജീവമാണ്", 
+  RC_DEACTIVATED_DETAILS : "നിങ്ങളുടെ RC നിലവിൽ മറ്റൊരു ഡ്രൈവറുടെ അക്കൗണ്ടിൽ സജീവമാണ്. റൈഡുകൾ ആരംഭിക്കാൻ ഒരു RC സജീവമാക്കുക"
 }

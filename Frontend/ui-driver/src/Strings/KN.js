@@ -738,5 +738,10 @@ const kannadaStrings = {
   GET_SPECIAL_OFFERS : "ಸ್ಪೆಷಲ್ ಆಫರ್ಗಳು ಪಡೆಯಿರಿ",
   VALID_ONLY_IF_PAYMENT : "ಪಾವತಿ ಪೂರ್ಣಗೊಂಡರೆ ಮಾತ್ರ ಮಾನ್ಯವಾಗಿರುತ್ತದೆ",
   HELP_STR : "ಸಹಾಯ",
-  REFRESH_STRING : "ರಿಫ್ರೆಶ್"
+  REFRESH_STRING : "ರಿಫ್ರೆಶ್",
+  HELP_STR : "ಸಹಾಯ", 
+  GO_TO_VEHICLE_DETAILS : "ವಾಹನದ ವಿವರಗಳಿಗೆ ಹೋಗಿ",
+  CLOSE: "ಮುಚ್ಚಿ", 
+  RC_DEACTIVATED : "RC ನಿಷ್ಕ್ರಿಯಗೊಂಡಿದೆ", 
+  RC_DEACTIVATED_DETAILS : "ನಿಮ್ಮ RC ಪ್ರಸ್ತುತ ಮತ್ತೊಂದು ಚಾಲಕ ಖಾತೆಯಲ್ಲಿ ಸಕ್ರಿಯವಾಗಿದೆ. ಸವಾರಿಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು RC ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ"
 }

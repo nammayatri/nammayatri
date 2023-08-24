@@ -595,5 +595,9 @@ const frenchStrings = {
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
   HELP_STR : "HELP",
-  REFRESH_STRING : "Refresh"
+  REFRESH_STRING : "Refresh",
+  GO_TO_VEHICLE_DETAILS : "Go to Vehicle Details",
+  CLOSE: "Fermer", 
+  RC_DEACTIVATED : "RC est désactivé", 
+  RC_DEACTIVATED_DETAILS : "Votre RC est actuellement active sur le compte d'un autre conducteur. Activez un RC pour commencer à faire des balades"
 }

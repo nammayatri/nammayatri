@@ -775,6 +775,10 @@ data STR = LETS_GET_STARTED
         | VALID_ONLY_IF_PAYMENT
         | HELP_STR
         | REFRESH_STRING
+        | GO_TO_VEHICLE_DETAILS 
+        | CLOSE
+        | RC_DEACTIVATED 
+        | RC_DEACTIVATED_DETAILS 
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1538,3 +1542,7 @@ getStringFromEnum key = case key of
     VALID_ONLY_IF_PAYMENT -> "VALID_ONLY_IF_PAYMENT"
     HELP_STR -> "HELP_STR"
     REFRESH_STRING -> "REFRESH_STRING"
+    GO_TO_VEHICLE_DETAILS -> "GO_TO_VEHICLE_DETAILS"
+    CLOSE -> "CLOSE"
+    RC_DEACTIVATED  -> "RC_DEACTIVATED"
+    RC_DEACTIVATED_DETAILS -> "RC_DEACTIVATED_DETAILS"

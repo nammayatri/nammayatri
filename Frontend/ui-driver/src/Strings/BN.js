@@ -753,5 +753,10 @@ const bengaliStrings = {
 	GET_SPECIAL_OFFERS : "Get Special Offers",
 	VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
 	HELP_STR : "HELP",
-	REFRESH_STRING : "Refresh"
-	}
+	REFRESH_STRING : "Refresh",
+	HELP_STR : "HELP", 
+	GO_TO_VEHICLE_DETAILS : "যানবাহনের বিবরণে যান",
+  CLOSE: "বন্ধ", 
+  RC_DEACTIVATED : "RC নিষ্ক্রিয় করা হয়েছে", 
+  RC_DEACTIVATED_DETAILS : "আপনার আরসি বর্তমানে অন্য ড্রাইভারের অ্যাকাউন্টে সক্রিয় আছে। রাইড নেওয়া শুরু করতে একটি RC সক্রিয় করুন"
+}

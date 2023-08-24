@@ -135,6 +135,8 @@ initData = {
         showlinkAadhaarPopup : false,
         isChatOpened : false,
         showAadharPopUp : true,
-        showOffer : false
+        showOffer : false, 
+        rcActive : false, 
+        rcDeactivePopup : false
     }
 }
