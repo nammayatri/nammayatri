@@ -500,7 +500,7 @@ mkUpdateProfileRequest _ =
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing
-        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
+        , deviceToken : Nothing
         , firstName : Nothing
         , email : Nothing
         , referralCode : Nothing
@@ -522,7 +522,7 @@ editProfileRequest firstName middleName lastName emailID gender =
     UpdateProfileReq{
           middleName : middleName
         , lastName : lastName
-        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
+        , deviceToken : Just Nothing
         , firstName : firstName
         , email : emailID
         , referralCode : Nothing
