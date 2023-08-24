@@ -41,6 +41,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
@@ -221,7 +222,8 @@ handler merchantId req eitherReq = do
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
 findRandomExophone merchantId = do
-  exophones <- CQExophone.findAllCallExophoneByMerchantId merchantId
+  merchantServiceUsageConfig <- CMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  exophones <- CQExophone.findByMerchantServiceAndExophoneType merchantId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantId.getId
     e : es -> pure $ e :| es

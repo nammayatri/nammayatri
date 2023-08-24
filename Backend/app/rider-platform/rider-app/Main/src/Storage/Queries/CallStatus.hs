@@ -44,7 +44,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
       Se.Set BeamCS.recordingUrl recordingUrl,
       Se.Set BeamCS.status status
     ]
-    [Se.Is BeamCS.callId (Se.Eq callId)]
+    [Se.Is BeamCS.id (Se.Eq callId)]
 
 instance FromTType' BeamCS.CallStatus CallStatus where
   fromTType' BeamCS.CallStatusT {..} = do

@@ -25,8 +25,9 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, null)
 import Kernel.Beam.Functions
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common

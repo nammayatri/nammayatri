@@ -52,6 +52,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     issueTicketService :: B.C f IssueTicketService,
     enableDashboardSms :: B.C f Bool,
+    getExophone :: B.C f CallService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }

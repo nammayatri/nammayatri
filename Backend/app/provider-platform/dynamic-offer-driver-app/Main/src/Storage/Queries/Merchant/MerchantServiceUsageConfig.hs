@@ -71,6 +71,7 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
             faceVerificationService = faceVerificationService,
             aadhaarVerificationService = aadhaarVerificationService,
             issueTicketService = issueTicketService,
+            getExophone = getExophone,
             updatedAt = updatedAt,
             createdAt = createdAt
           }
@@ -96,6 +97,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.faceVerificationService = faceVerificationService,
         BeamMSUC.aadhaarVerificationService = aadhaarVerificationService,
         BeamMSUC.issueTicketService = issueTicketService,
+        BeamMSUC.getExophone = getExophone,
         BeamMSUC.updatedAt = updatedAt,
         BeamMSUC.createdAt = createdAt
       }

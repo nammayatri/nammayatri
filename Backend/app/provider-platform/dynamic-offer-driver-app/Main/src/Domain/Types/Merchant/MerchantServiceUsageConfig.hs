@@ -45,6 +45,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     aadhaarVerificationService :: AadhaarVerificationService,
     faceVerificationService :: VerificationService,
     issueTicketService :: IssueTicketService,
+    getExophone :: CallService,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
