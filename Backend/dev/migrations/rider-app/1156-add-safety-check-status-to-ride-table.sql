@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.ride ADD COLUMN safety_check_status character varying(7) DEFAULT 'null';

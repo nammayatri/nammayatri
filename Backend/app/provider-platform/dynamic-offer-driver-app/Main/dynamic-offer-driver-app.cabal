@@ -51,6 +51,7 @@ library
       API.UI
       API.UI.Call
       API.UI.CancellationReason
+      API.UI.DeviationAlert
       API.UI.Driver
       API.UI.DriverOnboarding
       API.UI.DriverProfileSummary
@@ -118,6 +119,7 @@ library
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.DeviationAlert
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense

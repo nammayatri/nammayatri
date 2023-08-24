@@ -76,7 +76,8 @@ data RideT f = RideT
     distanceCalculationFailed :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
-    numberOfDeviation :: B.C f (Maybe Bool)
+    numberOfDeviation :: B.C f (Maybe Bool),
+    safetyAlertTriggerCount :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 
@@ -133,7 +134,8 @@ rideTMod =
       distanceCalculationFailed = B.fieldNamed "distance_calculation_failed",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
-      numberOfDeviation = B.fieldNamed "number_of_deviation"
+      numberOfDeviation = B.fieldNamed "number_of_deviation",
+      safetyAlertTriggerCount = B.fieldNamed "safety_alert_trigger_count"
     }
 
 instance Serialize Ride where

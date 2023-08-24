@@ -41,15 +41,23 @@ type API =
            :<|> "callbackRequest"
              :> TokenAuth
              :> Post '[JSON] APISuccess
+           :<|> "safetyCheck"
+             :> TokenAuth
+             :> ReqBody '[JSON] DSupport.SafetyCheck
+             :> Post '[JSON] DSupport.SendIssueRes
        )
 
 handler :: App.FlowServer API
 handler =
   sendIssue
     :<|> callbackRequest
+    :<|> askSupport
 
 sendIssue :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SendIssueReq -> App.FlowHandler DSupport.SendIssueRes
 sendIssue (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.sendIssue personId
 
 callbackRequest :: (Id Person.Person, Id Merchant.Merchant) -> App.FlowHandler APISuccess
 callbackRequest (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DSupport.callbackRequest personId
+
+askSupport :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SafetyCheck -> App.FlowHandler DSupport.SendIssueRes
+askSupport (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.askSupport personId

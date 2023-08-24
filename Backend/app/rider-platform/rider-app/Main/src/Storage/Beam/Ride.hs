@@ -78,7 +78,8 @@ data RideT f = RideT
     rideEndTime :: B.C f (Maybe Time.UTCTime),
     rideRating :: B.C f (Maybe Int),
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    safetyCheckStatus :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
@@ -119,7 +120,8 @@ rideTMod =
       rideRating = B.fieldNamed "ride_rating",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
-      driverMobileCountryCode = B.fieldNamed "driver_mobile_country_code"
+      driverMobileCountryCode = B.fieldNamed "driver_mobile_country_code",
+      safetyCheckStatus = B.fieldNamed "safety_check_status"
     }
 
 $(enableKVPG ''RideT ['id] [['bppRideId], ['bookingId]])

@@ -69,6 +69,7 @@ data Ride = Ride
     pickupDropOutsideOfThreshold :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    numberOfDeviation :: Maybe Bool
+    numberOfDeviation :: Maybe Bool,
+    safetyAlertTriggerCount :: Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

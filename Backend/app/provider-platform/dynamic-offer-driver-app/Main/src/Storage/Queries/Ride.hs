@@ -299,6 +299,13 @@ instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.Bookin
 instance BeamBackend.HasSqlValueSyntax be String => BeamBackend.HasSqlValueSyntax be Common.BookingStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
+updateSafetyAlertTriggerCount :: MonadFlow m => Id Ride -> Int -> m ()
+updateSafetyAlertTriggerCount rideId currCount = do
+  updateOneWithKV
+    [ Se.Set BeamR.safetyAlertTriggerCount (currCount + 1)
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 findAllRideItems ::
   MonadFlow m =>
   Id Merchant ->
@@ -462,7 +469,8 @@ instance FromTType' BeamR.Ride Ride where
             distanceCalculationFailed = distanceCalculationFailed,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            numberOfDeviation = numberOfDeviation
+            numberOfDeviation = numberOfDeviation,
+            safetyAlertTriggerCount = safetyAlertTriggerCount
           }
 
 instance ToTType' BeamR.Ride Ride where
@@ -491,5 +499,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.distanceCalculationFailed = distanceCalculationFailed,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
-        BeamR.numberOfDeviation = numberOfDeviation
+        BeamR.numberOfDeviation = numberOfDeviation,
+        BeamR.safetyAlertTriggerCount = safetyAlertTriggerCount
       }

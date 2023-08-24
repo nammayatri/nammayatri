@@ -85,6 +85,12 @@ data FlowStatus
         trackingUrl :: Maybe BaseUrl,
         driverArrivalTime :: Maybe UTCTime
       }
+  | SAFETY_ALERT
+      { rideId :: Id DRide.Ride,
+        bookingId :: Id DB.Booking,
+        trackingUrl :: Maybe BaseUrl,
+        driverLocation :: Maybe Maps.LatLong
+      }
   deriving (Show, Eq, Generic)
 
 flowStatusCustomJSONOptions :: Options

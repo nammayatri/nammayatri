@@ -286,7 +286,8 @@ otpRideCreate driver otpCode booking = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            numberOfDeviation = Nothing
+            numberOfDeviation = Nothing,
+            safetyAlertTriggerCount = 0
           }
 
     buildTrackingUrl rideId = do

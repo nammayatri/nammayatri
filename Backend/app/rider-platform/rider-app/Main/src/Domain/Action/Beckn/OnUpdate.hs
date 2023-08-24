@@ -118,6 +118,11 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         message :: Text
       }
+  | SafetyAlertReq
+      { bppBookingId :: Id SRB.BPPBooking,
+        bppRideId :: Id SRide.BPPRide,
+        reason :: Text
+      }
 
 data ValidatedOnUpdateReq
   = ValidatedRideAssignedReq
@@ -189,6 +194,13 @@ data ValidatedOnUpdateReq
         message :: Text,
         booking :: SRB.Booking,
         ride :: SRide.Ride
+      }
+  | ValidatedSafetyAlertReq
+      { bppBookingId :: Id SRB.BPPBooking,
+        bppRideId :: Id SRide.BPPRide,
+        booking :: SRB.Booking,
+        ride :: SRide.Ride,
+        reason :: Text
       }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
@@ -280,6 +292,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideStartTime = Nothing,
             rideEndTime = Nothing,
             rideRating = Nothing,
+            safetyCheckStatus = "",
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -404,6 +417,8 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
+onUpdate ValidatedSafetyAlertReq {..} = do
+  Notify.notifySafetyAlert booking reason
 
 validateRequest ::
   ( CacheFlow m r,
@@ -475,6 +490,12 @@ validateRequest EstimateRepetitionReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
   return $ ValidatedEstimateRepetitionReq {..}
+validateRequest SafetyAlertReq {..} = do
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  unless (ride.status == SRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
+  return ValidatedSafetyAlertReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->

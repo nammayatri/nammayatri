@@ -20,6 +20,7 @@ where
 
 import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.DeviationAlert as DeviationAlert
 import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
@@ -77,6 +78,7 @@ type API =
            :<|> OnMessage.API
            :<|> RideRoute.API
            :<|> Plan.API
+           :<|> DeviationAlert.API
        )
 
 handler :: FlowServer API
@@ -107,3 +109,4 @@ handler =
     :<|> OnMessage.handler
     :<|> RideRoute.handler
     :<|> Plan.handler
+    :<|> DeviationAlert.handler
