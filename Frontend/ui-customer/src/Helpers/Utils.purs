@@ -456,6 +456,15 @@ getScreenFromStage stage = case stage of
   DistanceOutsideLimits -> "finding_driver_loader"
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"
+  NammaSafetyDashboard -> "namma_safety_onboard_screen"
+  AboutNammaSafety -> "namma_safety_onboard_screen"
+  SetTriggerCustomerSupport -> "namma_safety_onboard_screen"
+  SetNightTimeSafetyAlert -> "namma_safety_onboard_screen"
+  SetDefaultEmergencyContacts -> "namma_safety_onboard_screen"
+  SetPersonalSafetySettings -> "namma_safety_onboard_screen"
+  EduNammaSafetyMeasures -> "namma_safety_onboard_screen"
+  EduNammaSafetyGuidelines -> "namma_safety_onboard_screen"
+  EduNammaSafetyAboutSOS -> "namma_safety_onboard_screen"
 
 getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
 getGlobalPayload _ = do

@@ -81,6 +81,7 @@ import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, is
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
+import Screens.NammaSafetyScreen.Controller (ScreenOutput(..)) as NammaSafetyScreenOutput
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
@@ -1364,7 +1365,17 @@ homeScreenFlow = do
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
       tripDetailsScreenFlow Home
+    GO_TO_NAMMASAFETY -> nammaSafetyFlow
     _ -> homeScreenFlow
+
+nammaSafetyFlow :: FlowBT String Unit
+nammaSafetyFlow = do
+  flow <- UI.nammaSafetyScreen
+  case flow of 
+    NammaSafetyScreenOutput.GoBack -> homeScreenFlow 
+  pure unit
+  
+
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
 getDistanceDiff state lat lon = do

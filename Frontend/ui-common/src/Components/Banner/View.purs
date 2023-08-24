@@ -23,7 +23,9 @@ import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Components.Banner.Controller
+import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Commons (os, screenWidth)
 
 
 view :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -32,16 +34,16 @@ view push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    , margin $ MarginTop 12
     , background config.backgroundColor
-    , visibility if config.isBanner then VISIBLE else GONE
+    -- , visibility if config.isBanner then VISIBLE else GONE
     , onClick push (const OnClick)
     ]
     [  linearLayout
-        [ height WRAP_CONTENT
+        [ height MATCH_PARENT
         , weight 1.0
-        , padding $ Padding 20 7 0 0
+        , padding if (os == "IOS") then Padding 20 16 0 18 else Padding 20 13 0 18
         , orientation VERTICAL
+        , gravity CENTER_VERTICAL
         ]
         [ textView
           [ height WRAP_CONTENT
@@ -49,46 +51,36 @@ view push config =
           , gravity LEFT
           , text config.title
           , color config.titleColor
-          , textSize FontSize.a_16
           , fontStyle $ FontStyle.bold LanguageStyle
+          , textSize if(screenWidth unit < 380) then  FontSize.a_14 else  FontSize.a_15
           ]
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , if (os == "IOS") then margin (MarginTop 4) else margin (MarginTop 0)
           ]
           [
             textView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , text config.actionText
+            , text $ config.actionText <> " →" 
             , color config.actionTextColor
-            , textSize FontSize.a_13
+            , textSize if(screenWidth unit < 380) then  FontSize.a_12 else  FontSize.a_13
             , fontStyle $ FontStyle.regular LanguageStyle
-            ]
-          , textView
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , gravity LEFT
-            , text "→"
-            , color config.actionTextColor
-            , textSize FontSize.a_14
-            , fontStyle $ FontStyle.regular LanguageStyle
-            , padding $ PaddingBottom 3
-            , margin $ MarginLeft 5
             ]
           ]
         ]
     ,   linearLayout
      [
-        height WRAP_CONTENT
+        height MATCH_PARENT
       , width WRAP_CONTENT
       , gravity CENTER_VERTICAL
      ][imageView
         [
           height $ V 95
-        , width $ V 118
+        , width $ V 108
         , margin $ MarginRight 5
         , imageWithFallback config.imageUrl
         ]]

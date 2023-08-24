@@ -99,6 +99,7 @@ settingsView state push =
         "HelpAndSupport" -> settingsMenuView {imageUrl : "ic_help," <> (getAssetStoreLink FunctionCall) <> "ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
         "Language" -> settingsMenuView {imageUrl : "ic_change_language," <> (getAssetStoreLink FunctionCall) <> "ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
         "ShareApp" -> settingsMenuView {imageUrl : "ic_share," <> (getAssetStoreLink FunctionCall) <> "ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
+        "NammaSafety" -> settingsMenuView {imageUrl : "ic_shield_heart, user/nammaYatri/res/drawable/ic_shield_heart.png", text : (getString NAMMA_SAFETY), tag : SETTINGS_NAMMASAFETY, iconUrl : "ic_star_four_fill, user/nammaYatri/res/drawable/ic_star_four_fill.png"} push
         "LiveStatsDashboard" -> settingsMenuView {imageUrl : "ic_graph_black," <> (getAssetStoreLink FunctionCall) <> "ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon," <> (getAssetStoreLink FunctionCall) <> "ic_red_icon.png"} push
         "About" -> settingsMenuView {imageUrl : "ic_info," <> (getAssetStoreLink FunctionCall) <> "ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
         "Logout" -> logoutView state push
@@ -246,6 +247,7 @@ settingsMenuView item push  =
                               SETTINGS_HELP           -> OnHelp
                               SETTINGS_LANGUAGE       -> ChangeLanguage
                               SETTINGS_ABOUT          -> GoToAbout
+                              SETTINGS_NAMMASAFETY    -> GoToNammaSafety
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
                               SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
@@ -265,7 +267,7 @@ settingsMenuView item push  =
     , imageView
       [ width ( V 8 )
       , height ( V 8 )
-      , visibility if item.tag == SETTINGS_LIVE_DASHBOARD && getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" then VISIBLE else GONE
+      -- , visibility if item.tag == SETTINGS_LIVE_DASHBOARD && getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" then VISIBLE else GONE
       , margin ( Margin 6 1 0 0)
       , imageWithFallback item.iconUrl
       ]

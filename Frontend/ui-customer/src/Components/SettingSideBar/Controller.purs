@@ -26,6 +26,7 @@ data Action = ChangeLanguage
             | PastRides
             | GoToEmergencyContacts
             | GoToAbout
+            | GoToNammaSafety
             | ShareAppLink
             | OnLogout
             | NoAction
@@ -38,7 +39,7 @@ data Action = ChangeLanguage
 
 data Status = OPEN | CLOSING | CLOSED
 
-data Tag = SETTINGS_LOGOUT | SETTINGS_ABOUT | SETTINGS_FAVOURITES | SETTINGS_HELP | SETTINGS_LANGUAGE | SETTINGS_RIDES | SETTINGS_SHARE_APP | SETTINGS_EMERGENCY_CONTACTS | SETTINGS_LIVE_DASHBOARD
+data Tag = SETTINGS_LOGOUT | SETTINGS_ABOUT | SETTINGS_FAVOURITES | SETTINGS_HELP | SETTINGS_LANGUAGE | SETTINGS_RIDES | SETTINGS_SHARE_APP | SETTINGS_EMERGENCY_CONTACTS | SETTINGS_LIVE_DASHBOARD | SETTINGS_NAMMASAFETY
 
 derive instance genericStatus :: Generic Status _
 instance eqStatus :: Eq Status where eq = genericEq

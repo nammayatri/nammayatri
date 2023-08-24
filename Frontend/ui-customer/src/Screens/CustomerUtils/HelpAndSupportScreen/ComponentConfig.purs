@@ -281,4 +281,3 @@ accountDeletedPopUp state = let
       }
     }
     in popUpConfig'
-

@@ -86,3 +86,4 @@ getScreen str = case str of
     ALERTS_SCREEN                  -> "alerts_screen"
     ACKNOWLEDGEMENT_SCREEN         -> "acknowledgement_screen"
     AADHAAR_VERIFICATION_SCREEN    -> "aadhaar_verification_screen"
+    NAMMASAFETY_ONBOARDING_SCREEN  -> "namma_safety_onboard_screen"

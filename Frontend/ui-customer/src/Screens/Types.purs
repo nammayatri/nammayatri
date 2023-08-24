@@ -127,7 +127,8 @@ type SplashScreenData =  {
 type CarouselModel = {
   image :: String,
   title :: String,
-  description :: String
+  description :: String,
+  viewId :: String
 }
 
 type WelcomeScreenState = {
@@ -513,10 +514,22 @@ data Stage = HomeScreen
            | ChatWithDriver
            | FindEstimateAndSearch
            | RetryFindingQuote
+           -- NammaSafety Stages
+           | NammaSafetyDashboard
+           | AboutNammaSafety
+           | SetTriggerCustomerSupport
+           | SetNightTimeSafetyAlert
+           | SetDefaultEmergencyContacts
+           | SetPersonalSafetySettings
+           | EduNammaSafetyMeasures
+           | EduNammaSafetyGuidelines
+           | EduNammaSafetyAboutSOS
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
 instance showStage :: Show Stage where show = genericShow
+instance encodeStage :: Encode Stage where encode = defaultEncode
+instance decodeStage :: Decode Stage where decode = defaultDecode
 
 data SearchLocationModelType = SearchLocation | LocateOnMap | NoView
 
@@ -1198,3 +1211,20 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
+
+
+-- ############################################## NammaSafety - OnboardingScreen #############################
+
+type NammaSafetyScreenState = {
+  data :: NammaSafetyScreenData,
+  props :: NammaSafetyScreenProps
+}
+
+type NammaSafetyScreenData =  {
+  showOnboarding :: Boolean,
+  emergencyContacts :: Array Contacts
+ }
+
+type NammaSafetyScreenProps =  {
+  currentStage :: Stage
+ }

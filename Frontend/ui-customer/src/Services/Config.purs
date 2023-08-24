@@ -51,7 +51,7 @@ getConfig = do
         , fingerprint : ""
         }
     DEV  -> Config
-        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
+        { baseUrl: "https://api.sandbox.beckn.juspay.in/dev/app/v2"
         , fingerprint : ""
         }
     UAT  -> Config

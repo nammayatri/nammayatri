@@ -40,7 +40,8 @@ import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState)
+import Screens.NammaSafetyScreen.ScreenData as NammaSafetyScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, NammaSafetyScreenState)
 import Foreign.Object ( Object(..), empty)
 import Foreign (Foreign)
 
@@ -68,6 +69,7 @@ newtype GlobalState = GlobalState {
   , emergencyContactsScreen :: EmergencyContactsScreenState
   , welcomeScreen :: WelcomeScreenState
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
+  , nammaSafetyScreen :: NammaSafetyScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -93,6 +95,7 @@ defaultGlobalState = GlobalState {
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData
+  , nammaSafetyScreen : NammaSafetyScreenData.initData
   }
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
@@ -117,6 +120,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | RETRY
                         | NO_OUTPUT
                         | GO_TO_HELP
+                        | GO_TO_NAMMASAFETY
                         | GO_TO_ABOUT
                         | GO_TO_MY_RIDES
                         | CHANGE_LANGUAGE
@@ -197,3 +201,4 @@ data ScreenType =
   | EmergencyContactsScreenStateType (EmergencyContactsScreenState -> EmergencyContactsScreenState)
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
+  | NammaSafetyScreenStateType (NammaSafetyScreenState -> NammaSafetyScreenState)

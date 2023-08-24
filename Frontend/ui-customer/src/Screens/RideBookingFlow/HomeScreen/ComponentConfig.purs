@@ -359,6 +359,22 @@ genderBannerConfig state =
       }
   in config'
 
+sosSetupBannerConfig :: ST.HomeScreenState -> Banner.Config
+sosSetupBannerConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = Color.lightMintGreen
+      , title = (getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE)
+      , titleColor = Color.elfGreen
+      , actionText = (getString SETUP_NOW)
+      , actionTextColor = Color.elfGreen
+      , imageUrl = "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+      , isBanner = true
+      }
+  in config'
+
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let

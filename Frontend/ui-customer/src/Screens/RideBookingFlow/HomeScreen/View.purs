@@ -70,7 +70,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onAnimationEnd, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -708,7 +708,8 @@ buttonLayout state push =
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isBanner == false) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            -- , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isBanner == false) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            , recentSearchesAndFavourites state push
             ]
         ]
 
@@ -723,20 +724,70 @@ recentSearchesAndFavourites state push =
   ]([ savedLocationsView state push
    , recentSearchesView state push])
   --  <> if(state.props.isBanner) then [genderBannerView state push] else [])
+  --  carouselView state push
+  
+  --  <> [sosSetupBannerView state push]
+  --  <> [carouselView state push])
+  --  <> if(state.props.isBanner) then [genderBannerView state push] else [])
+
+  
+-- carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+-- carouselView state push = 
+--   PrestoAnim.animationSet [ fadeIn true ] $
+--   linearLayout
+--     [ height $ V 100
+--     , width MATCH_PARENT
+--     , orientation VERTICAL
+--     , id $ getNewIDWithTag "CarouselViewBanner"
+--     , gravity CENTER
+--     , weight 1.0
+--     -- , margin $ MarginBottom 20
+--     , background Color.blue900
+--     , onAnimationEnd (\action -> do
+--         _ <- push action
+--         _ <- addCarousel [{image : "imAGE", title : "T", description : "D", viewId : getNewIDWithTag "GenderBanner"}, {image : "I2", title : "t2", description : "", viewId : getNewIDWithTag "GenderBanner2"}] (getNewIDWithTag "CarouselViewBanner")
+--         pure unit
+--         ) (const AfterRender)
+--     ][
+--        genderBannerView state push
+--        , genderBannerView2 state push
+--     ]
 
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderBannerView state push =
   linearLayout
-    [ height MATCH_PARENT
+    [ height $ V 70
     , width MATCH_PARENT
     , orientation VERTICAL
+    , id $ getNewIDWithTag "GenderBanner"
+    -- , background Color.yellow900
+    -- , visibility GONE
     , margin $ MarginVertical 10 10
     , visibility if state.data.config.showGenderBanner then VISIBLE else GONE
     ][
         genderBanner push state
+        -- textView
+        --     $
+        --       [ text "hello"]
     ]
 
+genderBannerView2 :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+genderBannerView2 state push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , id $ getNewIDWithTag "GenderBanner2"
+    , background Color.yellow900
+    -- , visibility GONE
+    , margin $ MarginVertical 10 10
+    ][
+        -- genderBanner push state
+        textView
+            $
+              [ text "hello"]
+    ]
 
 savedLocationsView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationsView state push =
@@ -829,38 +880,6 @@ homeScreenTopIconView push state =
         , orientation VERTICAL
         ]
         [ linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , background Color.white900
-            , orientation HORIZONTAL
-            , gravity LEFT
-            , visibility if state.data.config.terminateBtnConfig.visibility then VISIBLE else GONE
-            ]
-            [ linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , margin $ MarginLeft 16
-                , padding $ Padding 6 6 6 6
-                , gravity CENTER_VERTICAL
-                , onClick push (const TerminateApp)
-                ]
-                [ imageView
-                    [ imageWithFallback state.data.config.terminateBtnConfig.imageUrl
-                    , height $ V 20
-                    , width $ V 20
-                    , margin $ MarginRight 10
-                    ]
-                , textView
-                    $ [ width WRAP_CONTENT
-                      , height WRAP_CONTENT
-                      , gravity CENTER_VERTICAL
-                      , text state.data.config.terminateBtnConfig.title
-                      , color Color.black900
-                      ]
-                    <> FontStyle.tags TypoGraphy
-                ]
-            ]
-        , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation HORIZONTAL
@@ -881,6 +900,7 @@ homeScreenTopIconView push state =
                 , visibility if (any (_ == state.props.currentStage) [RideCompleted]) then GONE else VISIBLE
                 , onClick push $ const OpenSettings
                 ]
+                -- ic_star_four_fill, user/nammaYatri/res/drawable/ic_star_four_fill.png
                 [ imageView
                     [ imageWithFallback if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
                     , height $ V 24
@@ -2395,3 +2415,15 @@ confirmingLottieView push state =
 genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genderBanner push state =
   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
+
+sosSetupBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+sosSetupBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][     
+        Banner.view (push <<< StartSOSOnBoarding) (sosSetupBannerConfig state)
+    ]

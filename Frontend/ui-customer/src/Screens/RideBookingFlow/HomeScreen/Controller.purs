@@ -473,6 +473,7 @@ data ScreenOutput = LogoutUser
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
+                  | GoToNammaSafety HomeScreenState
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
@@ -619,6 +620,7 @@ data Action = NoAction
             | TerminateApp
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
+            | StartSOSOnBoarding Banner.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -984,9 +986,13 @@ eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) 
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
+eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety)) state = do
+  _ <- pure $ spy "zxc " state
+  exit $ GoToNammaSafety state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+
 eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+-- eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do
@@ -1746,6 +1752,8 @@ eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
+
+eval (StartSOSOnBoarding Banner.OnClick) state = exit $ GoToMyProfile state true
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
