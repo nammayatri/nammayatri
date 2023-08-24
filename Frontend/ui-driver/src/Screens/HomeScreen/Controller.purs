@@ -184,6 +184,7 @@ instance loggableAction :: Loggable Action where
     PaymentStatusAction _ -> pure unit
     RemovePaymentBanner -> pure unit
     OfferPopupAC _ -> pure unit
+    RCDeactivatedAC _ -> pure unit
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -207,7 +208,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
-                    | SubscriptionScreen ST.HomeScreenState
+                    | SubscriptionScreen ST.HomeScreenState 
+                    | GoToVehicleDetailScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -261,6 +263,7 @@ data Action = NoAction
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
             | AutoPayBanner Banner.Action
+            | RCDeactivatedAC PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -597,7 +600,8 @@ eval (RideActiveAction activeRide) state = updateAndExit state { data {activeRid
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state = do
-  if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
+  if state.props.rcActive == false then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+  else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
           _ <- pure $ toast (getString DEMO_MODE_DISABLED)
@@ -678,6 +682,10 @@ eval (PaymentStatusAction status) state =
                   bannerTitleColor = Color.dustyRed,
                   banneActionText = getString CONTACT_SUPPORT,
                   bannerImage = "ny_ic_payment_failed_banner," }}}
+
+eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetailScreen state 
+
+eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
 
 eval _ state = continue state
 

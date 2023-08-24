@@ -139,6 +139,8 @@ initData = {
         showAadharPopUp : true,
         canSendSuggestion : true,
         showOffer : false,
-        autoPayBanner : true
+        autoPayBanner : true,
+        rcActive : false, 
+        rcDeactivePopup : false
     }
 }

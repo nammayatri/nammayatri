@@ -206,6 +206,7 @@ view push state =
           driverMapsHeaderView push state
         , rideActionModelView push state
         ]
+      , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.data.paymentState.makePaymentModal then makePaymentModal push state else dummyTextView
@@ -280,7 +281,7 @@ driverMapsHeaderView push state =
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && not state.props.autoPayBanner) then genderBannerView state push else linearLayout[][]
             , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
-            , if (state.props.autoPayBanner && state.props.driverStatusSet /= ST.Offline) then autoPayBannerView state push else dummyTextView
+            , if (state.props.autoPayBanner && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push else dummyTextView
             ]
         ]
         , bottomNavBar push state

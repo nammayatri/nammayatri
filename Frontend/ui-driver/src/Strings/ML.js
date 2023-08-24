@@ -726,5 +726,9 @@ const mlStrings = {
 	NEED_HELP_JOINING_THE_PLAN : "പദ്ധതിയിലോ ഓട്ടോപേയ്യിലോ ചേരാൻ സഹായം ആവശ്യമുണ്ടോ?",
   NEED_HELP_CALL_SUPPORT : "സഹായം ആവശ്യമുണ്ട്? <span style='color:#2194FF'>പിന്തുണയെ വിളിക്കുക</span>",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "പ്രത്യേക കിഴിവുകൾ ലഭിക്കുന്നതിന് ഇപ്പോൾ ഓട്ടോപേ അപ്പ് സജ്ജമാക്കുക",
-	SETUP_NOW : "ഇപ്പോൾ സജ്ജീകരണം"
+  SETUP_NOW : "ഇപ്പോൾ സജ്ജീകരണം",
+  GO_TO_VEHICLE_DETAILS : "വാഹന വിശദാംശങ്ങളിലേക്ക് പോകുക",
+  CLOSE: "അടയ്ക്കുക", 
+  RC_DEACTIVATED : "RC നിർജ്ജീവമാണ്", 
+  RC_DEACTIVATED_DETAILS : "നിങ്ങളുടെ RC നിലവിൽ മറ്റൊരു ഡ്രൈവറുടെ അക്കൗണ്ടിൽ സജീവമാണ്. റൈഡുകൾ ആരംഭിക്കാൻ ഒരു RC സജീവമാക്കുക"
 }

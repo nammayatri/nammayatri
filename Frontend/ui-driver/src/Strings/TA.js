@@ -748,5 +748,10 @@ const tamilStrings = {
 	NEED_HELP_JOINING_THE_PLAN : "திட்டம் அல்லது ஆட்டோ பே இல் சேர உதவி தேவையா?",
   NEED_HELP_CALL_SUPPORT : "திட்டத்தில் சேர உதவி வேண்டுமா? <span style='color:#2194FF'>எங்களை தொடர்பு கொள்ளவும்</span>",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "சிறப்பு தள்ளுபடியைப் பெற இப்போதே ஆட்டோ பேயை அமைக்கவும்",
-	SETUP_NOW : "இப்போதே அமைக்கவும்"
+  SETUP_NOW : "இப்போதே அமைக்கவும்",
+  HELP_STR : "உதவி", 
+  GO_TO_VEHICLE_DETAILS : "வாகன விவரங்களுக்குச் செல்லவும்",
+  CLOSE: "மூடு", 
+  RC_DEACTIVATED : "RC செயலிழக்கப்பட்டது", 
+  RC_DEACTIVATED_DETAILS : "உங்கள் RC தற்போது மற்றொரு டிரைவரின் கணக்கில் செயலில் உள்ளது. ரைடுகளைத் தொடங்க RC ஐச் செயல்படுத்தவும்"
 }

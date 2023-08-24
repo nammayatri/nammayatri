@@ -74,6 +74,7 @@ import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
+import Screens.Handlers (homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail)
@@ -87,7 +88,7 @@ import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..), PlanCardConfig)
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..))
 import Services.Accessor (_lat, _lon, _id)
@@ -868,6 +869,10 @@ driverProfileFlow = do
       case res of
         Right (MakeRcActiveOrInactiveResp response) -> do
           pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)
+          if state.data.isRCActive then do 
+            changeDriverStatus Offline 
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = false, driverStatusSet = Offline, showOffer = false, rcActive = false, rcDeactivePopup = true}})
+          else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}}) 
           modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, alreadyActive = false,screenType = ST.VEHICLE_DETAILS}})
           refreshDriverProfile
           driverProfileFlow
@@ -1685,6 +1690,11 @@ homeScreenFlow = do
   checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp)
   let showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
+  case getDriverInfoResp.linkedVehicle of
+    Nothing -> do 
+      changeDriverStatus Offline
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = false, driverStatusSet = Offline, showOffer = false, rcActive = false, rcDeactivePopup = true}}) 
+    Just _ -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}}) 
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
   if (isJust getDriverInfoResp.numberOfRides) then do
     setValueToLocalStore HAS_TAKEN_FIRST_RIDE $ show $ fromMaybe 0 getDriverInfoResp.numberOfRides == 0
@@ -1730,6 +1740,9 @@ homeScreenFlow = do
   case action of
     GO_TO_PROFILE_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
+      driverProfileFlow 
+    GO_TO_VEHICLE_DETAILS_SCREEN -> do 
+      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
       driverProfileFlow
     GO_TO_RIDES_SCREEN -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_RIDES_SCREEN" "."
@@ -1740,16 +1753,12 @@ homeScreenFlow = do
       liftFlowBT $ logEvent logField_ "ny_driver_rankings"
       referralScreenFlow
     DRIVER_AVAILABILITY_STATUS state status -> do
-      _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
-      _ <- setValueToLocalStore DRIVER_STATUS_N $ show status
+      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
+      void $ lift $ lift $ toggleLoader true
       let label = if status == Online then "ny_driver_online_mode" else if status == Silent then "ny_driver_silent_mode" else "ny_driver_offline_mode"
       let currentTime = (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")
       liftFlowBT $ logEventWithParams logField_ label "Timestamp" currentTime
-      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
-      void $ lift $ lift $ toggleLoader true
-      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false") $ toUpper $ show status
-      _ <- setValueToLocalStore RIDE_T_FREQUENCY (if status == Online then "20000" else "30000")
-      _ <- setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if any( _ == status)[Online, Silent] then "8.0" else "25.0")
+      changeDriverStatus status
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = (if any( _ == status)[Online, Silent] then true else false), driverStatusSet = status, showOffer = (status == Online && state.props.driverStatusSet == Offline && getDriverInfoResp.autoPayStatus == Nothing )}})
       homeScreenFlow
     GO_TO_HELP_AND_SUPPORT_SCREEN -> do
@@ -2329,6 +2338,15 @@ popUpScreenFlow entityPayload = do
 -- alertNotification id = do
 --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ selectedNotification = Just id } })
 --   homeScreenFlow
+
+changeDriverStatus :: DriverStatus -> FlowBT String Unit 
+changeDriverStatus status = do 
+  _ <- setValueToLocalStore DRIVER_STATUS if any( _ == status)[Online, Silent] then "true" else "false" --(show status)
+  _ <- setValueToLocalStore DRIVER_STATUS_N $ show status
+  (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT (if any( _ == status)[Online, Silent] then "true" else "false") $ toUpper $ show status
+  _ <- setValueToLocalStore RIDE_T_FREQUENCY (if status == Online then "20000" else "30000")
+  _ <- setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if any( _ == status)[Online, Silent] then "8.0" else "25.0")
+  pure unit 
 
 driverRideRatingFlow :: FlowBT String Unit
 driverRideRatingFlow = do
