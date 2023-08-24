@@ -1037,7 +1037,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
     _ <- pure $ spy "state homeScreen" state
     case state.props.currentStage of
-      HomeScreen   -> do
+      HomeScreen   -> do 
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
         exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}, data{source=(getString CURRENT_LOCATION)}}
