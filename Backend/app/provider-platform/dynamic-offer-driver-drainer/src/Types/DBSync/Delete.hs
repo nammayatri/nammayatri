@@ -7,6 +7,7 @@ import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
+import qualified Kernel.Storage.Beam.BecknRequestDriver as BecknRequest
 import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
@@ -163,6 +164,7 @@ data DeleteModel
   | FeedbackFormDelete
   | FeedbackDelete
   | FeedbackBadgeDelete
+  | BecknRequestDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -242,6 +244,7 @@ getTagDelete VehicleDelete = "VehicleOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete FeedbackDelete = "FeedbackOptions"
 getTagDelete FeedbackBadgeDelete = "FeedbackBadgeOptions"
+getTagDelete BecknRequestDelete = "BecknRequestOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
@@ -317,6 +320,7 @@ parseTagDelete "VehicleOptions" = return VehicleDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "FeedbackOptions" = return FeedbackDelete
 parseTagDelete "FeedbackBadgeOptions" = return FeedbackBadgeDelete
+parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -396,6 +400,7 @@ data DBDeleteObject
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | FeedbackDeleteOptions DeleteModel (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeDeleteOptions DeleteModel (Where Postgres FeedbackBadge.FeedbackBadgeT)
+  | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -633,3 +638,6 @@ instance FromJSON DBDeleteObject where
       FeedbackBadgeDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FeedbackBadgeDeleteOptions deleteModel whereClause
+      BecknRequestDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ BecknRequestDeleteOptions deleteModel whereClause

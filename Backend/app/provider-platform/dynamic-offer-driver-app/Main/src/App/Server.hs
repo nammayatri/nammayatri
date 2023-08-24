@@ -30,7 +30,7 @@ run :: Env -> Application
 run = withModifiedEnv $ \modifiedEnv ->
   BU.run driverOfferAPI driverOfferServer context modifiedEnv
     & logRequestAndResponse modifiedEnv
-    & logBecknRequest modifiedEnv.appEnv
+    & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version driverOfferAPI
     & hashBodyForSignature
     & supportProxyAuthorization

@@ -17,24 +17,36 @@ module Beckn.Core where
 
 import Data.List (lookup)
 import qualified Data.Text.Encoding as T
-import Environment
+-- import Environment
 import EulerHS.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Queries.BecknRequest as QBR
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+-- import EulerHS.Language hiding (generateGUID)
+
+import qualified Kernel.Storage.Queries.BecknRequestRider as QBR
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.Flow (runFlowR)
+import Kernel.Utils.Common
+import Kernel.Utils.IOLogging (LoggerEnv)
 import qualified Network.Wai.Internal as Wai
 import Servant
 
-logBecknRequest :: AppEnv -> Application -> Application
-logBecknRequest appEnv f req@Wai.Request {..} respF = do
+logBecknRequest ::
+  (HasField "coreMetrics" f CoreMetricsContainer) =>
+  (HasField "loggerEnv" f LoggerEnv) =>
+  (HasField "version" f DeploymentVersion) =>
+  EnvR f ->
+  Application ->
+  Application
+logBecknRequest (EnvR flowRt appEnv) f req@Wai.Request {..} respF = do
   req' <- case lookup "Authorization" requestHeaders of
     Nothing -> return req
     Just header -> do
       body <- requestBody
       bodyMvar <- newMVar body
-      let logEnv = appEnv.loggerEnv
-          esqDBEnv = appEnv.esqDBEnv
-      Esq.runTransactionIO logEnv esqDBEnv $ do
-        QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header)
+      -- Esq.runTransactionIO logEnv esqDBEnv $ do
+      --   QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header)
+      void $ runFlowR flowRt appEnv (QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header))
       return req {Wai.requestBody = mkRequestBody bodyMvar}
   f req' respF
   where

@@ -91,6 +91,7 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("FeedbackForm" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreate dbConf ("Feedback" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackObject obj), val) <- cmds]
     |::| runCreate dbConf ("FeedbackBadge" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackBadgeObject obj), val) <- cmds]
+    |::| runCreate dbConf ("BecknRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
   where
     runCreate dbConf model object = do
       let dbObjects = map (\(dbObject, _, _) -> dbObject) object
