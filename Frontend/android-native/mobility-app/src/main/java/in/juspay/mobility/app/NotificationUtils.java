@@ -115,7 +115,7 @@ public class NotificationUtils {
     public static void deRegisterCallback(CallBack notificationCallback) {
         callBack.remove(notificationCallback);
     }
-
+    public static int chatNotificationId = 18012023;
     public static void showAllocationNotification(Context context, JSONObject data, JSONObject entity_payload) {
         try {
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
@@ -503,7 +503,6 @@ public class NotificationUtils {
     }
 
     public static void createChatNotification(String sentBy, String message, Context context) {
-        final int chatNotificationId = 18012023;
         createChatNotificationChannel(context);
         Intent notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         JSONObject payload = new JSONObject();
