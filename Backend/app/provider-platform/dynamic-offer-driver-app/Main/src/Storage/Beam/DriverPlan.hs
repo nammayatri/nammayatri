@@ -44,6 +44,7 @@ data DriverPlanT f = DriverPlanT
     planId :: B.C f Text,
     planType :: B.C f DPlan.PaymentMode,
     mandateId :: B.C f (Maybe Text),
+    mandateSetupDate :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -82,6 +83,7 @@ driverPlanTMod =
       planId = B.fieldNamed "plan_id",
       planType = B.fieldNamed "plan_type",
       mandateId = B.fieldNamed "mandate_id",
+      mandateSetupDate = B.fieldNamed "mandate_setup_date",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

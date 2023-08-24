@@ -44,6 +44,7 @@ data InvoiceT f = InvoiceT
     invoiceShortId :: B.C f Text,
     driverFeeId :: B.C f Text,
     invoiceStatus :: B.C f Domain.InvoiceStatus,
+    maxMandateAmount :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -77,6 +78,7 @@ invoiceTMod =
       invoiceShortId = B.fieldNamed "invoice_short_id",
       driverFeeId = B.fieldNamed "driver_fee_id",
       invoiceStatus = B.fieldNamed "invoice_status",
+      maxMandateAmount = B.fieldNamed "max_mandate_amount",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

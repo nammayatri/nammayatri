@@ -68,7 +68,7 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = d
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst) <$> driverFees
-      invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now <$> driverFees
+      invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) <$> driverFees
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
         CreateOrderReq
@@ -96,13 +96,14 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = d
       QIN.updateInvoiceStatusByInvoiceId invoiceId INV.EXPIRED
       createOrder (driverId, merchantId) driverFees mbMandateOrder Nothing -- call same function with no existing order
 
-mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> DriverFee -> INV.Invoice
-mkInvoiceAgainstDriverFee id shortId now driverFee =
+mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> DriverFee -> INV.Invoice
+mkInvoiceAgainstDriverFee id shortId now maxMandateAmount driverFee =
   INV.Invoice
     { id = Id id,
       invoiceShortId = shortId,
       driverFeeId = driverFee.id,
       invoiceStatus = INV.ACTIVE_INVOICE,
+      maxMandateAmount,
       updatedAt = now,
       createdAt = now
     }
