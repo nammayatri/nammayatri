@@ -15,6 +15,7 @@
 module Domain.Types.Exophone where
 
 import qualified Domain.Types.Merchant as DM
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -24,6 +25,8 @@ data Exophone = Exophone
     primaryPhone :: Text,
     backupPhone :: Text,
     isPrimaryDown :: Bool,
+    -- isBackupDown Bool -- do we need this?
+    callService :: CallService,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

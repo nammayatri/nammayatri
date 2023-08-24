@@ -25,6 +25,7 @@ import Domain.Types.Exophone as DE
 import qualified Domain.Types.Merchant as DM
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -48,6 +49,9 @@ findAllByMerchantId merchantId = findAllWithKV [Se.Is BeamE.merchantId $ Se.Eq $
 
 findAllExophones :: MonadFlow m => m [Exophone]
 findAllExophones = findAllWithKV [Se.Is BeamE.merchantId $ Se.Not $ Se.Eq ""]
+
+findByMerchantAndService :: MonadFlow m => Id DM.Merchant -> CallService -> m [Exophone]
+findByMerchantAndService merchantId service = findAllWithKV [Se.And [Se.Is BeamE.merchantId $ Se.Eq merchantId.getId, Se.Is BeamE.callService $ Se.Eq service]]
 
 updateAffectedPhones :: MonadFlow m => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
@@ -85,6 +89,7 @@ instance FromTType' BeamE.Exophone Exophone where
             primaryPhone = primaryPhone,
             backupPhone = backupPhone,
             isPrimaryDown = isPrimaryDown,
+            callService = callService,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -97,6 +102,7 @@ instance ToTType' BeamE.Exophone Exophone where
         BeamE.primaryPhone = primaryPhone,
         BeamE.backupPhone = backupPhone,
         BeamE.isPrimaryDown = isPrimaryDown,
+        BeamE.callService = callService,
         BeamE.createdAt = createdAt,
         BeamE.updatedAt = updatedAt
       }

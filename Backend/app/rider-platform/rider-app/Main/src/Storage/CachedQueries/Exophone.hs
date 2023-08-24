@@ -23,11 +23,13 @@ module Storage.CachedQueries.Exophone
     clearCache,
     clearAllCache,
     findByPrimaryPhone,
+    findByMerchantAndService,
   )
 where
 
 import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -63,6 +65,12 @@ findAllByPhone phone =
 findAllExophones :: MonadFlow m => m [Exophone]
 findAllExophones = Queries.findAllExophones
 
+findByMerchantAndService :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> CallService -> m [Exophone]
+findByMerchantAndService merchantId service =
+  Hedis.safeGet (makeMerchantIdAndServiceKey merchantId service) >>= \case
+    Just a -> return a
+    Nothing -> cacheExophonesByMerchantAndService merchantId service /=<< Queries.findByMerchantAndService merchantId service
+
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id DM.Merchant -> [Exophone] -> m ()
 clearCache merchantId exophones = do
@@ -84,11 +92,23 @@ cacheExophones merchantId exophones = do
     Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantId expTime
     Hedis.setExp (makePhoneKey exophone.backupPhone) merchantId expTime
 
+cacheExophonesByMerchantAndService :: CacheFlow m r => Id DM.Merchant -> CallService -> [Exophone] -> m ()
+cacheExophonesByMerchantAndService merchantId service exophones = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let merchantIdAndServiceKey = makeMerchantIdAndServiceKey merchantId service
+  Hedis.setExp merchantIdAndServiceKey exophones expTime
+  forM_ exophones $ \exophone -> do
+    Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantId expTime
+    Hedis.setExp (makePhoneKey exophone.backupPhone) merchantId expTime
+
 makeMerchantIdKey :: Id DM.Merchant -> Text
 makeMerchantIdKey merchantId = "CachedQueries:Exophones:MerchantId-" <> merchantId.getId
 
 makePhoneKey :: Text -> Text
 makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
+
+makeMerchantIdAndServiceKey :: Id DM.Merchant -> CallService -> Text
+makeMerchantIdAndServiceKey merchantId service = "CachedQueries:Exophones:MerchantId-" <> merchantId.getId <> ":CallService-" <> show service
 
 patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"

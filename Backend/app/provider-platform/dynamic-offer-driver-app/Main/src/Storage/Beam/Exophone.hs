@@ -22,6 +22,7 @@ import Database.Beam.MySQL ()
 import qualified Domain.Types.Exophone as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
@@ -34,6 +35,7 @@ data ExophoneT f = ExophoneT
     backupPhone :: B.C f Text,
     exophoneType :: B.C f Domain.ExophoneType,
     isPrimaryDown :: B.C f Bool,
+    callService :: B.C f CallService,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

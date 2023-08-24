@@ -43,6 +43,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     issueTicketService :: IssueTicketService,
     useFraudDetection :: Bool,
     enableDashboardSms :: Bool,
+    getExophone :: CallService,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
