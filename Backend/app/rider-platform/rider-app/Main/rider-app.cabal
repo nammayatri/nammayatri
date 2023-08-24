@@ -6,6 +6,7 @@ cabal-version: 1.12
 
 name:           rider-app
 version:        0.1.0.0
+synopsis:       The nammayatri rider application
 description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 homepage:       https://github.com/nammayatri/nammayatri#readme
 bug-reports:    https://github.com/nammayatri/nammayatri/issues
