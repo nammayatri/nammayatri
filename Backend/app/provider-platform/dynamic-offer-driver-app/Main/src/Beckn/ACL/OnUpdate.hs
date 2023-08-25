@@ -269,6 +269,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "TOTAL_FARE"
+            || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
