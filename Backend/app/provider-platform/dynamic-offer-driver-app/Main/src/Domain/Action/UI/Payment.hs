@@ -219,9 +219,9 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       Payment.CREATED -> Just DI.PENDING
       Payment.ACTIVE -> Just DI.ACTIVE
       Payment.REVOKED -> Just DI.CANCELLED_PSP
-      Payment.FAILURE -> Nothing
+      Payment.FAILURE -> Just DI.MANDATE_FAILURE
       Payment.PAUSED -> Just DI.PAUSED_PSP
-      Payment.EXPIRED -> Nothing
+      Payment.EXPIRED -> Just DI.MANDATE_EXPIRED
     mkMandate payerApp payerAppName = do
       now <- getCurrentTime
       return $

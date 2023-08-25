@@ -58,6 +58,8 @@ data DriverAutoPayStatus
   | SUSPENDED
   | PAUSED_PSP
   | CANCELLED_PSP
+  | MANDATE_FAILURE
+  | MANDATE_EXPIRED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable DriverAutoPayStatus
 
