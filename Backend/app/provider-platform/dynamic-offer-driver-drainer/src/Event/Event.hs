@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Event.Event where
 

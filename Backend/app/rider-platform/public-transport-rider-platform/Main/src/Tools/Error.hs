@@ -13,7 +13,6 @@
 -}
 {-# LANGUAGE TemplateHaskell #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Tools.Error
@@ -47,16 +46,14 @@ data PaymentDetailsError
 
 instanceExceptionWithParent 'HTTPException ''PaymentDetailsError
 
-instance IsBaseError PaymentDetailsError
-
-toMessage = \case
-  PaymentDetailsNotFound paymentId -> Just $ ("Booking with bookingId \"" :: [Char]) <> show paymentId <> "\" not found. "
+instance IsBaseError PaymentDetailsError where
+  toMessage = \case
+    PaymentDetailsNotFound bookingId -> Just $ "Payment details with bookingId \"" <> show bookingId <> "\" not found. "
 
 instance IsHTTPError PaymentDetailsError where
   toErrorCode = \case
     PaymentDetailsNotFound _ -> "PAYMENT_DETAILS_NOT_FOUND"
-
-toHttpCode = \case
-  PaymentDetailsNotFound _ -> E400
+  toHttpCode = \case
+    PaymentDetailsNotFound _ -> E500
 
 instance IsAPIError PaymentDetailsError

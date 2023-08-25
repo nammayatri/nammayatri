@@ -101,6 +101,7 @@ driverLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLocationToPSModifiers =
   M.empty
 
+-- FIXME add signature
 toRowExpression personId latLong updateTime now merchantId =
   DriverLocationT
     (B.val_ personId)
