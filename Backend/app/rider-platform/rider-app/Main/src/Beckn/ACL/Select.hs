@@ -26,17 +26,19 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import qualified Storage.Queries.SearchRequest as SR
 import Tools.Error
 
 buildSelectReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r) =>
   DSelect.DSelectRes ->
   m (BecknReq Select.SelectMessage)
 buildSelectReq dSelectRes = do
   let messageId = dSelectRes.estimate.bppEstimateId.getId
   let transactionId = dSelectRes.searchRequest.id.getId
+  searchReq <- SR.findById dSelectRes.searchRequest.id >>= fromMaybeM (SearchRequestNotFound $ "searchReqId-" <> dSelectRes.searchRequest.id.getId)
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.city dSelectRes.merchant.country dSelectRes.autoAssignEnabled
+  context <- buildTaxiContext Context.SELECT messageId transactionId dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.city dSelectRes.merchant.country dSelectRes.autoAssignEnabled (Just searchReq.validTill)
   order <- buildOrder dSelectRes
   pure $ BecknReq context $ Select.SelectMessage order
 

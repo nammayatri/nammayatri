@@ -18,9 +18,9 @@ import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601ParseM)
+-- import Data.Time.Format.ISO8601 (iso8601ParseM)
 -- import Data.Time.Clock(diffTimeToPicoseconds,secondsToDiffTime)
-import Data.Time.LocalTime (CalendarDiffTime, ctTime)
+-- import Data.Time.LocalTime (CalendarDiffTime, ctTime)
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
@@ -152,12 +152,12 @@ getDistanceToNearestDriver tagGroups = do
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
 
--- Parse ISO8601 duration and return the number of seconds
-parseISO8601Duration :: Text -> Maybe NominalDiffTime
-parseISO8601Duration durationStr = do
-  (calenderDiffernceTime :: CalendarDiffTime) <- iso8601ParseM $ T.unpack durationStr
-  Just $ ctTime calenderDiffernceTime
+-- -- Parse ISO8601 duration and return the number of seconds
+-- parseISO8601Duration :: Text -> Maybe NominalDiffTime
+-- parseISO8601Duration durationStr = do
+--   (calenderDiffernceTime :: CalendarDiffTime) <- iso8601ParseM $ T.unpack durationStr
+--   Just $ ctTime calenderDiffernceTime
 
 -- Add the parsed duration to a given UTCTime
 addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
-addDurationToUTCTime time duration = addUTCTime duration time
+addDurationToUTCTime time duration = addUTCTime duration time -- prash check this

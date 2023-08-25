@@ -24,7 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -45,22 +45,27 @@ search ::
   SignatureAuthResult ->
   SignatureAuthResult ->
   Search.SearchReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Search API Flow" "Reached"
-    dSearchReq <- ACL.buildSearchReq subscriber req
-    Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-      merchant <- DSearch.validateRequest transporterId dSearchReq
-      fork "search request processing" $
-        Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-          dSearchRes <- DSearch.handler merchant dSearchReq
-          let context = req.context
-          let callbackUrl = gateway.subscriber_url
-          void $
-            CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
-              pure $ ACL.mkOnSearchMessage dSearchRes
-    pure Ack
+    now <- getCurrentTime
+    isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+    if isExp
+      then getTtlExpiredRes
+      else do
+        logTagInfo "Search API Flow" "Reached"
+        dSearchReq <- ACL.buildSearchReq subscriber req
+        Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+          merchant <- DSearch.validateRequest transporterId dSearchReq
+          fork "search request processing" $
+            Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+              dSearchRes <- DSearch.handler merchant dSearchReq
+              let context = req.context
+              let callbackUrl = gateway.subscriber_url
+              void $
+                CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+                  pure $ ACL.mkOnSearchMessage dSearchRes
+        pure getSuccessRes
 
 searchLockKey :: Text -> Text -> Text
 searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId

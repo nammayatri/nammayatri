@@ -22,7 +22,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (messageResponse)
 import Servant
 import Tools.Auth
 

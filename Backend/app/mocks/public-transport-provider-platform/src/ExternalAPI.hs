@@ -21,7 +21,7 @@ import "public-transport-rider-platform" Beckn.Spec.OnStatus
 import Environment
 import Kernel.Mock.App
 import Kernel.Mock.ExternalAPI
-import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.BecknAPIResponse (BecknAPIResponse)
 import Kernel.Types.Beckn.ReqTypes
 import Servant
 import Servant.Client
@@ -29,7 +29,7 @@ import Servant.Client
 type GatewayOnSearchAPI =
   "on_search"
     :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] BecknAPIResponse
 
 callGatewayOnSearch :: BecknCallbackReq OnSearchCatalog -> MockM AppEnv ()
 callGatewayOnSearch = callAPI @GatewayOnSearchAPI gatewayUrl
@@ -40,7 +40,7 @@ callGatewayOnSearch = callAPI @GatewayOnSearchAPI gatewayUrl
 type OnConfirmAPI =
   "on_confirm"
     :> ReqBody '[JSON] (BecknCallbackReq OnConfirmMessage)
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] BecknAPIResponse
 
 callBapOnConfirm :: BecknCallbackReq OnConfirmMessage -> MockM AppEnv ()
 callBapOnConfirm = callBapAPI @OnConfirmAPI
@@ -49,7 +49,7 @@ callBapOnConfirm = callBapAPI @OnConfirmAPI
 type OnStatusAPI =
   "on_status"
     :> ReqBody '[JSON] (BecknCallbackReq OnStatusMessage)
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] BecknAPIResponse
 
 callBapOnStatus :: BecknCallbackReq OnStatusMessage -> MockM AppEnv ()
 callBapOnStatus = callBapAPI @OnStatusAPI
@@ -58,7 +58,7 @@ callBapOnStatus = callBapAPI @OnStatusAPI
 type OnCancelAPI =
   "on_cancel"
     :> ReqBody '[JSON] (BecknCallbackReq OnCancelMessage)
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] BecknAPIResponse
 
 callBapOnCancel :: BecknCallbackReq OnCancelMessage -> MockM AppEnv ()
 callBapOnCancel = callBapAPI @OnCancelAPI

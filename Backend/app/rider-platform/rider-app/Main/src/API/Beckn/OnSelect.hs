@@ -20,7 +20,7 @@ import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 
@@ -32,16 +32,21 @@ handler = onSelect
 onSelect ::
   SignatureAuthResult ->
   OnSelect.OnSelectReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onSelect _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnSelectReq <- ACL.buildOnSelectReq req
-  whenJust mbDOnSelectReq $ \onSelectReq ->
-    Redis.whenWithLockRedis (onSelectLockKey req.context.message_id) 60 $ do
-      validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq
-      fork "on select processing" $ do
-        Redis.whenWithLockRedis (onSelectProcessingLockKey req.context.message_id) 60 $
-          DOnSelect.onSelect validatedOnSelectReq
-  pure Ack
+  now <- getCurrentTime
+  isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+  if isExp
+    then getTtlExpiredRes
+    else do
+      mbDOnSelectReq <- ACL.buildOnSelectReq req
+      whenJust mbDOnSelectReq $ \onSelectReq ->
+        Redis.whenWithLockRedis (onSelectLockKey req.context.message_id) 60 $ do
+          validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq
+          fork "on select processing" $ do
+            Redis.whenWithLockRedis (onSelectProcessingLockKey req.context.message_id) 60 $
+              DOnSelect.onSelect validatedOnSelectReq
+      pure getSuccessRes
 
 onSelectLockKey :: Text -> Text
 onSelectLockKey id = "Customer:OnSelect:MessageId-" <> id

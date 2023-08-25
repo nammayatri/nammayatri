@@ -32,6 +32,7 @@ buildContextMetro ::
   m Context
 buildContextMetro action message_id bapId bapUri = do
   timestamp <- UTCTimeRFC3339 <$> getCurrentTime
+  let ttl = Nothing -- createTtl 0 0 0 0 0 30 -- 30 secs
   return
     Context
       { domain = METRO,
@@ -42,7 +43,7 @@ buildContextMetro action message_id bapId bapUri = do
         bap_uri = bapUri,
         bpp_id = Nothing,
         bpp_uri = Nothing,
-        transaction_id = Nothing,
+        transaction_id = "", -- this is metro, check prash
         max_callbacks = Nothing,
         ..
       }

@@ -19,7 +19,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
 import Kernel.Prelude
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 
@@ -31,8 +31,8 @@ handler = onStatus
 onStatus ::
   SignatureAuthResult ->
   OnStatus.OnStatusReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onStatus _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnStatusReq <- ACL.buildOnStatusReq req
   whenJust mbDOnStatusReq DOnStatus.onStatus
-  pure Ack
+  pure getSuccessRes

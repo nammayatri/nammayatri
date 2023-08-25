@@ -30,12 +30,14 @@ import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.SearchRequest as SR
 import qualified Tools.Maps as Maps
 
 buildOneWaySearchReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
   m (BecknReq Search.SearchMessage)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
@@ -53,7 +55,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
 buildRentalSearchReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
@@ -69,7 +71,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
 
 buildSearchReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
   DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
@@ -84,7 +86,8 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
+  searchReq <- SR.findById searchId >>= fromMaybeM (SearchRequestNotFound $ "searchReqId-" <> searchId.getId)
+  context <- buildTaxiContext Context.SEARCH messageId transactionId merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False (Just searchReq.validTill)
   let intent = mkIntent origin destination customerLanguage distance duration mbPoints
   let searchMessage = Search.SearchMessage intent
 

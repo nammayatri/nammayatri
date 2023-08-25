@@ -39,17 +39,22 @@ handler = onInit
 onInit ::
   SignatureAuthResult ->
   OnInit.OnInitReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnInitReq <- TaxiACL.buildOnInitReq req
-  whenJust mbDOnInitReq $ \onInitReq ->
-    Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
-      fork "oninit request processing" $ do
-        onInitRes <- DOnInit.onInit onInitReq
-        booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
-        handle (errHandler booking) $
-          void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
-  pure Ack
+  now <- getCurrentTime
+  isExp <- (&& False) <$> maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+  if isExp
+    then getTtlExpiredRes
+    else do
+      mbDOnInitReq <- TaxiACL.buildOnInitReq req
+      whenJust mbDOnInitReq $ \onInitReq ->
+        Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
+          fork "oninit request processing" $ do
+            onInitRes <- DOnInit.onInit onInitReq
+            booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
+            handle (errHandler booking) $
+              void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
+      pure getSuccessRes
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do

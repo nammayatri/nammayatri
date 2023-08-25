@@ -24,7 +24,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -48,40 +48,45 @@ confirm ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   Confirm.ConfirmReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 confirm transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Confirm API Flow" "Reached"
-    dConfirmReq <- ACL.buildConfirmReq req
-    Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
-      let context = req.context
-      now <- getCurrentTime
-      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
-      fork "confirm" $ do
-        Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
-          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
-          case dConfirmRes.booking.bookingType of
-            DBooking.NormalBooking -> do
-              ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
-              driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-              --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
-              driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-              -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-              fork "on_confirm/on_update" $ do
-                handle (errHandler dConfirmRes transporter (Just driver)) $ do
-                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                  void $
-                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-                  void $
-                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
-              DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
-            DBooking.SpecialZoneBooking -> do
-              fork "on_confirm/on_update" $ do
-                handle (errHandler' dConfirmRes transporter) $ do
-                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                  void $
-                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-    pure Ack
+    now <- getCurrentTime
+    -- logDebug $ "prash090 " <> show req.context.ttl <> " timstamp " <> show req.context.timestamp <> " now " <> show now <> " result " <> show (isTtlExpired req.context.ttl req.context.timestamp now)
+    x <- isTtlExpired req.context.ttl req.context.timestamp now
+    logDebug $ "prash01232" <> show req.context.ttl <> " timstamp " <> show req.context.timestamp <> " now " <> show now <> " result " <> show x
+    isExp <- (&& False) <$> maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+    if isExp
+      then getTtlExpiredRes
+      else do
+        logTagInfo "Confirm API Flow" "Reached"
+        dConfirmReq <- ACL.buildConfirmReq req
+        Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
+          let context = req.context
+          (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+          fork "confirm" $ do
+            Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
+              dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+              case dConfirmRes.booking.bookingType of
+                DBooking.NormalBooking -> do
+                  ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
+                  driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+                  driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
+                  fork "on_confirm/on_update" $ do
+                    handle (errHandler dConfirmRes transporter (Just driver)) $ do
+                      onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+                      void $
+                        BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+                      void $
+                        BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
+                  DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
+                DBooking.SpecialZoneBooking -> do
+                  fork "on_confirm/on_update" $ do
+                    handle (errHandler' dConfirmRes transporter) $ do
+                      onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+                      void $
+                        BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+        pure getSuccessRes
   where
     errHandler dConfirmRes transporter driver exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter

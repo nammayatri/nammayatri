@@ -21,7 +21,7 @@ import Domain.Types.Merchant (Merchant)
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -39,16 +39,20 @@ update ::
   Id Merchant ->
   SignatureAuthResult ->
   Update.UpdateReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 update _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
+    -- now <- getCurrentTime
+    -- isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+    -- if isExp then getTtlExpiredRes
+    -- else do -- req is diff. no need here - check prash
     logTagInfo "updateAPI" "Received update API call."
     dUpdateReq <- ACL.buildUpdateReq subscriber req
     Redis.whenWithLockRedis (updateLockKey dUpdateReq.bookingId.getId) 60 $ do
       fork "update request processing" $
         Redis.whenWithLockRedis (updateProcessingLockKey dUpdateReq.bookingId.getId) 60 $
           DUpdate.handler dUpdateReq
-    pure Ack
+    pure getSuccessRes
 
 updateLockKey :: Text -> Text
 updateLockKey id = "Driver:Update:BookingId-" <> id

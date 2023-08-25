@@ -23,7 +23,7 @@ import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -42,7 +42,7 @@ status ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   Status.StatusReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 status transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Status API Flow" "Reached"
@@ -55,4 +55,4 @@ status transporterId (SignatureAuthResult _ subscriber) req =
       CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri $
         pure $ ACL.mkOnStatusMessage dStatusRes
 
-    pure Ack
+    pure getSuccessRes

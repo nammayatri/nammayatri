@@ -22,11 +22,12 @@ import qualified Beckn.Spec.OnStatus as OnStatus
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
 import Kernel.Prelude
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
-import Tools.Error
+
+-- import Tools.Error
 
 handler ::
   SignatureAuthResult ->
@@ -36,13 +37,13 @@ handler = onStatus
 onStatus ::
   SignatureAuthResult ->
   BecknCallbackReq OnStatus.OnStatusMessage ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onStatus _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext Context.ON_STATUS $ req.context
-  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
+  -- transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
   case req.contents of
     Right msg -> do
-      let domainReq = BecknACL.mkOnStatus msg transactionId
+      let domainReq = BecknACL.mkOnStatus msg req.context.transaction_id
       DOnStatus.handler domainReq
     Left err -> logTagError "on_status req" $ "on_status error: " <> show err
-  pure Ack
+  pure getSuccessRes

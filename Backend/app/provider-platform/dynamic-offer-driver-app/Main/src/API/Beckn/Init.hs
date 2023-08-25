@@ -24,7 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude hiding (init)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -45,22 +45,27 @@ init ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   Init.InitReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 init transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Init API Flow" "Reached"
-    dInitReq <- ACL.buildInitReq subscriber req
-    Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
-      let context = req.context
-      validatedRes <- DInit.validateRequest transporterId dInitReq
-      fork "init request processing" $ do
-        Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
-          dInitRes <- DInit.handler transporterId dInitReq validatedRes
-          void . handle (errHandler dInitRes.booking) $
-            CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-              pure $ ACL.mkOnInitMessage dInitRes
-      return ()
-    pure Ack
+    now <- getCurrentTime
+    isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+    if isExp
+      then getTtlExpiredRes
+      else do
+        logTagInfo "Init API Flow" "Reached"
+        dInitReq <- ACL.buildInitReq subscriber req
+        Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
+          let context = req.context
+          validatedRes <- DInit.validateRequest transporterId dInitReq
+          fork "init request processing" $ do
+            Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
+              dInitRes <- DInit.handler transporterId dInitReq validatedRes
+              void . handle (errHandler dInitRes.booking) $
+                CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+                  pure $ ACL.mkOnInitMessage dInitRes
+          return ()
+        pure getSuccessRes
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking transporterId

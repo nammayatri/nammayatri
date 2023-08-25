@@ -21,7 +21,7 @@ import Domain.Types.Merchant (Merchant)
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -39,7 +39,7 @@ rating ::
   Id Merchant ->
   SignatureAuthResult ->
   Rating.RatingReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 rating _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "ratingAPI" "Received rating API call."
@@ -49,7 +49,7 @@ rating _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
       fork "rating request processing" $
         Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
           DRating.handler dRatingReq ride
-    pure Ack
+    pure getSuccessRes
 
 ratingLockKey :: Text -> Text
 ratingLockKey id = "Driver:Rating:BookingId-" <> id

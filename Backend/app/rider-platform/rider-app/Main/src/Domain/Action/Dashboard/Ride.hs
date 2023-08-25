@@ -291,13 +291,13 @@ rideInfo merchantShortId reqRideId = do
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
         estimatedRideDuration = estimatedDuration,
-        rideDuration = timeDiffInSeconds <$> ride.rideEndTime <*> ride.rideStartTime,
+        rideDuration = timeDiffInSeconds' <$> ride.rideEndTime <*> ride.rideStartTime,
         cancelledTime = cancelledTime,
         cancelledBy = cancelledBy
       }
 
-timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
-timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1
+timeDiffInSeconds' :: UTCTime -> UTCTime -> Seconds
+timeDiffInSeconds' t1 = nominalDiffTimeToSeconds . diffUTCTime t1
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource
 castCancellationSource = \case

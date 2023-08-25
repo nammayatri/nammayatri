@@ -18,7 +18,7 @@ import qualified Kernel.External.Infobip.Flow as IF
 import qualified Kernel.External.Infobip.Types as IT hiding (id)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (Message, message)
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Storage.Queries.Webengage as QW
 import Tools.Error

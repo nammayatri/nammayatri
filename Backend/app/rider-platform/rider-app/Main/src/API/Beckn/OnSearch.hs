@@ -35,16 +35,21 @@ onSearch ::
   SignatureAuthResult ->
   SignatureAuthResult ->
   OnSearch.OnSearchReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
-  whenJust mbDOnSearchReq $ \request -> do
-    Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $ do
-      validatedRequest <- DOnSearch.validateRequest request
-      fork "on search processing" $ do
-        Redis.whenWithLockRedis (onSearchProcessingLockKey req.context.message_id) 60 $
-          DOnSearch.onSearch req.context.message_id validatedRequest
-  pure Ack
+  now <- getCurrentTime
+  isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+  if isExp
+    then getTtlExpiredRes
+    else do
+      mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
+      whenJust mbDOnSearchReq $ \request -> do
+        Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $ do
+          validatedRequest <- DOnSearch.validateRequest request
+          fork "on search processing" $ do
+            Redis.whenWithLockRedis (onSearchProcessingLockKey req.context.message_id) 60 $
+              DOnSearch.onSearch req.context.message_id validatedRequest
+      pure getSuccessRes
 
 onSearchLockKey :: Text -> Text
 onSearchLockKey id = "Customer:OnSearch:MessageId-" <> id

@@ -22,7 +22,7 @@ import Environment
 import ExternalAPI
 import Kernel.Mock.App
 import Kernel.Mock.Utils
-import Kernel.Types.Beckn.Ack
+import Kernel.Types.Beckn.BecknAPIResponse
 import Kernel.Types.Beckn.Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
@@ -30,7 +30,7 @@ import Kernel.Utils.Time
 import qualified Redis
 import Relude
 
-statusServer :: BecknReq StatusMessage -> MockM AppEnv AckResponse
+statusServer :: BecknReq StatusMessage -> MockM AppEnv BecknAPIResponse
 statusServer statusReq@(BecknReq ctx msg) = do
   logOutput INFO $ "got confirm request: " <> show statusReq
   context' <- buildOnActionContext ON_STATUS ctx
@@ -44,4 +44,4 @@ statusServer statusReq@(BecknReq ctx msg) = do
     let eithOnStatusMsg = bimap (textToError . show) (OnStatusMessage . snd) eithCtxOrd
         onStatusReq = BecknCallbackReq context' eithOnStatusMsg
     callBapOnStatus onStatusReq
-  pure Ack
+  pure getSuccessRes

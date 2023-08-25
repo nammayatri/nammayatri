@@ -29,18 +29,23 @@ import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Error
 import Kernel.Types.Logging
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import qualified Storage.Queries.SearchRequest as SR
+
+-- import Kernel.Storage.Esqueleto (EsqDBFlow)
 
 buildInitReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   SConfirm.DConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
   let transactionId = res.searchRequestId.getId
+  searchReq <- SR.findById res.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchReqId-" <> res.searchRequestId.getId)
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country False
+  context <- buildTaxiContext Context.INIT res.booking.id.getId transactionId res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country False (Just searchReq.validTill)
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 

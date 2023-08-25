@@ -16,14 +16,14 @@ module Beckn.Spec.API.Search where
 
 import Beckn.Spec.Search
 import Kernel.Prelude
-import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.BecknAPIResponse (BecknAPIResponse)
 import Kernel.Types.Beckn.ReqTypes
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchAPI =
   "search"
     :> ReqBody '[JSON] (BecknReq SearchMessage)
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] BecknAPIResponse
 
 searchAPI :: Proxy SearchAPI
 searchAPI = Proxy

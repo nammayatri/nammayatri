@@ -31,8 +31,15 @@ handler = onUpdate
 onUpdate ::
   SignatureAuthResult ->
   OnUpdate.OnUpdateReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onUpdate _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+  -- create new withFlowHandlerBecknAPI
+  -- now <- getCurrentTime
+  -- -- whenJust req.context.ttl $\ ttl -> do
+  -- isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+  -- -- isExp <- isTtlExpired req.context.ttl req.context.timestamp now -- make ttl just
+  -- if isExp then getTtlExpiredRes
+  --   else do
   mbDOnUpdateReq <- ACL.buildOnUpdateReq req
   whenJust mbDOnUpdateReq $ \onUpdateReq ->
     Redis.whenWithLockRedis (onUpdateLockKey req.context.message_id) 60 $ do
@@ -40,7 +47,7 @@ onUpdate _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
       fork "on update processing" $ do
         Redis.whenWithLockRedis (onUpdateProcessngLockKey req.context.message_id) 60 $
           DOnUpdate.onUpdate validatedOnUpdateReq
-  pure Ack
+  pure getSuccessRes
 
 onUpdateLockKey :: Text -> Text
 onUpdateLockKey id = "Customer:OnUpdate:MessageId-" <> id

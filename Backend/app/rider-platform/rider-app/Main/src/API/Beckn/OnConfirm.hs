@@ -20,7 +20,7 @@ import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 
@@ -32,16 +32,21 @@ handler = onConfirm
 onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnConfirmReq <- ACL.buildOnConfirmReq req
-  whenJust mbDOnConfirmReq $ \onConfirmReq ->
-    Redis.whenWithLockRedis (onConfirmLockKey onConfirmReq.bppBookingId.getId) 60 $ do
-      validatedReq <- DOnConfirm.validateRequest onConfirmReq
-      fork "onConfirm request processing" $
-        Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppBookingId.getId) 60 $
-          DOnConfirm.onConfirm validatedReq
-  pure Ack
+  now <- getCurrentTime
+  isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+  if isExp
+    then getTtlExpiredRes
+    else do
+      mbDOnConfirmReq <- ACL.buildOnConfirmReq req
+      whenJust mbDOnConfirmReq $ \onConfirmReq ->
+        Redis.whenWithLockRedis (onConfirmLockKey onConfirmReq.bppBookingId.getId) 60 $ do
+          validatedReq <- DOnConfirm.validateRequest onConfirmReq
+          fork "onConfirm request processing" $
+            Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppBookingId.getId) 60 $
+              DOnConfirm.onConfirm validatedReq
+      pure getSuccessRes
 
 onConfirmLockKey :: Text -> Text
 onConfirmLockKey id = "Customer:OnConfirm:BppBookingId-" <> id

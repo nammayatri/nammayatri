@@ -21,7 +21,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Ack
+-- import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -39,17 +39,22 @@ select ::
   Id DM.Merchant ->
   SignatureAuthResult ->
   Select.SelectReq ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 select transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Select API Flow" "Reached"
-    dSelectReq <- ACL.buildSelectReq subscriber req
-    Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
-      (merchant, estimate) <- DSelect.validateRequest transporterId dSelectReq
-      fork "select request processing" $ do
-        Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
-          DSelect.handler merchant dSelectReq estimate
-    pure Ack
+    now <- getCurrentTime
+    isExp <- maybe (pure False) (\ttl -> isTtlExpired (Just ttl) req.context.timestamp now) req.context.ttl
+    if isExp
+      then getTtlExpiredRes
+      else do
+        logTagInfo "Select API Flow" "Reached"
+        dSelectReq <- ACL.buildSelectReq subscriber req
+        Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
+          (merchant, estimate) <- DSelect.validateRequest transporterId dSelectReq
+          fork "select request processing" $ do
+            Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
+              DSelect.handler merchant dSelectReq estimate
+        pure getSuccessRes
 
 selectLockKey :: Text -> Text
 selectLockKey id = "Driver:Select:MessageId-" <> id

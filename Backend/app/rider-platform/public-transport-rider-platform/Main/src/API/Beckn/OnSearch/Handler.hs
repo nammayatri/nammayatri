@@ -29,12 +29,13 @@ handler ::
   SignatureAuthResult ->
   SignatureAuthResult ->
   BecknCallbackReq OnSearch.OnSearchCatalog ->
-  FlowHandler AckResponse
+  FlowHandler BecknAPIResponse
 handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+  -- prash what to do
   validateContext Context.ON_SEARCH $ req.context
   case req.contents of
     Right msg -> do
       domainReq <- BecknACL.buildOnSearch req msg.catalog
       DOnSearch.handler domainReq
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
-  return Ack
+  return getSuccessRes

@@ -16,13 +16,13 @@ module Beckn.Types.Core.Taxi.API.Confirm where
 
 import Beckn.Types.Core.Taxi.Confirm
 import EulerHS.Prelude
-import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.BecknAPIResponse (BecknAPIResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type ConfirmReq = BecknReq ConfirmMessage
 
-type ConfirmRes = AckResponse
+type ConfirmRes = BecknAPIResponse
 
 type ConfirmAPI =
   "confirm"
