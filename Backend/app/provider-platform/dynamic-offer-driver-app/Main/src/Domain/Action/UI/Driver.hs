@@ -405,7 +405,9 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
     totalEarnings :: Money,
     charges :: Money,
     chargesBreakup :: [DriverPaymentBreakup],
-    txnInfo :: [DriverTxnInfo]
+    txnInfo :: [DriverTxnInfo],
+    feeType :: DDF.FeeType,
+    expectedDate :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1351,17 +1353,18 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
-  mapM buildPaymentResp driverFees
+  mapM (buildPaymentResp transporterConfig) driverFees
   where
     maxLimit = 20
     defaultLimit = 10
 
-    buildPaymentResp DDF.DriverFee {..} = do
+    buildPaymentResp transporterConfig DDF.DriverFee {..} = do
       let date = utctDay startTime
           driverFeeId = id
           totalRides = numRides
           charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
+          expectedDate = addUTCTime (transporterConfig.driverAutoPayNotificationTime) (addUTCTime (transporterConfig.driverAutoPayExecutionTime) endTime) -- TODO
       invoice <- QINV.findByDriverFeeId id
       transactionDetails <- case invoice of
         Nothing -> pure []
