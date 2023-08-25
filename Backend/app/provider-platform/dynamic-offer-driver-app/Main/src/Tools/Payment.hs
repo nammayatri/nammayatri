@@ -36,6 +36,9 @@ offerList = runWithServiceConfig Payment.offerList
 mandateRevoke :: ServiceFlow m r => Id DM.Merchant -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
 mandateRevoke = runWithServiceConfig Payment.mandateRevoke
 
+mandateList :: ServiceFlow m r => Id DM.Merchant -> Payment.MandateListReq -> m Payment.MandateListResp
+mandateList = runWithServiceConfig Payment.mandateList
+
 runWithServiceConfig ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
