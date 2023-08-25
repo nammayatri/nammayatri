@@ -19,7 +19,7 @@ import Log
 
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..))
+import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event)
 import Components.ChatView.Controller (makeChatComponent')
 import Control.Monad.Except.Trans (lift)
 import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last)
@@ -27,7 +27,7 @@ import Data.Either (Either(..))
 import Data.Functor (map)
 import Data.Int (round, toNumber, ceil, fromString)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, fromJust)
 import Data.Number (fromString) as Number
 import Data.Ord (compare)
 import Data.Ord (compare)
@@ -90,12 +90,12 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 
-baseAppFlow :: Boolean -> FlowBT String Unit
-baseAppFlow baseFlow = do
-    (GlobalState state) <- getState
+baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
+baseAppFlow baseFlow event = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
-    checkDateAndTime 
+    -- checkDateAndTime -- Need To Refactor
+    (GlobalState state) <- getState
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
@@ -103,9 +103,22 @@ baseAppFlow baseFlow = do
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
     if isTokenValid regToken
-      then do
-        setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-        getDriverInfoFlow
+      then case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
+        Just e -> 
+          case e.data of
+            "plans" -> do
+              lift $ lift $ doAff do liftEffect hideSplash
+              setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+              let (GlobalState defGlobalState) = defaultGlobalState
+              modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
+              subScriptionFlow
+            _ -> do
+                  setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+                  getDriverInfoFlow
+        
+        Nothing -> do
+            setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+            getDriverInfoFlow
       else loginFlow
     where
     cacheAppParameters :: Int -> FlowBT String Unit
