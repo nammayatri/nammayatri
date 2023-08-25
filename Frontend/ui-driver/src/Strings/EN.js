@@ -780,5 +780,6 @@ const englishStrings = {
 	NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan or Autopay?",
   NEED_HELP_CALL_SUPPORT : "Need Help? <span style='color:#2194FF'>Call Support</span>",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
-	SETUP_NOW : "Setup Now"
-} 
+	SETUP_NOW : "Setup Now",
+  GO_TO : "Go-To"
+}

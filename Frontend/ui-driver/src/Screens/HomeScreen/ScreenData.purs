@@ -27,6 +27,7 @@ initData = {
     data: {
         driverName : "",
         vehicleType : "",
+        profileImg : Nothing,
         driverAlternateMobile : Nothing,
         activeRide : {
           id : "",
@@ -99,9 +100,15 @@ initData = {
           chargesBreakup : [],
           blockedDueToPayment : false,
           laterButtonVisibility : false
-        },
-        profileImg : Nothing
-    },
+        }, driverGotoState : {
+            gotoCount : 3,
+            goToInfo : false,
+            enableGotoTimer : false,
+            selectedGoTo : "",
+            savedLocationsArray : [], -- selectable : true  , isEditEnabled : false
+            showGoto : false
+        }
+     },
     props: {
         statusOnline : true,
         driverStatusSet : Online,

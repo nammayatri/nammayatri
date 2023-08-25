@@ -17,6 +17,7 @@ module Components.RideActionModal.View where
 
 import Common.Types.App
 
+
 import Common.Types.App (LazyCheck(..))
 import Components.RideActionModal.Controller (Action(..), Config)
 import Components.SeparatorView.View as SeparatorView
@@ -150,7 +151,7 @@ rideActionViewWithZone push config =
           , textSize FontSize.a_12
           , fontStyle $ FontStyle.medium TypoGraphy
           ]
-      ]
+        
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -172,6 +173,7 @@ rideActionViewWithZone push config =
         , if config.startRideActive then startRide push config else endRide push config
         , cancelRide push config
       ]
+    ]
   ]
 
 rideTypeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

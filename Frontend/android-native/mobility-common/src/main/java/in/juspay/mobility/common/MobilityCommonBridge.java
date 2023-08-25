@@ -240,6 +240,11 @@ public class MobilityCommonBridge extends HyperBridge {
     public void storeCallBackDriverLocationPermission(String callback) {
         receivers.storeLocationCallBack = callback;
     }
+
+    @JavascriptInterface
+    public void storeCallBackLocateOnMap(String callback) {
+        storeLocateOnMapCallBack = callback;
+    }
     // endregion
 
     // region Location
@@ -386,6 +391,44 @@ public class MobilityCommonBridge extends HyperBridge {
                             }
                         })
                         .addOnFailureListener(bridgeComponents.getActivity(), e -> Log.e(LOCATION, "Last and current position not known"));
+        }
+    }
+
+    @JavascriptInterface
+    public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon) {
+        try {
+            ExecutorManager.runOnMainThread(() -> {
+                removeMarker("ny_ic_customer_current_location");
+                final LatLng position = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                if (goToCurrentLocation) {
+                    LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                } else {
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                }
+                googleMap.setOnCameraIdleListener(() -> {
+                    double lat1 = (googleMap.getCameraPosition().target.latitude);
+                    double lng = (googleMap.getCameraPosition().target.longitude);
+                    if (storeLocateOnMapCallBack != null) {
+                        String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, "LatLon", lat1, lng);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
+                if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
+                    LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                    if (googleMap != null)
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                } else {
+                    if (googleMap != null) {
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            Log.i(MAPS, "LocateOnMap error for ", e);
         }
     }
 

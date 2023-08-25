@@ -17,26 +17,26 @@ module Screens.Types where
 
 import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
-import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
+import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
+import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
+import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
+import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
+import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import Prelude (class Eq, class Show )
+import MerchantConfig.Types (AppConfig)
+import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
-import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
+import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp, Prediction(..))
 import Styles.Types (FontSize)
-import Components.ChatView.Controller as ChatView
-import Components.RecordAudioModel.Controller as RecordAudioModel
-import MerchantConfig.Types (AppConfig)
-import Foreign.Object (Object)
-import Foreign (Foreign)
 import Screens (ScreenName)
 
 type EditTextInLabelState =
@@ -759,8 +759,18 @@ type HomeScreenData =  {
   driverAlternateMobile :: Maybe String,
   logField :: Object Foreign,
   paymentState :: PaymentState,
-  profileImg :: Maybe String
+  profileImg :: Maybe String,
+  driverGotoState :: DriverGoToState
  }
+
+type DriverGoToState = {
+  gotoCount :: Int,
+  goToInfo :: Boolean,
+  enableGotoTimer :: Boolean,
+  selectedGoTo :: String,
+  showGoto :: Boolean,
+  savedLocationsArray :: Array GoToLocation
+}
 
 type PaymentState = {
   rideCount :: Int,
@@ -1689,3 +1699,55 @@ instance showPaymentHistorySubview :: Show PaymentHistorySubview where show = ge
 instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where eq = genericEq
 instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where decode = defaultEnumDecode
 instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where encode = defaultEnumEncode
+
+
+type DriverSavedLocationScreenState = {
+  data :: DriverSavedLocationScreenData,
+  props :: DriverSavedLocationScreenProps
+}
+
+type DriverSavedLocationScreenData = {
+  address :: String,
+  lat :: Number,
+  lon :: Number,
+  savedLocationsArray :: Array GoToLocation,
+  predictions :: Array Prediction,
+  saveLocationObject :: SaveLocationObject
+}
+
+type GoToLocation = {
+  id :: String,
+  lat :: Number,
+  lon :: Number,
+  address :: String,
+  tag :: String
+}
+
+type DriverSavedLocationScreenProps = {
+  viewType :: SavedLocationScreenType,
+  selectedPrediction :: Prediction,
+  confirmDelete :: Boolean,
+  selectedLocation :: String,
+  fromEditButton :: Boolean
+}
+
+data SavedLocationScreenType = GO_TO_LIST | ENABLE_GO_TO | ADD_GO_TO_LOCATION | LOCATE_ON_MAP | CONFIRM_LOCATION
+
+derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
+instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where eq = genericEq
+
+
+data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS
+derive instance genericMenuoptions :: Generic MenuOptions _
+instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
+
+type Listtype =
+    { icon :: String,
+      menuOptions :: MenuOptions
+    }
+
+type SaveLocationObject = {
+  position :: Location,
+  address :: String,
+  tag :: String
+}

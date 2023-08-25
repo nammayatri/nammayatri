@@ -219,3 +219,30 @@ selectPlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/select"
 
 suspendMandate :: String -> String 
 suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend"
+
+autoComplete :: String -> String
+autoComplete _ = (getBaseUrl "") <> "/maps/autoComplete"
+
+placeDetails :: String -> String
+placeDetails _ =  (getBaseUrl "") <> "/maps/getPlaceDetails"
+
+getPlaceName :: String -> String 
+getPlaceName _ = (getBaseUrl "") <> "/maps/getPlaceName"
+
+activateDriverGoTo :: String -> String
+activateDriverGoTo homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/activate?homeLocationId=" <> homeLocationId
+
+deactivateDriverGoTo :: String -> String
+deactivateDriverGoTo _ = getBaseUrl "" <> "/driver/goHomeFeature/deactivate"
+
+addDriverHomeLocation :: String -> String
+addDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHomeFeature/add"
+
+getDriverHomeLocation :: String -> String
+getDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHomeFeature/get"
+
+deleteDriverHomeLocation :: String -> String
+deleteDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/delete?driverHomeLocationId=" <> homeLocationId
+
+updateDriverHomeLocation :: String -> String
+updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/update?driverHomeLocationId=" <> homeLocationId

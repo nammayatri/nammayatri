@@ -110,8 +110,9 @@ homeScreen = do
     SubscriptionScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
--- DTHS.GoToStart screenState -> do
---       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
---       _ <- pure $ spy "lat handler" startRideCurrentLat
---       _ <- pure $ spy "lon handler" startRideCurrentLong
---       App.BackT $ App.BackPoint <$> (pure $ ReachedPickUp screenState startRideCurrentLat startRideCurrentLong)
+    EnableGoto updatedState locationId -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ ENABLE_GOTO_API updatedState locationId)
+    LoadGotoLocations updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ LOAD_GOTO_LOCATIONS updatedState)

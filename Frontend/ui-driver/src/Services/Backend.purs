@@ -1062,3 +1062,122 @@ suspendMandate _ = do
     withAPIResult (EP.suspendMandate "") unwrapResponse $ callAPI headers (SuspendMandateReq "")
     where
         unwrapResponse (x) = x
+
+----------------------------------------------autoComplete-------------------------------------------------
+autoCompleteBT :: String -> Number -> Number -> String -> FlowBT String AutoCompleteResp
+autoCompleteBT searchVal lat lon language = do
+  headers <- getHeaders'  "zxc" true
+  withAPIResultBT (EP.autoComplete "") (\x → x) errorHandler (lift $ lift $ callAPI headers (makeReq searchVal lat lon language))
+  where
+    makeReq :: String -> Number -> Number -> String -> AutoCompleteReq
+    makeReq searchVal lat lon language= AutoCompleteReq {
+        components : "String",
+        sessionToken : Nothing,
+        location : searchVal,
+        radius : 100,
+        input : "String",
+        language : language,
+        strictbounds : Nothing,
+        origin : LatLong {
+            lat : lat,
+            lon : lon
+        }
+    }
+    errorHandler _ = BackT $ pure GoBack
+
+-----------------------------------------getPlaceName--------------------------------------------------
+placeNameBT :: GetPlaceNameReq -> FlowBT String GetPlaceNameResp
+placeNameBT payload = do
+     headers <- lift $ lift $ getHeaders  "zxc" false
+     withAPIResultBT (EP.getPlaceName "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+    where
+    errorHandler errorPayload = BackT $ pure GoBack
+
+makePlaceNameReq :: Number -> Number -> String -> GetPlaceNameReq
+makePlaceNameReq lat lng language = GetPlaceNameReq
+    {"sessionToken" : Just "",
+      "language" : Just language,
+      "getBy" : GetPlaceNameBy {
+          "tag" : "ByLatLong",
+          "contents" :LatLongType ( LatLonBody {
+              "lat" : lat,
+              "lon" : lng
+          })
+      }
+    }
+
+makePlaceNameReqByPlaceId :: String -> String -> GetPlaceNameReq
+makePlaceNameReqByPlaceId placeId language = GetPlaceNameReq
+    {"sessionToken" : Just "",
+      "language" : Just language,
+      "getBy" : GetPlaceNameBy {
+          "tag" : "ByPlaceId",
+          "contents" : (PlaceId placeId)
+      }
+    }
+
+-------------------------------------------Driver Go To--------------------------------------------------
+
+addDriverHomeLocation :: Number -> Number  -> String -> String -> Flow GlobalState (Either ErrorResponse AddHomeLocationResp)
+addDriverHomeLocation lat lon address tag = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.addDriverHomeLocation "") unwrapResponse $ callAPI headers $ makeAddReq lat lon address tag
+  where
+    makeAddReq :: Number -> Number -> String -> String -> AddHomeLocationReq
+    makeAddReq lat lon address tag = AddHomeLocationReq {
+        position : LatLong $ {
+            lat : lat,
+            lon : lon
+        } ,
+        address : address,
+        tag : tag
+    }
+    unwrapResponse x = x
+
+
+getDriverHomeLocation :: String -> Flow GlobalState (Either ErrorResponse GetHomeLocationsRes)
+getDriverHomeLocation _ = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getDriverHomeLocation "") unwrapResponse $ callAPI headers (GetHomeLocationReq)
+  where
+    unwrapResponse x = x
+
+activateDriverGoTo :: String -> Flow GlobalState (Either ErrorResponse ActivateDriverGoToResp)
+activateDriverGoTo id = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.activateDriverGoTo id) unwrapResponse $ callAPI headers (ActivateDriverGoToReq id)
+  where
+    unwrapResponse x = x
+
+deactivateDriverGoTo :: String -> Flow GlobalState (Either ErrorResponse DeactivateDriverGoToResp)
+deactivateDriverGoTo _ = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deactivateDriverGoTo "") unwrapResponse $ callAPI headers (DeactivateDriverGoToReq)
+  where
+    unwrapResponse x = x
+
+deleteDriverHomeLocation :: String -> Flow GlobalState (Either ErrorResponse DeleteDriverHomeLocationResp)
+deleteDriverHomeLocation id = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deleteDriverHomeLocation id) unwrapResponse $ callAPI headers (DeleteDriverHomeLocationReq id)
+  where
+    unwrapResponse x = x
+
+updateDriverHomeLocation :: String -> Number ->Number -> String -> String  -> Flow GlobalState (Either ErrorResponse UpdateHomeLocationResp)
+updateDriverHomeLocation qParam lat lon address tag = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.deleteDriverHomeLocation qParam) unwrapResponse $ callAPI headers $ makeUpdateReq lat lon address tag
+  where
+    makeUpdateReq :: Number -> Number -> String -> String -> UpdateHomeLocationReq
+    makeUpdateReq lat lon address tag = UpdateHomeLocationReq {
+        qParam : "",
+        body : AddHomeLocationReq $ {
+            position : LatLong $ {
+                lat : lat,
+                lon : lon
+            } ,
+            address : address,
+            tag : tag
+        }
+    }
+    unwrapResponse x = x

@@ -28,6 +28,7 @@ import Components.MakePaymentModal as MakePaymentModal
 import Components.ChatView as ChatView
 import Components.StatsModel.Controller as StatsModelController
 import Components.RequestInfoCard as RequestInfoCard
+import Components.GoToLocationModal as GoToLocationModal
 import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
@@ -177,6 +178,7 @@ instance loggableAction :: Loggable Action where
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
     RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
+    _ -> pure unit
     WaitTimerCallback id min sec -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "wait_timer_callBack" 
     MakePaymentModalAC act -> pure unit
     RateCardAC act -> pure unit
@@ -208,6 +210,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
                     | SubscriptionScreen ST.HomeScreenState
+                    | EnableGoto ST.HomeScreenState String
+                    | LoadGotoLocations ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -254,6 +258,12 @@ data Action = NoAction
             | RemoveGenderBanner
             | RequestInfoCardAction RequestInfoCard.Action
             | ScrollToBottom
+            | GoToButtonClick 
+            | GoToLocationModalAC GoToLocationModal.Action
+            | CancelBack
+            | ClickInfo
+            | GotoKnowMoreAction PopUpModal.Action
+            | OnClickChangeAction GoToLocationModal.Action 
             | WaitTimerCallback String String Int
             | MakePaymentModalAC MakePaymentModal.Action
             | RateCardAC RateCard.Action
@@ -261,9 +271,25 @@ data Action = NoAction
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
             | AutoPayBanner Banner.Action
-
+            | GotoRequestPopupAction PopUpModal.Action
+            | GotoCancellationPreventionAction PopUpModal.Action 
+            | GotoLocInRangeAction PopUpModal.Action
+            | EnableGotoTimer
+            
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
+
+eval GoToButtonClick state =  updateAndExit state{ data { driverGotoState { savedLocationsArray = []}}} $ LoadGotoLocations state{ data { driverGotoState { savedLocationsArray = []}}}
+
+eval ClickInfo state = continue state {data { driverGotoState {goToInfo = true}}}
+
+eval (GotoKnowMoreAction PopUpModal.OnButton1Click) state = continue state { data { driverGotoState { goToInfo = false } }} 
+
+eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue state {data { driverGotoState {selectedGoTo = item.id}}}
+
+eval EnableGotoTimer state = exit $ EnableGoto state state.data.driverGotoState.selectedGoTo
+
+eval CancelBack state = continue state { data { driverGotoState { showGoto = false}}}
 
 eval AfterRender state = do
   continue state{props{mapRendered= true}}
@@ -283,10 +309,12 @@ eval BackPressed state = do
                   else if state.data.paymentState.showRateCard then
                     continue state { data { paymentState{ showRateCard = false } } }
                       else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
-                        else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
-                          else do
-                            _ <- pure $ minimizeApp ""
-                            continue state
+                        else if state.data.driverGotoState.goToInfo then continue state{data {driverGotoState {goToInfo = false}}}
+                          else if  state.data.driverGotoState.showGoto then continue state { data { driverGotoState { showGoto = false }}} 
+                            else if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then continue state {props{showAadharPopUp = false}}
+                              else do
+                                _ <- pure $ minimizeApp ""
+                                continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon

@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps)
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
@@ -56,6 +56,7 @@ import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens (ScreenName(..)) as ScreenNames
+import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -99,6 +100,7 @@ newtype GlobalState = GlobalState {
   , globalProps :: GlobalProps
   , subscriptionScreen :: SubscriptionScreenState
   , paymentHistoryScreen :: PaymentHistoryScreenState
+  , driverSavedLocationScreen :: DriverSavedLocationScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -142,6 +144,7 @@ defaultGlobalState = GlobalState{
 , globalProps : defaultGlobalProps
 , subscriptionScreen : SubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
+, driverSavedLocationScreen : DriverSavedLocationScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -189,11 +192,12 @@ data ScreenType =
   | GlobalPropsType (GlobalProps -> GlobalProps)
   | SubscriptionScreenStateType (SubscriptionScreenState -> SubscriptionScreenState)
   | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
+  | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
 data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
-                            | HOME_SCREEN
+                            | HOME_SCREEN 
                             | PROFILE_SCREEN
                             | GO_TO_REFERRAL_SCREEN
                             | REFRESH RideHistoryScreenState
@@ -240,7 +244,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_CALL_DRIVER DriverProfileScreenState
                                     | ADD_RC DriverProfileScreenState
                                     | UPDATE_LANGUAGES (Array String)
-
+                                    | SAVED_LOCATIONS_SCREEN
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -300,6 +304,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | ON_CALL HomeScreenState
                           | OPEN_PAYMENT_PAGE HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
+                          | ENABLE_GOTO_API HomeScreenState String
+                          | LOAD_GOTO_LOCATIONS HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -363,3 +369,11 @@ data NAVIGATION_ACTIONS = HomeScreenNav
 data PAYMENT_HISTORY_SCREEN_OUTPUT = ViewDetails PaymentHistoryScreenState
 
 data APP_UPDATE_POPUP = Later | UpdateNow
+
+data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN 
+                                  | AUTO_COMPLETE String DriverSavedLocationScreenState
+                                  | GET_LOCATION_NAME DriverSavedLocationScreenState
+                                  | SAVE_LOCATION DriverSavedLocationScreenState
+                                  | GET_PLACE_NAME DriverSavedLocationScreenState String
+                                  | DELETE_PLACE DriverSavedLocationScreenState String
+                                  | CHANGE_VIEW 

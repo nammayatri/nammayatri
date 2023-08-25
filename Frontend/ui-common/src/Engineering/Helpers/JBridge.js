@@ -1913,3 +1913,26 @@ export const scrollViewFocus = function (parentID) {
     return false;
   }
 }
+
+var timerIdDebounce = null;
+export const storeCallBackLocateOnMap = function (cb) {
+  try {
+  return function (action) {
+      return function () {
+        var callback = callbackMapper.map(function (key, lat, lon) {
+          if(timerIdDebounce){
+            clearTimeout(timerIdDebounce);
+          }
+          window.x = cb;
+          window.y = action;
+          timerIdDebounce = setTimeout(() => {
+            cb(action (key) (lat) (lon))();
+          }, 200);
+        });
+          window.JBridge.storeCallBackLocateOnMap(callback);
+      }
+  }}
+  catch (error){
+      console.log("Error occurred ", error);
+  }
+}

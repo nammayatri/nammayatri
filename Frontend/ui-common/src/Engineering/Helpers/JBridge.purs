@@ -231,6 +231,7 @@ foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: String -> Array ChatComponent
 foreign import scrollViewFocus :: String -> Int -> Boolean
+foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 
 type LottieAnimationConfig = {
     rawJson :: String

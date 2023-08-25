@@ -50,6 +50,7 @@ data ScreenName = SPLASH_SCREEN
                 | ACKNOWLEDGEMENT_SCREEN
                 | AADHAAR_VERIFICATION_SCREEN
                 | SUBSCRIPTION_SCREEN
+                | DRIVER_SAVED_LOCATION_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of
@@ -88,3 +89,4 @@ getScreen str = case str of
     ACKNOWLEDGEMENT_SCREEN         -> "acknowledgement_screen"
     AADHAAR_VERIFICATION_SCREEN    -> "aadhaar_verification_screen"
     SUBSCRIPTION_SCREEN            -> "subscription_screen"
+    DRIVER_SAVED_LOCATION_SCREEN   -> "driver_saved_location_screen"
