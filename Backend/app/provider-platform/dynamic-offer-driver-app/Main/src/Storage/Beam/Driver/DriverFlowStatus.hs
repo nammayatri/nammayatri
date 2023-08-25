@@ -14,52 +14,20 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Driver.DriverFlowStatus where
 
 import Data.Aeson
-import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString)
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, ResultError (..), fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
-
-fromFieldFlowStatus ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion Domain.FlowStatus
-fromFieldFlowStatus f mbValue = do
-  value <- fromField f mbValue
-  case A.fromJSON value of
-    A.Success a -> pure a
-    _ -> DPSF.returnError ConversionFailed f "Conversion failed"
-
-instance FromField Domain.FlowStatus where
-  fromField = fromFieldFlowStatus
-
-instance HasSqlValueSyntax be Value => HasSqlValueSyntax be Domain.FlowStatus where
-  sqlValueSyntax = sqlValueSyntax . A.toJSON
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FlowStatus
-
-instance FromBackendRow Postgres Domain.FlowStatus
-
-instance IsString Domain.FlowStatus where
-  fromString = show
 
 data DriverFlowStatusT f = DriverFlowStatusT
   { personId :: B.C f Text,
@@ -75,10 +43,6 @@ instance B.Table DriverFlowStatusT where
   primaryKey = Id . personId
 
 type DriverFlowStatus = DriverFlowStatusT Identity
-
-deriving stock instance Ord Domain.FlowStatus
-
-deriving stock instance Read Domain.FlowStatus
 
 driverFlowStatusTMod :: DriverFlowStatusT (B.FieldModification (B.TableField DriverFlowStatusT))
 driverFlowStatusTMod =

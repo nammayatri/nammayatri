@@ -14,17 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Booking where
 
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
@@ -36,26 +32,6 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.BookingStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.BookingStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingStatus
-
-instance FromBackendRow Postgres Domain.BookingStatus
-
-instance FromField Domain.BookingType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.BookingType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingType
-
-instance FromBackendRow Postgres Domain.BookingType
 
 data BookingT f = BookingT
   { id :: B.C f Text,
@@ -90,15 +66,6 @@ data BookingT f = BookingT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Domain.BookingStatus where
-  fromString = show
-
-instance IsString Domain.BookingType where
-  fromString = show
-
-instance IsString Veh.Variant where
-  fromString = show
-
 instance B.Table BookingT where
   data PrimaryKey BookingT f
     = Id (B.C f Text)
@@ -106,10 +73,6 @@ instance B.Table BookingT where
   primaryKey = Id . id
 
 type Booking = BookingT Identity
-
-deriving stock instance Ord Context.City
-
-deriving stock instance Ord Context.Country
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =

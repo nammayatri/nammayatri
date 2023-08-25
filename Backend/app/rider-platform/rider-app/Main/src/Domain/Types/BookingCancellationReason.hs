@@ -14,6 +14,11 @@
 
 module Domain.Types.BookingCancellationReason where
 
+import qualified Data.Aeson.Types as A
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Booking.Type (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import qualified Domain.Types.Merchant as DM
@@ -43,3 +48,22 @@ data CancellationSource
   | ByAllocator
   | ByApplication
   deriving (Show, Eq, Ord, Read, Generic)
+
+instance FromField CancellationSource where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationSource
+
+instance FromBackendRow Postgres CancellationSource
+
+instance IsString CancellationSource where
+  fromString = show
+
+instance FromJSON CancellationSource where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON CancellationSource where
+  toJSON = A.genericToJSON A.defaultOptions

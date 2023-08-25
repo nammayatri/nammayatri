@@ -2359,15 +2359,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1692880501,
-        "narHash": "sha256-mbvyw1HRD7RyPZ3EEspemQOlNQ2rQkHJFAtvbcUFPEU=",
+        "lastModified": 1692960530,
+        "narHash": "sha256-dyzntLyGck3U6zRc5AL0rDdXm41RpyJ53D7eJCmBbKE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "46bc9087efb59273ee341fe7ab9907aa0ca4e06d",
+        "rev": "ecaed6e76a69d476770ccc41df438a7e98f7d24b",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "refactor/Backend-moving-orphan-instances",
         "repo": "shared-kernel",
         "type": "github"
       }

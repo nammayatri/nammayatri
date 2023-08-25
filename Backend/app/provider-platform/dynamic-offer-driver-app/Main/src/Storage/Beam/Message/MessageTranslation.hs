@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Message.MessageTranslation where
 
@@ -29,9 +28,6 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
 import Sequelize
-
-instance IsString Language where
-  fromString = show
 
 data MessageTranslationT f = MessageTranslationT
   { messageId :: B.C f Text,

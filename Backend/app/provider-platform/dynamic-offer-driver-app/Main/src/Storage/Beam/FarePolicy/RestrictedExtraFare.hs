@@ -14,14 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.RestrictedExtraFare where
 
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Domain.Types.Vehicle.Variant as Vehicle
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
@@ -29,9 +28,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance IsString Vehicle.Variant where
-  fromString = show
 
 data RestrictedExtraFareT f = RestrictedExtraFareT
   { id :: B.C f Text,

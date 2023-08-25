@@ -14,25 +14,18 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverInformation where
 
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverInformation as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (fromFieldEnum)
 import Lib.Utils ()
 import Sequelize
 
@@ -70,16 +63,6 @@ instance B.Table DriverInformationT where
   primaryKey = Id . driverId
 
 type DriverInformation = DriverInformationT Identity
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DriverAutoPayStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverAutoPayStatus
-
-instance FromBackendRow Postgres Domain.DriverAutoPayStatus
-
-instance FromField Domain.DriverAutoPayStatus where
-  fromField = fromFieldEnum
 
 driverInformationTMod :: DriverInformationT (B.FieldModification (B.TableField DriverInformationT))
 driverInformationTMod =

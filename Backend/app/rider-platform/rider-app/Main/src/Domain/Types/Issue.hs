@@ -14,9 +14,14 @@
 
 module Domain.Types.Issue where
 
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data IssueStatus
@@ -24,6 +29,19 @@ data IssueStatus
   | PENDING
   | RESOLVED
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
+
+instance FromField IssueStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be IssueStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be IssueStatus
+
+instance FromBackendRow Postgres IssueStatus
+
+instance IsString IssueStatus where
+  fromString = show
 
 data Issue = Issue
   { id :: Id Issue,

@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate where
 
@@ -64,8 +63,6 @@ instance B.Table VehicleRegistrationCertificateT where
   primaryKey = Id . id
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
-
-deriving stock instance Ord Domain.VerificationStatus
 
 vehicleRegistrationCertificateTMod :: VehicleRegistrationCertificateT (B.FieldModification (B.TableField VehicleRegistrationCertificateT))
 vehicleRegistrationCertificateTMod =

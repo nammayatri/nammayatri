@@ -20,6 +20,10 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FareProduct as FareProductD
@@ -39,6 +43,19 @@ data BookingStatus
   | COMPLETED
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromField BookingStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BookingStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be BookingStatus
+
+instance FromBackendRow Postgres BookingStatus
+
+instance IsString BookingStatus where
+  fromString = show
 
 instance FromHttpApiData BookingStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -85,3 +102,16 @@ data Booking = Booking
 
 data BookingType = SpecialZoneBooking | NormalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromField BookingType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BookingType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be BookingType
+
+instance FromBackendRow Postgres BookingType
+
+instance IsString BookingType where
+  fromString = show

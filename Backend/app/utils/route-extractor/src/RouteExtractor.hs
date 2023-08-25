@@ -16,13 +16,13 @@
 module RouteExtractor where
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import Kernel.External.Maps.Types (LatLong (LatLong))
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import RenderTrack
 import System.Environment
 import qualified Text.XML as XML
 
-deriving instance Read LatLong
+-- deriving instance Read LatLong
 
 -- we don't want to ever use Read instance in production code,
 -- so let this instance be here

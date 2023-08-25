@@ -16,9 +16,14 @@ module Domain.Types.Merchant.MerchantPaymentMethod where
 
 import Data.Aeson.Types
 import qualified Data.List as List
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import qualified Text.Show
 
@@ -43,8 +48,34 @@ instance ToJSON (MerchantPaymentMethodD 'Unsafe)
 data PaymentType = PREPAID | POSTPAID
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord)
 
+instance FromField PaymentType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PaymentType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PaymentType
+
+instance FromBackendRow Postgres PaymentType
+
+instance IsString PaymentType where
+  fromString = show
+
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash
   deriving (Generic, Eq, Ord)
+
+instance FromField PaymentInstrument where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PaymentInstrument where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PaymentInstrument
+
+instance FromBackendRow Postgres PaymentInstrument
+
+instance IsString PaymentInstrument where
+  fromString = show
 
 instance ToJSON PaymentInstrument where
   toJSON = genericToJSON paymentInstrumentOptions
@@ -125,6 +156,19 @@ instance ToJSON WalletType where
 
 data PaymentCollector = BAP | BPP
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord)
+
+instance FromField PaymentCollector where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PaymentCollector where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PaymentCollector
+
+instance FromBackendRow Postgres PaymentCollector
+
+instance IsString PaymentCollector where
+  fromString = show
 
 data PaymentMethodInfo = PaymentMethodInfo
   { paymentType :: PaymentType,

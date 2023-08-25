@@ -15,6 +15,11 @@
 
 module Domain.Types.SearchRequestForDriver where
 
+import qualified Data.Aeson as A
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
@@ -33,12 +38,48 @@ data DriverSearchRequestStatus = Active | Inactive
   deriving (Show, Read, Eq, Generic)
   deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
+instance FromField DriverSearchRequestStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverSearchRequestStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverSearchRequestStatus
+
+instance FromBackendRow Postgres DriverSearchRequestStatus
+
+instance IsString DriverSearchRequestStatus where
+  fromString = show
+
+instance FromJSON DriverSearchRequestStatus where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON DriverSearchRequestStatus where
+  toJSON = A.genericToJSON A.defaultOptions
+
+deriving stock instance Ord DriverSearchRequestStatus
+
 data SearchRequestForDriverResponse
   = Accept
   | Reject
   | Pulled
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Read, Eq)
   deriving (PrettyShow) via Showable SearchRequestForDriverResponse
+
+instance FromField SearchRequestForDriverResponse where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestForDriverResponse where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be SearchRequestForDriverResponse
+
+instance FromBackendRow Postgres SearchRequestForDriverResponse
+
+instance IsString SearchRequestForDriverResponse where
+  fromString = show
+
+deriving stock instance Ord SearchRequestForDriverResponse
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,

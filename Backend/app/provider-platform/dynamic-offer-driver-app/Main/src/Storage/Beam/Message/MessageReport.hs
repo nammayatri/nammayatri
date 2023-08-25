@@ -14,69 +14,22 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Message.MessageReport where
 
 import Data.Aeson
 import qualified Data.Aeson as A
-import Data.ByteString (ByteString)
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Message.MessageReport as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.DeliveryStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DeliveryStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DeliveryStatus
-
-instance FromBackendRow Postgres Domain.DeliveryStatus
-
-instance IsString Domain.DeliveryStatus where
-  fromString = show
-
-fromFieldmessageDynamicFields ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion Domain.MessageDynamicFieldsType
-fromFieldmessageDynamicFields f mbValue = do
-  value <- fromField f mbValue
-  case A.fromJSON value of
-    A.Success a -> pure a
-    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
-
-instance FromField Domain.MessageDynamicFieldsType where
-  fromField = fromFieldmessageDynamicFields
-
-instance HasSqlValueSyntax be Value => HasSqlValueSyntax be Domain.MessageDynamicFieldsType where
-  sqlValueSyntax = sqlValueSyntax . A.toJSON
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageDynamicFieldsType
-
-instance FromField (Text, Text) => FromBackendRow Postgres Domain.MessageDynamicFieldsType
-
-instance IsString Domain.MessageDynamicFieldsType where
-  fromString = show
-
-deriving stock instance Ord Domain.DeliveryStatus
 
 data MessageReportT f = MessageReportT
   { messageId :: B.C f Text,

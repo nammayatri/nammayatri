@@ -14,25 +14,19 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Message.Message where
 
 import Data.Serialize hiding (label)
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Message.Message as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
 
@@ -58,23 +52,6 @@ instance B.Table MessageT where
   primaryKey = Id . id
 
 type Message = MessageT Identity
-
-instance FromField Domain.MessageType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MessageType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MessageType
-
-instance FromBackendRow Postgres Domain.MessageType
-
-deriving stock instance Ord Domain.MessageType
-
-deriving stock instance Eq Domain.MessageType
-
-instance IsString Domain.MessageType where
-  fromString = show
 
 messageTMod :: MessageT (B.FieldModification (B.TableField MessageT))
 messageTMod =

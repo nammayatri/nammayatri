@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.FarePolicy.Common where
 
@@ -22,6 +23,12 @@ data WaitingChargeInfo = WaitingChargeInfo
     waitingCharge :: WaitingCharge
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+
+deriving stock instance Ord WaitingCharge
+
+deriving stock instance Ord WaitingChargeInfo
+
+deriving stock instance Ord NightShiftCharge
 
 data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)

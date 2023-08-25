@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
@@ -22,7 +21,6 @@ import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import qualified Domain.Types.FarePolicy as Domain
-import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
@@ -31,9 +29,6 @@ import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
 import Sequelize as Se
-
-instance IsString Vehicle.Variant where
-  fromString = show
 
 data FarePolicyProgressiveDetailsPerExtraKmRateSectionT f = FarePolicyProgressiveDetailsPerExtraKmRateSectionT
   { -- id :: B.C f Text,

@@ -15,18 +15,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Plan where
 
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Plan as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -35,58 +29,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.PaymentMode where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.PaymentMode where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.PaymentMode
-
-instance FromBackendRow Postgres Domain.PaymentMode
-
-instance IsString Domain.PaymentMode where
-  fromString = show
-
-instance FromField Domain.PlanBaseAmount where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.PlanBaseAmount where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.PlanBaseAmount
-
-instance FromBackendRow Postgres Domain.PlanBaseAmount
-
-instance IsString Domain.PlanBaseAmount where
-  fromString = show
-
-instance FromField Domain.Frequency where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.Frequency where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Frequency
-
-instance FromBackendRow Postgres Domain.Frequency
-
-instance IsString Domain.Frequency where
-  fromString = show
-
-instance FromField Domain.PlanType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.PlanType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.PlanType
-
-instance FromBackendRow Postgres Domain.PlanType
-
-instance IsString Domain.PlanType where
-  fromString = show
 
 data PlanT f = PlanT
   { id :: B.C f Text,
@@ -112,12 +54,6 @@ instance B.Table PlanT where
   primaryKey = Id . id
 
 type Plan = PlanT Identity
-
-deriving stock instance Ord Domain.Frequency
-
-deriving stock instance Ord Domain.PlanType
-
-deriving stock instance Ord Domain.PlanBaseAmount
 
 planTMod :: PlanT (B.FieldModification (B.TableField PlanT))
 planTMod =

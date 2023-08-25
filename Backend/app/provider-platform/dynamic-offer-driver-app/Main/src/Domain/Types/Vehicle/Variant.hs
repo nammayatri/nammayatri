@@ -40,6 +40,9 @@ data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
     )
   deriving (PrettyShow) via Showable Variant
 
+instance IsString Variant where
+  fromString = show
+
 instance FromHttpApiData Variant where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece

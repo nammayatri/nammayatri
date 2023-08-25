@@ -14,64 +14,23 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant where
 
-import Data.ByteString.Internal (ByteString)
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common hiding (id)
+import Kernel.Types.Common ()
 import Kernel.Types.Geofencing
 import Lib.Utils ()
 import Sequelize
-
-fromFieldEnum' ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion GeoRestriction
-fromFieldEnum' f mbValue = case mbValue of
-  Nothing -> pure Unrestricted
-  Just _ -> Regions . V.toList <$> fromField f mbValue
-
-instance FromField GeoRestriction where
-  fromField = fromFieldEnum'
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be GeoRestriction where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be GeoRestriction
-
-instance FromBackendRow Postgres GeoRestriction
-
-instance FromField Domain.Status where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.Status where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Status
-
-instance FromBackendRow Postgres Domain.Status
-
-instance IsString Domain.Status where
-  fromString = show
-
-instance IsString GeoRestriction where
-  fromString = show
 
 data MerchantT f = MerchantT
   { id :: B.C f Text,
@@ -108,16 +67,6 @@ instance B.Table MerchantT where
   primaryKey = Id . id
 
 type Merchant = MerchantT Identity
-
-deriving stock instance Ord Domain.Status
-
-deriving stock instance Ord GeoRestriction
-
-deriving stock instance Eq GeoRestriction
-
-deriving stock instance Ord Context.City
-
-deriving stock instance Ord Context.Country
 
 merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
 merchantTMod =

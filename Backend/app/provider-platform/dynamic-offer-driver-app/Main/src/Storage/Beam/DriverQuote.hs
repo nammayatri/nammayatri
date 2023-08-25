@@ -14,17 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverQuote where
 
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -35,16 +31,6 @@ import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.DriverQuoteStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DriverQuoteStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverQuoteStatus
-
-instance FromBackendRow Postgres Domain.DriverQuoteStatus
 
 data DriverQuoteT f = DriverQuoteT
   { id :: B.C f Text,
@@ -69,12 +55,6 @@ data DriverQuoteT f = DriverQuoteT
     updatedAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
-
-instance IsString Domain.DriverQuoteStatus where
-  fromString = show
-
-instance IsString Variant.Variant where
-  fromString = show
 
 instance B.Table DriverQuoteT where
   data PrimaryKey DriverQuoteT f

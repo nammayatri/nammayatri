@@ -23,6 +23,10 @@ where
 
 import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
 import Data.OpenApi
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Person as DP
@@ -31,9 +35,10 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.Common
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
-deriving stock instance Ord Maps.LatLong
+-- deriving stock instance Ord Maps.LatLong
 
 data FlowStatus
   = IDLE
@@ -86,6 +91,21 @@ data FlowStatus
         driverArrivalTime :: Maybe UTCTime
       }
   deriving (Show, Eq, Generic)
+
+instance FromField FlowStatus where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be FlowStatus where
+  sqlValueSyntax = sqlValueSyntax . encodeToText
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be FlowStatus
+
+instance FromBackendRow Postgres FlowStatus
+
+instance IsString FlowStatus where
+  fromString = show
+
+deriving stock instance Ord FlowStatus
 
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =

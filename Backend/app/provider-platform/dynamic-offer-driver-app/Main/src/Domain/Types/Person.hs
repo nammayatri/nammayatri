@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Person where
 
@@ -21,6 +22,10 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.MediaFile as M
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
@@ -29,6 +34,7 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (Centesimal, maskText)
@@ -40,6 +46,21 @@ data Role
   = DRIVER
   | ADMIN
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
+
+instance FromField Role where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Role
+
+instance FromBackendRow Postgres Role
+
+instance IsString Role where
+  fromString = show
+
+deriving stock instance Ord Role
 
 instance FromHttpApiData Role where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -55,6 +76,21 @@ instance ToHttpApiData Role where
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
+instance FromField IdentifierType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
+
+instance FromBackendRow Postgres IdentifierType
+
+instance IsString IdentifierType where
+  fromString = show
+
+deriving stock instance Ord IdentifierType
+
 instance FromHttpApiData IdentifierType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -68,6 +104,21 @@ instance ToHttpApiData IdentifierType where
 --------------------------------------------------------------------------------------------------
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromField Gender where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Gender where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Gender
+
+instance FromBackendRow Postgres Gender
+
+instance IsString Gender where
+  fromString = show
+
+deriving stock instance Ord Gender
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8
