@@ -766,5 +766,8 @@ const englishStrings = {
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
   HELP_STR : "HELP",
-  REFRESH_STRING : "Refresh"
+  REFRESH_STRING : "Refresh",
+  CHAT_FOR_HELP : "Chat for Help",
+  VIEW_FAQs : "View FAQs",
+  SUPPORT : "Support"
 } 

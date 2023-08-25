@@ -733,5 +733,8 @@ const tamilStrings = {
   GET_SPECIAL_OFFERS : "சிறப்பு சலுகைகளைப் பெறுங்கள்",
   VALID_ONLY_IF_PAYMENT : "பணம் செலுத்தினால் மட்டுமே செல்லுபடியாகும்",
   HELP_STR : "உதவி",
-  REFRESH_STRING : "புதுப்பிப்பு"
+  REFRESH_STRING : "புதுப்பிப்பு",
+  CHAT_FOR_HELP : "மெசேஜ்",
+  VIEW_FAQs : "கேள்விகள்?",
+  SUPPORT : "ஆதரவு"
 }

@@ -713,5 +713,8 @@ const mlStrings = {
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
   HELP_STR : "HELP",
-  REFRESH_STRING : "Refresh"
+  REFRESH_STRING : "Refresh",
+  CHAT_FOR_HELP : "സഹായത്തിനായി ചാറ്റ് ചെയ്യുക",
+  VIEW_FAQs : "പതിവുചോദ്യങ്ങൾ കാണുക",
+  SUPPORT : "പിന്തുണ"
 }

@@ -75,7 +75,8 @@ initData = {
         },
         managePlanProps : {
             selectedPlanItem : dummyPlanConfig
-        }
+        },
+        optionsMenuExpanded : false
     }
 }
 

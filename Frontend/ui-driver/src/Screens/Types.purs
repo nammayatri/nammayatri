@@ -1536,7 +1536,8 @@ type SubscriptionScreenProps = {
   isDueViewExpanded :: Boolean,
   refreshPaymentStatus :: Boolean,
   confirmCancel :: Boolean,
-  isSelectedLangTamil :: Boolean
+  isSelectedLangTamil :: Boolean,
+  optionsMenuExpanded :: Boolean
 }
 
 type JoinPlanData = {

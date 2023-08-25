@@ -738,5 +738,8 @@ const kannadaStrings = {
   GET_SPECIAL_OFFERS : "ಸ್ಪೆಷಲ್ ಆಫರ್ಗಳು ಪಡೆಯಿರಿ",
   VALID_ONLY_IF_PAYMENT : "ಪಾವತಿ ಪೂರ್ಣಗೊಂಡರೆ ಮಾತ್ರ ಮಾನ್ಯವಾಗಿರುತ್ತದೆ",
   HELP_STR : "ಸಹಾಯ",
-  REFRESH_STRING : "ರಿಫ್ರೆಶ್"
+  REFRESH_STRING : "ರಿಫ್ರೆಶ್",
+  CHAT_FOR_HELP : "ಚಾಟ್?",
+  VIEW_FAQs : "ಎಫ್.ಎ.ಕ್ಯೂ ವೀಕ್ಷಿಸಿ",
+  SUPPORT : "ಬೆಂಬಲ"
 }

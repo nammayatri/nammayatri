@@ -21,6 +21,7 @@ import PrestoDOM
 import Common.Types.App (PaymentStatus(..))
 import Components.PopUpModal as PopUpModalConfig
 import Components.PrimaryButton as PrimaryButton
+import Components.OptionsMenu as OptionsMenuConfig
 import Data.Array as DA
 import Data.Maybe (isNothing)
 import Data.Maybe as Mb
@@ -214,3 +215,35 @@ tryAgainButtonConfig state = let
       , margin = Margin 16 16 16 16
       }
   in primaryButtonConfig'
+
+optionsMenuConfig :: ST.SubscriptionScreenState -> OptionsMenuConfig.Config
+optionsMenuConfig state = 
+  OptionsMenuConfig.config {
+  menuItems = [
+    {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : state.props.subView == ST.MyPlan},
+    {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : false},
+    {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible : true},
+    {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true},
+    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : true}],
+  backgroundColor = Color.blackLessTrans,
+  menuBackgroundColor = Color.white900,
+  gravity = RIGHT,
+  menuExpanded = state.props.optionsMenuExpanded,
+  width = 170,
+  marginRight = 16,
+  itemHeight = 50,
+  itemPadding = 16,
+  cornerRadius = 4.0
+
+}
+
+getHeaderConfig :: ST.SubscriptionSubview -> HeaderData
+getHeaderConfig subView = 
+  case subView of
+    ST.JoinPlan    -> {title : (getString NAMMA_YATRI_PLANS), actionText : getString SUPPORT, backbutton : false}
+    ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
+    ST.MyPlan      -> {title : (getString PLAN), actionText : (getString MANAGE_PLAN ), backbutton : false}
+    ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
+    _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : (getString HELP_STR), backbutton : false}
+
+type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
