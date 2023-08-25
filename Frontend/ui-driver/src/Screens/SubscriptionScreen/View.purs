@@ -87,10 +87,28 @@ screen initialState globalState =
 
 loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
 loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (GlobalState globalState) = do
-      uiPlans <- Remote.getUiPlans ""
-      case uiPlans of
-        Right resp -> doAff do liftEffect $ push $ loadPlans resp
+  if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
+    let globalProp = globalState.globalProps
+    let (GetDriverInfoResp driverInfo) = globalProp.driverInformation
+    if isJust driverInfo.autoPayStatus then do 
+      currentPlan <- Remote.getCurrentPlan ""
+      case currentPlan of
+        Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
+    else do
+      currentPlan <- Remote.getCurrentPlan ""
+      case currentPlan of
+        Right resp' -> do
+          let (GetCurrentPlanResp resp) = resp'
+          case resp.currentPlanDetails of
+            Nothing -> do
+              uiPlans <- Remote.getUiPlans ""
+              case uiPlans of
+                Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
+                Left err -> doAff do liftEffect $ push $ errorAction err
+            Just _ -> doAff do liftEffect $ push $ loadMyPlans resp'
+        Left err -> doAff do liftEffect $ push $ errorAction err 
+  else pure unit
 
 paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
 paymentStatusPooling orderId count base power state push action = do
@@ -502,8 +520,8 @@ headerView push state =
           imageWithFallback if state.props.subView == JoinPlan && state.props.optionsMenuExpanded then "ny_ic_chevronup_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevronup_blue.png"
                             else if state.props.subView == JoinPlan then "ny_ic_chevrondown_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevrondown_blue.png"
                             else "ny_ic_kebab_menu,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_kebab_menu.png"
-          , height $ V if state.props.subView == JoinPlan then 12 else 24
-          , width $ V if state.props.subView == JoinPlan then 12 else 24
+          , height $ V if state.props.subView == JoinPlan then 15 else 24
+          , width $ V if state.props.subView == JoinPlan then 15 else 24
           , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] then VISIBLE else GONE
           , margin $ MarginLeft 3
           ]
