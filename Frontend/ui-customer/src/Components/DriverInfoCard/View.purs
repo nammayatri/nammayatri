@@ -60,10 +60,10 @@ view push state =
   , orientation VERTICAL
   ][ linearLayout[
        height WRAP_CONTENT
-      , width MATCH_PARENT 
+      , width MATCH_PARENT
       , gravity RIGHT
       , padding $ PaddingHorizontal 16 16
-      ][supportButton push state]  
+      ][supportButton push state]
     , mapOptionsView push state
     , messageNotificationView push state
     , driverInfoViewSpecialZone push state
@@ -126,8 +126,8 @@ titleAndETA push state =
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (state.props.estimatedTime == "--"))) then GONE else VISIBLE
   ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
-      else 
-      textView $ 
+      else
+      textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ "ETA: " <> if state.props.currentSearchResultType == QUOTES then (state.props.estimatedTime) else (secondsToHms state.data.eta)
@@ -137,7 +137,7 @@ titleAndETA push state =
   ]
 
 specialZoneHeader :: forall w. String -> PrestoDOM ( Effect Unit) w
-specialZoneHeader vehicleVariant = 
+specialZoneHeader vehicleVariant =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -180,12 +180,12 @@ specialZoneHeader vehicleVariant =
 
   ]
 
-getTitleConfig :: forall w. String -> {text :: String , color :: String} 
-getTitleConfig vehicleVariant = 
-  (case vehicleVariant of 
+getTitleConfig :: forall w. String -> {text :: String , color :: String}
+getTitleConfig vehicleVariant =
+  (case vehicleVariant of
         "TAXI_PLUS" -> { text : (getString AC) <> " " <> (getString TAXI), color : Color.blue800 }
-        "TAXI" -> {text : (getString NON_AC )<> " " <> (getString TAXI) , color : CommonColor.orange900 } 
-        _ -> {text : "" , color : ""}) 
+        "TAXI" -> {text : (getString NON_AC )<> " " <> (getString TAXI) , color : CommonColor.orange900 }
+        _ -> {text : "" , color : ""})
 
 
 dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
@@ -377,7 +377,7 @@ locationTrackButton push state =
         , width $ V 18
         , margin $ Margin 10 10 10 10
         ]
-      ]  
+      ]
   ]
 
 sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
@@ -508,7 +508,7 @@ navigateView push state =
       , gravity CENTER
       , stroke $ "1,"<>Color.grey900
       , orientation HORIZONTAL
-      , onClick push (const OnNavigate)
+      , onClick push (const OnNavigateToZone)
       ][  imageView
           [ width $ V 20
           , height $ V 20
@@ -704,7 +704,7 @@ cancelRideLayout push state =
 
 ---------------------------------- contactView ---------------------------------------
 contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-contactView push state = 
+contactView push state =
   linearLayout
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
@@ -765,7 +765,7 @@ contactView push state =
             ]
           ]
     ]
-    
+
 
 ---------------------------------- driverDetailsView ---------------------------------------
 
@@ -794,7 +794,7 @@ driverDetailsView push state =
               , width $ V 50
               , padding $ Padding 2 3 2 1
               , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
-              ]  
+              ]
           ]
         , textView $
           [ text state.data.driverName
@@ -806,7 +806,7 @@ driverDetailsView push state =
           , gravity LEFT
           ] <> FontStyle.body7 TypoGraphy
         , textView (
-          [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of 
+          [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of
                           "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
                           "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
                           _ -> "")
@@ -1061,9 +1061,9 @@ headerTextView push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  ][ if state.props.currentStage == RideStarted then 
+  ][ if state.props.currentStage == RideStarted then
       textView $
-      [ text $ "ETA :" <> state.props.estimatedTime 
+      [ text $ "ETA :" <> state.props.estimatedTime
       , color Color.black800
       , padding $ PaddingBottom 16
       , ellipsize true
@@ -1152,7 +1152,7 @@ openGoogleMap push state =
   ]
 
 dummyView :: forall w . (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-dummyView push  = 
+dummyView push  =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -1174,6 +1174,6 @@ getVehicleImage variant vehicleDetail = do
   let url = getAssetStoreLink FunctionCall
   let details = (toLower vehicleDetail)
   if (variant == "AUTO_RICKSHAW") then "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
-  else 
+  else
     if contains (Pattern "ambassador") details then "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
     else "ic_white_taxi," <> url <> "ic_white_taxi.png"
