@@ -69,12 +69,10 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Constants (getKmMeter)
 import Resources.Constants (getKmMeter)
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
 import Screens.Types as ST
-import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, getValueToLocalNativeStore)
 import Styles.Colors as Color
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -173,6 +171,92 @@ getDistanceString currDistance initDistance zoneType
                   getString THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
                 else
                   getString DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
+
+safetyAlertConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyAlertConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+      dismissPopup =true,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 24 0 24 20,
+      gravity = CENTER,
+      margin = MarginHorizontal 20 20,
+      primaryText {
+        text = getString EVERYTHING_OKAY_Q
+      , margin = Margin 16 0 16 10
+      }
+      , secondaryText { 
+        text = getSafetyText $ getValueToLocalNativeStore SAFETY_ALERT_TYPE
+        , margin = MarginHorizontal 16 16 
+       },
+      option1 {
+        text = getString I_FEEL_SAFE
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , width = MATCH_PARENT
+      , margin = MarginVertical 20 10
+      },
+      option2 {
+        text = getString I_NEED_HELP
+      , color = Color.black700
+      , background = Color.white900
+      , width = MATCH_PARENT
+      , margin = MarginBottom 10
+      },
+      cornerRadius = Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = "ny_ic_safety_alert," <> getAssetStoreLink FunctionCall <> "ny_ic_safety_alert.png"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 16
+      , width = MATCH_PARENT
+      , height = V 225
+      }
+  }
+  in popUpConfig'
+
+getSafetyText :: String -> String
+getSafetyText reason
+            | reason == "Deviation" = getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE
+            | otherwise             = getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED
+
+
+reportingIssueConfig :: ST.HomeScreenState -> PopUpModal.Config
+reportingIssueConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { optionButtonOrientation = "VERTICAL",
+          buttonLayoutMargin = Margin 16 0 16 20,
+          gravity = CENTER,
+          margin = MarginHorizontal 20 20,
+          cornerRadius = Corners 15.0 true true true true,
+          primaryText
+          { text = getString WE_ARE_HERE_FOR_YOU
+          , margin = (Margin 16 20 16 0)
+          }
+        , secondaryText
+          { text = getString PLEASE_REMAIN_CALM_YOU_CAN_REQUEST_AN_IMMEDIATE_CALL
+          , margin = (Margin 0 16 0 20)
+          }
+        , option1 { 
+          text = getString RECEIVE_CALL_FROM_SUPPORT
+          , margin = MarginBottom 10
+          , width = MATCH_PARENT
+          , color = Color.yellow900
+          , background = Color.black900
+          }
+        , option2 { 
+          text = getString DISMISS
+          , margin = MarginBottom EHC.safeMarginBottom
+          , width = MATCH_PARENT
+          , color  = Color.black900
+          , background = Color.white900
+          }
+        }
+  in
+    popUpConfig'
 
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =

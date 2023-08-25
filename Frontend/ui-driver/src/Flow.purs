@@ -1863,6 +1863,7 @@ homeScreenFlow = do
       void $ pure $ setCleverTapUserProp "Driver On-ride" "No"
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+      _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT "false"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
       liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
 

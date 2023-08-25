@@ -704,6 +704,12 @@ sendIssueBT req = do
     errorHandler (errorPayload) =  do
             BackT $ pure GoBack
 
+sendSafetySupport req = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.safetySupport "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse (x) = x
+
 ----------------------------------------------------------------------------------------------
 drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> MapRouteConfig -> FlowBT String (Maybe Route)
 drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute routeAPIType specialLocation = do
@@ -771,6 +777,13 @@ makeSendIssueReq email bookingId reason description= SendIssueReq {
             "reason" : reason,
             "description" : description
         }
+}
+
+makeAskSupportRequest :: String -> String -> String -> AskSupportReq
+makeAskSupportRequest bId isSafe description = AskSupportReq{
+    "bookingId" : bId,
+    "isSafe" : isSafe,
+    "description" : description
 }
 
 originServiceabilityBT :: ServiceabilityReq -> FlowBT String ServiceabilityRes

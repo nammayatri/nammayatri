@@ -694,6 +694,7 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , reportUnsafe :: Boolean
   }
 
 type RouteEndPoints = {

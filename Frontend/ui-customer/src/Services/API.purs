@@ -1590,6 +1590,36 @@ instance showSendIssueRes :: Show SendIssueRes where show = genericShow
 instance decodeSendIssueRes :: Decode SendIssueRes where decode = defaultDecode
 instance encodeSendIssueRes :: Encode SendIssueRes where encode = defaultEncode
 
+
+newtype AskSupportRes = AskSupportRes {
+    result :: String
+  }
+
+newtype AskSupportReq = AskSupportReq {
+    bookingId :: String,
+    isSafe :: String,
+    description :: String
+  }
+
+instance makeAskSupportRequest :: RestEndpoint AskSupportReq AskSupportRes where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.safetySupport "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericAskSupportRes :: Generic AskSupportRes _
+derive instance newtypeAskSupportRes :: Newtype AskSupportRes _
+instance standardEncodeAskSupportRes :: StandardEncode AskSupportRes where standardEncode (AskSupportRes req) = standardEncode req
+instance showAskSupportRes :: Show AskSupportRes where show = genericShow
+instance decodeAskSupportRes :: Decode AskSupportRes where decode = defaultDecode
+instance encodeAskSupportRes :: Encode AskSupportRes where encode = defaultEncode
+
+derive instance genericAskSupportReq :: Generic AskSupportReq _
+derive instance newtypeAskSupportReq :: Newtype AskSupportReq _
+instance standardEncodeAskSupportReq :: StandardEncode AskSupportReq where standardEncode (AskSupportReq req) = standardEncode req
+instance showAskSupportReq :: Show AskSupportReq where show = genericShow
+instance decodeAskSupportReq :: Decode AskSupportReq where decode = defaultDecode
+instance encodeAskSupportReq :: Encode AskSupportReq where encode = defaultEncode
+
 newtype DestinationServiceabilityReq = DestinationServiceabilityReq
   { location  :: LatLong
   }

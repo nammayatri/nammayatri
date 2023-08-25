@@ -79,6 +79,7 @@ data KeyStore
   | COUNTRY_CODE
   | DISABILITY_UPDATED
   | DISABILITY_POPUP_TRIGGERED
+  | SAFETY_ALERT_TYPE
 
 derive instance genericKeyStore :: Generic KeyStore _
 

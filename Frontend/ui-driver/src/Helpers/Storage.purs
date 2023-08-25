@@ -98,6 +98,7 @@ data KeyStore = USER_NAME
                 | DRIVER_SUBSCRIBED
                 | KIOSK_LOCATIONS
                 | ENABLE_BLOCKING
+                | SAFETY_ALERT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

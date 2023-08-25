@@ -64,6 +64,10 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -103,6 +107,8 @@ public class LocationUpdateService extends Service {
     private int maximumLimitNotOnRide = 3;
     private float minDispDistanceNew = 25.0f, minDispDistance = 25.0f;
     private TimerTask timerTask;
+    private boolean alertSent = false;
+    private boolean deviationAlert = false;
     private String rideWaypoints = null;
     CancellationTokenSource cancellationTokenSource;
     static JSONArray metaDataForLocation;
@@ -443,6 +449,86 @@ public class LocationUpdateService extends Service {
         }
     }
 
+    private void callDeviationAlertAPI(String reason){
+        try{
+            String baseUrl = getValueFromStorage("BASE_URL");
+            String rideID = getValueFromStorage("RIDE_ID");
+            String version = getValueFromStorage("VERSION_NAME");
+            String token = getValueFromStorage("REGISTERATION_TOKEN");
+            String bundle_version = getValueFromStorage("BUNDLE_VERSION");
+            String deviceDetails = getValueFromStorage("DEVICE_DETAILS");
+            String orderURL = baseUrl + "/deviationAlert";
+            JSONObject post_data = new JSONObject();
+            post_data.put("rideId", rideID);
+            post_data.put("reason", reason);
+            HttpURLConnection connection = (HttpURLConnection) (new URL(orderURL).openConnection());
+            if (connection instanceof HttpsURLConnection)
+                ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("token", token);
+            connection.setRequestProperty("x-bundle-version", bundle_version);
+            connection.setRequestProperty("x-device", deviceDetails);
+            connection.setRequestProperty("x-client-version", version);
+            connection.setDoOutput(true);
+            OutputStream stream = connection.getOutputStream();
+            stream.write(post_data.toString().getBytes());
+            connection.connect();
+            int response = connection.getResponseCode();
+            if (response < 200 || response >= 300 && response != 302){
+                InputStreamReader respReader = new InputStreamReader(connection.getInputStream());
+                System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + respReader);
+                Log.d(LOG_TAG, "in error " + respReader);
+            }
+        }
+        catch (Exception e){
+
+        }
+    }
+
+    private void checkIfNotMoving(double lat, double lon){
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String jsonValue = sharedPref.getString("DRIVER_LATLON_TIME", "__failed");
+            LocalDateTime now = null;
+            JSONObject obj;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                now = LocalDateTime.now();
+            if (jsonValue.equals("__failed")) {
+                obj = new JSONObject();
+                obj.put("lat", lat);
+                obj.put("lon", lon);
+                obj.put("timeStamp", now.toString());
+                sharedPref.edit().putString("DRIVER_LATLON_TIME", obj.toString()).apply();
+            } else {
+                obj = new JSONObject(jsonValue);
+                if (lat == obj.getDouble("lat") && lon == obj.getDouble("lon")) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        SimpleDateFormat parser = new SimpleDateFormat("HH:mm");
+                        Date startTime  = parser.parse("21:00");
+                        Date endTime    = parser.parse("08:00");
+                        Date date   = new Date();
+                        Date currTime = parser.parse(parser.format(date)) ;
+                        LocalDateTime prevTime = LocalDateTime.parse(obj.getString("timeStamp"));
+                        String alertVal = sharedPref.getString("SAFETY_ALERT", "false");
+                        if (ChronoUnit.SECONDS.between(prevTime, now) / 60 >= 5 && alertVal == "false" && currTime.after(startTime) && currTime.before(endTime)) {
+                            sharedPref.edit().putString("SAFETY_ALERT","true").apply();
+                            callDeviationAlertAPI("NotMoving");
+                        }
+                    }
+                } else {
+                    obj = new JSONObject();
+                    obj.put("lat", lat);
+                    obj.put("lon", lon);
+                    obj.put("timeStamp", now.toString());
+                    sharedPref.edit().putString("DRIVER_LATLON_TIME", obj.toString()).apply();
+                }
+            }
+        }
+        catch (Exception e) {
+            Log.e("Driver Not Moving Exception", e.toString());
+        }
+    }
 
     private void updateDeviation(double latitude, double longitude, String waypoints) {
         try {
@@ -466,7 +552,17 @@ public class LocationUpdateService extends Service {
             if (devCount == null) {
                 return;
             }
-
+            SimpleDateFormat parser = new SimpleDateFormat("HH:mm");
+            Date startTime  = parser.parse("22:00");
+            Date endTime    = parser.parse("06:00");
+            Date date   = new Date();
+            Date currTime = parser.parse(parser.format(date)) ;
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String alertVal = sharedPref.getString("SAFETY_ALERT","false");
+            if (PolyUtil.locationIndexOnEdgeOrPath(new LatLng(latitude, longitude), latLngPoints, false, true, 1000.0) == -1 && alertVal.equals("false") && currTime.after(startTime) && currTime.before(endTime)){
+                sharedPref.edit().putString("SAFETY_ALERT","true").apply();
+                callDeviationAlertAPI("Deviation");
+            }
             if (devCount < 3) {
                 int resultIndex = PolyUtil.locationIndexOnEdgeOrPath(new LatLng(latitude, longitude), latLngPoints, PolyUtil.isClosedPolygon(latLngPoints), true, toleranceEarthVal);
                 if (resultIndex == -1) {
@@ -507,7 +603,10 @@ public class LocationUpdateService extends Service {
                             }
 
                             getRoute(Double.parseDouble(rideStartLat), Double.parseDouble(rideStartLon), Double.parseDouble(rideEndLat), Double.parseDouble(rideEndLon));
-                            routeHandler.post(() -> updateDeviation(latitude, longitude, rideWaypoints));
+                            routeHandler.post(() -> {
+                                updateDeviation(latitude, longitude, rideWaypoints);
+                                checkIfNotMoving(latitude, longitude);
+                            });
                         } catch (Exception e) {
                             Log.e("get route exception", e.toString());
                         }

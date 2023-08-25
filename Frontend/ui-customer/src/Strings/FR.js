@@ -500,5 +500,14 @@ export function getStringValue(key) {
     "JUST_ONE_LAST_THING": "Juste une dernière chose",
     "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément",
     "AUTO_RICKSHAW" : "Pousse-pousse automatique",
-    "CABS_AVAILABLE" : "cabines disponibles"
+    "CABS_AVAILABLE" : "cabines disponibles",
+    "WE_NOTICED_YOUR_RIDE_HASNT_MOVED" : "Nous avons remarqué que votre véhicule n'a pas bougé depuis un certain temps. Vous sentez-vous en sécurité pendant votre voyage ?",
+    "WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE" : "Nous avons remarqué que votre trajet empruntait un itinéraire différent. Vous sentez-vous en sécurité pendant votre voyage ?",
+    "WE_ARE_HERE_FOR_YOU" : "Nous sommes là pour vous`!",
+    "I_NEED_HELP" : "j'ai besoin d'aide",
+    "I_FEEL_SAFE" : "je me sens en sécurité",
+    "EVERYTHING_OKAY_Q" : "Tout va bien?",
+    "PLEASE_REMAIN_CALM_YOU_CAN_REQUEST_AN_IMMEDIATE_CALL" : "Veuillez rester calme, vous pouvez nous demander un appel immédiat si nécessaire.\n\nVous pouvez également utiliser les fonctionnalités SOS d'urgence en haut à droite pour plus de sécurité.",
+    "RECEIVE_CALL_FROM_SUPPORT" : "Recevoir un appel du support",
+    "DISMISS" : "Rejeter"
   }

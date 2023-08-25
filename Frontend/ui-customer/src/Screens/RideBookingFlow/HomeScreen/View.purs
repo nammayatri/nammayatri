@@ -84,7 +84,7 @@ import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), Sea
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Halogen.VDom.DOM.Prop (Prop)
@@ -361,6 +361,8 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
+            , safetyAlertPopup push state
+            , if state.props.reportUnsafe then issueReportedPopup push state else emptyTextView state
             ]
         ]
     ] 
@@ -391,6 +393,22 @@ cancelSearchPopUp push state =
   , width MATCH_PARENT
   , accessibility DISABLE
   ][PopUpModal.view (push <<< CancelSearchAction) (cancelAppConfig state)]
+
+safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+safetyAlertPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , visibility  if not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false"]
+                    then VISIBLE else GONE
+  ][PopUpModal.view (push <<< SafetyAlertAction) (safetyAlertConfig state)]
+
+issueReportedPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+issueReportedPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< ReportUnsafe) (reportingIssueConfig state)]
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
