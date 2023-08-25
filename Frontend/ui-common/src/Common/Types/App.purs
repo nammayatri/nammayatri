@@ -95,6 +95,11 @@ derive instance newtypeSignatureAuthData :: Newtype SignatureAuthData _
 instance encodeSignatureAuthData :: Encode SignatureAuthData where encode = defaultEncode
 instance decodeSignatureAuthData :: Decode SignatureAuthData where decode = defaultDecode
 
+type Event = {
+    type :: String
+  , data :: String
+}
+
 newtype GlobalPayload = GlobalPayload
   { betaAssets :: Maybe Boolean
   , payload :: Payload

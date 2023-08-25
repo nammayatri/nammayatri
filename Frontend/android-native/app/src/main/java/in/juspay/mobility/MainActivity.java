@@ -24,6 +24,7 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -36,6 +37,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -62,14 +64,17 @@ import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.gson.Gson;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.hypersdk.core.PaymentConstants;
@@ -236,9 +241,30 @@ public class MainActivity extends AppCompatActivity {
         return deviceDetails;
     }
 
+    private static HashMap<String, String> getQueryMap(String link) {
+        String[] query_params_array = link.split("&");
+        HashMap<String, String> query_params = new HashMap<>();
+        for (String query_param : query_params_array) {
+            String[] key_value = query_param.split("=");
+            String key = key_value[0];
+            String value = key_value[1];
+            query_params.put(key, value);
+        }
+        return query_params;
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        Vector<String> res = handleDeepLinkIfAvailable(getIntent());
+        String viewParam = null, deepLinkJson =null;
+        if (res!=null ){
+            viewParam = res.get(0);
+            deepLinkJson = res.get(1);
+        }
+        // https://nammayatri.in/partner?checking=this&vd=ewt34gwrg&fdg=srgrw34&er=e453tge3&pl=35t345gg // ---NOTE:// DeepLink example for debug
+        
         super.onCreate(savedInstanceState);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
@@ -297,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         updateConfigURL();
-        initApp();
+        initApp(viewParam, deepLinkJson);
 
         appUpdateManager = AppUpdateManagerFactory.create(this);
         // Returns an intent object that you use to check for an update.
@@ -400,7 +426,7 @@ public class MainActivity extends AppCompatActivity {
             }
     }
 
-    private void initApp() {
+    private void initApp(String viewParam, String deepLinkJSON) {
 
         hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
         final JSONObject json = new JSONObject();
@@ -415,6 +441,8 @@ public class MainActivity extends AppCompatActivity {
             payload.put("action", "initiate");
             payload.put("merchantId", getResources().getString(R.string.merchant_id));
             payload.put(PaymentConstants.ENV, "prod");
+            if (viewParam != null) payload.put("viewParam", viewParam);
+            if (deepLinkJSON != null) payload.put("deepLinkJSON", deepLinkJSON);
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -457,7 +485,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.i(LOG_TAG, "event reboot");
                         hyperServices.terminate();
                         hyperServices = null;
-                        initApp();
+                        initApp(null,null);
                         break;
                     case "in_app_notification":
                         String title = jsonObject.optString("title");
@@ -502,7 +530,7 @@ public class MainActivity extends AppCompatActivity {
             dialog.cancel();
             hyperServices.terminate();
             hyperServices = null;
-            initApp();
+            initApp(null, null);
         });
         runOnUiThread(() -> {
             AlertDialog alertDialog = builder.create();
@@ -510,8 +538,52 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
+    protected Vector<String> handleDeepLinkIfAvailable(Intent appLinkIntent){
+        if(appLinkIntent==null) return null;
+        Vector<String> res = new Vector<>();
+        Uri appLinkData = appLinkIntent.getData();
+        String deepLinkJson = null, viewParam = null;
+        if (appLinkData != null && appLinkData.getQuery() != null) {
+            String query = appLinkData.getQuery();
+            HashMap<String, String> query_params = getQueryMap(query);
+            for (String key : query_params.keySet()) {
+                if (key.equals("vp")){
+                    viewParam = query_params.get(key);
+                    break;
+                }
+            }
+            Gson gson = new Gson();
+            deepLinkJson = gson.toJson(query_params);
+        } else return null;
+        if(viewParam==null || deepLinkJson == null) return null;
+        res.add(viewParam);
+        res.add(deepLinkJson);
+        return res;
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
+        Vector<String> res = handleDeepLinkIfAvailable(intent);
+        String viewParam = null, deepLinkJson =null;
+        if (res!=null ){
+            viewParam = res.get(0);
+            deepLinkJson = res.get(1);
+        }
+        JSONObject proccessPayloadDL = new JSONObject();
+        JSONObject innerPayloadDL = new JSONObject();
+        try {
+            if (viewParam != null && deepLinkJson != null) {
+                innerPayloadDL.put("viewParamNewIntent", viewParam)
+                        .put("deepLinkJSON", deepLinkJson);
+                proccessPayloadDL.put("service", getService())
+                        .put("requestId", UUID.randomUUID())
+                        .put(PaymentConstants.PAYLOAD, innerPayloadDL);
+                {hyperServices.process(proccessPayloadDL);}
+            }
+        }catch (Exception e){
+            // Need to handle exception
+        }
         if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
             try {
                 String data = intent.getExtras().getString("NOTIFICATION_DATA");
@@ -534,7 +606,7 @@ public class MainActivity extends AppCompatActivity {
                                 .put("popType", type);
                     }
                 }
-                proccessPayload.put("payload", innerPayload);
+                proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
                 {hyperServices.process(proccessPayload);}
             } catch (Exception e) {
                 e.printStackTrace();

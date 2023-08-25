@@ -19,7 +19,7 @@ import Log
 
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..))
+import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event)
 import Components.ChatView.Controller (makeChatComponent')
 import Control.Monad.Except.Trans (lift)
 import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last)
@@ -27,7 +27,7 @@ import Data.Either (Either(..))
 import Data.Functor (map)
 import Data.Int (round, toNumber, ceil, fromString)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, fromJust)
 import Data.Number (fromString) as Number
 import Data.Ord (compare)
 import Data.Ord (compare)
@@ -99,12 +99,12 @@ import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 
 
-baseAppFlow :: Boolean -> FlowBT String Unit
-baseAppFlow baseFlow = do
-    (GlobalState state) <- getState
+baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
+baseAppFlow baseFlow event = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
-    -- checkDateAndTime
+    -- checkDateAndTime -- Need To Refactor
+    (GlobalState state) <- getState
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
@@ -112,9 +112,22 @@ baseAppFlow baseFlow = do
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
     if isTokenValid regToken
-      then do
-        setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-        getDriverInfoFlow
+      then case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
+        Just e -> 
+          case e.data of
+            "plans" -> do
+              lift $ lift $ doAff do liftEffect hideSplash
+              setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+              let (GlobalState defGlobalState) = defaultGlobalState
+              modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true}})
+              subScriptionFlow
+            _ -> do
+                  setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+                  getDriverInfoFlow
+        
+        Nothing -> do
+            setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+            getDriverInfoFlow
       else loginFlow
     where
     cacheAppParameters :: Int -> FlowBT String Unit
