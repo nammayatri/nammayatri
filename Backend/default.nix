@@ -59,6 +59,7 @@
 
     devShells.backend = pkgs.mkShell {
       name = "ny-backend";
+      meta.description = "Backend development environment for nammayatri";
       # cf. https://haskell.flake.page/devshell#composing-devshells
       inputsFrom = [
         config.mission-control.devShell
