@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,17 +13,45 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-deriving-defaults #-}
 
 module Domain.Types.CancellationReason where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Servant
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Ord)
+
+instance FromField CancellationStage where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationStage where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationStage
+
+instance FromBackendRow Postgres CancellationStage
+
+deriving newtype instance FromField CancellationReasonCode
+
+deriving newtype instance HasSqlValueSyntax be Text => HasSqlValueSyntax be CancellationReasonCode
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationReasonCode
+
+instance FromBackendRow Postgres CancellationReasonCode
+
+instance IsString CancellationStage where
+  fromString = show
 
 instance FromHttpApiData CancellationStage where
   parseUrlPiece = parseHeader . encodeUtf8

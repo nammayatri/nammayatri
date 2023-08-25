@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.QuoteSpecialZone where
 
@@ -47,9 +46,6 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     updatedAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
-
-instance IsString Variant.Variant where
-  fromString = show
 
 instance B.Table QuoteSpecialZoneT where
   data PrimaryKey QuoteSpecialZoneT f

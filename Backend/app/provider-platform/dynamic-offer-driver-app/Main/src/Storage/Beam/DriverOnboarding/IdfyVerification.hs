@@ -14,19 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.IdfyVerification where
 
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Vehicle as Vehicle
@@ -35,20 +29,9 @@ import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 import Storage.Beam.DriverOnboarding.Image ()
-
-instance FromField Domain.ImageExtractionValidation where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.ImageExtractionValidation where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.ImageExtractionValidation
-
-instance FromBackendRow Postgres Domain.ImageExtractionValidation
 
 data IdfyVerificationT f = IdfyVerificationT
   { id :: B.C f Text,
@@ -78,11 +61,6 @@ instance B.Table IdfyVerificationT where
   primaryKey = Id . id
 
 type IdfyVerification = IdfyVerificationT Identity
-
-instance IsString Domain.ImageExtractionValidation where
-  fromString = show
-
-deriving stock instance Ord Domain.ImageExtractionValidation
 
 idfyVerificationTMod :: IdfyVerificationT (B.FieldModification (B.TableField IdfyVerificationT))
 idfyVerificationTMod =

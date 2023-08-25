@@ -14,7 +14,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.SearchRequestForDriver where
 
@@ -23,12 +22,7 @@ import Data.ByteString
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -100,15 +94,6 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Domain.DriverSearchRequestStatus where
-  fromString = show
-
-instance IsString Domain.SearchRequestForDriverResponse where
-  fromString = show
-
-instance IsString Variant.Variant where
-  fromString = show
-
 instance B.Table SearchRequestForDriverT where
   data PrimaryKey SearchRequestForDriverT f
     = Id (B.C f Text)
@@ -116,16 +101,6 @@ instance B.Table SearchRequestForDriverT where
   primaryKey = Id . id
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity
-
-instance FromJSON Domain.DriverSearchRequestStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Domain.DriverSearchRequestStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord Domain.DriverSearchRequestStatus
-
-deriving stock instance Ord Domain.SearchRequestForDriverResponse
 
 searchRequestForDriverTMod :: SearchRequestForDriverT (B.FieldModification (B.TableField SearchRequestForDriverT))
 searchRequestForDriverTMod =

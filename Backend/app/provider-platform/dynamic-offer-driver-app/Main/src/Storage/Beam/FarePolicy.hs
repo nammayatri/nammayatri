@@ -14,22 +14,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy where
 
-import qualified Data.Aeson as A
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.FarePolicy as Domain
-import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
@@ -37,16 +29,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.FarePolicyType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FarePolicyType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FarePolicyType
-
-instance FromBackendRow Postgres Domain.FarePolicyType
 
 data FarePolicyT f = FarePolicyT
   { id :: B.C f Text,
@@ -63,12 +45,6 @@ data FarePolicyT f = FarePolicyT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Variant.Variant where
-  fromString = show
-
-instance IsString Domain.FarePolicyType where
-  fromString = show
-
 instance B.Table FarePolicyT where
   data PrimaryKey FarePolicyT f
     = Id (B.C f Text)
@@ -76,16 +52,6 @@ instance B.Table FarePolicyT where
   primaryKey = Id . id
 
 type FarePolicy = FarePolicyT Identity
-
-instance FromJSON Domain.FarePolicyType where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Domain.FarePolicyType where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord Domain.FarePolicyType
-
-deriving stock instance Eq Domain.FarePolicyType
 
 farePolicyTMod :: FarePolicyT (B.FieldModification (B.TableField FarePolicyT))
 farePolicyTMod =

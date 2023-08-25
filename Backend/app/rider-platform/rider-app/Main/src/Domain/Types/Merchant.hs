@@ -15,10 +15,18 @@
 
 module Domain.Types.Merchant where
 
+import qualified Data.Aeson as A
+import Data.ByteString.Lazy (fromStrict, toStrict)
+import qualified Data.Text.Encoding as TE
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import qualified Debug.Trace as T
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Base64 (Base64)
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common ()
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -64,3 +72,19 @@ data Slot = Slot
   }
   deriving stock (Generic, Show, Read, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be [Slot] where
+  sqlValueSyntax = sqlValueSyntax . (A.String . TE.decodeUtf8 . toStrict . A.encode . A.toJSON)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Slot]
+
+instance FromBackendRow Postgres [Slot] where
+  fromBackendRow = do
+    textVal <- fromBackendRow
+    case T.trace (show textVal) $ A.fromJSON textVal of
+      A.Success (jsonVal :: Text) -> case A.eitherDecode (fromStrict $ TE.encodeUtf8 jsonVal) of
+        Right val -> pure val
+        Left err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
+      A.Error err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
+
+deriving stock instance Ord Slot

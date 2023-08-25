@@ -21,9 +21,13 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney, Money)
+import Kernel.Types.Common (HighPrecMoney, Money, fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API
@@ -61,9 +65,49 @@ data RideCountBasedFeePolicy = RideCountBasedFeePolicy
 
 data PaymentMode = MANUAL | AUTOPAY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
+instance FromBackendRow Postgres PaymentMode
+
+instance FromField PaymentMode where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PaymentMode where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PaymentMode
+
 data Frequency = DAILY | WEEKLY | MONTHLY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
+instance FromField Frequency where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Frequency where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Frequency
+
+instance FromBackendRow Postgres Frequency
+
+instance IsString Frequency where
+  fromString = show
+
+deriving stock instance Ord Frequency
+
 data PlanType = DEFAULT | SUBSCRIPTION deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+instance FromField PlanType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PlanType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PlanType
+
+instance FromBackendRow Postgres PlanType
+
+instance IsString PlanType where
+  fromString = show
+
+deriving stock instance Ord PlanType
 
 data PlanBaseAmount
   = PERRIDE_BASE HighPrecMoney
@@ -72,6 +116,21 @@ data PlanBaseAmount
   | MONTHLY_BASE HighPrecMoney
   deriving (Generic, Eq, ToSchema, FromJSON, ToJSON)
   deriving (PrettyShow) via Showable PlanBaseAmount
+
+instance FromField PlanBaseAmount where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PlanBaseAmount where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PlanBaseAmount
+
+instance FromBackendRow Postgres PlanBaseAmount
+
+instance IsString PlanBaseAmount where
+  fromString = show
+
+deriving stock instance Ord PlanBaseAmount
 
 instance Read PlanBaseAmount where
   readsPrec d' =

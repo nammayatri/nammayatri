@@ -15,42 +15,22 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Beam.Maps.PlaceNameCache where
 
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Maps.PlaceNameCache as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
-
-instance FromField [Domain.AddressResp] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance FromField Domain.AddressResp where
-  fromField = fromFieldEnum
-
-instance (HasSqlValueSyntax be (V.Vector String)) => HasSqlValueSyntax be [Domain.AddressResp] where
-  sqlValueSyntax addressRespList =
-    let x = show <$> addressRespList
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.AddressResp]
-
-instance FromBackendRow Postgres [Domain.AddressResp]
 
 data PlaceNameCacheT f = PlaceNameCacheT
   { id :: B.C f Text,

@@ -15,7 +15,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Person.PersonFlowStatus where
 
@@ -23,36 +22,14 @@ import Data.Aeson
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Person.PersonFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
-import Kernel.Utils.Text (encodeToText)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.FlowStatus where
-  fromField = fromFieldJSON
-
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Domain.FlowStatus where
-  sqlValueSyntax = sqlValueSyntax . encodeToText
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FlowStatus
-
-instance FromBackendRow Postgres Domain.FlowStatus
-
-instance IsString Domain.FlowStatus where
-  fromString = show
-
-deriving stock instance Ord Domain.FlowStatus
 
 data PersonFlowStatusT f = PersonFlowStatusT
   { personId :: B.C f Text,

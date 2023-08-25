@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
   ( module Reexport,
@@ -40,6 +41,8 @@ instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+
+deriving stock instance Ord PlatformFeeCharge
 
 data PlatformFeeInfo = PlatformFeeInfo
   { platformFeeCharge :: PlatformFeeCharge,

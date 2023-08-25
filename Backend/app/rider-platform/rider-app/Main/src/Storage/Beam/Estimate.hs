@@ -21,14 +21,8 @@ module Storage.Beam.Estimate where
 
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -40,38 +34,8 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 
-instance FromField Domain.EstimateStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.EstimateStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.EstimateStatus
-
-instance FromBackendRow Postgres Domain.EstimateStatus
-
-instance IsString Domain.EstimateStatus where
-  fromString = show
-
 instance IsString TimeOfDay where
   fromString = show
-
-instance FromField [LatLong] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance FromField LatLong where
-  fromField = fromFieldEnum
-
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [LatLong] where
-  sqlValueSyntax latlonglist =
-    let x = (show <$> latlonglist :: [Text])
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [LatLong]
-
-instance FromBackendRow Postgres [LatLong]
-
-deriving stock instance Ord LatLong
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,

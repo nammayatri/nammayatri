@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   ( DriverPoolBatchesConfig (..),
@@ -20,6 +21,11 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   )
 where
 
+import qualified Data.Vector as V
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
@@ -29,6 +35,27 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
     batchSplitDelay :: Seconds
   }
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
+
+instance FromField BatchSplitByPickupDistance where
+  fromField = fromFieldEnum
+
+instance FromField [BatchSplitByPickupDistance] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
+  sqlValueSyntax batchList =
+    let x = (show <$> batchList :: [Text])
+     in sqlValueSyntax (V.fromList x)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistance]
+
+instance FromBackendRow Postgres [BatchSplitByPickupDistance]
+
+deriving stock instance Ord PoolSortingType
+
+deriving stock instance Eq PoolSortingType
+
+deriving stock instance Ord BatchSplitByPickupDistance
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
@@ -43,3 +70,16 @@ type HasDriverPoolBatchesConfig r =
 
 data PoolSortingType = Intelligent | Random
   deriving (Generic, FromDhall, Show, Read, FromJSON, ToJSON)
+
+instance IsString PoolSortingType where
+  fromString = show
+
+instance FromField PoolSortingType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be PoolSortingType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be PoolSortingType
+
+instance FromBackendRow Postgres PoolSortingType

@@ -14,33 +14,20 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FareProduct where
 
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.FlowType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FlowType where
-  sqlValueSyntax = autoSqlValueSyntax
 
 data FareProductT f = FareProductT
   { id :: B.C f Text,
@@ -59,10 +46,6 @@ instance B.Table FareProductT where
   primaryKey = Id . id
 
 type FareProduct = FareProductT Identity
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FlowType
-
-instance FromBackendRow Postgres Domain.FlowType
 
 fareProductTMod :: FareProductT (B.FieldModification (B.TableField FareProductT))
 fareProductTMod =
