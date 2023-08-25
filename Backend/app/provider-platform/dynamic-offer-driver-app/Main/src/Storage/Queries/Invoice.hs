@@ -14,11 +14,14 @@ import Storage.Beam.Invoice as BeamI hiding (Id)
 create :: MonadFlow m => Domain.Invoice -> m ()
 create = createWithKV
 
+findById :: MonadFlow m => Id Domain.Invoice -> m (Maybe Domain.Invoice)
+findById (Id invoiceId) = findOneWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
+
 createMany :: MonadFlow m => [Domain.Invoice] -> m ()
 createMany = traverse_ create
 
-findByDriverFeeId :: MonadFlow m => Id DriverFee -> m (Maybe Domain.Invoice)
-findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
+findByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findByDriverFeeId (Id driverFeeId) = findAllWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
 
 findAllByInvoiceId :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.And [Se.Is BeamI.id $ Se.Eq invoiceId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]

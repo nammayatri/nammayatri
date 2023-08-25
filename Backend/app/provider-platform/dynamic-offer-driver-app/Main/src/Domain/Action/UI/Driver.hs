@@ -1362,11 +1362,10 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
           totalRides = numRides
           charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
-      invoice <- QINV.findByDriverFeeId id
-      transactionDetails <- case invoice of
-        Nothing -> pure []
-        Just inv -> findAllByOrderId (cast inv.id)
-      let txnInfo = map mkDriverTxnInfo transactionDetails
+      invoice <- runInReplica $ QINV.findByDriverFeeId id
+      let invoiceIds = map (.id) invoice
+      transactionDetails <- mapM findAllByOrderId (cast <$> invoiceIds)
+      let txnInfo = map mkDriverTxnInfo (concat transactionDetails)
       return DriverPaymentHistoryResp {..}
 
     mkDriverTxnInfo PaymentTransaction {..} = DriverTxnInfo {..}
