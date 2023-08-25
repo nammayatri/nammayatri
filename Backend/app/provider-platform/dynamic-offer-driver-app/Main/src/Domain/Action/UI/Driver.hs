@@ -1344,20 +1344,20 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
   transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  now <- getCurrentTime
   let today = utctDay now
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe today mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
-  mapM buildPaymentResp driverFees
+  mapM (buildPaymentResp (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)) driverFees
   where
     maxLimit = 20
     defaultLimit = 10
 
-    buildPaymentResp DDF.DriverFee {..} = do
-      let date = utctDay startTime
+    buildPaymentResp timeDiffFromUtc DDF.DriverFee {..} = do
+      let date = utctDay (addUTCTime timeDiffFromUtc startTime)
           driverFeeId = id
           totalRides = numRides
           charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst

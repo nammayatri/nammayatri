@@ -30,7 +30,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id (cast)
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, Log (withLogTag), MonadTime (getCurrentTime), addUTCTime, fromMaybeM, getLocalCurrentTime, logError, logInfo, throwError)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, Log (withLogTag), MonadTime (getCurrentTime), addUTCTime, fromMaybeM, logError, logInfo, throwError)
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee
@@ -52,7 +52,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   let jobData = jobInfo.jobData
       startTime = jobData.startTime
       endTime = jobData.endTime
-  now <- getLocalCurrentTime jobData.timeDiff
+  now <- getCurrentTime
   feeZipDriver <- calcDriverFeeAttr ONGOING startTime endTime
   when (null feeZipDriver) $ logInfo "No ongoing payment found."
   for_ feeZipDriver $ \(driverFee, mbDriver) -> do
@@ -94,7 +94,7 @@ unsubscribeDriverForPaymentOverdue ::
 unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       startTime = jobData.startTime
-  now <- getLocalCurrentTime jobData.timeDiff
+  now <- getCurrentTime
   feeZipDriver <- calcDriverFeeAttr PAYMENT_PENDING startTime now
   when (null feeZipDriver) $ logInfo "No pending payment found."
   for_ feeZipDriver $ \(driverFee, mbDriver) -> do

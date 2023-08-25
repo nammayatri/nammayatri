@@ -137,9 +137,9 @@ streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy stat
     (topicName, Just (encodeUtf8 $ getId driverId))
     (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point accuracy status isDriverActive mbDriverMode)
 
-handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Seconds -> m ()
-handleDriverPayments driverId diffUtc = do
-  now <- getLocalCurrentTime diffUtc
+handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> m ()
+handleDriverPayments driverId = do
+  now <- getCurrentTime
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     ongoingAfterEndTime <- B.runInReplica $ findOngoingAfterEndTime driverId now
     overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
@@ -177,7 +177,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     when (thresholdConfig.subscription) $ do
       -- window end time over - still ongoing - sendPaymentReminder
       -- payBy is also over - still ongoing/pending - unsubscribe
-      handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
+      handleDriverPayments driver.id
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints

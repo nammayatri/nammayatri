@@ -407,8 +407,7 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverFee <- findPendingFeesByDriverId driverId >>= fromMaybeM (InvalidRequest "No pending payment found")
   driverInfo_ <- CDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
-  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  now <- getCurrentTime
   CDI.updatePendingPayment False driverFee.driverId
   CDI.updateSubscription True driverId
   QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) driverFee.id now
