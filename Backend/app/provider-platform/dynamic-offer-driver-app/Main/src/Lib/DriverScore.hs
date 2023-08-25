@@ -115,7 +115,7 @@ eventPayloadHandler DST.OnRideCompletion {..} = do
     DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotaEarningsBy (Money incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
   where
     isNotBackFilled :: DS.DriverStats -> Bool
-    isNotBackFilled driverStats = driverStats.totalEarnings == 0 && driverStats.bonusEarned == 0 && driverStats.lateNightTrips == 0 && driverStats.earningsMissed == 0
+    isNotBackFilled driverStats = driverStats.totalEarnings == 0 && driverStats.bonusEarned == 0 && driverStats.lateNightTrips == 0
 
     isLateNightRide :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => DR.Ride -> m Int
     isLateNightRide rd = do
