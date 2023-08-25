@@ -765,5 +765,8 @@ const hindiStrings = {
   GET_SPECIAL_OFFERS : "विशेष ऑफ़र प्राप्त करें",
   VALID_ONLY_IF_PAYMENT : "भुगतान पूरा होने पर ही मान्य",
   HELP_STR : "सहायता",
-  REFRESH_STRING : "पुनः लोड करें"
+  REFRESH_STRING : "पुनः लोड करें",
+  CHAT_FOR_HELP : "चैट करें",
+  VIEW_FAQs : "प्रश्न?",
+  SUPPORT : "सहायता"
 }

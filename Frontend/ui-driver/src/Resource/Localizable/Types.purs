@@ -775,6 +775,9 @@ data STR = LETS_GET_STARTED
         | VALID_ONLY_IF_PAYMENT
         | HELP_STR
         | REFRESH_STRING
+        | CHAT_FOR_HELP
+        | VIEW_FAQs
+        | SUPPORT
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1538,3 +1541,6 @@ getStringFromEnum key = case key of
     VALID_ONLY_IF_PAYMENT -> "VALID_ONLY_IF_PAYMENT"
     HELP_STR -> "HELP_STR"
     REFRESH_STRING -> "REFRESH_STRING"
+    VIEW_FAQs -> "VIEW_FAQs"
+    CHAT_FOR_HELP -> "CHAT_FOR_HELP"
+    SUPPORT -> "SUPPORT"

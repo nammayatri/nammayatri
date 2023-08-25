@@ -24,6 +24,7 @@ import Animation.Config as AnimConfig
 import Common.Types.App (APIPaymentStatus(..), LazyCheck(..), PaymentStatus(..))
 import Components.BottomNavBar (navData)
 import Components.BottomNavBar as BottomNavBar
+import Components.OptionsMenu as OptionsMenu
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (any, elem, length, filter, (!!))
@@ -47,10 +48,10 @@ import JBridge (getWidthFromPercent)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), bind, pure, discard, void)
+import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), (||), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, frameLayout, fontStyle,  gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -63,7 +64,6 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
-
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -87,28 +87,10 @@ screen initialState globalState =
 
 loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
 loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (GlobalState globalState) = do
-  if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
-    let globalProp = globalState.globalProps
-    let (GetDriverInfoResp driverInfo) = globalProp.driverInformation
-    if isJust driverInfo.autoPayStatus then do 
-      currentPlan <- Remote.getCurrentPlan ""
-      case currentPlan of
-        Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
+      uiPlans <- Remote.getUiPlans ""
+      case uiPlans of
+        Right resp -> doAff do liftEffect $ push $ loadPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
-    else do
-      currentPlan <- Remote.getCurrentPlan ""
-      case currentPlan of
-        Right resp' -> do
-          let (GetCurrentPlanResp resp) = resp'
-          case resp.currentPlanDetails of
-            Nothing -> do
-              uiPlans <- Remote.getUiPlans ""
-              case uiPlans of
-                Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
-                Left err -> doAff do liftEffect $ push $ errorAction err
-            Just _ -> doAff do liftEffect $ push $ loadMyPlans resp'
-        Left err -> doAff do liftEffect $ push $ errorAction err 
-  else pure unit
 
 paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
 paymentStatusPooling orderId count base power state push action = do
@@ -146,12 +128,19 @@ view push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , weight 1.0
+          , orientation VERTICAL
           ][ errorView push state
             , shimmerView state
-            , joinPlanView push state (state.props.subView == JoinPlan)
-            , managePlanView push state (state.props.subView == ManagePlan)
-            , myPlanView push state (state.props.subView == MyPlan)
-            , autoPayDetailsView push state (state.props.subView == PlanDetails)
+            , headerView push state
+            , frameLayout [
+              height MATCH_PARENT
+              , width MATCH_PARENT][
+                joinPlanView push state (state.props.subView == JoinPlan)
+                , managePlanView push state (state.props.subView == ManagePlan)
+                , myPlanView push state (state.props.subView == MyPlan)
+                , autoPayDetailsView push state (state.props.subView == PlanDetails)
+                , OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state)
+              ]
           ]
         , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN)
       ]
@@ -169,7 +158,6 @@ view push state =
       ][PopUpModal.view (push <<< ConfirmCancelPopup) (confirmCancelPopupConfig state)]
   ]
 
-
 joinPlanView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 joinPlanView push state visibility' = 
   PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
@@ -178,8 +166,7 @@ joinPlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  ][ headerView push (getString NAMMA_YATRI_PLANS) (getString HELP_STR) false state.props.isSelectedLangTamil true
-    , relativeLayout
+  ][ relativeLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , background Color.blue600
@@ -432,8 +419,7 @@ managePlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  ][ headerView push (getString MANAGE_PLAN) "" true state.props.isSelectedLangTamil false
-   , managePlanBodyView push state
+  ][ managePlanBodyView push state
    , linearLayout
      [ height $ V 45
      , width MATCH_PARENT
@@ -463,54 +449,66 @@ myPlanView push state visibility' =
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
   , gradient (Linear 180.0 ["#E2EAFF", "#F5F8FF"])
-  ][ headerView push (getString PLAN) (getString MANAGE_PLAN ) false state.props.isSelectedLangTamil false-- ("<u>" <> (getString VIEW_PAYMENT_HISTORY) <> "</u>")  :: Need to do later
-   , paymentPendingView push state
+  ][ paymentPendingView push state
    , myPlanBodyview push state
   ]
 
-headerView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
-headerView push title actionText backbutton isSelectedLangTamil showIcon =
-  linearLayout
-  [ height $ V 55
-  , width MATCH_PARENT
-  , orientation HORIZONTAL
-  , gravity CENTER_VERTICAL
-  , padding $ PaddingHorizontal 16 16
-  , background Color.white900
-  , stroke $ "1," <> Color.grey900
-  ][ imageView
-     [ width $ V 24
-     , height $ V 24
-     , margin $ MarginRight 16
-     , visibility if backbutton then VISIBLE else GONE
-     , onClick push $ const $ BackPressed
-     , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
-     ]
-   , textView
-     [ text title
-     , textSize if isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
-     , fontStyle $ FontStyle.semiBold LanguageStyle
-     , color Color.darkDescriptionText
-     , padding $ PaddingBottom 4
-     , weight 1.0
-     ]
-   , imageView [
-      imageWithFallback "ny_ic_warning_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_warning_unfilled.png"
-      , height $ V 20
-      , width $ V 20
-      , onClick push $ const HeaderRightClick
-      , visibility if showIcon then VISIBLE else GONE
-      , margin $ MarginRight 3
-   ]
-   , textView
-     [ textFromHtml actionText
-     , textSize if showIcon then if isSelectedLangTamil then FontSize.a_14 else FontSize.a_16 else if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
-     , visibility if (DS.length actionText > 0) then VISIBLE else GONE
-     , fontStyle $ FontStyle.medium LanguageStyle
-     , onClick push $ const HeaderRightClick
-     , color Color.blue900
-     ]
-  ]
+headerView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
+headerView push state =
+  let config = getHeaderConfig state.props.subView
+  in 
+    linearLayout
+    [ height $ V 55
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    , padding $ PaddingHorizontal 16 16
+    , background Color.white900
+    , stroke $ "1," <> Color.grey900
+    ][ imageView
+      [ width $ V 24
+      , height $ V 24
+      , margin $ MarginRight 16
+      , visibility if config.backbutton then VISIBLE else GONE
+      , onClick push $ const $ BackPressed
+      , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
+      ]
+    , textView
+      [ text config.title
+      , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      , color Color.darkDescriptionText
+      , padding $ PaddingBottom 4
+      , weight 1.0
+      ]
+    , linearLayout [
+        onClick push $ const HeaderRightClick
+        , padding $ Padding 10 10 10 10
+        , gravity CENTER_VERTICAL
+      ][
+        imageView [
+          imageWithFallback "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          , height $ V 15
+          , width $ V 15
+          , visibility if state.props.subView == JoinPlan then VISIBLE else GONE
+          , margin $ MarginRight 3
+          ]
+        , textView
+          $ [ textFromHtml config.actionText
+          , visibility if state.props.subView == JoinPlan then VISIBLE else GONE
+          , color Color.blue800
+          ] <> FontStyle.body1 TypoGraphy
+        , imageView [
+          imageWithFallback if state.props.subView == JoinPlan && state.props.optionsMenuExpanded then "ny_ic_chevronup_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevronup_blue.png"
+                            else if state.props.subView == JoinPlan then "ny_ic_chevrondown_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevrondown_blue.png"
+                            else "ny_ic_kebab_menu,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_kebab_menu.png"
+          , height $ V if state.props.subView == JoinPlan then 12 else 24
+          , width $ V if state.props.subView == JoinPlan then 12 else 24
+          , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] then VISIBLE else GONE
+          , margin $ MarginLeft 3
+          ]
+      ]
+    ]
 
 myPlanBodyview :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
 myPlanBodyview push state =
@@ -1044,7 +1042,7 @@ managePlanBodyView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , scrollBarY false
-  , margin $ MarginVertical 55 45
+  -- , margin $ MarginVertical 55 45
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
@@ -1215,8 +1213,7 @@ autoPayDetailsView push state visibility' =
      [ height MATCH_PARENT
      , width MATCH_PARENT
      , orientation VERTICAL
-     ][ headerView push (getString AUTOPAY_DETAILS) "" true state.props.isSelectedLangTamil false
-      , autoPayPGView push state
+     ][ autoPayPGView push state
       , scrollView
         [ height WRAP_CONTENT
         , width MATCH_PARENT

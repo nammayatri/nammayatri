@@ -265,7 +265,9 @@ getDriverInfoFlow = do
       let (OrganizationInfo organization) = getDriverInfoResp.organization
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
       case getDriverInfoResp.mobileNumber of
-          Just value -> void $ pure $ setCleverTapUserData "Phone" ("+91" <> value)
+          Just value -> do 
+            _ <- pure $ setCleverTapUserData "Phone" ("+91" <> value)
+            void $ pure $ setCleverTapUserProp "Mobile_Number" ("91" <> value)
           Nothing -> pure unit
 
       let middleName = case getDriverInfoResp.middleName of 
@@ -1945,8 +1947,8 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
 
       setValueToLocalStore DISABLE_WIDGET "true"
-      paymentPageOutput <- paymentPageUI sdkPayload
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
+      paymentPageOutput <- paymentPageUI sdkPayload
       setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId

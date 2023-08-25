@@ -1,16 +1,19 @@
 module Screens.SubscriptionScreen.Controller where
 
-import Common.Types.App (APIPaymentStatus)
+import Common.Types.App (APIPaymentStatus, LazyCheck(..))
 import Components.BottomNavBar as BottomNavBar
+import Components.OptionsMenu as OptionsMenu
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
+import Debug
 import Data.Int as DI
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
 import Data.String (toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp)
+import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport)
+import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard)
 import Presto.Core.Types.API (ErrorResponse)
@@ -22,6 +25,7 @@ import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScr
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -59,6 +63,7 @@ data Action = BackPressed
             | TryAgainButtonAC PrimaryButton.Action
             | RetryPaymentAC
             | RefreshPage
+            | OptionsMenuAction OptionsMenu.Action
 
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
@@ -78,6 +83,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
   if  ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
+  else if state.props.optionsMenuExpanded then continue state{props{optionsMenuExpanded = false}}
   else if state.props.confirmCancel then continue state{props { confirmCancel = false}}
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
@@ -91,6 +97,28 @@ eval ToggleDueDetailsView state = continue state {props { isDueViewExpanded = no
 
 eval (ClearDue PrimaryButton.OnClick) state = continue state
 
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
+  let merchant = getMerchant FunctionCall
+  continueWithCmd state{props{optionsMenuExpanded = false}} [do
+    case item of 
+      "manage_plan" -> pure ManagePlanAC 
+      "payment_history" -> pure ViewPaymentHistory 
+      "call_support" -> do
+        _ <- pure $ showDialer "8069490091" false
+        pure NoAction
+      "chat_for_help" -> do
+          _ <- openUrlInApp "https://wa.me/917483117936?text=Hello%2C%20I%20need%20help%20with%20setting%20up%20Autopay%20Subscription%0A%E0%B2%B8%E0%B3%8D%E0%B2%B5%E0%B2%AF%E0%B2%82%20%E0%B2%AA%E0%B2%BE%E0%B2%B5%E0%B2%A4%E0%B2%BF%20%E0%B2%9A%E0%B2%82%E0%B2%A6%E0%B2%BE%E0%B2%A6%E0%B2%BE%E0%B2%B0%E0%B2%BF%E0%B2%95%E0%B3%86%E0%B2%AF%E0%B2%A8%E0%B3%8D%E0%B2%A8%E0%B3%81%20%E0%B2%B9%E0%B3%8A%E0%B2%82%E0%B2%A6%E0%B2%BF%E0%B2%B8%E0%B2%B2%E0%B3%81%20%E0%B2%A8%E0%B2%A8%E0%B2%97%E0%B3%86%20%E0%B2%B8%E0%B2%B9%E0%B2%BE%E0%B2%AF%E0%B2%A6%20%E0%B2%85%E0%B2%97%E0%B2%A4%E0%B3%8D%E0%B2%AF%E0%B2%B5%E0%B2%BF%E0%B2%A6%E0%B3%86"
+          pure NoAction
+      "view_faq" -> do
+          _ <- openUrlInApp "https://nammayatri.in/plans/"
+          pure NoAction
+      _ -> pure NoAction
+  ]
+
+eval (OptionsMenuAction (OptionsMenu.BackgroundClick)) state = do
+  _ <- pure $ spy "menu background clicked" ""
+  continue state{props{optionsMenuExpanded = false}}
+
 eval (SwitchPlan PrimaryButton.OnClick) state = do
   let planId = state.props.managePlanProps.selectedPlanItem.id
   if planId /= "" then do
@@ -100,7 +128,7 @@ eval (SwitchPlan PrimaryButton.OnClick) state = do
 
 eval ManagePlanAC state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
-  updateAndExit state { props{showShimmer = true, subView = ManagePlan}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
+  updateAndExit state { props{showShimmer = true, subView = ManagePlan, optionsMenuExpanded = false}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity }, optionsMenuExpanded = false }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
 eval (SelectPlan config ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
 
@@ -108,16 +136,7 @@ eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selecte
 
 eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state
 
-eval HeaderRightClick state =  do
-    _ <- pure $ cleverTapCustomEvent "ny_driver_manage_plan_clicked"
-    case state.props.subView of
-    -- MyPlan -> exit $ PaymentHistory state 
-      JoinPlan -> continueWithCmd state [do
-          _ <- openUrlInApp "https://nammayatri.in/plans/"
-          pure NoAction
-        ]
-      _ -> updateAndExit state { props{showShimmer = true, subView = ManagePlan}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity } }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
-
+eval HeaderRightClick state =  continue state {props{ optionsMenuExpanded = not state.props.optionsMenuExpanded}}
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
                   Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
@@ -153,7 +172,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       exit $ Contest state
     _ -> continue state
 
-eval ViewPaymentHistory state = exit $ PaymentHistory state
+eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuExpanded = false}}
 
 eval RefreshPage state = exit $ Refresh
 
