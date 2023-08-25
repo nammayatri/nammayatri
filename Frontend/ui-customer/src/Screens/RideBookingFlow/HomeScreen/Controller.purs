@@ -1023,7 +1023,7 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
   _ <- pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
   if os == "IOS" then do
     continueWithCmd state [do
-      _ <- openUrlInApp state.data.config.dashboardUrl 
+      _ <- openUrlInApp state.data.config.dashboardUrl
       pure NoAction
     ]
   else continue state {props {showLiveDashboard = true}}
@@ -1138,8 +1138,8 @@ eval (DriverArrivedAction driverArrivalTime) state = do
   exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
-  _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "WAITING_ACTION_TRIGGERED" 
-                then setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED" 
+  _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "WAITING_ACTION_TRIGGERED"
+                then setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
                 else pure unit
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
@@ -1153,6 +1153,10 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryActi
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
   void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng
+  continue state
+
+eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigateToZone)) state = do
+  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
@@ -1822,7 +1826,7 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       newState = state{data{specialZoneQuoteList = updatedQuotes}}
-  if state.data.currentSearchResultType == QUOTES then do 
+  if state.data.currentSearchResultType == QUOTES then do
               _ <- pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
               continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
               else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
