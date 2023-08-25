@@ -19,6 +19,7 @@ module Lib.Payment.Domain.Action
     juspayWebhookService,
     createNotificationService,
     createExecutionService,
+    notificationStatusService,
   )
 where
 
@@ -363,6 +364,18 @@ createNotificationService ::
   (Payment.MandateNotificationReq -> m Payment.MandateNotificationRes) ->
   m Payment.MandateNotificationRes
 createNotificationService req notificationCall = do
+  notificationCall req
+
+---- notification status api ----
+notificationStatusService ::
+  ( EncFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Payment.MandateNotificationReq ->
+  (Payment.MandateNotificationReq -> m Payment.MandateNotificationRes) ->
+  m Payment.MandateNotificationRes
+notificationStatusService req notificationCall = do
   notificationCall req
 
 ----- execution api --------

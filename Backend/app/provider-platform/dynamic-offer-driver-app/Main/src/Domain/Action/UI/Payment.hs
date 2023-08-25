@@ -27,10 +27,11 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.Notification as NTF
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import Environment
-import Kernel.Beam.Functions as B
+import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -56,6 +57,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
+import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Notifications
@@ -144,6 +146,8 @@ juspayWebhookHandler merchantShortId authData value = do
             Payment.MandateStatusResp {..} -> do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               processMandate (cast order.personId) status mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount Nothing Nothing
+            Payment.PDNNotificationStatusResp {..} ->
+              processNotification (Id notificationId) notificationStatus
             Payment.BadStatusResp -> pure ()
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -189,6 +193,10 @@ sendNotificationIfNotSent key actions = do
     Hedis.setExp key True 86400 -- 24 hours
     actions
 
+processNotification :: Id NTF.Notification -> Payment.NotificationStatus -> Flow ()
+processNotification notificationId notificationStatus = do
+  QNTF.updateNotificationStatusById notificationId notificationStatus
+
 processMandate :: Id DP.Person -> Payment.MandateStatus -> UTCTime -> UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> Flow ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails = do
   let payerApp = upiDetails >>= (.payerApp)
@@ -221,9 +229,8 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       Payment.CREATED -> Just DI.PENDING
       Payment.ACTIVE -> Just DI.ACTIVE
       Payment.REVOKED -> Just DI.CANCELLED_PSP
-      Payment.FAILURE -> Nothing
       Payment.PAUSED -> Just DI.PAUSED_PSP
-      Payment.EXPIRED -> Nothing
+      _ -> Nothing
     mkMandate payerApp payerAppName = do
       now <- getCurrentTime
       return $

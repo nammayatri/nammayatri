@@ -167,8 +167,16 @@ updateStatusByIds status driverFeeIds now =
     [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
+updateFeeTypeByIds :: MonadFlow m => FeeType -> [Id DriverFee] -> UTCTime -> m ()
+updateFeeTypeByIds feeType driverFeeIds now =
+  updateWithKV
+    [ Se.Set BeamDF.feeType feeType,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+
 findAllPendingAndDueDriverFeeByDriverId :: MonadFlow m => Id Person -> m [DriverFee]
-findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE, Se.Or [Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING], Se.Is BeamDF.driverId $ Se.Eq driverId]]
+findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE], Se.Is BeamDF.status $ Se.In [PAYMENT_OVERDUE, PAYMENT_PENDING], Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
 findLatestByFeeTypeAndStatus :: MonadFlow m => Domain.FeeType -> [Domain.DriverFeeStatus] -> Id Person -> m (Maybe DriverFee)
 findLatestByFeeTypeAndStatus feeType status driverId = do

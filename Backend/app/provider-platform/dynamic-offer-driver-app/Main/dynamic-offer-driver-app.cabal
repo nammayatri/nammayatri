@@ -227,6 +227,7 @@ library
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
+      Domain.Types.Notification
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -355,6 +356,7 @@ library
       Storage.Beam.Message.MessageReport
       Storage.Beam.Message.MessageTranslation
       Storage.Beam.MetaData
+      Storage.Beam.Notification
       Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Person
       Storage.Beam.Plan
@@ -477,6 +479,7 @@ library
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.MetaData
+      Storage.Queries.Notification
       Storage.Queries.Person
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide

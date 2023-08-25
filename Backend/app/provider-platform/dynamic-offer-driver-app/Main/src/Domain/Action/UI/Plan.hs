@@ -76,7 +76,8 @@ data PlanEntity = PlanEntity
     offers :: [OfferEntity],
     paymentMode :: PaymentMode,
     totalPlanCreditLimit :: Money,
-    currentDues :: Money
+    currentDues :: HighPrecMoney,
+    dues :: [DriverDuesEntity]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -118,11 +119,20 @@ data MandateDetailsEntity = MandateDetails
     endDate :: UTCTime,
     mandateId :: Text,
     payerVpa :: Maybe Text,
+    payerApp :: Maybe Text,
     frequency :: Text,
     maxAmount :: Money,
     autopaySetupDate :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverDuesEntity = DriverDuesEntity
+  { date :: UTCTime,
+    amount :: Money,
+    earnings :: Money,
+    offers :: [OfferEntity]
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
 
 ---------------------------------------------------------------------------------------------------------
 --------------------------------------------- Controllers -----------------------------------------------
@@ -150,6 +160,10 @@ currentPlan (driverId, _merchantId) = do
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
 
+  now <- getCurrentTime
+  let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
+  let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus driverInfo.autoPayStatus then date else now) mbMandateSetupDate
+  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate >=> (pure . Just)) mPlan
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId
   latestAutopayPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_EXECUTION_INVOICE [DF.CLEARED] driverId
 
@@ -395,8 +409,9 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
         frequency = planBaseFrequcency,
         name = translatedName,
         description = translatedDescription,
-        currentDues = round . sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices,
+        currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices,
         totalPlanCreditLimit = round maxCreditLimit,
+        dues = buildDriverDuesEntity <$> dueInvoices,
         ..
       }
   where
@@ -437,6 +452,15 @@ convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
         PlanFareBreakup {component = "FINAL_FEE", amount = finalOrderAmount}
         ]
 
+buildDriverDuesEntity :: DF.DriverFee -> DriverDuesEntity
+buildDriverDuesEntity DF.DriverFee {..} =
+  DriverDuesEntity
+    { date = createdAt,
+      amount = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst,
+      earnings = totalEarnings,
+      offers = []
+    }
+
 mkMandateDetailEntity :: Maybe (Id DM.Mandate) -> Flow (Maybe MandateDetailsEntity)
 mkMandateDetailEntity mandateId = do
   case mandateId of
@@ -452,6 +476,7 @@ mkMandateDetailEntity mandateId = do
               payerVpa = mandate.payerVpa,
               frequency = "Aspresented",
               maxAmount = round mandate.maxAmount,
+              payerApp = mandate.payerApp,
               autopaySetupDate = mandate.createdAt
             }
     Nothing -> return Nothing

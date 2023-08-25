@@ -41,8 +41,11 @@ findByDriverFeeIdAndActiveStatus (Id driverFeeId) =
         ]
     ]
 
-updateInvoiceStatusByInvoiceId :: MonadFlow m => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
-updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
+findAllByDriverFeeIdAndStatus :: MonadFlow m => [Id DriverFee] -> Domain.InvoiceStatus -> m [Domain.Invoice]
+findAllByDriverFeeIdAndStatus driverIds status = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (driverIds <&> getId), Se.Is BeamI.invoiceStatus $ Se.Eq status]]
+
+updateInvoiceStatusByInvoiceId :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> m ()
+updateInvoiceStatusByInvoiceId invoiceId invoiceStatus = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamI.invoiceStatus invoiceStatus,

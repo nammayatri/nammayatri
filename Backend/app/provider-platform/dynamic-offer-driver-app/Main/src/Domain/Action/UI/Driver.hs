@@ -37,8 +37,8 @@ module Domain.Action.UI.Driver
     DriverPhotoUploadReq (..),
     ResendAuth (..),
     DriverPaymentHistoryResp,
-    DriverDuesResp (..),
     MetaDataReq (..),
+    ClearDuesRes (..),
     getInformation,
     activateGoHomeFeature,
     deactivateGoHomeFeature,
@@ -63,7 +63,7 @@ module Domain.Action.UI.Driver
     resendOtp,
     remove,
     getDriverPayments,
-    getDriverDues,
+    clearDriverDues,
     DriverInfo.DriverMode,
     updateMetaData,
   )
@@ -72,6 +72,7 @@ where
 import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
+import Data.List (groupBy, intersect)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
@@ -117,6 +118,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Payment.Interface
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
@@ -139,6 +141,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.SessionizerMetrics.Types.Event
@@ -150,6 +153,7 @@ import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -157,7 +161,6 @@ import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
@@ -165,7 +168,6 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as QAV
-import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -467,6 +469,12 @@ data MetaDataReq = MetaDataReq
     appPermissions :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data ClearDuesRes = ClearDuesRes
+  { orderId :: Id DOrder.PaymentOrder,
+    orderResp :: Payment.CreateOrderResp
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createDriver ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
@@ -1546,44 +1554,26 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
           }
       ]
 
-data DriverDuesResp = DriverDuesResp
-  { dues :: [DriverDuesEntity],
-    totalDue :: HighPrecMoney,
-    overdueThreshold :: HighPrecMoney
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-data DriverDuesEntity = DriverDuesEntity
-  { date :: UTCTime,
-    amount :: Money,
-    earnings :: Money,
-    offers :: [OfferEntity]
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-data OfferEntity = OfferEntity
-  { title :: Maybe Text,
-    description :: Maybe Text,
-    tnc :: Maybe Text
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-getDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverDuesResp
-getDriverDues (personId, _merchantId) = do
-  driverPlan <- runInReplica $ QDPlan.findByDriverId personId >>= fromMaybeM (NoCurrentPlanForDriver personId.getId)
-  plan <- QPD.findByIdAndPaymentMode driverPlan.planId driverPlan.planType >>= fromMaybeM (PlanNotFound driverPlan.planId.getId)
-  dueInvoices <- runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId personId
-  return $
-    DriverDuesResp
-      { dues = buildDriverDuesEntity <$> dueInvoices,
-        totalDue = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices,
-        overdueThreshold = plan.maxCreditLimit
-      }
+clearDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> m ClearDuesRes
+clearDriverDues (personId, _merchantId) = do
+  dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId personId
+  invoices <- groupInvoices <$> QINV.findAllByDriverFeeIdAndStatus (map DDF.id dueDriverFees) INV.ACTIVE_INVOICE
+  let invoice = validateExistingInvoice (listToMaybe invoices) dueDriverFees
+  if null invoices || (length invoices == 1 && isJust invoice)
+    then do
+      when (isJust invoice) $ QDF.updateFeeTypeByIds DDF.RECURRING_INVOICE (dueDriverFees <&> (.id)) =<< getCurrentTime
+      mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId) dueDriverFees Nothing invoice
+    else throwError OngoingPaymentExecution
   where
-    buildDriverDuesEntity DDF.DriverFee {..} =
-      DriverDuesEntity
-        { date = createdAt,
-          amount = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst,
-          earnings = totalEarnings,
-          offers = []
-        }
+    validateExistingInvoice invoicesGroup driverFees = do
+      case invoicesGroup of
+        Just invoices -> do
+          if length ((invoices <&> getId . (.driverFeeId)) `intersect` (driverFees <&> getId . (.id))) == length invoices
+            then do
+              (\inv -> (inv.id, inv.invoiceShortId)) <$> listToMaybe invoices
+            else Nothing
+        Nothing -> Nothing
+    mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
+    groupInvoices = groupBy ((==) `on` (getId . INV.id)) . sortBy (compare `on` (getId . INV.id))
+
+---- todo handle race and allow double debit ------
