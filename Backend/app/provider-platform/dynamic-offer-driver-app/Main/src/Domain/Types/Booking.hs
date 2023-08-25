@@ -81,7 +81,7 @@ data Booking = Booking
     updatedAt :: UTCTime,
     paymentUrl :: Maybe Text
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 data BookingType = SpecialZoneBooking | NormalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

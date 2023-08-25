@@ -18,6 +18,7 @@ module Storage.Queries.Driver.DriverFlowStatus where
 import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
+import Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -33,6 +34,22 @@ deleteById (Id driverId) = deleteWithKV [Se.Is BeamDFS.personId (Se.Eq driverId)
 
 getStatus :: MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
 getStatus (Id personId) = findOneWithKV [Se.Is BeamDFS.personId $ Se.Eq personId] <&> (DDFS.flowStatus <$>)
+
+findInProgressRideIdByDriverId :: MonadFlow m => Id Person -> m (Maybe (Id Ride))
+findInProgressRideIdByDriverId (Id personId) = do
+  flowStatus <- findOneWithKV [Se.Is BeamDFS.personId $ Se.Eq personId] <&> (DDFS.flowStatus <$>)
+  case flowStatus of
+    Just (ON_RIDE rideId) -> pure $ Just rideId
+    _ -> pure Nothing
+
+findRideIdByDriverId :: MonadFlow m => Id Person -> m (Maybe (Id Ride))
+findRideIdByDriverId (Id personId) = do
+  flowStatus <- findOneWithKV [Se.Is BeamDFS.personId $ Se.Eq personId] <&> (DDFS.flowStatus <$>)
+  case flowStatus of
+    Just (RIDE_ASSIGNED rideId) -> pure $ Just rideId
+    Just (WAITING_FOR_CUSTOMER rideId) -> pure $ Just rideId
+    Just (ON_RIDE rideId) -> pure $ Just rideId
+    _ -> pure Nothing
 
 clearPaymentStatus :: MonadFlow m => Id Person -> Bool -> m ()
 clearPaymentStatus personId isActive = updateStatus' False personId (if isActive then DDFS.ACTIVE else DDFS.IDLE)

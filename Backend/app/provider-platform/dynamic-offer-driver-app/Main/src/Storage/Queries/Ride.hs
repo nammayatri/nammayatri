@@ -29,7 +29,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Commo
 import Data.Either
 import qualified Data.HashMap.Strict as HashMap
 import Data.Int
-import Data.List (zip7)
+import Data.List (nub, zip7)
 import Data.Maybe
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -47,7 +47,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (find, id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
@@ -63,23 +63,11 @@ import qualified Storage.Beam.Ride.Table as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
 import Storage.Queries.Booking ()
+import Storage.Queries.Driver.DriverFlowStatus
+import qualified Storage.Queries.Driver.DriverFlowStatus ()
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
-
-data DatabaseWith2 table1 table2 f = DatabaseWith2
-  { dwTable1 :: f (B.TableEntity table1),
-    dwTable2 :: f (B.TableEntity table2)
-  }
-  deriving (Generic, B.Database be)
-
-data DatabaseWith4 table1 table2 table3 table4 f = DatabaseWith4
-  { dwTable1 :: f (B.TableEntity table1),
-    dwTable2 :: f (B.TableEntity table2),
-    dwTable3 :: f (B.TableEntity table3),
-    dwTable4 :: f (B.TableEntity table4)
-  }
-  deriving (Generic, B.Database be)
 
 create :: MonadFlow m => Ride.Ride -> m ()
 create = createWithKV
@@ -91,7 +79,7 @@ findAllRidesByDriverId ::
   MonadFlow m =>
   Id Person ->
   m [Ride]
-findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
+findAllRidesByDriverId (Id driverId) = findAllWithDb [Se.Is BeamR.driverId $ Se.Eq driverId]
 
 findActiveByRBId :: MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
@@ -132,28 +120,28 @@ findOneByBookingId :: MonadFlow m => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 findAllByDriverId :: MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
-findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
+findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
       isOnlyActive = Just True == mbOnlyActive
-  rides <-
-    findAllWithOptionsKV
+  dbRides <-
+    findAllWithOptionsDb
       [ Se.And
-          ( [Se.Is BeamR.driverId $ Se.Eq driverId]
-              <> if isOnlyActive
-                then [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
-                else
-                  []
-                    <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
-                    <> ([Se.And [Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq (Just (minDayTime (fromJust mbDay))), Se.Is BeamR.tripEndTime $ Se.LessThanOrEq (Just (maxDayTime (fromJust mbDay)))] | isJust mbDay])
+          ( [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
+              <> [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED] | isOnlyActive]
+              <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
+              <> ([Se.And [Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq (Just (minDayTime (fromJust mbDay))), Se.Is BeamR.tripEndTime $ Se.LessThanOrEq (Just (maxDayTime (fromJust mbDay)))] | isJust mbDay])
           )
       ]
       (Se.Desc BeamR.createdAt)
       (Just limitVal)
       (Just offsetVal)
-  bookings <- findAllWithOptionsKV [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides] (Se.Desc BeamB.createdAt) Nothing Nothing
 
-  let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
+  -- above rides will be from Db and below rides will be from KV
+  activeRideInKV <- getActiveRideFromKV driverId mbOnlyActive mbRideStatus mbDay
+  let allRides = nub (maybeToList activeRideInKV <> dbRides)
+  bookings <- findAllWithOptionsKV [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> allRides] (Se.Desc BeamB.createdAt) Nothing Nothing
+  let rideWithBooking = foldl' (getRideWithBooking bookings) [] (allRides)
   pure $ take limitVal rideWithBooking
   where
     getRideWithBooking bookings acc ride =
@@ -162,21 +150,47 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
     minDayTime date = UTCTime (addDays (-1) date) 66600
     maxDayTime date = UTCTime date 66600
 
+-- this function will be used to get the active ride from KV keeping in mind the ridestatus and day
+-- this is to avoid querying directly by driverId which cannot be used as secondary key in redis
+getActiveRideFromKV :: MonadFlow m => Id Person -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m (Maybe Ride)
+getActiveRideFromKV driverId mbOnlyActive mbRideStatus mbDay = do
+  let isOnlyActive = Just True == mbOnlyActive
+  mRideId <- findRideIdByDriverId driverId
+  case mRideId of
+    Just rideId -> do
+      findOneWithKV
+        [ Se.And
+            ( [Se.Is BeamR.id $ Se.Eq $ getId rideId] <> [Se.Is BeamR.status $ Se.Eq $ fromJust mbRideStatus | isJust mbRideStatus]
+                <> ([Se.And [Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq (Just (minDayTime (fromJust mbDay))), Se.Is BeamR.tripEndTime $ Se.LessThanOrEq (Just (maxDayTime (fromJust mbDay)))] | isJust mbDay])
+                <> [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED] | isOnlyActive]
+            )
+        ]
+    Nothing -> pure Nothing
+  where
+    minDayTime date = UTCTime (addDays (-1) date) 66600
+    maxDayTime date = UTCTime date 66600
+
 findOneByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
-findOneByDriverId (Id personId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq personId] <&> listToMaybe
+findOneByDriverId (Id personId) = findAllWithDb [Se.Is BeamR.driverId $ Se.Eq personId] <&> listToMaybe
 
 getInProgressByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
-getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
+getInProgressByDriverId personId = do
+  rideId <- findInProgressRideIdByDriverId personId
+  maybe (pure Nothing) findById rideId
 
 getInProgressOrNewRideIdAndStatusByDriverId :: MonadFlow m => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
-  ride' <- findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
-  let rideData = (,) <$> (DR.id <$> ride') <*> (DR.status <$> ride')
-  pure rideData
+  maybeRide <- findRideIdByDriverId (Id driverId)
+  case maybeRide of
+    Just rideId -> do
+      maybeRideStatus <- findById rideId
+      pure $ (Ride.id &&& Ride.status) <$> maybeRideStatus
+    Nothing -> pure Nothing
 
 getActiveByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
-getActiveByDriverId (Id personId) =
-  findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+getActiveByDriverId personId = do
+  maybeRide <- findRideIdByDriverId personId
+  maybe (pure Nothing) findById maybeRide
 
 updateStatus :: MonadFlow m => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
@@ -212,11 +226,15 @@ updateDistance driverId distance = do
   now <- getCurrentTime
   dist <- getDistance driverId
   let distance' = maybe distance (distance +) dist
-  updateWithKV
-    [ Se.Set BeamR.traveledDistance distance',
-      Se.Set BeamR.updatedAt now
-    ]
-    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+  maybeRideId <- findInProgressRideIdByDriverId driverId
+  case maybeRideId of
+    Just rideId ->
+      updateWithKV
+        [ Se.Set BeamR.traveledDistance distance',
+          Se.Set BeamR.updatedAt now
+        ]
+        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+    Nothing -> pure ()
 
 getDistance :: MonadFlow m => Id Person -> m (Maybe HighPrecMeters)
 getDistance driverId = do
@@ -259,7 +277,7 @@ getRidesForDate :: MonadFlow m => Id Person -> Day -> Seconds -> m [Ride]
 getRidesForDate driverId date diffTime = do
   let minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
   let maxDayTime = UTCTime date (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
-  findAllWithKV
+  findAllWithDb
     [ Se.And
         [ Se.Is BeamR.driverId $ Se.Eq $ getId driverId,
           Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq $ Just minDayTime,
@@ -414,7 +432,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
 findLastRideAssigned :: MonadFlow m => Id Person -> m (Maybe Ride)
-findLastRideAssigned (Id driverId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq driverId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findLastRideAssigned (Id driverId) = findAllWithOptionsDb [Se.Is BeamR.driverId $ Se.Eq driverId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 findRideBookingsById :: MonadFlow m => Id Merchant -> [Id Booking] -> m (HashMap.HashMap Text (Booking, Maybe DRide.Ride))
 findRideBookingsById merchantId bookingIds = do
@@ -428,9 +446,6 @@ findBookingsById (Id merchantId) bookingIds = findAllWithKV [Se.And [Se.Is BeamB
 
 findRidesByBookingId :: MonadFlow m => [Id Booking] -> m [DRide.Ride]
 findRidesByBookingId bookingIds = findAllWithKV [Se.Is BeamR.bookingId $ Se.In $ getId <$> bookingIds]
-
-findCancelledBookingId :: MonadFlow m => Id Person -> m [Id Booking]
-findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]] <&> (Ride.bookingId <$>)
 
 findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
