@@ -10,7 +10,7 @@ in
   config = {
     perSystem = { self', pkgs, lib, ... }: {
       packages = {
-        dockerImage = pkgs.dockerTools.buildImage {
+        dockerImage = (pkgs.dockerTools.buildImage {
           name = imageName;
           created = "now";
           tag = imageTag;
@@ -45,7 +45,10 @@ in
             # Swagger configs are copied over
             ls opt/app/swagger
           '';
-        };
+        }).overrideAttrs (lib.addMetaAttrs {
+          description = "Docker image for nammayatri backend";
+          homepage = "https://github.com/nammayatri/nammayatri/pkgs/container/nammayatri";
+        });
       };
     };
   };
