@@ -109,7 +109,7 @@ setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
         [ Se.Set BeamDS.updatedAt now,
           Se.Set BeamDS.totalRidesAssigned $ (liftA2 (+) (Just totalRides) ds.totalRidesAssigned),
           Se.Set BeamDS.ridesCancelled (Just cancelledCount),
-          Se.Set BeamDS.earningsMissed (ds.earningsMissed + missedEarning)
+          Se.Set BeamDS.earningsMissed missedEarning
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
