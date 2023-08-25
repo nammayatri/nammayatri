@@ -39,8 +39,6 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("MerchantServiceUsageConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceUsageConfigObject obj), val) <- cmds]
     |::| runCreate dbConf ("MerchantConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (MerchantConfigObject obj), val) <- cmds]
     |::| runCreate dbConf ("OnSearchEvent" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (OnSearchEventObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PaymentOrder" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PaymentOrderObject obj), val) <- cmds]
-    |::| runCreate dbConf ("PaymentTransaction" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PaymentTransactionObject obj), val) <- cmds]
     |::| runCreate dbConf ("Person" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonObject obj), val) <- cmds]
     |::| runCreate dbConf ("PersonDefaultEmergencyNumber" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonDefaultEmergencyNumberObject obj), val) <- cmds]
     |::| runCreate dbConf ("PersonFlowStatus" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PersonFlowStatusObject obj), val) <- cmds]
@@ -57,6 +55,8 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("Webengage" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
     |::| runCreate dbConf ("FeedbackForm" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreate dbConf ("HotSpotConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
+    |::| runCreate dbConf ("PaymentOrder" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PaymentOrderObject obj), val) <- cmds]
+    |::| runCreate dbConf ("PaymentTransaction" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (PaymentTransactionObject obj), val) <- cmds]
     |::| runCreate dbConf ("BecknRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
   where
     runCreate dbConf model object = do

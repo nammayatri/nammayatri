@@ -81,8 +81,6 @@ runUpdateCommands (cmd, val) = do
     UpdateDBCommand id _ _ _ _ (MerchantServiceUsageConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantServiceUsageConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (MerchantConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (OnSearchEventOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("OnSearchEvent" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PaymentOrderOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PaymentOrder" :: Text) =<< dbConf
-    UpdateDBCommand id _ _ _ _ (PaymentTransactionOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PaymentTransaction" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (PersonOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Person" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (PersonDefaultEmergencyNumberOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PersonDefaultEmergencyNumber" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (PersonFlowStatusOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PersonFlowStatus" :: Text) =<< dbConf
@@ -99,6 +97,8 @@ runUpdateCommands (cmd, val) = do
     UpdateDBCommand id _ _ _ _ (WebengageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Webengage" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (FeedbackFormOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FeedbackForm" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (HotSpotConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("HotSpotConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (PaymentOrderOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PaymentOrder" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (PaymentTransactionOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PaymentTransaction" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (BecknRequestOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BecknRequest" :: Text) =<< dbConf
   where
     runUpdate id value setClause whereClause model dbConf = do

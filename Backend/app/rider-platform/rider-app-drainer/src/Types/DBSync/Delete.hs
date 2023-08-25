@@ -8,6 +8,8 @@ import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
 import qualified Kernel.Storage.Beam.BecknRequestRider as BecknRequest
+import qualified Lib.Payment.Storage.Beam.PaymentOrderRider as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransactionRider as PaymentTransaction
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
@@ -35,8 +37,6 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
-import qualified "rider-app" Storage.Beam.Payment.PaymentOrder as PaymentOrder
-import qualified "rider-app" Storage.Beam.Payment.PaymentTransaction as PaymentTransaction
 import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
@@ -78,8 +78,6 @@ data DeleteModel
   | MerchantServiceUsageConfigDelete
   | MerchantConfigDelete
   | OnSearchEventDelete
-  | PaymentOrderDelete
-  | PaymentTransactionDelete
   | PersonDelete
   | PersonDefaultEmergencyNumberDelete
   | PersonFlowStatusDelete
@@ -97,6 +95,8 @@ data DeleteModel
   | FeedbackFormDelete
   | HotSpotConfigDelete
   | BecknRequestDelete
+  | PaymentOrderDelete
+  | PaymentTransactionDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -124,8 +124,6 @@ getTagDelete MerchantServiceConfigDelete = "MerchantServiceConfigOptions"
 getTagDelete MerchantServiceUsageConfigDelete = "MerchantServiceUsageConfigOptions"
 getTagDelete MerchantConfigDelete = "MerchantConfigOptions"
 getTagDelete OnSearchEventDelete = "OnSearchEventOptions"
-getTagDelete PaymentOrderDelete = "PaymentOrderOptions"
-getTagDelete PaymentTransactionDelete = "PaymentTransactionOptions"
 getTagDelete PersonDelete = "PersonOptions"
 getTagDelete PersonDefaultEmergencyNumberDelete = "PersonDefaultEmergencyNumberOptions"
 getTagDelete PersonFlowStatusDelete = "PersonFlowStatusOptions"
@@ -143,6 +141,8 @@ getTagDelete WebengageDelete = "WebengageOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
+getTagDelete PaymentOrderDelete = "PaymentOrderOptions"
+getTagDelete PaymentTransactionDelete = "PaymentTransactionOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -169,8 +169,6 @@ parseTagDelete "MerchantServiceConfigOptions" = return MerchantServiceConfigDele
 parseTagDelete "MerchantServiceUsageConfigOptions" = return MerchantServiceUsageConfigDelete
 parseTagDelete "MerchantConfigOptions" = return MerchantConfigDelete
 parseTagDelete "OnSearchEventOptions" = return OnSearchEventDelete
-parseTagDelete "PaymentOrderOptions" = return PaymentOrderDelete
-parseTagDelete "PaymentTransactionOptions" = return PaymentTransactionDelete
 parseTagDelete "PersonOptions" = return PersonDelete
 parseTagDelete "PersonDefaultEmergencyNumberOptions" = return PersonDefaultEmergencyNumberDelete
 parseTagDelete "PersonFlowStatusOptions" = return PersonFlowStatusDelete
@@ -188,6 +186,8 @@ parseTagDelete "WebengageOptions" = return WebengageDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
+parseTagDelete "PaymentOrderOptions" = return PaymentOrderDelete
+parseTagDelete "PaymentTransactionOptions" = return PaymentTransactionDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -215,8 +215,6 @@ data DBDeleteObject
   | MerchantServiceUsageConfigDeleteOptions DeleteModel (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
   | MerchantConfigDeleteOptions DeleteModel (Where Postgres MerchantConfig.MerchantConfigT)
   | OnSearchEventDeleteOptions DeleteModel (Where Postgres OnSearchEvent.OnSearchEventT)
-  | PaymentOrderDeleteOptions DeleteModel (Where Postgres PaymentOrder.PaymentOrderT)
-  | PaymentTransactionDeleteOptions DeleteModel (Where Postgres PaymentTransaction.PaymentTransactionT)
   | PersonDeleteOptions DeleteModel (Where Postgres Person.PersonT)
   | PersonDefaultEmergencyNumberDeleteOptions DeleteModel (Where Postgres PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumberT)
   | PersonFlowStatusDeleteOptions DeleteModel (Where Postgres PersonFlowStatus.PersonFlowStatusT)
@@ -234,6 +232,8 @@ data DBDeleteObject
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigDeleteOptions DeleteModel (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
+  | PaymentOrderDeleteOptions DeleteModel (Where Postgres PaymentOrder.PaymentOrderT)
+  | PaymentTransactionDeleteOptions DeleteModel (Where Postgres PaymentTransaction.PaymentTransactionT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -315,12 +315,6 @@ instance FromJSON DBDeleteObject where
       OnSearchEventDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ OnSearchEventDeleteOptions deleteModel whereClause
-      PaymentOrderDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ PaymentOrderDeleteOptions deleteModel whereClause
-      PaymentTransactionDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ PaymentTransactionDeleteOptions deleteModel whereClause
       PersonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ PersonDeleteOptions deleteModel whereClause
@@ -372,3 +366,9 @@ instance FromJSON DBDeleteObject where
       BecknRequestDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BecknRequestDeleteOptions deleteModel whereClause
+      PaymentOrderDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ PaymentOrderDeleteOptions deleteModel whereClause
+      PaymentTransactionDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ PaymentTransactionDeleteOptions deleteModel whereClause

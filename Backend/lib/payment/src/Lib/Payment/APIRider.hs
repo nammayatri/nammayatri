@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Lib.Payment.API
+module Lib.Payment.APIRider
   ( API,
   )
 where
@@ -21,7 +21,7 @@ import GHC.Base (Symbol)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Types.App (MandatoryQueryParam)
 import Kernel.Types.Id
-import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.ActionRider as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 

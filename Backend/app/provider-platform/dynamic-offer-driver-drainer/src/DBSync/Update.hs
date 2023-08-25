@@ -134,6 +134,8 @@ runUpdateCommands (cmd, val) = do
     UpdateDBCommand id _ _ _ _ (FeedbackOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Feedback" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (FeedbackBadgeOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FeedbackBadge" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (BecknRequestOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BecknRequest" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (PaymentOrderOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PaymentOrder" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (PaymentTransactionOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PaymentTransaction" :: Text) =<< dbConf
   where
     runUpdate id value setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

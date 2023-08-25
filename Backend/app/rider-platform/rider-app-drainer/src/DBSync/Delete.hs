@@ -41,8 +41,6 @@ runDeleteCommands (cmd, val) = do
     DeleteDBCommand id _ _ _ _ (MerchantServiceUsageConfigDeleteOptions _ whereClause) -> runDelete id val whereClause ("MerchantServiceUsageConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MerchantConfigDeleteOptions _ whereClause) -> runDelete id val whereClause ("MerchantConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (OnSearchEventDeleteOptions _ whereClause) -> runDelete id val whereClause ("OnSearchEvent" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (PaymentOrderDeleteOptions _ whereClause) -> runDelete id val whereClause ("PaymentOrder" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (PaymentTransactionDeleteOptions _ whereClause) -> runDelete id val whereClause ("PaymentTransaction" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (PersonDeleteOptions _ whereClause) -> runDelete id val whereClause ("Person" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (PersonDefaultEmergencyNumberDeleteOptions _ whereClause) -> runDelete id val whereClause ("PersonDefaultEmergencyNumber" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (PersonFlowStatusDeleteOptions _ whereClause) -> runDelete id val whereClause ("PersonFlowStatus" :: Text) =<< dbConf
@@ -60,6 +58,8 @@ runDeleteCommands (cmd, val) = do
     DeleteDBCommand id _ _ _ _ (FeedbackFormDeleteOptions _ whereClause) -> runDelete id val whereClause ("FeedbackForm" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (HotSpotConfigDeleteOptions _ whereClause) -> runDelete id val whereClause ("HotSpotConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (BecknRequestDeleteOptions _ whereClause) -> runDelete id val whereClause ("BecknRequest" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (PaymentOrderDeleteOptions _ whereClause) -> runDelete id val whereClause ("PaymentOrder" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (PaymentTransactionDeleteOptions _ whereClause) -> runDelete id val whereClause ("PaymentTransaction" :: Text) =<< dbConf
   where
     runDelete id value whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

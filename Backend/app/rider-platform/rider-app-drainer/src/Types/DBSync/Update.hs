@@ -6,6 +6,8 @@ import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
 import qualified Kernel.Storage.Beam.BecknRequestRider as BecknRequest
+import qualified Lib.Payment.Storage.Beam.PaymentOrderRider as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransactionRider as PaymentTransaction
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
@@ -33,8 +35,6 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
-import qualified "rider-app" Storage.Beam.Payment.PaymentOrder as PaymentOrder
-import qualified "rider-app" Storage.Beam.Payment.PaymentTransaction as PaymentTransaction
 import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
@@ -79,8 +79,6 @@ data UpdateModel
   | MerchantServiceUsageConfigUpdate
   | MerchantConfigUpdate
   | OnSearchEventUpdate
-  | PaymentOrderUpdate
-  | PaymentTransactionUpdate
   | PersonUpdate
   | PersonDefaultEmergencyNumberUpdate
   | PersonFlowStatusUpdate
@@ -98,6 +96,8 @@ data UpdateModel
   | FeedbackFormUpdate
   | HotSpotConfigUpdate
   | BecknRequestUpdate
+  | PaymentOrderUpdate
+  | PaymentTransactionUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -125,8 +125,6 @@ getTagUpdate MerchantServiceConfigUpdate = "MerchantServiceConfigOptions"
 getTagUpdate MerchantServiceUsageConfigUpdate = "MerchantServiceUsageConfigOptions"
 getTagUpdate MerchantConfigUpdate = "MerchantConfigOptions"
 getTagUpdate OnSearchEventUpdate = "OnSearchEventOptions"
-getTagUpdate PaymentOrderUpdate = "PaymentOrderOptions"
-getTagUpdate PaymentTransactionUpdate = "PaymentTransactionOptions"
 getTagUpdate PersonUpdate = "PersonOptions"
 getTagUpdate PersonDefaultEmergencyNumberUpdate = "PersonDefaultEmergencyNumberOptions"
 getTagUpdate PersonFlowStatusUpdate = "PersonFlowStatusOptions"
@@ -144,6 +142,8 @@ getTagUpdate WebengageUpdate = "WebengageOptions"
 getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
+getTagUpdate PaymentOrderUpdate = "PaymentOrderOptions"
+getTagUpdate PaymentTransactionUpdate = "PaymentTransactionOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -170,8 +170,6 @@ parseTagUpdate "MerchantServiceConfigOptions" = return MerchantServiceConfigUpda
 parseTagUpdate "MerchantServiceUsageConfigOptions" = return MerchantServiceUsageConfigUpdate
 parseTagUpdate "MerchantConfigOptions" = return MerchantConfigUpdate
 parseTagUpdate "OnSearchEventOptions" = return OnSearchEventUpdate
-parseTagUpdate "PaymentOrderOptions" = return PaymentOrderUpdate
-parseTagUpdate "PaymentTransactionOptions" = return PaymentTransactionUpdate
 parseTagUpdate "PersonOptions" = return PersonUpdate
 parseTagUpdate "PersonDefaultEmergencyNumberOptions" = return PersonDefaultEmergencyNumberUpdate
 parseTagUpdate "PersonFlowStatusOptions" = return PersonFlowStatusUpdate
@@ -189,6 +187,8 @@ parseTagUpdate "WebengageOptions" = return WebengageUpdate
 parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
+parseTagUpdate "PaymentOrderOptions" = return PaymentOrderUpdate
+parseTagUpdate "PaymentTransactionOptions" = return PaymentTransactionUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -216,8 +216,6 @@ data DBUpdateObject
   | MerchantServiceUsageConfigOptions UpdateModel [Set Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT] (Where Postgres MerchantServiceUsageConfig.MerchantServiceUsageConfigT)
   | MerchantConfigOptions UpdateModel [Set Postgres MerchantConfig.MerchantConfigT] (Where Postgres MerchantConfig.MerchantConfigT)
   | OnSearchEventOptions UpdateModel [Set Postgres OnSearchEvent.OnSearchEventT] (Where Postgres OnSearchEvent.OnSearchEventT)
-  | PaymentOrderOptions UpdateModel [Set Postgres PaymentOrder.PaymentOrderT] (Where Postgres PaymentOrder.PaymentOrderT)
-  | PaymentTransactionOptions UpdateModel [Set Postgres PaymentTransaction.PaymentTransactionT] (Where Postgres PaymentTransaction.PaymentTransactionT)
   | PersonOptions UpdateModel [Set Postgres Person.PersonT] (Where Postgres Person.PersonT)
   | PersonDefaultEmergencyNumberOptions UpdateModel [Set Postgres PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumberT] (Where Postgres PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumberT)
   | PersonFlowStatusOptions UpdateModel [Set Postgres PersonFlowStatus.PersonFlowStatusT] (Where Postgres PersonFlowStatus.PersonFlowStatusT)
@@ -235,6 +233,8 @@ data DBUpdateObject
   | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigOptions UpdateModel [Set Postgres HotSpotConfig.HotSpotConfigT] (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
+  | PaymentOrderOptions UpdateModel [Set Postgres PaymentOrder.PaymentOrderT] (Where Postgres PaymentOrder.PaymentOrderT)
+  | PaymentTransactionOptions UpdateModel [Set Postgres PaymentTransaction.PaymentTransactionT] (Where Postgres PaymentTransaction.PaymentTransactionT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -318,12 +318,6 @@ instance FromJSON DBUpdateObject where
       OnSearchEventUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ OnSearchEventOptions updateModel updVals whereClause
-      PaymentOrderUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ PaymentOrderOptions updateModel updVals whereClause
-      PaymentTransactionUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ PaymentTransactionOptions updateModel updVals whereClause
       PersonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ PersonOptions updateModel updVals whereClause
@@ -375,3 +369,9 @@ instance FromJSON DBUpdateObject where
       BecknRequestUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BecknRequestOptions updateModel updVals whereClause
+      PaymentOrderUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ PaymentOrderOptions updateModel updVals whereClause
+      PaymentTransactionUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ PaymentTransactionOptions updateModel updVals whereClause

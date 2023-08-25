@@ -126,7 +126,7 @@ import Kernel.Utils.Validation
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Payment.Domain.Types.PaymentTransaction
-import Lib.Payment.Storage.Queries.PaymentTransaction
+import Lib.Payment.Storage.Queries.PaymentTransactionDriver
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck

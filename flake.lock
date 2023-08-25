@@ -2359,15 +2359,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1692880501,
-        "narHash": "sha256-mbvyw1HRD7RyPZ3EEspemQOlNQ2rQkHJFAtvbcUFPEU=",
+        "lastModified": 1692955116,
+        "narHash": "sha256-QRLnO/QY/xSkg9uFor7wikSlYOe8opEGlYpYM8mcwGw=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "46bc9087efb59273ee341fe7ab9907aa0ca4e06d",
+        "rev": "4a62a851206721884cb8d0d2abcd1739dc50c58f",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "refactor/Backend-KV-Payment-changes",
         "repo": "shared-kernel",
         "type": "github"
       }

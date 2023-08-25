@@ -8,6 +8,8 @@ import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
 import qualified Kernel.Storage.Beam.BecknRequestDriver as BecknRequest
+import qualified Lib.Payment.Storage.Beam.PaymentOrderDriver as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransactionDriver as PaymentTransaction
 import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
@@ -165,6 +167,8 @@ data DeleteModel
   | FeedbackDelete
   | FeedbackBadgeDelete
   | BecknRequestDelete
+  | PaymentOrderDelete
+  | PaymentTransactionDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -245,6 +249,8 @@ getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete FeedbackDelete = "FeedbackOptions"
 getTagDelete FeedbackBadgeDelete = "FeedbackBadgeOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
+getTagDelete PaymentOrderDelete = "PaymentOrderOptions"
+getTagDelete PaymentTransactionDelete = "PaymentTransactionOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
@@ -321,6 +327,8 @@ parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "FeedbackOptions" = return FeedbackDelete
 parseTagDelete "FeedbackBadgeOptions" = return FeedbackBadgeDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
+parseTagDelete "PaymentOrderOptions" = return PaymentOrderDelete
+parseTagDelete "PaymentTransactionOptions" = return PaymentTransactionDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -401,6 +409,8 @@ data DBDeleteObject
   | FeedbackDeleteOptions DeleteModel (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeDeleteOptions DeleteModel (Where Postgres FeedbackBadge.FeedbackBadgeT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
+  | PaymentOrderDeleteOptions DeleteModel (Where Postgres PaymentOrder.PaymentOrderT)
+  | PaymentTransactionDeleteOptions DeleteModel (Where Postgres PaymentTransaction.PaymentTransactionT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -641,3 +651,9 @@ instance FromJSON DBDeleteObject where
       BecknRequestDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BecknRequestDeleteOptions deleteModel whereClause
+      PaymentOrderDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ PaymentOrderDeleteOptions deleteModel whereClause
+      PaymentTransactionDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ PaymentTransactionDeleteOptions deleteModel whereClause

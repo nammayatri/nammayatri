@@ -5,6 +5,8 @@ module Types.DBSync.Create where
 
 import EulerHS.Prelude
 import qualified Kernel.Storage.Beam.BecknRequestRider as BecknRequest
+import qualified Lib.Payment.Storage.Beam.PaymentOrderRider as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransactionRider as PaymentTransaction
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
@@ -31,8 +33,6 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
-import qualified "rider-app" Storage.Beam.Payment.PaymentOrder as PaymentOrder
-import qualified "rider-app" Storage.Beam.Payment.PaymentTransaction as PaymentTransaction
 import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
@@ -73,8 +73,6 @@ data DBCreateObject
   | MerchantServiceUsageConfigObject MerchantServiceUsageConfig.MerchantServiceUsageConfig
   | MerchantConfigObject MerchantConfig.MerchantConfig
   | OnSearchEventObject OnSearchEvent.OnSearchEvent
-  | PaymentOrderObject PaymentOrder.PaymentOrder
-  | PaymentTransactionObject PaymentTransaction.PaymentTransaction
   | PersonObject Person.Person
   | PersonDefaultEmergencyNumberObject PersonDefaultEmergencyNumber.PersonDefaultEmergencyNumber
   | PersonFlowStatusObject PersonFlowStatus.PersonFlowStatus
@@ -92,6 +90,8 @@ data DBCreateObject
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | HotSpotConfigObject HotSpotConfig.HotSpotConfig
   | BecknRequestObject BecknRequest.BecknRequest
+  | PaymentOrderObject PaymentOrder.PaymentOrder
+  | PaymentTransactionObject PaymentTransaction.PaymentTransaction
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -119,8 +119,6 @@ modelName (MerchantServiceConfigObject _) = "MerchantServiceConfig"
 modelName (MerchantServiceUsageConfigObject _) = "MerchantServiceUsageConfig"
 modelName (MerchantConfigObject _) = "MerchantConfig"
 modelName (OnSearchEventObject _) = "OnSearchEvent"
-modelName (PaymentOrderObject _) = "PaymentOrder"
-modelName (PaymentTransactionObject _) = "PaymentTransaction"
 modelName (PersonObject _) = "Person"
 modelName (PersonDefaultEmergencyNumberObject _) = "PersonDefaultEmergencyNumber"
 modelName (PersonFlowStatusObject _) = "PersonFlowStatus"
@@ -138,3 +136,5 @@ modelName (WebengageObject _) = "Webengage"
 modelName (FeedbackFormObject _) = "FeedbackForm"
 modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"
+modelName (PaymentOrderObject _) = "PaymentOrder"
+modelName (PaymentTransactionObject _) = "PaymentTransaction"

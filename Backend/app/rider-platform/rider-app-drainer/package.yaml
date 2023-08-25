@@ -107,6 +107,7 @@ library:
     - -Werror
   dependencies:
     - rider-app
+    - payment
     - mobility-core
 
 executables:
@@ -121,4 +122,5 @@ executables:
     dependencies:
       - rider-app-drainer
       - rider-app
+      - payment
       - mobility-core

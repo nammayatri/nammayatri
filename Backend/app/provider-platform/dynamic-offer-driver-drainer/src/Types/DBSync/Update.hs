@@ -6,6 +6,8 @@ import qualified Data.Text as T
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
 import qualified Kernel.Storage.Beam.BecknRequestDriver as BecknRequest
+import qualified Lib.Payment.Storage.Beam.PaymentOrderDriver as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransactionDriver as PaymentTransaction
 import Sequelize
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
@@ -165,6 +167,8 @@ data UpdateModel
   | FeedbackUpdate
   | FeedbackBadgeUpdate
   | BecknRequestUpdate
+  | PaymentOrderUpdate
+  | PaymentTransactionUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -245,6 +249,8 @@ getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate FeedbackUpdate = "FeedbackOptions"
 getTagUpdate FeedbackBadgeUpdate = "FeedbackBadgeOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
+getTagUpdate PaymentOrderUpdate = "PaymentOrderOptions"
+getTagUpdate PaymentTransactionUpdate = "PaymentTransactionOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "BapMetadataOptions" = return BapMetadataUpdate
@@ -324,6 +330,8 @@ parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "FeedbackOptions" = return FeedbackUpdate
 parseTagUpdate "FeedbackBadgeOptions" = return FeedbackBadgeUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
+parseTagUpdate "PaymentOrderOptions" = return PaymentOrderUpdate
+parseTagUpdate "PaymentTransactionOptions" = return PaymentTransactionUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -404,6 +412,8 @@ data DBUpdateObject
   | FeedbackOptions UpdateModel [Set Postgres Feedback.FeedbackT] (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeOptions UpdateModel [Set Postgres FeedbackBadge.FeedbackBadgeT] (Where Postgres FeedbackBadge.FeedbackBadgeT)
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
+  | PaymentOrderOptions UpdateModel [Set Postgres PaymentOrder.PaymentOrderT] (Where Postgres PaymentOrder.PaymentOrderT)
+  | PaymentTransactionOptions UpdateModel [Set Postgres PaymentTransaction.PaymentTransactionT] (Where Postgres PaymentTransaction.PaymentTransactionT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -646,3 +656,9 @@ instance FromJSON DBUpdateObject where
       BecknRequestUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BecknRequestOptions updateModel updVals whereClause
+      PaymentOrderUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ PaymentOrderOptions updateModel updVals whereClause
+      PaymentTransactionUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ PaymentTransactionOptions updateModel updVals whereClause

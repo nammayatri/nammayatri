@@ -36,7 +36,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrderDriver as SOrder
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.DriverInformation as CDI

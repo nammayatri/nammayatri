@@ -15,9 +15,7 @@ import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.DriverOffer as DomainDO
--- import qualified Domain.Types.FarePolicy.FareProductType as DomainFPT
 import qualified Domain.Types.VehicleVariant as VehVar
-import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Beckn.Context as Context
@@ -114,36 +112,6 @@ deriving stock instance Ord DomainDO.DriverOfferStatus
 --   fromField = fromFieldEnum
 
 -- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
-
-instance FromField Payment.Currency where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Payment.Currency where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Payment.Currency
-
-instance FromBackendRow Postgres Payment.Currency
-
-instance IsString Payment.Currency where
-  fromString = show
-
-deriving stock instance Ord Payment.Currency
-
-instance FromField Payment.TransactionStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Payment.TransactionStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Payment.TransactionStatus
-
-instance FromBackendRow Postgres Payment.TransactionStatus
-
-instance IsString Payment.TransactionStatus where
-  fromString = show
-
-deriving stock instance Ord Payment.TransactionStatus
 
 instance FromField VehVar.VehicleVariant where
   fromField = fromFieldEnum

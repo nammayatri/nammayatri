@@ -99,6 +99,7 @@ library
     , juspay-extra
     , lens
     , mobility-core
+    , payment
     , pcg-random
     , record-dot-preprocessor
     , record-hasfield
@@ -182,6 +183,7 @@ executable rider-app-drainer-exe
     , juspay-extra
     , lens
     , mobility-core
+    , payment
     , pcg-random
     , record-dot-preprocessor
     , record-hasfield

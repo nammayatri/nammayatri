@@ -21,15 +21,21 @@ source-repository head
 
 library
   exposed-modules:
-      Lib.Payment.API
-      Lib.Payment.Domain.Action
+      Lib.Payment.APIDriver
+      Lib.Payment.APIRider
+      Lib.Payment.Domain.ActionDriver
+      Lib.Payment.Domain.ActionRider
       Lib.Payment.Domain.Types.Common
       Lib.Payment.Domain.Types.PaymentOrder
       Lib.Payment.Domain.Types.PaymentTransaction
-      Lib.Payment.Storage.Queries.PaymentOrder
-      Lib.Payment.Storage.Queries.PaymentTransaction
-      Lib.Payment.Storage.Tabular.PaymentOrder
-      Lib.Payment.Storage.Tabular.PaymentTransaction
+      Lib.Payment.Storage.Beam.PaymentOrderDriver
+      Lib.Payment.Storage.Beam.PaymentOrderRider
+      Lib.Payment.Storage.Beam.PaymentTransactionDriver
+      Lib.Payment.Storage.Beam.PaymentTransactionRider
+      Lib.Payment.Storage.Queries.PaymentOrderDriver
+      Lib.Payment.Storage.Queries.PaymentOrderRider
+      Lib.Payment.Storage.Queries.PaymentTransactionDriver
+      Lib.Payment.Storage.Queries.PaymentTransactionRider
   other-modules:
       Paths_payment
   hs-source-dirs:
@@ -73,7 +79,11 @@ library
       aeson
     , base >=4.7 && <5
     , base16-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
+    , cereal
     , containers
     , cryptohash
     , euler-hs
@@ -81,12 +91,15 @@ library
     , http-client
     , http-types
     , mobility-core
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , servant
     , servant-client
     , servant-server
     , text
     , time
+    , unordered-containers
     , uri-encode
   default-language: Haskell2010

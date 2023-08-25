@@ -27,7 +27,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.API as Payment
+import qualified Lib.Payment.APIRider as Payment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Tools.Auth

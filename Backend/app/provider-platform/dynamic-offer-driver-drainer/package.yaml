@@ -107,6 +107,7 @@ library:
     - -Werror
   dependencies:
     - dynamic-offer-driver-app
+    - payment
     - mobility-core
 
 executables:
@@ -121,4 +122,5 @@ executables:
     dependencies:
       - dynamic-offer-driver-drainer
       - dynamic-offer-driver-app
+      - payment
       - mobility-core

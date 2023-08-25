@@ -41,10 +41,10 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.ActionDriver as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrderDriver as QOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import qualified SharedLogic.Payment as SPayment

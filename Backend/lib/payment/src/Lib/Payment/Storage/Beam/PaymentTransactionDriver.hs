@@ -17,7 +17,7 @@
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Beam.Payment.PaymentTransaction where
+module Lib.Payment.Storage.Beam.PaymentTransactionDriver where
 
 import Data.Serialize
 import qualified Data.Time as Time
@@ -25,18 +25,17 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data PaymentTransactionT f = PaymentTransactionT
   { id :: B.C f Text,
-    txnUUID :: B.C f Text,
-    paymentMethodType :: B.C f Text,
-    paymentMethod :: B.C f Text,
+    txnUUID :: B.C f (Maybe Text),
+    paymentMethodType :: B.C f (Maybe Text),
+    paymentMethod :: B.C f (Maybe Text),
     respMessage :: B.C f (Maybe Text),
     respCode :: B.C f (Maybe Text),
     gatewayReferenceId :: B.C f (Maybe Text),
@@ -48,6 +47,12 @@ data PaymentTransactionT f = PaymentTransactionT
     statusId :: B.C f Int,
     status :: B.C f Payment.TransactionStatus,
     juspayResponse :: B.C f (Maybe Text),
+    mandateStatus :: B.C f (Maybe Payment.MandateStatus),
+    mandateStartDate :: B.C f (Maybe Time.UTCTime),
+    mandateEndDate :: B.C f (Maybe Time.UTCTime),
+    mandateId :: B.C f (Maybe Text),
+    mandateFrequency :: B.C f (Maybe Payment.MandateFrequency),
+    mandateMaxAmount :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -65,7 +70,7 @@ paymentTransactionTMod :: PaymentTransactionT (B.FieldModification (B.TableField
 paymentTransactionTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      txnUUID = B.fieldNamed "txn_uuid",
+      txnUUID = B.fieldNamed "txn_u_u_i_d",
       paymentMethodType = B.fieldNamed "payment_method_type",
       paymentMethod = B.fieldNamed "payment_method",
       respMessage = B.fieldNamed "resp_message",
@@ -79,10 +84,16 @@ paymentTransactionTMod =
       statusId = B.fieldNamed "status_id",
       status = B.fieldNamed "status",
       juspayResponse = B.fieldNamed "juspay_response",
+      mandateStatus = B.fieldNamed "mandate_status",
+      mandateStartDate = B.fieldNamed "mandate_start_date",
+      mandateEndDate = B.fieldNamed "mandate_end_date",
+      mandateId = B.fieldNamed "mandate_id",
+      mandateFrequency = B.fieldNamed "mandate_frequency",
+      mandateMaxAmount = B.fieldNamed "mandate_max_amount",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
 
-$(enableKVPG ''PaymentTransactionT ['id] [])
+$(enableKVPG ''PaymentTransactionT ['id] [['txnUUID], ['orderId]])
 
-$(mkTableInstances ''PaymentTransactionT "payment_transaction" "atlas_app")
+$(mkTableInstances ''PaymentTransactionT "payment_transaction" "atlas_driver_off_bpp")

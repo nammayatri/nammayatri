@@ -5,6 +5,8 @@ module Types.DBSync.Create where
 
 import EulerHS.Prelude
 import qualified Kernel.Storage.Beam.BecknRequestDriver as BecknRequest
+import qualified Lib.Payment.Storage.Beam.PaymentOrderDriver as PaymentOrder
+import qualified Lib.Payment.Storage.Beam.PaymentTransactionDriver as PaymentTransaction
 import qualified "dynamic-offer-driver-app" Storage.Beam.BapMetadata as BapMetadata
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
 import qualified "dynamic-offer-driver-app" Storage.Beam.Booking.BookingLocation as BookingLocation
@@ -160,6 +162,8 @@ data DBCreateObject
   | FeedbackObject Feedback.Feedback
   | FeedbackBadgeObject FeedbackBadge.FeedbackBadge
   | BecknRequestObject BecknRequest.BecknRequest
+  | PaymentOrderObject PaymentOrder.PaymentOrder
+  | PaymentTransactionObject PaymentTransaction.PaymentTransaction
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types
@@ -242,4 +246,6 @@ modelName (RegistrationTokenObject _) = "RegistrationToken"
 modelName (FeedbackFormObject _) = "FeedBackForm"
 modelName (FeedbackObject _) = "FeedBack"
 modelName (FeedbackBadgeObject _) = "FeedBackBadge"
+modelName (PaymentOrderObject _) = "PaymentOrder"
+modelName (PaymentTransactionObject _) = "PaymentTransaction"
 modelName (BecknRequestObject _) = "BecknRequest"
