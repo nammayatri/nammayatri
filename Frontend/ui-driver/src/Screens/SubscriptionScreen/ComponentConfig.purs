@@ -242,8 +242,8 @@ getHeaderConfig subView =
   case subView of
     ST.JoinPlan    -> {title : (getString NAMMA_YATRI_PLANS), actionText : getString SUPPORT, backbutton : false}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
-    ST.MyPlan      -> {title : (getString PLAN), actionText : (getString MANAGE_PLAN ), backbutton : false}
+    ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
-    _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : (getString HELP_STR), backbutton : false}
+    _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
