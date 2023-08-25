@@ -16,18 +16,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.RentalSlab where
 
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
@@ -35,30 +29,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-deriving newtype instance FromField Hours
-
-instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Hours where
-  sqlValueSyntax = sqlValueSyntax . getHours
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Hours
-
-instance FromBackendRow Postgres Hours
-
-instance IsString Hours where
-  fromString = show
-
-deriving newtype instance FromField Kilometers
-
-instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Kilometers where
-  sqlValueSyntax = sqlValueSyntax . getKilometers
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Kilometers
-
-instance FromBackendRow Postgres Kilometers
-
-instance IsString Kilometers where
-  fromString = show
 
 data RentalSlabT f = RentalSlabT
   { id :: B.C f Text,

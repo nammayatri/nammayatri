@@ -17,23 +17,16 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverPlan where
 
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Plan as DPlan
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
-import Kernel.Types.Common
 import Lib.Utils ()
 import Sequelize
 
@@ -47,16 +40,6 @@ data DriverPlanT f = DriverPlanT
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
-
-instance FromBackendRow Postgres DPlan.PaymentMode
-
-instance FromField DPlan.PaymentMode where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DPlan.PaymentMode where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DPlan.PaymentMode
 
 instance B.Table DriverPlanT where
   data PrimaryKey DriverPlanT f

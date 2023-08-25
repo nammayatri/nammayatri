@@ -16,6 +16,10 @@
 module Domain.Types.Merchant.MerchantServiceConfig where
 
 import qualified Data.List as List
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import qualified Kernel.External.Call as Call
@@ -43,6 +47,19 @@ data ServiceName
   | IssueTicketService Ticket.IssueTicketService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+instance FromField ServiceName where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be ServiceName where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be ServiceName
+
+instance FromBackendRow Postgres ServiceName
+
+instance IsString ServiceName where
+  fromString = show
 
 instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Mandate where
 
@@ -19,8 +20,12 @@ import qualified Data.Bifunctor as BF
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (HighPrecMoney, fromFieldEnum)
 import Kernel.Types.Id
 import Servant.API
 
@@ -39,6 +44,18 @@ data Mandate = Mandate
   deriving (Generic, Show)
 
 data MandateStatus = ACTIVE | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+instance FromBackendRow Postgres MandateStatus
+
+instance FromField MandateStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be MandateStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+deriving stock instance Ord MandateStatus
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be MandateStatus
 
 instance FromHttpApiData MandateStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

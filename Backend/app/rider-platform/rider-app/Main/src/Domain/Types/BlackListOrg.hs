@@ -18,8 +18,13 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Servant.API
@@ -28,7 +33,20 @@ data BlackListOrgType
   = PROVIDER
   | APP
   | GATEWAY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Ord)
+
+instance FromField BlackListOrgType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BlackListOrgType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be BlackListOrgType
+
+instance FromBackendRow Postgres BlackListOrgType
+
+instance IsString BlackListOrgType where
+  fromString = show
 
 instance FromHttpApiData BlackListOrgType where
   parseUrlPiece = parseHeader . DT.encodeUtf8

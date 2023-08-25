@@ -14,49 +14,22 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BusinessEvent where
 
-import qualified Data.Aeson as A
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
+import Kernel.Types.Common ()
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.EventType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.EventType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.EventType
-
-instance FromBackendRow Postgres Domain.EventType
-
-instance FromField Domain.WhenPoolWasComputed where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.WhenPoolWasComputed where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.WhenPoolWasComputed
-
-instance FromBackendRow Postgres Domain.WhenPoolWasComputed
 
 data BusinessEventT f = BusinessEventT
   { id :: B.C f Text,
@@ -79,28 +52,6 @@ instance B.Table BusinessEventT where
   primaryKey = Id . id
 
 type BusinessEvent = BusinessEventT Identity
-
-instance FromJSON Domain.EventType where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Domain.EventType where
-  toJSON = A.genericToJSON A.defaultOptions
-
-instance FromJSON Domain.WhenPoolWasComputed where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Domain.WhenPoolWasComputed where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord Domain.EventType
-
-deriving stock instance Ord Domain.WhenPoolWasComputed
-
-instance IsString Domain.EventType where
-  fromString = show
-
-instance IsString Domain.WhenPoolWasComputed where
-  fromString = show
 
 businessEventTMod :: BusinessEventT (B.FieldModification (B.TableField BusinessEventT))
 businessEventTMod =

@@ -19,12 +19,17 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (maskText)
@@ -34,6 +39,19 @@ data Role
   = USER
   | CUSTOMER_SUPPORT
   deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
+
+instance FromField Role where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Role
+
+instance FromBackendRow Postgres Role
+
+instance IsString Role where
+  fromString = show
 
 instance FromHttpApiData Role where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -49,6 +67,19 @@ instance ToHttpApiData Role where
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
   deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON)
 
+instance FromField IdentifierType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
+
+instance FromBackendRow Postgres IdentifierType
+
+instance IsString IdentifierType where
+  fromString = show
+
 instance FromHttpApiData IdentifierType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -62,6 +93,19 @@ instance ToHttpApiData IdentifierType where
 --------------------------------------------------------------------------------------------------
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromField Gender where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Gender where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Gender
+
+instance FromBackendRow Postgres Gender
+
+instance IsString Gender where
+  fromString = show
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8

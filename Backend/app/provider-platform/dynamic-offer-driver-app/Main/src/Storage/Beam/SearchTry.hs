@@ -23,8 +23,6 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -34,26 +32,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.SearchTryStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchTryStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchTryStatus
-
-instance FromBackendRow Postgres Domain.SearchTryStatus
-
-instance FromField Domain.SearchRepeatType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchRepeatType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRepeatType
-
-instance FromBackendRow Postgres Domain.SearchRepeatType
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax = autoSqlValueSyntax
@@ -78,9 +56,6 @@ data SearchTryT f = SearchTryT
     updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
-
-instance IsString Variant.Variant where
-  fromString = show
 
 instance B.Table SearchTryT where
   data PrimaryKey SearchTryT f

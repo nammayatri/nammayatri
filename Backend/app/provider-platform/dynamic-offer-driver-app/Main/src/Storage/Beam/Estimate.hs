@@ -15,24 +15,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Estimate where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString)
-import Data.ByteString.Lazy (fromStrict)
-import Data.Coerce (coerce)
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
-import Domain.Types.Common
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -40,35 +33,8 @@ import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Sequelize
-
-instance FromBackendRow Postgres [Domain.EstimateBreakup]
-
-instance FromField [Domain.EstimateBreakup] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance FromField Domain.EstimateBreakup where
-  fromField = fromFieldJSON
-
-fromFieldEstimateBreakUp ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion [Domain.EstimateBreakup]
-fromFieldEstimateBreakUp f mbValue = case mbValue of
-  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
-  Just value' -> case A.decode $ fromStrict value' of
-    Just res -> pure res
-    Nothing -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
-
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Domain.EstimateBreakup] where
-  sqlValueSyntax estimateBreakupList =
-    let unsafeEstimateBreakupList = coerce @[Domain.EstimateBreakup] @[Domain.EstimateBreakupD 'Unsafe] $ estimateBreakupList
-        x = encodeToText <$> unsafeEstimateBreakupList
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.EstimateBreakup]
 
 newtype TimeOfDayText = TimeOfDayText TimeOfDay
   deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)
@@ -100,12 +66,6 @@ data EstimateT f = EstimateT
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
-
-instance IsString Domain.EstimateBreakup where
-  fromString = show
-
-instance IsString Variant.Variant where
-  fromString = show
 
 instance B.Table EstimateT where
   data PrimaryKey EstimateT f

@@ -23,12 +23,16 @@ import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
 import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (Money, fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API
@@ -60,6 +64,16 @@ data DriverAutoPayStatus
   | CANCELLED_PSP
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable DriverAutoPayStatus
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverAutoPayStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverAutoPayStatus
+
+instance FromBackendRow Postgres DriverAutoPayStatus
+
+instance FromField DriverAutoPayStatus where
+  fromField = fromFieldEnum
 
 derivePersistField "DriverAutoPayStatus"
 

@@ -15,12 +15,19 @@
 
 module Domain.Types.Estimate where
 
+import Data.Coerce (coerce)
+import qualified Data.Vector as V
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (encodeToText)
 
 data Estimate = Estimate
   { id :: Id Estimate,
@@ -57,6 +64,25 @@ data EstimateBreakupD (s :: UsageSafety) = EstimateBreakup
   deriving (Generic, Show)
 
 type EstimateBreakup = EstimateBreakupD 'Safe
+
+instance FromBackendRow Postgres [EstimateBreakup]
+
+instance FromField [EstimateBreakup] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance FromField EstimateBreakup where
+  fromField = fromFieldJSON
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [EstimateBreakup] where
+  sqlValueSyntax estimateBreakupList =
+    let unsafeEstimateBreakupList = coerce @[EstimateBreakup] @[EstimateBreakupD 'Unsafe] $ estimateBreakupList
+        x = encodeToText <$> unsafeEstimateBreakupList
+     in sqlValueSyntax (V.fromList x)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [EstimateBreakup]
+
+instance IsString EstimateBreakup where
+  fromString = show
 
 deriving instance FromJSON (EstimateBreakupD 'Unsafe)
 

@@ -29,8 +29,6 @@ derivePersistField "Domain.Category"
 derivePersistField "Domain.ShapeFile"
 derivePersistField "LatLong"
 
-deriving instance Read LatLong
-
 mkPersist
   defaultSqlSettings
   [defaultQQ|

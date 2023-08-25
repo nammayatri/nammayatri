@@ -15,9 +15,14 @@
 module Domain.Types.CallbackRequest where
 
 import qualified Data.Aeson as A
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.Postgres (Postgres)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DM
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data CallbackRequestE e = CallbackRequest
@@ -36,6 +41,19 @@ type CallbackRequest = CallbackRequestE 'AsEncrypted
 
 data CallbackRequestStatus = PENDING | RESOLVED | CLOSED
   deriving (Show, Read, Eq, Ord, Generic)
+
+instance FromField CallbackRequestStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be CallbackRequestStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be CallbackRequestStatus
+
+instance FromBackendRow Postgres CallbackRequestStatus
+
+instance IsString CallbackRequestStatus where
+  fromString = show
 
 instance FromJSON CallbackRequestStatus where
   parseJSON = A.genericParseJSON A.defaultOptions

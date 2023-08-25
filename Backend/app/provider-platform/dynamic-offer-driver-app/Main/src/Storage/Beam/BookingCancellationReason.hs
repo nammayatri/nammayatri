@@ -14,16 +14,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BookingCancellationReason where
 
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.BookingCancellationReason as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -32,16 +28,6 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
-
-instance FromField Domain.CancellationSource where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.CancellationSource where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.CancellationSource
-
-instance FromBackendRow Postgres Domain.CancellationSource
 
 data BookingCancellationReasonT f = BookingCancellationReasonT
   { driverId :: B.C f (Maybe Text),
@@ -56,9 +42,6 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     driverDistToPickup :: B.C f (Maybe Meters)
   }
   deriving (Generic, B.Beamable)
-
-instance IsString Domain.CancellationSource where
-  fromString = show
 
 instance B.Table BookingCancellationReasonT where
   data PrimaryKey BookingCancellationReasonT f

@@ -3,22 +3,18 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Mandate where
 
 import Data.Serialize
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Mandate as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import EulerHS.Prelude (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common (HighPrecMoney, fromFieldEnum)
+import Kernel.Types.Common (HighPrecMoney)
 import Lib.Utils ()
 import Sequelize
 
@@ -43,18 +39,6 @@ instance B.Table MandateT where
   primaryKey = Id . id
 
 type Mandate = MandateT Identity
-
-instance FromBackendRow Postgres Domain.MandateStatus
-
-instance FromField Domain.MandateStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.MandateStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-deriving stock instance Ord Domain.MandateStatus
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.MandateStatus
 
 mandateTMod :: MandateT (B.FieldModification (B.TableField MandateT))
 mandateTMod =

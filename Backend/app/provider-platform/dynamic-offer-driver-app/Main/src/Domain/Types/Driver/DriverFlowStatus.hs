@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Driver.DriverFlowStatus
   ( FlowStatus (..),
@@ -20,7 +21,14 @@ module Domain.Types.Driver.DriverFlowStatus
 where
 
 import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
+import qualified Data.Aeson as A
+import Data.ByteString
 import Data.OpenApi
+import qualified Database.Beam as B
+import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (sqlValueSyntax))
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -72,6 +80,33 @@ instance FromJSON FlowStatus where
 
 instance ToSchema FlowStatus where
   declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions flowStatusCustomJSONOptions
+
+fromFieldFlowStatus ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion FlowStatus
+fromFieldFlowStatus f mbValue = do
+  value' <- fromField f mbValue
+  case A.fromJSON value' of
+    A.Success a -> pure a
+    _ -> DPSF.returnError ConversionFailed f "Conversion failed"
+
+instance FromField FlowStatus where
+  fromField = fromFieldFlowStatus
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be FlowStatus where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be FlowStatus
+
+instance FromBackendRow Postgres FlowStatus
+
+instance IsString FlowStatus where
+  fromString = show
+
+deriving stock instance Ord FlowStatus
+
+deriving stock instance Read FlowStatus
 
 data DriverFlowStatus = DriverFlowStatus
   { personId :: Id DP.Person,
