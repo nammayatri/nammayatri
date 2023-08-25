@@ -35,6 +35,18 @@ cacheByMerchantId (Id merchantId) plans = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdKey (Id merchantId)) plans expTime
 
 ------------------- -----------------------
+findDefaultPlanByMerchantId :: (CacheFlow m r, MonadFlow m) => Id Merchant -> m [Plan]
+findDefaultPlanByMerchantId (Id merchantId) =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeDefaultPlanMerchantIdKey (Id merchantId)) >>= \case
+    Just a -> pure a
+    Nothing -> cacheDefaultPlanByMerchantId (Id merchantId) /=<< Queries.findDefaultPlanByMerchantId (Id merchantId)
+
+cacheDefaultPlanByMerchantId :: CacheFlow m r => Id Merchant -> [Plan] -> m ()
+cacheDefaultPlanByMerchantId (Id merchantId) plans = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeDefaultPlanMerchantIdKey (Id merchantId)) plans expTime
+
+------------------- -----------------------
 findByMerchantIdAndPaymentMode :: (CacheFlow m r, MonadFlow m) => Id Merchant -> PaymentMode -> m [Plan]
 findByMerchantIdAndPaymentMode (Id merchantId) paymentMode =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeKey (Id merchantId) paymentMode) >>= \case
@@ -69,3 +81,6 @@ makeMerchantIdAndPaymentModeKey merchantId paymentMode = "driver-offer:CachedQue
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey merchantId = "driver-offer:CachedQueries:Plan:MerchantId-" <> merchantId.getId
+
+makeDefaultPlanMerchantIdKey :: Id Merchant -> Text
+makeDefaultPlanMerchantIdKey merchantId = "driver-offer:CachedQueries:Plan:MerchantId-" <> merchantId.getId <> ":DefaultPlan"

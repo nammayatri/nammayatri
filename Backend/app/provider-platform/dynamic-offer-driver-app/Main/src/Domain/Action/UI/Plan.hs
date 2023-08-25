@@ -100,7 +100,8 @@ data CurrentPlanRes = CurrentPlanRes
     subscribed :: Bool,
     planRegistrationDate :: Maybe UTCTime,
     latestAutopayPaymentDate :: Maybe UTCTime,
-    latestManualPaymentDate :: Maybe UTCTime
+    latestManualPaymentDate :: Maybe UTCTime,
+    defaultPlan :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -141,10 +142,15 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
 
 -- This API is for listing current driver plan
 currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
-currentPlan (driverId, _merchantId) = do
+currentPlan (driverId, merchantId) = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
-  mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
+  mbPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
+  (isdefaultPlan, mPlan) <- case mbPlan of
+    Just plan -> pure (False, Just plan)
+    Nothing -> do
+      defPlan <- QPD.findDefaultPlanByMerchantId merchantId
+      checkDefaultPlan defPlan merchantId
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
   currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId >=> (pure . Just)) mPlan
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId
@@ -165,7 +171,8 @@ currentPlan (driverId, _merchantId) = do
         orderId,
         latestManualPaymentDate = latestManualPayment <&> (.updatedAt),
         latestAutopayPaymentDate = latestAutopayPayment <&> (.updatedAt),
-        planRegistrationDate = mDriverPlan <&> (.createdAt)
+        planRegistrationDate = mDriverPlan <&> (.createdAt),
+        defaultPlan = isdefaultPlan
       }
   where
     getDriverPaymentMode = \case
@@ -174,6 +181,9 @@ currentPlan (driverId, _merchantId) = do
       Just DI.PAUSED_PSP -> MANUAL
       Just DI.CANCELLED_PSP -> MANUAL
       _ -> MANUAL
+
+    checkDefaultPlan [plan] _ = pure (True, Just plan)
+    checkDefaultPlan _ mId = throwError (InternalError $ "Multiple / No Default plans found for merchant id: " <> show mId)
 
 -- This API is to create a mandate order if the driver has not subscribed to Mandate even once or has Cancelled Mandate from PSP App.
 planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribeRes
