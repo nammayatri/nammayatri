@@ -712,7 +712,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     private void startLoader(String id) {
-        countDownTimer.cancel();
         try {
             if (mediaPlayer != null) {
                 if (mediaPlayer.isPlaying()) {
@@ -731,6 +730,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             if (progressDialog != null) {
                 windowManager.addView(progressDialog, params);
+            }
+            if (countDownTimer != null) {
+                countDownTimer.cancel();
             }
             rideStatusListener = new CountDownTimer(getResources().getInteger(R.integer.LOADER_WAITING_TIME), 1000) {
                 @SuppressLint("SetTextI18n")

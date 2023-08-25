@@ -10,6 +10,7 @@
 package in.juspay.mobility.app;
 
 import android.Manifest;
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -31,6 +32,8 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -47,11 +50,16 @@ public class GpsListeningService extends Service {
     private final String LOG_TAG = "GpsListeningService";
     private BroadcastReceiver gpsReceiver;
 
-    public void startLocationService() {
+    public void startLocationService(Context context) {
         Log.i(LOG_TAG, "able to access service");
         Intent locationUpdateService = new Intent(this, LocationUpdateService.class);
         locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            Intent alarmIntent = new Intent(context, LocationBroadcastReceiver.class);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE);
+            manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             this.getApplicationContext().startForegroundService(locationUpdateService);
         } else {
             this.startService(locationUpdateService);
@@ -61,6 +69,8 @@ public class GpsListeningService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
+        registerReceiver(gpsReceiver, intentFilter);
         return START_STICKY;
     }
 
@@ -74,8 +84,6 @@ public class GpsListeningService extends Service {
     public void onCreate() {
         super.onCreate();
         startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
-        IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
-        registerReceiver(gpsReceiver, intentFilter);
     }
 
     @Override
@@ -85,8 +93,6 @@ public class GpsListeningService extends Service {
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         }
-        stopForeground(true);
-        stopSelf();
         super.onDestroy();
     }
 
@@ -112,11 +118,12 @@ public class GpsListeningService extends Service {
                     executor.execute(() -> {
                         boolean isApiSuccess = updateDriverStatus();
                         if (isApiSuccess) {
-                            startLocationService();
+                            startLocationService(context);
                             showAlertNotification();
+                            stopForeground(true);
+                            stopSelf();
                         }
                     });
-                    onDestroy();
                 }
             }
         };
@@ -185,6 +192,19 @@ public class GpsListeningService extends Service {
         } catch (Exception error) {
             Log.d(LOG_TAG, "Exception in updateDriverStatus : " + error);
             return false;
+        }
+    }
+    public static class LocationBroadcastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
+            locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(locationUpdateService);
+            } else {
+                context.startService(locationUpdateService);
+            }
         }
     }
 }

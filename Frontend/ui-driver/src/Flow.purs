@@ -51,12 +51,12 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit)
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, unregisterDateAndTime, withinTimeRange)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, getNetworkTime)
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, unregisterDateAndTime, withinTimeRange, cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
-import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=))
+import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
 import Presto.Core.Types.Language.Flow (getLogFields)
@@ -89,6 +89,8 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
+import Effect.Uncurried (runEffectFn1, runEffectFn4)
+import Effect.Aff (makeAff, nonCanceler)
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
@@ -146,30 +148,36 @@ checkVersion versioncode = do
     _ <- UI.handleAppUpdatePopUp
     checkVersion versioncode
 
+data NetworkTime = NetworkTime String Number
+
 checkDateAndTime :: FlowBT String Unit
 checkDateAndTime = do
-  _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "false"
-  (CurrentDateAndTimeRes current)  <- Remote.currentDateAndTimeBT ""
-  if(current == {timestamp : Nothing}) then pure unit
-  else do
-    let currentTimeStamp = current.timestamp
-    let deviceDateTimeStamp = getCurrentTimeStamp unit
-    let timeDiff = (((fromMaybe ( toNumber 0) currentTimeStamp )) - deviceDateTimeStamp)
-    let timeDiffInMins = (timeDiff) / toNumber (1000)
-    let absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
-    if (absTimeDiff < toNumber 10 ) then do
-      setValueToLocalStore IS_VALID_TIME "true"
-      liftFlowBT $ unregisterDateAndTime
-      liftFlowBT $ stopLocationPollingAPI
-      liftFlowBT $ startLocationPollingAPI
-    else
-      when (absTimeDiff >= toNumber 10 ) do
-        _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
-        setValueToLocalStore IS_VALID_TIME "false"
-        modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
-        lift $ lift $ doAff do liftEffect hideSplash
-        _ <- UI.handleAppUpdatePopUp
-        checkDateAndTime
+  (NetworkTime status currentTime) <- lift $ lift $ doAff $ makeAff (\cb -> runEffectFn4 getNetworkTime "time.google.com" 500 (cb <<< Right) NetworkTime $> nonCanceler)
+  case status of
+    "SUCCESS" -> validateTime currentTime
+    "NOT_FOUND" -> do
+      (CurrentDateAndTimeRes current)  <- Remote.currentDateAndTimeBT ""
+      if(isNothing current.timestamp) then pure unit else validateTime (fromMaybe 0.0 current.timestamp)
+    _ -> pure unit
+
+validateTime :: Number -> FlowBT String Unit
+validateTime currentTime = do  
+  let deviceDateTimeStamp = getCurrentTimeStamp unit
+      timeDiff = (currentTime - deviceDateTimeStamp)
+      timeDiffInMins = (timeDiff) / toNumber (1000)
+      absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
+  if (absTimeDiff < toNumber 10 ) then do
+    setValueToLocalStore IS_VALID_TIME "true"
+    liftFlowBT $ unregisterDateAndTime
+    liftFlowBT $ stopLocationPollingAPI
+    liftFlowBT $ startLocationPollingAPI
+  else
+    when (absTimeDiff >= toNumber 10 ) do
+      setValueToLocalStore IS_VALID_TIME "false"
+      modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
+      lift $ lift $ doAff do liftEffect hideSplash
+      _ <- UI.handleAppUpdatePopUp
+      checkDateAndTime
 
 getLatestAndroidVersion :: Merchant -> Int 
 getLatestAndroidVersion merchant = 

@@ -124,10 +124,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public static boolean isUploadPopupOpen = false;
 
     // CallBacks
-    private static String storeDriverCallBack = null;
-    private static String storeUpdateTimeCallBack = null;
-    private static String storeImageUploadCallBack = null;
+    private String storeDriverCallBack = null;
+    private String storeUpdateTimeCallBack = null;
+    private String storeImageUploadCallBack = null;
     private CallBack callBack;
+    private LocationUpdateService.UpdateTimeCallback locationCallback;
 
     public MobilityDriverBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -207,11 +208,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             Utils.registerCallback(callBack);
         }
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-            LocationUpdateService.UpdateTimeCallback callback = this::callUpdateTimeCallBack;
-            LocationUpdateService.registerCallback(callback);
+            locationCallback = this::callUpdateTimeCallBack;
+            LocationUpdateService.registerCallback(locationCallback);
         }
         if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
-            OverlaySheetService.deRegisterCallback(callBack);
+            OverlaySheetService.registerCallback(callBack);
         }
     }
 
@@ -221,7 +222,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         Utils.deRegisterCallback(callBack);
         DefaultMediaPlayerControl.mediaPlayer.reset();
         if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
-            OverlaySheetService.registerCallback(callBack);
+            OverlaySheetService.deRegisterCallback(callBack);
+        }
+        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+            LocationUpdateService.deRegisterCallback(locationCallback);
         }
         // Clearing all static variables
         // Media Utils
@@ -266,11 +270,15 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void stopLocationPollingAPI() {
-        Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
-        bridgeComponents.getContext().stopService(locationUpdateService);
-        WorkManager mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
-        mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(R.string.location_update));
-        Log.i(LOCATION, "Stop Location Update Polling");
+        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+            if (in.juspay.mobility.common.Utils.stopLocationService(bridgeComponents.getContext())) {
+                WorkManager mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
+                mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update));
+                Log.i(LOCATION, "Stop Location Update Polling");
+            } else {
+                Log.i(LOCATION, "Service not Started yet");
+            }
+        }
     }
 
     //endregion
@@ -523,6 +531,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @Override
     public void reset() {
+        Log.e(LOG_TAG,"inside reset");
         onDestroy();
         super.reset();
     }
@@ -731,13 +740,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         fragmentTransaction.add(Integer.parseInt(pureScriptId), mapFragment);
                         fragmentTransaction.commitAllowingStateLoss();
                         mapFragment.getMapAsync(googleMap -> {
-                            MobilityCommonBridge.googleMap = googleMap;
+                            this.googleMap = googleMap;
                             googleMap.getUiSettings().setAllGesturesEnabled(false);
                             googleMap.getUiSettings().setRotateGesturesEnabled(false);
                             googleMap.getUiSettings().setMyLocationButtonEnabled(false);
                             markers = new JSONObject();
                             markersElement.put(pureScriptId, markers);
-                            MobilityCommonBridge.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                            this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                                 @Override
                                 public synchronized void onMapLoaded() {
                                     showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8);
@@ -1081,6 +1090,18 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    @JavascriptInterface
+    public void getNetworkTime(String provider, int timeOut, String callback) {
+        NetworkTimerProvider timerProvider = new NetworkTimerProvider((status, time) -> {
+            if (callback != null) {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%d');",
+                        callback, status, time);
+                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            }
+        });
+        timerProvider.requestTime(provider, timeOut);
     }
     // endregion
 

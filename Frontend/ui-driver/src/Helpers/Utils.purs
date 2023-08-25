@@ -64,7 +64,7 @@ import Effect.Uncurried (EffectFn1(..))
 import Screens.Types (AllocationData, LeaderBoardWeek, YoutubeData, LeaderBoardDay)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
-import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
@@ -72,6 +72,8 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PaymentPagePayload, PromotionPopupConfig)
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout)
+import Effect.Uncurried(EffectFn1, EffectFn4)
+import Storage (KeyStore(..))
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -110,6 +112,8 @@ foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
+
+foreign import getNetworkTime ::forall action. EffectFn4 String Int (action -> Effect Unit) (String -> Number -> action) Unit
 
 foreign import isYesterday :: String -> Boolean
 
@@ -319,13 +323,20 @@ getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max 
 
 data LatLon = LatLon String String
 
-getCurrentLocation :: Number -> Number -> Number -> Number -> FlowBT String LatLon
-getCurrentLocation currentLat currentLon sourceLat sourceLon = do
-  (LatLon startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon 500 $> nonCanceler)
+getCurrentLocation :: Number -> Number -> Number -> Number -> Int -> FlowBT String LatLon
+getCurrentLocation currentLat currentLon sourceLat sourceLon timeOut = do
+  (LatLon startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon timeOut $> nonCanceler)
   if(startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0") then
     pure (LatLon startRideCurrentLat startRideCurrentLong)
-  else do 
-    let distanceDiff = (getDistanceBwCordinates currentLat currentLon sourceLat sourceLon)
-        rideLat = show $ if distanceDiff <= 0.10 then  currentLat else sourceLat
-        rideLong = show $ if distanceDiff <= 0.10 then currentLon else sourceLon
-    pure (LatLon rideLat rideLong) 
+  else do
+    if sourceLat /= 0.0 && sourceLon /= 0.0 && currentLat /= 0.0 && currentLon /= 0.0 then do
+      let distanceDiff = (getDistanceBwCordinates currentLat currentLon sourceLat sourceLon)
+          rideLat = show $ if distanceDiff <= 0.10 then  currentLat else sourceLat
+          rideLong = show $ if distanceDiff <= 0.10 then currentLon else sourceLon
+      pure (LatLon rideLat rideLong)
+      else do
+        rideLat <- lift $ lift $ loadS $ show LAST_KNOWN_LAT 
+        rideLong <- lift $ lift $ loadS $ show LAST_KNOWN_LON
+        case rideLat,rideLong of
+          Just lat, Just lon -> pure (LatLon lat lon)
+          _,_ -> pure (LatLon "0.0" "0.0")
