@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Action.UI.Driver
   ( DriverInformationRes (..),
@@ -179,7 +180,7 @@ data DriverInformationRes = DriverInformationRes
     numberOfRides :: Int,
     mobileNumber :: Maybe Text,
     linkedVehicle :: Maybe VehicleAPIEntity,
-    rating :: Maybe Int,
+    rating :: Maybe Centesimal,
     active :: Bool,
     onRide :: Bool,
     verified :: Bool,
@@ -215,7 +216,7 @@ data DriverEntityRes = DriverEntityRes
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
     linkedVehicle :: Maybe VehicleAPIEntity,
-    rating :: Maybe Int,
+    rating :: Maybe Centesimal,
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
@@ -597,7 +598,7 @@ buildDriverEntityRes (person, driverInfo) = do
         middleName = person.middleName,
         lastName = person.lastName,
         mobileNumber = decMobNum,
-        rating = round <$> person.rating,
+        rating = SP.roundToOneDecimal <$> person.rating,
         linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleMB,
         active = driverInfo.active,
         onRide = driverInfo.onRide,

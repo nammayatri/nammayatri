@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Types.Person where
 
@@ -155,3 +156,6 @@ getPersonNumber person = do
 
 getPersonFullName :: Person -> Maybe Text
 getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName
+
+roundToOneDecimal :: Centesimal -> Centesimal
+roundToOneDecimal x = fromIntegral (round (x * 10)) / 10
