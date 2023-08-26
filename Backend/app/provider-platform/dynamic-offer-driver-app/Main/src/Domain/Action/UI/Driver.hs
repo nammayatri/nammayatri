@@ -152,6 +152,7 @@ import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
@@ -1405,8 +1406,10 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
           totalRides = numRides
           charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
-      transactionDetails <- findAllByOrderId (cast id)
-      let txnInfo = map mkDriverTxnInfo transactionDetails
+      invoice <- runInReplica $ QINV.findByDriverFeeId id
+      let invoiceIds = map (.id) invoice
+      transactionDetails <- mapM findAllByOrderId (cast <$> invoiceIds)
+      let txnInfo = map mkDriverTxnInfo (concat transactionDetails)
       return DriverPaymentHistoryResp {..}
 
     mkDriverTxnInfo PaymentTransaction {..} = DriverTxnInfo {..}
