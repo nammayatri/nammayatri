@@ -94,7 +94,7 @@ selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . 
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  activeBooking <- B.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  activeBooking <- B.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatusForCheck
   -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking
     then do

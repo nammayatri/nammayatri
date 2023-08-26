@@ -179,7 +179,7 @@ equals list1 list2 = all (`elem` list1) list2 && all (`elem` list2) list1
 resetCustomer :: Text -> IO ()
 resetCustomer token = runAppFlow "" $ do
   regToken <- BQRegToken.findByToken token >>= fromMaybeM (InvalidToken token)
-  activeBookings <- BQB.findByRiderIdAndStatus (Id regToken.entityId) BDB.activeBookingStatus
+  activeBookings <- BQB.findByRiderIdAndStatus (Id regToken.entityId) BDB.activeBookingStatusForCheck
   forM_ activeBookings $ \activeBooking -> do
     rides <- BQRide.findActiveByRBId activeBooking.id
     _ <- BQB.updateStatus activeBooking.id BDB.CANCELLED

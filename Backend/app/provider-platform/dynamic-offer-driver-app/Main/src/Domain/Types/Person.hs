@@ -144,3 +144,6 @@ getPersonNumber person = do
 
 getPersonFullName :: Person -> Maybe Text
 getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName
+
+roundToOneDecimal :: Centesimal -> Centesimal
+roundToOneDecimal x = fromIntegral (round @Centesimal @Int (x * 10)) / 10
