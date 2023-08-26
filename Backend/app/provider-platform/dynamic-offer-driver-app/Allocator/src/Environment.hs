@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Environment
   ( HandlerCfg (..),
@@ -22,6 +23,7 @@ module Environment
   )
 where
 
+import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
@@ -37,7 +39,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
-import SharedLogic.GoogleTranslate
+import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
@@ -73,6 +75,8 @@ data HandlerEnv = HandlerEnv
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
     version :: DeploymentVersion,
+    maxThreads :: Int,
+    jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool
   }
@@ -98,6 +102,7 @@ buildHandlerEnv HandlerCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
+  let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   return HandlerEnv {..}

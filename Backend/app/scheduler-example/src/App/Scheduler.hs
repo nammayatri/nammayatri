@@ -37,7 +37,7 @@ schedulerHandle :: LoggerResources -> SchedulerHandle SchedulerJobType
 schedulerHandle loggerRes =
   SchedulerHandle
     { getTasksById = QSJ.getTasksById,
-      getReadyTasks = QSJ.getReadyTasks,
+      getReadyTasks = return [],
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,
@@ -58,7 +58,7 @@ runExampleScheduler configModifier = do
   let loggerConfig = appCfg.loggerConfig
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let loggerRes = LoggerResources {..}
-  runSchedulerService appCfg $ schedulerHandle loggerRes
+  runSchedulerService appCfg mempty $ schedulerHandle loggerRes
 
 -----------------
 

@@ -12,144 +12,186 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
-import Data.Singletons (SingI)
+import qualified Data.ByteString as BS
+import Data.Time as T hiding (getCurrentTime)
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVScheduler, findAllWithKVScheduler, findAllWithOptionsKVScheduler, findOneWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common (Log, MonadTime (getCurrentTime))
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM)
 import Lib.Scheduler.Environment
-import Lib.Scheduler.JobStorageType.DB.Table
+import Lib.Scheduler.JobStorageType.DB.Table hiding (Id)
+import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST hiding (Id)
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types as ST
+import qualified Sequelize as Se
 
-createJob :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => Int -> JobContent e -> Esq.SqlDB ()
+instance (JobProcessor t) => FromTType'' BeamST.SchedulerJob (AnyJob t) where
+  fromTType'' BeamST.SchedulerJobT {..} = do
+    (AnyJobInfo anyJobInfo) :: AnyJobInfo t <-
+      restoreAnyJobInfoMain @t (StoredJobInfo jobType jobData)
+        & fromMaybeM (InternalError ("Unable to restore JobInfo. " <> jobType <> ": " <> jobData))
+    pure . Just $
+      AnyJob $
+        Job
+          { id = Id id,
+            shardId = shardId,
+            scheduledAt = T.localTimeToUTC T.utc scheduledAt,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc updatedAt,
+            maxErrors = maxErrors,
+            currErrors = currErrors,
+            status = status,
+            jobInfo = anyJobInfo,
+            parentJobId = Id parentJobId
+          }
+
+instance (JobProcessor t) => ToTType'' BeamST.SchedulerJob (AnyJob t) where
+  toTType'' (AnyJob Job {..}) = do
+    let storedJobInfo = storeJobInfo jobInfo
+    BeamST.SchedulerJobT
+      { BeamST.id = getId id,
+        BeamST.jobType = storedJobType storedJobInfo,
+        BeamST.jobData = storedJobContent storedJobInfo,
+        BeamST.shardId = shardId,
+        BeamST.scheduledAt = T.utcToLocalTime T.utc scheduledAt,
+        BeamST.createdAt = T.utcToLocalTime T.utc createdAt,
+        BeamST.updatedAt = T.utcToLocalTime T.utc updatedAt,
+        BeamST.maxErrors = maxErrors,
+        BeamST.currErrors = currErrors,
+        BeamST.status = status,
+        BeamST.parentJobId = getId parentJobId
+      }
+
+createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Int -> JobContent e -> m ()
 createJob maxShards jobData = do
   void $
-    ScheduleJob.createJob @t @e @Esq.SqlDB Esq.create maxShards $
+    ScheduleJob.createJob @t @e @m createWithKVScheduler maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> Int -> JobContent e -> Esq.SqlDB ()
+createJobIn :: forall t (e :: t) m r. (Log m, JobFlow t e, JobCreator r m) => NominalDiffTime -> Int -> JobContent e -> m ()
 createJobIn inTime maxShards jobData = do
   void $
-    ScheduleJob.createJobIn @t @e @Esq.SqlDB Esq.create inTime maxShards $
+    ScheduleJob.createJobIn @t @e @m createWithKVScheduler inTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
--- createJobIn' :: forall t (e :: t) m. (SingI e, JobInfoProcessor e, JobProcessor t, L.MonadFlow m, MonadTime m, MonadGuid m, Log m) => NominalDiffTime -> Int -> JobContent e -> m ()
--- createJobIn' inTime maxShards jobData = do
---   void $
---     ScheduleJob.createJobIn' @t @e create'' inTime maxShards $
---       JobEntry
---         { jobData = jobData,
---           maxErrors = 5
---         }
-
--- create'' :: MonadFlow m => AnyJob t -> m ()
--- create'' (ST.AnyJob ST.Job {..}) = do
---   let storedJobInfo = ST.storeJobInfo jobInfo
---   dbConf <- L.getOption KBT.PsqlDbCfg >>= fromMaybeM (InternalError "distance is null for one way booking")
---   conn <- L.getOrInitSqlConn dbConf
---   case conn of
---     Right c -> do
---       void $
---         L.runDB c $
---           L.insertRows $
---             B.insert (BeamSJ.schedulerJob BeamSJ.atlasDB) $
---               B.insertExpressions [BeamSJ.SchedulerJobT (B.val_ $ getId id) (B.val_ $ ST.storedJobType storedJobInfo) (B.val_ $ ST.storedJobContent storedJobInfo) (B.val_ shardId) (B.val_ scheduledAt) (B.val_ createdAt) (B.val_ updatedAt) (B.val_ maxErrors) (B.val_ currErrors) (B.val_ status)]
---     Left _ -> pure ()
-
-createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> Int -> JobContent e -> Esq.SqlDB ()
+createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => UTCTime -> Int -> JobContent e -> m ()
 createJobByTime byTime maxShards jobData = do
   void $
-    ScheduleJob.createJobByTime @t @e @Esq.SqlDB Esq.create byTime maxShards $
+    ScheduleJob.createJobByTime @t @e @m createWithKVScheduler byTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-findAll :: FromTType SchedulerJobT (AnyJob t) => SchedulerM [AnyJob t]
-findAll = Esq.findAll $ from $ table @SchedulerJobT
+findAll :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => m [AnyJob t]
+findAll = findAllWithKVScheduler [Se.Is BeamST.id $ Se.Not $ Se.Eq ""]
 
-findById :: FromTType SchedulerJobT (AnyJob t) => Id AnyJob -> SchedulerM (Maybe (AnyJob t))
-findById = Esq.findById
+findById :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Id AnyJob -> m (Maybe (AnyJob t))
+findById (Id id) = findOneWithKVScheduler [Se.Is BeamST.id $ Se.Eq id]
 
-getTasksById :: FromTType SchedulerJobT (AnyJob t) => [Id AnyJob] -> SchedulerM [AnyJob t]
-getTasksById ids = Esq.findAll $ do
-  job <- from $ table @SchedulerJobT
-  where_ $ job ^. SchedulerJobId `in_` valList (map (.getId) ids)
-  pure job
+getTasksById :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => [Id AnyJob] -> m [AnyJob t]
+getTasksById ids = findAllWithKVScheduler [Se.Is BeamST.id $ Se.In $ getId <$> ids]
+
+getPendingStuckJobs :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => UTCTime -> m [AnyJob t]
+getPendingStuckJobs newtime = do
+  findAllWithKVScheduler
+    [ Se.And
+        [ Se.Is BeamST.status $ Se.Eq Pending,
+          Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc newtime)
+        ]
+    ]
 
 getShardIdKey :: Text
 getShardIdKey = "DriverOffer:Jobs:ShardId"
 
-getReadyTasks :: FromTType SchedulerJobT (AnyJob t) => Maybe Int -> SchedulerM [AnyJob t]
+getReadyTasks ::
+  forall t r m.
+  (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) =>
+  Maybe Int ->
+  m [(AnyJob t, BS.ByteString)]
 getReadyTasks mbMaxShards = do
   now <- getCurrentTime
   shardId <-
     case mbMaxShards of
       Just maxShards -> (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
       Nothing -> pure 0 -- wouldn't be used to fetch jobs in case of nothing
-  Esq.findAll $ do
-    job <- from $ table @SchedulerJobT
-    where_ $
-      job ^. SchedulerJobStatus ==. val Pending
-        &&. job ^. SchedulerJobScheduledAt <=. val now
-        &&. whenJust_ mbMaxShards (\_ -> job ^. SchedulerJobShardId ==. val shardId)
-    orderBy [asc $ job ^. SchedulerJobScheduledAt]
-    pure job
+  res <- findAllWithOptionsKVScheduler [Se.And ([Se.Is BeamST.status $ Se.Eq Pending, Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc now)] <> [Se.Is BeamST.shardId $ Se.Eq shardId | isJust mbMaxShards])] (Se.Asc BeamST.scheduledAt) Nothing Nothing
+  return $ zip res (map (const "rndm") [1 .. length res])
 
-updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
-updateStatus newStatus jobId = do
+updateStatus ::
+  ( MonadTime m,
+    L.MonadFlow m,
+    Log m
+  ) =>
+  JobStatus ->
+  Id AnyJob ->
+  m ()
+updateStatus newStatus (Id jobId) = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
-    set job [SchedulerJobStatus =. val newStatus, SchedulerJobUpdatedAt =. val now]
-    where_ $ job ^. SchedulerJobId ==. val jobId.getId
+  updateWithKVScheduler
+    [ Se.Set BeamST.status newStatus,
+      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
+    ]
+    [Se.Is BeamST.id (Se.Eq jobId)]
 
-markAsComplete :: Id AnyJob -> SchedulerM ()
+markAsComplete :: forall m r. (JobMonad r m) => Id AnyJob -> m ()
 markAsComplete = updateStatus Completed
 
-markAsFailed :: Id AnyJob -> SchedulerM ()
+markAsFailed :: forall m r. (JobMonad r m) => Id AnyJob -> m ()
 markAsFailed = updateStatus Failed
 
-updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM ()
-updateErrorCountAndFail jobId fCount = do
+updateErrorCountAndFail :: forall m r. (JobMonad r m) => Id AnyJob -> Int -> m ()
+updateErrorCountAndFail (Id jobId) fCount = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
-    set job [SchedulerJobStatus =. val Failed, SchedulerJobCurrErrors =. val fCount, SchedulerJobUpdatedAt =. val now]
-    where_ $ job ^. SchedulerJobId ==. val jobId.getId
+  updateWithKVScheduler
+    [ Se.Set BeamST.status Failed,
+      Se.Set BeamST.currErrors fCount,
+      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
+    ]
+    [Se.Is BeamST.id (Se.Eq jobId)]
 
-reSchedule :: Id AnyJob -> UTCTime -> SchedulerM ()
-reSchedule jobId newScheduleTime = do
+reSchedule :: forall m r. (JobMonad r m) => Id AnyJob -> UTCTime -> m ()
+reSchedule (Id jobId) newScheduleTime = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
-    set job [SchedulerJobScheduledAt =. val newScheduleTime, SchedulerJobUpdatedAt =. val now]
-    where_ $ job ^. SchedulerJobId ==. val jobId.getId
+  updateWithKVScheduler
+    [ Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now),
+      Se.Set BeamST.scheduledAt (T.utcToLocalTime T.utc newScheduleTime)
+    ]
+    [Se.Is BeamST.id (Se.Eq jobId)]
 
-updateFailureCount :: Id AnyJob -> Int -> SchedulerM ()
-updateFailureCount jobId newCountValue = do
+updateFailureCount :: forall m r. (JobMonad r m) => Id AnyJob -> Int -> m ()
+updateFailureCount (Id jobId) newCountValue = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
-    set job [SchedulerJobCurrErrors =. val newCountValue, SchedulerJobUpdatedAt =. val now]
-    where_ $ job ^. SchedulerJobId ==. val jobId.getId
+  updateWithKVScheduler
+    [ Se.Set BeamST.currErrors newCountValue,
+      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
+    ]
+    [Se.Is BeamST.id (Se.Eq jobId)]
 
-reScheduleOnError :: Id AnyJob -> Int -> UTCTime -> SchedulerM ()
-reScheduleOnError jobId newCountValue newScheduleTime = do
+reScheduleOnError :: forall m r. (JobMonad r m) => Id AnyJob -> Int -> UTCTime -> m ()
+reScheduleOnError (Id jobId) newCountValue newScheduleTime = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
-    set
-      job
-      [ SchedulerJobScheduledAt =. val newScheduleTime,
-        SchedulerJobUpdatedAt =. val now,
-        SchedulerJobCurrErrors =. val newCountValue
-      ]
-    where_ $ job ^. SchedulerJobId ==. val jobId.getId
+  updateWithKVScheduler
+    [ Se.Set BeamST.scheduledAt (T.utcToLocalTime T.utc newScheduleTime),
+      Se.Set BeamST.currErrors newCountValue,
+      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
+    ]
+    [Se.Is BeamST.id (Se.Eq jobId)]

@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.scheduler_job ADD COLUMN parent_job_id character(36);

@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
+import qualified Data.Map as M
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy as DFP
@@ -31,7 +33,7 @@ import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
@@ -73,10 +75,13 @@ cancelRideImpl ::
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
     CacheFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EventStreamFlow m r,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "schedulerType" r SchedulerType
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -167,6 +172,9 @@ repeatSearch ::
     HasSendSearchRequestToDriverMetrics m r,
     HasHttpClientOptions r c,
     HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
     HasShortDurationRetryCfg r c,
     CacheFlow m r
   ) =>
@@ -198,13 +206,12 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
     ReSchedule _ -> do
       let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       maxShards <- asks (.maxShards)
-      Esq.runTransaction $ do
-        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-          SendSearchRequestToDriverJobData
-            { searchTryId = newSearchTry.id,
-              estimatedRideDistance = searchReq.estimatedDistance,
-              driverExtraFeeBounds = driverExtraFeeBounds
-            }
+      createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+        SendSearchRequestToDriverJobData
+          { searchTryId = newSearchTry.id,
+            estimatedRideDistance = searchReq.estimatedDistance,
+            driverExtraFeeBounds = driverExtraFeeBounds
+          }
     _ -> return ()
 
   BP.sendEstimateRepetitionUpdateToBAP booking ride searchTry.estimateId cancellationSource

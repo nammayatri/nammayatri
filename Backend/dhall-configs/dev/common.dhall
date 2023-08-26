@@ -20,6 +20,8 @@ let mockGoogleCfg =
       , googleKey = "mock-google-key"
       }
 
+let SchedulerType = < RedisBased | DbBased >
+
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig =
@@ -47,4 +49,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , registryUrl = mockRegistryUrl
     , authServiceUrl = "http://localhost:8013/"
     , consumerType = globalCommon.consumerType
+    , schedulerType = SchedulerType
     }
