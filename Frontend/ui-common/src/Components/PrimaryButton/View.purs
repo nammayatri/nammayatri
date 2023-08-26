@@ -45,12 +45,13 @@ view push config =
             , width config.width
             , cornerRadius config.cornerRadius
             , background config.background
+            , padding config.padding
             , gravity config.gravity
             , clickable if config.enableLoader then false else config.isClickable
             , onClick
                 ( \action -> do
                     _ <- pure $ toggleBtnLoader config.id true
-                    _ <- pure $ startLottieProcess lottieAnimationConfig{ rawJson = getValueFromConfig "apiLoaderLottie", lottieId = getNewIDWithTag config.id}
+                    _ <- pure $ startLottieProcess lottieAnimationConfig{ rawJson = config.lottieConfig.lottieURL, lottieId = getNewIDWithTag config.id}
                     push action
                 )
                 (const OnClick)
@@ -92,8 +93,8 @@ view push config =
             [ lottieAnimationView
                 [ id (getNewIDWithTag config.id)
                 , visibility if config.enableLoader then VISIBLE else GONE
-                , height $ V 30
-                , width $ V 150
+                , height config.lottieConfig.height
+                , width config.lottieConfig.width
                 ]
             ]
         ]

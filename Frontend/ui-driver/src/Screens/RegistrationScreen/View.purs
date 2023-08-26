@@ -30,15 +30,14 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import Screens.RegistrationScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
-import Effect.Uncurried (runEffectFn1)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "RegistrationScreen"
-  , globalEvents : [(\_ -> pure $ runEffectFn1 consumeBP unit)]
+  , globalEvents : []
   , eval
   }
 

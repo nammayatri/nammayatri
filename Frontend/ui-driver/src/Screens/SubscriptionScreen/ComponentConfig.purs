@@ -17,7 +17,7 @@ module Screens.SubscriptionScreen.ComponentConfig where
 
 import Language.Strings
 import PrestoDOM
-
+import Engineering.Helpers.Commons as EHC
 import Common.Types.App (PaymentStatus(..))
 import Components.PopUpModal as PopUpModalConfig
 import Components.PrimaryButton as PrimaryButton
@@ -27,12 +27,15 @@ import Data.Maybe (isNothing)
 import Data.Maybe as Mb
 import Data.Semigroup ((<>))
 import Font.Style (Style(..))
+import JBridge as JB
 import Language.Types (STR(..))
-import Prelude ((==), (/=), (&&), ($))
+import Prelude (unit, (==), (/=), (&&), ($), (/))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (SubscribePopupType(..), PlanCardConfig(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils as HU
+import Common.Types.App (LazyCheck(..))
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -43,9 +46,47 @@ clearDueButtonConfig state = let
       , alpha = if true then 1.0 else 0.6
       , height = (V 48)
       , cornerRadius = 8.0
+      , id = "SetupAutoPayPrimaryButton"
+      , enableLoader = JB.getBtnLoader "SetupAutoPayPrimaryButton"
       , margin = (Margin 0 12 0 12)
       }
   in primaryButtonConfig'
+
+retryPaymentButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
+retryPaymentButtonConfig state =
+  let
+    screenWidth = EHC.screenWidth unit
+  in
+    PrimaryButton.config
+      { textConfig
+        { text = getString RETRY_PAYMENT_STR
+        , width = WRAP_CONTENT
+        , gravity = LEFT
+        , height = WRAP_CONTENT
+        , color = Color.white900
+        , textStyle = Body4
+        }
+      , height = V 30
+      , width = V $ screenWidth / 3
+      , gravity = CENTER
+      , cornerRadius = 24.0
+      , padding = Padding 10 5 10 6
+      , margin = MarginLeft 10
+      , isSuffixImage = true
+      , background = Color.blue800
+      , suffixImageConfig
+        { imageUrl = "ic_right_arrow," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_right_arrow_blue.png"
+        , height = V 16
+        , width = V 16
+        , margin = (MarginLeft 5)
+        }
+      , id = "RetryPaymentPrimaryButton"
+      , enableLoader = JB.getBtnLoader "RetryPaymentPrimaryButton"
+      , lottieConfig
+        { width = V $ screenWidth / 4
+        , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader_white.json"
+        }
+      }
 
 switchPlanButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 switchPlanButtonConfig state = let
@@ -77,12 +118,14 @@ joinPlanButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = case (getSelectedJoiningPlan state) of 
-                                Mb.Just value -> (getString PAY_TO_JOIN_THIS_PLAN)
+                                Mb.Just _ -> (getString PAY_TO_JOIN_THIS_PLAN)
                                 Mb.Nothing -> (getString TAP_A_PLAN_TO_VIEW_DETAILS) }
       , isClickable = if isNothing state.props.joinPlanProps.selectedPlanItem then false else true
       , alpha = if isNothing state.props.joinPlanProps.selectedPlanItem then 0.6 else 1.0
       , height = (V 48)
       , cornerRadius = 8.0
+      , id = "JoinPlanPrimaryButton"
+      , enableLoader = (JB.getBtnLoader "JoinPlanPrimaryButton")
       , margin = (MarginBottom 16)
       }
   in primaryButtonConfig'

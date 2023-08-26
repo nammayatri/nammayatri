@@ -39,10 +39,9 @@ import Log (printLog)
 import Data.String as DS 
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
-import Effect.Uncurried (runEffectFn1)
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -51,7 +50,6 @@ screen initialState =
   , name : "UploadDrivingLicenseScreen"
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
-    _ <- runEffectFn1 consumeBP unit
     pure $ pure unit)]
   , eval : \action state -> do
       let _ = printLog  "UploadDrivingLicenseScreen state -----" state
