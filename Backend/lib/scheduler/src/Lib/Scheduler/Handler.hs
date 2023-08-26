@@ -11,6 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Lib.Scheduler.Handler
   ( SchedulerHandle (..),
@@ -18,51 +20,95 @@ module Lib.Scheduler.Handler
   )
 where
 
+import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
+import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
-import Control.Monad.Trans.Cont
+import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
+import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import Kernel.Utils.Time ()
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobHandler
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
-import UnliftIO
 
 data SchedulerHandle t = SchedulerHandle
   { jobHandlers :: JobHandlersList t,
     getTasksById :: [Id AnyJob] -> SchedulerM [AnyJob t],
-    getReadyTasks :: SchedulerM [AnyJob t],
-    markAsComplete :: Id AnyJob -> SchedulerM (),
-    markAsFailed :: Id AnyJob -> SchedulerM (),
-    updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM (),
-    reSchedule :: Id AnyJob -> UTCTime -> SchedulerM (),
-    updateFailureCount :: Id AnyJob -> Int -> SchedulerM (),
-    reScheduleOnError :: Id AnyJob -> Int -> UTCTime -> SchedulerM ()
+    getReadyTasks :: SchedulerM [(AnyJob t, BS.ByteString)],
+    markAsComplete :: Text -> Id AnyJob -> SchedulerM (),
+    markAsFailed :: Text -> Id AnyJob -> SchedulerM (),
+    updateErrorCountAndFail :: Text -> Id AnyJob -> Int -> SchedulerM (),
+    reSchedule :: Text -> AnyJob t -> UTCTime -> SchedulerM (),
+    updateFailureCount :: Text -> Id AnyJob -> Int -> SchedulerM (),
+    reScheduleOnError :: Text -> AnyJob t -> Int -> UTCTime -> SchedulerM ()
   }
 
-handler :: SchedulerHandle t -> SchedulerM ()
+handler :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
 handler hnd = do
+  maxThreads <- asks (.maxThreads)
+  executionChannels :: [Chan (AnyJob t)] <- L.runIO $ mapM (const newChan) [1 .. maxThreads]
+  mapM_ (fork "executing tasks" . executeTaskInChan) executionChannels
+  handlerLoop hnd executionChannels
+  where
+    executeTaskInChan :: Chan (AnyJob t) -> SchedulerM ()
+    executeTaskInChan ch = runTask =<< L.runIO (readChan ch)
+
+    runTask :: AnyJob t -> SchedulerM ()
+    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId) $ do
+      res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+      registerExecutionResult hnd anyJob res
+      releaseLock parentJobId
+
+handlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
+handlerLoop hnd executionChannels = do
+  logInfo "Starting runner iteration 1"
+  schedulerType <- asks (.schedulerType)
   iterSessionId <- generateGUIDText
   before <- getCurrentTime
   withLogTag iterSessionId $ do
     logInfo "Starting runner iteration"
-    runnerIteration hnd
+    case schedulerType of
+      RedisBased -> runnerIterationRedis hnd executionChannels
+      DbBased -> runnerIteration hnd executionChannels
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
   loopIntervalSec <- asks (.loopIntervalSec)
   threadDelaySec (loopIntervalSec - diff)
-  handler hnd
+  handlerLoop hnd executionChannels
 
-errorLogger :: (Log m, Show a) => a -> m ()
-errorLogger e = logError $ "error occured: " <> show e
+mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
+mapConcurrently action = mapM_ (fork "mapThread" . action)
 
-runnerIteration :: forall t. SchedulerHandle t -> SchedulerM ()
-runnerIteration hnd@SchedulerHandle {..} = do
+runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
+runnerIterationRedis SchedulerHandle {..} executionChannels = do
+  key <- asks (.streamName)
+  groupName <- asks (.groupName)
   readyTasks <- getReadyTasks
+  logTagDebug "All Tasks - Count" . show $ length readyTasks
+  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) readyTasks
+  filteredTasks <- filterM (\(AnyJob Job {..}, _) -> attemptTaskLockAtomic parentJobId) readyTasks
+  let (filteredTasks', recordIds) = foldl (\(ftAcc, rIdAcc) (task, recordId) -> (task : ftAcc, recordId : rIdAcc)) ([], []) filteredTasks
+  logTagDebug "Available tasks - Count" . show $ length filteredTasks
+  logTagDebug "Available tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) filteredTasks
+  mapConcurrently writeToChan $ zip filteredTasks' $ cycle executionChannels
+  unless (null recordIds) do
+    void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
+    void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
+  where
+    writeToChan :: (AnyJob t, Chan (AnyJob t)) -> SchedulerM ()
+    writeToChan (job, ch) = L.runIO $ writeChan ch job
+
+runnerIteration :: forall t. (JobProcessor t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
+runnerIteration SchedulerHandle {..} executionChannels = do
+  readyJobs <- getReadyTasks
+  let readyTasks = map fst readyJobs
   logTagDebug "All Tasks - Count" . show $ length readyTasks
   logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> id) readyTasks
   tasksPerIteration <- asks (.tasksPerIteration)
@@ -70,35 +116,10 @@ runnerIteration hnd@SchedulerHandle {..} = do
   logTagDebug "Available tasks - Count" . show $ length availableReadyTasksIds
   logTagDebug "Available tasks" . show $ availableReadyTasksIds
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
-  terminationMVar <- newEmptyMVar
-  let inspectTermination = modifyMVarMasked_ terminationMVar pure
-      waitAll :: MonadUnliftIO m => [Async a] -> m ()
-      waitAll = mapConcurrently_ waitCatch
-  flip withAsync (waitEitherTerminationOrExecEnd terminationMVar) $
-    withAsyncList (map runTask takenTasksUpdatedInfo) $ \asyncList -> do
-      res <- race (waitAll asyncList) inspectTermination
-      case res of
-        Left _ -> pure ()
-        Right _ -> do
-          mapM_ cancel asyncList
-          waitAll asyncList
+  mapConcurrently writeToChan $ zip takenTasksUpdatedInfo $ cycle executionChannels
   where
-    waitEitherTerminationOrExecEnd :: MVar () -> Async () -> SchedulerM ()
-    waitEitherTerminationOrExecEnd termMVar exec =
-      void (waitCatch exec) `C.catchAll` \e -> mask $ \restore -> do
-        logInfo "terminating gracefully"
-        errorLogger e
-        termPeriod <- asks (.graceTerminationPeriod)
-        restore (threadDelaySec termPeriod) `C.catchAll` \e' ->
-          logInfo "terminating immediately" >> errorLogger e'
-        putMVar termMVar ()
-        throwIO e
-
-    runTask :: AnyJob t -> SchedulerM ()
-    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId=" <> id.getId) $ do
-      res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
-      registerExecutionResult hnd anyJob res
-      releaseLock id
+    writeToChan :: (AnyJob t, Chan (AnyJob t)) -> SchedulerM ()
+    writeToChan (job, ch) = L.runIO $ writeChan ch job
 
     pickTasks :: Int -> [Id AnyJob] -> SchedulerM [Id AnyJob]
     pickTasks _ [] = pure []
@@ -108,10 +129,6 @@ runnerIteration hnd@SchedulerHandle {..} = do
       if gainedLock
         then (x :) <$> pickTasks (tasksRemain - 1) xs
         else pickTasks tasksRemain xs
-
-withAsyncList :: MonadUnliftIO m => [m a] -> ([Async a] -> m b) -> m b
-withAsyncList actions func =
-  flip runCont func $ traverse (cont . withAsync) actions
 
 registerDuration :: Milliseconds -> a -> SchedulerM ()
 registerDuration millis _ = do
@@ -134,52 +151,58 @@ releaseLock jobId = Hedis.unlockRedis jobId.getId
 -- TODO: think about more robust style of working with redis locks
 -- see https://redis.io/docs/reference/patterns/distributed-locks/
 
-executeTask :: SchedulerHandle t -> AnyJob t -> SchedulerM ExecutionResult
+executeTask :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> SchedulerM ExecutionResult
 executeTask SchedulerHandle {..} (AnyJob job) = do
+  schedulerType <- asks (.schedulerType)
+  let jobType' = show (fromSing $ jobType $ jobInfo job)
   case findJobHandlerFunc job jobHandlers of
-    Nothing -> failExecution $ "No handler function found for the job type = " <> show (fromSing $ jobType $ jobInfo job)
+    Nothing -> failExecution jobType' "No handler function found for the job type = "
     Just handlerFunc_ -> do
       -- TODO: Fix this logic, that's not how we have to handle this issue
-      latestState' <- getTasksById [id job]
+      latestState' <- case schedulerType of
+        RedisBased -> pure [AnyJob job]
+        DbBased -> getTasksById [id job]
       case latestState' of
         [AnyJob latestState] ->
           if scheduledAt latestState > scheduledAt job || status latestState /= Pending
             then pure DuplicateExecution
             else do
               handlerFunc_ job
-        _ -> failExecution "Found multiple tasks by single it."
+        _ -> failExecution jobType' "Found multiple tasks by single id."
   where
-    failExecution description = do
-      logError $ "failed to execute job: " <> description
+    failExecution jobType' description = do
+      logError $ "failed to execute job: " <> description <> jobType'
       -- logPretty ERROR "failed job" job
-      markAsFailed $ id job
+      markAsFailed jobType' job.id
       pure $ Terminate description
 
-registerExecutionResult :: SchedulerHandle t -> AnyJob t -> ExecutionResult -> SchedulerM ()
-registerExecutionResult SchedulerHandle {..} (AnyJob job@Job {..}) result =
+registerExecutionResult :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> ExecutionResult -> SchedulerM ()
+registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
+  let jobType' = show (fromSing $ jobType jobInfo)
   case result of
     DuplicateExecution -> do
       logInfo $ "job id " <> show id <> " already executed "
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (currErrors + 1)
-      markAsComplete id
+      markAsComplete jobType' job.id
+      fork "" $ incrementStreamCounter "Executor"
     Terminate description -> do
       logInfo $ "job terminated on try " <> show (currErrors + 1) <> "; reason: " <> description
-      markAsFailed id
+      markAsFailed jobType' job.id
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime
-      reSchedule id reScheduledTime
+      reSchedule jobType' j reScheduledTime
     Retry ->
       let newErrorsCount = job.currErrors + 1
        in if newErrorsCount >= job.maxErrors
             then do
               logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
-              updateErrorCountAndFail id newErrorsCount
+              updateErrorCountAndFail jobType' job.id newErrorsCount
             else do
               logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
               waitBeforeRetry <- asks (.waitBeforeRetry)
               now <- getCurrentTime
-              reScheduleOnError id newErrorsCount $
+              reScheduleOnError jobType' j newErrorsCount $
                 fromIntegral waitBeforeRetry `addUTCTime` now
 
 defaultCatcher :: C.MonadThrow m => SomeException -> m ExecutionResult

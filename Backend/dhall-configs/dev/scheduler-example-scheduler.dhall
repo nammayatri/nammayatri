@@ -55,4 +55,8 @@ in  { loggerConfig =
     , graceTerminationPeriod = +10
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , groupName = "myGroup"
+    , schedulerType = common.schedulerType.RedisBased
+    , schedulerSetName = "Scheduled_Jobs"
+    , streamName = "Available_Jobs"
     }

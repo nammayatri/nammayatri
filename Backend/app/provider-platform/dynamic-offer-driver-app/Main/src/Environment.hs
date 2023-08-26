@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -16,6 +17,7 @@
 module Environment where
 
 import AWS.S3
+import qualified Data.Map as M
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
@@ -42,8 +44,10 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.Merchant as CM
@@ -115,12 +119,16 @@ data AppCfg = AppCfg
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
+    jobInfoMapx :: M.Map AllocatorJobType Bool
   }
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
   { hostName :: Text,
+    jobInfoMap :: M.Map Text Bool,
     nwAddress :: BaseUrl,
     signingKey :: PrivateKey,
     selfUIUrl :: BaseUrl,
@@ -183,7 +191,9 @@ data AppEnv = AppEnv
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     locationTrackingServiceKey :: Text,
-    eventRequestCounter :: EventCounterMetric
+    eventRequestCounter :: EventCounterMetric,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType
   }
   deriving (Generic)
 
@@ -218,6 +228,7 @@ buildAppEnv cfg@AppCfg {..} = do
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
   clickhouseEnv <- createConn clickhouseCfg
+  let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config

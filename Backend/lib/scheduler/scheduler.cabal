@@ -29,6 +29,8 @@ library
       Lib.Scheduler.JobHandler
       Lib.Scheduler.JobStorageType.DB.Queries
       Lib.Scheduler.JobStorageType.DB.Table
+      Lib.Scheduler.JobStorageType.Redis.Queries
+      Lib.Scheduler.JobStorageType.SchedulerType
       Lib.Scheduler.Metrics
       Lib.Scheduler.ScheduleJob
       Lib.Scheduler.Types
@@ -74,23 +76,31 @@ library
       aeson
     , base >=4.7 && <5
     , beam-core
+    , beam-mysql
     , beam-postgres
     , bytestring
+    , casing
+    , cereal
     , containers
     , euler-hs
     , exceptions
+    , hashmap
     , mobility-core
     , postgresql-simple
     , prometheus-client
+    , random
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , servant-server
     , singletons
+    , template-haskell
     , text
     , time
     , transformers
     , unliftio
     , unliftio-core
+    , unordered-containers
     , uuid
   default-language: Haskell2010
   if os(darwin)

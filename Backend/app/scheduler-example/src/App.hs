@@ -25,9 +25,11 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig (..))
 import Kernel.Storage.Esqueleto.Logger
 import Kernel.Storage.Esqueleto.Migration
+import Kernel.Storage.Hedis (HedisCfg (..))
 import Kernel.Types.Logging
 import Kernel.Utils.App
 import Kernel.Utils.Servant.Server (runServer)
+import Lib.Scheduler (SchedulerType (RedisBased))
 import Servant (Context (..))
 
 runService :: (AppCfg -> AppCfg) -> IO ()
@@ -57,6 +59,46 @@ defaultConfig =
             connectionPoolCount = 25
           },
       port = 8050,
+      hedisCfg =
+        HedisCfg
+          { connectHost = "localhost",
+            connectPort = 30001,
+            connectAuth = Nothing,
+            connectDatabase = 0,
+            connectMaxConnections = 50,
+            connectMaxIdleTime = 30,
+            connectTimeout = Nothing
+          },
+      hedisClusterCfg =
+        HedisCfg
+          { connectHost = "localhost",
+            connectPort = 30001,
+            connectAuth = Nothing,
+            connectDatabase = 0,
+            connectMaxConnections = 50,
+            connectMaxIdleTime = 30,
+            connectTimeout = Nothing
+          },
+      hedisNonCriticalCfg =
+        HedisCfg
+          { connectHost = "localhost",
+            connectPort = 30001,
+            connectAuth = Nothing,
+            connectDatabase = 0,
+            connectMaxConnections = 50,
+            connectMaxIdleTime = 30,
+            connectTimeout = Nothing
+          },
+      hedisNonCriticalClusterCfg =
+        HedisCfg
+          { connectHost = "localhost",
+            connectPort = 30001,
+            connectAuth = Nothing,
+            connectDatabase = 0,
+            connectMaxConnections = 50,
+            connectMaxIdleTime = 30,
+            connectTimeout = Nothing
+          },
       loggerConfig =
         LoggerConfig
           { level = DEBUG,
@@ -66,5 +108,14 @@ defaultConfig =
             logRawSql = True,
             prettyPrinting = True
           },
-      graceTerminationPeriod = 10
+      graceTerminationPeriod = 10,
+      cutOffHedisCluster = False,
+      hedisMigrationStage = False,
+      enablePrometheusMetricLogging = False,
+      jobInfoMapx = mempty,
+      schedulerSetName = "",
+      streamName = "",
+      schedulerType = RedisBased,
+      enableRedisLatencyLogging = False,
+      groupName = ""
     }

@@ -12,22 +12,29 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Lib.Scheduler.Environment where
 
-import qualified Control.Monad.Catch as C
-import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Kernel.Mock.App
+import qualified Data.Map as M
+import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.Language as L
+import qualified EulerHS.Runtime as R
+import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
+import Kernel.Beam.Connection.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
+import Kernel.Storage.Hedis (HedisCfg, HedisEnv, HedisFlow, disconnectHedis)
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
+import Kernel.Types.Flow
 import Kernel.Utils.App (Shutdown)
 import Kernel.Utils.Dhall (FromDhall)
+import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
-import Lib.Scheduler.Metrics (SchedulerMetrics)
+import Lib.Scheduler.Metrics
+import Lib.Scheduler.Types
+
+type JobInfoMap = M.Map Text Bool
 
 data SchedulerConfig = SchedulerConfig
   { loggerConfig :: LoggerConfig,
@@ -40,8 +47,13 @@ data SchedulerConfig = SchedulerConfig
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisPrefix :: Text,
+    schedulerType :: SchedulerType,
+    schedulerSetName :: Text,
+    streamName :: Text,
+    groupName :: Text,
     port :: Int,
     loopIntervalSec :: Seconds,
+    maxThreads :: Int,
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
     tasksPerIteration :: Int,
@@ -62,6 +74,10 @@ data SchedulerEnv = SchedulerEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
+    schedulerType :: SchedulerType,
+    schedulerSetName :: Text,
+    streamName :: Text,
+    groupName :: Text,
     metrics :: SchedulerMetrics,
     loopIntervalSec :: Seconds,
     expirationTime :: Integer,
@@ -72,7 +88,9 @@ data SchedulerEnv = SchedulerEnv
     isShuttingDown :: Shutdown,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    maxThreads :: Int,
+    jobInfoMap :: JobInfoMap
   }
   deriving (Generic)
 
@@ -84,9 +102,32 @@ releaseSchedulerEnv SchedulerEnv {..} = do
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
 
-newtype SchedulerM a = SchedulerM {unSchedulerM :: MockM SchedulerEnv a}
-  deriving newtype (Functor, Applicative, Monad, MonadReader SchedulerEnv, MonadIO)
-  deriving newtype (Metrics.CoreMetrics, C.MonadThrow, C.MonadCatch, C.MonadMask, MonadClock, MonadTime, MonadGuid, Log, Forkable, MonadUnliftIO)
+type SchedulerM = FlowR SchedulerEnv
 
-runSchedulerM :: SchedulerEnv -> SchedulerM a -> IO a
-runSchedulerM env action = runMock env $ unSchedulerM action
+type JobCreator r m = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "schedulerSetName" r Text, JobMonad r m)
+
+type JobExecutor r m = (HasField "streamName" r Text, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m, MonadIO m)
+
+type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadTime m, MonadTime m, MonadThrow m, Log m, MonadGuid m, MonadReader r m, HedisFlow m r, L.MonadFlow m)
+
+runSchedulerM :: SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
+runSchedulerM schedulerConfig env action = do
+  let loggerRt = L.getEulerLoggerRuntime Nothing env.loggerConfig
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    runFlow
+      flowRt
+      ( prepareConnectionDriver
+          ConnectionConfigDriver
+            { esqDBCfg = schedulerConfig.esqDBCfg,
+              esqDBReplicaCfg = schedulerConfig.esqDBCfg,
+              hedisClusterCfg = schedulerConfig.hedisClusterCfg,
+              locationDbCfg = schedulerConfig.esqDBCfg,
+              locationDbReplicaCfg = schedulerConfig.esqDBCfg
+            }
+          ( Tables
+              { enableKVForWriteAlso = [],
+                enableKVForRead = []
+              }
+          )
+      )
+    runFlowR flowRt env action

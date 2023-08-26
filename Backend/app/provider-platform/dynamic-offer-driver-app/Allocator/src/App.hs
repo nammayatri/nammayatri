@@ -29,7 +29,7 @@ import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
-import qualified Lib.Scheduler.JobStorageType.DB.Queries as QAllJ
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
@@ -92,4 +92,4 @@ runDriverOfferAllocator configModifier = do
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig $ allocatorHandle flowRt' handlerEnv
+    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap $ allocatorHandle flowRt' handlerEnv

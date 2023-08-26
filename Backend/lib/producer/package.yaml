@@ -1,4 +1,4 @@
-name: driver-offer-allocator
+name: producer
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -33,7 +33,9 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -47,71 +49,63 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
-  - StandaloneDeriving
-  - PackageImports
 
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - generic-lens
-  - bytestring
-  - cryptonite
-  - containers
-  - euler-hs
-  - exceptions
-  - hspec
-  - servant
-  - servant-client
-  - servant-client-core
-  - servant-server
-  - text
-  - wai
-  - warp
-  - time
-  - stm
-  - resource-pool
-  - uuid
-  - prometheus-client
-  - record-hasfield
+  - mobility-core
+  - hedis
   - hashmap
+  - monad-control
+  - euler-hs
+  - bytestring
   - record-dot-preprocessor
-  - servant-openapi3
-  - openapi3
-  - string-conversions
-  - either
-  - text-conversions
+  - record-hasfield
+  - text
+  - time
+  - servant-server
+  - persistent
+  - persistent-postgresql
+  - esqueleto
+  - template-haskell
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - template-haskell
+  - sequelize
+  - casing
+  - postgresql-simple
+  - random
   - scheduler
-  - safe
-  - extra
+  - uuid
   - singletons
+  - dynamic-offer-driver-app
 
 ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Werror
+  - -Widentities
+  - -Wunused-imports
+  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs:
-    - src
+  source-dirs: src
   ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
-  dependencies:
-    - dynamic-offer-driver-app
-    - mobility-core
-    - beckn-spec
+    - -Wincomplete-uni-patterns
 
 executables:
-  driver-offer-allocator-exe:
+  producer-exe:
     main: Main.hs
-    source-dirs: server
+    source-dirs: app
     ghc-options:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
+      - -Wincomplete-uni-patterns
     dependencies:
-      - driver-offer-allocator
+      - producer
       - mobility-core

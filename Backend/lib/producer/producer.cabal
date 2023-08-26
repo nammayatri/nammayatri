@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 
-name:           driver-offer-allocator
+name:           producer
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 homepage:       https://github.com/nammayatri/nammayatri#readme
@@ -23,9 +23,9 @@ library
   exposed-modules:
       App
       Environment
-      Tools.Metrics
+      Producer.Flow
   other-modules:
-      Paths_driver_offer_allocator
+      Paths_producer
   hs-source-dirs:
       src
   default-extensions:
@@ -46,7 +46,9 @@ library
       MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
+      OverloadedLabels
       OverloadedStrings
+      PackageImports
       PatternSynonyms
       PolyKinds
       RankNTypes
@@ -60,56 +62,47 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-      StandaloneDeriving
-      PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
-    , beckn-spec
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
-    , containers
-    , cryptonite
+    , casing
+    , cereal
     , dynamic-offer-driver-app
-    , either
+    , esqueleto
     , euler-hs
-    , exceptions
-    , extra
-    , generic-lens
     , hashmap
-    , hspec
+    , hedis
     , mobility-core
-    , openapi3
-    , prometheus-client
+    , monad-control
+    , persistent
+    , persistent-postgresql
+    , postgresql-simple
+    , random
     , record-dot-preprocessor
     , record-hasfield
-    , resource-pool
-    , safe
     , scheduler
-    , servant
-    , servant-client
-    , servant-client-core
-    , servant-openapi3
+    , sequelize
     , servant-server
     , singletons
-    , stm
-    , string-conversions
+    , template-haskell
     , text
-    , text-conversions
     , time
     , uuid
-    , wai
-    , warp
   default-language: Haskell2010
   if os(darwin)
     ghc-options: -fwhole-archive-hs-libs
 
-executable driver-offer-allocator-exe
+executable producer-exe
   main-is: Main.hs
   other-modules:
-      Paths_driver_offer_allocator
+      Paths_producer
   hs-source-dirs:
-      server
+      app
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -128,7 +121,9 @@ executable driver-offer-allocator-exe
       MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
+      OverloadedLabels
       OverloadedStrings
+      PackageImports
       PatternSynonyms
       PolyKinds
       RankNTypes
@@ -142,45 +137,38 @@ executable driver-offer-allocator-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-      StandaloneDeriving
-      PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
-    , containers
-    , cryptonite
-    , driver-offer-allocator
-    , either
+    , casing
+    , cereal
+    , dynamic-offer-driver-app
+    , esqueleto
     , euler-hs
-    , exceptions
-    , extra
-    , generic-lens
     , hashmap
-    , hspec
+    , hedis
     , mobility-core
-    , openapi3
-    , prometheus-client
+    , monad-control
+    , persistent
+    , persistent-postgresql
+    , postgresql-simple
+    , producer
+    , random
     , record-dot-preprocessor
     , record-hasfield
-    , resource-pool
-    , safe
     , scheduler
-    , servant
-    , servant-client
-    , servant-client-core
-    , servant-openapi3
+    , sequelize
     , servant-server
     , singletons
-    , stm
-    , string-conversions
+    , template-haskell
     , text
-    , text-conversions
     , time
     , uuid
-    , wai
-    , warp
   default-language: Haskell2010
   if os(darwin)
     ghc-options: -fwhole-archive-hs-libs

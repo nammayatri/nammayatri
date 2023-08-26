@@ -20,7 +20,7 @@ let schedulerConfig =
       , hedisNonCriticalCfg = appCfg.hedisCfg
       , hedisNonCriticalClusterCfg = appCfg.hedisClusterCfg
       , hedisMigrationStage = True
-      , cutOffHedisCluster = True
+      , cutOffHedisCluster = False
       , hedisPrefix = "driver-offer-scheduler"
       , port = +8055
       , loopIntervalSec = +5
@@ -30,6 +30,11 @@ let schedulerConfig =
       , graceTerminationPeriod = +10
       , enableRedisLatencyLogging = False
       , enablePrometheusMetricLogging = True
+      , groupName = "myGroup"
+      , schedulerType = common.schedulerType.RedisBased
+      , schedulerSetName = "Scheduled_Jobs"
+      , streamName = "Available_Jobs"
+      , maxThreads = +10
       }
 
 in  { appCfg =

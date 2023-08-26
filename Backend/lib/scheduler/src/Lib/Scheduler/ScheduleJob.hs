@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE RankNTypes #-}
 
 module Lib.Scheduler.ScheduleJob
   ( createJob,
@@ -20,17 +21,19 @@ module Lib.Scheduler.ScheduleJob
 where
 
 import Data.Singletons
+import Data.Time.Clock.System ()
 import qualified Data.UUID as UU
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.Environment
 import Lib.Scheduler.Types
 
 createJob ::
-  forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  forall t (e :: t) m r.
+  (JobFlow t e, JobMonad r m) =>
   (AnyJob t -> m ()) ->
   Int ->
   JobEntry e ->
@@ -40,8 +43,8 @@ createJob createJobFunc maxShards jobEntry = do
   createJobImpl createJobFunc now maxShards jobEntry
 
 createJobIn ::
-  forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  forall t (e :: t) m r.
+  (JobFlow t e, JobMonad r m) =>
   (AnyJob t -> m ()) ->
   NominalDiffTime ->
   Int ->
@@ -68,8 +71,8 @@ createJobIn createJobFunc diff maxShards jobEntry = do
 --   createJobImpl' createJobFunc scheduledAt maxShards jobEntry
 
 createJobByTime ::
-  forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  forall t (e :: t) m r.
+  (JobFlow t e, JobMonad r m) =>
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->
@@ -86,8 +89,8 @@ createJobByTime createJobFunc scheduledAt maxShards jobEntry = do
   createJobImpl createJobFunc scheduledAt maxShards jobEntry
 
 createJobImpl ::
-  forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  forall t (e :: t) m r.
+  (JobFlow t e, JobMonad r m) =>
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->
@@ -114,12 +117,13 @@ createJobImpl createJobFunc scheduledAt maxShards JobEntry {..} = do
           createdAt = currentTime,
           updatedAt = currentTime,
           currErrors = 0,
-          status = Pending
+          status = Pending,
+          parentJobId = id
         }
 
 -- createJobImpl' ::
 --   forall t (e :: t) m.
---   (MonadTime m, L.MonadFlow m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+--   (MonadTime m, L.MonadFlow m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t), ToJSON t) =>
 --   (AnyJob t -> m ()) ->
 --   UTCTime ->
 --   Int ->

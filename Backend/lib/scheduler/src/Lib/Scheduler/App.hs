@@ -32,15 +32,18 @@ import Kernel.Utils.Shutdown
 import Lib.Scheduler.Environment
 import Lib.Scheduler.Handler (SchedulerHandle, handler)
 import Lib.Scheduler.Metrics
+import Lib.Scheduler.Types (JobProcessor)
 import Servant (Context (EmptyContext))
 import System.Exit
 import UnliftIO
 
 runSchedulerService ::
+  (JobProcessor t, FromJSON t) =>
   SchedulerConfig ->
+  JobInfoMap ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService SchedulerConfig {..} handle_ = do
+runSchedulerService s@SchedulerConfig {..} jobInfoMap handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
@@ -58,17 +61,15 @@ runSchedulerService SchedulerConfig {..} handle_ = do
       else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
-
   let schedulerEnv = SchedulerEnv {..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure
-
   Metrics.serve metricsPort
   let serverStartAction = handler handle_
   randSecDelayBeforeStart <- Seconds <$> getRandomInRange (0, loopIntervalSec.getSeconds)
   threadDelaySec randSecDelayBeforeStart -- to make runners start out_of_sync to reduce probability of picking same tasks.
-  withAsync (runSchedulerM schedulerEnv serverStartAction) $ \schedulerAction ->
+  withAsync (runSchedulerM s schedulerEnv serverStartAction) $ \schedulerAction ->
     runServerGeneric
       schedulerEnv
       (Proxy @HealthCheckAPI)
@@ -78,7 +79,7 @@ runSchedulerService SchedulerConfig {..} handle_ = do
       EmptyContext
       (const identity)
       (\_ -> cancel schedulerAction)
-      runSchedulerM
+      (runSchedulerM s)
 
 -- TODO: explore what is going on here
 -- To which thread do signals come?

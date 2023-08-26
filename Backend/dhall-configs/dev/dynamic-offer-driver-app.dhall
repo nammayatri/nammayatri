@@ -158,6 +158,26 @@ let registryMap =
       , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
       ]
 
+let AllocatorJobType =
+      < SendSearchRequestToDriver
+      | SendPaymentReminderToDriver
+      | UnsubscribeDriverForPaymentOverdue
+      | UnblockDriver
+      >
+
+let jobInfoMapx =
+      [ { mapKey = AllocatorJobType.SendSearchRequestToDriver
+        , mapValue = False
+        }
+      , { mapKey = AllocatorJobType.SendPaymentReminderToDriver
+        , mapValue = False
+        }
+      , { mapKey = AllocatorJobType.UnsubscribeDriverForPaymentOverdue
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -168,7 +188,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , cutOffHedisCluster = False
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"
@@ -201,6 +221,7 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , apiRateLimitOptions
     , slackCfg
+    , jobInfoMapx
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
     , driverQuoteExpirationSeconds = +60
@@ -224,4 +245,6 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , schedulerSetName = "Scheduled_Jobs"
+    , schedulerType = common.schedulerType.RedisBased
     }

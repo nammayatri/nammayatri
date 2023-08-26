@@ -64,6 +64,8 @@ let longDurationRetryCfg = { maxRetries = +3, baseCoefficient = +4 }
 let ServerName =
       < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP | SPECIAL_ZONE >
 
+let SchedulerType = < RedisBased | DbBased >
+
 in  { smsSessionConfig
     , autoMigrate = False
     , loggerConfig
@@ -82,4 +84,5 @@ in  { smsSessionConfig
     , streamConfig
     , eventStreamNameType
     , eventType
+    , schedulerType = SchedulerType
     }

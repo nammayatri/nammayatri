@@ -34,9 +34,6 @@ createJobFunc (AnyJob job@Job {id}) = do
     modifyMVar_ jobsList $ \map_ -> do
       return $ Map.insert id (AnyJob job) map_
 
--- create :: AnyJob SchedulerJobType -> SchedulerM ()
--- create =
-
 findAll :: SchedulerM [AnyJob SchedulerJobType]
 findAll = liftIO $ Map.elems <$> readMVar jobsList
 
@@ -63,39 +60,41 @@ updateStatus newStatus jobId = do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{status = newStatus, updatedAt = now}) map_) mbJob
 
-markAsComplete :: Id AnyJob -> SchedulerM ()
-markAsComplete = updateStatus Completed
+markAsComplete :: Text -> Id AnyJob -> SchedulerM ()
+markAsComplete _ = updateStatus Completed
 
-markAsFailed :: Id AnyJob -> SchedulerM ()
-markAsFailed = updateStatus Failed
+markAsFailed :: Text -> Id AnyJob -> SchedulerM ()
+markAsFailed _ = updateStatus Failed
 
-updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM ()
-updateErrorCountAndFail jobId fCount = do
+updateErrorCountAndFail :: Text -> Id AnyJob -> Int -> SchedulerM ()
+updateErrorCountAndFail _ jobId fCount = do
   now <- getCurrentTime
   liftIO $
     modifyMVar_ jobsList $ \map_ -> do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{status = Failed, currErrors = fCount, updatedAt = now}) map_) mbJob
 
-reSchedule :: Id AnyJob -> UTCTime -> SchedulerM ()
-reSchedule jobId newScheduleTime = do
+reSchedule :: Text -> AnyJob t -> UTCTime -> SchedulerM ()
+reSchedule _ (AnyJob x) newScheduleTime = do
   now <- getCurrentTime
+  let jobId :: Id AnyJob = x.id
   liftIO $
     modifyMVar_ jobsList $ \map_ -> do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{scheduledAt = newScheduleTime, updatedAt = now}) map_) mbJob
 
-updateFailureCount :: Id AnyJob -> Int -> SchedulerM ()
-updateFailureCount jobId newCountValue = do
+updateFailureCount :: Text -> Id AnyJob -> Int -> SchedulerM ()
+updateFailureCount _ jobId newCountValue = do
   now <- getCurrentTime
   liftIO $
     modifyMVar_ jobsList $ \map_ -> do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{currErrors = newCountValue, updatedAt = now}) map_) mbJob
 
-reScheduleOnError :: Id AnyJob -> Int -> UTCTime -> SchedulerM ()
-reScheduleOnError jobId newCountValue newScheduleTime = do
+reScheduleOnError :: Text -> AnyJob t -> Int -> UTCTime -> SchedulerM ()
+reScheduleOnError _ (AnyJob x) newCountValue newScheduleTime = do
   now <- getCurrentTime
+  let jobId :: Id AnyJob = x.id
   liftIO $
     modifyMVar_ jobsList $ \map_ -> do
       let mbJob = Map.lookup jobId map_

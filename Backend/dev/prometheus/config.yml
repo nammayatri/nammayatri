@@ -31,3 +31,4 @@ scrape_configs:
         labels:
           service: "beckn-transport-allocation-service"
           namespace: "atlas"
+
