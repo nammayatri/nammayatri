@@ -46,6 +46,7 @@ import Data.Fixed
 import Data.List (partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
+import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
@@ -451,8 +452,8 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
         QP.NearestGoHomeDriversReq
           { variant = variant,
             fromLocation = getCoordinates fromLocation,
-            nearestRadius = driverPoolCfg.goHomeFromLocationRadius,
-            homeRadius = driverPoolCfg.goHomeToLocationRadius,
+            nearestRadius = goHomeCfg.goHomeFromLocationRadius,
+            homeRadius = goHomeCfg.goHomeWayPointRadiusRadius,
             merchantId,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry
           }
@@ -463,11 +464,11 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
   logDebug $ "random driver pool" <> show randomDriverPool
   driversRoutes' <- getRoutesForAllDrivers randomDriverPool
   merchant <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
-  let driversRoutes = map (refactorRoutesResp driverPoolCfg) driversRoutes'
+  let driversRoutes = map (refactorRoutesResp goHomeCfg) driversRoutes'
   let driversOnWayToHome =
         filter
           ( \(_, driverRoute) ->
-              any (\wp -> getDistanceBetweenCoords (getCoordinates toLocation) wp <= driverPoolCfg.goHomeToLocationRadius) driverRoute.points
+              any (\wp -> getDistanceBetweenCoords (getCoordinates toLocation) wp <= goHomeCfg.goHomeWayPointRadiusRadius) driverRoute.points
           )
           driversRoutes
   -- logDebug $ "drivers Routes : " <> show driversRoutes
@@ -780,8 +781,8 @@ computeActualDistance orgId pickup driverPoolResults = do
           keepHiddenForSeconds = Seconds 0
         }
 
-refactorRoutesResp :: DriverPoolConfig -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo) -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo)
-refactorRoutesResp driverPoolConfig (nearestDriverRes, route) = (nearestDriverRes, newRoute route)
+refactorRoutesResp :: GoHomeConfig -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo) -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo)
+refactorRoutesResp goHomeCfg (nearestDriverRes, route) = (nearestDriverRes, newRoute route)
   where
     newRoute route' =
       RouteInfo
@@ -791,7 +792,7 @@ refactorRoutesResp driverPoolConfig (nearestDriverRes, route) = (nearestDriverRe
           snappedWaypoints = route'.snappedWaypoints,
           boundingBox = Nothing
         }
-    refactor acc (p1 : p2 : ps) = if getDistanceBetweenCoords p1 p2 > driverPoolConfig.goHomeToLocationRadius then refactor (p1 : acc) (getPointInBetween p1 p2 (fromIntegral (driverPoolConfig.goHomeToLocationRadius.getMeters)) : p2 : ps) else refactor (p1 : acc) (p2 : ps)
+    refactor acc (p1 : p2 : ps) = if getDistanceBetweenCoords p1 p2 > goHomeCfg.goHomeWayPointRadiusRadius then refactor (p1 : acc) (getPointInBetween p1 p2 (fromIntegral (goHomeCfg.goHomeWayPointRadiusRadius.getMeters)) : p2 : ps) else refactor (p1 : acc) (p2 : ps)
     refactor acc [p1] = reverse (p1 : acc)
     refactor _ [] = []
 

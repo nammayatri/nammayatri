@@ -21,15 +21,8 @@ CREATE TABLE atlas_driver_offer_bpp.driver_go_home_request(
     updated_at timestamp with time zone NOT NULL
 );
 
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN go_home_from_location_radius integer;
-UPDATE atlas_driver_offer_bpp.driver_pool_config AS T1 SET go_home_from_location_radius = max_radius_of_search;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN go_home_from_location_radius SET NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN go_home_to_location_radius integer;
-UPDATE atlas_driver_offer_bpp.driver_pool_config AS T1 SET go_home_to_location_radius = max_radius_of_search;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN go_home_to_location_radius SET NOT NULL;
-
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN go_home_request_id character(36);
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN go_home_request_id character(36);
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_go_home_req_id character(36);
+CREATE INDEX idx_goHome_request ON atlas_app.ride USING btree (driver_go_home_req_id);
 

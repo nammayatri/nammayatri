@@ -80,7 +80,7 @@ type API =
              :> MandatoryQueryParam "active" Bool
              :> QueryParam "mode" DI.DriverMode
              :> Post '[JSON] APISuccess
-             :<|> "goHomeFeature"
+             :<|> "goHome"
                :> ( "activate" :> TokenAuth
                       :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
                       :> Post '[JSON] APISuccess

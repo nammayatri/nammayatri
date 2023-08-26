@@ -52,7 +52,7 @@ checkInvalidReqData ghrData currTime ghkey driverId merchantId goHomeCfg expTime
     then case ghrData.validTill of
       Just _ -> do
         ghrId <- fromMaybeM (InternalError "GoHomeRequestId not present but valid Till set") ghrData.driverGoHomeRequestId
-        succRide <- Ride.findSuccRideByGoHomeRequestId ghrId
+        succRide <- Ride.findCompletedRideByGHRId ghrId
         if isJust succRide
           then do
             deactivateDriverGoHomeRequest merchantId driverId SUCCESS ghrData

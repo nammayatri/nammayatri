@@ -25,6 +25,7 @@ module SharedLogic.DriverPool.Types
 where
 
 import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
@@ -46,6 +47,7 @@ data PoolCalculationStage = Estimate | DriverSelection
 data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
   { poolStage :: PoolCalculationStage,
     driverPoolCfg :: DriverPoolConfig,
+    goHomeCfg :: GoHomeConfig,
     variant :: Maybe Vehicle.Variant,
     fromLocation :: a,
     toLocation :: a,

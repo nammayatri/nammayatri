@@ -31,36 +31,24 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.GoHomeConfig as BeamGHC
 
 findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe GoHomeConfig)
-findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamGHC.id $ Se.Eq merchantId]
+findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamGHC.merchantId $ Se.Eq merchantId]
 
 instance FromTType' BeamGHC.GoHomeConfig GoHomeConfig where
   fromTType' BeamGHC.GoHomeConfigT {..} = do
     pure $
       Just
         GoHomeConfig
-          { id = Id id,
-            enableGoHome = enableGoHome,
-            startCnt = startCnt,
-            destRadiusMeters = destRadiusMeters,
-            activeTime = activeTime,
-            updateHomeLocationAfterSec = updateHomeLocationAfterSec,
-            cancellationCnt = cancellationCnt,
-            numHomeLocations = numHomeLocations,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+          { merchantId = Id merchantId,
+            goHomeFromLocationRadius = goHomeFromLocationRadius,
+            goHomeWayPointRadiusRadius = goHomeWayPointRadiusRadius,
+            ..
           }
 
 instance ToTType' BeamGHC.GoHomeConfig GoHomeConfig where
   toTType' GoHomeConfig {..} = do
     BeamGHC.GoHomeConfigT
-      { BeamGHC.id = getId id,
-        BeamGHC.enableGoHome = enableGoHome,
-        BeamGHC.startCnt = startCnt,
-        BeamGHC.destRadiusMeters = destRadiusMeters,
-        BeamGHC.activeTime = activeTime,
-        BeamGHC.updateHomeLocationAfterSec = updateHomeLocationAfterSec,
-        BeamGHC.cancellationCnt = cancellationCnt,
-        BeamGHC.numHomeLocations = numHomeLocations,
-        BeamGHC.createdAt = createdAt,
-        BeamGHC.updatedAt = updatedAt
+      { BeamGHC.merchantId = getId merchantId,
+        BeamGHC.goHomeFromLocationRadius = goHomeFromLocationRadius,
+        BeamGHC.goHomeWayPointRadiusRadius = goHomeWayPointRadiusRadius,
+        ..
       }

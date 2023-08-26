@@ -27,12 +27,13 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common (Meters)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
 data GoHomeConfigT f = GoHomeConfigT
-  { id :: B.C f Text,
+  { merchantId :: B.C f Text,
     enableGoHome :: B.C f Bool,
     startCnt :: B.C f Int,
     destRadiusMeters :: B.C f Int,
@@ -40,6 +41,8 @@ data GoHomeConfigT f = GoHomeConfigT
     updateHomeLocationAfterSec :: B.C f Int,
     cancellationCnt :: B.C f Int,
     numHomeLocations :: B.C f Int,
+    goHomeFromLocationRadius :: B.C f Meters,
+    goHomeWayPointRadiusRadius :: B.C f Meters,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -49,7 +52,7 @@ instance B.Table GoHomeConfigT where
   data PrimaryKey GoHomeConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . id
+  primaryKey = Id . merchantId
 
 instance ModelMeta GoHomeConfigT where
   modelFieldModification = goHomeConfigTMod
@@ -69,7 +72,7 @@ deriving stock instance Show GoHomeConfig
 goHomeConfigTMod :: GoHomeConfigT (B.FieldModification (B.TableField GoHomeConfigT))
 goHomeConfigTMod =
   B.tableModification
-    { id = B.fieldNamed "id",
+    { merchantId = B.fieldNamed "merchant_id",
       enableGoHome = B.fieldNamed "enable_go_home",
       startCnt = B.fieldNamed "start_cnt",
       destRadiusMeters = B.fieldNamed "dest_radius",
@@ -77,6 +80,8 @@ goHomeConfigTMod =
       updateHomeLocationAfterSec = B.fieldNamed "update_home_location_after_sec",
       cancellationCnt = B.fieldNamed "cancecllation_cnt",
       numHomeLocations = B.fieldNamed "num_home_locations",
+      goHomeFromLocationRadius = B.fieldNamed "go_home_from_location_radius",
+      goHomeWayPointRadiusRadius = B.fieldNamed "go_home_way_point_radius",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
@@ -96,4 +101,4 @@ goHomeConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 goHomeConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''GoHomeConfigT ['id] [])
+$(enableKVPG ''GoHomeConfigT ['merchantId] [])

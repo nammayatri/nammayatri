@@ -1,5 +1,5 @@
 CREATE TABLE atlas_driver_offer_bpp.go_home_config (
-    id character(36) NOT NULL PRIMARY KEY,
+    merchant_id character(36) NOT NULL PRIMARY KEY,
     enable_go_home boolean NOT NULL DEFAULT true,
     start_cnt integer NOT NULL DEFAULT 2,
     dest_radius integer NOT NULL DEFAULT 3000,
@@ -7,6 +7,8 @@ CREATE TABLE atlas_driver_offer_bpp.go_home_config (
     update_home_location_after_sec integer NOT NULL DEFAULT 2592000,
     cancecllation_cnt integer NOT NULL DEFAULT 2,
     num_home_locations integer NOT NULL DEFAULT 5,
+    go_home_from_location_radius integer NOT NULL DEFAULT 7000,
+    go_home_to_location_radius integer NOT NULL DEFAULT 2000,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL
 );

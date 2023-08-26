@@ -657,7 +657,7 @@ deactivateGoHomeFeature (personId, merchantId) = do
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantId (Just goHomeConfig)
   ghrId <- fromMaybeM DriverGoHomeRequestNotPresent ghInfo.driverGoHomeRequestId
-  succRide <- Ride.findSuccRideByGoHomeRequestId ghrId
+  succRide <- Ride.findCompletedRideByGHRId ghrId
   if isJust succRide
     then CQDGR.deactivateDriverGoHomeRequest merchantId driverId DDGR.SUCCESS ghInfo
     else CQDGR.deactivateDriverGoHomeRequest merchantId driverId DDGR.FAILED ghInfo

@@ -27,8 +27,6 @@ data DriverPoolConfigD u = DriverPoolConfig
     minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
     radiusStepSize :: Meters,
-    goHomeFromLocationRadius :: Meters,
-    goHomeToLocationRadius :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
     maxDriverQuotesRequired :: Int,

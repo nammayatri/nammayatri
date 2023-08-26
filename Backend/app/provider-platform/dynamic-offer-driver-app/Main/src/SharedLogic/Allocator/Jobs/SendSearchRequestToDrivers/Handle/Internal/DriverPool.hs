@@ -100,7 +100,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       goHomeConfig <- CQGHC.findByMerchantId searchReq.providerId
       allNearbyGoHomeDrivers <-
         if batchNum == 0 && goHomeConfig.enableGoHome
-          then calcGoHomeDriverPool
+          then calcGoHomeDriverPool goHomeConfig
           else return []
       currentDriverPoolBatch <-
         if notNull allNearbyGoHomeDrivers
@@ -185,11 +185,12 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
               ([], filledPoolBatch)
               driverPoolCfg.distanceBasedBatchSplit
 
-        calcGoHomeDriverPool = do
+        calcGoHomeDriverPool goHomeConfig = do
           calculateGoHomeDriverPool $
             CalculateGoHomeDriverPoolReq
               { poolStage = DriverSelection,
                 driverPoolCfg = driverPoolCfg,
+                goHomeCfg = goHomeConfig,
                 variant = Just searchTry.vehicleVariant,
                 fromLocation = searchReq.fromLocation,
                 toLocation = searchReq.toLocation,

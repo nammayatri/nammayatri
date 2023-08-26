@@ -17,6 +17,7 @@ module Domain.Types.GoHomeConfig where
 import Data.Time (UTCTime)
 import Domain.Types.Merchant
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common (Meters)
 import Kernel.Types.Id
 
 --------------------------------------------------------------------------------------
@@ -24,7 +25,7 @@ import Kernel.Types.Id
 data Subscriber
 
 data GoHomeConfig = GoHomeConfig
-  { id :: Id Merchant,
+  { merchantId :: Id Merchant,
     enableGoHome :: Bool,
     startCnt :: Int,
     destRadiusMeters :: Int,
@@ -32,6 +33,8 @@ data GoHomeConfig = GoHomeConfig
     updateHomeLocationAfterSec :: Int,
     cancellationCnt :: Int,
     numHomeLocations :: Int,
+    goHomeFromLocationRadius :: Meters,
+    goHomeWayPointRadiusRadius :: Meters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

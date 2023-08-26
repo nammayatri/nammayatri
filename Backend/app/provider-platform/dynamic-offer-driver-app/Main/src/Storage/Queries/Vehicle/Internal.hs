@@ -15,7 +15,6 @@
 module Storage.Queries.Vehicle.Internal where
 
 import Domain.Types.DriverInformation as DriverInfo
-import Domain.Types.Person as DP
 import Domain.Types.Vehicle as DV
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
@@ -43,7 +42,4 @@ getVehicles ::
   m [DV.Vehicle]
 getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
   where
-    personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
-
-fetchDriverIDsFromInfo :: [DriverInformation] -> [Id DP.Person]
-fetchDriverIDsFromInfo = map DriverInfo.driverId
+    personKeys = getId . DriverInfo.driverId <$> driverInfo

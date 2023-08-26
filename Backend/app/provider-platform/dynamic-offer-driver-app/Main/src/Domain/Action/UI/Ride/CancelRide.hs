@@ -82,7 +82,7 @@ data CancelRideReq = CancelRideReq
   }
 
 data CancelRideResp = CancelRideResp
-  { status :: Text,
+  { result :: Text,
     goHomeCancellationCount :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -107,7 +107,7 @@ cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.ge
   where
     buildCancelRideResp cancelCnt =
       CancelRideResp
-        { status = "success",
+        { result = "success",
           goHomeCancellationCount = cancelCnt
         }
 

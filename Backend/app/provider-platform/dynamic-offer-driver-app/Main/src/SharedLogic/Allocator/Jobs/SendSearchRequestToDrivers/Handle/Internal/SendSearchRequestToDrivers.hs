@@ -21,6 +21,7 @@ import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.FarePolicy as DFP
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -39,6 +40,7 @@ import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -77,7 +79,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
 
-  driverPoolZipSearchRequests <- processDriverPool validTill
+  driverPoolZipSearchRequests <- processDriverPool searchReq.providerId validTill
   -- Esq.runTransaction $ do
   _ <- QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany $ driverPoolZipSearchRequests <&> (._2)
@@ -95,18 +97,20 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       ( MonadFlow m,
         Redis.HedisFlow m r,
         EsqDBFlow m r,
-        MonadReader r m
+        MonadReader r m,
+        CacheFlow m r
       ) =>
+      Id Merchant ->
       UTCTime ->
       m [(DriverPoolWithActualDistResult, SearchRequestForDriver)]
-    processDriverPool validTill = do
+    processDriverPool providerId validTill = do
       batchNumber <- getPoolBatchNum searchTry.id
       sequenceA $ do
         driverPoolResult <- driverPool
         return $ do
           mbActiveDGR <- QDGR.findActive driverPoolResult.driverPoolResult.driverId
           mbDGRWithinRangeId <- flip (maybe (return Nothing)) mbActiveDGR $ \activeDGR -> do
-            isWithinRange <- QDGR.isWithinRange activeDGR.id (getCoordinates driverPoolResult) driverPoolConfig.goHomeToLocationRadius
+            isWithinRange <- QDGR.isWithinRange activeDGR.id (getCoordinates driverPoolResult) =<< (CQGHC.findByMerchantId providerId <&> (.goHomeWayPointRadiusRadius))
             return $ bool Nothing (Just activeDGR.id) isWithinRange
           searchReqForDriver <- buildSearchRequestForDriver batchNumber validTill driverPoolResult mbDGRWithinRangeId
           return (driverPoolResult, searchReqForDriver)
