@@ -14,75 +14,84 @@
 
 module Environment where
 
-import App.Scheduler.Types (SchedulerJobType)
-import qualified Data.Map as M
-import Kernel.Prelude
+import qualified Data.Text as T
+import EulerHS.Prelude hiding (maybe, show)
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster)
+import Kernel.Storage.Hedis
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.Flow
-import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
+import Kernel.Types.Flow (FlowR)
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
-import Kernel.Utils.Shutdown
-import Lib.Scheduler.Types hiding (id)
-import Tools.Metrics
-import Prelude (id)
+import Lib.Scheduler (SchedulerType)
+import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
-    port :: Int,
-    loggerConfig :: LoggerConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
-    graceTerminationPeriod :: Seconds,
-    migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
-    cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
-    enablePrometheusMetricLogging :: Bool,
-    jobInfoMapx :: M.Map SchedulerJobType Bool,
-    schedulerSetName :: Text,
-    streamName :: Text,
-    schedulerType :: SchedulerType,
+    cutOffHedisCluster :: Bool,
+    loggerConfig :: LoggerConfig,
     enableRedisLatencyLogging :: Bool,
-    groupName :: Text
+    batchSize :: Int,
+    waitTimeMilliSec :: Double,
+    enablePrometheusMetricLogging :: Bool,
+    streamName :: Text,
+    producerTimestampKey :: Text,
+    cacheConfig :: CF.CacheConfig,
+    schedulerSetName :: Text,
+    entryId :: Text,
+    reviverInterval :: Milliseconds,
+    reviveThreshold :: Seconds,
+    maxShards :: Int,
+    schedulerType :: SchedulerType,
+    tables :: Tables
   }
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { port :: Int,
-    loggerConfig :: LoggerConfig,
-    graceTerminationPeriod :: Seconds,
-    esqDBEnv :: EsqDBEnv,
-    isShuttingDown :: Shutdown,
-    loggerEnv :: LoggerEnv,
-    schedulerSetName :: Text,
-    streamName :: Text,
-    schedulerType :: SchedulerType,
-    coreMetrics :: CoreMetricsContainer,
-    version :: DeploymentVersion,
-    hedisMigrationStage :: Bool,
+  { esqDBEnv :: EsqDBEnv,
+    esqDBReplicaEnv :: EsqDBEnv,
+    maxShards :: Int,
     hedisEnv :: HedisEnv,
-    hedisClusterEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
-    enablePrometheusMetricLogging :: Bool,
+    hedisClusterEnv :: HedisEnv,
+    cutOffHedisCluster :: Bool,
+    hedisMigrationStage :: Bool,
+    hostname :: Maybe Text,
+    coreMetrics :: CoreMetricsContainer,
+    loggerEnv :: LoggerEnv,
     enableRedisLatencyLogging :: Bool,
-    groupName :: Text,
-    jobInfoMap :: M.Map Text Bool
+    enablePrometheusMetricLogging :: Bool,
+    waitTimeMilliSec :: Double,
+    loggerConfig :: LoggerConfig,
+    batchSize :: Int,
+    version :: DeploymentVersion,
+    streamName :: Text,
+    producerTimestampKey :: Text,
+    cacheConfig :: CF.CacheConfig,
+    schedulerSetName :: Text,
+    entryId :: Text,
+    schedulerType :: SchedulerType,
+    reviverInterval :: Milliseconds,
+    reviveThreshold :: Seconds
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
-  podName <- getPodName
-  version <- lookupDeploymentVersion
-  loggerEnv <- prepareLoggerEnv loggerConfig podName
-  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg id
+  version <- lookupDeploymentVersion
+  hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  coreMetrics <- registerCoreMetricsContainer
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   hedisClusterEnv <-
     if cutOffHedisCluster
@@ -92,17 +101,10 @@ buildAppEnv AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg id
-  let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
-  coreMetrics <- registerCoreMetricsContainer
-  isShuttingDown <- mkShutdown
-  return $ AppEnv {..}
-
-releaseAppEnv :: AppEnv -> IO ()
-releaseAppEnv AppEnv {..} =
-  releaseLoggerEnv loggerEnv
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  pure $ AppEnv {..}
 
 type FlowHandler = FlowHandlerR AppEnv
-
-type FlowServer api = FlowServerR AppEnv api
 
 type Flow = FlowR AppEnv

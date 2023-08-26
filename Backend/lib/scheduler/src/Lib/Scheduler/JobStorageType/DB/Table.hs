@@ -1,75 +1,80 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Scheduler.JobStorageType.DB.Table where
 
--- import GHC.IO (unsafePerformIO)
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import Kernel.Types.Error
-import Kernel.Types.Id
-import Kernel.Utils.Error
+import Data.Serialize
+import qualified Data.Time as Time
+import qualified Database.Beam as B
+import Database.Beam.Backend
+import Database.Beam.MySQL ()
+import Database.Beam.Postgres
+  ( Postgres,
+  )
+import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
+import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
+import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import qualified Lib.Scheduler.Types as ST
+import Sequelize
 
-mkPersist
-  defaultSqlSettings
-  [defaultQQ|
-    SchedulerJobT sql=scheduler_job
-      id Text
-      jobType Text
-      jobData Text
-      shardId Int
-      scheduledAt UTCTime
-      createdAt UTCTime
-      updatedAt UTCTime
-      maxErrors Int
-      currErrors Int
-      status ST.JobStatus
-      Primary id
-      deriving Generic
-    |]
+instance FromField ST.JobStatus where
+  fromField = fromFieldEnum
 
-instance TEntityKey SchedulerJobT where
-  type DomainKey SchedulerJobT = Id ST.AnyJob
-  fromKey (SchedulerJobTKey _id) = Id _id
-  toKey (Id id) = SchedulerJobTKey id
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be ST.JobStatus where
+  sqlValueSyntax = autoSqlValueSyntax
 
-instance (ST.JobProcessor t) => FromTType SchedulerJobT (ST.AnyJob t) where
-  fromTType SchedulerJobT {..} = do
-    (ST.AnyJobInfo anyJobInfo) :: ST.AnyJobInfo t <-
-      ST.restoreAnyJobInfoMain @t (ST.StoredJobInfo jobType jobData)
-        & fromMaybeM (InternalError ("Unable to restore JobInfo. " <> jobType <> ": " <> jobData))
-    return $
-      ST.AnyJob $
-        ST.Job
-          { id = Id id,
-            jobInfo = anyJobInfo,
-            ..
-          }
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be ST.JobStatus
 
-instance ToTType SchedulerJobT (ST.AnyJob t) where
-  toTType (ST.AnyJob ST.Job {..}) = do
-    let storedJobInfo = ST.storeJobInfo jobInfo
-    SchedulerJobT
-      { id = getId id,
-        jobType = ST.storedJobType storedJobInfo,
-        jobData = ST.storedJobContent storedJobInfo,
-        ..
-      }
+instance FromBackendRow Postgres ST.JobStatus
+
+instance IsString ST.JobStatus where
+  fromString = show
+
+data SchedulerJobT f = SchedulerJobT
+  { id :: B.C f Text,
+    jobType :: B.C f Text,
+    jobData :: B.C f Text,
+    shardId :: B.C f Int,
+    scheduledAt :: B.C f Time.LocalTime,
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime,
+    maxErrors :: B.C f Int,
+    currErrors :: B.C f Int,
+    status :: B.C f ST.JobStatus,
+    parentJobId :: B.C f Text
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table SchedulerJobT where
+  data PrimaryKey SchedulerJobT f
+    = Id (B.C f Text)
+    deriving (Generic, B.Beamable)
+  primaryKey = Id . id
+
+type SchedulerJob = SchedulerJobT Identity
+
+schedulerJobTMod :: SchedulerJobT (B.FieldModification (B.TableField SchedulerJobT))
+schedulerJobTMod =
+  B.tableModification
+    { id = B.fieldNamed "id",
+      jobType = B.fieldNamed "job_type",
+      jobData = B.fieldNamed "job_data",
+      shardId = B.fieldNamed "shard_id",
+      scheduledAt = B.fieldNamed "scheduled_at",
+      createdAt = B.fieldNamed "created_at",
+      updatedAt = B.fieldNamed "updated_at",
+      maxErrors = B.fieldNamed "max_errors",
+      currErrors = B.fieldNamed "curr_errors",
+      status = B.fieldNamed "status",
+      parentJobId = B.fieldNamed "parent_job_id"
+    }
+
+$(enableKVPG ''SchedulerJobT ['id] [])
+
+$(mkTableInstances ''SchedulerJobT "scheduler_job" "atlas_driver_offer_bpp")

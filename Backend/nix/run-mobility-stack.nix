@@ -65,6 +65,7 @@ _:
         mock-idfy-exe = { };
         mock-sms-exe = { };
         provider-dashboard-exe = { };
+        producer-exe = { };
         public-transport-rider-platform-exe = { };
         public-transport-search-consumer-exe = { };
         rider-app-exe = { };

@@ -56,6 +56,7 @@ dependencies:
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
+  - bytestring
   - text
   - time
   - aeson
@@ -70,6 +71,17 @@ dependencies:
   - servant-server
   - singletons
   - uuid
+  - hashmap
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - template-haskell
+  - sequelize
+  - casing
+  - postgresql-simple
+  - random
+  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info
