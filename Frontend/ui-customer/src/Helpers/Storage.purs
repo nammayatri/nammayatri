@@ -22,6 +22,13 @@ import Data.Show.Generic (genericShow)
 import JBridge as JBridge
 import Screens.Types (Stage)
 import Types.App (FlowBT)
+import Helpers.Table (TableType(..), TableData(..))
+import Data.Maybe (Maybe(..))
+import Control.Monad.Except (runExcept)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Data.Either (Either(..))
+import Effect (Effect)
+import Foreign.Class (class Encode)
 
 data KeyStore
   = USER_NAME_KEY
@@ -48,7 +55,7 @@ data KeyStore
   | REGISTRATION_APPROVED
   | PREVIOUS_CURRENT_LOCATION
   | READ_MESSAGES
-  | CHAT_CHANNEL_ID 
+  | CHAT_CHANNEL_ID
   | MERCHANT_ID
   | BASE_URL
   | CONTACTS
@@ -77,6 +84,8 @@ data KeyStore
   | LAST_LOGIN
   | SELECTED_VARIANT
   | COUNTRY_CODE
+  | PROFILE_TABLE_DATA
+  | SAVED_LOCATION_DATA
 
 derive instance genericKeyStore :: Generic KeyStore _
 
@@ -106,3 +115,26 @@ updateLocalStage = setValueToLocalStore LOCAL_STAGE <<< show
 
 isLocalStageOn :: Stage -> Boolean
 isLocalStageOn stage = (getValueToLocalStore LOCAL_STAGE) == show stage
+
+getDataFromTable :: TableType -> Maybe TableData
+getDataFromTable tableType =
+    case runExcept (decodeJSON (getValueToLocalStore (getKeyStoreFromTableType tableType)) :: _ TableData) of
+    Right res -> Just res
+    Left err -> Nothing
+
+setDataToTable :: Encode TableData => TableData -> Effect Unit
+setDataToTable object = void $ pure $ setValueToLocalStore (getKeyStoreFromTableData object) (encodeJSON object)
+
+getKeyStoreFromTableType :: TableType -> KeyStore
+getKeyStoreFromTableType tableType =
+  case tableType of
+    ProfileT -> PROFILE_TABLE_DATA
+    FlowStatusT -> FLOW_STATUS_DATA
+    SavedLocationT -> SAVED_LOCATION_DATA
+
+getKeyStoreFromTableData :: TableData -> KeyStore
+getKeyStoreFromTableData tableData =
+  case tableData of
+    ProfileD _ -> PROFILE_TABLE_DATA
+    FlowStatusD _ -> FLOW_STATUS_DATA
+    SavedLocationD _ -> SAVED_LOCATION_DATA

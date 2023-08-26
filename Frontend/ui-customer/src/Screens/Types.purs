@@ -1162,18 +1162,6 @@ type CurrentLocationDetailsWithDistance =  {
   , distance :: Number
 }
 
-newtype FlowStatusData = FlowStatusData {
-    source :: Location
-  , destination :: Location
-  , sourceAddress :: Address
-  , destinationAddress :: Address
-}
-
-derive instance genericFlowStatusData :: Generic FlowStatusData _
-instance showFlowStatusData :: Show FlowStatusData where show = genericShow
-instance encodeFlowStatusData :: Encode FlowStatusData where encode = defaultEncode
-instance decodeFlowStatusData :: Decode FlowStatusData where decode = defaultDecode
-
 data ZoneType = METRO
               | HOSPITAL
               | AIRPORT

@@ -488,6 +488,12 @@ getProfileBT _  = do
     errorHandler (errorPayload) =  do
         BackT $ pure GoBack
 
+getProfile _  = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.profile "") unwrapResponse $ callAPI headers GetProfileReq
+    where
+        unwrapResponse (x) = x
+
 -- updateProfileBT :: UpdateProfileReq -> FlowBT String UpdateProfileRes
 updateProfile (UpdateProfileReq payload) = do
         headers <- getHeaders "" false
@@ -797,6 +803,11 @@ flowStatusBT dummy = do
         errorHandler errorPayload = do
             BackT $ pure GoBack
 
+flowStatus dummy = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.flowStatus "") unwrapResponse $ callAPI headers FlowStatusReq
+    where
+        unwrapResponse (x) = x
 ---------------------------------------------------------------- notifyFlowEvent function -------------------------------------------------------------------
 
 notifyFlowEvent requestBody = do

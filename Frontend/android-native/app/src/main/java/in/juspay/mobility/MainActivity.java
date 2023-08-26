@@ -97,6 +97,7 @@ public class MainActivity extends AppCompatActivity {
     private HyperServices hyperServices;
     private Context context;
     private Activity activity;
+    private boolean animationCycleCompleted = false;
     @Nullable
     private SharedPreferences sharedPref;
     @SuppressLint("StaticFieldLeak")
@@ -294,6 +295,7 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onAnimationEnd(Animator animation) {
+                            animationCycleCompleted = true;
                             if (isHideSplashEventCalled) {
                                 hideSplash();
                             } else {
@@ -440,11 +442,9 @@ public class MainActivity extends AppCompatActivity {
                     case "hide_loader":
                     case "hide_splash":
                         String key = getResources().getString(R.string.service);
-                        if (key.equals("nammayatri") && isSystemAnimEnabled) {
-                            isHideSplashEventCalled = true;
-                        } else {
+                        isHideSplashEventCalled = true;
+                        if ((key != null && key.equals("nammayatri") && (animationCycleCompleted || !isSystemAnimEnabled)) || (key != null && !key.equals("nammayatri")))
                             hideSplash();
-                        }
                         break;
                     case "show_splash":
                         View v = findViewById(in.juspay.mobility.app.R.id.splash);

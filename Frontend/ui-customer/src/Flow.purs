@@ -88,13 +88,14 @@ import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData, setTipViewData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location)
+import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location)
 import Screens.Types (Gender(..)) as Gender
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..))
 import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
 import Services.Backend as Remote
-import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage, getDataFromTable, setDataToTable)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
+import Helpers.Table (FlowStatusData(..), TableData(..), TableType(..))
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) refreshFlow = do
@@ -121,7 +122,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
   if ((getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")) then do
-    setValueToLocalStore COUNTRY_CODE "+91" 
+    setValueToLocalStore COUNTRY_CODE "+91"
   else pure unit
   _ <- pure $ setValueToLocalStore MESSAGES_DELAY "0"
   _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
@@ -140,7 +141,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   when (not refreshFlow) $ void $ UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_entered_app"
-  if (getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)") 
+  if (getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")
   then do
     setValueToLocalStore COUNTRY_CODE "+91"
   else pure unit
@@ -374,7 +375,10 @@ currentFlowStatus = do
   _ <- pure $ spy "currentFlowStatus" ":::"
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
   verifyProfile "LazyCheck"
-  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
+  flowStatusResponse <- lift $ lift $ Remote.flowStatus "LazyCheck"
+  let (FlowStatusRes flowStatus) = case flowStatusResponse of
+                                Right response -> response
+                                Left _ -> FlowStatusRes { currentStatus : IDLE {}, oldStatus : Nothing }
   void $ pure $ spy "flowStatus" flowStatus
   case flowStatus.currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
@@ -387,7 +391,29 @@ currentFlowStatus = do
   where
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
-      (GetProfileRes response) <- Remote.getProfileBT ""
+      profileRes <- lift $ lift $ Remote.getProfile ""
+      let (GetProfileRes response) = case profileRes of
+                                      Right res -> res
+                                      Left err ->
+                                        let profileData = case getDataFromTable ProfileT of
+                                                                  Just (ProfileD profileData_) -> profileData_
+                                                                  _ -> GetProfileRes { middleName : Nothing
+                                                                                     , lastName : Nothing
+                                                                                     , maskedDeviceToken : Nothing
+                                                                                     , firstName : Just "N/A"
+                                                                                     , id : ""
+                                                                                     , maskedMobileNumber : Nothing
+                                                                                     , email : Nothing
+                                                                                     , hasTakenRide : false
+                                                                                     , referralCode : Nothing
+                                                                                     , language : Nothing
+                                                                                     , gender : Nothing
+                                                                                     , bundleVersion : Nothing
+                                                                                     , clientVersion : Nothing
+                                                                                     }
+                                        in profileData
+      void $ pure $ setDataToTable $ ProfileD (GetProfileRes response)
+
       let dbBundleVersion = response.bundleVersion
           dbClientVersion = response.clientVersion
       updateCustomerVersion dbClientVersion dbBundleVersion
@@ -462,8 +488,8 @@ currentFlowStatus = do
                                 currentState.homeScreen.props.tipViewProps{stage = tipView.stage , activeIndex = tipView.activeIndex , isVisible = tipView.isVisible }
                               Nothing -> do
                                 currentState.homeScreen.props.tipViewProps
-          case (getFlowStatusData "LazyCheck") of
-            Just (FlowStatusData flowStatusData) -> do
+          case (getDataFromTable FlowStatusT) of
+            Just (FlowStatusD (FlowStatusData flowStatusData)) -> do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
                 props{ sourceLat = flowStatusData.source.lat
                      , sourceLong = flowStatusData.source.lng
@@ -484,7 +510,7 @@ currentFlowStatus = do
                        , sourceAddress = flowStatusData.sourceAddress
                        , destinationAddress = flowStatusData.destinationAddress }
                 })
-            Nothing -> do
+            _ -> do
               updateFlowStatus SEARCH_CANCELLED
         else do
           updateFlowStatus SEARCH_CANCELLED
@@ -712,10 +738,10 @@ homeScreenFlow = do
               else pure unit
           pure unit
         Nothing -> pure unit
-      void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : state.data.source, address : Nothing}
+      void $ pure $ setDataToTable (FlowStatusD (FlowStatusData{ source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : state.data.source, address : Nothing}
                                                       , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination, address : Nothing}
                                                       , sourceAddress : state.data.sourceAddress
-                                                      , destinationAddress : state.data.destinationAddress })
+                                                      , destinationAddress : state.data.destinationAddress }))
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}})
       updateLocalStage FindingEstimate
       homeScreenFlow
@@ -1058,7 +1084,6 @@ homeScreenFlow = do
         else do
           if state.homeScreen.props.sourceLat/=0.0 && state.homeScreen.props.sourceLong /= 0.0 then do
             (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong)
-            -- let srcServiceable = sourceServiceabilityResp.serviceable
             let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
             let pickUpPoints = map (\(GatesInfo item) -> {
                                                     place: item.name,
@@ -1067,11 +1092,6 @@ homeScreenFlow = do
                                                     address : item.address
                                                   }) srcSpecialLocation.gates
             if (sourceServiceabilityResp.serviceable ) then do
-              -- if (isJust sourceServiceabilityResp.geoJson /= state.homeScreen.polygonCoordinates || ) then do
-              --   let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
-                -- _ <- pure $ spy "debug nexus inside RELOAD" "."
-                -- lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
-                -- else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints } ,props{ isSrcServiceable = true, showlocUnserviceablePopUp = false}})
               if (saveToCurrLocs && state.homeScreen.props.storeCurrentLocs) then
                 addLocToCurrLoc state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong state.homeScreen.data.source
@@ -1086,11 +1106,6 @@ homeScreenFlow = do
     RETRY  -> homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
-      -- let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
-      -- if (sourceServiceabilityResp.serviceable && isJust sourceServiceabilityResp.geoJson && ((MU.getValueFromConfig "specialLocationView") == "true" && (getMerchant FunctionCall) == JATRISAATHI || updatedState.props.currentStage == ConfirmingLocation)) then do
-      --     _ <- pure $ spy "debug nexus inside CHECK_SERVICEABILITY" "."
-      --     lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
-      --   else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
@@ -1407,10 +1422,10 @@ rideSearchFlow flowType = do
         true -> do
           PlaceName address <- getPlaceName finalState.props.sourceLat finalState.props.sourceLong HomeScreenData.dummyLocation
           (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId) finalState.data.destinationAddress)
-          void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : address.formattedAddress, address : Nothing}
+          void $ pure $ setDataToTable (FlowStatusD (FlowStatusData{ source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : address.formattedAddress, address : Nothing}
                                                           , destination : {lat : finalState.props.destinationLat, lng : finalState.props.destinationLong, place : finalState.data.destination, address : Nothing}
                                                           , sourceAddress : (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId)
-                                                          , destinationAddress : finalState.data.destinationAddress })
+                                                          , destinationAddress : finalState.data.destinationAddress }))
           case finalState.props.currentStage of
             TryAgain -> do
               when (finalState.props.customerTip.enableTips) $ do
@@ -1726,7 +1741,15 @@ savedLocationFlow = do
   modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreen -> savedLocationScreen{data{config = config}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   flow <- UI.savedLocationScreen
-  (SavedLocationsListRes savedLocationResp )<- Remote.getSavedLocationBT SavedLocationReq
+  savedLocationResponse <- lift $ lift $ Remote.getSavedLocationList SavedLocationReq
+  let (SavedLocationsListRes savedLocationResp) = case savedLocationResponse of
+                                                    Right response -> response
+                                                    Left err ->
+                                                      let profileData = case getDataFromTable SavedLocationT of
+                                                                          Just (SavedLocationD savedLocation) -> savedLocation
+                                                                          _ -> SavedLocationsListRes { list : [] }
+                                                      in profileData
+  void $ pure $ setDataToTable $ SavedLocationD (SavedLocationsListRes savedLocationResp)
   case flow of
     ADD_NEW_LOCATION state-> do
       (GlobalState newState) <- getState
@@ -2131,14 +2154,6 @@ removeChatService _ = do
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
   pure unit
 
-setFlowStatusData :: Encode FlowStatusData => FlowStatusData -> Effect Unit
-setFlowStatusData object = void $ pure $ setValueToLocalStore FLOW_STATUS_DATA (encodeJSON object)
-
-getFlowStatusData :: String -> Maybe FlowStatusData
-getFlowStatusData dummy =
-  case runExcept (decodeJSON (getValueToLocalStore FLOW_STATUS_DATA) :: _ FlowStatusData) of
-    Right res -> Just res
-    Left err -> Nothing
 
 updateFlowStatus :: NotifyFlowEventType -> FlowBT String Unit
 updateFlowStatus eventType = do
