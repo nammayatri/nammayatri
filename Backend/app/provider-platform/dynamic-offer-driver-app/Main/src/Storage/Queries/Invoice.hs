@@ -19,6 +19,9 @@ import Storage.Beam.Invoice as BeamI hiding (Id)
 create :: (L.MonadFlow m, Log m) => Domain.Invoice -> m ()
 create = createWithKV
 
+findById :: (L.MonadFlow m, Log m) => Id Domain.Invoice -> m (Maybe Domain.Invoice)
+findById (Id invoiceId) = findOneWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
+
 createMany :: (L.MonadFlow m, Log m) => [Domain.Invoice] -> m ()
 createMany = traverse_ create
 
@@ -33,8 +36,8 @@ createMany = traverse_ create
 --       invoice ^. InvoiceId ==. val (invoiceId.getId)
 --     return invoice
 
-findByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe Domain.Invoice)
-findByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
+findByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m [Domain.Invoice]
+findByDriverFeeId (Id driverFeeId) = findAllWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
 
 findAllByInvoiceId :: (L.MonadFlow m, Log m) => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.And [Se.Is BeamI.id $ Se.Eq invoiceId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]

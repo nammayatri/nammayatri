@@ -96,7 +96,10 @@ getStatus (personId, merchantId) orderId = do
     case mOrder of -- handling backward compatibility case of jatri saathi
       Just _order -> return _order
       Nothing -> do
-        invoice <- QIN.findByDriverFeeId (cast orderId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+        invoices <- QIN.findByDriverFeeId (cast orderId) -- >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+        invoice <- case invoices of
+          (x : _) -> pure x
+          _ -> throwError (PaymentOrderNotFound orderId.getId)
         QOrder.findById (cast invoice.id) >>= fromMaybeM (PaymentOrderNotFound invoice.id.getId)
 
   paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall
