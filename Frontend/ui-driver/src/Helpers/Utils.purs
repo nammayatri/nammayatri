@@ -304,6 +304,10 @@ foreign import startPP :: MicroAPPInvokeSignature
 
 foreign import initiatePP :: EffectFn1 Unit Unit
 
+foreign import checkPPInitiateStatus :: EffectFn1 (Unit -> Effect Unit) Unit
+
+foreign import killPP :: Effect Unit
+
 foreign import consumeBP :: EffectFn1 Unit Unit
 
 paymentPageUI :: PaymentPagePayload -> FlowBT String String

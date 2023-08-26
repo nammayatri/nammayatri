@@ -61,7 +61,7 @@ data Action = BackPressed
             | LoadAlternatePlans UiPlansResp
             | ConfirmCancelPopup PopUpModal.Action
             | TryAgainButtonAC PrimaryButton.Action
-            | RetryPaymentAC
+            | RetryPaymentAC PrimaryButton.Action
             | RefreshPage
             | OptionsMenuAction OptionsMenu.Action
 
@@ -134,7 +134,7 @@ eval (SelectPlan config ) state = continue state {props {managePlanProps { selec
 
 eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selectedPlanItem = Mb.Just config}}}
 
-eval (JoinPlanAC PrimaryButton.OnClick) state = exit $ JoinPlanExit state
+eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ JoinPlanExit state
 
 eval HeaderRightClick state =  continue state {props{ optionsMenuExpanded = not state.props.optionsMenuExpanded}}
 
@@ -153,7 +153,7 @@ eval (ConfirmCancelPopup (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_cancel_autopay"
   updateAndExit state { props{showShimmer = true, confirmCancel = false}} $ CancelAutoPayPlan state { props{showShimmer = true, confirmCancel = false}}
 
-eval (ResumeAutoPay PrimaryButton.OnClick) state = updateAndExit state { props{showShimmer = true}} $ ResumeAutoPayPlan state { props{showShimmer = true}}
+eval (ResumeAutoPay PrimaryButton.OnClick) state = updateAndExit state $ ResumeAutoPayPlan state
 
 eval CancelAutoPayAC state = continue state { props { confirmCancel = true}}
 
@@ -231,8 +231,8 @@ eval (LoadAlternatePlans plansArray) state = continue state { data { managePlanD
 
 eval (TryAgainButtonAC PrimaryButton.OnClick) state = updateAndExit state { props{showShimmer = true}} $ Refresh
 
-eval RetryPaymentAC state = if state.data.myPlanData.planEntity.id == "" then continue state else
-  exit $ RetryPayment state state.data.myPlanData.planEntity.id
+eval (RetryPaymentAC PrimaryButton.OnClick) state = if state.data.myPlanData.planEntity.id == "" then continue state else
+  updateAndExit state $ RetryPayment state state.data.myPlanData.planEntity.id
 
 eval _ state = continue state
 

@@ -50,9 +50,8 @@ main event = do
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true
     case resp of
-      Right _ -> liftFlow $ main event
+      Right _ -> pure $ printLog "success in main" "resp"
       Left error -> liftFlow $ main event
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ runEffectFn1 Utils.initiatePP unit
   JBridge.storeMainFiberOb mainFiber
   pure unit
 
@@ -81,8 +80,12 @@ mainAllocationPop payload_type entityPayload = do
 --       Left error -> throwErr $ show error
 
 onEvent :: String -> Effect Unit
-onEvent "onBackPressed" = PrestoDom.processEvent "onBackPressedEvent" unit
-onEvent _ = pure unit
+onEvent event = do
+  _ <- pure $ JBridge.toggleBtnLoader "" false
+  case event of 
+    "onBackPressed" -> do
+      PrestoDom.processEvent "onBackPressedEvent" unit
+    _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do

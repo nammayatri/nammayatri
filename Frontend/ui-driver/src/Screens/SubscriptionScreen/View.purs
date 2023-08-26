@@ -304,28 +304,7 @@ paymentPendingView push state =
               , margin $ MarginLeft 5
               ] <> FontStyle.body4 TypoGraphy
           ]
-        , linearLayout
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , background Color.blue800
-          , cornerRadius 24.0
-          , padding $ Padding 10 5 10 6
-          , margin $ MarginLeft 10
-          , gravity CENTER
-          , onClick push $ const RetryPaymentAC
-          ][ textView $ 
-              [ weight 1.0
-              , height WRAP_CONTENT
-              , text $ getString RETRY_PAYMENT_STR
-              , margin $ MarginRight 5
-              , color Color.white900
-              ] <> FontStyle.body4 TypoGraphy
-            , imageView
-              [ width $ V 16
-              , height $ V 16
-              , imageWithFallback $ "ic_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_right_arrow_blue.png"
-              ]
-          ]
+        , PrimaryButton.view (push <<< RetryPaymentAC) (retryPaymentButtonConfig state)
       ]
   ]
 

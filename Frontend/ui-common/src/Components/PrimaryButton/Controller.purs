@@ -47,6 +47,8 @@ type Config =
     , enableLoader :: Boolean
     , isGradient :: Boolean
     , gradient :: Gradient
+    , padding :: Padding
+    , lottieConfig :: LottieConfig
   }
 
 type TextConfig =
@@ -69,6 +71,11 @@ type ImageConfig =
   , gravity :: Gravity
   }
 
+type LottieConfig = 
+  { height :: Length
+  , width :: Length
+  , lottieURL :: String
+  }
 
 config :: Config
 config =   {
@@ -114,4 +121,10 @@ config =   {
   , enableLoader : false
   , isGradient : if (getValueFromConfig "isGradient") == "true" then true else false
   , gradient : (Linear 90.0 (getValueFromConfig "gradient"))
+  , padding : Padding 0 0 0 0
+  , lottieConfig : {
+    height : V 30
+  , width : V 150
+  , lottieURL : getValueFromConfig "apiLoaderLottie"
+  }
   }

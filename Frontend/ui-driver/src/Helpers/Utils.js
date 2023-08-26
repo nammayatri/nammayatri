@@ -729,23 +729,22 @@ export const startPP = function (payload) {
 
 
 export const initiatePP = function () {
-    var cb = function (code) {
-      return function (_response) {
-        return function () {
-          var response = JSON.parse(_response);
-          console.log("%cHyperpay initiate Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                               
-        }
+  var cb = function (code) {
+    return function (_response) {
+      return function () {
+        var response = JSON.parse(_response);
+        console.log("%cHyperpay initiate Response ", "background:darkblue;color:white;font-size:13px;padding:2px", response);
       }
     }
-    if (JOS) {      
-      try {
-        console.log("%cHyperpay initiate Request ", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
-        JOS.startApp("in.juspay.hyperpay")(window.__payload)(cb)();
-      } catch (err) {
-        console.error("Hyperpay initiate Request not sent : ", err);
-      }
-    }else{
-      }
+  }
+  if (JOS) {
+    try {
+      console.log("%cHyperpay initiate Request ", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
+      JOS.startApp("in.juspay.hyperpay")(window.__payload)(cb)();
+    } catch (err) {
+      console.error("Hyperpay initiate Request not sent : ", err);
+    }
+  }
 }
 
 export const consumeBP = function (unit){
@@ -781,4 +780,26 @@ export const getPopupObject = function (just, nothing, key){
     console.warn(e);
   }
   return nothing;
+}
+
+export const checkPPInitiateStatus = function (cb) {
+  if (JOS.isMAppPresent("in.juspay.hyperpay")() && window.isPPInitiated) {
+    cb()();
+  } else {
+    window.ppInitiateCallback = cb;
+  }
+}
+
+export const killPP = function () {
+  if (top.JOSHolder) {
+    const mapps = Object.keys(top.JOSHolder);
+    mapps.forEach((key) => {
+      if (key != JOS.self) {
+        var currJOS = top.JOSHolder[key];
+        currJOS.finish(0)("")();
+        delete top.JOSHolder[key];
+      }
+    });
+    window.ppInitiateCallback = undefined;
+  }
 }
