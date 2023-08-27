@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-
 module Types.DBSync.Delete where
 
 import Data.Aeson as A

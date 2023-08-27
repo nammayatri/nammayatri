@@ -1,7 +1,3 @@
-{-# HLINT ignore "Use tuple-section" #-}
-{-# HLINT ignore "Redundant bracket" #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE InstanceSigs #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,13 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-missing-methods #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Move brackets to avoid $" #-}
 
 module Storage.Queries.Ride where
 
@@ -287,12 +278,13 @@ data RideItem = RideItem
     bookingStatus :: Common.BookingStatus
   }
 
-instance Num Money => Num (Maybe Money) where
-  (-) :: Maybe Money -> Maybe Money -> Maybe Money
-  Nothing - Nothing = Nothing
-  Just a - Just b = Just (a - b)
-  Nothing - (Just _) = Nothing
-  Just _ - Nothing = Nothing
+instance Num (Maybe Money) where
+  (-) = liftA2 (-)
+  (+) = liftA2 (+)
+  (*) = liftA2 (*)
+  abs = fmap abs
+  signum = fmap signum
+  fromInteger = Just . fromInteger
 
 instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.BookingStatus
 

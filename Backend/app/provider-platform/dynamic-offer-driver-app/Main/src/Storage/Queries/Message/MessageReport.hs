@@ -11,11 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-identities #-}
-{-# HLINT ignore "Use tuple-section" #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Storage.Queries.Message.MessageReport where
 

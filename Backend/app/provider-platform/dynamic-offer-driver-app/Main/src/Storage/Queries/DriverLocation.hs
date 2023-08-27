@@ -11,11 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE NamedWildCards #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Storage.Queries.DriverLocation where
 

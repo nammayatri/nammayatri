@@ -20,14 +20,14 @@ mkDBSyncMetric = do
       DrainerQueryExecutes action count -> add (metrics </> #drainer_query_executes) count action
       QueryDrainLatency action latency -> observe (metrics </> #query_drain_latency) latency action
       DrainerStopStatus status -> setGauge (metrics </> #drainer_stop_status) status
-
-collectionDBSyncMetric =
-  peek_db_command_error
-    .> drop_db_command_error
-    .> parse_db_command_error
-    .> query_execution_failure_error
-    .> duplicate_entry_create
-    .> drainer_query_executes
-    .> query_drain_latency
-    .> drainer_stop_status
-    .> MNil
+  where
+    collectionDBSyncMetric =
+      peek_db_command_error
+        .> drop_db_command_error
+        .> parse_db_command_error
+        .> query_execution_failure_error
+        .> duplicate_entry_create
+        .> drainer_query_executes
+        .> query_drain_latency
+        .> drainer_stop_status
+        .> MNil

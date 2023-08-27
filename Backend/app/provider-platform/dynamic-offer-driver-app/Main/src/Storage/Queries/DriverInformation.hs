@@ -11,11 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-
-{-# HLINT ignore "Use fromRight" #-}
 
 module Storage.Queries.DriverInformation where
 
@@ -56,7 +51,7 @@ fetchAllByIds merchantId driversIds = do
   where
     getDriverInfoWithPerson persons acc dInfo' =
       case find (\person -> person.id == dInfo'.driverId) persons of
-        Just person -> dInfo' : acc
+        Just _person -> dInfo' : acc
         Nothing -> acc
 
 fetchAllAvailableByIds :: MonadFlow m => [Id Person.Driver] -> m [DriverInformation]
@@ -195,9 +190,9 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
       B.select $
         B.limit_ (fromMaybe 100 mbLimit) $
           B.offset_ (fromMaybe 0 mbOffset) $
-            B.orderBy_ (\(person, driverInfo) -> B.desc_ (driverInfo.createdAt)) $
+            B.orderBy_ (\(_person, driverInfo) -> B.desc_ (driverInfo.createdAt)) $
               B.filter_'
-                ( \(person, driverInfo) ->
+                ( \(person, _driverInfo) ->
                     person.role B.==?. B.val_ Person.DRIVER
                       B.&&?. person.merchantId B.==?. B.val_ (getId merchantId)
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, B.val_ "", B.fromMaybe_ (B.val_ "") person.middleName, B.val_ "", B.fromMaybe_ (B.val_ "") person.lastName] `B.like_` B.val_ ("%" <> searchString <> "%"))) mbSearchString

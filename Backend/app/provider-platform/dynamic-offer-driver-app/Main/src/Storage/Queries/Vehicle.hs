@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-identities #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -100,9 +99,7 @@ findByAnyOf registrationNoM vehicleIdM =
     ]
 
 findAllByVariantRegNumMerchantId :: MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
-findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId') = do
-  let limitVal = fromIntegral limit'
-      offsetVal = fromIntegral offset'
+findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id merchantId') = do
   dbConf <- getMasterBeamConfig
   vehicles <-
     L.runDB dbConf $
