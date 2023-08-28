@@ -18,7 +18,7 @@ module Screens.HomeScreen.Transformer where
 import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare)
-import Components.ChooseVehicle (Config, config, SearchRsltType(..)) as ChooseVehicle
+import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState, config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex)

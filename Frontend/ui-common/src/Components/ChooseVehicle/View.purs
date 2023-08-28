@@ -2,7 +2,7 @@ module Components.ChooseVehicle.View where
 
 import Common.Types.App
 
-import Components.ChooseVehicle.Controller (Action(..), Config, SearchRsltType(..))
+import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||))

@@ -26,14 +26,14 @@ type Config
     , maxPrice :: Int
     , basePrice :: Int
     , showInfo :: Boolean
-    , searchResultType :: SearchRsltType
+    , searchResultType :: SearchType
     }
 
-data SearchRsltType = QUOTES | ESTIMATES
+data SearchType = QUOTES | ESTIMATES
 
-derive instance genericSearchRsltType :: Generic SearchRsltType _
-instance eqSearchRsltType :: Eq SearchRsltType where eq = genericEq
-instance showSearchRsltType :: Show SearchRsltType where show = genericShow
+derive instance genericSearchType :: Generic SearchType _
+instance eqSearchType :: Eq SearchType where eq = genericEq
+instance showSearchType :: Show SearchType where show = genericShow
 
 
 config :: Config

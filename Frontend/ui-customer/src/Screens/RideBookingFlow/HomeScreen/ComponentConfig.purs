@@ -993,7 +993,7 @@ chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    quoteList = sortBy (\a b ->compare (a.price) (b.price)) state.data.specialZoneQuoteList,
+    quoteList = sortBy (\a b ->compare a.price b.price) state.data.specialZoneQuoteList,
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText
   }
 
