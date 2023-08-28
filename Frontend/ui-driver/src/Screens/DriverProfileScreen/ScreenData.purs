@@ -188,6 +188,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , paymentPending        :  false
     , subscribed            :  false
     , autoPayStatus         : Nothing
+    , mediaUrl              : Nothing
 }
 
 organizationInfo :: OrganizationInfo

@@ -16,6 +16,7 @@
 module Screens.RideHistoryScreen.Controller where
 
 import Effect.Unsafe
+import Prelude
 import Log
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.DatePickerModel as DatePickerModel
@@ -39,7 +40,7 @@ import JBridge (cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-
+import Screens.Types (IndividualRideCardState, ItemState, RideHistoryScreenState, AnimationState(..))
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, tripDatesCount)

@@ -1547,3 +1547,4 @@ getStringFromEnum key = case key of
     VIEW_FAQs -> "VIEW_FAQs"
     CHAT_FOR_HELP -> "CHAT_FOR_HELP"
     SUPPORT -> "SUPPORT"
+    ACTIVE_RC -> "ACTIVE_RC"

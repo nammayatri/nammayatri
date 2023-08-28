@@ -92,6 +92,7 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Common.Styles.Colors as Color
 import Effect.Uncurried (runEffectFn1)
 import Effect.Aff (makeAff, nonCanceler)
+import Engineering.Helpers.LogEvent (logEvent)
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
