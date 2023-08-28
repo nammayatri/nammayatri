@@ -372,7 +372,7 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
   pure NoAction
   ]
 
-eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = exit $ OpenPaymentPage state
+eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
 
 eval (MakePaymentModalAC (MakePaymentModal.Cancel)) state = continue state{data { paymentState {makePaymentModal = false}}}
 

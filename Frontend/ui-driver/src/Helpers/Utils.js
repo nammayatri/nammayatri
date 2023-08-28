@@ -758,3 +758,25 @@ export const isYesterday = function (dateString){
   }
   return false;
 }
+
+export const checkPPInitiateStatus = function (cb) {
+  if (JOS.isMAppPresent("in.juspay.hyperpay")() && window.isPPInitiated) {
+    cb()();
+  } else {
+    window.ppInitiateCallback = cb;
+  }
+}
+
+export const killPP = function () {
+  if (top.JOSHolder) {
+    const mapps = Object.keys(top.JOSHolder);
+    mapps.forEach((key) => {
+      if (key != JOS.self) {
+        var currJOS = top.JOSHolder[key];
+        currJOS.finish(0)("")();
+        delete top.JOSHolder[key];
+      }
+    });
+    window.ppInitiateCallback = undefined;
+  }
+}
