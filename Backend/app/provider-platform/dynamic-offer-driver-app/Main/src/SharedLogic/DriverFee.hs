@@ -14,31 +14,135 @@
 
 module SharedLogic.DriverFee where
 
-import Domain.Types.DriverFee
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBFlow)
-import Kernel.Types.Common (MonadFlow, generateGUID)
-import Storage.Queries.DriverFee (create, updateStatus)
+import qualified Data.List as DL
+import Data.Time (Day, UTCTime (utctDay))
+import qualified Domain.Types.DriverFee as DDF
+import qualified Domain.Types.Invoice as INV
+import EulerHS.Prelude hiding (id, state)
+import GHC.Records.Extra
+import Kernel.Beam.Functions
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.Invoice as QINV
 
-mergeDriverFee :: (MonadFlow m, EsqDBFlow m r) => DriverFee -> DriverFee -> UTCTime -> m ()
+mergeDriverFee :: (MonadFlow m, EsqDBFlow m r) => DDF.DriverFee -> DDF.DriverFee -> UTCTime -> m ()
 mergeDriverFee oldFee newFee now = do
   id <- generateGUID
   let driverId = newFee.driverId
       merchantId = newFee.merchantId
       govtCharges = newFee.govtCharges + oldFee.govtCharges
-      platformFee = PlatformFee (oldFee.platformFee.fee + newFee.platformFee.fee) (oldFee.platformFee.cgst + newFee.platformFee.cgst) (oldFee.platformFee.sgst + newFee.platformFee.sgst)
+      platformFee = DDF.PlatformFee (oldFee.platformFee.fee + newFee.platformFee.fee) (oldFee.platformFee.cgst + newFee.platformFee.cgst) (oldFee.platformFee.sgst + newFee.platformFee.sgst)
       numRides = oldFee.numRides + newFee.numRides
       payBy = newFee.endTime
       totalEarnings = oldFee.totalEarnings + newFee.totalEarnings
       startTime = oldFee.startTime
       endTime = newFee.endTime
-      status = PAYMENT_OVERDUE
+      status = DDF.PAYMENT_OVERDUE
       collectedBy = Nothing
       createdAt = now
       updatedAt = now
-      feeType = RECURRING_INVOICE
-  let newDriverFee = DriverFee {..}
+      feeType = DDF.RECURRING_INVOICE
+  let newDriverFee = DDF.DriverFee {..}
   -- runTransaction $ do
-  _ <- updateStatus INACTIVE oldFee.id now
-  _ <- updateStatus INACTIVE newFee.id now
-  void $ create newDriverFee
+  _ <- QDF.updateStatus DDF.INACTIVE oldFee.id now
+  _ <- QDF.updateStatus DDF.INACTIVE newFee.id now
+  void $ QDF.create newDriverFee
+
+data DriverFeeByInvoice = DriverFeeByInvoice
+  { invoiceId :: Id INV.Invoice,
+    date :: Day,
+    govtCharges :: HighPrecMoney,
+    platformFee :: PlatformFee,
+    numRides :: Int,
+    payBy :: UTCTime,
+    totalEarnings :: Money,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    status :: DDF.DriverFeeStatus
+  }
+
+data PlatformFee = PlatformFee
+  { fee :: HighPrecMoney,
+    cgst :: HighPrecMoney,
+    sgst :: HighPrecMoney
+  }
+
+groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m [DriverFeeByInvoice]
+groupDriverFeeByInvoices driverFees_ = do
+  let pendingFees = filter (\df -> elem df.status [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]) driverFees_
+
+  pendingFeeInvoiceId <- getInvoiceIdForPendingFees pendingFees
+  uniqueInvoiceIds <- getUniqueInvoiceIds driverFees_ pendingFeeInvoiceId -- except this pendingFeeInvoiceId
+  pendingFeeInvoiceResp <- buildDriverFeeByInvoice driverFees_ (Just DDF.PAYMENT_PENDING) pendingFeeInvoiceId
+  otherInvoiceResp <- mapM (buildDriverFeeByInvoice driverFees_ Nothing) uniqueInvoiceIds
+
+  return ([pendingFeeInvoiceResp] <> otherInvoiceResp)
+  where
+    getUniqueInvoiceIds :: (EsqDBReplicaFlow m r, MonadFlow m) => [DDF.DriverFee] -> Id INV.Invoice -> m [Id INV.Invoice]
+    getUniqueInvoiceIds driverFees pendingFeeInvoiceId = do
+      invoices <- (runInReplica . QINV.findByDriverFeeId . (.id)) `mapM` driverFees
+      let uniqueInvoices = DL.nub $ map (.id) (concat invoices)
+      return $ filter (pendingFeeInvoiceId /=) uniqueInvoices
+
+    getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
+    getInvoiceIdForPendingFees pendingFees = do
+      invoices <- (runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` pendingFees
+      let createNewInvoice = and (isJust <$> invoices)
+      if createNewInvoice
+        then do
+          insertInvoiceAgainstDriverFee pendingFees
+        else do
+          let mLatestInvoice = listToMaybe $ sortOn (Down . (.createdAt)) (catMaybes invoices)
+          case mLatestInvoice of
+            Just invoice -> return invoice.id
+            Nothing -> insertInvoiceAgainstDriverFee pendingFees
+
+    insertInvoiceAgainstDriverFee :: (EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
+    insertInvoiceAgainstDriverFee driverFees = do
+      invoiceId <- generateGUID
+      invoiceShortId <- generateShortId
+      now <- getCurrentTime
+      let invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId.getShortId now <$> driverFees
+      QINV.createMany invoices
+      return invoiceId
+
+    mkInvoiceAgainstDriverFee id shortId now driverFee = do
+      INV.Invoice
+        { id = Id id,
+          invoiceShortId = shortId,
+          driverFeeId = driverFee.id,
+          invoiceStatus = INV.ACTIVE_INVOICE,
+          updatedAt = now,
+          createdAt = now
+        }
+
+    buildDriverFeeByInvoice ::
+      (EsqDBReplicaFlow m r, MonadFlow m) =>
+      [DDF.DriverFee] ->
+      Maybe DDF.DriverFeeStatus ->
+      Id INV.Invoice ->
+      m DriverFeeByInvoice
+    buildDriverFeeByInvoice driverFees mStatus invoiceId = do
+      invoices <- runInReplica $ QINV.findById invoiceId
+      now <- getCurrentTime
+      let driverFeeIds = invoices <&> (.driverFeeId)
+          invoiceDriverFees = filter (\x -> x.id `elem` driverFeeIds) driverFees
+          date = utctDay $ maybe now (.createdAt) (listToMaybe invoices)
+          numRides = sum (invoiceDriverFees <&> (.numRides))
+          payBy = minimum (invoiceDriverFees <&> (.payBy))
+          startTime = minimum (invoiceDriverFees <&> (.startTime))
+          endTime = maximum (invoiceDriverFees <&> (.endTime))
+          totalEarnings = sum (invoiceDriverFees <&> (.totalEarnings))
+          govtCharges = sum (invoiceDriverFees <&> fromIntegral . (.govtCharges))
+          fee = sum (invoiceDriverFees <&> fromIntegral . (.platformFee.fee))
+          cgst = sum (invoiceDriverFees <&> (.platformFee.cgst))
+          sgst = sum (invoiceDriverFees <&> (.platformFee.sgst))
+          platformFee = PlatformFee {..}
+          status =
+            case mStatus of
+              (Just status_) -> status_
+              Nothing -> maybe DDF.INACTIVE (.status) (listToMaybe invoiceDriverFees)
+
+      return $ DriverFeeByInvoice {..}

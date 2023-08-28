@@ -78,6 +78,7 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
@@ -130,6 +131,7 @@ import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
+import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
@@ -150,7 +152,6 @@ import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
-import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
@@ -400,6 +401,7 @@ newtype DriverAlternateNumberRes = DriverAlternateNumberRes
 data DriverPaymentHistoryResp = DriverPaymentHistoryResp
   { date :: Day, -- window start day
     driverFeeId :: Id DDF.DriverFee,
+    invoiceId :: Id INV.Invoice,
     status :: DDF.DriverFeeStatus,
     totalRides :: Int,
     totalEarnings :: Money,
@@ -1338,6 +1340,7 @@ remove (personId, _) = do
   _ <- QPerson.updateAlternateMobileNumberAndCode driver
   return Success
 
+-- history should be on basis of invoice instead of driverFee id
 getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
 getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
@@ -1351,21 +1354,22 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
-  mapM buildPaymentResp driverFees
+
+  driverFeeByInvoices <- SLDriverFee.groupDriverFeeByInvoices driverFees
+
+  mapM buildPaymentHistory driverFeeByInvoices
   where
     maxLimit = 20
     defaultLimit = 10
 
-    buildPaymentResp DDF.DriverFee {..} = do
-      let date = utctDay startTime
-          driverFeeId = id
-          totalRides = numRides
-          charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
+    buildPaymentHistory SLDriverFee.DriverFeeByInvoice {..} = do
+      let charges = round $ govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
-      invoice <- runInReplica $ QINV.findByDriverFeeId id
-      let invoiceIds = map (.id) invoice
-      transactionDetails <- mapM findAllByOrderId (cast <$> invoiceIds)
-      let txnInfo = map mkDriverTxnInfo (concat transactionDetails)
+          totalRides = numRides
+          driverFeeId = cast invoiceId
+
+      transactionDetails <- findAllByOrderId (cast invoiceId)
+      let txnInfo = map mkDriverTxnInfo transactionDetails
       return DriverPaymentHistoryResp {..}
 
     mkDriverTxnInfo PaymentTransaction {..} = DriverTxnInfo {..}
@@ -1373,11 +1377,11 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
     mkChargesBreakup govtCharges platformFee cgst sgst =
       [ DriverPaymentBreakup
           { component = "Government Charges",
-            amount = fromIntegral govtCharges
+            amount = govtCharges
           },
         DriverPaymentBreakup
           { component = "Platform Fee",
-            amount = fromIntegral platformFee
+            amount = platformFee
           },
         DriverPaymentBreakup
           { component = "CGST",

@@ -145,7 +145,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.firstName mbFirstName | isJust mbFirstName]
-        <> [Se.Set BeamP.middleName mbMiddleName | isJust mbFirstName]
+        <> [Se.Set BeamP.middleName mbMiddleName | isJust mbMiddleName]
         <> [Se.Set BeamP.lastName mbLastName | isJust mbLastName]
         <> [Se.Set BeamP.emailEncrypted mbEmailEncrypted | isJust mbEmailEncrypted]
         <> [Se.Set BeamP.emailHash mbEmailHash | isJust mbEmailHash]

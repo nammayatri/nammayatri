@@ -62,11 +62,11 @@ import Tools.Notifications
 import qualified Tools.Payment as Payment
 
 -- create order -----------------------------------------------------
-createOrder :: (Id DP.Person, Id DM.Merchant) -> Id DriverFee -> Flow Payment.CreateOrderResp
-createOrder (driverId, merchantId) driverFeeId = do
-  driverFee <- B.runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  mbInvoice <- B.runInReplica $ QIN.findByDriverFeeIdAndActiveStatus driverFee.id
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) [driverFee] Nothing (getIdAndShortId <$> mbInvoice)
+createOrder :: (Id DP.Person, Id DM.Merchant) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
+createOrder (driverId, merchantId) invoiceId = do
+  invoices <- B.runInReplica $ QIN.findAllByInvoiceId invoiceId
+  driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) (catMaybes driverFees) Nothing (getIdAndShortId <$> listToMaybe invoices)
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
@@ -93,7 +93,8 @@ getStatus (personId, merchantId) orderId = do
     case mOrder of -- handling backward compatibility case of jatri saathi
       Just _order -> return _order
       Nothing -> do
-        invoice <- QIN.findById (cast orderId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+        invoices <- QIN.findById (cast orderId)
+        invoice <- listToMaybe invoices & fromMaybeM (PaymentOrderNotFound orderId.getId)
         QOrder.findById (cast invoice.id) >>= fromMaybeM (PaymentOrderNotFound invoice.id.getId)
 
   paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall
@@ -160,7 +161,7 @@ processPayment merchantId driverId orderId sendNotification = do
     CDI.updateSubscription True (cast driverId)
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QDFS.clearPaymentStatus driverId driverInfo.active
-    QIN.updateInvoiceStatusByInvoiceId (cast orderId) INV.SUCCESS
+    QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
 
 notifyPaymentSuccessIfNotNotified :: DP.Person -> Id DOrder.PaymentOrder -> Flow ()
@@ -175,7 +176,7 @@ shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.R
 notifyAndUpdateInvoiceStatusIfPaymentFailed :: Id DP.Person -> Id DOrder.PaymentOrder -> Payment.TransactionStatus -> Flow ()
 notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus = do
   when (orderStatus `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
-    QIN.updateInvoiceStatusByInvoiceId (cast orderId) INV.FAILED
+    QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
     let key = "driver-offer:FailedNotif-" <> orderId.getId
     sendNotificationIfNotSent key $ do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)

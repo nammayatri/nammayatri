@@ -93,7 +93,7 @@ createOrder (driverId, merchantId) driverFees mbMandateOrder existingInvoice = d
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
-      QIN.updateInvoiceStatusByInvoiceId invoiceId INV.EXPIRED
+      QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
       createOrder (driverId, merchantId) driverFees mbMandateOrder Nothing -- call same function with no existing order
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> DriverFee -> INV.Invoice

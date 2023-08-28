@@ -100,12 +100,12 @@ findFeesInRangeWithStatus startTime endTime status =
     ]
 
 findWindowsWithStatus :: MonadFlow m => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
-findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVal =
+findWindowsWithStatus (Id driverId) from to mbStatus limitVal offsetVal =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is BeamDF.driverId $ Se.Eq driverId,
-          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.endTime $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
         ]
           <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]

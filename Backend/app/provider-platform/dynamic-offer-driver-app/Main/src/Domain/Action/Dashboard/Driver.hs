@@ -60,6 +60,7 @@ import Domain.Types.DriverOnboarding.DriverRCAssociation
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.Image (Image)
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
@@ -76,6 +77,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.DB.Queries
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
+import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.DriverBlockReason as DBR
@@ -90,6 +92,7 @@ import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicens
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -218,17 +221,24 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
   mobileNumber <- getDbHash phone
   driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   driverFees <- findPendingFeesByDriverId (cast driver.id)
-  return $ map mkPaymentDueResp driverFees
+  driverFeeByInvoices <- SLDriverFee.groupDriverFeeByInvoices driverFees
+  return $ map (mkPaymentDueResp driver.id) driverFeeByInvoices
   where
-    mkPaymentDueResp a@DriverFee {..} = do
-      let platformFee_ = mkPlatformFee a.platformFee
-          status_ = castStatus a.status
-          totalFee = round $ fromIntegral a.govtCharges + fromIntegral platformFee_.fee + platformFee_.cgst + platformFee_.sgst
-          driverFeeId = cast id
+    mkPaymentDueResp driverId SLDriverFee.DriverFeeByInvoice {..} = do
+      let platformFee_ = mkPlatformFee platformFee
+          status_ = castStatus status
+          totalFee = round $ govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
+          driverFeeId = cast invoiceId
           driverId_ = cast driverId
-      Common.DriverOutstandingBalanceResp {platformFee = platformFee_, status = status_, driverId = driverId_, ..}
+      Common.DriverOutstandingBalanceResp
+        { govtCharges = round govtCharges,
+          platformFee = platformFee_,
+          status = status_,
+          driverId = driverId_,
+          ..
+        }
 
-    mkPlatformFee PlatformFee {..} = Common.PlatformFee {..}
+    mkPlatformFee SLDriverFee.PlatformFee {..} = Common.PlatformFee {fee = round fee, ..}
 
     castStatus status = case status of -- only PENDING and OVERDUE possible
       ONGOING -> Common.ONGOING
@@ -414,6 +424,8 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   CDI.updateSubscription True driverId
   mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
   QDFS.clearPaymentStatus (cast driverId) driverInfo_.active
+  mInvoices <- (B.runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` driverFees
+  void $ (QINV.updateInvoiceStatusByInvoiceId INV.SUCCESS . (.id)) `mapM` catMaybes mInvoices
   fork "sending dashboard sms - collected cash" $ do
     Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
   pure Success
