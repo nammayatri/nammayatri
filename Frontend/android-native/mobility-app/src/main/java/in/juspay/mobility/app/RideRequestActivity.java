@@ -377,8 +377,8 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
                 if (i < sheetArrayList.size()) {
                     indicatorTextList.get(i).setText(
-                            sheetArrayList.get(i).getRequestedVehicleVariant() + "\n" +
-                            sharedPref.getString("CURRENCY", "₹") +
+                            (sheetArrayList.get(i).getRequestedVehicleVariant().equals(NotificationUtils.NO_VARIANT) ? "" : (sheetArrayList.get(i).getRequestedVehicleVariant() + "\n")) +
+                            (sharedPref.getString("CURRENCY", "₹")) +
                             (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
                 } else {

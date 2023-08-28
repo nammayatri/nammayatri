@@ -226,7 +226,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         youTubePlayerView = null;
         youtubePlayer = null;
         videoDuration = 0;
-        audioPlayers = null;
+        audioPlayers = new ArrayList<>();
         audioRecorder = null;
 
         // Others

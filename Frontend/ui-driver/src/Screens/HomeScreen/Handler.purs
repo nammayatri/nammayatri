@@ -31,9 +31,13 @@ import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
-import Screens.Types (KeyboardModalType(..))
-import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Screens.Types (KeyboardModalType(..))
+import Data.Maybe (Maybe(..))
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Helpers.Utils (getCurrentLocation, LatLon(..))
+
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
 homeScreen = do
@@ -54,7 +58,7 @@ homeScreen = do
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
     DriverAvailabilityStatus state status -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
-      App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS status)
+      App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS state status)
     StartRide state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       LatLon lat lon <- getCurrentLocation state.data.currentDriverLat state.data.currentDriverLon  state.data.activeRide.src_lat state.data.activeRide.src_lon
@@ -102,7 +106,9 @@ homeScreen = do
     AadhaarVerificationFlow updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
-    
+    SubscriptionScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV GoToSubscription)
 -- DTHS.GoToStart screenState -> do
 --       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
 --       _ <- pure $ spy "lat handler" startRideCurrentLat

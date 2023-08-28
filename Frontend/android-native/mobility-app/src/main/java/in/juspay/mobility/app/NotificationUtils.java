@@ -51,6 +51,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONException;
@@ -300,7 +301,7 @@ public class NotificationUtils {
         String notificationType = data.getString("notification_type");
         String channelId;
         String merchantType = context.getString(R.string.service);
-        String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
+        String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
         if (ALLOCATION_TYPE.equals(notificationType)) {
             System.out.println("showNotification:- " + notificationType);
@@ -359,6 +360,7 @@ public class NotificationUtils {
         }
         SharedPreferences sharedPref = context.getSharedPreferences(
                 context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                
         if (TRIP_CHANNEL_ID.equals(notificationType)) {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -577,6 +579,13 @@ public class NotificationUtils {
                     default : return NO_VARIANT;
                 }
             default:return NO_VARIANT;
+        }
+    }
+
+    public static void cleverTapCustomEvent(String event, Context context) {
+        CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+        if (clevertapDefaultInstance != null){
+            clevertapDefaultInstance.pushEvent(event);
         }
     }
 }

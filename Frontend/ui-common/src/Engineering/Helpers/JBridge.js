@@ -899,6 +899,24 @@ export const getCurrentLatLong = function () {
   }
 };
 
+export const getCurrentPositionWithTimeout = function (cb){
+  return function (action){
+    return function (delay){
+      return function () {
+        var callbackFallback = function (){
+          cb(action("0.0")("0.0"))();
+        };
+        var timer = setTimeout(callbackFallback, delay);
+        var callback = callbackMapper.map(function (lat, lng) {
+          clearTimeout(timer);
+          cb(action(lat)(lng))();
+        });
+        window.JBridge.getCurrentPosition(callback);
+      }
+    }
+  }
+}
+
 export const isLocationEnabled = function (unit) {
   return function () {
     if (window.__OS == "IOS")
@@ -1669,11 +1687,9 @@ export const cleverTapCustomEvent = function(event){
 export const cleverTapCustomEventWithParams = function (event) {
   return function (paramKey) {
     return function (paramValue) {
-      return function () {
-        if(window.JBridge.cleverTapCustomEventWithParams){
-            window.JBridge.cleverTapCustomEventWithParams(event, paramKey,paramValue);
-        }
-    };
+      if(window.JBridge.cleverTapCustomEventWithParams){
+          window.JBridge.cleverTapCustomEventWithParams(event, paramKey,paramValue);
+      }
   };
  };
 };
@@ -1797,4 +1813,10 @@ export const  horizontalScrollToPos = function (id, childId, focus) {
   }
   function between(x, min, max) {
     return x >= min && x <= max;
+  }
+
+  export const askNotificationPermission = function () {
+    if (window.JBridge.requestNotificationPermission){
+      return window.JBridge.requestNotificationPermission();
+    }
   }

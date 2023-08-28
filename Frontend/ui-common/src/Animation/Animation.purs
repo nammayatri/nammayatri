@@ -25,7 +25,7 @@ import Common.Animation.Config
 
 
 animateTime :: Int
-animateTime = 300
+animateTime = 150
 
 interpolator :: PrestoAnim.Interpolator
 interpolator = PrestoAnim.Bezier 0.1 0.4 0.4 0.9

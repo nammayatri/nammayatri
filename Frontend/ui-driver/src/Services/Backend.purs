@@ -542,6 +542,13 @@ getCorrespondingErrorMessage errorPayload = do
         "OTP_ATTEMPT_EXCEEDED" -> getString OTP_ATTEMPT_EXCEEDED
         "UPSTREAM_INTERNAL_SERVER_ERROR" -> getString UPSTREAM_INTERNAL_SERVER_ERROR
         "TRANSACTION_ALREADY_COMPLETED" -> getString TRANSACTION_ALREADY_COMPLETED
+        "PLAN_NOT_FOUND" -> getString PLAN_NOT_FOUND
+        "MANDATE_NOT_FOUND" -> getString MANDATE_NOT_FOUND
+        "ACTIVE_MANDATE_EXISTS" -> getString ACTIVE_MANDATE_EXISTS
+        "NO_ACTIVE_MANDATE_EXIST" -> getString NO_ACTIVE_MANDATE_EXIST
+        "NO_PLAN_FOR_DRIVER" -> getString NO_PLAN_FOR_DRIVER
+        "INVALID_PAYMENT_MODE" -> getString INVALID_PAYMENT_MODE
+        "INVALID_AUTO_PAY_STATUS" -> getString INVALID_AUTO_PAY_STATUS
         "null" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         _ -> decodeErrorMessage errorPayload.response.errorMessage
@@ -988,3 +995,63 @@ unVerifiedAadhaarData driverName driverGender driverDob = do
         driverDob : driverDob
     }
     unwrapResponse x = x
+
+
+getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
+getUiPlans dummy = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getUiPlans "") unwrapResponse $ callAPI headers (UiPlansReq "")
+    where
+        unwrapResponse (x) = x
+
+getUiPlansBT :: String -> FlowBT String UiPlansResp
+getUiPlansBT dummy = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getUiPlans "") (\x → x) errorHandler (lift $ lift $ callAPI headers (UiPlansReq ""))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+            BackT $ pure GoBack
+
+getCurrentPlan :: String -> Flow GlobalState (Either ErrorResponse GetCurrentPlanResp)
+getCurrentPlan driverId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getCurrentPlan driverId) unwrapResponse $ callAPI headers (GetCurrentPlanReq driverId)
+    where
+        unwrapResponse (x) = x
+
+
+subscribePlan :: String  -> Flow GlobalState (Either ErrorResponse SubscribePlanResp)
+subscribePlan planId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.subscribePlan planId) unwrapResponse $ callAPI headers $ (SubscribePlanReq planId)
+  where
+    unwrapResponse x = x
+
+paymentDues :: String -> Flow GlobalState (Either ErrorResponse PaymentDuesResp)
+paymentDues dummy = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.paymentDues "") unwrapResponse $ callAPI headers (PaymentDuesReq "")
+    where
+        unwrapResponse (x) = x
+
+selectPlan :: String  -> Flow GlobalState (Either ErrorResponse SelectPlanResp)
+selectPlan planId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.selectPlan planId) unwrapResponse $ callAPI headers (SelectPlanReq planId)
+  where
+    unwrapResponse x = x
+
+resumeMandate :: String -> Flow GlobalState (Either ErrorResponse ResumeMandateResp)
+resumeMandate driverId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.resumeMandate driverId) unwrapResponse $ callAPI headers (ResumeMandateReq driverId)
+    where
+        unwrapResponse (x) = x
+
+suspendMandate :: String -> Flow GlobalState (Either ErrorResponse SuspendMandateResp)
+suspendMandate _ = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.suspendMandate "") unwrapResponse $ callAPI headers (SuspendMandateReq "")
+    where
+        unwrapResponse (x) = x
