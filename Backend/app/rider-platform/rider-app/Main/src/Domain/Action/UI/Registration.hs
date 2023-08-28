@@ -50,6 +50,7 @@ import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.APISuccess as AP
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as BC
@@ -196,6 +197,7 @@ auth req mbBundleVersion mbClientVersion = do
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
       >>= maybe (createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
+  _ <- cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -490,15 +492,23 @@ resend tokenId = do
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
       sender = smsCfg.sender
-  withLogTag ("personId_" <> entityId) $ do
-    message <-
-      MessageBuilder.buildSendOTPMessage person.merchantId $
-        MessageBuilder.BuildSendOTPMessageReq
-          { otp = otpCode,
-            hash = otpHash
-          }
-    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
-      >>= Sms.checkSmsResult
+  otpChannel <- getPersonOTPChannel person.id
+  case otpChannel of
+    SMS -> do
+      withLogTag ("personId_" <> getId person.id) $ do
+        message <-
+          MessageBuilder.buildSendOTPMessage person.merchantId $
+            MessageBuilder.BuildSendOTPMessageReq
+              { otp = otpCode,
+                hash = otpHash
+              }
+        Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+          >>= Sms.checkSmsResult
+    WHATSAPP ->
+      withLogTag ("personId_" <> getId person.id) $ do
+        result <- Whatsapp.whatsAppOtpApi person.merchantId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
+        when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
+
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing
 
@@ -520,3 +530,17 @@ logout personId = do
   void $ Person.updateDeviceToken personId Nothing
   void $ RegistrationToken.deleteByPersonId personId
   pure AP.Success
+
+authHitOTPChannel :: Id SP.Person -> Text
+authHitOTPChannel personId = "BAP:Registration:auth" <> getId personId <> ":OtpChannel"
+
+cachePersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> OTPChannel -> m ()
+cachePersonOTPChannel personId otpChannel = do
+  Hedis.setExp (authHitOTPChannel personId) otpChannel 1800 -- 30 min
+
+getPersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> m OTPChannel
+getPersonOTPChannel personId = do
+  Hedis.get (authHitOTPChannel personId) >>= \case
+    Just a -> pure a
+    Nothing -> do
+      pure SMS -- default otpChannel is SMS (for resend)
