@@ -91,8 +91,13 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Common.Styles.Colors as Color
 import Effect.Uncurried (runEffectFn1)
-import Effect.Aff (makeAff, nonCanceler)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Commons (flowRunner)
+import JBridge as JB
+import Effect.Aff (makeAff, nonCanceler, launchAff)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+
 
 baseAppFlow :: Boolean -> FlowBT String Unit
 baseAppFlow baseFlow = do
@@ -417,7 +422,6 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
       pure unit
     else pure unit
   else pure unit
-
 
 aadhaarVerificationFlow :: FlowBT String Unit
 aadhaarVerificationFlow = do

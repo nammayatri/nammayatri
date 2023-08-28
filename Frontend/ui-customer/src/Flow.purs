@@ -45,7 +45,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn5, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, stringToVersion, convertUTCtoISC, getCurrentUTC, getWindowVariable)
+import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, stringToVersion, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign (MultipleErrors, unsafeToForeign)
@@ -53,7 +53,7 @@ import Foreign.Class (class Encode)
 import Foreign.Class (encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, saveRecents, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, hideLoader, emitJOSEvent)
+import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs, hideLoader, emitJOSEvent, setFCMTokenWithTimeOut)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -63,7 +63,7 @@ import Engineering.Helpers.Utils (getAppConfig)
 import Constants as Constants
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<))
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard)
@@ -93,8 +93,12 @@ import Screens.Types (Gender(..)) as Gender
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..))
 import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
 import Services.Backend as Remote
+import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
-import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
+import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), defaultGlobalState)
+import Effect.Aff (makeAff, nonCanceler, launchAff)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) refreshFlow = do
@@ -119,6 +123,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
+  _ <- pure $ setValueToLocalStore BASE_URL (getBaseUrl "dummy")
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
   if ((getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")) then do
     setValueToLocalStore COUNTRY_CODE "+91" 
@@ -388,7 +393,10 @@ currentFlowStatus = do
       (GetProfileRes response) <- Remote.getProfileBT ""
       let dbBundleVersion = response.bundleVersion
           dbClientVersion = response.clientVersion
+          maskedDeviceToken = response.maskedDeviceToken
       updateCustomerVersion dbClientVersion dbBundleVersion
+      when (any (_ == maskedDeviceToken) [Just "__f...led", Just "..."]) do
+        void $ liftFlowBT $ launchAff $ flowRunner defaultGlobalState $ do void $ runExceptT $ runBackT $ checkAndUpdateToken 5
       if isJust response.language then do
         when (getKeyByLanguage (fromMaybe "ENGLISH" response.language) /= (getValueToLocalNativeStore LANGUAGE_KEY)) $ do
           resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
@@ -502,6 +510,18 @@ chooseLanguageScreenFlow = do
                             _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_choose" "language" (language))
                             enterMobileNumberScreenFlow
     Refresh state -> chooseLanguageScreenFlow
+
+data FCMToken = FCMToken String
+checkAndUpdateToken :: Int -> FlowBT String Unit
+checkAndUpdateToken count = do
+    if count > 0 then do
+      (FCMToken newToken) <- lift $ lift $ doAff $ makeAff \cb -> setFCMTokenWithTimeOut 5000 (cb <<< Right) FCMToken $> nonCanceler
+      if newToken == "NOT_FOUND" then checkAndUpdateToken (count - 1)
+          else do 
+              let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
+                  requiredData = initialData{deviceToken = Just newToken}
+              void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
+    else pure unit
 
 updateCustomerVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateCustomerVersion dbClientVersion dbBundleVersion = do
