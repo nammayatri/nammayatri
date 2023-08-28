@@ -44,7 +44,7 @@ drainerStopKey = "DRIVER_DRAINER_STOP"
 
 --                                  |
 forceDrainEnabledKey :: Text
-forceDrainEnabledKey = "FORCE_DRAIN"
+forceDrainEnabledKey = "DRIVER_FORCE_DRAIN"
 
 --                                  |
 envNamePrefix :: String
