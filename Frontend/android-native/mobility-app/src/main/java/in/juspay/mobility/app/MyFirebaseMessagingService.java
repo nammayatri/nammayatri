@@ -25,7 +25,10 @@ import androidx.annotation.NonNull;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.pushnotification.NotificationInfo;
 import com.clevertap.android.sdk.pushnotification.fcm.CTFcmMessageHandler;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -64,20 +67,33 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public void onNewToken(@NonNull String newToken) {
         super.onNewToken(newToken);
         Log.e("newToken", newToken);
-        CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
-        if (cleverTapAPI != null) {
-            cleverTapAPI.pushFcmRegistrationId(newToken,true);
-        }
+        if(newToken.equals(" ") || newToken.equals("__failed") || newToken.equals("null") || newToken.equals("(null)") || newToken.equals("")){
+            Task<String> tokenTask = FirebaseMessaging.getInstance().getToken();
+            tokenTask.addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    String token = task.getResult();
+                    Log.d("TAG", "token: " + token);
+                    handleFCMToken(token);
+                }
+            });
+        }else handleFCMToken(newToken);
+        Log.e("newToken", newToken);
+    }
+
+    private void handleFCMToken (String newToken){
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
                 this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString("FCM_TOKEN", newToken);
         editor.apply();
-        String regToken = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
+        if (cleverTapAPI != null) {
+            cleverTapAPI.pushFcmRegistrationId(newToken,true);
+        }
+        String regToken = sharedPref.getString("", "null");
         if (!regToken.equals("null") && !regToken.equals("__failed")) {
             updateFCMToken(newToken);
         }
-        Log.e("newToken", newToken);
     }
 
     public static void registerBundleUpdateCallback(BundleUpdateCallBack notificationCallback) {

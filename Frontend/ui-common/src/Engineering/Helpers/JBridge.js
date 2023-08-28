@@ -417,6 +417,29 @@ export const setFCMToken = function (cb) {
   // JBridge.setFCMToken();
 };
 
+export const setFCMTokenWithTimeOut = function (timeOut) {
+  return function (cb){
+    return function (action) {
+      return function () {
+        if (window.JBridge.setFCMToken) {
+          var timer;
+          var callback = callbackMapper.map(function (id) {
+            clearTimeout(timer);
+            cb(action(id))();
+          });
+          var timeOutCallBack = function ()
+          {
+              cb(action("NOT_FOUND"))();
+          };
+          timer = setTimeout(timeOutCallBack,timeOut);
+          return window.JBridge.setFCMToken(callback);
+        }
+     };
+   };
+  // JBridge.setFCMToken();
+  };
+};
+
 export const dateTimePicker = function (cb) {
   return function (action) {
     return function () {
