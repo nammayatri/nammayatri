@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.merchant ADD COLUMN distance_weightage int NOT NULL DEFAULT 60;

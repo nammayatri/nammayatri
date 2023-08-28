@@ -319,6 +319,7 @@ library
       Tools.Notifications
       Tools.Payment
       Tools.Schema
+      Tools.Search
       Tools.SignatureAuth
       Tools.SMS
       Tools.Streaming.Kafka
