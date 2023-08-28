@@ -70,7 +70,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, shimmerFrameLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -311,7 +311,7 @@ view push state =
                     ]
                 ]
             , homeScreenView push state
-            , if (not (isLocalStageOn InitialStage)) then buttonLayoutParentView push state else emptyTextView state
+            , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating ]) then rideRequestFlowView push state else emptyTextView state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
@@ -554,11 +554,24 @@ shareAppPopUp push state =
 buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 buttonLayoutParentView push state =
   linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , alignParentBottom "true,-1"
-  , orientation VERTICAL
-  ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , alignParentBottom "true,-1"
+     , orientation VERTICAL
+     ][ if isLocalStageOn InitialStage then
+           shimmerView
+             $ linearLayout
+               [ width MATCH_PARENT
+               , height $ V 100
+               , background Color.black600
+               , margin $ Margin 16 0 16 20
+               , cornerRadius 8.0
+               ][]
+       else
+           if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then
+             buttonLayout state push
+           else
+             emptyTextView state]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 recenterButtonView push state =
@@ -820,7 +833,21 @@ homeScreenView push state =
         , padding (Padding 0 safeMarginTop 0 safeMarginBottom)
         , orientation VERTICAL
         ]
-        [ if (not state.props.rideRequestFlow) then homeScreenTopIconView push state else emptyTextView state ]
+        [ if isLocalStageOn InitialStage then
+            shimmerView
+             $ linearLayout
+               [ width MATCH_PARENT
+               , height $ V 80
+               , background Color.black600
+               , margin $ Margin 16 28 16 0
+               , cornerRadius 8.0
+               ][]
+          else
+            if (not state.props.rideRequestFlow) then
+              homeScreenTopIconView push state
+            else
+              emptyTextView state
+        ]
 
 homeScreenTopIconView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenTopIconView push state =
@@ -2399,3 +2426,10 @@ confirmingLottieView push state =
 genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genderBanner push state =
   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
+
+shimmerView :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
+shimmerView a =
+  shimmerFrameLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    ][ a ]
