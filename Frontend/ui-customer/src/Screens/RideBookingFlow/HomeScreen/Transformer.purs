@@ -21,7 +21,7 @@ import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _e
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState, config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Data.Array (mapWithIndex)
+import Data.Array (mapWithIndex, filter)
 import Data.Array as DA
 import Data.Int (toNumber)
 import Data.Lens ((^.))
@@ -316,8 +316,13 @@ getSpecialZoneQuote quote index =
     Public body -> ChooseVehicle.config
 
 getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
-getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) (getFilteredEstimate quotes)
+getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index (isFareRangePresent quotes)) (getFilteredEstimate quotes)
 
+isFareRangePresent :: Array EstimateAPIEntity -> Boolean
+isFareRangePresent estimates = DA.length (DA.filter (\(EstimateAPIEntity estimate) -> 
+         case estimate.totalFareRange of 
+                Nothing -> false
+                Just (FareRange fareRange) -> not (fareRange.minFare == fareRange.maxFare )) estimates) > 0
 
 getFilteredEstimate :: Array EstimateAPIEntity -> Array EstimateAPIEntity
 getFilteredEstimate quotes = do
@@ -358,8 +363,8 @@ getFilteredQuotes quotes =  do
       (DA.take 1 sortedACTaxiVariants) <> (nonAcTaxiVariants)
     _ -> quotes
 
-getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index = 
+getEstimates :: EstimateAPIEntity -> Int -> Boolean -> ChooseVehicle.Config
+getEstimates (EstimateAPIEntity estimate) index isFareRangePresent = 
   let currency = getValueFromConfig "currency"
   in ChooseVehicle.config { 
         vehicleImage = getVehicleImage estimate.vehicleVariant
@@ -374,7 +379,7 @@ getEstimates (EstimateAPIEntity estimate) index =
       , capacity = getVehicleCapacity estimate.vehicleVariant
       , showInfo = (getMerchant FunctionCall) == YATRI
       , basePrice = estimate.estimatedTotalFare
-      , searchResultType = ChooseVehicle.ESTIMATES
+      , searchResultType = if isFareRangePresent then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       }
 
 dummyFareRange :: FareRange
