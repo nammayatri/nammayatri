@@ -220,8 +220,8 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
   mobileNumber <- getDbHash phone
   driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   -- driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
-  driverFee <- findPendingFeesByDriverId (cast driver.id)
-  return $ map mkPaymentDueResp (catMaybes [driverFee])
+  driverFees <- findPendingFeesByDriverId (cast driver.id)
+  return $ map mkPaymentDueResp driverFees
   where
     mkPaymentDueResp a@DriverFee {..} = do
       let platformFee_ = mkPlatformFee a.platformFee
@@ -413,18 +413,18 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  driverFee <- findPendingFeesByDriverId driverId >>= fromMaybeM (InvalidRequest "No pending payment found")
-  driverInfo_ <- CDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+  driverFees <- findPendingFeesByDriverId driverId
+  let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fromIntegral fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
+  driverInfo_ <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  CDI.updatePendingPayment False driverFee.driverId
+  CDI.updatePendingPayment False driverId
   CDI.updateSubscription True driverId
   -- Esq.runTransaction $ do
-  QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) driverFee.id now
-  QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
+  mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
+  QDFS.clearPaymentStatus (cast driverId) driverInfo_.active
   fork "sending dashboard sms - collected cash" $ do
-    let totalDriverFee = fromIntegral driverFee.govtCharges + fromIntegral driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
-    Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalDriverFee
+    Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
   pure Success
 
 ---------------------------------------------------------------------
