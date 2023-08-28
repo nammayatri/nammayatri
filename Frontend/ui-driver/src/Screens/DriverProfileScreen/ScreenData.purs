@@ -31,7 +31,7 @@ initData = {
   data:  {
     driverName : "",
     driverVehicleType : "",
-    driverRating : Just 2,
+    driverRating : Just 2.0,
     base64Image : "",
     drivingLicenseNo : "",
     driverMobile : Just "",

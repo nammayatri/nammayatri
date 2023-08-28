@@ -249,7 +249,7 @@ type DriverProfileScreenState = {
 type DriverProfileScreenData = {
   driverName :: String,
   driverVehicleType :: String,
-  driverRating :: Maybe Int,
+  driverRating :: Maybe Number,
   base64Image :: String,
   drivingLicenseNo :: String,
   driverMobile :: Maybe String,
@@ -654,7 +654,7 @@ instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
 type DriverDetailsScreenStateData =  {
   driverName :: String,
   driverVehicleType :: String,
-  driverRating :: Maybe Int,
+  driverRating :: Maybe Number,
   base64Image :: String,
   drivingLicenseNo :: String,
   driverMobile :: Maybe String,
