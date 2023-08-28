@@ -375,7 +375,7 @@ data GetDriverInfoReq = GetDriverInfoReq { }
 
 newtype GetDriverInfoResp = GetDriverInfoResp
     { id                    :: String
-    , rating                :: Maybe Int
+    , rating                :: Maybe Number
     , middleName            :: Maybe String
     , lastName              :: Maybe String
     , firstName             :: String
