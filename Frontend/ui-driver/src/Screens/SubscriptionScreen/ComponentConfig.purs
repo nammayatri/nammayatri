@@ -71,7 +71,7 @@ retryPaymentButtonConfig state =
       , width = WRAP_CONTENT
       , gravity = CENTER
       , cornerRadius = 24.0
-      , padding = Padding 10 5 10 6
+      , padding = Padding 10 7 10 9
       , margin = MarginLeft 10
       , isSuffixImage = true
       , background = Color.blue800
@@ -142,8 +142,8 @@ popupModalConfig state = let
       , gravity = CENTER
       , backgroundColor =  Color.black9000
       , backgroundClickable = false
-      , dismisText = Mb.Nothing
       , buttonLayoutMargin = MarginBottom 0
+      , optionButtonOrientation = if state.props.popUpState == Mb.Just SupportPopup then "VERTICAL" else "HORIZONTAL"
     ,primaryText {
         text = case state.props.popUpState of
                   Mb.Just SuccessPopup -> (getString PLAN_ACTIVATED_SUCCESSFULLY)
@@ -151,9 +151,10 @@ popupModalConfig state = let
                   Mb.Just DuesClearedPopup -> (getString DUES_CLEARED_SUCCESSFULLY)
                   Mb.Just CancelAutoPay -> (getString NOT_PLANNING_TO_TAKE_RIDES)
                   Mb.Just SwitchedPlan -> (getString PLAN_SWITCHED_TO) <> (if state.data.managePlanData.currentPlan.title == getString DAILY_UNLIMITED then getString DAILY_UNLIMITED else getString DAILY_PER_RIDE)
+                  Mb.Just SupportPopup -> ""
                   Mb.Nothing -> ""
       , margin = Margin 16 16 16 0
-      , visibility = VISIBLE
+      , visibility = if state.props.popUpState == Mb.Just SupportPopup then GONE else VISIBLE
       , color = Color.black800
       , textStyle = Heading2
      },
@@ -164,11 +165,15 @@ popupModalConfig state = let
                   Mb.Just DuesClearedPopup -> getString GOT_IT
                   Mb.Just SwitchedPlan -> getString GOT_IT
                   Mb.Just CancelAutoPay -> getString PAUSE_AUTOPAY_STR
+                  Mb.Just SupportPopup -> getString CALL_SUPPORT
                   Mb.Nothing -> ""
       , color = Color.yellow900
       , background = Color.black
       , visibility =true
       , margin = MarginTop 16
+      , width = case state.props.popUpState of
+                  Mb.Just SupportPopup -> MATCH_PARENT
+                  _                    -> (V 156)
       },
       coverImageConfig {
         imageUrl =  case state.props.popUpState of
@@ -177,21 +182,44 @@ popupModalConfig state = let
           Mb.Just FailedPopup -> "ny_failed,"
           Mb.Just DuesClearedPopup -> "ny_ic_green_tick,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
           Mb.Just CancelAutoPay -> "ny_ic_pause_autopay,"
+          Mb.Just SupportPopup -> ""
           Mb.Nothing -> ""
-      , visibility = VISIBLE
+      , visibility = case state.props.popUpState of
+          Mb.Just SupportPopup -> GONE
+          _                    -> VISIBLE
       , width = V 114
       , height = V 114
       },
     secondaryText {
-      text = if state.props.popUpState == Mb.Just FailedPopup then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL else if state.data.managePlanData.currentPlan.title == getString DAILY_PER_RIDE then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE else ""
+      text = if state.props.popUpState == Mb.Just FailedPopup 
+                then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL 
+             else if state.props.popUpState == Mb.Just SupportPopup
+                then getString NEED_HELP_JOINING_THE_PLAN
+             else if state.data.managePlanData.currentPlan.title == getString DAILY_PER_RIDE 
+                then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE 
+             else ""
       , color = Color.black700
       , margin = Margin 16 4 16 0
-      , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan] then VISIBLE else GONE
+      , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan, Mb.Just SupportPopup] then VISIBLE else GONE
+      , textStyle = if Mb.Just SupportPopup == state.props.popUpState then SubHeading1 else Body1
       },
-      option2 { visibility = false }
+    option2 { 
+      visibility = state.props.popUpState == Mb.Just SupportPopup
+      , text = getString CANCEL
+      , color = Color.black650
+      , background = Color.white900
+      , strokeColor = Color.white900
+      , width = MATCH_PARENT
+      , margin = (Margin 0 0 0 0)
+    },
+    optionWithHtml {
+      text = if state.props.popUpState == Mb.Just FailedPopup then getString NEED_HELP_CALL_SUPPORT else ""
+      , color = Color.black650
+      , margin = Margin 16 4 16 0
+      , visibility = state.props.popUpState == Mb.Just FailedPopup
+    }
     }
   in popUpConf'
-
 
 confirmCancelPopupConfig :: ST.SubscriptionScreenState -> PopUpModalConfig.Config
 confirmCancelPopupConfig state = let

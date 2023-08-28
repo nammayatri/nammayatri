@@ -344,7 +344,7 @@ eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_in_app_popup_join_now"
   exit $ SubscriptionScreen state {props { showOffer = false }}
 
-eval (OfferPopupAC PopUpModal.DismissPopup) state = do
+eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   continue state {props { showOffer = false }}
 

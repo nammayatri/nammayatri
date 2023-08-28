@@ -739,7 +739,7 @@ const englishStrings = {
   FIRST_FREE_RIDE : "First Free Ride",
   DAILY_PER_RIDE_DESC : "No charges till Aug 31",
   FIRST_FREE_RIDE : "First Ride FREE",
-  JOIN_THE_UNLIMITED_PLAN : "Join the UNLIMITED plan now at ₹1/day and save 96%!!",
+  JOIN_THE_UNLIMITED_PLAN : "Join the UNLIMITED plan now at ₹5/day and save 96%!!",
   MAYBE_LATER : "Maybe Later",
   DO_YOU_WANT_TO_CANCEL : "Do you want to cancel?",
   DO_YOU_WANT_TO_CANCEL_DESC : "You are about to cancel Autopay.\nYou will have to set up autopay again to resume automatic payments.",
@@ -762,12 +762,14 @@ const englishStrings = {
   PLAN_SWITCHED_TO : "Plan Switched to ",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Note: Offers applicable only if Autopay is setup on DAILY UNLIMITED plan",
   DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Note: Daily Unlimited offers are not applicable on this plan!", 
-  NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
+  NO_RIDES_NO_CHARGE : "Pay only if you take rides",
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
   HELP_STR : "HELP",
   REFRESH_STRING : "Refresh",
   CHAT_FOR_HELP : "Chat for Help",
   VIEW_FAQs : "View FAQs",
-  SUPPORT : "Support"
+  SUPPORT : "Support",
+	NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan? Contact us",
+  NEED_HELP_CALL_SUPPORT : "Need Help? <span style='color:#2194FF'>Call Support</span>"
 } 

@@ -79,6 +79,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "option_with_html_clicked"
     SavedLocationListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "saved_location_list"
     NoAction -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "no_action"
 

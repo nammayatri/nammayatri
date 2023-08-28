@@ -739,7 +739,6 @@ export const initiatePP = function () {
   }
   if (JOS && !window.isPPInitiated) {
     try {
-      console.log("%cHyperpay initiate Request ", "background:darkblue;color:white;font-size:13px;padding:2px", window.__payload);
       JOS.startApp("in.juspay.hyperpay")(window.__payload)(cb)();
     } catch (err) {
       console.error("Hyperpay initiate Request not sent : ", err);

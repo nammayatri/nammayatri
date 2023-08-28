@@ -778,6 +778,8 @@ data STR = LETS_GET_STARTED
         | CHAT_FOR_HELP
         | VIEW_FAQs
         | SUPPORT
+        | NEED_HELP_JOINING_THE_PLAN
+        | NEED_HELP_CALL_SUPPORT
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -1544,3 +1546,5 @@ getStringFromEnum key = case key of
     VIEW_FAQs -> "VIEW_FAQs"
     CHAT_FOR_HELP -> "CHAT_FOR_HELP"
     SUPPORT -> "SUPPORT"
+    NEED_HELP_JOINING_THE_PLAN -> "NEED_HELP_JOINING_THE_PLAN"
+    NEED_HELP_CALL_SUPPORT -> "NEED_HELP_CALL_SUPPORT"

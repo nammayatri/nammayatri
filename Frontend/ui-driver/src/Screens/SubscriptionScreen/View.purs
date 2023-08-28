@@ -223,6 +223,7 @@ enjoyBenefitsView push state =
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
                       , gravity CENTER_VERTICAL
+                      , margin $ MarginTop 5
                       ][ imageView
                           [ imageWithFallback $ "ny_ic_check_green," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_green.png"
                           , width $ V 11
@@ -244,7 +245,7 @@ enjoyBenefitsView push state =
             , textSize if state.props.isSelectedLangTamil then FontSize.a_8 else FontSize.a_10
             , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.black700
-            , margin $ MarginLeft 22
+            , margin $ Margin 22 3 0 0
           ]
         ]
         
@@ -302,9 +303,26 @@ paymentPendingView push state =
               , text $ getString REFRESH_STR
               , color Color.blue900
               , margin $ MarginLeft 5
+              , padding $ PaddingBottom 4
               ] <> FontStyle.body4 TypoGraphy
           ]
         , PrimaryButton.view (push <<< RetryPaymentAC) (retryPaymentButtonConfig state)
+      ]
+      , linearLayout [
+          width MATCH_PARENT
+          , height $ V 1
+          , margin $ MarginVertical 16 12
+          , background $ "#E2D7BB"
+      ][]
+      , linearLayout [
+          width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+      ][
+        textView $ [
+          textFromHtml $ getString NEED_HELP_CALL_SUPPORT
+          , onClick push $ const $ CallSupport
+        ] <> FontStyle.tags TypoGraphy
       ]
   ]
 
@@ -479,7 +497,8 @@ headerView push state =
       , weight 1.0
       ]
     , linearLayout [
-        onClick push $ const HeaderRightClick
+        height WRAP_CONTENT
+        , onClick push $ const HeaderRightClick
         , padding $ Padding 10 10 10 10
         , gravity CENTER_VERTICAL
       ][
@@ -493,6 +512,7 @@ headerView push state =
         , textView
           $ [ textFromHtml config.actionText
           , visibility if state.props.subView == JoinPlan then VISIBLE else GONE
+          , padding $ PaddingBottom 3
           , color Color.blue800
           ] <> FontStyle.body1 TypoGraphy
         , imageView [
@@ -570,7 +590,7 @@ myPlanBodyview push state =
          ]
      , planDescriptionView push state.data.myPlanData.planEntity  (state.data.myPlanData.autoPayStatus == PENDING) state.props.isSelectedLangTamil
      , alertView push (getImageURL "ny_ic_about,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_about.png") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true
-     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (state.data.myPlanData.autoPayStatus == CANCELLED_PSP) state.props.isSelectedLangTamil false
+     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false
      , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (getString LOW_ACCOUNT_BALANCE_DESC) "" NoAction state.data.myPlanData.lowAccountBalance state.props.isSelectedLangTamil false
      , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil false
      , duesView push state
@@ -687,13 +707,14 @@ duesView push state =
         , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
         , fontStyle $ FontStyle.bold LanguageStyle
         , color Color.blue800
+        , padding $ PaddingBottom 2
         ]
       , imageView [
         imageWithFallback if state.props.isDueViewExpanded 
                                  then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
                                  else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png"
-        , height $ V 16
-        , width $ V 16
+        , height $ V 12
+        , width $ V 12
         , margin $ MarginLeft 6
         , onClick push $ const $ ToggleDueDetailsView
       ]
