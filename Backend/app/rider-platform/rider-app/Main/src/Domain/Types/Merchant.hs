@@ -44,6 +44,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     cipherText :: Maybe Base64,
     signatureExpiry :: Int,
     dirCacheSlot :: [Slot],
+    distanceWeightage :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     timeDiffFromUtc :: Seconds

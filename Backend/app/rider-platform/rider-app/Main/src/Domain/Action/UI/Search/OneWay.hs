@@ -57,6 +57,7 @@ import Tools.Event
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
+import qualified Tools.Search as Search
 
 data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
@@ -148,7 +149,8 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             mode = Just Maps.CAR
           }
   routeResponse <- SDC.getRoutes person.merchantId request
-  let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
+  let durationWeightage = 100 - merchant.distanceWeightage
+  let shortestRouteInfo = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo
   let shortestRouteDuration = (.duration) =<< shortestRouteInfo
@@ -213,17 +215,13 @@ getLongestRouteDistance (routeInfo : routeInfoArray) =
         then route1
         else route2
 
-getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
-getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
-  if null routeInfoArray
-    then Just routeInfo
-    else do
-      restRouteresult <- getRouteInfoWithShortestDuration routeInfoArray
-      Just $ comparator routeInfo restRouteresult
-getRouteInfoWithShortestDuration [] = Nothing
-
-comparator :: Maps.RouteInfo -> Maps.RouteInfo -> Maps.RouteInfo
-comparator route1 route2 =
-  if route1.duration < route2.duration
-    then route1
-    else route2
+getEfficientRouteInfo :: [Maps.RouteInfo] -> Int -> Int -> Maybe Maps.RouteInfo
+getEfficientRouteInfo [] _ _ = Nothing
+getEfficientRouteInfo routeInfos distanceWeight durationWeight = do
+  let minD = Search.minDistance routeInfos
+      minDur = Search.minDuration routeInfos
+      normalizedInfos = Search.normalizeArr (Just minD) (Just minDur) routeInfos
+      resultInfoIdx = Search.findMaxWeightedInfoIdx (fromIntegral distanceWeight) (fromIntegral durationWeight) normalizedInfos
+  if resultInfoIdx < length routeInfos
+    then Just (routeInfos !! resultInfoIdx)
+    else Nothing
