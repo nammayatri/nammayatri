@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import JBridge as JB 
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (not, (<>), ($))
+import Prelude (not, (<>), ($), (==))
 import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..), textFromHtml)
 import Screens.Types(NammaSafetyScreenState, Stage(..))
 import Styles.Colors as Color
@@ -50,6 +50,7 @@ startNSOnboardingButtonConfig state =
     { textConfig{ text = (getButtonString state.props.currentStage) }
     , id = "PrimaryButtonOTP"
     , isClickable = true
+    , visibility = if state.props.showOnboarding == true then VISIBLE else GONE
     -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (Margin 16 0 16 0 )
     -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")

@@ -13,7 +13,39 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.NammaSafetyScreen.View where
+module Screens.NammaSafetyScreen.View
+  ( CardViewDataType
+  , ContentViewDataType
+  , aboutNammaSafetyView
+  , aboutSOSData
+  , aboutSOSView
+  , cardView
+  , contactCircleView
+  , dashboardView
+  , educationView
+  , getCardViewData
+  , getFirstChar
+  , getLastChar
+  , getNameInitials
+  , measureView
+  , nammaSafetyMeasuresView
+  , safetyGuidelinesData
+  , safetyGuidelinesView
+  , safetyMeasuresData
+  , screen
+  , separatorView
+  , settingUpContentView
+  , settingUpContentViewData
+  , settingUpView
+  , sosActiveView
+  , stepsHeaderData
+  , toggleSwitchView
+  , toggleSwitchViewLayout
+  , userSettingsView
+  , videoRecordSOSView
+  , view
+  )
+  where
 
 import Common.Types.App
 import Screens.NammaSafetyScreen.ComponentConfig
@@ -44,7 +76,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), map)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageView, id, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, textFromHtml, imageUrl)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.NammaSafetyScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.EmergencyContactsScreen.Controller (contactColorsList)
@@ -110,18 +142,18 @@ view push state = let
         -- _ <- requestKeyboardShow (getNewIDWithTag "EnterMobileNumberEditText")
         pure unit
         ) (const AfterRender)
-    , margin $ MarginBottom if state.props.currentStage == NammaSafetyDashboard && state.data.showOnboarding == false then 0 else 24
+    , margin $ MarginBottom if state.props.currentStage == NammaSafetyDashboard && state.props.showOnboarding == false then 0 else 24
     , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
     , background Color.white900
     , onBackPressed push (const BackPressed )
     ][  
         -- chooseActionSOSView state push
-        -- videoRecordSOSView state push
+        videoRecordSOSView state push
         -- sosActiveView state push
-        if state.props.currentStage == NammaSafetyDashboard || state.props.currentStage == AboutNammaSafety then dashboardView state push else linearLayout [][]
-        , if state.props.currentStage == AboutNammaSafety then aboutNammaSafetyView state push else linearLayout [][]
-        , if state.props.currentStage == SetTriggerCustomerSupport || state.props.currentStage == SetNightTimeSafetyAlert || state.props.currentStage == SetDefaultEmergencyContacts || state.props.currentStage == SetPersonalSafetySettings then settingUpView state push else linearLayout [][]
-        , if state.props.currentStage == EduNammaSafetyMeasures || state.props.currentStage == EduNammaSafetyGuidelines || state.props.currentStage == EduNammaSafetyAboutSOS  then educationView state push else linearLayout [][]
+        -- if state.props.currentStage == NammaSafetyDashboard || state.props.currentStage == AboutNammaSafety then dashboardView state push 
+        -- else if state.props.currentStage == SetTriggerCustomerSupport || state.props.currentStage == SetNightTimeSafetyAlert || state.props.currentStage == SetDefaultEmergencyContacts || state.props.currentStage == SetPersonalSafetySettings then settingUpView state push 
+        -- else if state.props.currentStage == EduNammaSafetyMeasures || state.props.currentStage == EduNammaSafetyGuidelines || state.props.currentStage == EduNammaSafetyAboutSOS  then educationView state push 
+        -- else linearLayout [][]
     --     PrestoAnim.animationSet
     --       [ Anim.fadeIn true
     --       ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (StepsHeaderModel.stepsHeaderData 0)
@@ -269,7 +301,7 @@ dashboardView state push=
         , width MATCH_PARENT
         , background Color.greySmoke
         ][]
-      , if state.props.currentStage == AboutNammaSafety || state.data.showOnboarding == true then aboutNammaSafetyView state push else userSettingsView state push
+      , if state.props.currentStage == AboutNammaSafety || state.props.showOnboarding == true then aboutNammaSafetyView state push else userSettingsView state push
       ]
   ]
 
@@ -295,14 +327,13 @@ aboutNammaSafetyView state push =
             , cardView state (getCardViewData 1) push
             , cardView state (getCardViewData 2) push
         ]
-        , if state.data.showOnboarding == true then linearLayout
+        , linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , orientation HORIZONTAL
               , background Color.white900
               , alignParentBottom "true,-1"
               ][  PrimaryButton.view (push <<< StartNammaSafetyOnboarding) (startNSOnboardingButtonConfig state) ]
-          else linearLayout [][]
     ]
 
 cardView:: NammaSafetyScreenState  -> CardViewDataType -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -384,7 +415,7 @@ userSettingsView state push=
                 , fontStyle $ FontStyle.semiBold LanguageStyle ] 
                 
             ]
-            , toggleSwitchView state push
+            , toggleSwitchViewLayout state push
             , linearLayout [
                 width MATCH_PARENT
             , height WRAP_CONTENT
@@ -405,9 +436,9 @@ userSettingsView state push=
                 
             ]
             , separatorView
-            , toggleSwitchView state push
+            , toggleSwitchViewLayout state push
             , separatorView
-            , toggleSwitchView state push
+            , toggleSwitchViewLayout state push
         ]
     , linearLayout
         [ height WRAP_CONTENT
@@ -438,8 +469,8 @@ userSettingsView state push=
           ]
     ]
 
-toggleSwitchView:: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-toggleSwitchView state push=
+toggleSwitchViewLayout:: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+toggleSwitchViewLayout state push=
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -453,12 +484,7 @@ toggleSwitchView state push=
         , color Color.black800
         , textSize FontSize.a_14
         , fontStyle $ FontStyle.semiBold LanguageStyle ]
-    , imageView [ 
-        imageWithFallback "ny_ic_switch, user/nammaYatri/res/drawable/ny_ic_switch.png"
-        , height $ V 20
-        , width $ V 40
-        , gravity RIGHT
-        ]
+    , toggleSwitchView true push
   ]
 
 contactCircleView ::  NammaSafetyScreenState -> (Action -> Effect Unit) -> Contacts -> Int -> forall w. PrestoDOM (Effect Unit) w
@@ -520,14 +546,23 @@ settingUpContentView config state push =
             , padding (Padding 16 32 16 16)
             , orientation VERTICAL
         ][
-            if config.image /= "" then 
-                imageView
-                    [ imageWithFallback "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png"
-                    , height $ V 50
-                    , margin (Margin 0 0 14 0)
-                    , width $ V 50
-                    ]
-            else linearLayout [][]
+            linearLayout [
+                height WRAP_CONTENT
+                , width MATCH_PARENT
+            ][
+                linearLayout [
+                    weight 1.0
+                ][
+                    imageView
+                        [ imageWithFallback "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png"
+                        , height $ V 50
+                        , margin (Margin 0 0 14 0)
+                        , width $ V 50
+                        , visibility if config.image /= "" then VISIBLE else GONE
+                        ]
+                ]
+                , toggleSwitchView true push
+            ]
             , textView [
                 width WRAP_CONTENT
                 , height MATCH_PARENT
@@ -1001,7 +1036,7 @@ videoRecordSOSView state push =
                 , width MATCH_PARENT
                 , background $ Color.red
                 , margin $ MarginTop 37
-                -- , id $ getNewIDWithTag "VideoCamView"
+                , id $ EHC.getNewIDWithTag "VideoCamView"
                 -- , gravity CENTER
             ][]
             , linearLayout[
@@ -1036,3 +1071,17 @@ videoRecordSOSView state push =
         ]
       ]
   ]
+
+toggleSwitchView :: Boolean -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+toggleSwitchView isActive push = 
+    linearLayout[
+        height MATCH_PARENT
+        , width WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+    ][
+        imageView [
+            imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
+            , width $ V 40
+            , height $ V 20
+        ]  
+    ]

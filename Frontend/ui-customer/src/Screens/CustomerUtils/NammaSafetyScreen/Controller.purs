@@ -93,7 +93,7 @@ eval (EditEmergencyContacts PrimaryButtonController.OnClick) state = continue st
 
 eval (GoToEducation stage) state = continue state {props {currentStage = stage}}
 
-eval (ShowAboutNammaSafety) state = continue state {props {currentStage = AboutNammaSafety}, data {showOnboarding = false}}
+eval (ShowAboutNammaSafety) state = continue state {props {currentStage = AboutNammaSafety, showOnboarding = false}}
 
 eval (GoToNextStep PrimaryButtonController.OnClick) state = do
   _ <- pure $ spy "currentStage" state.props.currentStage
@@ -101,7 +101,7 @@ eval (GoToNextStep PrimaryButtonController.OnClick) state = do
     SetTriggerCustomerSupport ->  continue state {props {currentStage = SetNightTimeSafetyAlert}}
     SetNightTimeSafetyAlert ->  continue state {props {currentStage = SetDefaultEmergencyContacts}}
     SetDefaultEmergencyContacts ->  continue state {props {currentStage = SetPersonalSafetySettings}}
-    SetPersonalSafetySettings -> continue state{data {showOnboarding = false}, props {currentStage = NammaSafetyDashboard}}
+    SetPersonalSafetySettings -> continue state{props {currentStage = NammaSafetyDashboard, showOnboarding = false}}
     _ -> continue state
 
 eval (SkipToNextStep PrimaryButtonController.OnClick) state = do

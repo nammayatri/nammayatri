@@ -1221,10 +1221,14 @@ type NammaSafetyScreenState = {
 }
 
 type NammaSafetyScreenData =  {
-  showOnboarding :: Boolean,
-  emergencyContacts :: Array Contacts
+  emergencyContacts :: Array Contacts,
+  shareEmergencyContacts :: Boolean,
+  nightTimeSafety :: Boolean,
+  triggerNYSupport :: Boolean,
+  hasCompletedSafetySetup :: Boolean
  }
 
 type NammaSafetyScreenProps =  {
+  showOnboarding :: Boolean,
   currentStage :: Stage
  }

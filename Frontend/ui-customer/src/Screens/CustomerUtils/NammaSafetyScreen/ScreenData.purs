@@ -21,10 +21,14 @@ import PrestoDOM (LetterSpacing(..))
 initData :: NammaSafetyScreenState
 initData = {
     data: {
-      showOnboarding : true,
-      emergencyContacts : [{name : "A B", number : "95645645"}]
+      emergencyContacts : [{name : "A B", number : "95645645"}],
+      shareEmergencyContacts : false,
+      nightTimeSafety : false,
+      triggerNYSupport : false,
+      hasCompletedSafetySetup : false
     },
     props: {
+      showOnboarding : true,
       currentStage : NammaSafetyDashboard
     }
 }
