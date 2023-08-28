@@ -2,10 +2,10 @@ module Components.ChooseVehicle.View where
 
 import Common.Types.App
 
-import Components.ChooseVehicle.Controller (Action(..), Config)
+import Components.ChooseVehicle.Controller (Action(..), Config, SearchRsltType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender)
 import Common.Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
@@ -42,7 +42,7 @@ view push config =
           , height WRAP_CONTENT
           , orientation VERTICAL
           ][ vehicleDetailsView push config
-           , if config.isCheckBox then capacityView push config else priceDetailsView push config
+           , if config.isCheckBox || config.searchResultType == QUOTES then capacityView push config else priceDetailsView push config
           ]
         , linearLayout
           [ height WRAP_CONTENT
@@ -54,8 +54,8 @@ view push config =
       , height WRAP_CONTENT
       , gravity RIGHT
       , afterRender push (const NoAction)
-      , visibility if config.isCheckBox then VISIBLE else GONE
-      ][checkBox push config]
+      , visibility if config.isCheckBox || config.searchResultType == QUOTES then VISIBLE else GONE
+      ][if config.isCheckBox then checkBox push config else priceDetailsView push config]
 
   ]
 
@@ -85,7 +85,7 @@ vehicleDetailsView push config =
     , linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , visibility if config.isCheckBox then GONE else VISIBLE
+      , visibility if config.isCheckBox || config.searchResultType == QUOTES then GONE else VISIBLE
       ][ linearLayout
           [ height $ V 4
           , width $ V 4
@@ -125,9 +125,8 @@ priceDetailsView push config = do
           , height WRAP_CONTENT
           , text config.price
           , color Color.black800
-          , visibility if config.isCheckBox then GONE else VISIBLE
           ]
-        <> FontStyle.subHeading1 TypoGraphy
+        <> FontStyle.h3 TypoGraphy
       , imageView
         [ imageWithFallback "ny_ic_info_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
         , width $ V 14

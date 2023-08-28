@@ -45,7 +45,7 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!))
+import Data.Array ((!!), sortBy)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int as INT
@@ -993,7 +993,7 @@ chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    quoteList = state.data.specialZoneQuoteList,
+    quoteList = sortBy (\a b ->compare (a.price) (b.price)) state.data.specialZoneQuoteList,
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText
   }
 

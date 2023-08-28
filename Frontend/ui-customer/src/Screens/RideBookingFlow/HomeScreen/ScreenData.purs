@@ -18,6 +18,7 @@ module Screens.HomeScreen.ScreenData where
 import Common.Types.App (RateCardType(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
+import Components.ChooseVehicle.Controller (SearchRsltType(..)) as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
@@ -103,6 +104,7 @@ initData = {
       , maxPrice : 0
       , basePrice : 0
       , showInfo : true
+      , searchResultType : CV.ESTIMATES
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }

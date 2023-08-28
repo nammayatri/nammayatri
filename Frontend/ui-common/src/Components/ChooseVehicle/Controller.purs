@@ -1,5 +1,10 @@
 module Components.ChooseVehicle.Controller where
 
+import Prelude (class Eq, class Show )
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+
 data Action
   = NoAction
   | OnSelect Config
@@ -21,7 +26,15 @@ type Config
     , maxPrice :: Int
     , basePrice :: Int
     , showInfo :: Boolean
+    , searchResultType :: SearchRsltType
     }
+
+data SearchRsltType = QUOTES | ESTIMATES
+
+derive instance genericSearchRsltType :: Generic SearchRsltType _
+instance eqSearchRsltType :: Eq SearchRsltType where eq = genericEq
+instance showSearchRsltType :: Show SearchRsltType where show = genericShow
+
 
 config :: Config
 config =
@@ -39,4 +52,5 @@ config =
   , maxPrice : 123
   , basePrice : 0 
   , showInfo : false
+  , searchResultType : QUOTES
   }
