@@ -25,9 +25,10 @@ import Data.Array as DA
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, discard, ($), (<<<), (==), (<>))
+import Prelude (Unit, const, pure, unit, discard, ($), (<<<), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)

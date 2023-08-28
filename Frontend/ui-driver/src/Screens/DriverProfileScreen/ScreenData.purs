@@ -24,6 +24,7 @@ import Foreign.Object (empty)
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..))
+import Services.API (GetDriverInfoResp(..), OrganizationInfo(..))
 
 initData :: DriverProfileScreenState
 initData = {
@@ -158,3 +159,43 @@ languagesChoices =
     }
   ]
 
+dummyDriverInfo :: GetDriverInfoResp
+dummyDriverInfo = GetDriverInfoResp {
+      id                    :  ""
+    , rating                :  Nothing 
+    , middleName            :  Nothing 
+    , lastName              :  Nothing 
+    , firstName             :  ""
+    , mobileNumber          :  Nothing 
+    , active                :  false
+    , mode                  :  Nothing
+    , onRide                :  false
+    , linkedVehicle         :  Nothing
+    , organization          :  organizationInfo
+    , enabled               :  false
+    , verified              :  false
+    , language              :  Nothing 
+    , referralCode          :  Nothing 
+    , alternateNumber       :  Nothing 
+    , canDowngradeToHatchback :  false
+    , canDowngradeToSedan :  false
+    , canDowngradeToTaxi :  false
+    , clientVersion         :  Nothing
+    , bundleVersion         :  Nothing
+    , gender                :  Nothing
+    , blocked               :  Nothing
+    , numberOfRides         :  Nothing
+    , paymentPending        :  false
+    , subscribed            :  false
+    , autoPayStatus         : Nothing
+}
+
+organizationInfo :: OrganizationInfo
+organizationInfo = OrganizationInfo {
+  name          : "",
+  description   : Nothing,
+  contactNumber : "",
+  status        : "",
+  enabled       : false,
+  id            : ""
+}

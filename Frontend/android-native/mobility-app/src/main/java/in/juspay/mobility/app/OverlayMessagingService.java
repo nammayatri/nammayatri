@@ -197,6 +197,15 @@ public class OverlayMessagingService extends Service {
                         case "OPEN_APP":
                             RideRequestUtils.openApplication(this);
                             break;
+                        case "OPEN_SUBSCRIPTION" :
+                            Intent intent = getApplicationContext().getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
+                            intent.putExtra("notification_type", "PAYMENT_MODE_MANUAL");
+                            intent.putExtra("entity_ids", "");
+                            intent.putExtra("entity_type", "");
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+                            NotificationUtils.cleverTapCustomEvent("ny_driver_overlay_join_now", getApplicationContext());
+                            break;
                     }
                 }
             } catch (Exception e) {

@@ -1,6 +1,7 @@
 package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.content.Context.MODE_PRIVATE;
@@ -156,6 +157,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
     protected static final int LOCATION_RESOLUTION_REQUEST_CODE = 21345;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
+    private static final int REQUEST_CODE_NOTIFICATION_PERMISSION = 10;
     //Maps
     protected static JSONObject markers = new JSONObject();
     protected static GoogleMap googleMap;
@@ -260,6 +262,15 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         } catch (Exception e) {
             Log.e(LOCATION, "Exception in request permission", e);
+        }
+    }
+
+    @JavascriptInterface
+    public void requestNotificationPermission(){
+        if (bridgeComponents.getActivity() != null && Build.VERSION.SDK_INT >= 33){
+            if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(),Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
+            }
         }
     }
 

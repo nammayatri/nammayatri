@@ -15,41 +15,38 @@
 
 module Screens.RideHistoryScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), map, (==), not,bind, (&&),(<>) ,(+), (*), (/=), discard, (/), (||), (-))
-import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..))
-import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
-import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
-import Components.IndividualRideCard.Controller as IndividualRideCardController
-import Components.ErrorModal as ErrorModalController
-import Services.API (RidesInfo(..), Status(..))
-import PrestoDOM.Types.Core (toPropValue)
-import Resource.Constants (decodeAddress)
-import Data.Array (union, (!!), filter, length)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Int(fromString, toNumber)
-import Data.Number(fromString) as NUM
-import Data.String (Pattern(..), split)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC, getRequiredTag)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
-import Data.Int (ceil)
-import Styles.Colors as Color
+import Effect.Unsafe
 import Log
-import Data.Show (show)
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Screens (ScreenName(..), getScreen)
-import Language.Strings (getString)
-import Language.Types(STR(..))
-import Storage (setValueToLocalNativeStore, KeyStore(..))
-import Engineering.Helpers.LogEvent (logEvent)
+import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.DatePickerModel as DatePickerModel
+import Components.ErrorModal as ErrorModalController
 import Components.GenericHeader as GenericHeader
+import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PaymentHistoryListItem as PaymentHistoryModelItem
 import Components.PaymentHistoryModel as PaymentHistoryModel
 import Components.PrimaryButton as PrimaryButton
+import Data.Array (union, (!!), filter, length)
+import Data.Int (ceil)
+import Data.Int (fromString, toNumber)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString) as NUM
+import Data.Show (show)
+import Data.String (Pattern(..), split)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Engineering.Helpers.LogEvent (logEvent)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC, getRequiredTag)
+import JBridge (cleverTapCustomEvent)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
+
+import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
+import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, tripDatesCount)
-import Effect.Unsafe
-import Log
+import Screens (ScreenName(..), getScreen)
+import Services.API (RidesInfo(..), Status(..))
+import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Styles.Colors as Color
 
 instance showAction :: Show Action where
   show _ = ""
@@ -100,6 +97,7 @@ data ScreenOutput = GoBack
                     | GoToReferralScreen
                     | SelectedTab RideHistoryScreenState
                     | OpenPaymentHistoryScreen RideHistoryScreenState
+                    | SubscriptionScreen RideHistoryScreenState
 
 data Action = Dummy
             | OnFadeComplete String
@@ -155,6 +153,10 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    "Join" -> do
+      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      exit $ SubscriptionScreen state
     _ -> continue state
 
 eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
