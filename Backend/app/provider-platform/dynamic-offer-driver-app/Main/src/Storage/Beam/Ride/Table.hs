@@ -114,6 +114,6 @@ rideTMod =
       numberOfDeviation = B.fieldNamed "number_of_deviation"
     }
 
-$(enableKVPG ''RideT ['id] [['bookingId]])
+$(enableKVPG ''RideT ['id] [['bookingId], ['driverId]])
 
 $(mkTableInstances ''RideT "ride" "atlas_driver_offer_bpp")
