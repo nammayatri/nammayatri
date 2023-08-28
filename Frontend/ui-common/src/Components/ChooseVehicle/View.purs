@@ -165,5 +165,5 @@ capacityView push config =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , text config.capacity
-  , margin $ MarginLeft 8
+  , margin $ Margin 8 4 0 0
   ] <> FontStyle.body3 TypoGraphy
