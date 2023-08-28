@@ -18,7 +18,7 @@ module Screens.HomeScreen.Transformer where
 import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare)
-import Components.ChooseVehicle (Config, config) as ChooseVehicle
+import Components.ChooseVehicle (Config, config, SearchRsltType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState, config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (mapWithIndex)
@@ -310,6 +310,7 @@ getSpecialZoneQuote quote index =
       , id = trim quoteEntity.id
       , capacity = getVehicleCapacity quoteEntity.vehicleVariant
       , showInfo = (getMerchant FunctionCall) == YATRI
+      , searchResultType = ChooseVehicle.QUOTES
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -366,13 +367,14 @@ getEstimates (EstimateAPIEntity estimate) index =
       , price = case estimate.totalFareRange of 
                 Nothing -> currency <> (show estimate.estimatedTotalFare)
                 Just (FareRange fareRange) -> if fareRange.minFare == fareRange.maxFare then currency <> (show estimate.estimatedTotalFare)
-                                              else (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
+                                              else  currency <> (show fareRange.minFare) <> " - " <> currency <> (show fareRange.maxFare)
       , activeIndex = 0
       , index = index
       , id = trim estimate.id
       , capacity = getVehicleCapacity estimate.vehicleVariant
       , showInfo = (getMerchant FunctionCall) == YATRI
       , basePrice = estimate.estimatedTotalFare
+      , searchResultType = ChooseVehicle.ESTIMATES
       }
 
 dummyFareRange :: FareRange
