@@ -15,7 +15,6 @@
 
 module Domain.Types.FareParameters where
 
-import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -57,7 +56,9 @@ data FParamsSlabDetails = FParamsSlabDetails
 
 type FullFareParametersProgressiveDetails = (Id FareParameters, FParamsProgressiveDetails)
 
-data FareParametersType = Progressive | Slab deriving (Show, Read, Generic)
+data FareParametersType = Progressive | Slab
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance FromBackendRow Postgres FareParametersType
 
@@ -68,16 +69,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be FareParametersType 
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be FareParametersType
-
-instance FromJSON FareParametersType where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FareParametersType where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord FareParametersType
-
-deriving stock instance Eq FareParametersType
 
 getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of

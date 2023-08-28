@@ -50,7 +50,8 @@ data Area
   = Pickup (Id SpecialLocation)
   | Drop (Id SpecialLocation)
   | Default
-  deriving (Generic, Eq, ToSchema, FromJSON, ToJSON)
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable Area
 
 instance Read Area where

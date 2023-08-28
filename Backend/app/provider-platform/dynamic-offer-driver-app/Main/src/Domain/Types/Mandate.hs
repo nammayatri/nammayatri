@@ -43,7 +43,9 @@ data Mandate = Mandate
   }
   deriving (Generic, Show)
 
-data MandateStatus = ACTIVE | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+data MandateStatus = ACTIVE | INACTIVE
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 instance FromBackendRow Postgres MandateStatus
 
@@ -52,8 +54,6 @@ instance FromField MandateStatus where
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be MandateStatus where
   sqlValueSyntax = autoSqlValueSyntax
-
-deriving stock instance Ord MandateStatus
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be MandateStatus
 

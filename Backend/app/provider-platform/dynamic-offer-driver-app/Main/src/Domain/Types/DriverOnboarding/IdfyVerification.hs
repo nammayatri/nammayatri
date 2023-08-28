@@ -30,12 +30,12 @@ import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data VerificationStatus = PENDING | VALID | INVALID
-  deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
-
-deriving stock instance Ord VerificationStatus
+  deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data ImageExtractionValidation = Success | Skipped | Failed
-  deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField VerificationStatus where
   fromField = fromFieldEnum
@@ -56,8 +56,6 @@ instance FromBackendRow Postgres ImageExtractionValidation
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be VerificationStatus
 
 instance FromBackendRow Postgres VerificationStatus
-
-deriving stock instance Ord ImageExtractionValidation
 
 instance IsString ImageExtractionValidation where
   fromString = show

@@ -11,10 +11,10 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.CallbackRequest where
 
-import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres (Postgres)
@@ -40,7 +40,8 @@ data CallbackRequestE e = CallbackRequest
 type CallbackRequest = CallbackRequestE 'AsEncrypted
 
 data CallbackRequestStatus = PENDING | RESOLVED | CLOSED
-  deriving (Show, Read, Eq, Ord, Generic)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance FromField CallbackRequestStatus where
   fromField = fromFieldEnum
@@ -54,9 +55,3 @@ instance FromBackendRow Postgres CallbackRequestStatus
 
 instance IsString CallbackRequestStatus where
   fromString = show
-
-instance FromJSON CallbackRequestStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON CallbackRequestStatus where
-  toJSON = A.genericToJSON A.defaultOptions

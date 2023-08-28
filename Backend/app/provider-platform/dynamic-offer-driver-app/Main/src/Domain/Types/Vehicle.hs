@@ -35,7 +35,8 @@ import Kernel.Utils.GenericPretty
 import Servant.API
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable Category
 
 instance FromField Category where
@@ -51,8 +52,6 @@ instance FromBackendRow Postgres Category
 instance IsString Category where
   fromString = show
 
-deriving stock instance Ord Category
-
 instance FromHttpApiData Category where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -60,7 +59,8 @@ instance FromHttpApiData Category where
 
 ----
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable RegistrationCategory
 
 instance FromField RegistrationCategory where
@@ -75,8 +75,6 @@ instance FromBackendRow Postgres RegistrationCategory
 
 instance IsString RegistrationCategory where
   fromString = show
-
-deriving stock instance Ord RegistrationCategory
 
 instance FromHttpApiData RegistrationCategory where
   parseUrlPiece = parseHeader . DT.encodeUtf8

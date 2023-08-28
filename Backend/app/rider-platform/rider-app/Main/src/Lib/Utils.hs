@@ -64,8 +64,6 @@ instance FromBackendRow Postgres DomainDO.DriverOfferStatus
 instance IsString DomainDO.DriverOfferStatus where
   fromString = show
 
-deriving stock instance Ord DomainDO.DriverOfferStatus
-
 -- instance FromField DomainFPT.FareProductType where
 --   fromField = fromFieldEnum
 
@@ -128,8 +126,6 @@ instance FromBackendRow Postgres Payment.Currency
 instance IsString Payment.Currency where
   fromString = show
 
-deriving stock instance Ord Payment.Currency
-
 instance FromField Payment.TransactionStatus where
   fromField = fromFieldEnum
 
@@ -142,8 +138,6 @@ instance FromBackendRow Postgres Payment.TransactionStatus
 
 instance IsString Payment.TransactionStatus where
   fromString = show
-
-deriving stock instance Ord Payment.TransactionStatus
 
 instance FromField VehVar.VehicleVariant where
   fromField = fromFieldEnum

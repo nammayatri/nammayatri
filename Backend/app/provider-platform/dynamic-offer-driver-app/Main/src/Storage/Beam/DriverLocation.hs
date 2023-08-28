@@ -66,11 +66,9 @@ instance ModelMeta DriverLocationT where
 
 type DriverLocation = DriverLocationT Identity
 
-instance FromJSON DriverLocation where
-  parseJSON = A.genericParseJSON A.defaultOptions
+deriving anyclass instance FromJSON DriverLocation
 
-instance ToJSON DriverLocation where
-  toJSON = A.genericToJSON A.defaultOptions
+deriving anyclass instance ToJSON DriverLocation
 
 deriving stock instance Show DriverLocation
 

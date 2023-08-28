@@ -19,7 +19,6 @@ module Domain.Types.Message.MessageReport where
 import qualified Data.Aeson as A
 import Data.ByteString
 import qualified Data.Map as M
-import Data.OpenApi
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -56,7 +55,9 @@ instance FromField (Text, Text) => FromBackendRow Postgres MessageDynamicFieldsT
 instance IsString MessageDynamicFieldsType where
   fromString = show
 
-data DeliveryStatus = Success | Failed | Queued | Sending deriving (Generic, ToSchema, Show, Read, ToJSON, FromJSON, Eq)
+data DeliveryStatus = Success | Failed | Queued | Sending
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField DeliveryStatus where
   fromField = fromFieldEnum
@@ -70,8 +71,6 @@ instance FromBackendRow Postgres DeliveryStatus
 
 instance IsString DeliveryStatus where
   fromString = show
-
-deriving stock instance Ord DeliveryStatus
 
 data MessageReport = MessageReport
   { messageId :: Id Msg.Message,

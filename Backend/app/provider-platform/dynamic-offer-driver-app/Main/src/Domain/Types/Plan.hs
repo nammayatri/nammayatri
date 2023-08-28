@@ -75,7 +75,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be PaymentMode where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be PaymentMode
 
-data Frequency = DAILY | WEEKLY | MONTHLY deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+data Frequency = DAILY | WEEKLY | MONTHLY
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 instance FromField Frequency where
   fromField = fromFieldEnum
@@ -90,9 +92,9 @@ instance FromBackendRow Postgres Frequency
 instance IsString Frequency where
   fromString = show
 
-deriving stock instance Ord Frequency
-
-data PlanType = DEFAULT | SUBSCRIPTION deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+data PlanType = DEFAULT | SUBSCRIPTION
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 instance FromField PlanType where
   fromField = fromFieldEnum
@@ -107,14 +109,13 @@ instance FromBackendRow Postgres PlanType
 instance IsString PlanType where
   fromString = show
 
-deriving stock instance Ord PlanType
-
 data PlanBaseAmount
   = PERRIDE_BASE HighPrecMoney
   | DAILY_BASE HighPrecMoney
   | WEEKLY_BASE HighPrecMoney
   | MONTHLY_BASE HighPrecMoney
-  deriving (Generic, Eq, ToSchema, FromJSON, ToJSON)
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable PlanBaseAmount
 
 instance FromField PlanBaseAmount where
@@ -129,8 +130,6 @@ instance FromBackendRow Postgres PlanBaseAmount
 
 instance IsString PlanBaseAmount where
   fromString = show
-
-deriving stock instance Ord PlanBaseAmount
 
 instance Read PlanBaseAmount where
   readsPrec d' =

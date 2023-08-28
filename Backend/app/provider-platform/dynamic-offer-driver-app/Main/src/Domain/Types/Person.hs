@@ -45,7 +45,8 @@ data Driver -- = Person
 data Role
   = DRIVER
   | ADMIN
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField Role where
   fromField = fromFieldEnum
@@ -60,8 +61,6 @@ instance FromBackendRow Postgres Role
 instance IsString Role where
   fromString = show
 
-deriving stock instance Ord Role
-
 instance FromHttpApiData Role where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -74,7 +73,8 @@ instance ToHttpApiData Role where
 
 -------------------------------------------------------------------------------------------
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance FromField IdentifierType where
   fromField = fromFieldEnum
@@ -89,8 +89,6 @@ instance FromBackendRow Postgres IdentifierType
 instance IsString IdentifierType where
   fromString = show
 
-deriving stock instance Ord IdentifierType
-
 instance FromHttpApiData IdentifierType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -103,7 +101,8 @@ instance ToHttpApiData IdentifierType where
 
 --------------------------------------------------------------------------------------------------
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField Gender where
   fromField = fromFieldEnum
@@ -117,8 +116,6 @@ instance FromBackendRow Postgres Gender
 
 instance IsString Gender where
   fromString = show
-
-deriving stock instance Ord Gender
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8

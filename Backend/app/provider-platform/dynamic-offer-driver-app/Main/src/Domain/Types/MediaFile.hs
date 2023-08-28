@@ -23,14 +23,12 @@ import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
-data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink deriving (Read, Show, Generic, ToSchema, ToJSON, FromJSON)
+data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField MediaType where
   fromField = fromFieldEnum
-
-deriving stock instance Ord MediaType
-
-deriving stock instance Eq MediaType
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be MediaType
 

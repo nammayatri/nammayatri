@@ -47,7 +47,8 @@ data FeedbackFormAPIEntity = FeedbackFormAPIEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data Category = RIDE | DRIVER | VEHICLE
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField Category where
   fromField = fromFieldEnum
@@ -62,8 +63,6 @@ instance FromBackendRow Postgres Category
 instance IsString Category where
   fromString = show
 
-deriving stock instance Ord Category
-
 data FeedbackFormItem = FeedbackFormItem
   { id :: Id FeedbackFormItem,
     rating :: Maybe Int,
@@ -74,7 +73,8 @@ data FeedbackFormItem = FeedbackFormItem
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data AnswerType = Text | Checkbox | Radio
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField AnswerType where
   fromField = fromFieldEnum
@@ -88,8 +88,6 @@ instance FromBackendRow Postgres AnswerType
 
 instance IsString AnswerType where
   fromString = show
-
-deriving stock instance Ord AnswerType
 
 data FeedbackFormRes = FeedbackFormRes
   { categoryName :: Category,

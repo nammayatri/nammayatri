@@ -34,7 +34,8 @@ import Kernel.Types.Id
 import Servant.API
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField Status where
   fromField = fromFieldEnum
@@ -48,8 +49,6 @@ instance FromBackendRow Postgres Status
 
 instance IsString Status where
   fromString = show
-
-deriving stock instance Ord Status
 
 instance FromHttpApiData Status where
   parseUrlPiece = parseHeader . DT.encodeUtf8

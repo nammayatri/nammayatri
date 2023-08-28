@@ -16,7 +16,6 @@
 module Domain.Types.Message.Message where
 
 import Data.Map as HM
-import Data.OpenApi hiding (description, title)
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -28,7 +27,9 @@ import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
-data MessageType = Action Text | Read deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+data MessageType = Action Text | Read
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField MessageType where
   fromField = fromFieldEnum
@@ -39,10 +40,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be MessageType where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be MessageType
 
 instance FromBackendRow Postgres MessageType
-
-deriving stock instance Ord MessageType
-
-deriving stock instance Eq MessageType
 
 instance IsString MessageType where
   fromString = show

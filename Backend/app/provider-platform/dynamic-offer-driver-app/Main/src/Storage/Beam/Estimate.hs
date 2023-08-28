@@ -25,6 +25,7 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -54,7 +55,7 @@ data EstimateT f = EstimateT
     vehicleVariant :: B.C f Variant.Variant,
     minFare :: B.C f Money,
     maxFare :: B.C f Money,
-    estimateBreakupList :: B.C f [Domain.EstimateBreakup],
+    estimateBreakupList :: B.C f [Domain.EstimateBreakupD 'Unsafe],
     nightShiftCharge :: B.C f (Maybe Money),
     oldNightShiftCharge :: B.C f (Maybe Centesimal),
     nightShiftStart :: B.C f (Maybe TimeOfDayText),

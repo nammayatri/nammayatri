@@ -15,7 +15,6 @@
 
 module Domain.Types.SearchRequestForDriver where
 
-import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -35,7 +34,8 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 
 data DriverSearchRequestStatus = Active | Inactive
-  deriving (Show, Read, Eq, Generic)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
   deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
 instance FromField DriverSearchRequestStatus where
@@ -51,19 +51,12 @@ instance FromBackendRow Postgres DriverSearchRequestStatus
 instance IsString DriverSearchRequestStatus where
   fromString = show
 
-instance FromJSON DriverSearchRequestStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverSearchRequestStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord DriverSearchRequestStatus
-
 data SearchRequestForDriverResponse
   = Accept
   | Reject
   | Pulled
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Read, Eq)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRequestForDriverResponse
 
 instance FromField SearchRequestForDriverResponse where
@@ -78,8 +71,6 @@ instance FromBackendRow Postgres SearchRequestForDriverResponse
 
 instance IsString SearchRequestForDriverResponse where
   fromString = show
-
-deriving stock instance Ord SearchRequestForDriverResponse
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,

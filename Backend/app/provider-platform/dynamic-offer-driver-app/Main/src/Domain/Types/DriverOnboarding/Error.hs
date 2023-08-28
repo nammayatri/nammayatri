@@ -48,7 +48,8 @@ data DriverOnboardingError
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
   | RCActivationFailedPaymentDue Text
-  deriving (Generic, Eq, Show, Read, IsBecknAPIError, ToSchema, ToJSON, FromJSON)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
@@ -64,8 +65,6 @@ instance FromBackendRow Postgres DriverOnboardingError
 
 instance IsString DriverOnboardingError where
   fromString = show
-
-deriving stock instance Ord DriverOnboardingError
 
 instance IsBaseError DriverOnboardingError where
   toMessage = \case

@@ -34,7 +34,8 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   { batchSplitSize :: Int,
     batchSplitDelay :: Seconds
   }
-  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance FromField BatchSplitByPickupDistance where
   fromField = fromFieldEnum
@@ -51,12 +52,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistan
 
 instance FromBackendRow Postgres [BatchSplitByPickupDistance]
 
-deriving stock instance Ord PoolSortingType
-
-deriving stock instance Eq PoolSortingType
-
-deriving stock instance Ord BatchSplitByPickupDistance
-
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
     maxNumberOfBatches :: Int,
@@ -69,7 +64,8 @@ type HasDriverPoolBatchesConfig r =
   )
 
 data PoolSortingType = Intelligent | Random
-  deriving (Generic, FromDhall, Show, Read, FromJSON, ToJSON)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, FromDhall)
 
 instance IsString PoolSortingType where
   fromString = show

@@ -15,7 +15,6 @@
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
-import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -71,7 +70,9 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data FarePolicyType = Progressive | Slabs deriving (Show, Read, Generic)
+data FarePolicyType = Progressive | Slabs
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance FromField FarePolicyType where
   fromField = fromFieldEnum
@@ -85,16 +86,6 @@ instance FromBackendRow Postgres FarePolicyType
 
 instance IsString FarePolicyType where
   fromString = show
-
-instance FromJSON FarePolicyType where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FarePolicyType where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord FarePolicyType
-
-deriving stock instance Eq FarePolicyType
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

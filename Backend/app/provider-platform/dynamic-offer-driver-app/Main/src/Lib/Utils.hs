@@ -24,8 +24,6 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 -- import Kernel.External.Types
 
 -- import Kernel.Storage.Esqueleto.Types
-
-import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DomainDI
 -- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
 -- import qualified Domain.Types.DriverOnboarding.Image as Image
@@ -365,12 +363,6 @@ instance FromBackendRow Postgres DomainODC.VehicleClassCheckType
 --   fromField = fromFieldEnum
 
 -- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
-
-deriving stock instance Ord FareProductD.Area
-
-deriving stock instance Read PlatformFee
-
-deriving stock instance Ord PlatformFee
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>

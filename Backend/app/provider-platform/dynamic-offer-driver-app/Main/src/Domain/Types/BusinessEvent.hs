@@ -15,7 +15,6 @@
 
 module Domain.Types.BusinessEvent where
 
-import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -43,7 +42,8 @@ data BusinessEvent = BusinessEvent
   deriving (Generic)
 
 data EventType = DRIVER_IN_POOL | RIDE_COMMENCED | DRIVER_ASSIGNED | RIDE_CONFIRMED
-  deriving (Show, Eq, Read, Generic, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField EventType where
   fromField = fromFieldEnum
@@ -55,19 +55,12 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be EventType
 
 instance FromBackendRow Postgres EventType
 
-instance FromJSON EventType where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON EventType where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord EventType
-
 instance IsString EventType where
   fromString = show
 
 data WhenPoolWasComputed = ON_SEARCH | ON_CONFIRM | ON_REALLOCATION
-  deriving (Show, Eq, Read, Generic, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 instance FromField WhenPoolWasComputed where
   fromField = fromFieldEnum
@@ -79,13 +72,5 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be WhenPoolWasComputed
 
 instance FromBackendRow Postgres WhenPoolWasComputed
 
-instance FromJSON WhenPoolWasComputed where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON WhenPoolWasComputed where
-  toJSON = A.genericToJSON A.defaultOptions
-
 instance IsString WhenPoolWasComputed where
   fromString = show
-
-deriving stock instance Ord WhenPoolWasComputed
