@@ -44,8 +44,6 @@ import Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
-import Kernel.Storage.Hedis as Redis (HedisFlow)
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -58,7 +56,6 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
@@ -188,7 +185,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       requestedVehicleVariant = booking.vehicleVariant
     }
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
@@ -206,17 +203,15 @@ arrivedAtPickup rideId req = do
     isValidRideStatus status = status == DRide.NEW
 
 otpRideCreate ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    Redis.HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasHttpClientOptions r c,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
-    CoreMetrics m,
     HasPrettyLogger m r,
     EventStreamFlow m r
   ) =>

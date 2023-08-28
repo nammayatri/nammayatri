@@ -36,14 +36,15 @@ import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Utils.Common (CacheConfig)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
-import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
@@ -180,7 +181,8 @@ data AppEnv = AppEnv
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    eventRequestCounter :: EventCounterMetric
   }
   deriving (Generic)
 
@@ -197,6 +199,7 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  eventRequestCounter <- registerEventRequestCounterMetric
   esqLocationDBEnv <- prepareEsqDBEnv esqLocationDBCfg loggerEnv
   esqLocationDBRepEnv <- prepareEsqDBEnv esqLocationDBRepCfg loggerEnv
   let modifierFunc = ("dynamic-offer-driver-app:" <>)

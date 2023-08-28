@@ -22,7 +22,6 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.TransporterConfig
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -31,10 +30,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
-findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
 
-updateFCMConfig :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> BaseUrl -> Text -> m ()
+updateFCMConfig :: MonadFlow m => Id Merchant -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
   now <- getCurrentTime
   updateOneWithKV
@@ -44,7 +43,7 @@ updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
     ]
     [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
 
-updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Text -> m ()
+updateReferralLinkPassword :: MonadFlow m => Id Merchant -> Text -> m ()
 updateReferralLinkPassword (Id merchantId) newPassword = do
   now <- getCurrentTime
   updateOneWithKV
@@ -53,7 +52,7 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
     ]
     [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => TransporterConfig -> m ()
+update :: MonadFlow m => TransporterConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateOneWithKV

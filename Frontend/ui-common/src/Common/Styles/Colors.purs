@@ -33,6 +33,9 @@ blueGrey = "#9899a1"
 blue600 :: Color
 blue600 = "#f4F7FF"
 
+blue700 :: Color
+blue700 = "#80B2FF"
+
 blue800 :: Color
 blue800 = "#2194FF"
 

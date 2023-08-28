@@ -17,15 +17,14 @@ module Domain.Action.UI.Whatsapp (module Domain.Action.UI.Whatsapp, module Reexp
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
+import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Whatsapp.Interface.Types as Reexport
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
-import Tools.Metrics (CoreMetrics)
 import Tools.Whatsapp as Whatsapp
 
 newtype OptAPIRequest = OptAPIRequest
@@ -33,7 +32,7 @@ newtype OptAPIRequest = OptAPIRequest
   }
   deriving (Show, Eq, Generic, ToSchema, FromJSON, ToJSON)
 
-whatsAppOptAPI :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DM.Merchant) -> OptAPIRequest -> m APISuccess
+whatsAppOptAPI :: ServiceFlow m r => (Id DP.Person, Id DM.Merchant) -> OptAPIRequest -> m APISuccess
 whatsAppOptAPI (personId, _) OptAPIRequest {..} = do
   DP.Person {..} <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")

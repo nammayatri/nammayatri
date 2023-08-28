@@ -51,6 +51,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONException;
@@ -115,7 +116,7 @@ public class NotificationUtils {
     public static void deRegisterCallback(CallBack notificationCallback) {
         callBack.remove(notificationCallback);
     }
-
+    public static int chatNotificationId = 18012023;
     public static void showAllocationNotification(Context context, JSONObject data, JSONObject entity_payload) {
         try {
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
@@ -300,7 +301,7 @@ public class NotificationUtils {
         String notificationType = data.getString("notification_type");
         String channelId;
         String merchantType = context.getString(R.string.service);
-        String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
+        String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
         if (ALLOCATION_TYPE.equals(notificationType)) {
             System.out.println("showNotification:- " + notificationType);
@@ -357,6 +358,9 @@ public class NotificationUtils {
         if (notificationType.equals(ALLOCATION_TYPE)) {
             System.out.println("In clean notification if");
         }
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                
         if (TRIP_CHANNEL_ID.equals(notificationType)) {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -368,10 +372,15 @@ public class NotificationUtils {
         if (TRIP_FINISHED.equals(notificationType)) {
             Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-            if (key.equals("USER"))
-                mFirebaseAnalytics.logEvent("ny_user_ride_completed", params);
+            if (key.equals("USER")){
+                mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
+                String rideTaken = sharedPref.getString("HAS_TAKEN_FIRST_RIDE", "false");
+                if(rideTaken.equals("false")){
+                    mFirebaseAnalytics.logEvent("ny_user_first_ride_completed",params);
+                }
+            }
             else
-                mFirebaseAnalytics.logEvent("ride_completed", params);
+                mFirebaseAnalytics.logEvent("ride_completed",params);
         }
         if (CANCELLED_PRODUCT.equals(notificationType) ||REALLOCATE_PRODUCT.equals(notificationType)) {
             Bundle params = new Bundle();
@@ -496,7 +505,6 @@ public class NotificationUtils {
     }
 
     public static void createChatNotification(String sentBy, String message, Context context) {
-        final int chatNotificationId = 18012023;
         createChatNotificationChannel(context);
         Intent notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         JSONObject payload = new JSONObject();
@@ -571,6 +579,13 @@ public class NotificationUtils {
                     default : return NO_VARIANT;
                 }
             default:return NO_VARIANT;
+        }
+    }
+
+    public static void cleverTapCustomEvent(String event, Context context) {
+        CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+        if (clevertapDefaultInstance != null){
+            clevertapDefaultInstance.pushEvent(event);
         }
     }
 }

@@ -40,18 +40,15 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment ()
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
@@ -64,7 +61,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
 import Tools.Maps (LatLong)
-import Tools.Metrics (CoreMetrics, HasBAPMetrics, incrementRideCreatedRequestCount)
+import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 
 data OnUpdateReq
@@ -235,16 +232,14 @@ data BreakupPriceInfo = BreakupPriceInfo
 
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasCacheConfig r,
+    CacheFlow m r,
     EsqDBFlow m r,
-    L.MonadFlow m,
+    MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
-    CoreMetrics m,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HedisFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasBAPMetrics m r,
     EventStreamFlow m r
@@ -359,7 +354,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
           }
 onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
-  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
   case cancellationSource of
     SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
@@ -385,7 +380,7 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   Notify.notifyOnBookingCancelled booking cancellationSource
 onUpdate ValidatedBookingReallocationReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
-  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
   _ <- QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
   _ <- QRide.updateStatus ride.id SRide.CANCELLED
   QBCR.upsert bookingCancellationReason
@@ -398,7 +393,7 @@ onUpdate ValidatedDriverArrivedReq {..} = do
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
 onUpdate ValidatedEstimateRepetitionReq {..} = do
-  bookingCancellationReason <- buildBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
   logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
   _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
@@ -411,15 +406,11 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   Notify.notifyOnEstimatedReallocated booking estimate.id
 
 validateRequest ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    CoreMetrics m,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    MonadFlow m,
-    MonadReader r m,
-    HedisFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   OnUpdateReq ->
@@ -485,23 +476,21 @@ validateRequest EstimateRepetitionReq {..} = do
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
   return $ ValidatedEstimateRepetitionReq {..}
 
-buildBookingCancellationReason ::
-  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) =>
+mkBookingCancellationReason ::
   Id SRB.Booking ->
   Maybe (Id SRide.Ride) ->
   SBCR.CancellationSource ->
   Id DMerchant.Merchant ->
-  m SBCR.BookingCancellationReason
-buildBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
-  return
-    SBCR.BookingCancellationReason
-      { bookingId = bookingId,
-        rideId = mbRideId,
-        merchantId = Just merchantId,
-        source = cancellationSource,
-        reasonCode = Nothing,
-        reasonStage = Nothing,
-        additionalInfo = Nothing,
-        driverCancellationLocation = Nothing,
-        driverDistToPickup = Nothing
-      }
+  SBCR.BookingCancellationReason
+mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
+  SBCR.BookingCancellationReason
+    { bookingId = bookingId,
+      rideId = mbRideId,
+      merchantId = Just merchantId,
+      source = cancellationSource,
+      reasonCode = Nothing,
+      reasonStage = Nothing,
+      additionalInfo = Nothing,
+      driverCancellationLocation = Nothing,
+      driverDistToPickup = Nothing
+    }

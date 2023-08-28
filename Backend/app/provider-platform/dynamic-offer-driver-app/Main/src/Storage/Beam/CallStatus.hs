@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.CallStatus where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -28,15 +26,14 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Call.CallStatus where
@@ -48,6 +45,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Call.CallStatus whe
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Call.CallStatus
 
 instance FromBackendRow Postgres Call.CallStatus
+
+deriving stock instance Ord Call.CallStatus
+
+instance IsString Call.CallStatus where
+  fromString = show
 
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,
@@ -67,28 +69,7 @@ instance B.Table CallStatusT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta CallStatusT where
-  modelFieldModification = callStatusTMod
-  modelTableName = "call_status"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type CallStatus = CallStatusT Identity
-
-callStatusTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CallStatusT)
-callStatusTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "call_status"
-    <> B.modifyTableFields callStatusTMod
-
-instance FromJSON CallStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON CallStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Ord Call.CallStatus
-
-deriving stock instance Show CallStatus
 
 callStatusTMod :: CallStatusT (B.FieldModification (B.TableField CallStatusT))
 callStatusTMod =
@@ -103,22 +84,6 @@ callStatusTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-instance IsString Call.CallStatus where
-  fromString = show
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-callStatusToHSModifiers :: M.Map Text (A.Value -> A.Value)
-callStatusToHSModifiers =
-  M.empty
-
-callStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
-callStatusToPSModifiers =
-  M.empty
-
-instance Serialize CallStatus where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''CallStatusT ['id] [['callId]])
+
+$(mkTableInstances ''CallStatusT "call_status" "atlas_driver_offer_bpp")

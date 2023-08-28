@@ -18,7 +18,6 @@ module Storage.Queries.DriverOnboarding.AadhaarVerification where
 
 import Domain.Types.DriverOnboarding.AadhaarVerification
 import Domain.Types.Person (Person)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
@@ -27,19 +26,19 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
 
-create :: (L.MonadFlow m, Log m) => AadhaarVerification -> m ()
+create :: MonadFlow m => AadhaarVerification -> m ()
 create = createWithKV
 
-findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe AadhaarVerification)
+findByDriverId :: MonadFlow m => Id Person -> m (Maybe AadhaarVerification)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamAV.driverId $ Se.Eq driverId]
 
-deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByDriverId :: MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq driverId)]
 
-findByAadhaarNumberHash :: (L.MonadFlow m, Log m) => DbHash -> m (Maybe AadhaarVerification)
+findByAadhaarNumberHash :: MonadFlow m => DbHash -> m (Maybe AadhaarVerification)
 findByAadhaarNumberHash aadhaarHash = findOneWithKV [Se.Is BeamAV.aadhaarNumberHash $ Se.Eq (Just aadhaarHash)]
 
-findByPhoneNumberAndUpdate :: (L.MonadFlow m, Log m, MonadTime m) => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
+findByPhoneNumberAndUpdate :: MonadFlow m => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
 findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
   now <- getCurrentTime
   updateWithKV
@@ -52,7 +51,7 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
     ]
     [Se.Is BeamAV.driverId (Se.Eq $ getId personId)]
 
-deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId :: MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq personId)]
 
 instance FromTType' BeamAV.AadhaarVerification AadhaarVerification where

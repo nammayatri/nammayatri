@@ -16,18 +16,17 @@
 module Storage.Queries.TripTerms where
 
 import Domain.Types.TripTerms as DTT
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TripTerms as BeamTT
 
-createTripTerms :: (L.MonadFlow m, Log m) => TripTerms -> m ()
+createTripTerms :: MonadFlow m => TripTerms -> m ()
 createTripTerms = createWithKV
 
-findById'' :: (L.MonadFlow m, Log m) => Id TripTerms -> m (Maybe TripTerms)
+findById'' :: MonadFlow m => Id TripTerms -> m (Maybe TripTerms)
 findById'' tripTermsId = findOneWithKV [Se.Is BeamTT.id $ Se.Eq (getId tripTermsId)]
 
 instance FromTType' BeamTT.TripTerms TripTerms where

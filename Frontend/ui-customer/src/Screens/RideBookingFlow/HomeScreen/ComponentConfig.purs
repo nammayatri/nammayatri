@@ -45,7 +45,7 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!))
+import Data.Array ((!!), sortBy)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int as INT
@@ -147,8 +147,8 @@ cancelAppConfig state = let
       cornerRadius = Corners 15.0 true true false false,
       coverImageConfig {
         imageUrl = if state.data.driverInfoCardState.distance <= 500
-                    then "ny_ic_driver_near,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
-                    else "ny_ic_driver_started,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_started.png"
+                    then if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW"  then "ny_ic_driver_near_auto," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near_auto" else "ny_ic_driver_near," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_near"
+                    else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then  "ny_ic_driver_started_auto,"  <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started_auto" else "ny_ic_driver_started," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver_started"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -741,7 +741,7 @@ chatViewConfig state = let
       , messagesSize = state.data.messagesSize
       , sendMessageActive = state.props.sendMessageActive
       , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber
-      , suggestionsList = if (state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) || state.data.messagesSize == "-1") then getCustomerSuggestions state else getSuggestionsfromKey "customerDefaultBP"
+      , suggestionsList = if (state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) || state.data.messagesSize == "-1") then getCustomerSuggestions state else []
       , hint = (getString MESSAGE)
       , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
       , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
@@ -758,6 +758,7 @@ chatViewConfig state = let
       , white900 = Color.white900
       , black800 = Color.black800
       , black700 = Color.black700
+      , canSendSuggestion = state.props.canSendSuggestion
   }
   in chatViewConfig'
 
@@ -831,7 +832,7 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating}}
+ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating, feedbackList = state.data.rideRatingState.feedbackList}}
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
@@ -995,7 +996,8 @@ chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    quoteList = state.data.specialZoneQuoteList
+    quoteList = sortBy (\a b ->compare a.price b.price) state.data.specialZoneQuoteList,
+    showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText
   }
 
 specialLocationIcons :: ZoneType -> String

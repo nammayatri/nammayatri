@@ -25,15 +25,13 @@ where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.OnboardingDocumentConfig as DTO
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
 
-create :: (L.MonadFlow m, Log m) => OnboardingDocumentConfig -> m ()
+create :: MonadFlow m => OnboardingDocumentConfig -> m ()
 create = Queries.create
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DTO.OnboardingDocumentConfig]
@@ -58,5 +56,5 @@ makeMerchantIdKey merchantId = "driver-offer:CachedQueries:OnboardingDocumentCon
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => OnboardingDocumentConfig -> m ()
+update :: MonadFlow m => OnboardingDocumentConfig -> m ()
 update = Queries.update

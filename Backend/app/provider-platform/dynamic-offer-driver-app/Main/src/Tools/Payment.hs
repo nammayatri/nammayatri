@@ -17,28 +17,27 @@ module Tools.Payment where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import Tools.Metrics (CoreMetrics)
 
-createOrder :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfig Payment.createOrder
 
-orderStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfig Payment.orderStatus
 
-offerList :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
+offerList :: ServiceFlow m r => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
 offerList = runWithServiceConfig Payment.offerList
 
-mandateRevoke :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
+mandateRevoke :: ServiceFlow m r => Id DM.Merchant -> Payment.MandateRevokeReq -> m Payment.MandateRevokeRes
 mandateRevoke = runWithServiceConfig Payment.mandateRevoke
 
 runWithServiceConfig ::
-  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
+  ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
   req ->

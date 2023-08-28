@@ -33,5 +33,5 @@ defaultDBSyncConfig =
     { _emptyRetry = 50,
       _rateLimitN = 200,
       _rateLimitWindow = 100,
-      _streamReadCount = 1000
+      _streamReadCount = 200 -- 1000
     }

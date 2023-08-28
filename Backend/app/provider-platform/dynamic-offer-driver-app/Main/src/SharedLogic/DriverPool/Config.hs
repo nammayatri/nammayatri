@@ -20,8 +20,8 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
@@ -32,7 +32,7 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   deriving (Generic)
 
 getDriverPoolConfig ::
-  (MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Meters ->
   m DriverPoolConfig

@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
@@ -28,15 +26,23 @@ import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize as Se
 
 instance IsString Vehicle.Variant where
   fromString = show
+
+deriving stock instance Ord Domain.WaitingCharge
+
+deriving stock instance Ord Domain.WaitingChargeInfo
+
+deriving stock instance Ord Domain.NightShiftCharge
+
+deriving stock instance Ord Domain.PlatformFeeCharge
 
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),
@@ -58,30 +64,9 @@ instance B.Table FarePolicySlabsDetailsSlabT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FarePolicySlabsDetailsSlabT where
-  modelFieldModification = farePolicySlabsDetailsSlabTMod
-  modelTableName = "fare_policy_slabs_details_slab"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlabT Identity
 
 type FullFarePolicySlabsDetailsSlab = (KTI.Id Domain.FarePolicy, Domain.FPSlabsDetailsSlab)
-
-instance FromJSON FarePolicySlabsDetailsSlab where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FarePolicySlabsDetailsSlab where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FarePolicySlabsDetailsSlab
-
-deriving stock instance Ord Domain.WaitingCharge
-
-deriving stock instance Ord Domain.WaitingChargeInfo
-
-deriving stock instance Ord Domain.NightShiftCharge
-
-deriving stock instance Ord Domain.PlatformFeeCharge
 
 farePolicySlabsDetailsSlabTMod :: FarePolicySlabsDetailsSlabT (B.FieldModification (B.TableField FarePolicySlabsDetailsSlabT))
 farePolicySlabsDetailsSlabTMod =
@@ -98,19 +83,6 @@ farePolicySlabsDetailsSlabTMod =
       nightShiftCharge = B.fieldNamed "night_shift_charge"
     }
 
-instance Serialize FarePolicySlabsDetailsSlab where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-farePolicySlabsDetailsSlabToHSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicySlabsDetailsSlabToHSModifiers =
-  M.empty
-
-farePolicySlabsDetailsSlabToPSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicySlabsDetailsSlabToPSModifiers =
-  M.empty
-
 $(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [['farePolicyId]])
+
+$(mkTableInstances ''FarePolicySlabsDetailsSlabT "fare_policy_slabs_details_slab" "atlas_driver_offer_bpp")

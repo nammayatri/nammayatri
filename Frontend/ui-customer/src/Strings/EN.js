@@ -570,9 +570,9 @@ const englishStrings = {
   "AMAZING": "Amazing!!! 🤩",
   "ASKED_FOR_EXTRA_FARE":  "Asked for Extra Fare",
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "Anything that you would like to tell us? (Optional)",
+  "PLEASE_WAIT" : "Please wait",
   "PLATFORM_FEE" : "Platform Fee",
   "FINDING_QUOTES_TEXT": "Searching for cabs around",
-  "PLEASE_WAIT": "Please wait!",
   "FASTER" : "Faster",
   "NEW_" : "New",
   "PLATFORM_FEE" : "Platform Fee",
@@ -586,5 +586,11 @@ const englishStrings = {
   "GET_OTP_VIA_WHATSAPP" : "Get OTP via WhatsApp",
   "OR" : "Or",
   "WAITING_CHARGE_AFTER_3_MINUTES" : "Waiting charge is zero for the first 3 minutes. You will be charged for ₹1.per minute of wait time after that",
-  "WAITING_CHARGES" : "Waiting Charges"
+  "WAITING_CHARGES" : "Waiting Charges",
+  "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(Helps driver confirm it is you)",
+  "LETS_GET_YOU_TRIP_READY" : "Let’s get you trip-ready!", 
+  "GOT_AN_OTP" : "Got an OTP?",
+  "JUST_ONE_LAST_THING" : "Just one last thing",
+  "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional"
 }

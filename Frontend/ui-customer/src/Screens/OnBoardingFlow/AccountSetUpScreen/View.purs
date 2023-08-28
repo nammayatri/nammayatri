@@ -144,7 +144,7 @@ nameEditTextView state push =
           textView $ 
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text "(Helps driver confirm it is you)"
+          , text (getString HELPS_DRIVER_CONFIRM_ITS_YOU)
           , singleLine true
           , color Color.black600
           , margin $ MarginLeft 7

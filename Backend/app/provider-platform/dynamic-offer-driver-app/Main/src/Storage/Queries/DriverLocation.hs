@@ -39,13 +39,13 @@ import Lib.Utils (buildRadiusWithin'')
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverLocation as BeamDL
 
-create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+create :: MonadFlow m => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 create drLocationId latLong updateTime merchantId = do
   now <- getCurrentTime
   dbConf <- getLocationDbBeamConfig
   void $ L.runDB dbConf $ L.insertRows $ B.insert (BeamCommon.driverLocation BeamCommon.atlasDB) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
 
-findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverLocation)
+findById :: MonadFlow m => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
   dbConf <- getLocationDbBeamConfig
   geoms <-
@@ -59,7 +59,7 @@ findById (Id driverLocationId) = do
     Right (Just geom) -> fromTType' geom
     _ -> return Nothing
 
-upsertGpsCoord :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
+upsertGpsCoord :: MonadFlow m => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   now <- getCurrentTime
   res <- findById drLocationId
@@ -78,7 +78,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
           }
   return updatedRecord
   where
-    updateRecords :: L.MonadFlow m => Text -> LatLong -> UTCTime -> UTCTime -> m ()
+    updateRecords :: MonadFlow m => Text -> LatLong -> UTCTime -> UTCTime -> m ()
     updateRecords drLocationId' latLong' calculationTime' now' = do
       dbConf <- getLocationDbBeamConfig
       void $
@@ -95,7 +95,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
               )
               (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ drLocationId')
 
-deleteById :: L.MonadFlow m => Id Person -> m ()
+deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id driverId') = do
   dbConf <- getLocationDbBeamConfig
   void $
@@ -107,7 +107,7 @@ deleteById (Id driverId') = do
         )
 
 getDriverLocsFromMerchId ::
-  (L.MonadFlow m, MonadTime m, Log m) =>
+  MonadFlow m =>
   Maybe Seconds ->
   LatLong ->
   Int ->
@@ -135,7 +135,7 @@ byDist :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
 byDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> 'SRID=4326;POINT(" <> show lon <> " " <> show lat <> ")'"))
 
 findAllDriverLocations ::
-  (L.MonadFlow m, MonadTime m, Log m) =>
+  MonadFlow m =>
   [Id Person] ->
   Maybe Seconds ->
   UTCTime ->
@@ -155,7 +155,7 @@ findAllDriverLocations driverIds mbDriverPositionInfoExpiry now = do
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 getDriverLocations ::
-  (L.MonadFlow m, MonadTime m, Log m) =>
+  MonadFlow m =>
   UTCTime ->
   m [DriverLocation]
 getDriverLocations before = do
@@ -172,7 +172,7 @@ getDriverLocations before = do
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 getDriverLocs ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   [Id Person] ->
   Id Merchant ->
   m [DriverLocation]

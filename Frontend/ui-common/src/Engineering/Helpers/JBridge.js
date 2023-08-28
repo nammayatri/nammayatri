@@ -2,6 +2,8 @@ import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
 const { JBridge } = window;
 var mainFiber = null;
+let suggestions = require("../Engineering.Helpers.Suggestions")
+var timer;
 
 // exports._keyStoreEntryPresent = function(alias) {
 //   return function() {
@@ -575,25 +577,35 @@ export const updateRoute = function (data) {
 };
 
 export const storeCallBackMessageUpdated = function (cb) {
-      return function (chatChannelID) {
-        return function(chatUserId) {
-          return function(action) {
-              return function (){
-                var callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize){
-                  if(messagesSize == undefined) {
-                    messagesSize = "-1"
-                  }
-                  cb(action (message) (sentBy) (timeStamp) (messagesSize))();
-                });
-                window.storeCallBackMessageUpdated = callback;
-                if(JBridge.storeCallBackMessageUpdated) {
-                  JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
-                }
-              };
-            };
-          };
+  return function (chatChannelID) {
+    return function (chatUserId) {
+      return function (action) {
+        return function () {
+          var callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
+            if (messagesSize == undefined) {
+              messagesSize = "-1"
+            }
+            let decodedMessage = suggestions.getMessageFromKey(message)(getKeyInSharedPrefKeys("LANGUAGE_KEY"))
+            let messageObj = { "message": decodedMessage, "sentBy": sentBy, "timeStamp": timeStamp, type: "Text", delay: 0 }
+            window.chatMessages = window.chatMessages || [];
+            window.chatMessages.push(messageObj);
+            if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
+              cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+            }
+          });
+          window.storeCallBackMessageUpdated = callback;
+          if (JBridge.storeCallBackMessageUpdated) {
+            JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+          }
         };
       };
+    };
+  };
+};
+
+export const getChatMessages = function(string) {
+    return [].concat(window.chatMessages !== undefined ? window.chatMessages : []);
+}
 
 export const dateCallback = function (cb, action) {
     var callback = function (){
@@ -649,14 +661,18 @@ export const startChatListenerService = function() {
 
 export const stopChatListenerService = function () {
   if (JBridge.stopChatListenerService) {
+    window.chatMessages = undefined;
     JBridge.stopChatListenerService();
   }
 }
 
 export const sendMessage = function (message) {
-  console.log("Send Message Called");
   if (JBridge.sendMessage) {
-    JBridge.sendMessage(message);
+    if(timer) clearTimeout(timer);
+    const fn = function () {
+      return JBridge.sendMessage(message);
+    }
+    timer = setTimeout(fn, 200);
   }
 };
 
@@ -883,6 +899,7 @@ export const getCurrentLatLong = function () {
   }
 };
 
+
 export const isLocationEnabled = function (unit) {
   return function () {
     if (window.__OS == "IOS")
@@ -991,10 +1008,13 @@ export const minimizeApp = function (str) {
   window.JBridge.minimizeApp();
 };
 export const toast = function (str) {
-  if(window.JBridge.toaster)
-    window.JBridge.toaster(str);
-  else
-    window.JBridge.toast(str);
+  if (window.__OS == "IOS")
+    window.JBridge.toast(str); //remove once toast is fixed in iOS.
+    else 
+      if(window.JBridge.toaster)
+        window.JBridge.toaster(str);
+      else
+        window.JBridge.toast(str);
 };
 
 export const firebaseLogEventWithParams = function (event) {
@@ -1650,11 +1670,9 @@ export const cleverTapCustomEvent = function(event){
 export const cleverTapCustomEventWithParams = function (event) {
   return function (paramKey) {
     return function (paramValue) {
-      return function () {
-        if(window.JBridge.cleverTapCustomEventWithParams){
-            window.JBridge.cleverTapCustomEventWithParams(event, paramKey,paramValue);
-        }
-    };
+      if(window.JBridge.cleverTapCustomEventWithParams){
+          window.JBridge.cleverTapCustomEventWithParams(event, paramKey,paramValue);
+      }
   };
  };
 };
@@ -1778,4 +1796,10 @@ export const  horizontalScrollToPos = function (id, childId, focus) {
   }
   function between(x, min, max) {
     return x >= min && x <= max;
+  }
+
+  export const askNotificationPermission = function () {
+    if (window.JBridge.requestNotificationPermission){
+      return window.JBridge.requestNotificationPermission();
+    }
   }

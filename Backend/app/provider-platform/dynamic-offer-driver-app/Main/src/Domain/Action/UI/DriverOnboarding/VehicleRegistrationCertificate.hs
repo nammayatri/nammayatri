@@ -52,6 +52,7 @@ import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude hiding (find)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -156,24 +157,25 @@ verifyRC isDashboard mbMerchant (personId, merchantId) req@DriverRCReq {..} mbVa
         Nothing -> throwImageError imageId ImageExtractionFailed
 
   mVehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleRegistrationCertNumber
-  case mVehicleRC of
-    Just vehicleRC -> do
-      when (isJust mbVariant) $
-        RCQuery.updateVehicleVariant vehicleRC.id mbVariant -- update vehicleVariant of RC is passed hardcoded from dashboard
-      when (isNothing multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
-      mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id person.id
-      case mRCAssociation of
-        Just assoc -> do
-          now <- getCurrentTime
-          when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
-            createRCAssociation person.id vehicleRC
-        Nothing -> do
-          -- if no association to driver, create one. No need to verify RC as already verified except in fallback case
-          if isNothing dateOfRegistration
-            then createRCAssociation person.id vehicleRC
-            else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
-    Nothing ->
-      verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
+  Redis.whenWithLockRedis (rcVerificationLockKey vehicleRegistrationCertNumber) 60 $ do
+    case mVehicleRC of
+      Just vehicleRC -> do
+        when (isJust mbVariant) $
+          RCQuery.updateVehicleVariant vehicleRC.id mbVariant -- update vehicleVariant of RC is passed hardcoded from dashboard
+        when (isNothing multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
+        mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id person.id
+        case mRCAssociation of
+          Just assoc -> do
+            now <- getCurrentTime
+            when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
+              createRCAssociation person.id vehicleRC
+          Nothing -> do
+            -- if no association to driver, create one. No need to verify RC as already verified except in fallback case
+            if isNothing dateOfRegistration
+              then createRCAssociation person.id vehicleRC
+              else verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
+      Nothing ->
+        verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
 
   return Success
   where
@@ -266,10 +268,11 @@ compareRegistrationDates actualDate providedDate =
 
 linkRCStatus :: (Id Person.Person, Id DM.Merchant) -> RCStatusReq -> Flow APISuccess
 linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
+  driverInfo <- DriverInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  unless (driverInfo.subscribed) $ throwError (RCActivationFailedPaymentDue driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
-
   if req.isActivate
     then do
       validateRCActivation driverId merchantId rc
@@ -474,3 +477,6 @@ removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
 
 convertUTCTimetoDate :: UTCTime -> Text
 convertUTCTimetoDate utctime = T.pack (DT.formatTime DT.defaultTimeLocale "%d/%m/%Y" utctime)
+
+rcVerificationLockKey :: Text -> Text
+rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber

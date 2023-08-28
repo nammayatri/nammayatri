@@ -15,13 +15,11 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 
 data FareProducts = FareProducts
@@ -31,7 +29,7 @@ data FareProducts = FareProducts
   }
 
 getPickupSpecialLocation ::
-  (MonadFlow m, MonadReader r m, HasEsqEnv m r, EsqDBReplicaFlow m r) =>
+  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
@@ -41,7 +39,7 @@ getPickupSpecialLocation merchantId pickupSpecialLocation = do
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::
-  (MonadFlow m, MonadReader r m, HasEsqEnv m r, EsqDBReplicaFlow m r) =>
+  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
@@ -50,7 +48,7 @@ getDropSpecialLocation merchantId dropSpecialLocation = do
   -- dropSpecialLocationPriority <- QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
-getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FareProducts
+getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FareProducts
 getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
   mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
   mbDropSpecialLocation <- mapM (getDropSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong toLocationLatLong

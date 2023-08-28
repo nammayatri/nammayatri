@@ -16,7 +16,6 @@
 module Storage.Queries.SearchRequest where
 
 import Domain.Types.SearchRequest as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -26,23 +25,23 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
-createDSReq :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
+createDSReq :: MonadFlow m => SearchRequest -> m ()
 createDSReq = createWithKV
 
-create :: (L.MonadFlow m, Log m) => SearchRequest -> m ()
+create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = QSRL.create dsReq.fromLocation >> QSRL.create dsReq.toLocation >> createDSReq dsReq
 
-findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
+findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
-getRequestIdfromTransactionId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe (Id SearchRequest))
+getRequestIdfromTransactionId :: MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
 getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSR.transactionId $ Se.Eq tId] <&> fmap Domain.id
 
-findByTransactionId :: (L.MonadFlow m, Log m) => Text -> m (Maybe (Id SearchRequest))
+findByTransactionId :: MonadFlow m => Text -> m (Maybe (Id SearchRequest))
 findByTransactionId transactionId = findOneWithKV [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]] <&> (Domain.id <$>)
 
 updateAutoAssign ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id SearchRequest ->
   Bool ->
   m ()

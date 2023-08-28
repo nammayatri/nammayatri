@@ -93,6 +93,9 @@ data KeyStore = USER_NAME
                 | SHOW_PAYMENT_MODAL
                 | PAYMENT_STATUS_POOLING
                 | NEGOTIATION_UNIT_CABS
+                | DISABLE_WIDGET
+                | SHOW_JOIN_NAMMAYATRI
+                | DRIVER_SUBSCRIBED
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

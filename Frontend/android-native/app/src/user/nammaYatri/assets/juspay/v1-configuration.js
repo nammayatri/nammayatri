@@ -35,6 +35,7 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY","FIREBASE"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
+    "dashboardUrl" : "https://nammayatri.in/open?source=in-app",
     "quoteListItemConfig": {
       "primaryButtonCorner": 8.0,
       "expiresColor" : "#E55454",
@@ -49,6 +50,7 @@ window.getMerchantConfig = function () {
       "enableLocationTagbar" : "true",
       "resultsCardCornerRadius" : 20.0,
       "showRateCardDetails" : true,
+      "showAdditionalChargesText" : false,
       "lottieHeight": 96,
       "lottieWidth": 96,
       "primaryButtonHeight": 60,
@@ -136,7 +138,7 @@ window.getMerchantConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subTitle": ""
+      "subTitle": "ಆಂಗ್ಲ"
     }, {
       "name": "ಕನ್ನಡ",
       "value": "KN_IN",

@@ -29,6 +29,7 @@ data Action = StartRide
             | MessageCustomer
             | TimerCallback String String Int
             | WaitingInfo
+            | LoadMessages
 
 type Config = { 
   startRideActive :: Boolean,

@@ -19,12 +19,10 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
-import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
-import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -33,7 +31,6 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
@@ -45,14 +42,11 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
-    Metrics.CoreMetrics m,
-    HasCacheConfig r,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    Log m,
-    L.MonadFlow m
+    MonadFlow m
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -72,12 +66,10 @@ sendSearchRequestToDrivers' ::
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
-    Metrics.CoreMetrics m,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
-    Log m
+    EsqLocRepDBFlow m r
   ) =>
   DriverPoolConfig ->
   SearchRequest ->

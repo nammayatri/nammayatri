@@ -32,15 +32,12 @@ import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis
-import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -89,13 +86,11 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
 
 cancelBooking ::
   ( EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m,
     HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    HasCacheConfig r
+    HasLongDurationRetryCfg r c
   ) =>
   DRB.Booking ->
   Id DM.Merchant ->

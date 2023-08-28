@@ -41,7 +41,6 @@ import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
 import Kernel.Streaming.MonadProducer
@@ -57,9 +56,6 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 -- import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
-import Storage.CachedQueries.CacheConfig
--- import qualified Storage.CachedQueries.Merchant as QMerchant
--- import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -129,14 +125,12 @@ search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHand
   return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    CoreMetrics m,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m,
@@ -160,13 +154,11 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, dSearchRes.shortestRouteInfo)
 
 rentalSearch ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HedisFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    CoreMetrics m,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasBAPMetrics m r
   ) =>
@@ -186,11 +178,9 @@ rentalSearch personId bundleVersion clientVersion device req = do
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,
-    CoreMetrics m,
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
-    MonadTime m
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]
   ) =>
   Id Person.Person ->
   m ()

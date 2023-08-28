@@ -274,13 +274,13 @@ getVehicleImage :: String -> String
 getVehicleImage variant = do
         let url = (getAssetStoreLink FunctionCall)
         case fetchVehicleVariant variant of 
-          Just ST.TAXI -> "ic_sedan_non_ac,"<> url <>"ic_sedan_non_ac.png"
+          Just ST.TAXI -> "ic_sedan,"<> url <>"ic_sedan.png"
           Just ST.TAXI_PLUS -> "ic_sedan_ac,"<> url <>"ic_sedan_ac.png"
           Just ST.SEDAN -> "ic_sedan,"<> url <>"ic_sedan.png"
           Just ST.SUV -> "ic_suv,"<> url <>"ic_suv.png"
           Just ST.HATCHBACK -> "ic_hatchback,"<> url <>"ic_hatchback.png"
           Just ST.AUTO_RICKSHAW -> "ic_vehicle_side,"<> url <>"ic_auto_side_view.png"
-          _ -> "ic_sedan_non_ac,"<> url <>"ic_sedan_non_ac.png"
+          _ -> "ic_sedan,"<> url <>"ic_sedan.png"
 
 getVehicleCapacity :: String -> String 
 getVehicleCapacity variant = case getMerchant FunctionCall of

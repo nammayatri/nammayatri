@@ -30,14 +30,13 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, logInfo)
+import Kernel.Utils.Common (CacheFlow, addUTCTime, logInfo)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
@@ -51,8 +50,7 @@ sendSearchRequestToDrivers ::
     Esq.EsqDBReplicaFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
-    EncFlow m r,
-    Redis.HedisFlow m r
+    EncFlow m r
   ) =>
   DSR.SearchRequest ->
   DST.SearchTry ->
@@ -96,8 +94,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
       ( MonadFlow m,
-        Redis.HedisFlow m r,
-        MonadReader r m
+        Redis.HedisFlow m r
       ) =>
       Int ->
       UTCTime ->

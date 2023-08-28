@@ -17,7 +17,6 @@ module Storage.Queries.DriverBlockReason where
 
 import Data.Function
 import Domain.Types.DriverBlockReason
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -25,7 +24,7 @@ import Kernel.Types.Id
 import Sequelize as Se
 import qualified Storage.Beam.DriverBlockReason as BeamDBR
 
-findAll :: (L.MonadFlow m, Log m) => m [DriverBlockReason]
+findAll :: MonadFlow m => m [DriverBlockReason]
 findAll = findAllWithKV [Se.Is BeamDBR.reasonCode $ Se.Not $ Se.Eq ""]
 
 instance FromTType' BeamDBR.DriverBlockReason DriverBlockReason where

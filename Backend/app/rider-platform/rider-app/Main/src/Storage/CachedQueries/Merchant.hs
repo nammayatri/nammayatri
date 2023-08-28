@@ -27,19 +27,17 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
-loadAllBaps :: (L.MonadFlow m, Log m) => m [Merchant]
+loadAllBaps :: MonadFlow m => m [Merchant]
 loadAllBaps = Queries.findAll
 
-findById :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m) => Id Merchant -> m (Maybe Merchant)
+findById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
@@ -90,5 +88,5 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 makeSubscriberIdKey :: ShortId Subscriber -> Text
 makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
+update :: MonadFlow m => Merchant -> m ()
 update = Queries.update

@@ -46,6 +46,7 @@ window.getMerchantConfig = function () {
     "autoConfirmingLoaderColor": "#80B2FF",
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
+    "dashboardUrl" : "https://yatrisathi.in/open/?source=in-app",
     "quoteListItemConfig": {
       "primaryButtonCorner": 8.0,
       "expiresColor" : "#E55454",
@@ -60,6 +61,7 @@ window.getMerchantConfig = function () {
       "enableLocationTagbar" : "true",
       "resultsCardCornerRadius" : 20.0,
       "showRateCardDetails" : true,
+      "showAdditionalChargesText" : true,
       "lottieHeight": 96,
       "lottieWidth": 96,
       "primaryButtonHeight": 60,
@@ -168,7 +170,7 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION" : "पश्चिम बंगाल सरकार के सूचना प्रौद्योगिकी और इलेक्ट्रॉनिक्स विभाग, मोनीभंडार (5वीं और 6वीं मंजिल), वेबेल भवन का परिसर, ब्लॉक - ईपी और जीपी, सेक्टर-वी, साल्ट लेक, कोलकाता - 700091",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "यात्री साथी सहायता को कॉल करें",
-      "YOUR_FEEDBACK_HELPS_US" : "आपका फीडबैक हमें Yatri Sathi अनुभव को बेहतर बनाने में मदद करता है"
+      "YOUR_FEEDBACK_HELPS_US" : "आपका फीडबैक हमें यात्री साथी अनुभव को बेहतर बनाने में मदद करता है"
     },
     "bengaliStrings": {
       "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
@@ -182,18 +184,18 @@ window.getMerchantConfig = function () {
       "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\n আপনি আপনার যাত্রী সাথী ড্রাইভারকে জিজ্ঞাসা করে একটি রেফারেল কোড পেতে পারেন।",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "আপনার অবস্থান আমাদের সিস্টেমকে ট্যাক্সি দ্বারা আশেপাশের সমস্ত স্থান ম্যাপ করতে এবং আপনাকে দ্রুততম রাইড করতে সাহায্য করে৷",
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
-      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Yatri Sathi-এ স্বাগতম \nরাইড বুকিং শুরু করতে, অনুগ্রহ করে আমাদের আপনাকে খুঁজে পেতে অনুমতি দিন!",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "যাত্রী সাথী-এ স্বাগতম \nরাইড বুকিং শুরু করতে, অনুগ্রহ করে আমাদের আপনাকে খুঁজে পেতে অনুমতি দিন!",
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CORPORATE_ADDRESS_DESCRIPTION" : "পশ্চিমবঙ্গ সরকারের তথ্য প্রযুক্তি ও ইলেকট্রনিক্স বিভাগ, মনিভান্ডার (৫ম এবং ৬ষ্ঠ তলা), ওয়েবেল ভবনের প্রাঙ্গণ, ব্লক - ইপি অ্যান্ড জিপি, সেক্টর-ভি, সল্টলেক, কলকাতা - 700091",
       "REGISTERED_ADDRESS_DESCRIPTION" : "পশ্চিমবঙ্গ সরকারের তথ্য প্রযুক্তি ও ইলেকট্রনিক্স বিভাগ, মনিভান্ডার (৫ম এবং ৬ষ্ঠ তলা), ওয়েবেল ভবনের প্রাঙ্গণ, ব্লক - ইপি অ্যান্ড জিপি, সেক্টর-ভি, সল্টলেক, কলকাতা - 700091",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CALL_NAMMA_YATRI_SUPPORT" : "সহযাত্রী সমর্থন কল করুন",
-      "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের Yatri Sathi অভিজ্ঞতা উন্নত করতে সাহায্য করে"
+      "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের যাত্রী সাথী অভিজ্ঞতা উন্নত করতে সাহায্য করে"
     },
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subTitle": ""
+      "subTitle": "ইংরেজি"
     }, {
       "name": "বাংলা",
       "value": "BN_IN",
@@ -230,6 +232,7 @@ window.getMerchantConfig = function () {
 }
   , "SUPPORT_EMAIL" : "yatrisathi.support@wb.gov.in"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+  , "internationalNumberEnabled" : true
   })
 }
 

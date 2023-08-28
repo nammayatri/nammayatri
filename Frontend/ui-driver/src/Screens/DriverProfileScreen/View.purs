@@ -1093,13 +1093,13 @@ infoView state push =
 getRcDetails :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action, isEditable :: Boolean}
 getRcDetails state = do
   let config = state.data.activeRCData
-  ([{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_RC) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
+  ([{ key : (getString RC_STATUS) , value : Just $ if config.rcStatus then (getString ACTIVE_STR) else (getString INACTIVE_RC), action : NoAction , isEditable : false }
   , { key : (getString REG_NUMBER) , value : Just config.rcDetails.certificateNumber , action : NoAction , isEditable : false }]
   <> (if config.rcStatus then
       [{ key : (getString TYPE) , value : Just (getVehicleType state.data.driverVehicleType) , action : NoAction , isEditable : false }]
      else [])
-  <>[{ key :(getString MODEL_NAME) , value : config.rcDetails.vehicleModel , action :  NoAction , isEditable : false}
-  , { key : (getString COLOUR) , value : config.rcDetails.vehicleColor, action :NoAction , isEditable : false } ]
+  <>[{ key :(getString MODEL_NAME) , value : if config.rcStatus then config.rcDetails.vehicleModel else Just "NA", action :  NoAction , isEditable : false}
+  , { key : (getString COLOUR) , value : if config.rcStatus then config.rcDetails.vehicleColor else Just "NA", action :NoAction , isEditable : false } ]
   <> (if not null state.data.rcDataArray then
       [{ key : "" , value : Just (getString EDIT_RC), action :UpdateRC config.rcDetails.certificateNumber config.rcStatus , isEditable : false }]
     else [])
@@ -1247,7 +1247,7 @@ detailsListViewComponent state push config =
                 , color case item.value of
                           Nothing -> Color.blue900
                           Just val -> do
-                                      let isRcActive = val == (getString ACTIVE_RC)
+                                      let isRcActive = val == (getString ACTIVE_STR)
                                       let isRcInActive = val == (getString INACTIVE_RC)
                                       let isRCEdit = val == (getString EDIT_RC)
                                       if isRcActive then Color.green900 else if isRcInActive then Color.red else if isRCEdit then Color.blue900 else Color.black900
@@ -1409,7 +1409,7 @@ driverAboutMeArray state =  [{ key : (getString LANGUAGES_SPOKEN) , value : ((ge
 
 getLanguagesSpoken :: Array String -> Maybe String
 getLanguagesSpoken languages =
-  if (length languages >2) then Just $ (intercalate ", " (take 2 languages)) <> "+1"
+  if (length languages >2) then Just $ (intercalate ", " (take 2 languages)) <> " +" <> show (length languages - 2)
     else if (length languages > 0) then Just (intercalate ", " languages)
     else Nothing
 

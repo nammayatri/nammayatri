@@ -21,6 +21,7 @@ import Kernel.Types.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.SessionizerMetrics.Kafka.Config
+import Prometheus
 
 data Event p = Event
   { id :: Text, -- id of the event
@@ -44,10 +45,10 @@ instance FromJSON p => FromJSON (Event p)
 data EventTriggeredBy = User | System
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
-data EventStreamConfig = KafkaStream KafkaConfig | LogStream Text
+data EventStreamConfig = KafkaStream KafkaConfig | PrometheusStream Text | LogStream Text
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
-data EventStreamName = KAFKA_STREAM | REDIS_STREAM | LOG_STREAM
+data EventStreamName = KAFKA_STREAM | REDIS_STREAM | PROMETHEUS_STREAM | LOG_STREAM
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
 data Service = DYNAMIC_OFFER_DRIVER_APP | RIDER_APP
@@ -63,4 +64,4 @@ data EventStreamMap = EventStreamMap
 data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
-type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap])
+type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasField "eventRequestCounter" r (Vector (Text, Text, Text) Counter))

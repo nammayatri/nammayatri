@@ -32,12 +32,10 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Serviceability
 import Kernel.Storage.Esqueleto
-import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
@@ -46,7 +44,6 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.DirectionsCache as SDC
 import qualified SharedLogic.MerchantConfig as SMC
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.MerchantConfig as QMC
@@ -83,9 +80,7 @@ data OneWaySearchRes = OneWaySearchRes
   }
 
 hotSpotUpdate ::
-  ( HasCacheConfig r,
-    CoreMetrics m,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -99,12 +94,9 @@ hotSpotUpdate merchantId mbFavourite req = case mbFavourite of
     frequencyUpdator merchantId req.origin.gps (bool NonManualPickup ManualPickup (req.isSourceManuallyMoved == Just True))
 
 updateForSpecialLocation ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    HasCacheConfig r,
+  ( EsqDBFlow m r,
+    CacheFlow m r,
     EncFlow m r,
-    HedisFlow m r,
-    CoreMetrics m,
     EventStreamFlow m r
   ) =>
   Id Merchant ->
@@ -121,16 +113,13 @@ updateForSpecialLocation merchantId req = do
         Nothing -> return ()
 
 oneWaySearch ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HedisFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
-    CoreMetrics m,
     HasBAPMetrics m r,
-    L.MonadFlow m,
+    MonadFlow m,
     EventStreamFlow m r
   ) =>
   Id Person.Person ->

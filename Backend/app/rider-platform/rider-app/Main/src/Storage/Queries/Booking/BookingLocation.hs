@@ -18,7 +18,6 @@ module Storage.Queries.Booking.BookingLocation where
 
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.LocationAddress
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -26,13 +25,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 
-create :: (L.MonadFlow m, Log m) => BookingLocation -> m ()
+create :: MonadFlow m => BookingLocation -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id BookingLocation -> m (Maybe BookingLocation)
+findById :: MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
 findById (Id bookingLocationId) = findOneWithKV [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
 
-updateAddress :: (L.MonadFlow m, MonadTime m, Log m) => Id BookingLocation -> LocationAddress -> m ()
+updateAddress :: MonadFlow m => Id BookingLocation -> LocationAddress -> m ()
 updateAddress (Id blId) LocationAddress {..} = do
   now <- getCurrentTime
   updateOneWithKV

@@ -13,26 +13,25 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as BST
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import Domain.Types.Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+-- import Kernel.Types.Common hiding (id)
+
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
@@ -64,26 +63,7 @@ instance B.Table VehicleRegistrationCertificateT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta VehicleRegistrationCertificateT where
-  modelFieldModification = vehicleRegistrationCertificateTMod
-  modelTableName = "vehicle_registration_certificate"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
-
-vehicleRegistrationCertificateTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleRegistrationCertificateT)
-vehicleRegistrationCertificateTable =
-  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "vehicle_registration_certificate"
-    <> B.modifyTableFields vehicleRegistrationCertificateTMod
-
-instance FromJSON VehicleRegistrationCertificate where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON VehicleRegistrationCertificate where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show VehicleRegistrationCertificate
 
 deriving stock instance Ord Domain.VerificationStatus
 
@@ -111,19 +91,6 @@ vehicleRegistrationCertificateTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize VehicleRegistrationCertificate where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-vehicleRegistrationCertificateToHSModifiers :: M.Map Text (A.Value -> A.Value)
-vehicleRegistrationCertificateToHSModifiers =
-  M.empty
-
-vehicleRegistrationCertificateToPSModifiers :: M.Map Text (A.Value -> A.Value)
-vehicleRegistrationCertificateToPSModifiers =
-  M.empty
-
 $(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
+
+$(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate" "atlas_driver_offer_bpp")

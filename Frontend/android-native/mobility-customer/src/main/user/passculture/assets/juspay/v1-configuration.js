@@ -54,6 +54,7 @@ window.getMerchantConfig = function () {
       "enableLocationTagbar" : "false",
       "resultsCardCornerRadius" : 8.0,
       "showRateCardDetails" : false,
+      "showAdditionalChargesText" : false,
       "lottieHeight": 40,
       "lottieWidth": 40,
       "primaryButtonHeight": 48
@@ -169,6 +170,7 @@ window.getMerchantConfig = function () {
   , "navigationAppConfig" : {
     "query" : "https://waze.com/ul?ll=%f,%f"
   , "packageName" : "com.waze"
+  , "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app"
 }
   })
 }

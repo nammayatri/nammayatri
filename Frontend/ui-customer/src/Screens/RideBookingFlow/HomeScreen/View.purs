@@ -140,7 +140,7 @@ screen initialState =
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
-              SettingPrice -> do 
+              SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 pure unit
               RideAccepted -> do
@@ -248,10 +248,7 @@ view push state =
             ( \action -> do
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
-                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then do
-                  let delay = if os == "IOS" then 2000.0 else 5000.0 
-                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState else pure unit
-                  push OpenChatScreen 
+                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen 
                 else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
@@ -281,7 +278,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if os == "IOS" then 20 else if showLabel then 70 else 34)
+                    , padding (PaddingBottom if showLabel then (if os == "IOS" then 53 else 70) else (if os == "IOS" then 10 else 34))
                     , gravity CENTER
                     , orientation VERTICAL
                     ]
@@ -307,7 +304,7 @@ view push state =
                             false ->  (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker") <> "," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dest_marker.png"
                         , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
                         ]
-                    ] 
+                    ]
                 ]
             , homeScreenView push state
             , buttonLayoutParentView push state
@@ -380,7 +377,7 @@ showLiveStatsDashboard push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "webview")
-      , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.4")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
+      , url (getValueFromConfig "dashboardUrl")
       ]]
 
 driverCallPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1102,7 +1099,7 @@ completedRideDetails state push =
       ][  imageView
           [ height $ V 40
           , width $ V 40
-          , imageWithFallback "ic_headphone_white,https://assets.juspay.in/nammayatri/images/user/ic_headphone_white.png"
+          , imageWithFallback $ "ny_ic_headphone_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_headphone_white.png"
           , onClick push $ const Support
           ]
       ]
@@ -1708,13 +1705,13 @@ locationTrackingData lazyCheck =
 ----------- confirmPickUpLocationView -------------
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
-  let zonePadding = (ceil (toNumber (screenWidth unit))/8)
+  let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
   in
   linearLayout
     [ orientation VERTICAL
     , height WRAP_CONTENT
     , width MATCH_PARENT
-    , clickable true
+    , disableClickFeedback true
     , background Color.transparent
     , visibility if state.props.currentStage == ConfirmingLocation then VISIBLE else GONE
     , padding $ PaddingTop 16
@@ -1737,7 +1734,7 @@ confirmPickUpLocationView push state =
             , gravity CENTER
             , padding (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
-            , visibility if state.props.confirmLocationCategory /= "" && os /= "IOS" then VISIBLE else GONE
+            , visibility if state.props.confirmLocationCategory /= "" then VISIBLE else GONE
             ] [ imageView
                 [ width (V 20)
                 , height (V 20)
@@ -1927,7 +1924,6 @@ rideTrackingView push state =
                     ]
                     [ if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
                         DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
-
                       else
                         emptyTextView state
                     ]

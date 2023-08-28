@@ -32,25 +32,25 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 
-create :: (L.MonadFlow m, Log m) => DE.Exophone -> m ()
+create :: MonadFlow m => DE.Exophone -> m ()
 create = createWithKV
 
-findAllMerchantIdsByPhone :: (L.MonadFlow m, Log m) => Text -> m [Id DM.Merchant]
+findAllMerchantIdsByPhone :: MonadFlow m => Text -> m [Id DM.Merchant]
 findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantId <$>)
 
-findAllByPhone :: (L.MonadFlow m, Log m) => Text -> m [Exophone]
+findAllByPhone :: MonadFlow m => Text -> m [Exophone]
 findAllByPhone phone = do
   merchIds <- findAllMerchantIdsByPhone phone
   findAllWithKV [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
 
-findAllByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m [Exophone]
+findAllByMerchantId :: MonadFlow m => Id DM.Merchant -> m [Exophone]
 findAllByMerchantId (Id merchantId) = do
   findAllWithKV [Se.Is BeamE.merchantId $ Se.Eq merchantId]
 
-findAllExophones :: (L.MonadFlow m, Log m) => m [Exophone]
+findAllExophones :: MonadFlow m => m [Exophone]
 findAllExophones = findAllWithDb [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
 
-updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
+updateAffectedPhones :: MonadFlow m => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
@@ -73,7 +73,7 @@ updateAffectedPhones primaryPhones = do
                 B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
           )
 
-deleteByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m ()
+deleteByMerchantId :: MonadFlow m => Id DM.Merchant -> m ()
 deleteByMerchantId (Id merchantId) = deleteWithKV [Se.Is BeamE.merchantId (Se.Eq merchantId)]
 
 instance FromTType' BeamE.Exophone Exophone where

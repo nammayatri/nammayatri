@@ -59,7 +59,7 @@ primaryButtonConfig state =
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
-        , margin = if os == "IOS" then (MarginBottom 0) else (MarginBottom 24)
+        , margin = (MarginBottom 24)
         , visibility = if ((length state.data.contactsList) == 3) then GONE else VISIBLE
         }
   in
@@ -86,6 +86,8 @@ removeContactPopUpModelConfig state =
           , color = Color.white900
           , strokeColor = Color.red
           }
+        , backgroundClickable = false
+        , buttonLayoutMargin = MarginBottom if os == "IOS" then 0 else 24
         }
   in
     popUpConfig'

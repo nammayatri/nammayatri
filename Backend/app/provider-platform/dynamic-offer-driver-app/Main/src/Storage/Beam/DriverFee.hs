@@ -14,13 +14,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverFee where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -33,10 +31,10 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverFee as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import EulerHS.Prelude (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.DriverFeeStatus where
@@ -61,8 +59,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FeeType wher
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FeeType
 
 instance FromBackendRow Postgres Domain.FeeType
-
-deriving stock instance Ord Domain.FeeType
 
 data DriverFeeT f = DriverFeeT
   { id :: B.C f Text,
@@ -91,20 +87,7 @@ instance B.Table DriverFeeT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverFeeT where
-  modelFieldModification = driverFeeTMod
-  modelTableName = "driver_fee"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverFee = DriverFeeT Identity
-
-instance FromJSON DriverFee where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverFee where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverFee
 
 driverFeeTMod :: DriverFeeT (B.FieldModification (B.TableField DriverFeeT))
 driverFeeTMod =
@@ -128,19 +111,6 @@ driverFeeTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize DriverFee where
-  put = error "undefined"
-  get = error "undefined"
+$(enableKVPG ''DriverFeeT ['id] [['driverId]])
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverFeeToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverFeeToHSModifiers =
-  M.empty
-
-driverFeeToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverFeeToPSModifiers =
-  M.empty
-
-$(enableKVPG ''DriverFeeT ['id] [['driverId]]) -- check if mId needed
+$(mkTableInstances ''DriverFeeT "driver_fee" "atlas_driver_offer_bpp")

@@ -24,17 +24,13 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
-import qualified Tools.Metrics as Metrics
 
 unblockDriver ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
-    Metrics.CoreMetrics m,
-    HasCacheConfig r,
-    EsqDBFlow m r,
-    Log m
+    CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   Job 'UnblockDriver ->
   m ExecutionResult

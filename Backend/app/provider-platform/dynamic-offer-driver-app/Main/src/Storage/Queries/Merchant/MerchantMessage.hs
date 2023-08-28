@@ -22,15 +22,14 @@ where
 
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantMessage
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 
-findByMerchantIdAndMessageKey :: (L.MonadFlow m, Log m) => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantIdAndMessageKey :: MonadFlow m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantIdAndMessageKey (Id merchantId) messageKey = findOneWithKV [Se.And [Se.Is BeamMM.merchantId $ Se.Eq merchantId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
 
 instance FromTType' BeamMM.MerchantMessage MerchantMessage where

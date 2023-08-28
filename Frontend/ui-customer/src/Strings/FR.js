@@ -494,5 +494,10 @@ export function getStringValue(key) {
     "GET_OTP_VIA_WHATSAPP" : "Obtenez OTP via WhatsApp",
     "OR" : "ou",
     "WAITING_CHARGE_AFTER_3_MINUTES" : "Les frais d'attente sont nuls pendant les 3 premières minutes. Vous serez facturé 1 ₹ par minute d'attente après cela",
-  "WAITING_CHARGES" : "Frais d'attente"
+  "WAITING_CHARGES" : "Frais d'attente",
+    "HELPS_DRIVER_CONFIRM_ITS_YOU": "(Aide le conducteur à confirmer qu'il s'agit bien de vous)",
+    "LETS_GET_YOU_TRIP_READY": "Préparons-nous pour le voyage!",
+    "GOT_AN_OTP": "Vous avez un OTP?",
+    "JUST_ONE_LAST_THING": "Juste une dernière chose",
+    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément"
   }

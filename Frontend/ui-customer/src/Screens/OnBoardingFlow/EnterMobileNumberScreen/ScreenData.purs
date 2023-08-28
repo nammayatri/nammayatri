@@ -20,6 +20,7 @@ import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import PrestoDOM (LetterSpacing(..))
 import Screens.Types (EnterMobileNumberScreenState)
+import Common.Types.App (OTPChannel(..))
 
 initData :: EnterMobileNumberScreenState
 initData = {
@@ -36,7 +37,8 @@ initData = {
     , timer : 30
     , timerID : ""
     , config : DC.config
-    , logField : empty
+    , logField : empty 
+    , otpChannel : SMS
     },
     props: {
         enterOTP : false,
@@ -52,6 +54,6 @@ initData = {
         otpEdtFocused : false,
         editTextVal : "",
         attemptLeft : "",
-        countryCodeOptionExpended : false
+        countryCodeOptionExpanded : false
     }
 }

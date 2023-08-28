@@ -31,23 +31,21 @@ import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
 import qualified Kernel.External.SMS as Sms
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
-import Tools.Metrics
 
-sendSMS :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> SendSMSReq -> m SendSMSRes
+sendSMS :: ServiceFlow m r => Id Merchant -> SendSMSReq -> m SendSMSRes
 sendSMS merchantId = Sms.sendSMS handler
   where
     handler = Sms.SmsHandler {..}
@@ -70,13 +68,9 @@ data DashboardMessageType = BOOKING | ENDRIDE | ONBOARDING | CASH_COLLECTED deri
 
 sendDashboardSms ::
   ( EsqDBReplicaFlow m r,
-    HasCacheConfig r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
     EsqLocDBFlow m r,
-    EncFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m
+    ServiceFlow m r
   ) =>
   Id Merchant ->
   DashboardMessageType ->

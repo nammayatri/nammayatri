@@ -17,18 +17,17 @@ module Storage.Queries.EstimateBreakup where
 
 import Domain.Types.Estimate
 import qualified Domain.Types.Estimate as DEB
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
-create :: (L.MonadFlow m, Log m) => EstimateBreakup -> m ()
+create :: MonadFlow m => EstimateBreakup -> m ()
 create = createWithKV
 
-findAllByEstimateIdT :: (L.MonadFlow m, Log m) => Id Estimate -> m [EstimateBreakup]
+findAllByEstimateIdT :: MonadFlow m => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateIdT (Id estimateId) = findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
 
 instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where

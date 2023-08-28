@@ -17,7 +17,7 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (OptionButtonList, RateCardType, CountryCodeObj)
+import Common.Types.App (OptionButtonList, RateCardType, CountryCodeObj, OTPChannel)
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
@@ -185,7 +185,7 @@ type EnterMobileNumberScreenStateProps = {
   otpEdtFocused :: Boolean,
   editTextVal :: String,
   attemptLeft :: String,
-  countryCodeOptionExpended :: Boolean
+  countryCodeOptionExpanded :: Boolean
 }
 
 type EnterMobileNumberScreenStateData = {
@@ -198,6 +198,7 @@ type EnterMobileNumberScreenStateData = {
   , timerID :: String
   , config :: AppConfig
   , logField :: Object Foreign
+  , otpChannel :: OTPChannel
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -660,6 +661,7 @@ type HomeScreenStateProps =
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
+  , canSendSuggestion :: Boolean
   }
 
 type RouteEndPoints = {

@@ -14,20 +14,22 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverBlockReason where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
+-- import qualified Dashboard.ProviderPlatform.Driver as Domain
+-- import Data.ByteString.Internal (ByteString, unpackChars)
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+-- import Kernel.Types.Common hiding (id)
+-- import Lib.Utils
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 data DriverBlockReasonT f = DriverBlockReasonT
@@ -43,20 +45,7 @@ instance B.Table DriverBlockReasonT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . reasonCode
 
-instance ModelMeta DriverBlockReasonT where
-  modelFieldModification = driverBlockReasonTMod
-  modelTableName = "driver_block_reason"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverBlockReason = DriverBlockReasonT Identity
-
-instance FromJSON DriverBlockReason where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverBlockReason where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverBlockReason
 
 driverBlockReasonTMod :: DriverBlockReasonT (B.FieldModification (B.TableField DriverBlockReasonT))
 driverBlockReasonTMod =
@@ -66,19 +55,6 @@ driverBlockReasonTMod =
       blockTimeInHours = B.fieldNamed "block_time_in_hours"
     }
 
-instance Serialize DriverBlockReason where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverBlockReasonToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverBlockReasonToHSModifiers =
-  M.empty
-
-driverBlockReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverBlockReasonToPSModifiers =
-  M.empty
-
 $(enableKVPG ''DriverBlockReasonT ['reasonCode] [])
+
+$(mkTableInstances ''DriverBlockReasonT "driver_block_reason" "atlas_driver_offer_bpp")

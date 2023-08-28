@@ -21,9 +21,9 @@ import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
+import Components.MobileNumberEditor as MobileNumberEditor
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Components.MobileNumberEditor as MobileNumberEditor
 import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -41,7 +41,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -122,55 +122,63 @@ view push state = let
 enterMobileNumberView:: ST.EnterMobileNumberScreenState  -> String -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 enterMobileNumberView  state lang push =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , visibility  if state.props.enterOTP then GONE else VISIBLE
     , alpha if state.props.enterOTP then 0.0 else 1.0
     , orientation VERTICAL
     ][
-      PrestoAnim.animationSet
-        [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
-        ] $ MobileNumberEditor.view (push <<< MobileNumberEditTextAction) (mobileNumberEditTextConfig state)
+        MobileNumberEditor.view (push <<< MobileNumberEditTextAction) (mobileNumberEditTextConfig state)
        ,  PrestoAnim.animationSet
           ( if EHC.os == "IOS" then [] else [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig 
-          , Anim.fadeOut state.props.countryCodeOptionExpended
+          , Anim.fadeOut state.props.countryCodeOptionExpanded
           ]) $ linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , margin (Margin 0 8 0 12)
-            , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
+            , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false
             , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
               ]
         , PrestoAnim.animationSet
           [ Anim.fadeIn $ not state.props.enterOTP 
-          , Anim.fadeOut $ state.props.enterOTP || state.props.countryCodeOptionExpended
+          , Anim.fadeOut $ state.props.enterOTP || state.props.countryCodeOptionExpanded
           ] $
           linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
+            , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
-            -- Until Backend Whatsapp OTP DONE
-        -- , PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpended] $ textView $ [
-        --     height WRAP_CONTENT
-        --   , width MATCH_PARENT
-        --   , text $ getString OR
-        --   , gravity CENTER
-        --   , margin $ MarginVertical 24 24
-        --   , color Color.black500
-        --   , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
-        --   ] <> FontStyle.tags TypoGraphy
-        -- , PrestoAnim.animationSet
-        --   [ Anim.fadeIn $ not state.props.enterOTP
-        --   , Anim.fadeOut $ state.props.countryCodeOptionExpended || state.props.enterOTP
-        --   ] $
-        --   linearLayout
-        --     [ height WRAP_CONTENT
-        --     , width MATCH_PARENT
-        --     , visibility  if state.props.countryCodeOptionExpended then GONE else VISIBLE
-        --     ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state)]
+        , if (not state.props.countryCodeOptionExpanded) && state.data.config.internationalNumberEnabled then whatsAppOTPButtonView state push else dummyView push
     ]
+
+whatsAppOTPButtonView  :: ST.EnterMobileNumberScreenState  -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+whatsAppOTPButtonView state push = 
+  linearLayout [
+    height WRAP_CONTENT,
+    width MATCH_PARENT, 
+    orientation VERTICAL,
+    gravity CENTER
+  ][PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpanded] $ 
+    textView $ [
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , text $ getString OR
+    , gravity CENTER
+    , margin $ MarginVertical 24 24
+    , color Color.black500
+    ] <> FontStyle.tags TypoGraphy
+  , PrestoAnim.animationSet
+    [ Anim.fadeIn $ not state.props.enterOTP
+    , Anim.fadeOut $ state.props.countryCodeOptionExpanded || state.props.enterOTP
+    ] $
+    linearLayout
+      [ height WRAP_CONTENT
+      , width $ V (EHC.screenWidth unit - 32)
+      , gravity CENTER
+      ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state)]
+    ]
+
 
 commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
 commonTextView state textValue isLink link push isTextFromHtml=
@@ -242,3 +250,9 @@ enterOTPView state lang push =
       ][PrimaryButton.view (push <<< VerifyOTPButtonAction) (verifyOTPButtonConfig state)]
     ]
 
+dummyView :: forall w . (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+dummyView push  = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  ][]

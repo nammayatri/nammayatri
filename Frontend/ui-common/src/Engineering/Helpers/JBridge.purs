@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),DateObj, LayoutBound)
+import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -144,6 +144,7 @@ foreign import toast          :: String -> Unit
 foreign import factoryResetApp :: String -> Unit
 foreign import startTimerWithTime :: forall action. String -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit
+foreign import askNotificationPermission :: Unit -> Effect Unit
 -- foreign import onEvent        :: Foreign -> Effect Unit
 -- foreign import _onEventWithCB :: Foreign -> (String -> Effect Unit) -> (String -> Effect Unit) -> Effect Unit
 -- -- foreign import getSessionInfo :: { android_id_raw :: String, android_id :: String, os_version :: String, package_name :: String, android_api_level :: String }
@@ -223,6 +224,7 @@ foreign import getLayoutBounds :: Fn1 String LayoutBound
 foreign import getAllDates :: Fn1 Int (Array DateObj)
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
+foreign import getChatMessages :: String -> Array ChatComponent
 
 type LottieAnimationConfig = {
     rawJson :: String

@@ -13,13 +13,12 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy where
 
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -33,10 +32,10 @@ import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.FarePolicyType where
@@ -76,26 +75,13 @@ instance B.Table FarePolicyT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta FarePolicyT where
-  modelFieldModification = farePolicyTMod
-  modelTableName = "fare_policy"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type FarePolicy = FarePolicyT Identity
-
-instance FromJSON FarePolicy where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON FarePolicy where
-  toJSON = A.genericToJSON A.defaultOptions
 
 instance FromJSON Domain.FarePolicyType where
   parseJSON = A.genericParseJSON A.defaultOptions
 
 instance ToJSON Domain.FarePolicyType where
   toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show FarePolicy
 
 deriving stock instance Ord Domain.FarePolicyType
 
@@ -117,19 +103,6 @@ farePolicyTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-farePolicyToHSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicyToHSModifiers =
-  M.empty
-
-farePolicyToPSModifiers :: M.Map Text (A.Value -> A.Value)
-farePolicyToPSModifiers =
-  M.empty
-
-instance Serialize FarePolicy where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''FarePolicyT ['id] [[]])
+
+$(mkTableInstances ''FarePolicyT "fare_policy" "atlas_driver_offer_bpp")

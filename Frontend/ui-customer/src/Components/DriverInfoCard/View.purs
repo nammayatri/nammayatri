@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
-import Data.String (Pattern(..), split, length, take, drop)
+import Data.String (Pattern(..), split, length, take, drop, toLower, contains)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
@@ -60,13 +60,14 @@ view push state =
   , orientation VERTICAL
   ][ linearLayout[
        height WRAP_CONTENT
-      , width MATCH_PARENT 
+      , width MATCH_PARENT
       , gravity RIGHT
       , padding $ PaddingHorizontal 16 16
-      ][supportButton push state]  
+      ][supportButton push state]
     , mapOptionsView push state
     , messageNotificationView push state
-    , if state.props.currentSearchResultType == QUOTES then driverInfoViewSpecialZone push state else driverInfoView push state
+    , driverInfoViewSpecialZone push state
+    , driverInfoView push state
     ]
 
 driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
@@ -74,6 +75,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
+  , visibility if state.props.currentSearchResultType == QUOTES then VISIBLE else GONE
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -124,8 +126,8 @@ titleAndETA push state =
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (state.props.estimatedTime == "--"))) then GONE else VISIBLE
   ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
-      else 
-      textView $ 
+      else
+      textView $
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ "ETA: " <> if state.props.currentSearchResultType == QUOTES then (state.props.estimatedTime) else (secondsToHms state.data.eta)
@@ -135,7 +137,7 @@ titleAndETA push state =
   ]
 
 specialZoneHeader :: forall w. String -> PrestoDOM ( Effect Unit) w
-specialZoneHeader vehicleVariant = 
+specialZoneHeader vehicleVariant =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -178,12 +180,12 @@ specialZoneHeader vehicleVariant =
 
   ]
 
-getTitleConfig :: forall w. String -> {text :: String , color :: String} 
-getTitleConfig vehicleVariant = 
-  (case vehicleVariant of 
+getTitleConfig :: forall w. String -> {text :: String , color :: String}
+getTitleConfig vehicleVariant =
+  (case vehicleVariant of
         "TAXI_PLUS" -> { text : (getString AC) <> " " <> (getString TAXI), color : Color.blue800 }
-        "TAXI" -> {text : (getString NON_AC )<> " " <> (getString TAXI) , color : CommonColor.orange900 } 
-        _ -> {text : "" , color : ""}) 
+        "TAXI" -> {text : (getString NON_AC )<> " " <> (getString TAXI) , color : CommonColor.orange900 }
+        _ -> {text : "" , color : ""})
 
 
 dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
@@ -297,7 +299,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
-  ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then textView[] else sosView push state
+  ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else sosView push state
     , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
@@ -363,11 +365,18 @@ locationTrackButton push state =
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
-  ][  imageView
-      [ imageWithFallback $ "ny_ic_location_track," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
-      , height $ V 18
-      , width $ V 18
-      , margin $ Margin 10 10 10 10
+  ][  linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , background Color.white900
+      , stroke $ "1,"<> Color.grey900
+      , cornerRadius 20.0
+      ][  imageView
+        [ imageWithFallback $ "ny_ic_location_track," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
+        , height $ V 18
+        , width $ V 18
+        , margin $ Margin 10 10 10 10
+        ]
       ]
   ]
 
@@ -417,12 +426,7 @@ messageNotificationView push state =
       , padding $ PaddingHorizontal 12 16
       , orientation HORIZONTAL
       , clickable true
-      , onClick (\action -> do
-                  let delay = if os == "IOS" then 2000.0 else 5000.0
-                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
-                  else pure unit
-                  push action
-                ) (const MessageDriver)
+      , onClick push $ const $ MessageDriver
       , gravity CENTER_VERTICAL
       ][ linearLayout
          [ height MATCH_PARENT
@@ -504,7 +508,7 @@ navigateView push state =
       , gravity CENTER
       , stroke $ "1,"<>Color.grey900
       , orientation HORIZONTAL
-      , onClick push (const OnNavigate)
+      , onClick push (const OnNavigateToZone)
       ][  imageView
           [ width $ V 20
           , height $ V 20
@@ -599,6 +603,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
+  , visibility if state.props.currentSearchResultType == QUOTES then GONE else VISIBLE
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -699,7 +704,7 @@ cancelRideLayout push state =
 
 ---------------------------------- contactView ---------------------------------------
 contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-contactView push state = 
+contactView push state =
   linearLayout
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
@@ -724,10 +729,10 @@ contactView push state =
             ][ textView $
                 [ text $"is " <> secondsToHms state.data.eta
                 , color Color.black800
-                , visibility if state.data.distance > 1000 then VISIBLE else GONE
+                , visibility if (state.data.distance > 1000 && (secondsToHms state.data.eta) /= "") then VISIBLE else GONE
                 ] <> FontStyle.subHeading1 TypoGraphy
               , textView $
-                [ text case state.data.distance > 1000 of
+                [ text case (state.data.distance > 1000 && (secondsToHms state.data.eta) /= "") of
                     true -> getString AWAY
                     false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
                 , color Color.black800
@@ -749,12 +754,8 @@ contactView push state =
               , cornerRadius 20.0
               , background state.data.config.driverInfoConfig.callBackground
               , stroke state.data.config.driverInfoConfig.callButtonStroke
-              , onClick (\action -> do
-                  let delay = if os == "IOS" then 2000.0 else 5000.0
-                  if not state.props.isChatOpened && state.props.chatcallbackInitiated then showAndHideLoader delay (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
-                  else pure unit
-                  push action
-              ) (const MessageDriver)
+              , afterRender push $ const $ LoadMessages
+              , onClick push $ const $ MessageDriver
               ][ imageView
                   [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
                   , height $ V state.data.config.driverInfoConfig.callHeight
@@ -764,7 +765,7 @@ contactView push state =
             ]
           ]
     ]
-    
+
 
 ---------------------------------- driverDetailsView ---------------------------------------
 
@@ -793,7 +794,7 @@ driverDetailsView push state =
               , width $ V 50
               , padding $ Padding 2 3 2 1
               , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
-              ]  
+              ]
           ]
         , textView $
           [ text state.data.driverName
@@ -805,9 +806,9 @@ driverDetailsView push state =
           , gravity LEFT
           ] <> FontStyle.body7 TypoGraphy
         , textView (
-          [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of 
-                          "TAXI_PLUS" -> (getString AC_TAXI)
-                          "TAXI" -> (getString NON_AC_TAXI)
+          [ text (state.data.vehicleDetails <> case state.data.vehicleVariant of
+                          "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
+                          "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
                           _ -> "")
           , color Color.black700
           , width $ V ((screenWidth unit) /2 - 20)
@@ -829,7 +830,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback (getVehicleImage state.data.vehicleVariant)
+              [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails)
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -1060,9 +1061,9 @@ headerTextView push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  ][ if state.props.currentStage == RideStarted then 
+  ][ if state.props.currentStage == RideStarted then
       textView $
-      [ text $ "ETA :" <> state.props.estimatedTime 
+      [ text $ "ETA :" <> state.props.estimatedTime
       , color Color.black800
       , padding $ PaddingBottom 16
       , ellipsize true
@@ -1151,7 +1152,7 @@ openGoogleMap push state =
   ]
 
 dummyView :: forall w . (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-dummyView push  = 
+dummyView push  =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -1168,11 +1169,11 @@ configurations =
               , paddingOTP : Padding 11 0 11 7
               }
 
-getVehicleImage :: String -> String 
-getVehicleImage variant = do
+getVehicleImage :: String -> String -> String
+getVehicleImage variant vehicleDetail = do
   let url = getAssetStoreLink FunctionCall
-  case variant of 
-    "TAXI" -> "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
-    "TAXI_PLUS" -> "ic_white_taxi," <> url <> "ic_white_taxi.png"
-    "AUTO_RICKSHAW" -> "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
-    _ ->  "ic_white_taxi," <> url <> "ic_white_taxi.png"
+  let details = (toLower vehicleDetail)
+  if (variant == "AUTO_RICKSHAW") then "ic_auto_rickshaw," <> url <>"ic_auto_rickshaw.png"
+  else
+    if contains (Pattern "ambassador") details then "ic_yellow_ambassador," <> url <> "ic_yellow_ambassador.png"
+    else "ic_white_taxi," <> url <> "ic_white_taxi.png"

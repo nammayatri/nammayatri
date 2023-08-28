@@ -16,28 +16,27 @@
 module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
 import qualified Domain.Types.FarePolicy as DFP
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 
 findAll' ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id DFP.FarePolicy ->
   m [BeamFPSS.FullFarePolicySlabsDetailsSlab]
 findAll' (Id farePolicyId) = findAllWithOptionsKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] (Se.Asc BeamFPSS.startDistance) Nothing Nothing
 
 findById'' ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id DFP.FarePolicy ->
   m (Maybe BeamFPSS.FullFarePolicySlabsDetailsSlab)
 findById'' (Id farePolicyId) = findAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] <&> listToMaybe
 
-deleteAll' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
+deleteAll' :: MonadFlow m => Id DFP.FarePolicy -> m ()
 deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
 
 instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySlabsDetailsSlab where

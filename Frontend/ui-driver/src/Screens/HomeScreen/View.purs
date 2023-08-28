@@ -80,6 +80,7 @@ import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Components.RateCard as RateCard 
 import Engineering.Helpers.Commons (getNewIDWithTag)
+import Effect.Uncurried (runEffectFn1)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -96,7 +97,9 @@ screen initialState =
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
-                Nothing -> setValueToLocalStore IS_RIDE_ACTIVE "false"
+                Nothing -> do
+                           setValueToLocalStore IS_RIDE_ACTIVE "false"
+                           void $ pure $ JB.setCleverTapUserProp "Driver On-ride" "No"
           let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
           if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
             _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))
@@ -215,7 +218,13 @@ view push state =
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
+      , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
+          Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
+          Nothing -> linearLayout[visibility GONE][]
+      , if state.props.showOffer then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
   ]
+
+
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverMapsHeaderView push state =
@@ -514,7 +523,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background Color.darkMint
+                    , background Color.darkMint -- Color.yellowText TODO:: Later
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView

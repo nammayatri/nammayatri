@@ -184,14 +184,15 @@ triggerOTPBT payload = do
         BackT $ pure GoBack
 
 
-makeTriggerOTPReq :: String -> String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber countryCode=
+makeTriggerOTPReq :: String -> String -> String -> TriggerOTPReq
+makeTriggerOTPReq mobileNumber countryCode otpChannel=
     let merchant = SC.getMerchantId ""
     in TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : countryCode,
-      "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant
+      "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant,
+      "otpChannel" : otpChannel
     }
 
 ---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------
@@ -248,10 +249,10 @@ verifyToken payload token = do
         unwrapResponse (x) = x
 
 makeVerifyOTPReq :: String -> String -> VerifyTokenReq
-makeVerifyOTPReq otp defaultId = 
+makeVerifyOTPReq otp defaultId =
     let token = getValueToLocalNativeStore FCM_TOKEN
         deviceToken = if any (_ == token) ["__failed", "", " ", "null", "(null)"] then defaultId <> token else token
-    in 
+    in
         VerifyTokenReq {
             "otp": otp,
             "deviceToken": deviceToken,
@@ -499,7 +500,7 @@ mkUpdateProfileRequest _ =
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing
-        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
+        , deviceToken : Nothing
         , firstName : Nothing
         , email : Nothing
         , referralCode : Nothing
@@ -521,7 +522,7 @@ editProfileRequest firstName middleName lastName emailID gender =
     UpdateProfileReq{
           middleName : middleName
         , lastName : lastName
-        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
+        , deviceToken : Nothing
         , firstName : firstName
         , email : emailID
         , referralCode : Nothing

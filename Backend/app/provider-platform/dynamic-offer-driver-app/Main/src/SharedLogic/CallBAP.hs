@@ -49,7 +49,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
-import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
@@ -57,7 +56,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
@@ -140,14 +138,12 @@ buildBppUrl (Id transporterId) =
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
 sendRideAssignedUpdateToBAP ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HedisFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    CacheFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -166,14 +162,12 @@ sendRideAssignedUpdateToBAP booking ride = do
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideAssignedMsg retryConfig
 
 sendRideStartedUpdateToBAP ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HedisFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -192,14 +186,12 @@ sendRideStartedUpdateToBAP booking ride = do
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideStartedMsg retryConfig
 
 sendRideCompletedUpdateToBAP ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HedisFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -284,14 +276,12 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
           }
 
 sendDriverArrivalUpdateToBAP ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HedisFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -311,14 +301,12 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId driverArrivedMsg retryConfig
 
 sendNewMessageToBAP ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HedisFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -336,14 +324,12 @@ sendNewMessageToBAP booking ride message = do
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
 
 sendEstimateRepetitionUpdateToBAP ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HedisFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->

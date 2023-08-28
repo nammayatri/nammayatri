@@ -32,7 +32,6 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -43,7 +42,7 @@ import qualified Storage.Beam.Ride as BeamR
 import Storage.Queries.Booking ()
 import Storage.Queries.Person ()
 
-create :: (L.MonadFlow m, Log m) => Ride -> m ()
+create :: MonadFlow m => Ride -> m ()
 create = createWithKV
 
 data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
@@ -53,7 +52,7 @@ data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   }
   deriving (Generic, B.Database be)
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> RideStatus -> m ()
+updateStatus :: MonadFlow m => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
   updateOneWithKV
@@ -62,7 +61,7 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateTrackingUrl :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> BaseUrl -> m ()
+updateTrackingUrl :: MonadFlow m => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
   now <- getCurrentTime
   updateOneWithKV
@@ -71,7 +70,7 @@ updateTrackingUrl rideId url = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateRideRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Int -> m ()
+updateRideRating :: MonadFlow m => Id Ride -> Int -> m ()
 updateRideRating rideId rideRating = do
   now <- getCurrentTime
   updateOneWithKV
@@ -80,16 +79,16 @@ updateRideRating rideId rideRating = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-findById :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
+findById :: MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 
-findByBPPRideId :: (L.MonadFlow m, Log m) => Id BPPRide -> m (Maybe Ride)
+findByBPPRideId :: MonadFlow m => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
 
 findAllCompletedRides :: MonadFlow m => m [Ride]
 findAllCompletedRides = findAllWithKV [Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]
 
-updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
+updateMultiple :: MonadFlow m => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
   updateOneWithKV
@@ -103,10 +102,10 @@ updateMultiple rideId ride = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
+findActiveByRBId :: MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
-findAllByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m [Ride]
+findAllByRBId :: MonadFlow m => Id Booking -> m [Ride]
 findAllByRBId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
 
 findLatestCompletedRide :: MonadFlow m => Id Person -> m (Maybe Ride)
@@ -114,7 +113,7 @@ findLatestCompletedRide riderId = do
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
   findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateDriverArrival :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> m ()
+updateDriverArrival :: MonadFlow m => Id Ride -> m ()
 updateDriverArrival rideId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -129,7 +128,7 @@ data StuckRideItem = StuckRideItem
     riderId :: Id Person
   }
 
-findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems :: MonadFlow m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   bookings <-
@@ -157,7 +156,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
-cancelRides :: (L.MonadFlow m, MonadTime m, Log m) => [Id Ride] -> UTCTime -> m ()
+cancelRides :: MonadFlow m => [Id Ride] -> UTCTime -> m ()
 cancelRides rideIds now = do
   updateWithKV
     [ Se.Set BeamR.status Ride.CANCELLED,
@@ -177,7 +176,7 @@ instance BeamBackend.HasSqlValueSyntax be String => BeamBackend.HasSqlValueSynta
   sqlValueSyntax = autoSqlValueSyntax
 
 findAllRideItems ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id Merchant ->
   Int ->
   Int ->
@@ -240,13 +239,13 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
     mkRideItem (person, ride, bookingStatus) = do
       RideItem {..}
 
-findRiderIdByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId :: MonadFlow m => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId rideId = do
   ride <- findOneWithKV [Se.Is BeamR.id $ Se.Eq $ getId rideId]
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
+findAllByRiderIdAndRide :: MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit

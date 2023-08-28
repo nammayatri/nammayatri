@@ -54,6 +54,7 @@ type Config =
   , white900 :: String
   , black800 :: String
   , black700 :: String
+  , canSendSuggestion :: Boolean
   }
 
 type UserConfig =
@@ -104,6 +105,7 @@ config =
     , white900 : ""
     , black800 : ""
     , black700 : ""
+    , canSendSuggestion : true
   }
 
 makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponent

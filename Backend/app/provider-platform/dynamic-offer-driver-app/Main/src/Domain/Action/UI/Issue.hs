@@ -32,7 +32,6 @@ import Kernel.Utils.Common
 import qualified "shared-services" SharedService.ProviderPlatform.Issue as Common
 import qualified Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified Storage.CachedQueries.Issue.IssueOption as CQIO
-import qualified Storage.CachedQueries.Issue.IssueReport as CQIR
 import qualified Storage.CachedQueries.MediaFile as CQMF
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
@@ -90,7 +89,7 @@ getIssueOption (driverId, _) issueCategoryId mbLanguage = do
 
 issueReportDriverList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Flow Common.IssueReportDriverListRes
 issueReportDriverList (driverId, _) language = do
-  issueReports <- CQIR.findAllByDriver driverId
+  issueReports <- QIR.findAllByDriver driverId
   issues <- mapM mkIssueReport issueReports
   return $ Common.IssueReportDriverListRes {issues}
   where
@@ -184,7 +183,6 @@ createIssueReport (driverId, merchantId) Common.IssueReportReq {..} = do
   ticket <- buildTicket issueReport category mbOption mbRide merchant.shortId mediaFileUrls
   ticketResponse <- createTicket merchantId ticket
   QIR.updateTicketId issueReport.id ticketResponse.ticketId
-  CQIR.invalidateIssueReportCache Nothing (Just driverId)
   pure $ Common.IssueReportRes {issueReportId = cast issueReport.id}
   where
     mkIssueReport = do
@@ -259,7 +257,7 @@ createIssueReport (driverId, merchantId) Common.IssueReportReq {..} = do
 issueInfo :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Flow Common.IssueInfoRes
 issueInfo issueReportId (driverId, _) mbLanguage = do
   language <- getLanguage driverId mbLanguage
-  issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId
   (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage issueReport.categoryId language >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
   mbIssueOption <- (join <$>) $
@@ -292,19 +290,17 @@ issueInfo issueReportId (driverId, _) mbLanguage = do
         []
 
 updateIssueOption :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Common.IssueUpdateReq -> Flow APISuccess
-updateIssueOption issueReportId (driverId, _) Common.IssueUpdateReq {..} = do
-  void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+updateIssueOption issueReportId (_, _) Common.IssueUpdateReq {..} = do
+  void $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   void $ CQIO.findByIdAndCategoryId (cast optionId) (cast categoryId) >>= fromMaybeM (IssueOptionInvalid optionId.getId categoryId.getId)
   _ <- QIR.updateOption issueReportId (cast optionId)
-  CQIR.invalidateIssueReportCache (Just issueReportId) (Just driverId)
   pure Success
 
 deleteIssue :: Id D.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 deleteIssue issueReportId (driverId, _) = do
   unlessM (B.runInReplica (QIR.isSafeToDelete issueReportId driverId)) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this driver.")
-  issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   _ <- QIR.updateAsDeleted issueReportId
-  CQIR.invalidateIssueReportCache (Just issueReportId) (Just driverId)
   CQMF.invalidateMediaFileCache issueReport.mediaFiles (Just issueReportId)
   pure Success

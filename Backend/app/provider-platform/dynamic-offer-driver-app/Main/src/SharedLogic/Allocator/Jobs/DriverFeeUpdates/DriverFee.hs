@@ -27,16 +27,13 @@ import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id (cast)
-import Kernel.Utils.Common (EsqDBFlow, Log (withLogTag), MonadFlow, MonadTime (getCurrentTime), addUTCTime, fromMaybeM, getLocalCurrentTime, logError, logInfo, throwError)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, Log (withLogTag), MonadTime (getCurrentTime), addUTCTime, fromMaybeM, getLocalCurrentTime, logError, logInfo, throwError)
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -45,10 +42,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
 
 sendPaymentReminderToDriver ::
-  ( MonadFlow m,
-    HedisFlow m r,
-    CoreMetrics m,
-    HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
@@ -67,14 +61,14 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         logInfo "Driver Not found. This should not be possible."
         throwError (InternalError "Driver Not Found") -- Unreachable
       Just driver -> do
+        overdueFeeNotif <- B.runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
         let paymentTitle = "Bill generated"
-            paymentMessage = "You have taken " <> show driverFee.numRides <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
+            paymentMessage = "You have taken " <> show (driverFee.numRides + maybe 0 (.numRides) overdueFeeNotif) <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
-      overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
-      -- overdueFee <- findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
       Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
+        overdueFee <- B.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
         case overdueFee of
           Nothing -> do
             -- Esq.runTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
@@ -91,10 +85,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       ReSchedule <$> getRescheduledTime transporterConfig
 
 unsubscribeDriverForPaymentOverdue ::
-  ( MonadFlow m,
-    HedisFlow m r,
-    CoreMetrics m,
-    HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
@@ -124,7 +115,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
       whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
   return Complete
 
-calcDriverFeeAttr :: (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => DriverFeeStatus -> UTCTime -> UTCTime -> m [(DriverFee, Maybe Person)]
+calcDriverFeeAttr :: (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => DriverFeeStatus -> UTCTime -> UTCTime -> m [(DriverFee, Maybe Person)]
 calcDriverFeeAttr driverFeeStatus startTime endTime = do
   driverFees <- findFeesInRangeWithStatus startTime endTime driverFeeStatus
   let relevantDriverIds = (.driverId) <$> driverFees
@@ -132,5 +123,5 @@ calcDriverFeeAttr driverFeeStatus startTime endTime = do
   -- relevantDrivers <- mapM QPerson.findById (cast <$> relevantDriverIds)
   return $ zip driverFees relevantDrivers
 
-getRescheduledTime :: (MonadFlow m) => TransporterConfig -> m UTCTime
+getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.driverPaymentReminderInterval <$> getCurrentTime

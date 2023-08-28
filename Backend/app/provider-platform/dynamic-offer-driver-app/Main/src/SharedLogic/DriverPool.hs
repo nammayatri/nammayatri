@@ -54,7 +54,6 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -69,12 +68,10 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
-import Tools.Metrics
 
 data PoolCalculationStage = Estimate | DriverSelection
 
@@ -96,7 +93,7 @@ mkOldRatioKey driverId ratioType = "driver-offer:DriverPool:" <> ratioType <> ":
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
-windowFromIntelligentPoolConfig :: (L.MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
+windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig merchantId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantId merchantId
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
@@ -193,18 +190,14 @@ addSearchRequestInfoToCache searchReqId merchantId driverId valueToPut singleBat
   Redis.withCrossAppRedis $ Redis.hSetExp (mkParallelSearchRequestKey merchantId driverId) searchReqId.getId valueToPut singleBatchProcessTime
 
 getSearchRequestInfoMap ::
-  ( Redis.HedisFlow m r,
-    MonadReader r m
-  ) =>
+  Redis.HedisFlow m r =>
   Id DM.Merchant ->
   Id DP.Driver ->
   m [(Text, (UTCTime, Bool))]
 getSearchRequestInfoMap mId dId = Redis.withCrossAppRedis $ Redis.hGetAll $ mkParallelSearchRequestKey mId dId
 
 getValidSearchRequestCount ::
-  ( Redis.HedisFlow m r,
-    MonadReader r m
-  ) =>
+  Redis.HedisFlow m r =>
   Id DM.Merchant ->
   Id DP.Driver ->
   UTCTime ->
@@ -436,8 +429,7 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
-    L.MonadFlow m,
+    MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -489,7 +481,6 @@ calculateDriverPoolWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -520,8 +511,7 @@ calculateDriverPoolCurrentlyOnRide ::
     EsqDBFlow m r,
     EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    CoreMetrics m,
-    L.MonadFlow m,
+    MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -573,7 +563,6 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -637,8 +626,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
         }
 
 computeActualDistanceOneToOne ::
-  ( CoreMetrics m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     HasCoordinates a
@@ -652,8 +640,7 @@ computeActualDistanceOneToOne merchantId pickup driverPoolResult = do
   pure ele
 
 computeActualDistance ::
-  ( CoreMetrics m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     HasCoordinates a

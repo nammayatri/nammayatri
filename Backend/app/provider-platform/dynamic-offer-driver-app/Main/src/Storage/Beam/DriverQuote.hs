@@ -13,13 +13,11 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.DriverQuote where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -31,11 +29,11 @@ import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize
 
 instance FromField Domain.DriverQuoteStatus where
@@ -84,20 +82,7 @@ instance B.Table DriverQuoteT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverQuoteT where
-  modelFieldModification = driverQuoteTMod
-  modelTableName = "driver_quote"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverQuote = DriverQuoteT Identity
-
-instance FromJSON DriverQuote where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverQuote where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverQuote
 
 driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT))
 driverQuoteTMod =
@@ -124,19 +109,6 @@ driverQuoteTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverQuoteToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverQuoteToHSModifiers =
-  M.empty
-
-driverQuoteToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverQuoteToPSModifiers =
-  M.empty
-
-instance Serialize DriverQuote where
-  put = error "undefined"
-  get = error "undefined"
-
 $(enableKVPG ''DriverQuoteT ['id] [['driverId], ['searchTryId], ['requestId]])
+
+$(mkTableInstances ''DriverQuoteT "driver_quote" "atlas_driver_offer_bpp")

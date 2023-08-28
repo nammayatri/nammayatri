@@ -20,7 +20,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import Storage.Queries.SavedReqLocation as Queries
 
 findByLatLonAndRiderId :: (CacheFlow m r, EsqDBFlow m r) => Id Person -> LatLong -> m (Maybe SavedReqLocation)

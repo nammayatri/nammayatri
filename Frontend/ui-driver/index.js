@@ -5,15 +5,9 @@ require('core-js');
 window.session_id = guid();
 window.version = __VERSION__;
 let previousDateObject = new Date();
-const refreshThreshold = 120;
+const refreshThreshold = 300;
 console.warn("Hello World");
 loadConfig();
-
-var jpConsumingBackpress = {
-  event: "jp_consuming_backpress",
-  payload: { jp_consuming_backpress: true }
-}
-JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 
 window.isObject = function (object) {
   return (typeof object == "object");
@@ -97,7 +91,7 @@ window.onMerchantEvent = function (event, payload) {
   var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
     var isInit = "in.juspay.hyperpay" in top.window.mapps;
-    if (clientId == "open-kochi") {
+    if (clientId == "yatriprovider") {
       window.merchantID = "YATRI"
     } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
       window.merchantID = "YATRISATHI"
@@ -109,9 +103,9 @@ window.onMerchantEvent = function (event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
-    if (!isInit) {
+    // if (!isInit) {
       callInitiateResult();
-    }
+    // }
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
@@ -132,7 +126,9 @@ window.onMerchantEvent = function (event, payload) {
       JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
       if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "NEW_MESSAGE" && parsedPayload.payload.notificationData.entity_ids) {
         purescript.main(makeEvent("NEW_MESSAGE", parsedPayload.payload.notificationData.entity_ids))();
-      }else {
+      }else if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "PAYMENT_MODE_MANUAL") {
+        purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))();
+      } else {
         purescript.main(makeEvent("", ""))();
       }
     }
@@ -232,8 +228,11 @@ window["onEvent'"] = function (event, args) {
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
   if ((JSON.parse(jsonPayload)).event == "initiate_result"){
-    callInitiateResult();
-    
+    if (window.ppInitiateCallback) {
+      window.ppInitiateCallback()();
+    } else {
+      window.isPPInitiated = true;
+    }
   }
 }
 
@@ -246,6 +245,11 @@ function callInitiateResult () {
     , errorMessage: ""
     , errorCode: ""
   }
+  var jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: true }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
@@ -254,12 +258,13 @@ function refreshFlow(){
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
   let token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
   if ((diff > refreshThreshold) && (token != "__failed")){
-    if(JBridge.removeChatMessageCallback){
-      JBridge.removeChatMessageCallback();
+    if(window.storeCallBackMessageUpdated){
+      window.__PROXY_FN[window.storeCallBackMessageUpdated] = undefined;
     }
     if(JBridge.removeCallBackOpenChatScreen) {
       JBridge.removeCallBackOpenChatScreen();
     }
+    window.chatMessages = undefined;
     purescript.onConnectivityEvent("REFRESH")();
   }
 }

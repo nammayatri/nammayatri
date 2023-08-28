@@ -41,15 +41,12 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
-import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Tools.Maps as Maps
-import Tools.Metrics
 
 isBatchNumExceedLimit ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r
   ) =>
   DriverPoolConfig ->
@@ -65,13 +62,11 @@ previouslyAttemptedDriversKey searchTryId = "Driver-Offer:PreviouslyAttemptedDri
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
-    HasCacheConfig r,
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    CacheFlow m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -253,8 +248,7 @@ previouslyAttemptedDrivers searchTryId = do
       a -> return a
 
 sortWithDriverScore ::
-  ( Redis.HedisFlow m r,
-    HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m
   ) =>
@@ -333,10 +327,8 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dr
         HM.empty
 
 fetchScore ::
-  ( Redis.HedisFlow m r,
-    HasCacheConfig r,
-    EsqDBFlow m r,
-    MonadFlow m
+  ( CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   Id Merchant ->
   [(Id Driver, Meters)] ->
@@ -371,7 +363,7 @@ fetchScore merchantId driverActualDistanceList driverIds intelligentPoolConfig d
     getScoreWithWeight weight driverParamsValue = pure $ map (second (fromIntegral weight *)) driverParamsValue
 
 randomizeAndLimitSelection ::
-  (MonadFlow m) =>
+  MonadFlow m =>
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
 randomizeAndLimitSelection = randomizeList
@@ -396,13 +388,11 @@ poolRadiusStepKey searchReqId = "Driver-Offer:Allocator:PoolRadiusStep:SearchReq
 
 getNextDriverPoolBatch ::
   ( EncFlow m r,
-    HasCacheConfig r,
+    CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    CoreMetrics m,
-    EsqDBFlow m r,
-    Redis.HedisFlow m r
+    EsqDBFlow m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

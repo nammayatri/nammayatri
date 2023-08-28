@@ -3,17 +3,16 @@
 module Storage.Queries.AppInstalls where
 
 import Domain.Types.AppInstalls as AppInstalls
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging
 import Kernel.Types.Version
 import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.AppInstalls as BeamAI
 
-upsert :: (L.MonadFlow m, Log m) => AppInstalls.AppInstalls -> m ()
+upsert :: MonadFlow m => AppInstalls.AppInstalls -> m ()
 upsert a@AppInstalls {..} = do
   res <- findOneWithKV [Se.And [Se.Is BeamAI.merchantId $ Se.Eq (getId a.merchantId), Se.Is BeamAI.source $ Se.Eq a.source, Se.Is BeamAI.deviceToken $ Se.Eq a.deviceToken]]
   if isJust res

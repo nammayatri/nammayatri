@@ -30,20 +30,17 @@ import Data.Text (pack)
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
-import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.CacheConfig as SCC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Tools.Maps as Maps
-import Tools.Metrics (CoreMetrics)
 
 data AutoCompleteReq = AutoCompleteReq
   { input :: Text,
@@ -56,7 +53,7 @@ data AutoCompleteReq = AutoCompleteReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete merchantId AutoCompleteReq {..} = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   Maps.autoComplete
@@ -71,11 +68,11 @@ autoComplete merchantId AutoCompleteReq {..} = do
       Context.France -> Maps.France
       Context.AnyCountry -> Maps.India
 
-getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
+getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails (_, merchantId) req = do
   Maps.getPlaceDetails merchantId req
 
-getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName (_, merchantId) req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   case req.getBy of
@@ -94,7 +91,7 @@ getPlaceName (_, merchantId) req = do
         then callMapsApi merchantId req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: (L.MonadFlow m, EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi :: (MonadFlow m, ServiceFlow m r) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId req geoHashPrecisionValue = do
   res <- Maps.getPlaceName merchantId req
   let firstElement = listToMaybe res

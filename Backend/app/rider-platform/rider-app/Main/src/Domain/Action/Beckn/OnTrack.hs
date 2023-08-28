@@ -24,7 +24,6 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 

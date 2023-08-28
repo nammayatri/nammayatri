@@ -31,7 +31,6 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -52,7 +51,6 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -62,7 +60,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
-import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
@@ -115,13 +112,11 @@ authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsC
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    HasCacheConfig r,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    Redis.HedisFlow m r,
-    EncFlow m r,
-    CoreMetrics m
+    EncFlow m r
   ) =>
   Bool ->
   AuthReq ->
@@ -300,9 +295,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboa
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
     EncFlow m r,
-    CoreMetrics m,
     CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->
@@ -340,7 +333,6 @@ verify tokenId req = do
 
 callWhatsappOptApi ::
   ( EsqDBFlow m r,
-    CoreMetrics m,
     EncFlow m r,
     CacheFlow m r
   ) =>
@@ -354,11 +346,11 @@ callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
   void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
-checkRegistrationTokenExists :: (L.MonadFlow m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: MonadFlow m => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: (L.MonadFlow m, MonadThrow m, Log m) => Text -> m SP.Person
+checkPersonExists :: MonadFlow m => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
@@ -366,8 +358,7 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r,
-    CoreMetrics m
+    CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes

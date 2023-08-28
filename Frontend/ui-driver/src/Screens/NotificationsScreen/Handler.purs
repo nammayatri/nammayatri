@@ -22,14 +22,14 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import PrestoDOM.Core (getPushFn)
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import PrestoDOM.List as PrestoList
 import Screens.NotificationsScreen.Controller (ScreenOutput(..))
-import Screens.NotificationsScreen.View as NotificationsScreen
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
+import Screens.NotificationsScreen.View as NotificationsScreen
 import Screens.Types (AnimationState(..))
-import Types.App (ScreenType(..), FlowBT, GlobalState(..), NOTIFICATIONS_SCREEN_OUTPUT(..))
+import Types.App (FlowBT, GlobalState(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
 notifications :: FlowBT String NOTIFICATIONS_SCREEN_OUTPUT
@@ -51,3 +51,4 @@ notifications = do
     GoToCurrentRideFlow -> do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen → NotificationsScreenData.initData)
       App.BackT $ App.NoBack <$> (pure $ CHECK_RIDE_FLOW_STATUS)
+    SubscriptionScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ NOTIFICATION_SCREEN_NAV GoToSubscription)

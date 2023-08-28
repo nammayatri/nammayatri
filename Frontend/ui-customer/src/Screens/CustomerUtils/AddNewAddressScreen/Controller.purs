@@ -179,7 +179,7 @@ eval (UpdateCurrLocName lat lon name) state = do
 
 eval (SelectedCurrentLocation lat lon name) state = do
   void $ pure $ hideKeyboardOnNavigation true
-  exit $ CheckLocServiceability (state{data{address = name, locationList = [] , selectedItem{tag = "Current_Location",lat = Just lat, lon = Just lon, placeId = Nothing, description = name,title =(fromMaybe "" ((split (Pattern "," ) name) DA.!! 0) ), subTitle = (drop ((fromMaybe 0 (indexOf (Pattern ",") (name))) + 2) (name))  }}}) (CURR_LOC)
+  exit $ CheckLocServiceability (state{data{address = name, locationList = [] , selectedItem{tag = "Current_Location",lat = Just lat, lon = Just lon, placeId = Nothing, locationItemType = Nothing, description = name,title =(fromMaybe "" ((split (Pattern "," ) name) DA.!! 0) ), subTitle = (drop ((fromMaybe 0 (indexOf (Pattern ",") (name))) + 2) (name))  }}}) (CURR_LOC)
 
 eval (UpdateCurrentLocation lat lng) state = continue state{data{ lat = (fromMaybe 0.0 (Number.fromString lat) ), lon = (fromMaybe 0.0 (Number.fromString lng))}}
 
@@ -207,7 +207,7 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd 
 
 eval (LocationListItemAC (LocationListItemController.SelectedCurrentLocation lat lon name)) state = do
   let newState = state{data{ address = name ,selectedItem{lat = Just lat, lon = Just lon, description = name, placeId = Nothing }}}
-  updateAndExit newState $  CheckLocServiceability (state{data{address= name , selectedItem{lat = Just lat, lon = Just lon, placeId = Nothing,description = name}}}) (CURR_LOC)
+  updateAndExit newState $  CheckLocServiceability (state{data{address= name , selectedItem{lat = Just lat, lon = Just lon, placeId = Nothing,locationItemType = Nothing, description = name}}}) (CURR_LOC)
 
 eval (LocationListItemAC (LocationListItemController.OnClick item))  state = do
   if item.isClickable then do
@@ -232,7 +232,8 @@ eval (PrimaryButtonConfirmLocAC (PrimaryButton.OnClick)) state = do
                                             , title = (fromMaybe "" ((split (Pattern "," ) state.data.locSelectedFromMap)DA.!! 0) )
                                             , subTitle = (drop ((fromMaybe 0 (indexOf (Pattern ",") (state.data.locSelectedFromMap))) + 2) (state.data.locSelectedFromMap))
                                             , lat = Just state.data.latSelectedFromMap
-                                            , lon = Just state.data.lonSelectedFromMap }
+                                            , lon = Just state.data.lonSelectedFromMap 
+                                            , locationItemType = Nothing }
                                             }
                                           }) (LOCATE_ON_MAP)
 
@@ -247,30 +248,28 @@ eval (TagSelected index) state = do
     else
       if (validTag state.data.savedTags activeTag state.data.placeName) then
         continue state{ data  { activeIndex = Just index
-                              , selectedTag = getTag index}
-                      , props { isBtnActive = if (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation == true && state.data.placeName /="" )
-                                                then (not state.props.placeNameExists && true)
-                                                else if (index == 1 || index == 0)
-                                                  then (not state.props.placeNameExists && true)
-                                                    else false
-                                                    }}
+                              , selectedTag = getTag index
+                              , addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs}
+                      , props { placeNameExists = if index /= 2 then false else state.props.placeNameExists 
+                              , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation == true && state.data.placeName /="" ) || index == 1 || index == 0
+                                              }}
         else do
           void $ pure $ toast ((case (toLower activeTag) of
                                   "home" -> (getString HOME)
                                   "work" -> (getString WORK)
                                   _      -> "") <> " " <> (getString LOCATION_ALREADY_EXISTS))
-          continue state
+          continue state{data{addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs }, props {placeNameExists = if index /= 2 then false else state.props.placeNameExists}}
 
 eval (ChangeAddress ) state = do
   continue state{props{showSavePlaceView = false, editLocation = true, isSearchedLocationServiceable = state.props.isLocationServiceable},data{latSelectedFromMap = state.data.lat , lonSelectedFromMap = state.data.lon ,locationList= state.data.recentSearchs.predictionArray}}
 
 eval (PrimaryEditTextAC (PrimaryEditText.TextChanged id input)) state = do
   case (trim input) of
-    "" ->  continue state{props{isBtnActive = false}, data{addressSavedAs = ""}}
+    "" ->  continue state{props{isBtnActive = false, placeNameExists = false}, data{addressSavedAs = ""}}
     _  -> if (validTag state.data.savedTags (trim input) state.data.placeName) then
             if (length (trim input) >= 3 ) then continue state {data{addressSavedAs =(trim input)},props{isBtnActive = if (state.data.selectedTag /= Nothing) then true else false, placeNameExists = false}}
               else continue state {data{addressSavedAs = ""}, props{isBtnActive = if state.data.selectedTag /= Just OTHER_TAG then true else false, placeNameExists = false}}
-            else continue state{props{isBtnActive = false, placeNameExists = true}}
+            else continue state{props{isBtnActive = false, placeNameExists = true},data{ addressSavedAs = (trim input) }}
 
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   void $ pure $ hideKeyboardOnNavigation true

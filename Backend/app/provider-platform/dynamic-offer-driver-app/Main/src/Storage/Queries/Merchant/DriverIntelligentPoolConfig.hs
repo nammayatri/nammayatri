@@ -22,19 +22,17 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common (MonadFlow, MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 
-findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamDIPC.merchantId $ Se.Eq merchantId]
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => DriverIntelligentPoolConfig -> m ()
+update :: MonadFlow m => DriverIntelligentPoolConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateOneWithKV

@@ -13,25 +13,21 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.FarePolicy.DriverExtraFeeBounds where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import qualified Kernel.Types.Id as KId
 import Lib.Utils ()
-import Lib.UtilsTH
 import Sequelize as Se
 
 instance IsString Vehicle.Variant where
@@ -52,22 +48,7 @@ instance B.Table DriverExtraFeeBoundsT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta DriverExtraFeeBoundsT where
-  modelFieldModification = driverExtraFeeBoundsTMod
-  modelTableName = "fare_policy_driver_extra_fee_bounds"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverExtraFeeBounds = DriverExtraFeeBoundsT Identity
-
-instance FromJSON DriverExtraFeeBounds where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverExtraFeeBounds where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverExtraFeeBounds
-
-type FullDriverExtraFeeBounds = (KId.Id Domain.FarePolicy, Domain.DriverExtraFeeBounds)
 
 driverExtraFeeBoundsTMod :: DriverExtraFeeBoundsT (B.FieldModification (B.TableField DriverExtraFeeBoundsT))
 driverExtraFeeBoundsTMod =
@@ -79,19 +60,6 @@ driverExtraFeeBoundsTMod =
       maxFee = B.fieldNamed "max_fee"
     }
 
-instance Serialize DriverExtraFeeBounds where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverExtraFeeBoundsToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverExtraFeeBoundsToHSModifiers =
-  M.empty
-
-driverExtraFeeBoundsToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverExtraFeeBoundsToPSModifiers =
-  M.empty
-
 $(enableKVPG ''DriverExtraFeeBoundsT ['id] [['farePolicyId]])
+
+$(mkTableInstances ''DriverExtraFeeBoundsT "fare_policy_driver_extra_fee_bounds" "atlas_driver_offer_bpp")

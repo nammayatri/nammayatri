@@ -124,6 +124,8 @@ token: {{app-token}}
 # paymentMethodId will work only if autoAssignEnabledV2 is true
 # else paymentMethodId should be specified in confirm API
 
+# "paymentMethodId" : "{{paymentMethodId}}"
+
 POST {{app-host}}/estimate/{{estimateId}}/select2 HTTP/1.1
 content-type: application/json
 token: {{app-token}}
@@ -132,7 +134,7 @@ token: {{app-token}}
   "customerExtraFee" : 10,
   "autoAssignEnabled" : false,
   "autoAssignEnabledV2" : false,
-  "paymentMethodId" : "{{paymentMethodId}}"
+  "paymentMethodId" : null
 }
 
 ###
@@ -167,7 +169,9 @@ token: {{app-token}}
 
 # @name confirmQuote
 
-POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
+# POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
+
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
 content-type: application/json
 token: {{app-token}}
 

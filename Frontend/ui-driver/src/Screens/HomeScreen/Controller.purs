@@ -39,7 +39,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -182,6 +182,7 @@ instance loggableAction :: Loggable Action where
     PaymentBannerAC act -> pure unit
     PaymentStatusAction _ -> pure unit
     RemovePaymentBanner -> pure unit
+    OfferPopupAC _ -> pure unit
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -205,6 +206,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
+                    | SubscriptionScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -256,6 +258,7 @@ data Action = NoAction
             | RateCardAC RateCard.Action
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
+            | OfferPopupAC PopUpModal.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -330,7 +333,20 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
+    "Join" -> do
+      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      exit $ SubscriptionScreen state
     _ -> continue state
+
+eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
+  _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
+  _ <- pure $ cleverTapCustomEvent "ny_driver_in_app_popup_join_now"
+  exit $ SubscriptionScreen state {props { showOffer = false }}
+
+eval (OfferPopupAC PopUpModal.DismissPopup) state = do
+  _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
+  continue state {props { showOffer = false }}
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let
@@ -380,6 +396,8 @@ eval (MakePaymentModalAC (MakePaymentModal.Info)) state = continue state{data { 
 
 eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}}}
 
+------------------------------- ChatService - Start --------------------------
+
 eval (OpenChatScreen) state = do
   if not state.props.chatcallbackInitiated then continue state else do
     continueWithCmd state{props{openChatScreen = false}} [do
@@ -390,7 +408,82 @@ eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
   if not state.props.chatcallbackInitiated then continue state else do
     _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
-    continue state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false, isChatOpened = true}}
+    let allMessages = getChatMessages ""
+    continue state{data{messages = allMessages}, props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false, isChatOpened = true}}
+
+eval (UpdateInChat) state = continue state {props{updatedArrivalInChat = true}}
+
+eval (InitializeChat ) state = continue state {props{chatcallbackInitiated = true}}
+
+eval RemoveChat state = do
+  continueWithCmd state {props{chatcallbackInitiated = false}} [ do
+    _ <- stopChatListenerService
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
+    pure $ NoAction
+  ]
+
+eval (UpdateMessages message sender timeStamp size) state = do
+  if not state.props.chatcallbackInitiated then continue state {props {canSendSuggestion = true}} else do
+    continueWithCmd state{data{messagesSize = size}, props {canSendSuggestion = true}} [do
+      pure $ (RideActionModalAction (RideActionModal.LoadMessages))
+    ]
+    
+eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
+  let allMessages = getChatMessages ""
+  case (Array.last allMessages) of
+      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
+                      if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true}}
+                      else do
+                        let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
+                        let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length allMessages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
+                        let suggestions = getSuggestionsfromKey value.message
+                        updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
+      Nothing -> continue state {props {canSendSuggestion = true}}
+
+eval ScrollToBottom state = do
+  _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
+  continue state
+
+eval (ChatViewActionController (ChatView.TextChanged value)) state = continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = (length (trim value)) >= 1}}
+
+eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
+  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
+  _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
+  pure NoAction
+  ]
+
+eval (ChatViewActionController (ChatView.SendMessage)) state = do
+  if state.data.messageToBeSent /= ""
+  then
+   continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [do
+      _ <- pure $ sendMessage state.data.messageToBeSent
+      _ <- pure $ setText (getNewIDWithTag "ChatInputEditText") ""
+      pure NoAction
+   ]
+  else
+    continue state
+
+eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
+  if state.props.canSendSuggestion then do
+    let message = getMessageFromKey chatSuggestion "EN_US"
+    _ <- pure $ sendMessage message
+    let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
+    continue state{props {canSendSuggestion = false}}
+  else continue state
+
+eval (ChatViewActionController (ChatView.BackPressed)) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  continueWithCmd state [do
+      pure $ BackPressed
+    ]
+
+eval (ChatViewActionController (ChatView.Navigate)) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  continueWithCmd state [do
+    pure $ RideActionModalAction (RideActionModal.OnNavigate)
+  ]
+
+------------------------------- ChatService - End --------------------------
 
 eval (RideActionModalAction (RideActionModal.LocationTracking)) state = do
   let newState = state {props {showDottedRoute = not state.props.showDottedRoute} }
@@ -492,76 +585,6 @@ eval (TimeUpdate time lat lng) state = do
     _ <- if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
     pure AfterRender
     ]
-
-eval (UpdateInChat) state = continue state {props{updatedArrivalInChat = true}}
-
-eval (InitializeChat ) state = continue state {props{chatcallbackInitiated = true}}
-
-eval RemoveChat state = do
-  continueWithCmd state {props{chatcallbackInitiated = false}} [ do
-    _ <- stopChatListenerService
-    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
-    pure $ NoAction
-  ]
-
-eval (UpdateMessages message sender timeStamp size) state = do
-  if not state.props.chatcallbackInitiated then continue state else do
-    let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
-    case (Array.last messages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
-                      if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
-                      else do
-                        let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                        let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                        let suggestions = getSuggestionsfromKey message
-                        updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestions, messagesSize = size}, props {unReadMessages = unReadMessages}}
-      Nothing -> continue state
-
-eval ScrollToBottom state = do
-  _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
-  continue state
-
-eval (ChatViewActionController (ChatView.TextChanged value)) state = do
-  let sendMessageActive = if (length (trim value)) >= 1 then
-                          true
-                        else
-                          false
-  continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = sendMessageActive}}
-
-eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
-  _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
-  pure NoAction
-  ]
-
-eval (ChatViewActionController (ChatView.SendMessage)) state = do
-  if state.data.messageToBeSent /= ""
-  then
-   continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [do
-      _ <- pure $ sendMessage state.data.messageToBeSent
-      _ <- pure $ setText (getNewIDWithTag "ChatInputEditText") ""
-      pure NoAction
-   ]
-  else
-    continue state
-
-eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
-  let message = getMessageFromKey chatSuggestion "EN_US"
-  _ <- pure $ sendMessage message
-  let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
-  continue state
-
-eval (ChatViewActionController (ChatView.BackPressed)) state = do
-  _ <- pure $ hideKeyboardOnNavigation true
-  continueWithCmd state [do
-      pure $ BackPressed
-    ]
-
-eval (ChatViewActionController (ChatView.Navigate)) state = do
-  _ <- pure $ hideKeyboardOnNavigation true
-  continueWithCmd state [do
-    pure $ RideActionModalAction (RideActionModal.OnNavigate)
-  ]
 
 eval (RideActiveAction activeRide) state = updateAndExit state { data {activeRide = activeRideDetail state activeRide}} $ UpdateStage ST.RideAccepted state { data {activeRide = activeRideDetail state activeRide}}
 
@@ -762,9 +785,6 @@ dummyCancelReason =  {
         , textBoxRequired : false
         , subtext : Nothing
         }
-
-getValueFromRange :: Int -> Int -> Int -> Int -> Int  -> Int
-getValueFromRange inMin inMax outMin outMax percent = (percent - inMin) * (outMax - outMin + 1) / (inMax - inMin + 1) + outMin
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
 checkNotificationType currentNotification requiredNotification = (show requiredNotification) == currentNotification

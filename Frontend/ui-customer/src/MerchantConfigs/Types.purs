@@ -49,6 +49,8 @@ type AppConfig =
   , showGenderBanner :: Boolean
   , enableMockLocation :: Boolean
   , specialLocationView :: Boolean
+  , internationalNumberEnabled :: Boolean
+  , dashboardUrl :: String
   } 
 
 type QuoteListItemConfig = {
@@ -96,6 +98,7 @@ type SearchLocationConfig = {
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
   showRateCardDetails :: Boolean,
+  showAdditionalChargesText :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
   primaryButtonHeight :: Int

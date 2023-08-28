@@ -15,6 +15,7 @@
 
 module Storage.Queries.SearchRequestForDriver where
 
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
 import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
@@ -28,13 +29,18 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 
-createMany :: (L.MonadFlow m, Log m) => [SearchRequestForDriver] -> m ()
+createMany :: MonadFlow m => [SearchRequestForDriver] -> m ()
 createMany = traverse_ createOne
   where
-    createOne :: (L.MonadFlow m, Log m) => SearchRequestForDriver -> m ()
-    createOne = createWithKV
+    createOne :: MonadFlow m => SearchRequestForDriver -> m ()
+    createOne srd = do
+      when (srd.status == Domain.Active) $ do
+        void $
+          L.runKVDB meshConfig.kvRedis $
+            L.sadd (TE.encodeUtf8 (BeamSRFD.searchReqestForDriverkey $ getId $ Domain.driverId srd)) [TE.encodeUtf8 (getId $ Domain.id srd)]
+      createWithKV srd
 
-findAllActiveBySTId :: (L.MonadFlow m, Log m) => Id SearchTry -> m [SearchRequestForDriver]
+findAllActiveBySTId :: MonadFlow m => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySTId (Id searchTryId) =
   findAllWithKV
     [ Se.And
@@ -43,7 +49,7 @@ findAllActiveBySTId (Id searchTryId) =
         ]
     ]
 
-findAllActiveBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId :: MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
 findAllActiveBySRId (Id searchReqId) =
   findAllWithKV
     [ Se.And
@@ -52,7 +58,7 @@ findAllActiveBySRId (Id searchReqId) =
         ]
     ]
 
-findAllActiveWithoutRespBySearchTryId :: (L.MonadFlow m, MonadTime m, Log m) => Id SearchTry -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchTryId :: MonadFlow m => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
   findAllWithKV
     [ Se.And
@@ -62,7 +68,7 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
         )
     ]
 
-findByDriverAndSearchTryId :: (L.MonadFlow m, Log m) => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchTryId :: MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV
     [ Se.And
@@ -72,30 +78,38 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
         )
     ]
 
--- Should not support driver Id as a key in index, since it will be 1 to many; routing these queries through DB
-findByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m [SearchRequestForDriver]
+-- Should not support driver Id as a secondryKey index in Kv so creating a new key while creating the entry in redis for active searchRequestForDriver
+findByDriver :: MonadFlow m => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   now <- getCurrentTime
-  findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
+  srfdIds <-
+    L.runKVDB meshConfig.kvRedis $
+      L.smembers (TE.encodeUtf8 $ BeamSRFD.searchReqestForDriverkey driverId)
+  findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.id $ Se.In (map TE.decodeUtf8 $ BeamSRFD.extractValue srfdIds), Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
 
-deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
-deleteByDriverId (Id personId) =
+deleteByDriverId :: MonadFlow m => Id Person -> m ()
+deleteByDriverId (Id personId) = do
+  void $ L.runKVDB meshConfig.kvRedis $ L.del [TE.encodeUtf8 $ BeamSRFD.searchReqestForDriverkey personId]
   deleteWithKV
     [Se.Is BeamSRFD.driverId (Se.Eq personId)]
 
-setInactiveBySTId :: (L.MonadFlow m, Log m) => Id SearchTry -> m ()
-setInactiveBySTId (Id searchTryId) =
+setInactiveBySTId :: MonadFlow m => Id SearchTry -> m ()
+setInactiveBySTId (Id searchTryId) = do
+  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+  mapM_ (\s -> void $ L.runKVDB meshConfig.kvRedis $ L.srem (TE.encodeUtf8 $ BeamSRFD.searchReqestForDriverkey $ getId $ Domain.driverId s) [TE.encodeUtf8 $ getId $ Domain.id s]) srfds -- this will remove the key from redis
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
-setInactiveBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m ()
-setInactiveBySRId (Id searchReqId) =
+setInactiveBySRId :: MonadFlow m => Id SearchRequest -> m ()
+setInactiveBySRId (Id searchReqId) = do
+  srfd <- findAllWithKV [Se.And [Se.Is BeamSRFD.requestId (Se.Eq searchReqId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+  mapM_ (\s -> void $ L.runKVDB meshConfig.kvRedis $ L.srem (TE.encodeUtf8 $ BeamSRFD.searchReqestForDriverkey $ getId $ Domain.driverId s) [TE.encodeUtf8 $ getId $ Domain.id s]) srfd -- this will remove the key from redis
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.requestId (Se.Eq searchReqId)]
 
-updateDriverResponse :: (L.MonadFlow m, Log m) => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
+updateDriverResponse :: MonadFlow m => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
 updateDriverResponse (Id id) response =
   updateOneWithKV
     [Se.Set BeamSRFD.response (Just response)]

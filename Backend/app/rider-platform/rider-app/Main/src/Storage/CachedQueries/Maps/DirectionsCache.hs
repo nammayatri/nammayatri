@@ -17,12 +17,10 @@ module Storage.CachedQueries.Maps.DirectionsCache where
 
 import Data.Text
 import Domain.Types.Maps.DirectionsCache (DirectionsCache)
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Logging (Log)
-import Storage.CachedQueries.CacheConfig (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, MonadFlow)
 import qualified Storage.Queries.Maps.DirectionsCache as Queries
 
 cacheDirectionsResponse :: CacheFlow m r => DirectionsCache -> m ()
@@ -34,7 +32,7 @@ cacheDirectionsResponse dirCache = do
 makeDirKey :: Text -> Text -> Int -> Text
 makeDirKey originHash destHash slot = pack "CachedQueries:Maps:origin-" <> originHash <> "-dest:" <> destHash <> "-slot:" <> (pack . show $ slot)
 
-create :: (L.MonadFlow m, Log m) => DirectionsCache -> m ()
+create :: MonadFlow m => DirectionsCache -> m ()
 create = Queries.create
 
 findRoute :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> Text -> Int -> m (Maybe DirectionsCache)

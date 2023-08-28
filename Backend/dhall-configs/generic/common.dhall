@@ -36,9 +36,11 @@ let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS >
 
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 
-let eventStreamNameType = < KAFKA_STREAM | LOG_STREAM | REDIS_STREAM >
+let eventStreamNameType =
+      < KAFKA_STREAM | LOG_STREAM | PROMETHEUS_STREAM | REDIS_STREAM >
 
-let streamConfig = < KafkaStream : kafkaConfig | LogStream : Text >
+let streamConfig =
+      < KafkaStream : kafkaConfig | LogStream : Text | PrometheusStream : Text >
 
 let eventType =
       < RideCreated

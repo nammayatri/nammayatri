@@ -22,27 +22,26 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Plan
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id as KTI
-import Kernel.Types.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.Plan as BeamP
 
-create :: (L.MonadFlow m, Log m) => Plan -> m ()
+create :: MonadFlow m => Plan -> m ()
 create = createWithKV
 
-fetchAllPlan :: (L.MonadFlow m, Log m) => m [Plan]
+fetchAllPlan :: MonadFlow m => m [Plan]
 fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByIdAndPaymentMode :: (L.MonadFlow m, Log m) => Id Plan -> PaymentMode -> m (Maybe Plan)
+findByIdAndPaymentMode :: MonadFlow m => Id Plan -> PaymentMode -> m (Maybe Plan)
 findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq planId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
 
-findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Plan]
+findByMerchantId :: MonadFlow m => Id Merchant -> m [Plan]
 findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamP.merchantId $ Se.Eq merchantId]
 
-findByMerchantIdAndPaymentMode :: (L.MonadFlow m, Log m) => Id Merchant -> PaymentMode -> m [Plan]
+findByMerchantIdAndPaymentMode :: MonadFlow m => Id Merchant -> PaymentMode -> m [Plan]
 findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
 
 instance FromTType' BeamP.Plan Plan where

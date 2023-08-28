@@ -23,7 +23,6 @@ where
 import Domain.Types.Person
 import Domain.Types.Person.PersonFlowStatus
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -31,23 +30,23 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 
-create :: (L.MonadFlow m, Log m) => DPFS.PersonFlowStatus -> m ()
+create :: MonadFlow m => DPFS.PersonFlowStatus -> m ()
 create = createWithKV
 
-getStatus :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DPFS.FlowStatus)
+getStatus :: MonadFlow m => Id Person -> m (Maybe DPFS.FlowStatus)
 getStatus (Id personId) = findOneWithKV [Se.Is BeamPFS.personId $ Se.Eq personId] <&> (DPFS.flowStatus <$>)
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> DPFS.FlowStatus -> m ()
+updateStatus :: MonadFlow m => Id Person -> DPFS.FlowStatus -> m ()
 updateStatus (Id personId) flowStatus = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamPFS.flowStatus flowStatus, Se.Set BeamPFS.updatedAt now]
     [Se.Is BeamPFS.personId $ Se.Eq personId]
 
-deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId :: MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamPFS.personId $ Se.Eq personId]
 
-updateToIdleMultiple :: (L.MonadFlow m, Log m) => [Id Person] -> UTCTime -> m ()
+updateToIdleMultiple :: MonadFlow m => [Id Person] -> UTCTime -> m ()
 updateToIdleMultiple personIds now =
   updateWithKV
     [Se.Set BeamPFS.flowStatus DPFS.IDLE, Se.Set BeamPFS.updatedAt now]

@@ -17,15 +17,14 @@ module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
 import qualified Domain.Types.CancellationReason as Domain
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Logging (Log)
+import Kernel.Types.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
 -- Not querying by Id. In case the table is enabled someday, better to route this through DB
-findAll :: (L.MonadFlow m, Log m) => CancellationStage -> m [CancellationReason]
+findAll :: MonadFlow m => CancellationStage -> m [CancellationReason]
 findAll cancStage = do
   seCaseCondition <- case cancStage of
     OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True

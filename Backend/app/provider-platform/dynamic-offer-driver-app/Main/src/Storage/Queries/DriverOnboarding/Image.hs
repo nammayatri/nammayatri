@@ -20,7 +20,6 @@ import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -28,27 +27,27 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error.Throwing
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
 
-create :: (L.MonadFlow m, Log m) => Image -> m ()
+create :: MonadFlow m => Image -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id Image -> m (Maybe Image)
+findById :: MonadFlow m => Id Image -> m (Maybe Image)
 findById (Id imageid) = findOneWithKV [Se.Is BeamI.id $ Se.Eq imageid]
 
-findImagesByPersonAndType :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person -> ImageType -> m [Image]
+findImagesByPersonAndType :: MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
   findAllWithKV
     [ Se.And
         [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
     ]
 
-findRecentByPersonIdAndImageType :: (L.MonadFlow m, Log m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
+findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
 findRecentByPersonIdAndImageType personId imgtype = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
@@ -62,22 +61,22 @@ findRecentByPersonIdAndImageType personId imgtype = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
-updateToValid :: (L.MonadFlow m, Log m) => Id Image -> m ()
+updateToValid :: MonadFlow m => Id Image -> m ()
 updateToValid (Id id) =
   updateWithKV
     [Se.Set BeamI.isValid True]
     [Se.Is BeamI.id (Se.Eq id)]
 
-findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Image]
+findByMerchantId :: MonadFlow m => Id Merchant -> m [Image]
 findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamI.merchantId $ Se.Eq merchantId]
 
-addFailureReason :: (L.MonadFlow m, Log m) => Id Image -> DriverOnboardingError -> m ()
+addFailureReason :: MonadFlow m => Id Image -> DriverOnboardingError -> m ()
 addFailureReason (Id id) reason =
   updateWithKV
     [Se.Set BeamI.failureReason $ Just reason]
     [Se.Is BeamI.id (Se.Eq id)]
 
-deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId :: MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamI.personId (Se.Eq personId)]
 
 instance FromTType' BeamI.Image Image where

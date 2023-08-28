@@ -39,13 +39,11 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as QDrLoc
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
-import qualified Tools.Metrics as Metrics
 
 type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 
@@ -141,7 +139,6 @@ driverDistanceToPickup ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Metrics.CoreMetrics m,
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>

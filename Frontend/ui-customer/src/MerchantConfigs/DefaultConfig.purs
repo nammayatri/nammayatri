@@ -49,6 +49,7 @@ config =
     , enableLocationTagbar : "true"
     , resultsCardCornerRadius : 20.0
     , showRateCardDetails : true
+    , showAdditionalChargesText : false
     , lottieHeight : 96
     , lottieWidth : 96
     , primaryButtonHeight : 60
@@ -117,4 +118,6 @@ config =
   , showGenderBanner : true
   , enableMockLocation : false
   , specialLocationView : false
+  , internationalNumberEnabled : false
+  , dashboardUrl : "https://nammayatri.in/open/"
   }

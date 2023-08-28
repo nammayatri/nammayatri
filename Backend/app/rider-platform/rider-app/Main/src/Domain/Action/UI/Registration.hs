@@ -62,7 +62,6 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
@@ -71,7 +70,6 @@ import qualified Storage.Queries.Person.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
-import Tools.Metrics
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp
@@ -172,12 +170,10 @@ authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCo
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    HasCacheConfig r,
+    CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    EncFlow m r,
-    CoreMetrics m
+    EncFlow m r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -234,12 +230,10 @@ auth req mbBundleVersion mbClientVersion = do
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasCacheConfig r,
+    CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    EncFlow m r,
-    CoreMetrics m
+    EncFlow m r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -360,7 +354,7 @@ makeSession SmsSessionConfig {..} entityId merchantId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r, L.MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, L.MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   void $ RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
@@ -379,14 +373,12 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   return personAPIEntity
 
 verify ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
-    EncFlow m r,
-    CoreMetrics m,
-    CacheFlow m r
+    EncFlow m r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -416,11 +408,9 @@ verify tokenId req = do
         throwError TokenExpired
 
 callWhatsappOptApi ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
-    CoreMetrics m,
-    EncFlow m r,
-    CacheFlow m r
+    EncFlow m r
   ) =>
   Text ->
   Id SP.Person ->
@@ -477,8 +467,7 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r,
-    CoreMetrics m
+    CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes

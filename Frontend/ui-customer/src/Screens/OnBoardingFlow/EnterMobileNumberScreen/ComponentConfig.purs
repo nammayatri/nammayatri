@@ -32,7 +32,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (not, (<>), (==), (&&), (/=), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), gravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility)
 import Screens.Types as ST
 import Storage (KeyStore(..))
 import Styles.Colors as Color
@@ -71,7 +71,7 @@ whatsAppOTPButtonConfig state = let
       , isSuffixImage = true
       , suffixImageConfig {
         imageUrl = "ny_ic_whatsapp_logo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_whatsapp_logo.png",
-        margin = MarginTop 10,
+        margin = MarginLeft 10,
         gravity = CENTER
         }
       }
@@ -84,8 +84,8 @@ verifyOTPButtonConfig state = let
       { textConfig{ text = (getString CONTINUE) 
                   , color = state.data.config.primaryTextColor }
       , id = "PrimaryButtonOTP"
-      , isClickable = state.props.btnActiveOTP
-      , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
+      , isClickable = state.props.btnActiveOTP 
+      , alpha = if state.props.btnActiveOTP  then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , background = state.data.config.primaryBackground
       , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
@@ -119,13 +119,14 @@ mobileNumberEditTextConfig state = let
       , showErrorLabel = (not state.props.isValidMobileNumber)
       , errorLabel
         { text = (getString INVALID_MOBILE_NUMBER)
+        , margin = MarginBottom 1
         }
       , showCountryCodeField= true
       , countryCodeField { 
-          color = if state.props.countryCodeOptionExpended then Color.black800 else Color.grey900 
+          color = if state.props.countryCodeOptionExpanded then Color.black800 else Color.grey900 
         , padding = PaddingBottom 1
         , textStyle = FontStyle.SubHeading2
-        , countryCodeOptionExpended = state.props.countryCodeOptionExpended
+        , countryCodeOptionExpanded = state.props.countryCodeOptionExpanded
         , countryCode = state.data.countryObj.countryCode
         }
       }

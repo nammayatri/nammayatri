@@ -242,7 +242,6 @@ library
       Lib.Mesh
       Lib.Schema
       Lib.Utils
-      Lib.UtilsTH
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
@@ -357,7 +356,6 @@ library
       Storage.Beam.SearchTry
       Storage.Beam.Vehicle
       Storage.CachedQueries.BapMetadata
-      Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
@@ -365,7 +363,6 @@ library
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
-      Storage.CachedQueries.Issue.IssueReport
       Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.MediaFile

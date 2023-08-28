@@ -22,15 +22,14 @@ where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantConfig as DMC
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfig as BeamMC
 
-findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [DMC.MerchantConfig]
+findAllByMerchantId :: MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
 findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMC.merchantId $ Se.Eq merchantId, Se.Is BeamMC.enabled $ Se.Eq True]]
 
 instance FromTType' BeamMC.MerchantConfig MerchantConfig where

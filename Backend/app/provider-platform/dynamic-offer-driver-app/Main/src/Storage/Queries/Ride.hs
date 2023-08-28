@@ -81,37 +81,37 @@ data DatabaseWith4 table1 table2 table3 table4 f = DatabaseWith4
   }
   deriving (Generic, B.Database be)
 
-create :: (L.MonadFlow m, Log m) => Ride.Ride -> m ()
+create :: MonadFlow m => Ride.Ride -> m ()
 create = createWithKV
 
-findById :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
+findById :: MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 
 findAllRidesByDriverId ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id Person ->
   m [Ride]
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
 
-findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
+findActiveByRBId :: MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
-findAllRidesWithSeConditionsCreatedAtDesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
+findAllRidesWithSeConditionsCreatedAtDesc :: MonadFlow m => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
 findAllRidesWithSeConditionsCreatedAtDesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamR.createdAt) Nothing Nothing
 
-findAllDriverInfromationFromRides :: (L.MonadFlow m, Log m) => [Ride] -> m [DriverInformation]
+findAllDriverInfromationFromRides :: MonadFlow m => [Ride] -> m [DriverInformation]
 findAllDriverInfromationFromRides rides = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
 
-findAllBookingsWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
+findAllBookingsWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
 findAllBookingsWithSeConditions = findAllWithKV
 
-findAllBookingsWithSeConditionsCreatedAtDesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
+findAllBookingsWithSeConditionsCreatedAtDesc :: MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
 findAllBookingsWithSeConditionsCreatedAtDesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamB.createdAt) Nothing Nothing
 
-findAllRidesWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
+findAllRidesWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
 findAllRidesWithSeConditions = findAllWithKV
 
-findAllRidesBookingsByRideId :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId :: MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
 findAllRidesBookingsByRideId (Id merchantId) rideIds = do
   rides <- findAllRidesWithSeConditions [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
   let bookingSeCondition =
@@ -128,10 +128,10 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
       let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
        in acc <> ((\x -> (ride', x)) <$> bookings')
 
-findOneByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
+findOneByBookingId :: MonadFlow m => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
+findAllByDriverId :: MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
@@ -162,23 +162,23 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
     minDayTime date = UTCTime (addDays (-1) date) 66600
     maxDayTime date = UTCTime date 66600
 
-findOneByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
+findOneByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
 findOneByDriverId (Id personId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq personId] <&> listToMaybe
 
-getInProgressByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
+getInProgressByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
-getInProgressOrNewRideIdAndStatusByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverId :: MonadFlow m => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
   ride' <- findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
   let rideData = (,) <$> (DR.id <$> ride') <*> (DR.status <$> ride')
   pure rideData
 
-getActiveByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
+getActiveByDriverId :: MonadFlow m => Id Person -> m (Maybe Ride)
 getActiveByDriverId (Id personId) =
   findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
 
-updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> RideStatus -> m ()
+updateStatus :: MonadFlow m => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
   updateOneWithKV
@@ -187,7 +187,7 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateStartTimeAndLoc :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> LatLong -> m ()
+updateStartTimeAndLoc :: MonadFlow m => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
   updateOneWithKV
@@ -198,7 +198,7 @@ updateStartTimeAndLoc rideId point = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateStatusByIds :: (L.MonadFlow m, MonadTime m, Log m) => [Id Ride] -> RideStatus -> m ()
+updateStatusByIds :: MonadFlow m => [Id Ride] -> RideStatus -> m ()
 updateStatusByIds rideIds status = do
   now <- getCurrentTime
   updateWithKV
@@ -207,7 +207,7 @@ updateStatusByIds rideIds status = do
     ]
     [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
-updateDistance :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> HighPrecMeters -> m ()
+updateDistance :: MonadFlow m => Id Person -> HighPrecMeters -> m ()
 updateDistance driverId distance = do
   now <- getCurrentTime
   dist <- getDistance driverId
@@ -218,12 +218,12 @@ updateDistance driverId distance = do
     ]
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
-getDistance :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m (Maybe HighPrecMeters)
+getDistance :: MonadFlow m => Id Person -> m (Maybe HighPrecMeters)
 getDistance driverId = do
   ride <- getInProgressByDriverId driverId
   pure $ Ride.traveledDistance <$> ride
 
-updateAll :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
+updateAll :: MonadFlow m => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime
   updateWithKV
@@ -240,7 +240,7 @@ updateAll rideId ride = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-getCountByStatus :: (L.MonadFlow m) => Id Merchant -> m [(RideStatus, Int)]
+getCountByStatus :: MonadFlow m => Id Merchant -> m [(RideStatus, Int)]
 getCountByStatus merchantId = do
   -- Tricky query to be able to insert meaningful Point
   dbConf <- getMasterBeamConfig
@@ -255,7 +255,7 @@ getCountByStatus merchantId = do
               pure (ride, booking)
   pure (EulerHS.Prelude.fromRight [] resp)
 
-getRidesForDate :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Day -> Seconds -> m [Ride]
+getRidesForDate :: MonadFlow m => Id Person -> Day -> Seconds -> m [Ride]
 getRidesForDate driverId date diffTime = do
   let minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
   let maxDayTime = UTCTime date (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
@@ -268,7 +268,7 @@ getRidesForDate driverId date diffTime = do
         ]
     ]
 
-updateArrival :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> m ()
+updateArrival :: MonadFlow m => Id Ride -> m ()
 updateArrival rideId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -300,7 +300,7 @@ instance BeamBackend.HasSqlValueSyntax be String => BeamBackend.HasSqlValueSynta
   sqlValueSyntax = autoSqlValueSyntax
 
 findAllRideItems ::
-  (L.MonadFlow m, Log m) =>
+  MonadFlow m =>
   Id Merchant ->
   Int ->
   Int ->
@@ -380,7 +380,7 @@ data StuckRideItem = StuckRideItem
     driverActive :: Bool
   }
 
-findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems :: MonadFlow m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
       bookingSeCondition =
@@ -413,20 +413,20 @@ findStuckRideItems (Id merchantId) bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
 
-findLastRideAssigned :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
+findLastRideAssigned :: MonadFlow m => Id Person -> m (Maybe Ride)
 findLastRideAssigned (Id driverId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq driverId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findRideBookingsById :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Booking] -> m (HashMap.HashMap Text (Booking, Maybe DRide.Ride))
+findRideBookingsById :: MonadFlow m => Id Merchant -> [Id Booking] -> m (HashMap.HashMap Text (Booking, Maybe DRide.Ride))
 findRideBookingsById merchantId bookingIds = do
   bookings <- findBookingsById merchantId bookingIds
   rides <- findRidesByBookingId (bookings <&> (.id))
   let tuple = map (\booking -> (getId booking.id, (booking, Kernel.Prelude.find (\ride -> ride.bookingId == booking.id) rides))) bookings
   pure $ HashMap.fromList tuple
 
-findBookingsById :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Booking] -> m [Booking]
+findBookingsById :: MonadFlow m => Id Merchant -> [Id Booking] -> m [Booking]
 findBookingsById (Id merchantId) bookingIds = findAllWithKV [Se.And [Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]]
 
-findRidesByBookingId :: (L.MonadFlow m, Log m) => [Id Booking] -> m [DRide.Ride]
+findRidesByBookingId :: MonadFlow m => [Id Booking] -> m [DRide.Ride]
 findRidesByBookingId bookingIds = findAllWithKV [Se.Is BeamR.bookingId $ Se.In $ getId <$> bookingIds]
 
 findCancelledBookingId :: MonadFlow m => Id Person -> m [Id Booking]

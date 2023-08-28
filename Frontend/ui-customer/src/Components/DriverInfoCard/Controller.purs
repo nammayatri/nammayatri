@@ -35,6 +35,8 @@ data Action = NoAction
             | OnNavigate
             | RemoveNotification
             | CallDriver
+            | LoadMessages
+            | OnNavigateToZone
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

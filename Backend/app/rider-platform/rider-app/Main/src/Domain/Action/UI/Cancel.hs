@@ -36,11 +36,9 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
@@ -51,7 +49,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 import qualified Tools.Maps as Maps
-import qualified Tools.Metrics as Metrics
 
 data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,
@@ -79,7 +76,7 @@ data CancelSearch = CancelSearch
     merchant :: DM.Merchant
   }
 
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
+cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -138,7 +135,7 @@ isBookingCancellable booking
   | otherwise = pure False
 
 mkDomainCancelSearch ::
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasCacheConfig r, HedisFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) =>
   Id Person.Person ->
   Id DEstimate.Estimate ->
   m CancelSearch
@@ -165,7 +162,7 @@ mkDomainCancelSearch personId estimateId = do
           }
 
 cancelSearch ::
-  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id Person.Person ->
   CancelSearch ->
   m ()
@@ -187,7 +184,6 @@ driverDistanceToPickup ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Metrics.CoreMetrics m,
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>

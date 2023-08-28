@@ -27,12 +27,10 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
 import Kernel.Serviceability
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QPerson
@@ -57,11 +55,9 @@ data RentalSearchRes = RentalSearchRes
   }
 
 rentalSearch ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
     EsqDBReplicaFlow m r,
-    CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasBAPMetrics m r
   ) =>

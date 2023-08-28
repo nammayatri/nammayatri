@@ -16,15 +16,14 @@
 module Storage.Queries.BapMetadata where
 
 import Domain.Types.BapMetadata
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Logging (Log)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BapMetadata as BeamBMD
 
-findById :: (L.MonadFlow m, Log m) => Id BapMetadata -> m (Maybe BapMetadata)
+findById :: MonadFlow m => Id BapMetadata -> m (Maybe BapMetadata)
 findById (Id metaDataId) = findOneWithKV [Se.Is BeamBMD.id $ Se.Eq metaDataId]
 
 instance FromTType' BeamBMD.BapMetadata BapMetadata where

@@ -24,16 +24,15 @@ import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
 import qualified Kernel.External.SMS as Sms
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error
-import Tools.Metrics
 
-sendSMS :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> SendSMSReq -> m SendSMSRes
+sendSMS :: ServiceFlow m r => Id Merchant -> SendSMSReq -> m SendSMSRes
 sendSMS merchantId = Sms.sendSMS handler
   where
     handler = Sms.SmsHandler {..}

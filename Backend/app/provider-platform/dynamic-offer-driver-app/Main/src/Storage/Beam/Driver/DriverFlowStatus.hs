@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Driver.DriverFlowStatus where
@@ -20,8 +21,6 @@ module Storage.Beam.Driver.DriverFlowStatus where
 import Data.Aeson
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
@@ -35,8 +34,8 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
-import Lib.UtilsTH
 import Sequelize
 
 fromFieldFlowStatus ::
@@ -75,20 +74,7 @@ instance B.Table DriverFlowStatusT where
     deriving (Generic, B.Beamable)
   primaryKey = Id . personId
 
-instance ModelMeta DriverFlowStatusT where
-  modelFieldModification = driverFlowStatusTMod
-  modelTableName = "driver_flow_status"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
-
 type DriverFlowStatus = DriverFlowStatusT Identity
-
-instance FromJSON DriverFlowStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON DriverFlowStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
-deriving stock instance Show DriverFlowStatus
 
 deriving stock instance Ord Domain.FlowStatus
 
@@ -102,19 +88,6 @@ driverFlowStatusTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize DriverFlowStatus where
-  put = error "undefined"
-  get = error "undefined"
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverFlowStatusToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverFlowStatusToHSModifiers =
-  M.empty
-
-driverFlowStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverFlowStatusToPSModifiers =
-  M.empty
-
 $(enableKVPG ''DriverFlowStatusT ['personId] [])
+
+$(mkTableInstances ''DriverFlowStatusT "driver_flow_status" "atlas_driver_offer_bpp")

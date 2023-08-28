@@ -18,10 +18,12 @@ module Screens.EnterMobileNumberScreen.Controller where
 import Effect.Unsafe
 
 import Common.Types.App (LazyCheck(..)) as Lazy
+import Common.Types.App (MobileNumberValidatorResp(..)) as MVR
+import Common.Types.App (OTPChannel(..)) as OTP
 import Components.GenericHeader.Controller as GenericHeaderController
+import Components.MobileNumberEditor.Controller as MobileNumberEditorController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Components.MobileNumberEditor.Controller as MobileNumberEditorController
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 import Data.Maybe (Maybe(..))
 import Data.String (length)
@@ -29,6 +31,7 @@ import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
 import Helpers.Utils (setText, clearCountDownTimer, showCarouselScreen)
 import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toast, toggleBtnLoader)
 import Language.Strings (getString)
@@ -40,7 +43,6 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
-import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -120,9 +122,17 @@ eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput Enter
 
 eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_otp_triggered"
+    let newState = state {data {otpChannel = OTP.SMS}, props{btnActiveOTP = false}}
     pure $ hideKeyboardOnNavigation true
     pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
-    exit $ GoToOTP state
+    exit $ GoToOTP newState
+
+eval (WhatsAppOTPButtonAction PrimaryButtonController.OnClick) state = do
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_otp_triggered"
+    let newState = state {data {otpChannel = OTP.WHATSAPP}}
+    pure $ hideKeyboardOnNavigation true
+    pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
+    exit $ GoToOTP newState
 
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 
@@ -132,41 +142,39 @@ eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
     updateAndExit state $ GoToAccountSetUp state
 
 eval (MobileNumberEditTextAction (MobileNumberEditorController.TextChanged id value)) state = do
-    let maxLen = mobileNumberMaxLength state.data.countryObj.countryShortCode
     _ <- if length value ==  mobileNumberMaxLength state.data.countryObj.countryShortCode then do
             pure $ hideKeyboardOnNavigation true
             else pure unit
-    let isValidMobileNumber = mobileNumberValidator state.data.countryObj.countryCode state.data.countryObj.countryShortCode value 
-    let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber
-                                        , btnActiveMobileNumber = if isValidMobileNumber then true else false
-                                        , countryCodeOptionExpended = false}
-                                        , data = state.data { mobileNumber = if (length value) <= maxLen then value else state.data.mobileNumber}}
-    if  isValidMobileNumber then do 
+    let validatorResp = mobileNumberValidator state.data.countryObj.countryCode state.data.countryObj.countryShortCode value 
+    let newState = state { props = state.props { isValidMobileNumber = isValidPrefixMobileNumber validatorResp
+                                        , btnActiveMobileNumber = isValidMobileNumber validatorResp
+                                        , countryCodeOptionExpanded = false}
+                                        , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else value}}
+    if  isValidMobileNumber validatorResp then do 
          let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
          pure unit
      else pure unit
 
     continue newState
 
-eval (MobileNumberEditTextAction (MobileNumberEditorController.FocusChanged boolean)) state = continue state { props{ mNumberEdtFocused = boolean, countryCodeOptionExpended = not boolean}}
+eval (MobileNumberEditTextAction (MobileNumberEditorController.FocusChanged mobileNumberFocused)) state = continue state { props{ mNumberEdtFocused = mobileNumberFocused, countryCodeOptionExpanded = not mobileNumberFocused}}
 
 eval (MobileNumberEditTextAction (MobileNumberEditorController.CountryCodeSelected country)) state = do 
     _ <-  pure $ hideKeyboardOnNavigation true
-    let maxLen = mobileNumberMaxLength country.countryShortCode
-    let isValidMobileNumber = mobileNumberValidator country.countryCode country.countryShortCode state.data.mobileNumber 
+    let validatorResp = mobileNumberValidator country.countryCode country.countryShortCode state.data.mobileNumber 
     let newState = state {data {countryObj = country} 
-                        , props {countryCodeOptionExpended = false, mNumberEdtFocused = true
-                        , isValidMobileNumber = isValidMobileNumber
-                        , btnActiveMobileNumber = isValidMobileNumber }}
-    if isValidMobileNumber then do 
+                        , props {countryCodeOptionExpanded = false, mNumberEdtFocused = true
+                        , isValidMobileNumber = isValidPrefixMobileNumber validatorResp
+                        , btnActiveMobileNumber = isValidMobileNumber validatorResp}}
+    if isValidMobileNumber validatorResp then do 
          let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
          pure unit
     else pure unit
     continue newState
 
-eval (MobileNumberEditTextAction MobileNumberEditorController.ShowOptions) state = continue state{props {countryCodeOptionExpended = true, mNumberEdtFocused = false}}
+eval (MobileNumberEditTextAction MobileNumberEditorController.ShowOptions) state = continue state{props {countryCodeOptionExpanded = true, mNumberEdtFocused = false}}
 
-eval (MobileNumberEditTextAction MobileNumberEditorController.CloseOptions) state = continue state {props {countryCodeOptionExpended = false}}
+eval (MobileNumberEditTextAction MobileNumberEditorController.CloseOptions) state = continue state {props {countryCodeOptionExpanded = false}}
 
 eval (OTPEditTextAction (PrimaryEditTextController.FocusChanged boolean)) state = continue state { props{ otpEdtFocused = boolean}}
 
@@ -198,7 +206,7 @@ eval (AutoFill otp) state = do
     updateAndExit newState $ GoToAccountSetUp (newState)
    
 eval (BackPressed flag) state = do
-      _ <- pure $ printLog "state" state
+      _ <- pure $ spy "state" state
       _ <- pure $ toggleBtnLoader "" false
       _ <- pure $ clearCountDownTimer state.data.timerID
       let newState = state {props{enterOTP =  false,letterSpacing = PX 1.0},data{otp = ""}}
@@ -228,3 +236,9 @@ eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""}
 eval AfterRender state = continue state
 
 eval _ state = continue state
+
+isValidPrefixMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
+isValidPrefixMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)
+
+isValidMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
+isValidMobileNumber resp = (resp == MVR.Valid)

@@ -22,11 +22,11 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
+import Kernel.Utils.Common (CacheConfig)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Shutdown
-import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 
 type Flow = FlowR AppEnv

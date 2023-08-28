@@ -20,7 +20,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified Storage.CachedQueries.Issue.IssueOption as CQIO
-import qualified Storage.CachedQueries.Issue.IssueReport as CQIR
 import qualified Storage.CachedQueries.MediaFile as CQMF
 import qualified Storage.Queries.Issue.Comment as QC
 import qualified Storage.Queries.Issue.IssueReport as QIR
@@ -138,10 +137,9 @@ issueUpdate :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueUpdateBy
 issueUpdate _merchantShortId issueReportId req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
-  issueReport <- CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  _ <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   QIR.updateStatusAssignee issueReportId (toDomainIssueStatus <$> req.status) req.assignee
   whenJust req.assignee mkIssueAssigneeUpdateComment
-  CQIR.invalidateIssueReportCache (Just issueReportId) (Just issueReport.driverId)
   pure Success
   where
     mkIssueAssigneeUpdateComment assignee = do
@@ -159,7 +157,7 @@ issueUpdate _merchantShortId issueReportId req = do
 
 issueAddComment :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueAddCommentByUserReq -> Flow APISuccess
 issueAddComment _merchantShortId issueReportId req = do
-  void $ CQIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  void $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   _ <- QC.create =<< mkComment
   pure Success
   where

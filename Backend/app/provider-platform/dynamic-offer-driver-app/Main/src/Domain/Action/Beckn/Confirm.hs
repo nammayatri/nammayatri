@@ -37,7 +37,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -49,7 +48,6 @@ import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
-import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
@@ -95,8 +93,7 @@ data DConfirmRes = DConfirmRes
   }
 
 handler ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -104,7 +101,6 @@ handler ::
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,
-    CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
@@ -280,13 +276,10 @@ getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
           }
 
 buildRideDetails ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
     HasPrettyLogger m r,
     EncFlow m r,
-    CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
@@ -312,16 +305,14 @@ buildRideDetails ride driver = do
 
 cancelBooking ::
   ( EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    CoreMetrics m,
-    HasLongDurationRetryCfg r c,
-    HasCacheConfig r
+    HasLongDurationRetryCfg r c
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -368,17 +359,14 @@ cancelBooking booking mbDriver transporter = do
           }
 
 validateRequest ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HedisFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,
-    CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c

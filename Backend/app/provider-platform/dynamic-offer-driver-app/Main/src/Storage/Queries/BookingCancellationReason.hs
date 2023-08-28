@@ -33,10 +33,10 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import qualified Storage.Beam.Common as BeamCommon
 
-create :: (L.MonadFlow m, Log m) => DBCR.BookingCancellationReason -> m ()
+create :: MonadFlow m => DBCR.BookingCancellationReason -> m ()
 create = createWithKV
 
-findAllCancelledByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m Int
+findAllCancelledByDriverId :: MonadFlow m => Id Person -> m Int
 findAllCancelledByDriverId driverId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -52,13 +52,13 @@ findAllCancelledByDriverId driverId = do
               B.all_ (BeamCommon.bookingCancellationReason BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if Data.List.null r then 0 else Data.List.head r) res
 
-findByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
+findByBookingId :: MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
 findByBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
-findByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe BookingCancellationReason)
+findByRideId :: MonadFlow m => Id Ride -> m (Maybe BookingCancellationReason)
 findByRideId (Id rideId) = findOneWithKV [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
 
-upsert :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
+upsert :: MonadFlow m => BookingCancellationReason -> m ()
 upsert cancellationReason = do
   res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
   if isJust res

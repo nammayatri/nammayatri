@@ -26,15 +26,13 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
-import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.DriverPoolConfig as Queries
 
-create :: (L.MonadFlow m, Log m) => DriverPoolConfig -> m ()
+create :: MonadFlow m => DriverPoolConfig -> m ()
 create = Queries.create
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DriverPoolConfig]
@@ -59,5 +57,5 @@ makeMerchantIdKey id = "driver-offer:CachedQueries:DriverPoolConfig:MerchantId-"
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
-update :: (L.MonadFlow m, MonadTime m, Log m) => DriverPoolConfig -> m ()
+update :: MonadFlow m => DriverPoolConfig -> m ()
 update = Queries.update

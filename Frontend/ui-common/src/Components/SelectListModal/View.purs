@@ -363,6 +363,7 @@ radioButton config push index item =
         , textView $
           [ text $ fromMaybe "" item.subtext
           , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
+          , padding $ PaddingBottom 5
           , color Color.black650
           , visibility $ case config.activeIndex of 
                             Just activeIndex' -> if (activeIndex' == index) then if item.subtext == Nothing then GONE else VISIBLE else GONE

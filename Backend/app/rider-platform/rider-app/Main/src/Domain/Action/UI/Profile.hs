@@ -46,12 +46,10 @@ import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
 import SharedLogic.CallBPPInternal as CallBPPInternal
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
 import Tools.Error
-import Tools.Metrics
 
 type ProfileRes = Person.PersonAPIEntity
 
@@ -111,7 +109,7 @@ getPersonDetails (personId, _) = do
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CoreMetrics m) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
@@ -134,7 +132,7 @@ updatePerson personId req = do
       req.bundleVersion
   pure APISuccess.Success
 
-validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)
+validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do
   unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
