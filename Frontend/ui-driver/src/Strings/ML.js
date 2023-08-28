@@ -709,12 +709,14 @@ const mlStrings = {
   SWITCH_PLAN_STR : "സ്വിച്ച് പ്ലാൻ?",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത പ്ലാനിൽ ഓട്ടോപെ സജ്ജമാക്കിയിട്ടുണ്ടെങ്കിൽ മാത്രമേ ബാധകമായ ഓഫറുകൾ.",
   DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "കുറിപ്പ്: ദൈനംദിന പരിധിയില്ലാത്ത ഓഫറുകൾ ഈ പ്ലാനിൽ ബാധകമല്ല!", 
-  NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day" ,
+  NO_RIDES_NO_CHARGE : "നിങ്ങൾ സവാരി നടത്തിയാൽ മാത്രം പണം നൽകുക" ,
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
   HELP_STR : "HELP",
   REFRESH_STRING : "Refresh",
   CHAT_FOR_HELP : "സഹായത്തിനായി ചാറ്റ് ചെയ്യുക",
   VIEW_FAQs : "പതിവുചോദ്യങ്ങൾ കാണുക",
-  SUPPORT : "പിന്തുണ"
+  SUPPORT : "പിന്തുണ",
+	NEED_HELP_JOINING_THE_PLAN : "പ്ലാനിൽ ചേരുന്നതിന് സഹായം ആവശ്യമുണ്ടോ? ഞങ്ങളെ സമീപിക്കുക",
+  NEED_HELP_CALL_SUPPORT : "സഹായം ആവശ്യമുണ്ട്? <span style='color:#2194FF'>പിന്തുണയെ വിളിക്കുക</span>"
 }

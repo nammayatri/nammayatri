@@ -16,7 +16,7 @@ module Components.PopUpModal.View where
 
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), not, (<<<), bind, discard, show, pure)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textFromHtml, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight)
 import Components.PopUpModal.Controller (Action(..), Config)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -158,7 +158,7 @@ view push state =
             , margin $ state.secondaryText.margin
             , text $ state.secondaryText.text
             , visibility $ state.secondaryText.visibility
-            ] <> FontStyle.body1 TypoGraphy
+            ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
         , contactView push state
         , linearLayout
             [ height WRAP_CONTENT
@@ -241,14 +241,26 @@ view push state =
         , textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
+            , background state.optionWithHtml.background
+            , cornerRadius 8.0
+            , visibility if state.optionWithHtml.visibility then VISIBLE else GONE
+            , stroke ("1," <> state.optionWithHtml.strokeColor)
+            , margin state.optionWithHtml.margin
+            , color $ state.optionWithHtml.color
             , gravity CENTER
-            , margin $ MarginTop 5
-            , padding $ Padding 5 5 5 10
-            , onClick push $ const DismissPopup
-            ] <> (case state.dismisText of
-                    Just txt -> [text txt]
-                    Nothing -> [visibility GONE]) 
-              <> (FontStyle.subHeading2 LanguageStyle)
+            , onClick
+                ( \action -> do
+                    _ <- push action
+                    clearTheTimer state
+                    pure unit
+                )
+                (const OptionWithHtmlClick)
+            , padding state.optionWithHtml.padding
+            , orientation VERTICAL
+            , clickable state.optionWithHtml.isClickable
+            , alpha (if state.optionWithHtml.isClickable then 1.0 else 0.5)
+            , textFromHtml state.optionWithHtml.text
+            ] <> (FontStyle.subHeading2 LanguageStyle)
         ]
     ]
 

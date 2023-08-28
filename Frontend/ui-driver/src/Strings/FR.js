@@ -592,12 +592,14 @@ const frenchStrings = {
   PLAN_SWITCHED_TO : "le plan est passé à",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "Remarque: Offre applicable uniquement si AutoPay est configuré sur le plan illimité quotidien.",
   DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "Remarque: les offres illimitées quotidiennes ne sont pas applicables sur ce plan!" , 
-  NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
+  NO_RIDES_NO_CHARGE : "Payez uniquement si vous faites des courses",
   GET_SPECIAL_OFFERS : "Get Special Offers",
   VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
   HELP_STR : "HELP",
   REFRESH_STRING : "Refresh",
   CHAT_FOR_HELP : "Chat for Help",
   VIEW_FAQs : "View FAQs",
-  SUPPORT : "Support"
+  SUPPORT : "Support",
+	NEED_HELP_JOINING_THE_PLAN : "Besoin d'aide pour adhérer au plan ?Contactez-nous",
+  NEED_HELP_CALL_SUPPORT : "Besoin d'aide? <span style='color:#2194FF'>Appeler l'assistance</span>"
 }

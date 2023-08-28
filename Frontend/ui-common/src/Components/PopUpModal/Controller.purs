@@ -34,6 +34,7 @@ data Action = OnButton1Click
             | OnImageClick
             | Tipbtnclick Int Int
             | DismissPopup
+            | OptionWithHtmlClick
 
 type Config = {
     primaryText :: TextConfig,
@@ -68,7 +69,7 @@ type Config = {
     fareEstimateText :: String,
     tipSelectedText :: String,
     backgroundColor  :: String,
-    dismisText :: Mb.Maybe String,
+    optionWithHtml :: ButtonConfig,
     topTitle :: Mb.Maybe String
 }
 
@@ -141,7 +142,6 @@ config = {
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
-  , dismisText : Mb.Nothing
   , topTitle : Mb.Nothing
   , primaryText : {
       text : "Text1",
@@ -208,6 +208,22 @@ config = {
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
+    }
+  , optionWithHtml : {
+      background : Color.white900
+    , text : "OptionWithHtml"
+    , strokeColor : Color.white900
+    , color : Color.black650
+    , visibility : false
+    , margin : (Margin 12 0 0 16)
+    , isClickable : true
+    , width : (V 156)
+    , padding : (Padding 0 0 0 0)
+    , timerValue : 5
+    , enableTimer : false
+    , timerID : ""
+    , height : (V 48)
+    , textStyle : SubHeading2
     }
     , dismissPopupConfig : 
     { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"

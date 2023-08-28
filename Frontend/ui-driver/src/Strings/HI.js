@@ -739,7 +739,7 @@ const hindiStrings = {
   FIRST_FREE_RIDE : "पहली मुफ़्त सवारी",
   DAILY_PER_RIDE_DESC : "31 अगस्त तक कोई शुल्क नहीं",
   FIRST_FREE_RIDE : "पहली मुफ़्त सवारी",
-  JOIN_THE_UNLIMITED_PLAN : "अभी ₹1/दिन पर अनलिमिटेड प्लान से जुड़ें और 96% बचाएं!!",
+  JOIN_THE_UNLIMITED_PLAN : "अभी ₹5/दिन पर अनलिमिटेड प्लान से जुड़ें और 96% बचाएं!!",
   MAYBE_LATER : "शायद बाद में",
   YOUR_DUES_DESCRIPTION_MANUAL : "कृपया निर्बाध सवारी जारी रखने की सीमा तक पहुंचने से पहले अपना बकाया चुका दें। आप आसान, परेशानी मुक्त भुगतान के लिए <b>UPI ऑटोपे</b>भी सेट कर सकते हैं।",
   DO_YOU_WANT_TO_CANCEL : "क्या आप रद्द करना चाहते हैं?",
@@ -763,12 +763,14 @@ const hindiStrings = {
   PLAN_SWITCHED_TO : "योजना को अद्यतन किया गया",
   OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।",
   DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "नोट: ऑफर केवल डेली अनलिमिटेड प्लान पर लागू हैं।" , 
-  NO_RIDES_NO_CHARGE : "कोई सवारी नहीं = दिन के लिए कोई शुल्क नहीं",
+  NO_RIDES_NO_CHARGE : "यदि आप सवारी लेते हैं तो ही भुगतान करें",
   GET_SPECIAL_OFFERS : "विशेष ऑफ़र प्राप्त करें",
   VALID_ONLY_IF_PAYMENT : "भुगतान पूरा होने पर ही मान्य",
   HELP_STR : "सहायता",
   REFRESH_STRING : "पुनः लोड करें",
   CHAT_FOR_HELP : "चैट करें",
   VIEW_FAQs : "प्रश्न?",
-  SUPPORT : "सहायता"
+  SUPPORT : "सहायता",
+	NEED_HELP_JOINING_THE_PLAN : "योजना में शामिल होने में सहायता चाहिए? संपर्क करें",
+  NEED_HELP_CALL_SUPPORT : "मदद की ज़रूरत है? <span style='color:#2194FF'>सहायता को कॉल करें</span>"
 }

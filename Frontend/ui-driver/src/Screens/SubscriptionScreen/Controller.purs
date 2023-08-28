@@ -1,31 +1,32 @@
 module Screens.SubscriptionScreen.Controller where
 
+import Debug
+
 import Common.Types.App (APIPaymentStatus, LazyCheck(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.OptionsMenu as OptionsMenu
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
-import Debug
 import Data.Int as DI
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
 import Data.String (toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport)
-import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard)
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), PlanCardConfig)
 import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
+import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore)
-import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -64,6 +65,7 @@ data Action = BackPressed
             | RetryPaymentAC PrimaryButton.Action
             | RefreshPage
             | OptionsMenuAction OptionsMenu.Action
+            | CallSupport
 
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
@@ -82,14 +84,14 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
-  if  ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
+  if state.props.subView == JoinPlan && state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
+  else if  ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
   else if state.props.optionsMenuExpanded then continue state{props{optionsMenuExpanded = false}}
   else if state.props.confirmCancel then continue state{props { confirmCancel = false}}
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
-  else do
-    _ <- pure $ minimizeApp ""
-    continue state
+  else if state.props.subView == JoinPlan && state.props.popUpState /= Mb.Just SupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else continue state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
 
@@ -103,9 +105,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     case item of 
       "manage_plan" -> pure ManagePlanAC 
       "payment_history" -> pure ViewPaymentHistory 
-      "call_support" -> do
-        _ <- pure $ showDialer "08069490091" false
-        pure NoAction
+      "call_support" -> pure CallSupport
       "chat_for_help" -> do
           _ <- openUrlInApp "https://wa.me/917483117936?text=Hello%2C%20I%20need%20help%20with%20setting%20up%20Autopay%20Subscription%0A%E0%B2%B8%E0%B3%8D%E0%B2%B5%E0%B2%AF%E0%B2%82%20%E0%B2%AA%E0%B2%BE%E0%B2%B5%E0%B2%A4%E0%B2%BF%20%E0%B2%9A%E0%B2%82%E0%B2%A6%E0%B2%BE%E0%B2%A6%E0%B2%BE%E0%B2%B0%E0%B2%BF%E0%B2%95%E0%B3%86%E0%B2%AF%E0%B2%A8%E0%B3%8D%E0%B2%A8%E0%B3%81%20%E0%B2%B9%E0%B3%8A%E0%B2%82%E0%B2%A6%E0%B2%BF%E0%B2%B8%E0%B2%B2%E0%B3%81%20%E0%B2%A8%E0%B2%A8%E0%B2%97%E0%B3%86%20%E0%B2%B8%E0%B2%B9%E0%B2%BE%E0%B2%AF%E0%B2%A6%20%E0%B2%85%E0%B2%97%E0%B2%A4%E0%B3%8D%E0%B2%AF%E0%B2%B5%E0%B2%BF%E0%B2%A6%E0%B3%86"
           pure NoAction
@@ -143,9 +143,23 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
                   Mb.Just FailedPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Just DuesClearedPopup -> exit $ Refresh
                   Mb.Just SwitchedPlan -> exit $ Refresh
+                  Mb.Just SupportPopup -> continueWithCmd state [pure CallSupport]
                   Mb.Just CancelAutoPay -> exit $ CancelAutoPayPlan state -- CancelAutoPay API
                   Mb.Nothing -> continue state
 
+eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirectToNav of
+            "Home" -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            "Rides" -> exit $ RideHistory state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            "Alert" -> do
+              _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+              _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+              exit $ Alerts state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            "Rankings" -> do
+              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+              exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            _ -> continue state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+
+eval (PopUpModalAC (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd state [pure CallSupport]
 
 eval (ConfirmCancelPopup (PopUpModal.OnButton1Click)) state = continue state { props { confirmCancel = false}}
 
@@ -160,17 +174,19 @@ eval CancelAutoPayAC state = continue state { props { confirmCancel = true}}
 eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  case screen of
-    "Home" -> exit $ HomeScreen state
-    "Rides" -> exit $ RideHistory state
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-      exit $ Alerts state
-    "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ Contest state
-    _ -> continue state
+  case state.props.subView of 
+    JoinPlan -> continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen}}
+    _ ->  case screen of
+            "Home" -> exit $ HomeScreen state
+            "Rides" -> exit $ RideHistory state
+            "Alert" -> do
+              _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+              _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+              exit $ Alerts state
+            "Rankings" -> do
+              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+              exit $ Contest state
+            _ -> continue state
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuExpanded = false}}
 
@@ -233,6 +249,10 @@ eval (TryAgainButtonAC PrimaryButton.OnClick) state = updateAndExit state { prop
 
 eval (RetryPaymentAC PrimaryButton.OnClick) state = if state.data.myPlanData.planEntity.id == "" then continue state else
   updateAndExit state $ RetryPayment state state.data.myPlanData.planEntity.id
+
+eval CallSupport state = do
+  _ <- pure $ showDialer "08069490091" false
+  continue state
 
 eval _ state = continue state
 
