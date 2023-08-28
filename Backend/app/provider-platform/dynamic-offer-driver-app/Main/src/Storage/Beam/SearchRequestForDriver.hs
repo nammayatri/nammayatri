@@ -160,6 +160,6 @@ searchRequestForDriverTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-$(enableKVPG ''SearchRequestForDriverT ['id] [['driverId], ['searchTryId], ['requestId]])
+$(enableKVPG ''SearchRequestForDriverT ['id] [['searchTryId], ['requestId]])
 
 $(mkTableInstances ''SearchRequestForDriverT "search_request_for_driver" "atlas_driver_offer_bpp")
