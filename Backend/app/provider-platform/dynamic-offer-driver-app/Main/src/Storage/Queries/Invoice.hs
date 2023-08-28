@@ -14,8 +14,8 @@ import Storage.Beam.Invoice as BeamI hiding (Id)
 create :: MonadFlow m => Domain.Invoice -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Domain.Invoice -> m (Maybe Domain.Invoice)
-findById (Id invoiceId) = findOneWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
+findById :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
+findById (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 
 createMany :: MonadFlow m => [Domain.Invoice] -> m ()
 createMany = traverse_ create
@@ -29,8 +29,8 @@ findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.And [Se.Is BeamI.id $ Se.E
 findByDriverFeeIdAndActiveStatus :: MonadFlow m => Id DriverFee -> m (Maybe Domain.Invoice)
 findByDriverFeeIdAndActiveStatus (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
 
-updateInvoiceStatusByInvoiceId :: MonadFlow m => Id Domain.Invoice -> Domain.InvoiceStatus -> m ()
-updateInvoiceStatusByInvoiceId invoiceId invoiceStatus = do
+updateInvoiceStatusByInvoiceId :: MonadFlow m => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
+updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamI.invoiceStatus invoiceStatus,
