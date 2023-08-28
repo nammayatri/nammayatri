@@ -225,7 +225,12 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
     , height = V 178
     , width = V 204
     }
-  , dismisText = Just $ getString MAYBE_LATER
+  , optionWithHtml  {
+    text = getString MAYBE_LATER
+    , visibility = true
+    , margin = MarginTop 5
+    , padding = Padding 5 5 5 10
+  }
 }
 
 offerConfigParams :: ST.HomeScreenState -> PromotionPopupConfig
