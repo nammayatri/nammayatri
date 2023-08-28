@@ -749,12 +749,14 @@ const bengaliStrings = {
 	SWITCH_PLAN_STR : "স্যুইচ প্ল্যান?",
 	OFFERS_APPLICABLE_ON_DAILY_UNLIMITED : "দ্রষ্টব্য: অফারগুলি শুধুমাত্র ডেইলি আনলিমিটেড প্ল্যানে প্রযোজ্য",
 	DAILY_UNLIMITED_OFFER_NOT_AVAILABLE : "দ্রষ্টব্য: প্রতিদিনের সীমাহীন অফারগুলি এই পরিকল্পনায় প্রযোজ্য নয়!" , 
-	NO_RIDES_NO_CHARGE : "No Rides = No Charge for the day",
+	NO_RIDES_NO_CHARGE : "আপনি যদি রাইড করেন তবেই অর্থ প্রদান করুন",
 	GET_SPECIAL_OFFERS : "Get Special Offers",
 	VALID_ONLY_IF_PAYMENT : "valid only if payment is completed",
 	HELP_STR : "HELP",
 	REFRESH_STRING : "Refresh",
 	CHAT_FOR_HELP : "সাহায্যের জন্য চ্যাট",
 	VIEW_FAQs : "View FAQs",
-	SUPPORT : "সমর্থন"
+	SUPPORT : "সমর্থন",
+	NEED_HELP_JOINING_THE_PLAN : "পরিকল্পনায় যোগদানের জন্য সাহায্যের প্রয়োজন? যোগাযোগ করুন",
+  	NEED_HELP_CALL_SUPPORT : "সাহায্য দরকার? <span style='color:#2194FF'>কল সমর্থন</span>"
 	}
