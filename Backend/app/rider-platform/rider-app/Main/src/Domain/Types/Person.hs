@@ -102,7 +102,11 @@ data PersonE e = Person
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    shareEmergencyContacts :: Maybe Bool,
+    nightTimeSafety :: Maybe Bool,
+    triggerNYSupport :: Maybe Bool,
+    hasCompletedSafetySetup :: Maybe Bool
   }
   deriving (Generic)
 

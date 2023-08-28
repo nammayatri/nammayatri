@@ -26,6 +26,7 @@ data MessageKey
   | SET_AS_DEFAULT_EMERGENCY_NUMBER
   | SEND_OTP
   | SEND_BOOKING_OTP
+  | SEND_SOS_ALERT
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage

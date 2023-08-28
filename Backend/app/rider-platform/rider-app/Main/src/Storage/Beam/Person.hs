@@ -128,7 +128,11 @@ data PersonT f = PersonT
     clientVersion :: B.C f (Maybe Text),
     hasTakenValidRide :: B.C f Bool,
     referralCode :: B.C f (Maybe Text),
-    referredAt :: B.C f (Maybe Time.UTCTime)
+    referredAt :: B.C f (Maybe Time.UTCTime),
+    shareEmergencyContacts :: B.C f (Maybe Bool),
+    triggerNYSupport :: B.C f (Maybe Bool),
+    nightTimeSafety :: B.C f (Maybe Bool),
+    hasCompletedSafetySetup :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
@@ -176,7 +180,11 @@ personTMod =
       clientVersion = B.fieldNamed "client_version",
       hasTakenValidRide = B.fieldNamed "has_taken_valid_ride",
       referralCode = B.fieldNamed "referral_code",
-      referredAt = B.fieldNamed "referred_at"
+      referredAt = B.fieldNamed "referred_at",
+      shareEmergencyContacts = B.fieldNamed "share_emergency_contacts",
+      nightTimeSafety = B.fieldNamed "night_safety_checks",
+      triggerNYSupport = B.fieldNamed "trigger_ny_support",
+      hasCompletedSafetySetup = B.fieldNamed "has_completed_safety_setup"
     }
 
 $(enableKVPG ''PersonT ['id] [['mobileNumberHash], ['emailHash], ['referralCode], ['deviceToken]])

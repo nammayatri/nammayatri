@@ -20,10 +20,13 @@ module Domain.Action.UI.Profile
     PersonDefaultEmergencyNumber (..),
     UpdateProfileDefaultEmergencyNumbersResp,
     GetProfileDefaultEmergencyNumbersResp (..),
+    UpdateEmergencySettingsReq (..),
+    UpdateEmergencySettingsResp,
     getPersonDetails,
     updatePerson,
     updateDefaultEmergencyNumbers,
     getDefaultEmergencyNumbers,
+    updateEmergencySettings,
   )
 where
 
@@ -190,3 +193,24 @@ getDefaultEmergencyNumbers (personId, _) = do
 getUniquePersonByMobileNumber :: UpdateProfileDefaultEmergencyNumbersReq -> [PersonDefaultEmergencyNumber]
 getUniquePersonByMobileNumber req =
   nubBy ((==) `on` mobileNumber) req.defaultEmergencyNumbers
+
+data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
+  { shareEmergencyContacts :: Maybe Bool, -- Maybe Nothing
+    triggerNYSupport :: Maybe Bool, -- Maybe Nothing
+    nightTimeSafety :: Maybe Bool,
+    hasCompletedSafetySetup :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type UpdateEmergencySettingsResp = APISuccess.APISuccess
+
+updateEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateEmergencySettingsReq -> m UpdateEmergencySettingsResp
+updateEmergencySettings personId req = do
+  void $
+    QPerson.updateEmergencyInfo
+      personId
+      req.shareEmergencyContacts
+      req.triggerNYSupport
+      req.nightTimeSafety
+      req.hasCompletedSafetySetup
+  pure APISuccess.Success

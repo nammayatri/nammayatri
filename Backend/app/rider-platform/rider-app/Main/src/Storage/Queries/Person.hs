@@ -145,7 +145,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.firstName mbFirstName | isJust mbFirstName]
-        <> [Se.Set BeamP.middleName mbMiddleName | isJust mbFirstName]
+        <> [Se.Set BeamP.middleName mbMiddleName | isJust mbMiddleName]
         <> [Se.Set BeamP.lastName mbLastName | isJust mbLastName]
         <> [Se.Set BeamP.emailEncrypted mbEmailEncrypted | isJust mbEmailEncrypted]
         <> [Se.Set BeamP.emailHash mbEmailHash | isJust mbEmailHash]
@@ -297,7 +297,11 @@ instance FromTType' BeamP.Person Person where
             createdAt = createdAt,
             updatedAt = updatedAt,
             bundleVersion = bundleVersion',
-            clientVersion = clientVersion'
+            clientVersion = clientVersion',
+            shareEmergencyContacts = shareEmergencyContacts,
+            nightTimeSafety = nightTimeSafety,
+            triggerNYSupport = triggerNYSupport,
+            hasCompletedSafetySetup = hasCompletedSafetySetup
           }
 
 instance ToTType' BeamP.Person Person where
@@ -336,5 +340,28 @@ instance ToTType' BeamP.Person Person where
         BeamP.createdAt = createdAt,
         BeamP.updatedAt = updatedAt,
         BeamP.bundleVersion = versionToText <$> bundleVersion,
-        BeamP.clientVersion = versionToText <$> clientVersion
+        BeamP.clientVersion = versionToText <$> clientVersion,
+        BeamP.shareEmergencyContacts = shareEmergencyContacts,
+        BeamP.nightTimeSafety = nightTimeSafety,
+        BeamP.triggerNYSupport = triggerNYSupport,
+        BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup
       }
+
+updateEmergencyInfo ::
+  MonadFlow m =>
+  Id Person ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  m ()
+updateEmergencyInfo (Id personId) shareEmergencyContacts triggerNYSupport nightTimeSafety hasCompletedSafetySetup = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.shareEmergencyContacts shareEmergencyContacts | isJust shareEmergencyContacts]
+        <> [Se.Set BeamP.triggerNYSupport triggerNYSupport | isJust triggerNYSupport]
+        <> [Se.Set BeamP.nightTimeSafety nightTimeSafety | isJust nightTimeSafety]
+        <> [Se.Set BeamP.hasCompletedSafetySetup hasCompletedSafetySetup | isJust hasCompletedSafetySetup]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]

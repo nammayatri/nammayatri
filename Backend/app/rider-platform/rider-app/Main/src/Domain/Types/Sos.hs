@@ -27,3 +27,13 @@ data SosStatus
   | NotResolved
   | Pending
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data MediaType = Video deriving (Read, Show, Generic, ToSchema, ToJSON, FromJSON)
+
+data SosMedia = SosMedia
+  { id :: Id SosMedia,
+    _type :: MediaType,
+    url :: Text,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON)

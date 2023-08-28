@@ -41,6 +41,11 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DSos.SosFeedbackReq
              :> Post '[JSON] APISuccess.APISuccess
+             --  :<|> Capture "sosId" (Id Sos.Sos)
+             --    :> "addVideo"
+             --    :> TokenAuth
+             --    :> MultipartForm Tmp DSos.SOSVideoUploadReq
+             --    :> Post '[JSON] APISuccess.APISuccess
        )
 
 handler :: FlowServer API
@@ -49,7 +54,14 @@ handler =
     :<|> updateSosDetails
 
 createSosDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
-createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
+createSosDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId merchantId
 
 updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
 updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId
+
+-- addSosVideo :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler APISuccess.APISuccess
+-- addSosVideo sosId (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.addSosVideo sosId personId
+
+-- updateSosProfileDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
+
+-- createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId

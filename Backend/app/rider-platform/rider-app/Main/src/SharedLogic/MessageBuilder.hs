@@ -14,9 +14,11 @@
 
 module SharedLogic.MessageBuilder
   ( BuildSendOTPMessageReq (..),
+    BuildSOSAlertMessageReq (..),
     buildSendOTPMessage,
     BuildSendBookingOTPMessageReq (..),
     buildSendBookingOTPMessage,
+    buildSOSAlertMessage,
   )
 where
 
@@ -63,3 +65,19 @@ buildSendBookingOTPMessage merchantId req = do
     merchantMessage.message
       & T.replace (templateText "otp") req.otp
       & T.replace (templateText "amount") req.amount
+
+data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
+  { userName :: Text,
+    rideLink :: Text
+  }
+  deriving (Generic)
+
+buildSOSAlertMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildSOSAlertMessageReq -> m Text
+buildSOSAlertMessage merchantId req = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.SEND_SOS_ALERT
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.SEND_SOS_ALERT))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "userName") req.userName
+      & T.replace (templateText "rideLink") req.rideLink
