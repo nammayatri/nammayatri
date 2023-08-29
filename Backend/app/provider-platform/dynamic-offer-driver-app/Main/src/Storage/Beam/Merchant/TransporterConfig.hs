@@ -70,6 +70,8 @@ data TransporterConfigT f = TransporterConfigT
     enableDashboardSms :: B.C f Bool,
     subscriptionStartTime :: B.C f UTCTime,
     mandateValidity :: B.C f Int,
+    driverLocationAccuracyBuffer :: B.C f Meters,
+    routeDeviationThreshold :: B.C f Meters,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -126,7 +128,9 @@ transporterConfigTMod =
       automaticRCActivationCutOff = B.fieldNamed "automatic_r_c_activation_cut_off",
       driverAutoPayNotificationTime = B.fieldNamed "driver_auto_pay_notification_time",
       driverAutoPayExecutionTime = B.fieldNamed "driver_auto_pay_execution_time",
-      subscriptionStartTime = B.fieldNamed "subscription_start_time"
+      subscriptionStartTime = B.fieldNamed "subscription_start_time",
+      driverLocationAccuracyBuffer = B.fieldNamed "driver_location_accuracy_buffer",
+      routeDeviationThreshold = B.fieldNamed "route_deviation_threshold"
     }
 
 $(enableKVPG ''TransporterConfigT ['merchantId] [])
