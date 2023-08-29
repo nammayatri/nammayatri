@@ -51,6 +51,7 @@ handler =
 
 updateLocation :: (Id Person.Person, Id DM.Merchant) -> DLocation.UpdateLocationReq -> FlowHandler APISuccess
 updateLocation (personId, _) waypoints = withFlowHandlerAPI $ do
+  logDebug "Rupak1"
   hdl <- DLocation.buildUpdateLocationHandle personId
   DLocation.updateLocationHandler hdl waypoints
 

@@ -87,10 +87,13 @@ processWaypoints ::
   NonEmpty LatLong ->
   m ()
 processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints = do
+  logDebug "Rupak9"
+  updateRouteDeviation driverId (toList waypoints)
   calculationFailed <- ih.isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
     else ih.wrapDistanceCalculation driverId $ do
+      logDebug "Rupak7"
       addPoints driverId waypoints
       recalcDistanceBatches ih ending driverId
 
@@ -103,6 +106,7 @@ recalcDistanceBatches ::
 recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId = do
   distanceToUpdate <- recalcDistanceBatches' 0
   updateDistance driverId distanceToUpdate
+  logDebug "Rupak6"
   where
     atLeastBatchPlusOne = getWaypointsNumber driverId <&> (> batchSize)
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
@@ -126,7 +130,7 @@ recalcDistanceBatchStep ::
   m HighPrecMeters
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  updateRouteDeviation driverId batchWaypoints
+  logDebug "Rupak10"
   (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps

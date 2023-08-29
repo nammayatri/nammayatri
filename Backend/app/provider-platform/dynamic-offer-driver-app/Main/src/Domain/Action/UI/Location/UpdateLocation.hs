@@ -212,6 +212,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
         [] -> logWarning "Accuracy of the points is low, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
+          logDebug $ "waypoints length from updateLocationHandler: " <> show newWaypoints
           fork "update driver speed in redis" $
             forM_ (a : ax) $ \point -> do
               updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts

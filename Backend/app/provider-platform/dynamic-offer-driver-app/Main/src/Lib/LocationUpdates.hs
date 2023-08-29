@@ -44,22 +44,24 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 isWithinTolerance :: LatLong -> [LatLong] -> Meters -> Bool
-isWithinTolerance pt estimatedRoute tolerance =
+isWithinTolerance pt estimatedRoute tolerance = do
   let minDistance = highPrecMetersToMeters (minimum $ map (distanceBetweenInMeters pt) estimatedRoute)
    in minDistance <= tolerance
 
 checkForDeviation :: Meters -> [LatLong] -> [LatLong] -> Int -> Bool
-checkForDeviation _ _ [] _ = False
+checkForDeviation _ _ [] deviationCount
+  | deviationCount >= 3 = True
+  | otherwise = False
 checkForDeviation tolerance estimatedRoute (pt : batchWaypoints) deviationCount
   | deviationCount >= 3 = True
-  | length batchWaypoints < 2 = False
   | otherwise = do
     if isWithinTolerance pt estimatedRoute tolerance
-      then checkForDeviation tolerance estimatedRoute batchWaypoints (deviationCount + 1)
-      else checkForDeviation tolerance estimatedRoute batchWaypoints deviationCount
+      then checkForDeviation tolerance estimatedRoute batchWaypoints 0
+      else checkForDeviation tolerance estimatedRoute batchWaypoints (deviationCount + 1)
 
 updateDeviation :: (HedisFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasField "toleranceEarthMetres" r Meters) => Id Person -> [LatLong] -> m ()
 updateDeviation driverId batchWaypoints = do
+  logWarning "Updating Deviation"
   ride <- SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
   tolerance <- asks (.toleranceEarthMetres)
   case ride of
@@ -73,6 +75,7 @@ updateDeviation driverId batchWaypoints = do
               logInfo $ "Deviation detected for driverId: " <> show driverId
               QRide.updateNumDeviation driverId True
             else do
+              logDebug $ "waypoints length: " <> show batchWaypoints
               logInfo $ "No deviation detected for driverId: " <> show driverId
         Nothing -> logInfo $ "Ride route points not found for rideId: " <> show rideId
     Nothing -> logInfo $ "Ride not found for driverId: " <> show driverId
