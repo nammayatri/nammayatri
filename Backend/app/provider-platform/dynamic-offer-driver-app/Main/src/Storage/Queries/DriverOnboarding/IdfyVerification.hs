@@ -41,6 +41,9 @@ findLatestByDriverIdAndDocType (Id driverId) imgType = findAllWithOptionsKV [Se.
 findByRequestId :: MonadFlow m => Text -> m (Maybe IdfyVerification)
 findByRequestId requestId = findOneWithKV [Se.Is BeamIV.requestId $ Se.Eq requestId]
 
+findAllByDriverIdAndDocType :: MonadFlow m => Id Person -> ImageType -> m [IdfyVerification]
+findAllByDriverIdAndDocType (Id driverId) imgType = findAllWithOptionsKV [Se.And [Se.Is BeamIV.driverId $ Se.Eq driverId, Se.Is BeamIV.docType $ Se.Eq imgType]] (Se.Desc BeamIV.createdAt) Nothing Nothing
+
 updateResponse :: MonadFlow m => Text -> Text -> Text -> m ()
 updateResponse requestId status resp = do
   now <- getCurrentTime

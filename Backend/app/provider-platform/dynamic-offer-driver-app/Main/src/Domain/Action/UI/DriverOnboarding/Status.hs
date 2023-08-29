@@ -24,7 +24,10 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
-import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC -- temp import for backward compatibility should be removed later
+-- temp import for backward compatibility should be removed later
+
+import Data.List (unionBy)
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
@@ -38,6 +41,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import SharedLogic.VehicleRegistrationCertificate
 import qualified Storage.CachedQueries.DriverInformation as DIQuery
 import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as SAV
@@ -52,13 +56,12 @@ import Storage.Queries.Person as Person
 -- FAILED is used when verification is failed
 -- INVALID is the state
 --   which the doc switches to when, for example, it's expired.
-data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
   { dlVerificationStatus :: ResponseStatus,
     rcVerificationStatus :: ResponseStatus,
-    aadhaarVerificationStatus :: ResponseStatus
+    aadhaarVerificationStatus :: ResponseStatus,
+    rcLinkStatus :: [RCLinkStatus]
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -69,13 +72,14 @@ statusHandler (personId, merchantId) multipleRC = do
   (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
   (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit multipleRC
   (aadhaarStatus, _) <- getAadhaarStatus personId
+  allRCsStatus <- findAllRCsByLatestStatus personId transporterConfig.onboardingTryLimit
 
   when (rcStatus == VALID && isNothing multipleRC) $
     activateRCAutomatically personId merchantId mRC
 
   when (dlStatus == VALID && rcStatus == VALID && (aadhaarStatus == VALID || not transporterConfig.aadhaarVerificationRequired)) $ do
     enableDriver personId mDL
-  return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus, aadhaarVerificationStatus = aadhaarStatus}
+  return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus, aadhaarVerificationStatus = aadhaarStatus, rcLinkStatus = allRCsStatus}
 
 getAadhaarStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
 getAadhaarStatus personId = do
@@ -139,9 +143,12 @@ verificationStatus :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
 verificationStatus onboardingTryLimit imagesNum verificationReq =
   case verificationReq of
     Just req -> do
-      if req.status == "pending"
-        then PENDING
-        else FAILED
+      if req.status == "completed"
+        then VALID
+        else
+          if req.status == "pending"
+            then PENDING
+            else FAILED
     Nothing -> do
       if imagesNum > onboardingTryLimit
         then LIMIT_EXCEED
@@ -165,3 +172,24 @@ activateRCAutomatically personId merchantId (Just rc) = do
             isActivate = True
           }
   void $ DomainRC.linkRCStatus (personId, merchantId) rcStatusReq
+
+findAllRCsByLatestStatus :: Id SP.Person -> Int -> Flow [RCLinkStatus]
+findAllRCsByLatestStatus personId onboardingTryLimit = do
+  activeRCs <- getAllLinkedRCs personId
+  allRCsLinkedWithDriverId <- IVQuery.findAllByDriverIdAndDocType personId Image.VehicleRegistrationCertificate
+  transformedRCs <- mapM (idfyToLinkedRCStatus personId Image.VehicleRegistrationCertificate onboardingTryLimit) allRCsLinkedWithDriverId
+  let allRCsLatestStatus = unionBy (\activeRC allRC -> activeRC.rcNumber == allRC.rcNumber) activeRCs transformedRCs
+      pendingAndFailedRCs = filter (\rc -> rc.status == PENDING || rc.status == FAILED) allRCsLatestStatus
+  pure $ activeRCs ++ pendingAndFailedRCs
+
+idfyToLinkedRCStatus :: Id SP.Person -> Image.ImageType -> Int -> IV.IdfyVerification -> Flow RCLinkStatus
+idfyToLinkedRCStatus driverId docType driverOnBoardingLimit verification = do
+  images <- IQuery.findRecentByPersonIdAndImageType driverId docType
+  rcNumber <- decrypt verification.documentNumber
+  let verificationStatus_ = verificationStatus driverOnBoardingLimit (length images) (Just verification)
+  return $
+    RCLinkStatus
+      { rcNumber = rcNumber,
+        isActive = False,
+        status = verificationStatus_
+      }
