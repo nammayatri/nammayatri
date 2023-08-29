@@ -226,6 +226,7 @@ foreign import getAllDates :: Fn1 Int (Array DateObj)
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: String -> Array ChatComponent
+foreign import scrollViewFocus :: String -> Int -> Boolean
 
 type LottieAnimationConfig = {
     rawJson :: String
