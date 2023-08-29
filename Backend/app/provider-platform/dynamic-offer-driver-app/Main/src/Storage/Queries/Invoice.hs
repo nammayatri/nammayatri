@@ -20,12 +20,12 @@ findById (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 createMany :: MonadFlow m => [Domain.Invoice] -> m ()
 createMany = traverse_ create
 
-findByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
-findByDriverFeeId (Id driverFeeId) =
+findValidByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findValidByDriverFeeId (Id driverFeeId) =
   findAllWithKV
     [ Se.And
         [ Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId,
-          Se.Is BeamI.invoiceStatus $ Se.Not $ Se.Eq Domain.INACTIVE
+          Se.Is BeamI.invoiceStatus $ Se.Not $ Se.In [Domain.INACTIVE, Domain.EXPIRED]
         ]
     ]
 
