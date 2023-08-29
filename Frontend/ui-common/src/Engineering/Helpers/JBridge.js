@@ -1033,7 +1033,7 @@ export const minimizeApp = function (str) {
 export const toast = function (str) {
   if (window.__OS == "IOS")
     window.JBridge.toast(str); //remove once toast is fixed in iOS.
-    else 
+    else
       if(window.JBridge.toaster)
         window.JBridge.toaster(str);
       else
@@ -1229,7 +1229,7 @@ export const storeCallBackDriverLocationPermission = function (cb) {
           };
           window.JBridge.storeCallBackDriverLocationPermission(callback);
           console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
-      }    
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackDriverLocationPermission ------", error);
@@ -1282,7 +1282,7 @@ export const storeCallBackOverlayPermission = function (cb) {
             window.onResumeListeners.push(overlayCallBack);
           }
           console.log("In storeCallBackOverlayPermission ---------- + " + action);
-      }    
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackOverlayPermission ------", error);
@@ -1304,7 +1304,7 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
             window.onResumeListeners.push(batteryCallBack);
           }
           console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
-      }    
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackBatteryUsagePermission ------", error);
@@ -1623,7 +1623,7 @@ export const generateSessionId = function () {
     });
     return uuid;
   } catch (err) {
-    return Math.random().toString(16); 
+    return Math.random().toString(16);
   }
 }
 export const initialWebViewSetUp = function (cb) {
@@ -1712,7 +1712,7 @@ export const launchDateSettings = function (res) {
   }
 };
 
-function getTwoDigitsNumber(number) 
+function getTwoDigitsNumber(number)
 {
   return number >= 10 ? number : "0"+number.toString();
 }
@@ -1806,23 +1806,45 @@ export const  horizontalScrollToPos = function (id, childId, focus) {
   // top - 33
   // down - 130
 
-  export const withinTimeRange = function (startTime) {
-    return function (endTime) {
-      return function(timeStr){
-        try {
-          return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
-       }catch (err){
-          return false;
-        }
+export const withinTimeRange = function (startTime) {
+  return function (endTime) {
+    return function(timeStr){
+      try {
+        return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
+     }catch (err){
+        return false;
       }
     }
   }
-  function between(x, min, max) {
-    return x >= min && x <= max;
-  }
+}
 
-  export const askNotificationPermission = function () {
-    if (window.JBridge.requestNotificationPermission){
-      return window.JBridge.requestNotificationPermission();
-    }
+function between(x, min, max) {
+  return x >= min && x <= max;
+}
+
+export const askNotificationPermission = function () {
+  if (window.JBridge.requestNotificationPermission){
+    return window.JBridge.requestNotificationPermission();
   }
+}
+
+export const scrollViewFocus = function (parentID) {
+  return function (index) {
+    if (window.__OS == "ANDROID") {
+      try {
+        let cmd = "set_scrollView=ctx->findViewById:i_" + parentID + ";"
+            cmd += "set_childView=get_scrollView->getChildAt:i_0;"
+            cmd += "set_focusChildView=get_childView->getChildAt:i_" + JSON.stringify(index) + ";"
+            cmd += "get_btm=get_focusChildView->getTop;"
+            cmd += "get_scrollView->smoothScrollTo:i_0,get_btm;"
+        setTimeout(function () {
+          window.Android.runInUI(cmd, null);
+        }, 200)
+        return true;
+      } catch (err) {
+        console.log("error in scrollViewFocus : " + err);
+      }
+    }
+    return false;
+  }
+}
