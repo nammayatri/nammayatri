@@ -59,6 +59,8 @@ data TransporterConfigD u = TransporterConfig
     mandateValidity :: Int,
     aadhaarVerificationRequired :: Bool,
     enableDashboardSms :: Bool,
+    driverLocationAccuracyBuffer :: Meters,
+    routeDeviationThreshold :: Meters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     rcLimit :: Int,

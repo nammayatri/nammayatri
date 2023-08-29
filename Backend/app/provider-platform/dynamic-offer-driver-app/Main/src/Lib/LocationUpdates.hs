@@ -19,35 +19,81 @@ module Lib.LocationUpdates
   )
 where
 
+import Domain.Action.Beckn.Search
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person as Person
+import Domain.Types.Person
+import Domain.Types.Ride
+import qualified Domain.Types.RideRoute as RI
 import Environment
+import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
+import qualified SharedLogic.Ride as SRide
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person.Person Flow)
-buildRideInterpolationHandler orgId isEndRide = do
-  orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
+isWithinTolerance :: LatLong -> [LatLong] -> Meters -> Bool
+isWithinTolerance pt estimatedRoute routeDeviationThreshold = do
+  let minDistance = highPrecMetersToMeters (minimum $ map (distanceBetweenInMeters pt) estimatedRoute)
+   in minDistance <= routeDeviationThreshold
+
+checkForDeviation :: Meters -> [LatLong] -> [LatLong] -> Int -> Bool
+checkForDeviation _ _ [] deviationCount
+  | deviationCount >= 3 = True
+  | otherwise = False
+checkForDeviation routeDeviationThreshold estimatedRoute (pt : batchWaypoints) deviationCount
+  | deviationCount >= 3 = True
+  | otherwise = do
+    if isWithinTolerance pt estimatedRoute routeDeviationThreshold
+      then checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
+      else checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints (deviationCount + 1)
+
+updateDeviation :: (HedisFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Meters -> Maybe (Id Ride) -> [LatLong] -> m ()
+updateDeviation _ Nothing _ = logInfo "No ride found to check deviation"
+updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
+  logWarning "Updating Deviation"
+  let key = searchRequestKey (getId rideId)
+  routeInfo :: Maybe RI.RouteInfo <- Redis.get key
+  case routeInfo >>= (.points) of
+    Just estimatedRoute ->
+      if checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
+        then do
+          logInfo $ "Deviation detected for rideId: " <> show rideId
+          QRide.updateNumDeviation rideId True
+        else do
+          logInfo $ "No deviation detected for rideId: " <> show rideId
+    Nothing -> logInfo $ "Ride route points not found for rideId: " <> show rideId
+
+buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person Flow)
+buildRideInterpolationHandler merchantId isEndRide = do
+  transportConfig <- MTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  orgMapsConfig <- QOMC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService orgMapsConfig.snapToRoad)
-      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show orgMapsConfig.snapToRoad))
+    QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService orgMapsConfig.snapToRoad)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show orgMapsConfig.snapToRoad))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig cfg ->
       return $
-        mkRideInterpolationHandler isEndRide cfg $
-          \driverId dist -> void (QRide.updateDistance driverId dist)
+        mkRideInterpolationHandler
+          isEndRide
+          cfg
+          (\driverId dist -> void (QRide.updateDistance driverId dist))
+          ( \driverId batchWaypoints -> do
+              mRide <- SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
+              void (updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints)
+          )
     _ -> throwError $ InternalError "Unknown Service Config"
 
-whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id DP.Person -> m () -> m ()
+whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do
   redisLockDriverId <- Redis.tryLockRedis lockKey 60
   if redisLockDriverId
