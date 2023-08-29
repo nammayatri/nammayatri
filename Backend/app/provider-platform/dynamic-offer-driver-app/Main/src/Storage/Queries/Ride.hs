@@ -187,6 +187,15 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateNumDeviation :: MonadFlow m => Id Person -> Bool -> m ()
+updateNumDeviation driverId deviation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.numberOfDeviation $ Just deviation,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.driverId (Se.Eq $ getId driverId)]
+
 updateStartTimeAndLoc :: MonadFlow m => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime

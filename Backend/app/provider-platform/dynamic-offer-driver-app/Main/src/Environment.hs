@@ -30,7 +30,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Seconds, Tables)
+import Kernel.Types.Common (HighPrecMeters, Meters, Seconds, Tables)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Registry
@@ -113,7 +113,9 @@ data AppCfg = AppCfg
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    distanceBetweenDriverLocationPointsMetres :: Meters,
+    toleranceEarthMetres :: Meters
   }
   deriving (Generic, FromDhall)
 
@@ -182,7 +184,9 @@ data AppEnv = AppEnv
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     locationTrackingServiceKey :: Text,
-    eventRequestCounter :: EventCounterMetric
+    eventRequestCounter :: EventCounterMetric,
+    distanceBetweenDriverLocationPointsMetres :: Meters,
+    toleranceEarthMetres :: Meters
   }
   deriving (Generic)
 
@@ -219,6 +223,8 @@ buildAppEnv cfg@AppCfg {..} = do
   clickhouseEnv <- createConn clickhouseCfg
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
+      distanceBetweenDriverLocationPointsMetres = cfg.distanceBetweenDriverLocationPointsMetres
+      toleranceEarthMetres = cfg.toleranceEarthMetres
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   return AppEnv {..}

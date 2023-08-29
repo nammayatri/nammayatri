@@ -46,6 +46,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
@@ -163,6 +164,7 @@ updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
+    HasFlowEnv m r '["distanceBetweenDriverLocationPointsMetres" ::: Meters],
     MonadTime m,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -186,8 +188,9 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
+      thresholdDistance <- asks (.distanceBetweenDriverLocationPointsMetres)
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter (filterFunction thresholdDistance oldLoc) sortedWaypoint) mbOldLoc
       mbRideIdAndStatus <- getAssignedRide
 
       case filteredWaypoint of
@@ -235,3 +238,9 @@ checkLocationUpdatesRateLimit personId = do
 
 locationUpdatesHitsCountKey :: Id Person.Person -> Text
 locationUpdatesHitsCountKey personId = "BPP:DriverLocationUpdates:" <> getId personId <> ":hitsCount"
+
+filterFunction :: Meters -> DriverLocation -> Waypoint -> Bool
+filterFunction thresholdDistance oldLoc currwpt =
+  do
+    highPrecMetersToMeters (distanceBetweenInMeters (LatLong oldLoc.lat oldLoc.lon) (currwpt.pt)) > thresholdDistance
+    && oldLoc.coordinatesCalculatedAt < currwpt.ts
