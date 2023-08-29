@@ -58,6 +58,7 @@ data DriverFeeByInvoice = DriverFeeByInvoice
     numRides :: Int,
     payBy :: UTCTime,
     totalEarnings :: Money,
+    totalFee :: Money,
     startTime :: UTCTime,
     endTime :: UTCTime,
     status :: DDF.DriverFeeStatus
@@ -78,26 +79,37 @@ groupDriverFeeByInvoices driverFees_ = do
   pendingFeeInvoiceResp <- buildDriverFeeByInvoice driverFees_ (Just DDF.PAYMENT_PENDING) pendingFeeInvoiceId
   otherInvoiceResp <- mapM (buildDriverFeeByInvoice driverFees_ Nothing) uniqueInvoiceIds
 
-  return ([pendingFeeInvoiceResp] <> otherInvoiceResp)
+  return ([pendingFeeInvoiceResp | pendingFeeInvoiceResp.totalFee /= 0] <> otherInvoiceResp)
   where
     getUniqueInvoiceIds :: (EsqDBReplicaFlow m r, MonadFlow m) => [DDF.DriverFee] -> Id INV.Invoice -> m [Id INV.Invoice]
     getUniqueInvoiceIds driverFees pendingFeeInvoiceId = do
-      invoices <- (runInReplica . QINV.findByDriverFeeId . (.id)) `mapM` driverFees
-      let uniqueInvoices = DL.nub $ map (.id) (concat invoices)
-      return $ filter (pendingFeeInvoiceId /=) uniqueInvoices
+      invoices <- (QINV.findByDriverFeeId . (.id)) `mapM` driverFees
+      let uniqueInvoicesIds = map (.id) (mergeSortAndRemoveDuplicate invoices)
+      return $ filter (pendingFeeInvoiceId /=) uniqueInvoicesIds
 
     getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
     getInvoiceIdForPendingFees pendingFees = do
       invoices <- (runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` pendingFees
-      let createNewInvoice = or (isNothing <$> invoices)
+      let sortedInvoices = mergeSortAndRemoveDuplicate invoices
+      let createNewInvoice = or (null <$> invoices)
       if createNewInvoice
         then do
+          inactivateInvoices sortedInvoices
           insertInvoiceAgainstDriverFee pendingFees
         else do
-          let mLatestInvoice = listToMaybe $ sortOn (Down . (.createdAt)) (catMaybes invoices)
-          case mLatestInvoice of
-            Just invoice -> return invoice.id
-            Nothing -> insertInvoiceAgainstDriverFee pendingFees
+          case sortedInvoices of
+            [] -> insertInvoiceAgainstDriverFee pendingFees
+            (invoice : rest) -> do
+              inactivateInvoices rest
+              return invoice.id
+
+    inactivateInvoices :: (EsqDBFlow m r, MonadFlow m) => [INV.Invoice] -> m ()
+    inactivateInvoices = mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id))
+
+    mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
+    mergeSortAndRemoveDuplicate invoices = do
+      let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
+      sortOn (Down . (.createdAt)) uniqueInvoices
 
     insertInvoiceAgainstDriverFee :: (EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
     insertInvoiceAgainstDriverFee driverFees = do
@@ -140,6 +152,7 @@ groupDriverFeeByInvoices driverFees_ = do
           cgst = sum (invoiceDriverFees <&> (.platformFee.cgst))
           sgst = sum (invoiceDriverFees <&> (.platformFee.sgst))
           platformFee = PlatformFee {..}
+          totalFee = round $ govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
           status =
             case mStatus of
               (Just status_) -> status_

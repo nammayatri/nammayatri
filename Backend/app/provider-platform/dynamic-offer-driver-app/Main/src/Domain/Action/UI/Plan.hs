@@ -20,6 +20,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
+import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (MandateStatus)
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
@@ -308,10 +309,13 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
   let currentDues = sum $ map (\dueInvoice -> fromIntegral dueInvoice.govtCharges + fromIntegral dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) driverPendingAndDuesFees
   case driverRegisterationFee of
     Just registerFee -> do
-      invoice <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
-      case invoice of
-        Just inv -> SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) (Just (inv.id, inv.invoiceShortId))
-        Nothing -> createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues now transporterConfig.mandateValidity
+      invoices <- QINV.findByDriverFeeIdAndActiveStatus registerFee.id
+      case invoices of
+        [] -> createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues now transporterConfig.mandateValidity
+        (inv : resActiveInvoices) -> do
+          -- ideally resActiveInvoices should be null in case they are there make them inactive
+          mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) resActiveInvoices
+          SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) (Just (inv.id, inv.invoiceShortId))
     Nothing -> do
       driverFee <- mkDriverFee
       QDF.create driverFee

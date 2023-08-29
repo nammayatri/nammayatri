@@ -1365,7 +1365,7 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
     defaultLimit = 10
 
     buildPaymentHistory SLDriverFee.DriverFeeByInvoice {..} = do
-      let charges = round $ govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
+      let charges = totalFee
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
           totalRides = numRides
           driverFeeId = cast invoiceId

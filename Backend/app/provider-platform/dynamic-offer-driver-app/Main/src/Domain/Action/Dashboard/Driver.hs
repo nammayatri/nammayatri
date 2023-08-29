@@ -229,7 +229,6 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
     mkPaymentDueResp driverId SLDriverFee.DriverFeeByInvoice {..} = do
       let platformFee_ = mkPlatformFee platformFee
           status_ = castStatus status
-          totalFee = round $ govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
           driverFeeId = cast invoiceId
           driverId_ = cast driverId
       Common.DriverOutstandingBalanceResp
@@ -426,8 +425,8 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   CDI.updateSubscription True driverId
   mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
   QDFS.clearPaymentStatus (cast driverId) driverInfo_.active
-  mInvoices <- (B.runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` driverFees
-  void $ (QINV.updateInvoiceStatusByInvoiceId INV.SUCCESS . (.id)) `mapM` catMaybes mInvoices
+  invoices <- (B.runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` driverFees
+  mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.SUCCESS . (.id)) (concat invoices)
   fork "sending dashboard sms - collected cash" $ do
     Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
   pure Success

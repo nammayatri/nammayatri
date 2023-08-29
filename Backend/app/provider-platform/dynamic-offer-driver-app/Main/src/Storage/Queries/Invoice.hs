@@ -4,7 +4,7 @@ module Storage.Queries.Invoice where
 
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -21,13 +21,25 @@ createMany :: MonadFlow m => [Domain.Invoice] -> m ()
 createMany = traverse_ create
 
 findByDriverFeeId :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
-findByDriverFeeId (Id driverFeeId) = findAllWithKV [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId]
+findByDriverFeeId (Id driverFeeId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId,
+          Se.Is BeamI.invoiceStatus $ Se.Not $ Se.Eq Domain.INACTIVE
+        ]
+    ]
 
 findAllByInvoiceId :: MonadFlow m => Id Domain.Invoice -> m [Domain.Invoice]
-findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.And [Se.Is BeamI.id $ Se.Eq invoiceId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
+findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 
-findByDriverFeeIdAndActiveStatus :: MonadFlow m => Id DriverFee -> m (Maybe Domain.Invoice)
-findByDriverFeeIdAndActiveStatus (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId, Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE]]
+findByDriverFeeIdAndActiveStatus :: MonadFlow m => Id DriverFee -> m [Domain.Invoice]
+findByDriverFeeIdAndActiveStatus (Id driverFeeId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId,
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE
+        ]
+    ]
 
 updateInvoiceStatusByInvoiceId :: MonadFlow m => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
 updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
