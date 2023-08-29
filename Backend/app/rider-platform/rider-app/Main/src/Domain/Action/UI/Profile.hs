@@ -31,7 +31,9 @@ import Data.List (nubBy)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
+import qualified Domain.Types.Person.PersonDisability as PersonDisability
 import Kernel.Beam.Functions
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -49,6 +51,7 @@ import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
+import qualified Storage.Queries.Person.PersonDisability as PDisability
 import Tools.Error
 
 type ProfileRes = Person.PersonAPIEntity
@@ -64,7 +67,8 @@ data UpdateProfileReq = UpdateProfileReq
     language :: Maybe Maps.Language,
     gender :: Maybe Person.Gender,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    disability :: Maybe PersonDisability.DisabilityItem
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -116,6 +120,16 @@ updatePerson personId req = do
   mbEncEmail <- encrypt `mapM` req.email
 
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
+  whenJust req.disability $ \disability -> do
+    customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
+    when (isNothing customerDisability) $ do
+      newDisability <- makeDisability disability
+      PDisability.create newDisability
+      QPerson.updateHasDisability personId
+    when (isJust customerDisability) $ do
+      let disabilityId = getId $ disability.disabilityId
+      PDisability.updateDisabilityByPersonId personId disabilityId disability.tag disability.description
+      QPerson.updateHasDisability personId
   void $
     QPerson.updatePersonalInfo
       personId
@@ -131,6 +145,17 @@ updatePerson personId req = do
       req.clientVersion
       req.bundleVersion
   pure APISuccess.Success
+  where
+    makeDisability disability = do
+      now <- getCurrentTime
+      return $
+        PersonDisability.PersonDisability
+          { personId = personId,
+            disabilityId = getId $ disability.disabilityId,
+            tag = disability.tag,
+            description = disability.description,
+            updatedAt = now
+          }
 
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do

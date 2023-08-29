@@ -42,6 +42,7 @@ data SearchRequest = SearchRequest
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     language :: Maybe Maps.Language,
+    disabilityTag :: Maybe Text,
     customerExtraFee :: Maybe Money,
     autoAssignEnabled :: Maybe Bool,
     autoAssignEnabledV2 :: Maybe Bool,

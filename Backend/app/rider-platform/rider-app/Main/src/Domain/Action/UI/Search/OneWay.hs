@@ -32,6 +32,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Serviceability
@@ -51,6 +52,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Event
@@ -75,6 +77,7 @@ data OneWaySearchRes = OneWaySearchRes
     searchRequestExpiry :: UTCTime,
     merchant :: DM.Merchant,
     customerLanguage :: Maybe Maps.Language,
+    disabilityTag :: Maybe Text,
     device :: Maybe Text,
     shortestRouteInfo :: Maybe Maps.RouteInfo
   }
@@ -130,6 +133,8 @@ oneWaySearch ::
   m OneWaySearchRes
 oneWaySearch personId req bundleVersion clientVersion device = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbDisability <- B.runInReplica $ PD.findByPersonId personId
+  let tag = mbDisability <&> (.tag)
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   mbFavourite <- CSavedLocation.findByLatLonAndRiderId personId req.origin.gps
   HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
@@ -167,6 +172,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
       bundleVersion
       clientVersion
       device
+      tag
       shortestRouteDuration
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
@@ -184,6 +190,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
             customerLanguage = searchRequest.language,
+            disabilityTag = tag,
             device,
             shortestRouteInfo,
             ..
