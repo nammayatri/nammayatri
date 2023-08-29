@@ -358,6 +358,7 @@ getDriverInfoFlow = do
         genderSelectionModal{activeIndex = reqIndex}
         }})
         modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating , driverAlternateNumber = getDriverInfoResp.alternateNumber, driverGender = getGenderState getDriverInfoResp.gender,capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant}})
+        _ <- liftFlowBT $ runEffectFn1 consumeBP unit
         permissionsGiven <- checkAll3Permissions
         if permissionsGiven
           then currentRideFlow
@@ -1954,7 +1955,6 @@ homeScreenFlow = do
 
 nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
 nyPaymentFlow planCardConfig fromJoinPlan = do
-  liftFlowBT $ runEffectFn1 initiatePP unit
   response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
   case response of
     Right (SubscribePlanResp listResp) -> do
@@ -1972,7 +1972,6 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       setValueToLocalStore DISABLE_WIDGET "true"
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
       _ <- paymentPageUI sdkPayload
-      liftFlowBT killPP
       pure $ toggleBtnLoader "" false
       setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
@@ -2101,6 +2100,7 @@ subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN"}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+  liftFlowBT $ runEffectFn1 initiatePP unit
   uiAction <- UI.subscriptionScreen
   case uiAction of
     NAV HomeScreenNav -> homeScreenFlow
