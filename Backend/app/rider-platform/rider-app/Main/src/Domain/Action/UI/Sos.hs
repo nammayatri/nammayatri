@@ -17,43 +17,24 @@ module Domain.Action.UI.Sos
   ( SosReq (..),
     SosRes (..),
     SosFeedbackReq (..),
+    SOSVideoUploadReq (..),
     createSosDetails,
     updateSosDetails,
     markRideAsSafe,
+    addSosVideo,
   )
 where
 
 -- import qualified Domain.Action.Dashboard.Ride as DR
 
--- import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
-
 -- import qualified Storage.Queries.Merchant as SQM
+
 -- import Storage.Tabular.Person ()
 
-import Domain.Action.UI.Profile (getDefaultEmergencyNumbers)
-import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Sos as DSos
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
-import Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.Prelude
-import Kernel.Sms.Config
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Types.APISuccess as APISuccess
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import qualified SharedLogic.MessageBuilder as MessageBuilder
-import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
-import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.Sos as QSos
-import Tools.Error
-import Tools.SMS as Sms
-import Tools.Ticket
+-- import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
 
+import AWS.S3 as S3
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 -- import Storage.CachedQueries.CacheConfig
 -- import qualified Kernel.Storage.Hedis as Redis
 -- import Kernel.ServantMultipart
@@ -69,10 +50,40 @@ import Tools.Ticket
 -- import qualified Text.Read as Read
 -- import qualified "shared-services" SharedService.ProviderPlatform.Issue as Common
 -- import Servant hiding (Summary, throwError)
--- import qualified Data.ByteString as BS
--- import AWS.S3 as S3
--- import qualified EulerHS.Language as L
--- import qualified Storage.Queries.SosMedia as SQSM
+import qualified Data.ByteString as BS
+import Data.Text as T
+import Data.Time.Format.ISO8601 (iso8601Show)
+import Domain.Action.UI.Profile (getDefaultEmergencyNumbers)
+import Domain.Types.Booking.Type (BookingDetails (..))
+import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Sos as DSos
+import Environment
+import qualified EulerHS.Language as L
+import EulerHS.Types (base64Encode)
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
+import Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.Prelude
+import Kernel.ServantMultipart
+import Kernel.Sms.Config
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Sos as QSos
+import qualified Storage.Queries.SosMedia as SQSM
+import qualified Text.Read as Read
+import Tools.Error
+import Tools.SMS as Sms
+import Tools.Ticket
+
 -- import Kernel.External.Ticket.Kapture.Types (IssueDetails(IssueDetails))
 -- import Domain.Action.UI.Profile (getDefaultEmergencyNumbers)
 -- import Data.Foldable (for_)
@@ -89,7 +100,7 @@ data SosReq = SosReq
 
 data SOSVideoUploadReq = SOSVideoUploadReq
   { video :: FilePath,
-    fileType :: FileType,
+    fileType :: Common.FileType,
     reqContentType :: Text
   }
   deriving stock (Eq, Show, Generic)
@@ -99,18 +110,18 @@ data FileType = Video
   deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
--- instance FromMultipart Tmp SOSVideoUploadReq where
---   fromMultipart form = do
---     SOSVideoUploadReq
---       <$> fmap fdPayload (lookupFile "video" form)
---       <*> (lookupInput "fileType" form >>= (Read.readEither . T.unpack))
---       <*> fmap fdFileCType (lookupFile "video" form)
+instance FromMultipart Tmp SOSVideoUploadReq where
+  fromMultipart form = do
+    SOSVideoUploadReq
+      <$> fmap fdPayload (lookupFile "video" form)
+      <*> (lookupInput "fileType" form >>= (Read.readEither . T.unpack))
+      <*> fmap fdFileCType (lookupFile "video" form)
 
--- instance ToMultipart Tmp SOSVideoUploadReq where
---   toMultipart sosVideoUploadReq =
---     MultipartData
---       [Input "fileType" (show sosVideoUploadReq.fileType)]
---       [FileData "video" (T.pack sosVideoUploadReq.image) "" (sosVideoUploadReq.image)]
+instance ToMultipart Tmp SOSVideoUploadReq where
+  toMultipart sosVideoUploadReq =
+    MultipartData
+      [Input "fileType" (show sosVideoUploadReq.fileType)]
+      [FileData "video" (T.pack sosVideoUploadReq.video) "" (sosVideoUploadReq.video)]
 
 newtype SosFeedbackReq = SosFeedbackReq
   { status :: DSos.SosStatus
@@ -138,31 +149,36 @@ createSosDetails personId merchantId req = do
   _ <- QSos.create sosDetails
   smsCfg <- asks (.smsCfg)
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  mobile <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let phoneNumber = countryCode <> mobileNumber
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
-  -- ticketResponse <- createTicket person.merchantId (mkTicket person phoneNumber)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound req.rideId.getId)
-  driverPhoneNo <- ride.driverMobileNumber
-  let countryCode = "+91"
-  let mobileNumber = "450934890"
+  toLocation <- case booking.bookingDetails of
+    OneWayDetails bDetails -> pure $ mkAddressEntity bDetails.toLocation.address
+    RentalDetails _ -> pure $ ""
+    DriverOfferDetails bDetails -> pure $ mkAddressEntity bDetails.toLocation.address
+    OneWaySpecialZoneDetails bDetails -> pure $ mkAddressEntity bDetails.toLocation.address
+
   let rideInfo =
         Ticket.RideInfo
           { rideShortId = ride.shortId.getShortId,
-            customerName = booking.customerName,
-            customerPhoneNo = countryCode <> mobileNumber,
+            customerName = Just $ (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName),
+            customerPhoneNo = Just $ countryCode <> mobileNumber,
             driverName = Just ride.driverName,
-            driverPhoneNo = Just driverPhoneNo,
-            vehicleNo = ride.vehicleNo,
-            status = show booking.bookingStatus,
+            driverPhoneNo = Just ride.driverMobileNumber,
+            vehicleNo = ride.vehicleNumber,
+            status = show booking.status,
             rideCreatedAt = ride.createdAt,
-            pickupLocation = "mkAddress <$> booking.fromLocation",
-            dropLocation = "mkAddress <$> booking.toLocation",
-            fare = ""
+            pickupLocation = mkAddressEntity booking.fromLocation.address,
+            dropLocation = Just toLocation,
+            fare = Nothing
           }
   -- personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   -- decPersonENList <- decrypt `mapM` personENList
+  _ <- createTicket person.merchantId (mkTicket person (Just phoneNumber) ride.trackingUrl rideInfo)
   emergencyContacts <- getDefaultEmergencyNumbers (personId, merchantId)
+
   let sender = smsCfg.sender
 
   message <-
@@ -172,14 +188,29 @@ createSosDetails personId merchantId req = do
           rideLink = "nammayatri.in/t/" <> show ride.shortId
         }
   for_ emergencyContacts.defaultEmergencyNumbers $ \emergencyContact -> do
-    let phoneNumber = emergencyContact.mobileCountryCode <> emergencyContact.mobileNumber
-    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+    let emergencyPhoneNumber = emergencyContact.mobileCountryCode <> emergencyContact.mobileNumber
+    Sms.sendSMS person.merchantId (Sms.SendSMSReq message emergencyPhoneNumber sender)
       >>= Sms.checkSmsResult
 
   return $
     SosRes
       { sosId = sosDetails.id
       }
+  where
+    mkAddressEntity addr =
+      let -- Helper function to add a field to the string if it's Just a value
+          addField field label = case field of
+            Just value -> T.concat [label, ": ", value, ", "]
+            Nothing -> ""
+       in T.concat
+            [ addField addr.street "Street",
+              addField addr.city "City",
+              addField addr.state "State",
+              addField addr.country "Country",
+              addField addr.building "Building",
+              addField addr.areaCode "Area Code",
+              addField addr.area "Area"
+            ]
 
 updateSosDetails :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r) => Id DSos.Sos -> Id Person.Person -> SosFeedbackReq -> m APISuccess.APISuccess
 updateSosDetails sosId personId req = do
@@ -205,28 +236,28 @@ buildSosDetails personId req = do
         rideId = req.rideId
       }
 
--- addSosVideo :: Id DSos.Sos ->  SOSVideoUploadReq -> m APISuccess.APISuccess
--- addSosVideo sosId personId SOSVideoUploadReq {..} = do
---   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
---   contentType <- validateContentType
---   mediaFile <- L.runIO $ base64Encode <$> BS.readFile video
---   filePath <- createFilePath (getId sosId) fileType imageExtension
---   -- discuss file limit
---   fileConfig <- SQM.findById (person.merchantId) >>= fromMaybeM (MerchantConfigNotFound (getId (person.merchantId)))
---   let fileUrl =
---         fileConfig.mediaFileUrlPattern
---           & T.replace "<DOMAIN>" "sos-video"
---           & T.replace "<FILE_PATH>" filePath
---   result <- try @_ @SomeException $ S3.put (T.unpack filePath) encImage
---   case result of
---     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
---     Right _ -> do
---       createMediaEntry sosId Common.AddLinkAsMedia {url = fileUrl, fileType}
---   where
---     validateContentType = do
---       case fileType of
---         Video | reqContentType == "video/mp4" -> pure "mp4"
---         _ -> throwError $ FileFormatNotSupported reqContentType
+addSosVideo :: Id DSos.Sos -> Id Person.Person -> SOSVideoUploadReq -> Flow APISuccess.APISuccess
+addSosVideo sosId personId SOSVideoUploadReq {..} = do
+  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
+  contentType <- validateContentType
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile video
+  filePath <- createFilePath (getId sosId) DSos.Video contentType
+  -- discuss file limit
+  fileConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (InternalError "Error getting merchant configs") -- make type later
+  let fileUrl =
+        fileConfig.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "sos-video"
+          & T.replace "<FILE_PATH>" filePath
+  result <- try @_ @SomeException $ S3.put (T.unpack filePath) mediaFile
+  case result of
+    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+    Right _ -> do
+      createMediaEntry sosId Common.AddLinkAsMedia {url = fileUrl, fileType}
+  where
+    validateContentType = do
+      case fileType of
+        Common.Video | reqContentType == "video/mp4" -> pure "mp4"
+        _ -> throwError $ FileFormatNotSupported reqContentType
 
 -- driverPhotoUpload :: (Id SP.Person, Id DM.Merchant) -> DriverPhotoUploadReq -> Flow APISuccess
 -- driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
@@ -262,23 +293,23 @@ buildSosDetails personId req = do
 --           _ -> throwError $ FileFormatNotSupported reqContentType
 --         _ -> throwError $ FileFormatNotSupported reqContentType
 
--- createFilePath ::
---   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
---   Text ->
---   Video ->
---   Text ->
---   m Text
--- createFilePath sosId fileType imageExtension = do
---   pathPrefix <- asks (.s3Env.pathPrefix)
---   now <- getCurrentTime
---   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
---   return
---     ( pathPrefix <> "/sos-video/" <> "sos-" <> sosId <> "/"
---         <> show fileType
---         <> "/"
---         <> fileName
---         <> imageExtension
---     )
+createFilePath ::
+  Text ->
+  DSos.MediaType ->
+  Text ->
+  Flow Text
+createFilePath sosId fileType videoExtension = do
+  pathPrefix <- asks (.s3Env.pathPrefix)
+  now <- getCurrentTime
+  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+  return
+    ( pathPrefix <> "/sos-video/" <> "sos-" <> sosId <> "/"
+        <> show fileType
+        <> "/"
+        <> fileName
+        <> videoExtension
+    )
+
 -- data AddLinkAsMedia = AddLinkAsMedia
 --   { url :: Text,
 --     fileType :: FileType
@@ -286,39 +317,38 @@ buildSosDetails personId req = do
 --   deriving stock (Eq, Show, Generic)
 --   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
--- createMediaEntry :: Id DSos.Sos -> AddLinkAsMedia -> m APISuccess.APISuccess
--- createMediaEntry sosId Common.AddLinkAsMedia {..} = do
---   fileEntity <- mkFile url
---   SQSM.create fileEntity
---   -- update ticket here
---   return Success
---   where
---     mkFile fileUrl = do
---       id <- generateGUID
---       now <- getCurrentTime
---       return $
---         DSos.SosMedia
---           { id,
---             _type = Dsos.MediaType,
---             url = fileUrl,
---             createdAt = now
---           }
+createMediaEntry :: Id DSos.Sos -> Common.AddLinkAsMedia -> Flow APISuccess.APISuccess
+createMediaEntry _sosId Common.AddLinkAsMedia {..} = do
+  fileEntity <- mkFile url
+  SQSM.create fileEntity
+  -- update ticket here
+  return APISuccess.Success
+  where
+    mkFile fileUrl = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DSos.SosMedia
+          { id,
+            _type = DSos.Video,
+            url = fileUrl,
+            createdAt = now
+          }
 
--- mkTicket :: Person.Person -> Maybe Text -> Ticket.CreateTicketReq
--- mkTicket person phoneNumber trackingUrl = do
---   info <- forM mbRide (buildRideInfo merchantShortId)
---   Ticket.CreateTicketReq
---     { category = "Code Red",
---       subCategory = Just "SOS Alert (follow-back)",
---       issueId = Nothing,
---       issueDescription = "SOS called",
---       mediaFiles = Just [show trackingUrl],
---       name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
---       phoneNo = phoneNumber,
---       personId = person.id.getId,
---       classification = Ticket.CUSTOMER,
---       rideDescription = info
---     }
+mkTicket :: Person.Person -> Maybe Text -> Maybe BaseUrl -> Ticket.RideInfo -> Ticket.CreateTicketReq
+mkTicket person phoneNumber trackingUrl info = do
+  Ticket.CreateTicketReq
+    { category = "Code Red",
+      subCategory = Just "SOS Alert (follow-back)",
+      issueId = Nothing,
+      issueDescription = "SOS called",
+      mediaFiles = Just [show trackingUrl],
+      name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
+      phoneNo = phoneNumber,
+      personId = person.id.getId,
+      classification = Ticket.CUSTOMER,
+      rideDescription = Just info
+    }
 
 markRideAsSafe ::
   ( EsqDBReplicaFlow m r,
@@ -330,7 +360,7 @@ markRideAsSafe ::
   (Id Person.Person, Id Merchant.Merchant) ->
   Id DSos.Sos ->
   m APISuccess.APISuccess
-markRideAsSafe (personId, merchantId) sosId = do
+markRideAsSafe (personId, merchantId) _sosId = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   smsCfg <- asks (.smsCfg)
   -- updateTicket

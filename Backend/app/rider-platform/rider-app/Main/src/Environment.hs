@@ -26,6 +26,7 @@ module Environment
   )
 where
 
+import AWS.S3
 import qualified Data.Map as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
@@ -109,7 +110,9 @@ data AppCfg = AppCfg
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    tables :: Tables
+    tables :: Tables,
+    s3Config :: S3Config,
+    s3PublicConfig :: S3Config
   }
   deriving (Generic, FromDhall)
 
@@ -165,7 +168,11 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    s3Env :: S3Env Flow,
+    s3EnvPublic :: S3Env Flow,
+    s3Config :: S3Config,
+    s3PublicConfig :: S3Config
   }
   deriving (Generic)
 
@@ -182,6 +189,8 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
+      s3Env = buildS3Env s3Config
+      s3EnvPublic = buildS3Env s3PublicConfig
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   hedisClusterEnv <-

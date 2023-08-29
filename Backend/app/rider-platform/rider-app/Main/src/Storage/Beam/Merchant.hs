@@ -120,7 +120,8 @@ data MerchantT f = MerchantT
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime,
     timeDiffFromUtc :: B.C f Seconds,
-    dirCacheSlot :: B.C f [Domain.Slot]
+    dirCacheSlot :: B.C f [Domain.Slot],
+    mediaFileUrlPattern :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
@@ -193,7 +194,8 @@ merchantTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at",
       timeDiffFromUtc = B.fieldNamed "time_diff_from_utc",
-      dirCacheSlot = B.fieldNamed "dir_cache_slot"
+      dirCacheSlot = B.fieldNamed "dir_cache_slot",
+      mediaFileUrlPattern = B.fieldNamed "media_file_url_pattern"
     }
 
 $(enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])

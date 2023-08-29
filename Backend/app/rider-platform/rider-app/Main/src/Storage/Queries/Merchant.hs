@@ -87,7 +87,8 @@ instance FromTType' BeamM.Merchant Merchant where
             createdAt = createdAt,
             timeDiffFromUtc = timeDiffFromUtc,
             updatedAt = updatedAt,
-            dirCacheSlot = dirCacheSlot
+            dirCacheSlot = dirCacheSlot,
+            mediaFileUrlPattern = mediaFileUrlPattern
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -116,5 +117,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
         BeamM.timeDiffFromUtc = timeDiffFromUtc,
-        BeamM.dirCacheSlot = dirCacheSlot
+        BeamM.dirCacheSlot = dirCacheSlot,
+        BeamM.mediaFileUrlPattern = mediaFileUrlPattern
       }

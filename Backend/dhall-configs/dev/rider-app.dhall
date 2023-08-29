@@ -203,4 +203,6 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , tables
+    , s3Config = common.s3Config
+    , s3PublicConfig = common.s3PublicConfig
     }

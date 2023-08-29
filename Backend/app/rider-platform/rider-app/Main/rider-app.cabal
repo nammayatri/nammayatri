@@ -376,6 +376,7 @@ library
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , beckn-spec
     , bytestring
     , casing
@@ -475,6 +476,7 @@ executable rider-app-exe
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , beckn-spec
     , bytestring
     , casing
