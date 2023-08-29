@@ -98,7 +98,8 @@ initData = {
           showBannerImage : false,
           chargesBreakup : [],
           blockedDueToPayment : false,
-          laterButtonVisibility : false
+          laterButtonVisibility : false,
+          orderId : ""
         },
         profileImg : Nothing
     },

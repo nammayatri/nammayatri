@@ -77,7 +77,7 @@ import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..), DriverStatus(..), AadhaarStage(..), UpdatePopupType(..))
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), OnCallRes(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), CreateOrderRes(..), PaymentPagePayload(..), PayPayload(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), OrderStatusRes(..), GenerateAadhaarOTPResp(..), VerifyAadhaarOTPResp(..), OrganizationInfo(..), CurrentDateAndTimeRes(..), MakeRcActiveOrInactiveResp(..))
-import Services.Accessor (_lat, _lon, _id)
+import Services.Accessor (_lat, _lon, _id, _orderId)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
@@ -1933,8 +1933,10 @@ paymentFlow = do
       liftFlowBT killPP
       pure $ toggleBtnLoader "" false
       liftFlowBT $ runEffectFn1 consumeBP unit
-      if (paymentPageOutput == "backpressed") then homeScreenFlow else pure unit-- backpressed FAIL
-      orderStatus <- lift $ lift $ Remote.paymentOrderStatus homeScreenState.data.paymentState.driverFeeId
+      if paymentPageOutput == "backpressed" then homeScreenFlow else pure unit-- backpressed FAIL
+      let orderId = fromMaybe "" $ (sdk_payload.payload)^._orderId
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { paymentState{orderId = orderId } }})
+      orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
       case orderStatus of
         Right (OrderStatusRes resp) ->
           case resp.status of

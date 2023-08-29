@@ -724,7 +724,7 @@ export const initiatePP = function () {
       return function (_response) {
         return function () {
           var response = JSON.parse(_response);
-          console.log("%cHyperpay initiate Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                               
+          console.log("%cHyperpay Terminate Response ", "background:darkblue;color:white;font-size:13px;padding:2px", code, response);
         }
       }
     }
@@ -773,7 +773,10 @@ export const killPP = function () {
     mapps.forEach((key) => {
       if (key != JOS.self) {
         var currJOS = top.JOSHolder[key];
-        currJOS.finish(0)("")();
+        try{currJOS.finish(1)(JSON.stringify({result:"success"}))();}
+        catch (err){
+          console.log(err);
+        }
         delete top.JOSHolder[key];
       }
     });
