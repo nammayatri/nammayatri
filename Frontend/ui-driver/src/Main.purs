@@ -50,7 +50,7 @@ main event = do
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true
     case resp of
-      Right _ -> pure $ printLog "success in main" "resp"
+      Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
   JBridge.storeMainFiberOb mainFiber
   pure unit

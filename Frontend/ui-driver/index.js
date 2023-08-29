@@ -228,10 +228,9 @@ window["onEvent'"] = function (event, args) {
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
   if ((JSON.parse(jsonPayload)).event == "initiate_result"){
+    window.isPPInitiated = true;
     if (window.ppInitiateCallback) {
       window.ppInitiateCallback()();
-    } else {
-      window.isPPInitiated = true;
     }
   }
 }

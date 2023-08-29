@@ -233,7 +233,7 @@ whereToButtonConfig state =
         , color = state.data.config.primaryTextColor 
         }
       , height = V 60
-      , gravity = CENTER
+      , gravity = CENTER_VERTICAL
       , cornerRadius = 8.0
       , margin = (MarginHorizontal 16 16)  
       , isClickable = true 

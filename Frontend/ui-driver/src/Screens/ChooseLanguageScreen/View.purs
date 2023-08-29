@@ -23,9 +23,10 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SelectMenuButton.View as MenuButton
 import Data.Array as DA
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn1)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (consumeBP, getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, pure, unit, discard, ($), (<<<), (==), (<>))
@@ -43,7 +44,7 @@ screen initialState =
   { initialState
   , view
   , name : "ChooseLanguageScreen" 
-  , globalEvents : []
+  , globalEvents : [(\_ -> pure $ runEffectFn1 consumeBP unit)]
   , eval
   }
 
