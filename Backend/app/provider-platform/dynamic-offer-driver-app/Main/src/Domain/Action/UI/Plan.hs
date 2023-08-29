@@ -329,7 +329,7 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
           if inv.maxMandateAmount == Just plan.maxAmount
             then SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) (Just (inv.id, inv.invoiceShortId))
             else do
-              QINV.updateInvoiceStatusByInvoiceId inv.id INV.INACTIVE
+              QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id
               createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues now transporterConfig.mandateValidity
     Nothing -> do
       driverFee <- mkDriverFee
