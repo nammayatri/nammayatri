@@ -13,7 +13,6 @@
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.DriverOnboarding.IdfyVerification where
 

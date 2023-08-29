@@ -13,7 +13,6 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module SharedLogic.Allocator where
 

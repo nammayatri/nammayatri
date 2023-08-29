@@ -13,7 +13,6 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.DriverOnboarding.AadhaarOtpReq where
 
