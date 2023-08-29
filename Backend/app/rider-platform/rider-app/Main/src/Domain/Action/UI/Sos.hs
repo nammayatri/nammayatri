@@ -45,6 +45,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.Ride as QRide
@@ -137,8 +138,28 @@ createSosDetails personId merchantId req = do
   _ <- QSos.create sosDetails
   smsCfg <- asks (.smsCfg)
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mobile <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   -- ticketResponse <- createTicket person.merchantId (mkTicket person phoneNumber)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound req.rideId.getId)
+  driverPhoneNo <- ride.driverMobileNumber
+  let countryCode = "+91"
+  let mobileNumber = "450934890"
+  let rideInfo =
+        Ticket.RideInfo
+          { rideShortId = ride.shortId.getShortId,
+            customerName = booking.customerName,
+            customerPhoneNo = countryCode <> mobileNumber,
+            driverName = Just ride.driverName,
+            driverPhoneNo = Just driverPhoneNo,
+            vehicleNo = ride.vehicleNo,
+            status = show booking.bookingStatus,
+            rideCreatedAt = ride.createdAt,
+            pickupLocation = "mkAddress <$> booking.fromLocation",
+            dropLocation = "mkAddress <$> booking.toLocation",
+            fare = ""
+          }
   -- personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   -- decPersonENList <- decrypt `mapM` personENList
   emergencyContacts <- getDefaultEmergencyNumbers (personId, merchantId)
@@ -298,23 +319,6 @@ buildSosDetails personId req = do
 --       classification = Ticket.CUSTOMER,
 --       rideDescription = info
 --     }
---   where
---     buildRideInfo merchantShortId ride = do
---       res <- DR.rideInfo merchantShortId (cast ride.id)
---       return
---         TIT.RideInfo
---           { rideShortId = ride.shortId.getShortId,
---             customerName = res.customerName,
---             customerPhoneNo = Just res.customerPhoneNo,
---             driverName = Just res.driverName,
---             driverPhoneNo = res.driverPhoneNo,
---             vehicleNo = res.vehicleNo,
---             status = show res.bookingStatus,
---             rideCreatedAt = ride.createdAt,
---             pickupLocation = mkAddress res.customerPickupLocation,
---             dropLocation = mkAddress <$> res.customerDropLocation,
---             fare = res.actualFare
---           }
 
 markRideAsSafe ::
   ( EsqDBReplicaFlow m r,
