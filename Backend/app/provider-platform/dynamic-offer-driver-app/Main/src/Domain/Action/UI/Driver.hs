@@ -1355,7 +1355,9 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
 
-  driverFeeByInvoices <- SLDriverFee.groupDriverFeeByInvoices driverFees
+  driverFeeByInvoices <- case driverFees of
+    [] -> pure []
+    _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
 
   mapM buildPaymentHistory driverFeeByInvoices
   where
