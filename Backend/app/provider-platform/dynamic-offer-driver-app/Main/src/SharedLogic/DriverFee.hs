@@ -126,6 +126,7 @@ groupDriverFeeByInvoices driverFees_ = do
           invoiceShortId = shortId,
           driverFeeId = driverFee.id,
           invoiceStatus = INV.ACTIVE_INVOICE,
+          maxMandateAmount = Nothing,
           updatedAt = now,
           createdAt = now
         }

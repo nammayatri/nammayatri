@@ -132,7 +132,8 @@ planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow Pla
 planList (driverId, merchantId) _mbLimit _mbOffset = do
   plans <- QPD.findByMerchantIdAndPaymentMode merchantId AUTOPAY
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  plansList <- mapM (convertPlanToPlanEntity driverId) plans
+  now <- getCurrentTime
+  plansList <- mapM (convertPlanToPlanEntity driverId now) plans
   return $
     PlanListAPIRes
       { list = plansList,
@@ -147,9 +148,15 @@ currentPlan (driverId, _merchantId) = do
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
-  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId >=> (pure . Just)) mPlan
+
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId
   latestAutopayPayment <- QDF.findLatestByFeeTypeAndStatus DF.RECURRING_EXECUTION_INVOICE [DF.CLEARED] driverId
+
+  now <- getCurrentTime
+  let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
+  let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus driverInfo.autoPayStatus then date else now) mbMandateSetupDate
+  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate >=> (pure . Just)) mPlan
+
   orderId <-
     if driverInfo.autoPayStatus == Just DI.PENDING
       then do
@@ -175,6 +182,9 @@ currentPlan (driverId, _merchantId) = do
       Just DI.PAUSED_PSP -> MANUAL
       Just DI.CANCELLED_PSP -> MANUAL
       _ -> MANUAL
+
+    checkIFActiveStatus (Just DI.ACTIVE) = True
+    checkIFActiveStatus _ = False
 
 -- This API is to create a mandate order if the driver has not subscribed to Mandate even once or has Cancelled Mandate from PSP App.
 planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribeRes
@@ -231,6 +241,7 @@ planSubscribe planId isDashboard (driverId, merchantId) = do
             mandateId = Nothing,
             createdAt = now,
             updatedAt = now,
+            mandateSetupDate = Nothing,
             ..
           }
 
@@ -315,7 +326,11 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
         (inv : resActiveInvoices) -> do
           -- ideally resActiveInvoices should be null in case they are there make them inactive
           mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) resActiveInvoices
-          SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) (Just (inv.id, inv.invoiceShortId))
+          if inv.maxMandateAmount == Just plan.maxAmount
+            then SPayment.createOrder (driverId, merchantId) (registerFee : driverPendingAndDuesFees) (Just $ mandateOrder currentDues now transporterConfig.mandateValidity) (Just (inv.id, inv.invoiceShortId))
+            else do
+              QINV.updateInvoiceStatusByInvoiceId inv.id INV.INACTIVE
+              createOrderForDriverFee driverPendingAndDuesFees registerFee currentDues now transporterConfig.mandateValidity
     Nothing -> do
       driverFee <- mkDriverFee
       QDF.create driverFee
@@ -356,10 +371,10 @@ createMandateInvoiceAndOrder driverId merchantId plan = do
             driverId = cast driverId
           }
 
-convertPlanToPlanEntity :: Id SP.Person -> Plan -> Flow PlanEntity
-convertPlanToPlanEntity driverId plan@Plan {..} = do
+convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Plan -> Flow PlanEntity
+convertPlanToPlanEntity driverId applicationDate plan@Plan {..} = do
   dueInvoices <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId driverId
-  offers <- Payment.offerList merchantId =<< makeOfferReq
+  offers <- Payment.offerList merchantId =<< makeOfferReq applicationDate
   let planFareBreakup = mkPlanFareBreakup offers.offerResp
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbtranslation <- CQPTD.findByPlanIdAndLanguage plan.id (fromMaybe ENGLISH driver.language)
@@ -388,18 +403,17 @@ convertPlanToPlanEntity driverId plan@Plan {..} = do
           description = offer.offerDescription.description,
           tnc = offer.offerDescription.tnc
         }
-    makeOfferReq = do
+    makeOfferReq date = do
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = Payment.INR}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-      now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       return
         Payment.OfferListReq
           { order = offerOrder,
             customer = Just customerReq,
             planId = plan.id.getId,
-            registrationDate = now
+            registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) date
           }
     mkPlanFareBreakup offers = do
       let baseAmount = case plan.planBaseAmount of
