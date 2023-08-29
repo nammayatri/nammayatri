@@ -179,6 +179,7 @@ library
       Domain.Types.OnSearchEvent
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
+      Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Person.PersonStats
       Domain.Types.Quote
@@ -238,6 +239,7 @@ library
       Storage.Beam.Payment.PaymentTransaction
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
+      Storage.Beam.Person.PersonDisability
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.Person.PersonStats
       Storage.Beam.Quote
@@ -294,6 +296,7 @@ library
       Storage.Queries.OnSearchEvent
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
+      Storage.Queries.Person.PersonDisability
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Person.PersonStats
       Storage.Queries.Quote

@@ -87,6 +87,7 @@ data DSearchReq = DSearchReq
     routeDuration :: Maybe Seconds,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
+    disabilityTag :: Maybe Text,
     routePoints :: Maybe [LatLong]
   }
 

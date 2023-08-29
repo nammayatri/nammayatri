@@ -98,6 +98,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverMaxExtraFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
+    disabilityTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds,
     requestedVehicleVariant :: Variant.Variant
   }
@@ -128,6 +129,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
       rideRequestPopupDelayDuration = delayDuration,
       specialLocationTag = searchRequest.specialLocationTag,
+      disabilityTag = searchRequest.disabilityTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
       ..
     }
