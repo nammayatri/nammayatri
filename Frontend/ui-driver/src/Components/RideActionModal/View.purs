@@ -204,7 +204,7 @@ rideTypeView push config =
           , height WRAP_CONTENT
           , text $ getCategorizedVariant config.requestedVehicleVariant
           , margin $ MarginLeft 8
-          , color Color.black800
+          , color $ if getCategorizedVariant config.requestedVehicleVariant == "AC Taxi" then Color.blue800 else Color.orange900
           ] <> FontStyle.body1 TypoGraphy
       ]
   ]
