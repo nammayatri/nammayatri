@@ -184,6 +184,7 @@ data AppEnv = AppEnv
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     locationTrackingServiceKey :: Text,
+    eventRequestCounter :: EventCounterMetric,
     distanceBetweenDriverLocationPointsMetres :: Meters,
     toleranceEarthMetres :: Meters
   }
