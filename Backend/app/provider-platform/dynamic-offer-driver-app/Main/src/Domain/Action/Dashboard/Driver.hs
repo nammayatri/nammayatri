@@ -221,7 +221,9 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
   mobileNumber <- getDbHash phone
   driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   driverFees <- findPendingFeesByDriverId (cast driver.id)
-  driverFeeByInvoices <- SLDriverFee.groupDriverFeeByInvoices driverFees
+  driverFeeByInvoices <- case driverFees of
+    [] -> pure []
+    _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
   return $ map (mkPaymentDueResp driver.id) driverFeeByInvoices
   where
     mkPaymentDueResp driverId SLDriverFee.DriverFeeByInvoice {..} = do
