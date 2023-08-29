@@ -174,6 +174,8 @@ tripIdView push state =
   , gravity LEFT
   ][  textView $
       [ text (getString RIDE_ID)
+      , accessibilityHint $ "Ride I-D :" <> state.data.tripId
+      , accessibilityImportance ENABLE
       , color Color.black700
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout
@@ -184,6 +186,7 @@ tripIdView push state =
       , gravity CENTER_VERTICAL
       ][ textView $
           [ text state.data.tripId
+          , accessibilityImportance DISABLE
           , width WRAP_CONTENT
           , color Color.black900
           ] <> FontStyle.paragraphText LanguageStyle
@@ -286,6 +289,8 @@ tripDetailsView state =
       , orientation VERTICAL
       ][  textView $
           [ text (state.data.totalAmount)
+          , accessibilityHint $  (state.data.totalAmount) <> "Rupees"
+          , accessibilityImportance ENABLE
           , color Color.black
           ] <> FontStyle.h2 LanguageStyle
         , textView $
@@ -365,6 +370,8 @@ invoiceView state push =
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][  textView $
         [ text (getString VIEW_INVOICE)
+        , accessibilityHint "View Invoice Button"
+        , accessibilityImportance ENABLE
         , color Color.darkDescriptionText
         ] <> FontStyle.body1 LanguageStyle
      ,  linearLayout
@@ -372,7 +379,7 @@ invoiceView state push =
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback $     "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+            [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , height (V 15)
             , width (V 15)
             ]
@@ -397,6 +404,8 @@ reportIssueView state push =
         , margin (MarginBottom 16)
         ][  textView $
             [ text (getString REPORT_AN_ISSUE)
+            , accessibilityHint "Report an Issue Button"
+            , accessibilityImportance ENABLE
             , color Color.darkDescriptionText
             ] <> FontStyle.body1 LanguageStyle
           , linearLayout

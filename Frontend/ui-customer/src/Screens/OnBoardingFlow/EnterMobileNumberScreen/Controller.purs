@@ -143,7 +143,7 @@ eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value
     let newState = state { props = state.props { isValidMobileNumber = isValidMobileNumber
                                         , btnActiveMobileNumber = if (length value == 10 && isValidMobileNumber) then true else false}
                                         , data = state.data { mobileNumber = if length value <= 10 then value else state.data.mobileNumber}}
-    continue newState
+    continue newState{props{editTextVal = value}}
 
 eval (MobileNumberEditTextAction (PrimaryEditTextController.FocusChanged boolean)) state = continue state { props{ mNumberEdtFocused = boolean}}
 

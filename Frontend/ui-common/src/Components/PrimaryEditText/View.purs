@@ -20,7 +20,7 @@ import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os, setText)
 import Components.PrimaryEditText.Controller (Action(..), Config)
-import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat, accessibilityHint)
+import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat, accessibilityHint, accessibilityImportance)
 import Font.Style as FontStyle
 import Common.Types.App
 import Data.String as DS
@@ -49,6 +49,7 @@ topLabelView config =
     , singleLine true
     , margin config.topLabel.margin
     , alpha config.topLabel.alpha
+    , accessibilityImportance config.topLabel.accessibilityImportance
     , visibility config.topLabel.visibility
     ] <> (FontStyle.getFontStyle config.topLabel.textStyle LanguageStyle)
 
@@ -94,6 +95,7 @@ editTextView push config =
   , hint config.editText.placeholder
   , singleLine config.editText.singleLine
   , hintColor config.editText.placeholderColor
+  , accessibilityImportance ENABLE
   , accessibilityHint if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text))
   , margin config.editText.margin
   , background config.background

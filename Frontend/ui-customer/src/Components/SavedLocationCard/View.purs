@@ -118,6 +118,8 @@ savedLocationView state push =
             , margin (MarginRight 12)
             ][  textView $
                 [ text (getString EDIT)
+                , accessibilityHint "Edit Button"
+                , accessibilityImportance ENABLE
                 , color Color.blue900
                 ] <> FontStyle.body1 LanguageStyle
               ]
@@ -130,6 +132,8 @@ savedLocationView state push =
             ][  textView $
                 [ text (getString REMOVE)
                 , color Color.blue900
+                , accessibilityHint "Remove Button"
+                , accessibilityImportance ENABLE
                 ] <> FontStyle.body1 LanguageStyle
               ]
           ]

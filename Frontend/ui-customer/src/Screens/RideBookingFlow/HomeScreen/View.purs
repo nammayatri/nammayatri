@@ -666,8 +666,7 @@ liveStatsDashboardView push state =
         width WRAP_CONTENT
       , height WRAP_CONTENT
       , color Color.blue900
-      , accessibilityHint "Check Out Live Stats Button"
-      , accessibilityImportance ENABLE
+      , accessibilityImportance DISABLE
       , text (getString CHECK_OUT_LIVE_STATS)
       ] <> FontStyle.tags TypoGraphy
     ]
@@ -938,7 +937,7 @@ homeScreenTopIconView push state =
                 , disableClickFeedback true
                 , onClick push (const $ OpenSearchLocation)
                 , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
-                , accessibilityHint "Pickup Location is Current Location. Button"
+                , accessibilityHint "Pickup Location is Current Location"
                 , accessibilityImportance ENABLE
                 ]
                 [ textView
@@ -1162,7 +1161,7 @@ completedRideDetails state push =
               ]
           , textView
               [ textFromHtml $ "<strike> ₹" <> (show state.data.driverInfoCardState.price) <> "</strike>"
-              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> show state.data.finalAmount <> " To ₹" <> show state.data.finalAmount
+              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> show state.data.driverInfoCardState.price <> " To ₹" <> show state.data.finalAmount
               , accessibilityImportance ENABLE
               , color Color.white900
               , textSize FontSize.a_28
@@ -1452,7 +1451,7 @@ suggestedPriceView push state =
             ][  textView
                 [ text $ if state.data.rateCard.additionalFare == 0 then state.data.config.currency <> (show state.data.suggestedAmount) else  state.data.config.currency <> (show state.data.suggestedAmount) <> "-" <> state.data.config.currency <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
                 , textSize FontSize.a_32
-                , accessibilityHint $ "Fare IS " <> (if state.data.rateCard.additionalFare == 0 then state.data.config.currency <> (show state.data.suggestedAmount) else  state.data.config.currency <> (show state.data.suggestedAmount) <> "To" <> state.data.config.currency <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)))
+                , accessibilityHint $ "Fare IS " <> (if state.data.rateCard.additionalFare == 0 then state.data.config.currency <> (show state.data.suggestedAmount) else  state.data.config.currency <> (show state.data.suggestedAmount) <> "To" <> state.data.config.currency <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))) <> ":"
                 , accessibilityImportance ENABLE
                 , color Color.black800
                 , margin $ MarginTop 8
@@ -1855,14 +1854,14 @@ loaderView push state =
         $ lottieLoaderView state push
     , PrestoAnim.animationSet [ fadeIn true ]
         $ textView $
-            [ text
-                ( case state.props.currentStage of
+            [ accessibilityHint $ DS.replaceAll (DS.Pattern ".") (DS.Replacement "") ( case state.props.currentStage of
                     ConfirmingRide -> (getString CONFIRMING_THE_RIDE_FOR_YOU)
                     FindingEstimate -> (getString GETTING_ESTIMATES_FOR_YOU)
                     TryAgain -> (getString LET_TRY_THAT_AGAIN)
                     _ -> (getString GETTING_ESTIMATES_FOR_YOU)
                 )
-            , accessibilityHint $ DS.replaceAll (DS.Pattern ".") (DS.Replacement ":") ( case state.props.currentStage of
+            , text
+                ( case state.props.currentStage of
                     ConfirmingRide -> (getString CONFIRMING_THE_RIDE_FOR_YOU)
                     FindingEstimate -> (getString GETTING_ESTIMATES_FOR_YOU)
                     TryAgain -> (getString LET_TRY_THAT_AGAIN)

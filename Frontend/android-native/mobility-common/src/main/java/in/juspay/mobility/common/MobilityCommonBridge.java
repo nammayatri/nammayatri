@@ -63,6 +63,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -1447,16 +1448,20 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (bridgeComponents.getActivity() != null) {
                     int currentId = Integer.parseInt(id);
                     InputMethodManager inputMethodManager = (InputMethodManager) bridgeComponents.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    View editText = bridgeComponents.getActivity().findViewById(currentId);
-                    View prevEditText = null;
+                    EditText editText = bridgeComponents.getActivity().findViewById(currentId);
+                    EditText prevEditText = null;
                     if (lastFocusedEditView != -1) {
                         prevEditText = bridgeComponents.getActivity().findViewById(lastFocusedEditView);
                     }
                     if (inputMethodManager != null && editText != null) {
                         if (prevEditText != null && lastFocusedEditView != currentId) {
                             prevEditText.clearFocus();
+                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
                         }
                         editText.requestFocus();
+                        editText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+                        editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
                         inputMethodManager.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
                     }
                     if (currentId != lastFocusedEditView) {

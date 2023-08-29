@@ -68,6 +68,7 @@ view push config =
                 [ width config.width
                 , height config.height
                 , orientation HORIZONTAL
+                , accessibilityImportance DISABLE
                 , gravity config.gravity
                 , visibility if config.enableLoader then GONE else VISIBLE
                 ]
@@ -75,12 +76,12 @@ view push config =
                 , textView
                     $ [ height config.textConfig.height
                       , width config.textConfig.width
+                      , accessibilityHint config.textConfig.accessibilityHint
+                      , accessibilityImportance ENABLE
                       , text config.textConfig.text
                       , color config.textConfig.color
                       , gravity config.textConfig.gravity
                       , lineHeight "20"
-                      , accessibilityHint config.textConfig.accessibilityHint
-                      , accessibilityImportance ENABLE
                       ]
                     <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
                 , suffixImageLayout config

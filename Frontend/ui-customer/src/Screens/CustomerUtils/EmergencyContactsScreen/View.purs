@@ -346,7 +346,7 @@ contactCardView push state contact index =
         [ height $ WRAP_CONTENT
         , width $ WRAP_CONTENT
         , text (getString REMOVE)
-        , accessibilityHint "Remove Button"
+        , accessibilityHint "Remove"
         , accessibilityImportance ENABLE
         , color Color.blue900
         , textSize 14

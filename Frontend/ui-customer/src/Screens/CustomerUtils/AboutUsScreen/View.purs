@@ -62,8 +62,7 @@ view push state =
     , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
     , gravity CENTER_HORIZONTAL
     , afterRender push (const AfterRender)
-    , accessibilityImportance ENABLE
-    , accessibilityHint $ "App Version : " <>  (getValueToLocalStore VERSION_NAME) <> " Bundle Version : " <> (getValueToLocalStore BUNDLE_VERSION)
+    
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , if (not state.appConfig.nyBrandingVisibility) then
                   linearLayout
@@ -111,7 +110,7 @@ topTextView push state =
         ] <> FontStyle.body5 LanguageStyle
       , linearLayout
         [ height WRAP_CONTENT
-        , width WRAP_CONTENT
+        , width MATCH_PARENT
         , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
         ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
       , linearLayout
@@ -191,6 +190,8 @@ bottomLinksView state =
     , textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
+          , accessibilityImportance ENABLE
+          , accessibilityHint $ "App Version : " <>  (getValueToLocalStore VERSION_NAME) <> " : Bundle Version : " <> (getValueToLocalStore BUNDLE_VERSION)
           , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
           , color "#354052"
           , margin (Margin 0 20 0 10)
@@ -237,6 +238,8 @@ termsAndConditionsView state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString TERMS_AND_CONDITIONS)
+        , accessibilityHint "Terms and Conditions Button"
+        , accessibilityImportance ENABLE
         , color Color.blue900
         , onClick (\action -> do
             _ <- pure action
@@ -263,6 +266,8 @@ privacyPolicyView state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString PRIVACY_POLICY)
+        , accessibilityHint "Privacy Policy"
+        , accessibilityImportance ENABLE
         , color Color.blue900
         , margin (Margin 0 20 0 0)
         , onClick (\action -> do

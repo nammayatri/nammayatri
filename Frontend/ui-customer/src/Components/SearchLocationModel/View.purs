@@ -234,13 +234,7 @@ sourceDestinationEditTextView state push =
     , orientation VERTICAL
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 15 15 0)
     , height $ V 136
-    , afterRender (\action -> do
-      _ <- requestKeyboardShow case state.isSource of
-                                Just true  -> (getNewIDWithTag "SourceEditText")
-                                Just false -> (getNewIDWithTag "DestinationEditText")
-                                Nothing    -> ""
-      pure unit
-      ) (const NoAction)
+  
     ][linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -263,7 +257,14 @@ sourceDestinationEditTextView state push =
             , hint (getString START_)
             , hintColor "#A7A7A7"
             , id $ getNewIDWithTag "SourceEditText"
-            , accessibilityImportance if state.isSource == Just false then DISABLE else ENABLE
+            , afterRender (\action -> do
+                  _ <- pure $ requestKeyboardShow case state.isSource of
+                                            Just true  -> (getNewIDWithTag "SourceEditText")
+                                            Just false -> (getNewIDWithTag "DestinationEditText")
+                                            Nothing    -> ""
+                  pure unit
+                    ) (const NoAction)
+            -- , accessibilityImportance if state.isSource == Just false then DISABLE else ENABLE
             , onChange
                 ( \action -> do
                     _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
@@ -330,7 +331,14 @@ sourceDestinationEditTextView state push =
               , hintColor "#A7A7A7"
               , singleLine true
               , ellipsize true
-              , accessibilityImportance if state.isSource == Just true then DISABLE else ENABLE
+              , afterRender (\action -> do
+                  _ <- pure $ requestKeyboardShow case state.isSource of
+                                            Just true  -> (getNewIDWithTag "SourceEditText")
+                                            Just false -> (getNewIDWithTag "DestinationEditText")
+                                            Nothing    -> ""
+                  pure unit
+                    ) (const NoAction)
+              -- , accessibilityImportance if state.isSource == Just true then DISABLE else ENABLE
               , accessibilityHint "Destination Location Editable field"
               , cursorColor state.homeScreenConfig.primaryBackground
               , id $ getNewIDWithTag "DestinationEditText"
@@ -493,6 +501,7 @@ bottomBtnsView state push =
     , padding (PaddingBottom if os == "IOS" then 10 else 0)
     , alignParentBottom "true,-1"
     , background Color.white900
+    , accessibilityImportance DISABLE_DESCENDANT
     , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE
     , adjustViewWithKeyboard "true"
     ][  linearLayout

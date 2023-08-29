@@ -125,7 +125,6 @@ primaryEditTextConfig state = let
         , pattern = Just "[a-zA-Z0-9 ]*,100"
         , padding = (Padding 0 0 0 0)
         , singleLine = false
-        , accessibilityHint = "For example Actual fare was higher than what was shown"
         }
       , height = (V 54)
       , margin = (Margin 10 32 10 0)

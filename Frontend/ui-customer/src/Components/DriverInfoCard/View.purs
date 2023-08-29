@@ -953,7 +953,7 @@ paymentMethodView push state title shouldShowIcon =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , accessibilityHint $ "Ride Fare : " <> state.data.config.currency <> show state.data.price 
+  , accessibilityHint $ "Ride Fare : " <> show state.data.price  <> " Rupees" <> " : Pick Up Location is " <> state.data.source <> " : Destination Location is " <> state.data.destination <> " : Ride Distacnce is : " <> state.data.estimatedDistance <> " Km"
   , accessibilityImportance ENABLE
   ][  linearLayout
       [ orientation VERTICAL
@@ -1001,6 +1001,7 @@ sourceDistanceView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , accessibilityImportance DISABLE_DESCENDANT
   , padding $ Padding 0 10 0 if (os == "IOS" && state.props.currentStage == RideStarted) then safeMarginBottom else 16
   ][  textView (
       [ text $ getString PICKUP_AND_DROP

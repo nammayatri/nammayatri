@@ -124,7 +124,7 @@ titleView config =
     , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then config.tag else config.title
     , color Color.black800
     , lineHeight "18"
-    , accessibilityHint $ config.title
+    , accessibilityHint $ config.title <> " : " <> config.subTitle
     , accessibilityImportance ENABLE
     , maxLines 1
     , ellipsize true
@@ -138,6 +138,7 @@ subTitleView config =
     ([ height WRAP_CONTENT
     , width MATCH_PARENT
     , text config.subTitle
+    , accessibilityImportance DISABLE
     , color Color.black700
     , padding (PaddingRight 20)
     , maxLines 1

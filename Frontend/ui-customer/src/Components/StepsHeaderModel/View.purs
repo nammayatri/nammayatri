@@ -53,9 +53,9 @@ view push state =
           , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ "Step "<> (show (state.activeIndex + 1)) <> "/"<> (show (Array.length state.textArray))
-            , accessibilityHint $ "Step " <> (show (state.activeIndex + 1)) <> " Of "<> (show (Array.length state.textArray))
             , accessibilityImportance ENABLE
+            , accessibilityHint $ "Step " <> (show (state.activeIndex + 1)) <> " Of "<> (show (Array.length state.textArray))
+            , text $ "Step "<> (show (state.activeIndex + 1)) <> "/"<> (show (Array.length state.textArray))
             , color Color.white900
             ] <> FontStyle.body3 TypoGraphy
 
@@ -63,8 +63,8 @@ view push state =
       , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , text $ Maybe.fromMaybe "" (state.textArray Array.!! state.activeIndex)
         , accessibilityImportance DISABLE
+        , text $ Maybe.fromMaybe "" (state.textArray Array.!! state.activeIndex)
         , color Color.white900
         , margin $ Margin 15 5 0 22
         ] <> FontStyle.h1 TypoGraphy

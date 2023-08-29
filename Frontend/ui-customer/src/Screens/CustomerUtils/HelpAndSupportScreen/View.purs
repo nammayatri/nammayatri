@@ -41,7 +41,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
+import Prelude (Unit, bind, const, discard, map, pure, unit, show, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibilityImportance, accessibilityHint)
 import PrestoDOM.Properties as PP
@@ -112,7 +112,7 @@ view push state =
             [ text (getString VIEW_ALL_RIDES)
             , alignParentRight "true,-1"
             , margin (Margin 0 14 16 14)
-            , accessibilityHint "View All Rides Button"
+            , accessibilityHint "View All Rides"
             , accessibilityImportance ENABLE
             , width MATCH_PARENT
             , gravity RIGHT
@@ -239,6 +239,8 @@ driverRatingView state =
   ][  textView $
       [ text (getString YOU_RATED)
       , color Color.darkDescriptionText
+      , accessibilityHint $ "You Rated : " <> (show state.data.rating) <> " stars"
+      , accessibilityImportance ENABLE
       ] <> FontStyle.body3 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT

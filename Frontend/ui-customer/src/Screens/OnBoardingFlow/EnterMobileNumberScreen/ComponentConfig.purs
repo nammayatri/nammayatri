@@ -26,7 +26,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (not, (<>), (==))
-import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..), Accessiblity(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
@@ -40,7 +40,7 @@ mobileNumberButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = (getString CONTINUE) 
                   ,  color = state.data.config.primaryTextColor 
-                  , accessibilityHint = "Continue Button"
+                  , accessibilityHint = if state.props.btnActiveMobileNumber then "Continue Button" else "Enter a valid Mobile Number to continue"
                   }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActiveMobileNumber
@@ -57,7 +57,7 @@ verifyOTPButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig{ text = (getString CONTINUE) 
                   , color = state.data.config.primaryTextColor
-                  , accessibilityHint = "Continue Button" }
+                  , accessibilityHint = if state.props.btnActiveOTP then "Continue Button" else "Enter a valid OTP to continue" }
       , id = "PrimaryButtonOTP"
       , isClickable = state.props.btnActiveOTP
       , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
@@ -86,6 +86,7 @@ mobileNumberEditTextConfig state = let
         { text = (getString ENTER_YOUR_MOBILE_NUMBER)
         , color = Color.black800
         , alpha = 0.8
+        , accessibilityImportance = DISABLE
         }
       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
       , type = "number"
@@ -126,6 +127,7 @@ otpEditTextConfig state = let
         { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> (getValueToLocalStore MOBILE_NUMBER)
         , color = Color.black800
         , alpha = 0.8
+        , accessibilityImportance = DISABLE
         } 
       , id = (EHC.getNewIDWithTag "EnterOTPNumberEditText")
       , type = "number"

@@ -63,7 +63,7 @@ genericHeaderConfig state = let
       , margin = (Margin 10 17 16 15)
       , accessibilityHint = if state.props.showSavePlaceView then "Close Button" else "Back Button"
       , visibility = VISIBLE
-      , accessibilityImportance = DISABLE
+      , accessibilityImportance = ENABLE
       , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 
                     else if state.props.showSavePlaceView then if state.data.config.nyBrandingVisibility then "ny_ic_close,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
                       else  "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png" else config.prefixImageConfig.imageUrl
@@ -114,7 +114,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig{ text = if (state.props.editSavedLocation) then (getString CONFIRM_CHANGES) else (getString CONFIRM_AND_SAVE)
       , color = state.data.config.primaryTextColor 
-      , accessibilityHint = (if (state.props.editSavedLocation) then (getString CONFIRM_CHANGES) else (getString CONFIRM_AND_SAVE) )<> "Button"}
+      , accessibilityHint = (if (state.props.editSavedLocation) then (getString CONFIRM_CHANGES) else (getString CONFIRM_AND_SAVE) )<> "Button" <> if state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists) then "" else " : Disabled" }
       , margin = MarginBottom 24
       , isClickable = (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists))
       , alpha = if (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists)) then 1.0 else 0.4

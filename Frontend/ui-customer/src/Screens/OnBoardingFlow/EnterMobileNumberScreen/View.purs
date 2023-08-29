@@ -141,7 +141,7 @@ enterMobileNumberView  state lang push =
         , width MATCH_PARENT
         , margin (Margin 11 0 0 10)
         ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false false "" 
-        , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true $ (getString BY_TAPPING_CONTINUE) <> " Terms & Conditions Button"
+        , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true $ (getString BY_TAPPING_CONTINUE) <> " Terms & Conditions"
           ]
     , PrestoAnim.animationSet
       [ Anim.fadeIn $ not state.props.enterOTP
@@ -194,8 +194,9 @@ enterOTPView state lang push =
           , height WRAP_CONTENT
           , text (getString RESEND)
           , clickable state.props.resendEnable
-          , clickable state.props.resendEnable
           , color Color.blue900
+          , accessibilityImportance ENABLE
+          , accessibilityHint if state.props.resendEnable then "Resend Button" else ("Resend in " <> show state.data.timer <> "seconds")
           , onClick push (const Resend)
           ] <> FontStyle.body9 TypoGraphy
         , linearLayout
@@ -209,6 +210,7 @@ enterOTPView state lang push =
         , height WRAP_CONTENT
         , text if lang == "HI_IN" then ("  "<> show state.data.timer <> "s  "<> getString IN) else ("  " <> getString IN <> "  "<> show state.data.timer <> "  s")
         , color Color.blue900
+        , accessibilityImportance DISABLE
         , visibility if state.props.resendEnable then GONE else VISIBLE
         ] <> FontStyle.body9 TypoGraphy]
     , linearLayout

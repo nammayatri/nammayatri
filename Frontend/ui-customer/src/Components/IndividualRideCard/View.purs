@@ -201,8 +201,7 @@ sourceAndDestination push =
       ][  imageView
           [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
           , height $ V 15
-          , accessibilityHint "Pickup Location Is : "
-          , accessibilityImportance ENABLE
+          , accessibilityImportance DISABLE
           , width $ V 15
           , margin (MarginTop 2)
           ]
@@ -227,8 +226,7 @@ sourceAndDestination push =
           [ imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
           , height $ V 16
           , width $ V 16
-          , accessibilityHint "Destination Location Is : "
-          , accessibilityImportance ENABLE
+          , accessibilityImportance DISABLE
           , margin (MarginTop 2)
           ]
         , textView (

@@ -20,7 +20,7 @@ import Font.Size as FontSize
 import Common.Styles.Colors as Color
 import Font.Style (Style(..)) 
 import Data.Maybe(Maybe(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..), Accessiblity(..))
 import Common.Types.App
 
 data Action = TextChanged String String | FocusChanged Boolean
@@ -88,6 +88,7 @@ type TextConfig =
   , alpha :: Number
   , margin :: Margin
   , textStyle :: Style
+  , accessibilityImportance :: Accessiblity
   }
 type ImageConfig =
   { height :: Length
@@ -139,6 +140,7 @@ config = {
     , color : Color.yellow900
     , alpha : 1.0
     , margin : (Margin 0 0 0 10)
+    , accessibilityImportance : ENABLE
     }
   , showErrorLabel : false
   , errorLabel : {
@@ -149,6 +151,7 @@ config = {
     , visibility : GONE
     , alpha : 1.0
     , margin : (Margin 0 0 0 0)
+    , accessibilityImportance : ENABLE
     }
   , showErrorImage : false
   , errorImageConfig :

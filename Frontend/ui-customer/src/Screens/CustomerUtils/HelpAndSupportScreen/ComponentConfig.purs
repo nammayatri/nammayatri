@@ -75,6 +75,7 @@ sourceToDestinationConfig state = let
       , maxLines = 1
       , ellipsize = true
       }
+    , overrideSeparatorCount = 2
     }
   in sourceToDestinationConfig'
 
@@ -235,6 +236,7 @@ primaryButtonConfigSubmitRequest state = let
     primaryButtonConfig' = config
       { textConfig
         { text = getString SUBMIT_REQUEST
+        , accessibilityHint = if state.props.btnActive then "Submit Request Button" else "Submit Request Button Disabled"
         , color = if state.props.btnActive then Color.yellowRadler else Color.yellow800
         }
       , cornerRadius = 8.0
