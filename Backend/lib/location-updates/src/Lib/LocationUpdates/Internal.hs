@@ -58,7 +58,6 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> m (),
-    updateDistance :: Id person -> HighPrecMeters -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m ()
   }
 

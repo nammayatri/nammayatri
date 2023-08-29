@@ -114,7 +114,6 @@ data AppCfg = AppCfg
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
     locationTrackingServiceKey :: Text,
-    locationTrackingServiceKey :: Text,
     distanceBetweenDriverLocationPointsMetres :: Meters,
     toleranceEarthMetres :: Meters
   }
