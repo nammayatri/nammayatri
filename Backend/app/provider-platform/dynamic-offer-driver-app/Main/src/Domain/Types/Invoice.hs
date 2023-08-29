@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.DriverFee as DF
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Servant.API
 
@@ -15,6 +16,7 @@ data Invoice = Invoice
     invoiceShortId :: Text,
     driverFeeId :: Id DF.DriverFee,
     invoiceStatus :: InvoiceStatus,
+    maxMandateAmount :: Maybe HighPrecMoney,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

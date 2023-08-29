@@ -563,6 +563,7 @@ data SubscriptionError
   | ActiveMandateDoNotExist Text
   | InActiveMandateDoNotExist Text
   | InvalidPaymentMode
+  | OngoingPaymentExecution
   | NoCurrentPlanForDriver Text
   | NoDriverPlanForMandate Text
   | InvalidAutoPayStatus
@@ -581,6 +582,7 @@ instance IsBaseError SubscriptionError where
     NoDriverPlanForMandate mandateId -> Just $ "No plan exists for mandateId \"" <> show mandateId <> "\""
     InvalidPaymentMode -> Just "Invalid payment method"
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
+    OngoingPaymentExecution -> Just "There is ongoing mandate execution pls wait"
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -593,6 +595,7 @@ instance IsHTTPError SubscriptionError where
     NoDriverPlanForMandate _ -> "NO_DRIVER_PLAN_FOR_MANDATE"
     InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
+    OngoingPaymentExecution -> "ONGOING_PAYMENT_EXECUTION"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -603,5 +606,6 @@ instance IsHTTPError SubscriptionError where
     InvalidAutoPayStatus -> E400
     NoCurrentPlanForDriver _ -> E500
     NoDriverPlanForMandate _ -> E500
+    OngoingPaymentExecution -> E400
 
 instance IsAPIError SubscriptionError
