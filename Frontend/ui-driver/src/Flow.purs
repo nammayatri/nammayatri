@@ -148,7 +148,7 @@ baseAppFlow baseFlow = do
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
-  when (versioncode < (getLatestAndroidVersion (getMerchant FunctionCall))) $ do
+  when (getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && versioncode < (getLatestAndroidVersion (getMerchant FunctionCall))) $ do
     lift $ lift $ doAff do liftEffect hideSplash
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
     _ <- UI.handleAppUpdatePopUp
@@ -182,9 +182,9 @@ checkDateAndTime = do
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
   case merchant of
-    NAMMAYATRI -> 54
+    NAMMAYATRI -> 73
     YATRI -> 48
-    YATRISATHI -> 2
+    YATRISATHI -> 16
     MOBILITY_PM -> 1
     MOBILITY_RS -> 1
     PASSCULTURE -> 1
