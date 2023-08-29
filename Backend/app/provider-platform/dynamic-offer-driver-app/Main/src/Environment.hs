@@ -16,7 +16,6 @@
 module Environment where
 
 import AWS.S3
-import qualified Data.Map as M
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
@@ -33,6 +32,7 @@ import Kernel.Types.Cache
 import Kernel.Types.Common (HighPrecMeters, Seconds, Tables)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Id (Id (..))
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (lookupDeploymentVersion)
@@ -46,6 +46,8 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.GoogleTranslate
+import Storage.CachedQueries.Merchant as CM
+import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
@@ -70,7 +72,6 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     hostName :: Text,
     nwAddress :: BaseUrl,
-    registryMap :: M.Map Text BaseUrl,
     selfUIUrl :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
@@ -129,7 +130,6 @@ data AppEnv = AppEnv
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
     graceTerminationPeriod :: Seconds,
-    registryMap :: M.Map Text BaseUrl,
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
@@ -241,10 +241,18 @@ type Flow = FlowR AppEnv
 
 instance Registry Flow where
   registryLookup =
-    Registry.withSubscriberCache $ \sub -> do
-      asks (.registryMap) <&> M.lookup sub.subscriber_id
-        >>>= \registryUrl ->
-          Registry.registryLookup registryUrl sub
+    Registry.withSubscriberCache $ \sub ->
+      fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id
+        >>>= \registryUrl -> Registry.registryLookup registryUrl sub
+    where
+      fetchFromDB subscriberId uniqueId merchantId = do
+        mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
+        case mbRegistryMapFallback of
+          Just registryMapFallback -> pure $ Just registryMapFallback.registryUrl
+          Nothing ->
+            do
+              mbMerchant <- CM.findById (Id merchantId)
+              pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

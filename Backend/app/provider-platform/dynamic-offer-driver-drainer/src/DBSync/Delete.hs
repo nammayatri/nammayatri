@@ -94,6 +94,7 @@ runDeleteCommands (cmd, val) = do
     DeleteDBCommand id _ _ _ _ (FeedbackDeleteOptions _ whereClause) -> runDelete id val whereClause ("Feedback" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FeedbackBadgeDeleteOptions _ whereClause) -> runDelete id val whereClause ("FeedbackBadge" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (BecknRequestDeleteOptions _ whereClause) -> runDelete id val whereClause ("BecknRequest" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (RegistryMapFallbackDeleteOptions _ whereClause) -> runDelete id val whereClause ("RegistryMapFallback" :: Text) =<< dbConf
   where
     runDelete id value whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

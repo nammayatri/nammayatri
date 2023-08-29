@@ -226,6 +226,7 @@ library
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
       Domain.Types.RegistrationToken
+      Domain.Types.RegistryMapFallback
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
@@ -349,6 +350,7 @@ library
       Storage.Beam.QuoteSpecialZone
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
+      Storage.Beam.RegistryMapFallback
       Storage.Beam.Ride.Table
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
@@ -381,6 +383,7 @@ library
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
+      Storage.CachedQueries.RegistryMapFallback
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
@@ -452,6 +455,7 @@ library
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
+      Storage.Queries.RegistryMapFallback
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails

@@ -74,6 +74,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
+import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
 import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
@@ -163,6 +164,7 @@ data DeleteModel
   | FeedbackDelete
   | FeedbackBadgeDelete
   | BecknRequestDelete
+  | RegistryMapFallbackDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -243,6 +245,7 @@ getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete FeedbackDelete = "FeedbackOptions"
 getTagDelete FeedbackBadgeDelete = "FeedbackBadgeOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
+getTagDelete RegistryMapFallbackDelete = "RegistryMapFallbackOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
@@ -319,6 +322,7 @@ parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "FeedbackOptions" = return FeedbackDelete
 parseTagDelete "FeedbackBadgeOptions" = return FeedbackBadgeDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
+parseTagDelete "RegistryMapFallbackOptions" = return RegistryMapFallbackDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -399,6 +403,7 @@ data DBDeleteObject
   | FeedbackDeleteOptions DeleteModel (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeDeleteOptions DeleteModel (Where Postgres FeedbackBadge.FeedbackBadgeT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
+  | RegistryMapFallbackDeleteOptions DeleteModel (Where Postgres RegistryMapFallback.RegistryMapFallbackT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -639,3 +644,6 @@ instance FromJSON DBDeleteObject where
       BecknRequestDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ BecknRequestDeleteOptions deleteModel whereClause
+      RegistryMapFallbackDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ RegistryMapFallbackDeleteOptions deleteModel whereClause

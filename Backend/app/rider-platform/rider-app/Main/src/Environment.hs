@@ -26,7 +26,6 @@ module Environment
   )
 where
 
-import qualified Data.Map as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
@@ -41,12 +40,13 @@ import Kernel.Types.App
 import Kernel.Types.Cache
 import Kernel.Types.Common (HighPrecMeters, Meters, Seconds, Tables)
 import Kernel.Types.Credentials (PrivateKey)
+import Kernel.Types.Error
 import Kernel.Types.Flow
-import Kernel.Types.Id (ShortId (..))
+import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -56,6 +56,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
+import Storage.CachedQueries.Merchant as CM
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -107,7 +108,6 @@ data AppCfg = AppCfg
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    registryMap :: M.Map Text BaseUrl,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
@@ -164,7 +164,6 @@ data AppEnv = AppEnv
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    registryMap :: M.Map Text BaseUrl,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -227,11 +226,12 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub -> do
-      asks (.registryMap) <&> M.lookup sub.subscriber_id
-        >>>= \registryUrl ->
-          Registry.registryLookup registryUrl sub
-            >>= Registry.whitelisting isWhiteListed
+      fetchFromDB sub.merchant_id >>= \registryUrl ->
+        Registry.registryLookup registryUrl sub >>= Registry.whitelisting isWhiteListed
     where
+      fetchFromDB merchantId = do
+        merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
+        pure $ merchant.registryUrl
       isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
 
 instance Cache Subscriber Flow where

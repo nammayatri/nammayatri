@@ -71,6 +71,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
+import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
 import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
@@ -159,6 +160,7 @@ data DBCreateObject
   | FeedbackObject Feedback.Feedback
   | FeedbackBadgeObject FeedbackBadge.FeedbackBadge
   | BecknRequestObject BecknRequest.BecknRequest
+  | RegistryMapFallbackObject RegistryMapFallback.RegistryMapFallback
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types
@@ -242,3 +244,4 @@ modelName (FeedbackFormObject _) = "FeedBackForm"
 modelName (FeedbackObject _) = "FeedBack"
 modelName (FeedbackBadgeObject _) = "FeedBackBadge"
 modelName (BecknRequestObject _) = "BecknRequest"
+modelName (RegistryMapFallbackObject _) = "RegistryMapFallback"

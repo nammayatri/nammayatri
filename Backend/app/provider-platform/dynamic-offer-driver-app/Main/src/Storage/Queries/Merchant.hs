@@ -60,6 +60,7 @@ update org = do
 
 instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do
+    regUrl <- parseBaseUrl registryUrl
     pure $
       Just
         Merchant
@@ -86,7 +87,8 @@ instance FromTType' BeamM.Merchant Merchant where
             createdAt = createdAt,
             updatedAt = updatedAt,
             geofencingConfig = GeofencingConfig originRestriction destinationRestriction,
-            info = info
+            info = info,
+            registryUrl = regUrl
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -116,5 +118,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.updatedAt = updatedAt,
         BeamM.originRestriction = origin geofencingConfig,
         BeamM.destinationRestriction = destination geofencingConfig,
-        BeamM.info = info
+        BeamM.info = info,
+        BeamM.registryUrl = showBaseUrl registryUrl
       }

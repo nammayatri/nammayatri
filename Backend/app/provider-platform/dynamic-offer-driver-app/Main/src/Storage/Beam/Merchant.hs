@@ -55,7 +55,8 @@ data MerchantT f = MerchantT
     updatedAt :: B.C f Time.UTCTime,
     originRestriction :: B.C f GeoRestriction,
     destinationRestriction :: B.C f GeoRestriction,
-    info :: B.C f (Maybe Text)
+    info :: B.C f (Maybe Text),
+    registryUrl :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
@@ -94,7 +95,8 @@ merchantTMod =
       updatedAt = B.fieldNamed "updated_at",
       originRestriction = B.fieldNamed "origin_restriction",
       destinationRestriction = B.fieldNamed "destination_restriction",
-      info = B.fieldNamed "info"
+      info = B.fieldNamed "info",
+      registryUrl = B.fieldNamed "registry_url"
     }
 
 $(enableKVPG ''MerchantT ['id] [['subscriberId], ['shortId], ['status]])

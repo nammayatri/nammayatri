@@ -134,6 +134,7 @@ runUpdateCommands (cmd, val) = do
     UpdateDBCommand id _ _ _ _ (FeedbackOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Feedback" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (FeedbackBadgeOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FeedbackBadge" :: Text) =<< dbConf
     UpdateDBCommand id _ _ _ _ (BecknRequestOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BecknRequest" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (RegistryMapFallbackOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RegistryMapFallback" :: Text) =<< dbConf
   where
     runUpdate id value setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

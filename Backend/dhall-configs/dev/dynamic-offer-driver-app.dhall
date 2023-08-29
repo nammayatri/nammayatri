@@ -193,7 +193,6 @@ in  { esqDBCfg
     , googleTranslateKey = common.googleTranslateKey
     , appBackendBapInternal
     , graceTerminationPeriod = +90
-    , registryMap
     , encTools
     , authTokenCacheExpiry = +600
     , disableSignatureAuth = False
