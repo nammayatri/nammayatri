@@ -22,11 +22,13 @@ module Domain.Action.UI.Profile
     GetProfileDefaultEmergencyNumbersResp (..),
     UpdateEmergencySettingsReq (..),
     UpdateEmergencySettingsResp,
+    EmergencySettingsRes,
     getPersonDetails,
     updatePerson,
     updateDefaultEmergencyNumbers,
     getDefaultEmergencyNumbers,
     updateEmergencySettings,
+    getEmergencySettings,
   )
 where
 
@@ -214,3 +216,16 @@ updateEmergencySettings personId req = do
       req.nightTimeSafety
       req.hasCompletedSafetySetup
   pure APISuccess.Success
+
+data EmergencySettingsRes = EmergencySettingsRes
+  { shareEmergencyContacts :: Maybe Bool,
+    triggerNYSupport :: Maybe Bool,
+    nightTimeSafety :: Maybe Bool,
+    hasCompletedSafetySetup :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m EmergencySettingsRes
+getEmergencySettings (personId, _) = do
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  return $ EmergencySettingsRes person.shareEmergencyContacts person.triggerNYSupport person.nightTimeSafety person.hasCompletedSafetySetup

@@ -50,6 +50,9 @@ type API =
            :<|> TokenAuth
              :> ReqBody '[JSON] DProfile.UpdateEmergencySettingsReq
              :> Post '[JSON] APISuccess.APISuccess
+           :<|> "getEmergencySettings"
+             :> TokenAuth
+             :> Get '[JSON] DProfile.EmergencySettingsRes
            :<|> "defaultEmergencyNumbers"
              :> ( TokenAuth
                     :> ReqBody '[JSON] DProfile.UpdateProfileDefaultEmergencyNumbersReq
@@ -64,6 +67,7 @@ handler =
   getPersonDetails
     :<|> updatePerson
     :<|> updateEmergencySettings
+    :<|> getEmergencySettings
     :<|> updateDefaultEmergencyNumbers
     :<|> getDefaultEmergencyNumbers
 
@@ -81,3 +85,6 @@ getDefaultEmergencyNumbers = withFlowHandlerAPI . DProfile.getDefaultEmergencyNu
 
 updateEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateEmergencySettingsReq -> FlowHandler DProfile.UpdateEmergencySettingsResp
 updateEmergencySettings (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateEmergencySettings personId
+
+getEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.EmergencySettingsRes
+getEmergencySettings (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId $ DProfile.getEmergencySettings (personId, merchantId)

@@ -41,17 +41,21 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DSos.SosFeedbackReq
              :> Post '[JSON] APISuccess.APISuccess
-             --  :<|> Capture "sosId" (Id Sos.Sos)
-             --    :> "addVideo"
-             --    :> TokenAuth
-             --    :> MultipartForm Tmp DSos.SOSVideoUploadReq
-             --    :> Post '[JSON] APISuccess.APISuccess
+           --  :<|> Capture "sosId" (Id Sos.Sos)
+           --    :> "addVideo"
+           --    :> TokenAuth
+           --    :> MultipartForm Tmp DSos.SOSVideoUploadReq
+           --    :> Post '[JSON] APISuccess.APISuccess
+           :<|> "markRideAsSafe"
+             :> TokenAuth
+             :> Post '[JSON] APISuccess.APISuccess
        )
 
 handler :: FlowServer API
 handler =
   createSosDetails
     :<|> updateSosDetails
+    :<|> markRideAsSafe
 
 createSosDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
 createSosDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId merchantId
@@ -65,3 +69,6 @@ updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag p
 -- updateSosProfileDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
 
 -- createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
+
+markRideAsSafe :: (Id Person.Person, Id Merchant.Merchant) -> Id Sos.Sos -> FlowHandler APISuccess.APISuccess
+markRideAsSafe (personId, merchantId) sosId = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.markRideAsSafe (personId, merchantId) sosId

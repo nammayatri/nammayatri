@@ -2,7 +2,8 @@
 INSERT INTO atlas_driver_offer_bpp.merchant_service_config (merchant_id, service_name, config_json)
 SELECT m.id, 'Ticket_Kapture',
   json_build_object(
-    'auth', '0.1.0|2|JMM1g9qYbwWtoscHG4qTUql80FhbCz8dMpB0ZMWaUhbSa9RBqO3bUsggftvSo2kCHjJTYgGykwXJzU1xVjDu',
+    'createAuth', '0.1.0|2|JMM1g9qYbwWtoscHG4qTUql80FhbCz8dMpB0ZMWaUhbSa9RBqO3bUsggftvSo2kCHjJTYgGykwXJzU1xVjDu',
+    'updateAuth', '0.1.0|2|JMM1g9qYbwWtoscHG4qTUql80FhbCz8dMpB0ZMWaUhbSa9RBqO3bUsggftvSo2kCHjJTYgGykwXJzU1xVjDu',
     'version', 'v.2.0',
     'url', 'nammayatri.kapturecrm.com'
     )

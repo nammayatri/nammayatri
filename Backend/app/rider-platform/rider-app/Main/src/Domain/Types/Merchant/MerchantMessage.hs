@@ -27,6 +27,7 @@ data MessageKey
   | SEND_OTP
   | SEND_BOOKING_OTP
   | SEND_SOS_ALERT
+  | MARK_RIDE_AS_SAFE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage

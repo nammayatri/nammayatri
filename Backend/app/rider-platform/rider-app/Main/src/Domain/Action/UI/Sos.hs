@@ -19,6 +19,7 @@ module Domain.Action.UI.Sos
     SosFeedbackReq (..),
     createSosDetails,
     updateSosDetails,
+    markRideAsSafe,
   )
 where
 
@@ -314,3 +315,30 @@ mkTicket person phoneNumber trackingUrl = do
             dropLocation = mkAddress <$> res.customerDropLocation,
             fare = res.actualFare
           }
+
+markRideAsSafe ::
+  ( EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    EncFlow m r,
+    CacheFlow m r
+  ) =>
+  (Id Person.Person, Id Merchant.Merchant)
+    SosReq ->
+  m SosRes
+markRideAsSafe (personId, merchantId) sosId = do
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  smsCfg <- asks (.smsCfg)
+  -- updateTicket
+  emergencyContacts <- getDefaultEmergencyNumbers (personId, merchantId)
+  let sender = smsCfg.sender
+  withLogTag ("perosnId" <> getId personId) $ do
+    message <-
+      MessageBuilder.buildMarkRideAsSafeMessage merchantId $
+        MessageBuilder.BuildMarkRideAsSafeMessageReq
+          { name = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
+          }
+    for_ emergencyContacts.defaultEmergencyNumbers $ \emergencyContact -> do
+      let phoneNumber = emergencyContact.mobileCountryCode <> emergencyContact.mobileNumber
+      Sms.sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender)
+        >>= Sms.checkSmsResult

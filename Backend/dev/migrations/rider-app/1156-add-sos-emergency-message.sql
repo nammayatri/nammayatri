@@ -5,6 +5,13 @@ WITH MerchantMessages AS (
 INSERT INTO atlas_app.merchant_message (merchant_id, message_key, message)
   (SELECT * FROM MerchantMessages);
 
+WITH MerchantMessages AS (
+  SELECT T1.id, 'MARK_RIDE_AS_SAFE', '{#userName#} has confirmed their safety during the Namma Yatri ride - Juspay.'
+  FROM atlas_app.merchant AS T1
+)
+INSERT INTO atlas_app.merchant_message (merchant_id, message_key, message)
+  (SELECT * FROM MerchantMessages);
+
 CREATE TABLE atlas_app.sos_media (
     id character(36) NOT NULL,
     type character(36) NOT NULL,
