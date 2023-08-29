@@ -24,13 +24,9 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 -- import Kernel.External.Types
 
 -- import Kernel.Storage.Esqueleto.Types
-import qualified Domain.Types.DriverInformation as DomainDI
 -- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
 -- import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.FarePolicy as DomainFP
-import qualified Domain.Types.FareProduct as FareProductD
-import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DomainODC
-import Domain.Types.Vehicle.Variant (Variant (..))
 -- import EulerHS.CachedSqlDBQuery (SqlReturning)
 -- import qualified EulerHS.KVConnector.Flow as KV
 -- import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
@@ -38,7 +34,6 @@ import Domain.Types.Vehicle.Variant (Variant (..))
 -- import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn, OptionEntity)
 -- import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 -- import Kernel.Types.Error
 import Kernel.Utils.Common (encodeToText)
@@ -130,32 +125,12 @@ fromFieldMeters f mbValue = case mbValue of
 -- instance FromField [Text] where
 --   fromField f mbValue = V.toList <$> fromField f mbValue
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be FareProductD.Area where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be FareProductD.Area
-
-instance FromBackendRow Postgres FareProductD.Area
-
-instance FromField FareProductD.Area where
-  fromField = fromFieldEnum
-
 -- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centi
 
 -- instance FromBackendRow Postgres Centi
 
 -- instance HasSqlValueSyntax be Centi => HasSqlValueSyntax be Centesimal where
 --   sqlValueSyntax = sqlValueSyntax . getCenti
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant
-
-instance FromBackendRow Postgres Variant
-
-instance FromField Variant where
-  fromField = fromFieldEnum
 
 -- instance HasSqlValueSyntax be Centesimal => HasSqlValueSyntax be HighPrecMeters where
 --   sqlValueSyntax = sqlValueSyntax . getHighPrecMeters
@@ -246,26 +221,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInf
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
 
-instance FromField Context.City where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.City where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.City
-
-instance FromBackendRow Postgres Context.City
-
-instance FromField Context.Country where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.Country where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.Country
-
-instance FromBackendRow Postgres Context.Country
-
 -- instance IsString HighPrecMeters where
 --   fromString = show
 
@@ -292,77 +247,6 @@ instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DomainFP.NightShiftCh
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.NightShiftCharge
 
 instance FromBackendRow Postgres DomainFP.NightShiftCharge
-
-instance FromField DomainDI.DriverMode where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainDI.DriverMode where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainDI.DriverMode
-
-instance FromBackendRow Postgres DomainDI.DriverMode
-
--- instance FromField DomainIdfy.VerificationStatus where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainIdfy.VerificationStatus where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainIdfy.VerificationStatus
-
--- instance FromBackendRow Postgres DomainIdfy.VerificationStatus
-
--- instance IsString DomainIdfy.VerificationStatus where
---   fromString = show
-
--- instance FromField Image.ImageType where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
-
--- instance FromBackendRow Postgres Image.ImageType
-
--- -- deriving stock instance Ord Image.ImageType
-
--- instance IsString Image.ImageType where
---   fromString = show
-
-instance FromField DomainODC.DocumentType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainODC.DocumentType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainODC.DocumentType
-
-instance FromBackendRow Postgres DomainODC.DocumentType
-
-instance FromField DomainODC.VehicleClassCheckType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainODC.VehicleClassCheckType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainODC.VehicleClassCheckType
-
-instance FromBackendRow Postgres DomainODC.VehicleClassCheckType
-
--- instance IsString DomainODC.DocumentType where
---   fromString = show
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Language where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance FromField Language => FromBackendRow Postgres Language
-
--- instance FromField Language where
---   fromField = fromFieldEnum
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>

@@ -12,15 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Merchant.MerchantMessage where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
@@ -33,18 +31,7 @@ data MessageKey
   | SEND_BOOKING_OTP
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
-instance FromField MessageKey where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be MessageKey where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be MessageKey
-
-instance FromBackendRow Postgres MessageKey
-
-instance IsString MessageKey where
-  fromString = show
+$(mkBeamInstancesForEnum ''MessageKey)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { merchantId :: Id Merchant,

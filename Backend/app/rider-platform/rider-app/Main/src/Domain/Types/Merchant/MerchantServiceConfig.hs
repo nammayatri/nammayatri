@@ -12,16 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Merchant.MerchantServiceConfig where
 
 import qualified Data.List as List
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
@@ -48,18 +46,7 @@ data ServiceName
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-instance FromField ServiceName where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ServiceName where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be ServiceName
-
-instance FromBackendRow Postgres ServiceName
-
-instance IsString ServiceName where
-  fromString = show
+$(mkBeamInstancesForEnum ''ServiceName)
 
 instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s

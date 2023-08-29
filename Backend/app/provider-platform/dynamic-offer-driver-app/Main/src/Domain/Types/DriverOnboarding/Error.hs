@@ -16,10 +16,7 @@
 
 module Domain.Types.DriverOnboarding.Error where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (sqlValueSyntax), autoSqlValueSyntax)
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Error.BaseError.HTTPError
@@ -53,18 +50,7 @@ data DriverOnboardingError
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
-instance FromField DriverOnboardingError where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverOnboardingError where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverOnboardingError
-
-instance FromBackendRow Postgres DriverOnboardingError
-
-instance IsString DriverOnboardingError where
-  fromString = show
+$(mkBeamInstancesForEnum ''DriverOnboardingError)
 
 instance IsBaseError DriverOnboardingError where
   toMessage = \case

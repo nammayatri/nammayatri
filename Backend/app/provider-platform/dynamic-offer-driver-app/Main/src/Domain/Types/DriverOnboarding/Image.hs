@@ -11,17 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.DriverOnboarding.Image where
 
-import Database.Beam (FromBackendRow)
-import qualified Database.Beam as B
-import Database.Beam.Backend (BeamSqlBackend, HasSqlValueSyntax, autoSqlValueSyntax, sqlValueSyntax)
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.DriverOnboarding.Error
 import Domain.Types.Merchant
 import Domain.Types.Person
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
@@ -29,15 +26,7 @@ import Kernel.Types.Id
 data ImageType = DriverLicense | VehicleRegistrationCertificate
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema, Ord)
 
-instance FromField ImageType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ImageType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be ImageType
-
-instance FromBackendRow Postgres ImageType
+$(mkBeamInstancesForEnum ''ImageType)
 
 data Image = Image
   { id :: Id Image,

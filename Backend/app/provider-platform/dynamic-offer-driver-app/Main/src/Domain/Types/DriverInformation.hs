@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -13,6 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.DriverInformation where
@@ -23,13 +23,10 @@ import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (Money, fromFieldEnum)
@@ -45,6 +42,8 @@ data DriverMode
   deriving (PrettyShow) via Showable DriverMode
 
 derivePersistField "DriverMode"
+
+$(mkBeamInstancesForEnum ''DriverMode)
 
 instance FromHttpApiData DriverMode where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -65,17 +64,9 @@ data DriverAutoPayStatus
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable DriverAutoPayStatus
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverAutoPayStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverAutoPayStatus
-
-instance FromBackendRow Postgres DriverAutoPayStatus
-
-instance FromField DriverAutoPayStatus where
-  fromField = fromFieldEnum
-
 derivePersistField "DriverAutoPayStatus"
+
+$(mkBeamInstancesForEnum ''DriverAutoPayStatus)
 
 instance FromHttpApiData DriverAutoPayStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

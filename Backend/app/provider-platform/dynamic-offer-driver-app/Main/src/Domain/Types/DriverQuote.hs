@@ -15,10 +15,6 @@
 
 module Domain.Types.DriverQuote where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Estimate
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.Merchant as DMerchant
@@ -27,6 +23,7 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -36,18 +33,7 @@ data DriverQuoteStatus = Active | Inactive
   deriving (Show, Read, Eq, Generic, Ord, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable DriverQuoteStatus
 
-instance FromField DriverQuoteStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverQuoteStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverQuoteStatus
-
-instance FromBackendRow Postgres DriverQuoteStatus
-
-instance IsString DriverQuoteStatus where
-  fromString = show
+$(mkBeamInstancesForEnum ''DriverQuoteStatus)
 
 data DriverQuote = DriverQuote
   { id :: Id DriverQuote,

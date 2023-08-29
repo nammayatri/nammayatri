@@ -17,13 +17,10 @@ module Domain.Types.FareProduct where
 
 import qualified Data.List as List
 import qualified Data.Text as T
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
@@ -35,16 +32,6 @@ data FlowType
   = RIDE_OTP
   | NORMAL
   deriving (Show, Read, Generic, Eq, ToSchema, FromJSON, ToJSON, Ord)
-
-instance FromField FlowType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be FlowType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be FlowType
-
-instance FromBackendRow Postgres FlowType
 
 data Area
   = Pickup (Id SpecialLocation)
@@ -87,3 +74,7 @@ data FareProduct = FareProduct
     flow :: FlowType
   }
   deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)
+
+$(mkBeamInstancesForEnum ''FlowType)
+
+$(mkBeamInstancesForEnum ''Area)

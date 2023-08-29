@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   ( DriverPoolBatchesConfig (..),
@@ -27,6 +28,7 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 
@@ -67,15 +69,4 @@ data PoolSortingType = Intelligent | Random
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, FromDhall)
 
-instance IsString PoolSortingType where
-  fromString = show
-
-instance FromField PoolSortingType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be PoolSortingType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be PoolSortingType
-
-instance FromBackendRow Postgres PoolSortingType
+$(mkBeamInstancesForEnum ''PoolSortingType)

@@ -11,21 +11,19 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Issue.IssueReport where
 
 import Data.Aeson
 import Data.OpenApi (ToSchema)
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Issue.IssueCategory as D
 import qualified Domain.Types.Issue.IssueOption as D
 import qualified Domain.Types.MediaFile as D
 import qualified Domain.Types.Person as D
 import qualified Domain.Types.Ride as D
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -36,18 +34,7 @@ data IssueStatus
   | RESOLVED
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
 
-instance FromField IssueStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be IssueStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be IssueStatus
-
-instance FromBackendRow Postgres IssueStatus
-
-instance IsString IssueStatus where
-  fromString = show
+$(mkBeamInstancesForEnum ''IssueStatus)
 
 data IssueReport = IssueReport
   { id :: Id IssueReport,

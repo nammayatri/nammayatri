@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Vehicle (module Domain.Types.Vehicle, module Reexport) where
 
@@ -21,14 +22,11 @@ import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import Domain.Types.Vehicle.Variant as Reexport
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
@@ -39,18 +37,7 @@ data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
   deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable Category
 
-instance FromField Category where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Category
-
-instance FromBackendRow Postgres Category
-
-instance IsString Category where
-  fromString = show
+$(mkBeamInstancesForEnum ''Category)
 
 instance FromHttpApiData Category where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -63,18 +50,7 @@ data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable RegistrationCategory
 
-instance FromField RegistrationCategory where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be RegistrationCategory where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be RegistrationCategory
-
-instance FromBackendRow Postgres RegistrationCategory
-
-instance IsString RegistrationCategory where
-  fromString = show
+$(mkBeamInstancesForEnum ''RegistrationCategory)
 
 instance FromHttpApiData RegistrationCategory where
   parseUrlPiece = parseHeader . DT.encodeUtf8

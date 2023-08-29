@@ -50,7 +50,6 @@ default-extensions:
   - StandaloneDeriving
   - PackageImports
   - TemplateHaskell
-  - TemplateHaskell
 
 dependencies:
   - aeson

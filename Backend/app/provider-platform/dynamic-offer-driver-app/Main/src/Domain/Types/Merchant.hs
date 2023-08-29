@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Merchant where
 
@@ -21,12 +22,9 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Geofencing
@@ -37,18 +35,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField Status where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Status
-
-instance FromBackendRow Postgres Status
-
-instance IsString Status where
-  fromString = show
+$(mkBeamInstancesForEnum ''Status)
 
 instance FromHttpApiData Status where
   parseUrlPiece = parseHeader . DT.encodeUtf8

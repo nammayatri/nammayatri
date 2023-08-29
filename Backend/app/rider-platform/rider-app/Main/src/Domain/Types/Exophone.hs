@@ -24,7 +24,6 @@ data Exophone = Exophone
     primaryPhone :: Text,
     backupPhone :: Text,
     isPrimaryDown :: Bool,
-    -- isBackupDown Bool -- do we need this?
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

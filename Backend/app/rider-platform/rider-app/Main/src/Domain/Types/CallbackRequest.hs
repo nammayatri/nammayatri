@@ -12,14 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.CallbackRequest where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DM
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
@@ -43,15 +41,4 @@ data CallbackRequestStatus = PENDING | RESOLVED | CLOSED
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-instance FromField CallbackRequestStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CallbackRequestStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be CallbackRequestStatus
-
-instance FromBackendRow Postgres CallbackRequestStatus
-
-instance IsString CallbackRequestStatus where
-  fromString = show
+$(mkBeamInstancesForEnum ''CallbackRequestStatus)

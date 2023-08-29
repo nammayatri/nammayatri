@@ -12,16 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Message.Message where
 
 import Data.Map as HM
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.MediaFile as MF
 import Domain.Types.Merchant (Merchant)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
@@ -31,18 +29,7 @@ data MessageType = Action Text | Read
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField MessageType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be MessageType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be MessageType
-
-instance FromBackendRow Postgres MessageType
-
-instance IsString MessageType where
-  fromString = show
+$(mkBeamInstancesForEnum ''MessageType)
 
 data Message = Message
   { id :: Id Message,

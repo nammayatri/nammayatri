@@ -12,17 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.BookingCancellationReason where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Booking.Type (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Ride (Ride)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -50,15 +48,4 @@ data CancellationSource
   deriving (Show, Eq, Ord, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-instance FromField CancellationSource where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationSource
-
-instance FromBackendRow Postgres CancellationSource
-
-instance IsString CancellationSource where
-  fromString = show
+$(mkBeamInstancesForEnum ''CancellationSource)

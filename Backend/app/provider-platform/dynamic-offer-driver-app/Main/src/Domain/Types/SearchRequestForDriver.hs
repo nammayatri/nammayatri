@@ -12,13 +12,10 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.SearchRequestForDriver where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
@@ -27,6 +24,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -38,18 +36,7 @@ data DriverSearchRequestStatus = Active | Inactive
   deriving anyclass (FromJSON, ToJSON)
   deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
-instance FromField DriverSearchRequestStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverSearchRequestStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverSearchRequestStatus
-
-instance FromBackendRow Postgres DriverSearchRequestStatus
-
-instance IsString DriverSearchRequestStatus where
-  fromString = show
+$(mkBeamInstancesForEnum ''DriverSearchRequestStatus)
 
 data SearchRequestForDriverResponse
   = Accept
@@ -59,18 +46,7 @@ data SearchRequestForDriverResponse
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRequestForDriverResponse
 
-instance FromField SearchRequestForDriverResponse where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestForDriverResponse where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SearchRequestForDriverResponse
-
-instance FromBackendRow Postgres SearchRequestForDriverResponse
-
-instance IsString SearchRequestForDriverResponse where
-  fromString = show
+$(mkBeamInstancesForEnum ''SearchRequestForDriverResponse)
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,

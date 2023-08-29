@@ -12,11 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.DriverOffer where
 
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -28,6 +30,8 @@ data DriverOfferStatus = ACTIVE | INACTIVE
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
   deriving (PrettyShow) via Showable DriverOfferStatus
+
+$(mkBeamInstancesForEnum ''DriverOfferStatus)
 
 data DriverOffer = DriverOffer
   { id :: Id DriverOffer,

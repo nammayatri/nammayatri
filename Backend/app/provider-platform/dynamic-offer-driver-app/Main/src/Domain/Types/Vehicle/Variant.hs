@@ -20,7 +20,9 @@ import Data.Bifunctor
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude hiding (first)
+import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Utils.GenericPretty
 import Servant.API
 
@@ -40,8 +42,7 @@ data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
     )
   deriving (PrettyShow) via Showable Variant
 
-instance IsString Variant where
-  fromString = show
+$(mkBeamInstancesForEnum ''Variant)
 
 instance FromHttpApiData Variant where
   parseUrlPiece = parseHeader . DT.encodeUtf8

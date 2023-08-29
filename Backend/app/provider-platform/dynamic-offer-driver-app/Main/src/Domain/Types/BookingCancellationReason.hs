@@ -15,16 +15,13 @@
 
 module Domain.Types.BookingCancellationReason where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -51,15 +48,4 @@ data CancellationSource
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-instance FromField CancellationSource where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationSource
-
-instance FromBackendRow Postgres CancellationSource
-
-instance IsString CancellationSource where
-  fromString = show
+$(mkBeamInstancesForEnum ''CancellationSource)

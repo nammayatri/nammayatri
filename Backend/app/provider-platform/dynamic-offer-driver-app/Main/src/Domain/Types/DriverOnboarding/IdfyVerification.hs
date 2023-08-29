@@ -13,17 +13,14 @@
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.DriverOnboarding.IdfyVerification where
 
-import Database.Beam (FromBackendRow)
-import qualified Database.Beam as B
-import Database.Beam.Backend (BeamSqlBackend, HasSqlValueSyntax, autoSqlValueSyntax, sqlValueSyntax)
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person
 import Domain.Types.Vehicle as Vehicle
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
@@ -33,32 +30,13 @@ data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+$(mkBeamInstancesForEnum ''VerificationStatus)
+
 data ImageExtractionValidation = Success | Skipped | Failed
   deriving stock (Show, Eq, Read, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField VerificationStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be VerificationStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromField ImageExtractionValidation where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ImageExtractionValidation where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be ImageExtractionValidation
-
-instance FromBackendRow Postgres ImageExtractionValidation
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be VerificationStatus
-
-instance FromBackendRow Postgres VerificationStatus
-
-instance IsString ImageExtractionValidation where
-  fromString = show
+$(mkBeamInstancesForEnum ''ImageExtractionValidation)
 
 data IdfyVerificationE e = IdfyVerification
   { id :: Id IdfyVerification,

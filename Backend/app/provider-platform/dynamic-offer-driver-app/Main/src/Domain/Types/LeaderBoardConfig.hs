@@ -11,14 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.LeaderBoardConfig where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DMerchant
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -28,18 +26,7 @@ data LeaderBoardType
   | DAILY
   deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show, Ord, Eq)
 
-instance FromField LeaderBoardType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be LeaderBoardType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be LeaderBoardType
-
-instance FromBackendRow Postgres LeaderBoardType
-
-instance IsString LeaderBoardType where
-  fromString = show
+$(mkBeamInstancesForEnum ''LeaderBoardType)
 
 data LeaderBoardConfigs = LeaderBoardConfigs
   { id :: Id LeaderBoardConfigs,

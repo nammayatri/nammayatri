@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Booking.Type where
 
@@ -18,10 +19,6 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -30,6 +27,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -48,19 +46,9 @@ data BookingStatus
   | TRIP_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-instance FromField BookingStatus where
-  fromField = fromFieldEnum
+$(mkBeamInstancesForEnum ''BookingStatus)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be BookingStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be BookingStatus
-
-instance FromBackendRow Postgres BookingStatus
-
-instance IsString BookingStatus where
-  fromString = show
-
+-- TODO use TH
 instance FromHttpApiData BookingStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece

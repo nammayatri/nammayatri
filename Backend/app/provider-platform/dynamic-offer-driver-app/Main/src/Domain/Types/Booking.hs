@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Booking where
 
@@ -20,10 +21,6 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FareProduct as FareProductD
@@ -32,6 +29,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -44,18 +42,7 @@ data BookingStatus
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance FromField BookingStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be BookingStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be BookingStatus
-
-instance FromBackendRow Postgres BookingStatus
-
-instance IsString BookingStatus where
-  fromString = show
+$(mkBeamInstancesForEnum ''BookingStatus)
 
 instance FromHttpApiData BookingStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -103,15 +90,4 @@ data Booking = Booking
 data BookingType = SpecialZoneBooking | NormalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance FromField BookingType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be BookingType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be BookingType
-
-instance FromBackendRow Postgres BookingType
-
-instance IsString BookingType where
-  fromString = show
+$(mkBeamInstancesForEnum ''BookingType)

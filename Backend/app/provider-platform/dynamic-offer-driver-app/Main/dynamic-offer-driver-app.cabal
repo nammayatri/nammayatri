@@ -514,7 +514,6 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
@@ -616,7 +615,6 @@ executable dynamic-offer-driver-app-exe
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-      TemplateHaskell
       TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:

@@ -12,15 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Feedback.FeedbackForm where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax, autoSqlValueSyntax)
-import Database.Beam.Backend.SQL.SQL2003 (HasSqlValueSyntax (sqlValueSyntax))
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Ride (Ride)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
@@ -50,19 +47,6 @@ data Category = RIDE | DRIVER | VEHICLE
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField Category where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Category
-
-instance FromBackendRow Postgres Category
-
-instance IsString Category where
-  fromString = show
-
 data FeedbackFormItem = FeedbackFormItem
   { id :: Id FeedbackFormItem,
     rating :: Maybe Int,
@@ -76,19 +60,6 @@ data AnswerType = Text | Checkbox | Radio
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField AnswerType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerType
-
-instance FromBackendRow Postgres AnswerType
-
-instance IsString AnswerType where
-  fromString = show
-
 data FeedbackFormRes = FeedbackFormRes
   { categoryName :: Category,
     id :: Id FeedbackFormItem,
@@ -98,3 +69,7 @@ data FeedbackFormRes = FeedbackFormRes
     answerType :: AnswerType
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
+
+$(mkBeamInstancesForEnum ''AnswerType)
+
+$(mkBeamInstancesForEnum ''Category)
