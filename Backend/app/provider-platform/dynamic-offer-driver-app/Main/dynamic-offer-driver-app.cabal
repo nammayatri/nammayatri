@@ -273,6 +273,7 @@ library
       SharedLogic.Ride
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
+      SharedLogic.VehicleRegistrationCertificate
       Storage.Beam.BapMetadata
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
