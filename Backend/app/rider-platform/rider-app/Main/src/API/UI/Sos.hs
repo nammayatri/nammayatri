@@ -48,6 +48,7 @@ type API =
            --    :> Post '[JSON] APISuccess.APISuccess
            :<|> "markRideAsSafe"
              :> TokenAuth
+             :> Capture "sosId" (Id Sos.Sos)
              :> Post '[JSON] APISuccess.APISuccess
        )
 
@@ -71,4 +72,4 @@ updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag p
 -- createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
 
 markRideAsSafe :: (Id Person.Person, Id Merchant.Merchant) -> Id Sos.Sos -> FlowHandler APISuccess.APISuccess
-markRideAsSafe (personId, merchantId) sosId = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.markRideAsSafe (personId, merchantId) sosId
+markRideAsSafe (personId, merchantId) sosId = withFlowHandlerAPI $ withPersonIdLogTag personId $ DSos.markRideAsSafe (personId, merchantId) sosId

@@ -283,38 +283,38 @@ buildSosDetails personId req = do
 --             createdAt = now
 --           }
 
-mkTicket :: Person.Person -> Maybe Text -> Ticket.CreateTicketReq
-mkTicket person phoneNumber trackingUrl = do
-  info <- forM mbRide (buildRideInfo merchantShortId)
-  Ticket.CreateTicketReq
-    { category = "Code Red",
-      subCategory = Just "SOS Alert (follow-back)",
-      issueId = Nothing,
-      issueDescription = "SOS called",
-      mediaFiles = Just [show trackingUrl],
-      name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
-      phoneNo = phoneNumber,
-      personId = person.id.getId,
-      classification = Ticket.CUSTOMER,
-      rideDescription = info
-    }
-  where
-    buildRideInfo merchantShortId ride = do
-      res <- DR.rideInfo merchantShortId (cast ride.id)
-      return
-        TIT.RideInfo
-          { rideShortId = ride.shortId.getShortId,
-            customerName = res.customerName,
-            customerPhoneNo = Just res.customerPhoneNo,
-            driverName = Just res.driverName,
-            driverPhoneNo = res.driverPhoneNo,
-            vehicleNo = res.vehicleNo,
-            status = show res.bookingStatus,
-            rideCreatedAt = ride.createdAt,
-            pickupLocation = mkAddress res.customerPickupLocation,
-            dropLocation = mkAddress <$> res.customerDropLocation,
-            fare = res.actualFare
-          }
+-- mkTicket :: Person.Person -> Maybe Text -> Ticket.CreateTicketReq
+-- mkTicket person phoneNumber trackingUrl = do
+--   info <- forM mbRide (buildRideInfo merchantShortId)
+--   Ticket.CreateTicketReq
+--     { category = "Code Red",
+--       subCategory = Just "SOS Alert (follow-back)",
+--       issueId = Nothing,
+--       issueDescription = "SOS called",
+--       mediaFiles = Just [show trackingUrl],
+--       name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
+--       phoneNo = phoneNumber,
+--       personId = person.id.getId,
+--       classification = Ticket.CUSTOMER,
+--       rideDescription = info
+--     }
+--   where
+--     buildRideInfo merchantShortId ride = do
+--       res <- DR.rideInfo merchantShortId (cast ride.id)
+--       return
+--         TIT.RideInfo
+--           { rideShortId = ride.shortId.getShortId,
+--             customerName = res.customerName,
+--             customerPhoneNo = Just res.customerPhoneNo,
+--             driverName = Just res.driverName,
+--             driverPhoneNo = res.driverPhoneNo,
+--             vehicleNo = res.vehicleNo,
+--             status = show res.bookingStatus,
+--             rideCreatedAt = ride.createdAt,
+--             pickupLocation = mkAddress res.customerPickupLocation,
+--             dropLocation = mkAddress <$> res.customerDropLocation,
+--             fare = res.actualFare
+--           }
 
 markRideAsSafe ::
   ( EsqDBReplicaFlow m r,
@@ -323,9 +323,9 @@ markRideAsSafe ::
     EncFlow m r,
     CacheFlow m r
   ) =>
-  (Id Person.Person, Id Merchant.Merchant)
-    SosReq ->
-  m SosRes
+  (Id Person.Person, Id Merchant.Merchant) ->
+  Id DSos.Sos ->
+  m APISuccess.APISuccess
 markRideAsSafe (personId, merchantId) sosId = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   smsCfg <- asks (.smsCfg)
@@ -336,9 +336,11 @@ markRideAsSafe (personId, merchantId) sosId = do
     message <-
       MessageBuilder.buildMarkRideAsSafeMessage merchantId $
         MessageBuilder.BuildMarkRideAsSafeMessageReq
-          { name = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
+          { userName = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
           }
     for_ emergencyContacts.defaultEmergencyNumbers $ \emergencyContact -> do
       let phoneNumber = emergencyContact.mobileCountryCode <> emergencyContact.mobileNumber
+      -- fork
       Sms.sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
+  pure APISuccess.Success
