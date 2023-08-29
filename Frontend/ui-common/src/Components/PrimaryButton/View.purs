@@ -39,6 +39,7 @@ view push config =
         [ height config.height
         , width config.width
         , visibility config.visibility
+        , gravity CENTER
         ]
         [ linearLayout
             ([ height config.height
@@ -47,6 +48,7 @@ view push config =
             , background config.background
             , padding config.padding
             , gravity config.gravity
+            , id $ getNewIDWithTag (config.id <> "_buttonLayout")
             , clickable if config.enableLoader then false else config.isClickable
             , onClick
                 ( \action -> do
@@ -66,11 +68,12 @@ view push config =
             , stroke config.stroke
             ]  <> if config.isGradient then [gradient config.gradient] else [background config.background])
             [ linearLayout
-                [ width config.width
-                , height config.height
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
                 , orientation HORIZONTAL
                 , gravity config.gravity
-                , visibility if config.enableLoader then GONE else VISIBLE
+                , visibility if config.enableLoader then INVISIBLE else VISIBLE
+                , afterRender push (const NoAction)
                 ]
                 [ prefixImageLayout config
                 , textView

@@ -29,13 +29,14 @@ import Data.Semigroup ((<>))
 import Font.Style (Style(..))
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (unit, (==), (/=), (&&), ($), (/))
+import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (SubscribePopupType(..), PlanCardConfig(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
 import Common.Types.App (LazyCheck(..))
+import Data.Function.Uncurried (runFn1)
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -55,7 +56,7 @@ clearDueButtonConfig state = let
 retryPaymentButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 retryPaymentButtonConfig state =
   let
-    screenWidth = EHC.screenWidth unit
+    layouts = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag $ "RetryPaymentPrimaryButton" <> "_buttonLayout"
   in
     PrimaryButton.config
       { textConfig
@@ -66,8 +67,8 @@ retryPaymentButtonConfig state =
         , color = Color.white900
         , textStyle = Body4
         }
-      , height = V 30
-      , width = V $ screenWidth / 3
+      , height = WRAP_CONTENT
+      , width = WRAP_CONTENT
       , gravity = CENTER
       , cornerRadius = 24.0
       , padding = Padding 10 5 10 6
@@ -83,7 +84,8 @@ retryPaymentButtonConfig state =
       , id = "RetryPaymentPrimaryButton"
       , enableLoader = JB.getBtnLoader "RetryPaymentPrimaryButton"
       , lottieConfig
-        { width = V $ screenWidth / 4
+        { width = V $ layouts.width
+        , height = V $ layouts.height
         , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader_white.json"
         }
       }
