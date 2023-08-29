@@ -856,6 +856,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         vehicleVariantList.get(i).setVisibility(View.GONE);
                     }else {
                         vehicleVariantList.get(i).setText(variant);
+                        if (variant == "AC Taxi") {
+                            vehicleVariantList.get(i).setTextColor(getColor(R.color.blue800));
+                        } else {
+                            vehicleVariantList.get(i).setTextColor(getColor(R.color.orange900));
+                        }
                     }
                     vehicleVariantList.get(i).setText(variant);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
