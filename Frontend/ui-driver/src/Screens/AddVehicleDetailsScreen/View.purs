@@ -31,7 +31,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -44,6 +44,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
+import Effect.Uncurried (runEffectFn1)
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -52,6 +53,7 @@ screen initialState =
   , name : "AddVehicleDetailsScreen"
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
+    _ <- runEffectFn1 consumeBP unit
     pure $ pure unit
   )]
   , eval

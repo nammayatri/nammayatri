@@ -44,9 +44,10 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Maybe
 import Data.String (length)
 import Screens.ApplicationStatusScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Effect.Uncurried (runEffectFn1)
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -65,6 +66,7 @@ screen initialState screenType =
         if initialState.props.isAlternateMobileNumberExists then do
           pure $ EHC.setText (EHC.getNewIDWithTag "Referalnumber") initialState.data.mobileNumber
           else pure unit
+        _ <- runEffectFn1 consumeBP unit
         pure $ pure unit
       )
   ]

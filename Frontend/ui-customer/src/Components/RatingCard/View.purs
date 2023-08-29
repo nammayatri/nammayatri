@@ -207,7 +207,7 @@ rideRatingButtonConfig state = let
       , alpha = if not (state.data.rating < 1) || state.data.appConfig.isGradient == "true" then 1.0 else 0.4
       , margin = (Margin 0 0 0 0)
       , height = (V 48)
-      , gravity = CENTER_VERTICAL
+      , gravity = CENTER
       , isGradient = if state.data.rating < 1 then false else if state.data.appConfig.isGradient == "true" then true else false
       , cornerRadius = state.data.appConfig.ratingConfig.buttonCornerRadius
       , background = if state.data.rating < 1 && state.data.appConfig.isGradient == "true" then "#F1F1F4" else state.data.appConfig.primaryBackground
