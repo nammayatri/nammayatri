@@ -137,13 +137,6 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let cacheFeedbackFormConfig = { configsExpTime = +5184000 }
 
-let registryMap =
-      [ { mapKey = "YATRI", mapValue = "http://localhost:8020/" }
-      , { mapKey = "YATRI_2", mapValue = "http://localhost:8020/" }
-      , { mapKey = "NAMMA_YATRI", mapValue = "http://localhost:8020/" }
-      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
-      ]
-
 let hccfg =
       { connectHost = "localhost"
       , connectPort = 30001
@@ -211,7 +204,6 @@ in  { esqDBCfg
     , cacheFeedbackFormConfig
     , maxEmergencyNumberCount = +3
     , minTripDistanceForReferralCfg = Some +1000
-    , registryMap
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings

@@ -74,6 +74,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
+import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
 import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
 import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
@@ -165,6 +166,7 @@ data UpdateModel
   | FeedbackUpdate
   | FeedbackBadgeUpdate
   | BecknRequestUpdate
+  | RegistryMapFallbackUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -245,6 +247,7 @@ getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate FeedbackUpdate = "FeedbackOptions"
 getTagUpdate FeedbackBadgeUpdate = "FeedbackBadgeOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
+getTagUpdate RegistryMapFallbackUpdate = "RegistryMapFallbackOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "BapMetadataOptions" = return BapMetadataUpdate
@@ -324,6 +327,7 @@ parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "FeedbackOptions" = return FeedbackUpdate
 parseTagUpdate "FeedbackBadgeOptions" = return FeedbackBadgeUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
+parseTagUpdate "RegistryMapFallbackOptions" = return RegistryMapFallbackUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -404,6 +408,7 @@ data DBUpdateObject
   | FeedbackOptions UpdateModel [Set Postgres Feedback.FeedbackT] (Where Postgres Feedback.FeedbackT)
   | FeedbackBadgeOptions UpdateModel [Set Postgres FeedbackBadge.FeedbackBadgeT] (Where Postgres FeedbackBadge.FeedbackBadgeT)
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
+  | RegistryMapFallbackOptions UpdateModel [Set Postgres RegistryMapFallback.RegistryMapFallbackT] (Where Postgres RegistryMapFallback.RegistryMapFallbackT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -646,3 +651,6 @@ instance FromJSON DBUpdateObject where
       BecknRequestUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ BecknRequestOptions updateModel updVals whereClause
+      RegistryMapFallbackUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ RegistryMapFallbackOptions updateModel updVals whereClause
