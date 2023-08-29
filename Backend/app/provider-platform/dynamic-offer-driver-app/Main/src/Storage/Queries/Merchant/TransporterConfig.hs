@@ -85,49 +85,19 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
       Just
         TransporterConfig
           { merchantId = Id merchantId,
-            pickupLocThreshold = pickupLocThreshold,
-            dropLocThreshold = dropLocThreshold,
-            rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,
-            includeDriverCurrentlyOnRide = includeDriverCurrentlyOnRide,
-            defaultPopupDelay = defaultPopupDelay,
-            popupDelayToAddAsPenalty = popupDelayToAddAsPenalty,
-            thresholdCancellationScore = thresholdCancellationScore,
-            minRidesForCancellationScore = minRidesForCancellationScore,
-            thresholdCancellationPercentageToUnlist = thresholdCancellationPercentageToUnlist,
-            minRidesToUnlist = minRidesToUnlist,
-            mediaFileUrlPattern = mediaFileUrlPattern,
-            mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
-            referralLinkPassword = referralLinkPassword,
             fcmConfig =
               FCM.FCMConfig
                 { fcmUrl = fcmUrl',
                   fcmServiceAccount = fcmServiceAccount,
                   fcmTokenKeyPrefix = fcmTokenKeyPrefix
                 },
-            onboardingTryLimit = onboardingTryLimit,
-            onboardingRetryTimeInHours = onboardingRetryTimeInHours,
-            checkImageExtractionForDashboard = checkImageExtractionForDashboard,
-            searchRepeatLimit = searchRepeatLimit,
-            actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
-            upwardsRecomputeBuffer = upwardsRecomputeBuffer,
-            approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
             driverPaymentCycleBuffer = secondsToNominalDiffTime driverPaymentCycleBuffer,
             driverPaymentCycleDuration = secondsToNominalDiffTime driverPaymentCycleDuration,
             driverPaymentCycleStartTime = secondsToNominalDiffTime driverPaymentCycleStartTime,
             driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
-            timeDiffFromUtc = timeDiffFromUtc,
-            subscription = subscription,
-            minLocationAccuracy = minLocationAccuracy,
-            aadhaarVerificationRequired = aadhaarVerificationRequired,
-            enableDashboardSms = enableDashboardSms,
-            createdAt = createdAt,
-            rcLimit = rcLimit,
-            mandateValidity = mandateValidity,
-            subscriptionStartTime = subscriptionStartTime,
-            automaticRCActivationCutOff = automaticRCActivationCutOff,
-            updatedAt = updatedAt
+            ..
           }
 
 instance ToTType' BeamTC.TransporterConfig TransporterConfig where
@@ -173,5 +143,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,
         BeamTC.mandateValidity = mandateValidity,
+        BeamTC.driverLocationAccuracyBuffer = driverLocationAccuracyBuffer,
+        BeamTC.routeDeviationThreshold = routeDeviationThreshold,
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff
       }

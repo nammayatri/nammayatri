@@ -46,6 +46,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
@@ -187,7 +188,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter (filterFunction thresholdConfig.driverLocationAccuracyBuffer oldLoc) sortedWaypoint) mbOldLoc
       mbRideIdAndStatus <- getAssignedRide
 
       case filteredWaypoint of
@@ -235,3 +236,9 @@ checkLocationUpdatesRateLimit personId = do
 
 locationUpdatesHitsCountKey :: Id Person.Person -> Text
 locationUpdatesHitsCountKey personId = "BPP:DriverLocationUpdates:" <> getId personId <> ":hitsCount"
+
+filterFunction :: Meters -> DriverLocation -> Waypoint -> Bool
+filterFunction thresholdDistance oldLoc currwpt =
+  do
+    highPrecMetersToMeters (distanceBetweenInMeters (LatLong oldLoc.lat oldLoc.lon) (currwpt.pt)) > thresholdDistance
+    && oldLoc.coordinatesCalculatedAt < currwpt.ts
