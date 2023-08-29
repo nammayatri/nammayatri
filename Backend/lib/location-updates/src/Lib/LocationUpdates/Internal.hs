@@ -57,7 +57,9 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong]),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
-    updateDistance :: Id person -> HighPrecMeters -> m ()
+    updateDistance :: Id person -> HighPrecMeters -> m (),
+    updateDistance :: Id person -> HighPrecMeters -> m (),
+    updateRouteDeviation :: Id person -> [LatLong] -> m ()
   }
 
 --------------------------------------------------------------------------------
@@ -86,6 +88,7 @@ processWaypoints ::
   NonEmpty LatLong ->
   m ()
 processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints = do
+  updateRouteDeviation driverId (toList waypoints)
   calculationFailed <- ih.isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
@@ -145,8 +148,9 @@ mkRideInterpolationHandler ::
   Bool ->
   MapsServiceConfig ->
   (Id person -> HighPrecMeters -> m ()) ->
+  (Id person -> [LatLong] -> m ()) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide mapsCfg updateDistance =
+mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -160,6 +164,7 @@ mkRideInterpolationHandler isEndRide mapsCfg updateDistance =
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg,
       updateDistance,
+      updateRouteDeviation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation
     }

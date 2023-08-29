@@ -218,4 +218,6 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , distanceBetweenDriverLocationPointsMetres = +5
+    , toleranceEarthMetres = +100
     }
