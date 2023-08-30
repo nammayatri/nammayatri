@@ -189,6 +189,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , subscribed            :  false
     , autoPayStatus         : Nothing
     , mediaUrl              : Nothing
+    , aadhaarCardPhoto      : Nothing 
 }
 
 organizationInfo :: OrganizationInfo
