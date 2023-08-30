@@ -126,7 +126,7 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
   where
     getRideWithBooking bookings acc ride' =
       let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
-       in acc <> ((\x -> (ride', x)) <$> bookings')
+       in acc <> ((ride',) <$> bookings')
 
 findOneByBookingId :: MonadFlow m => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
@@ -158,7 +158,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
   where
     getRideWithBooking bookings acc ride =
       let bookings' = filter (\b -> b.id == ride.bookingId) bookings
-       in acc <> ((\b -> (ride, b)) <$> bookings')
+       in acc <> ((ride,) <$> bookings')
     minDayTime date = UTCTime (addDays (-1) date) 66600
     maxDayTime date = UTCTime date 66600
 
@@ -187,11 +187,11 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateNumDeviation :: MonadFlow m => Id Ride -> Bool -> m ()
-updateNumDeviation rideId deviation = do
+updateDriverDeviatedFromRoute :: MonadFlow m => Id Ride -> Bool -> m ()
+updateDriverDeviatedFromRoute rideId deviation = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamR.numberOfDeviation $ Just deviation,
+    [ Se.Set BeamR.driverDeviatedFromRoute $ Just deviation,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -217,20 +217,19 @@ updateStatusByIds rideIds status = do
     [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
 updateDistance :: MonadFlow m => Id Person -> HighPrecMeters -> m ()
-updateDistance driverId distance = do
-  now <- getCurrentTime
-  dist <- getDistance driverId
-  let distance' = maybe distance (distance +) dist
-  updateWithKV
-    [ Se.Set BeamR.traveledDistance distance',
-      Se.Set BeamR.updatedAt now
-    ]
-    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
-
-getDistance :: MonadFlow m => Id Person -> m (Maybe HighPrecMeters)
-getDistance driverId = do
-  ride <- getInProgressByDriverId driverId
-  pure $ Ride.traveledDistance <$> ride
+updateDistance driverId distance
+  | distance == 0 = return ()
+  | otherwise = do
+    now <- getCurrentTime
+    ride <- getInProgressByDriverId driverId
+    let distance' = maybe distance ((distance +) . (.traveledDistance)) ride
+    let snapAPICalls = maybe 1 (1 +) (ride >>= (.numberOfSnapToRoadCalls))
+    updateWithKV
+      [ Se.Set BeamR.traveledDistance distance',
+        Se.Set BeamR.numberOfSnapToRoadCalls (Just snapAPICalls),
+        Se.Set BeamR.updatedAt now
+      ]
+      [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
 updateAll :: MonadFlow m => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
@@ -244,8 +243,7 @@ updateAll rideId ride = do
       Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
       Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
       Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
-      Se.Set BeamR.updatedAt now,
-      Se.Set BeamR.numberOfDeviation ride.numberOfDeviation
+      Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
@@ -335,16 +333,16 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (defaultFrom)) mbFrom
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (defaultTo)) mbTo
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ (bookingStatus)) mbBookingStatus
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - (B.just_ booking.estimatedFare)) B.>. B.val_ (Just fareDiff_) B.||. (ride.fare - (B.just_ booking.estimatedFare)) B.<. B.val_ (Just fareDiff_)) mbFareDiff
               )
               do
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
                 ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
-                rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. (BeamRD.id rideDetails''))
-                riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> (B.just_ (BeamRDR.id riderDetails'')) B.==?. (BeamB.riderId booking'))
+                rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
+                riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
                 pure (booking', ride', rideDetails', riderDetails')
   res' <- case res of
     Right x -> do
@@ -352,10 +350,10 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
           rides = snd' <$> x
           rideDetails = thd' <$> x
           riderDetails = fth' <$> x
-      b <- catMaybes <$> (mapM fromTType' (bookings))
-      r <- catMaybes <$> (mapM fromTType' (rides))
-      rd <- catMaybes <$> (mapM fromTType' (rideDetails))
-      rdr <- catMaybes <$> (mapM fromTType' (riderDetails))
+      b <- catMaybes <$> mapM fromTType' bookings
+      r <- catMaybes <$> mapM fromTType' rides
+      rd <- catMaybes <$> mapM fromTType' rideDetails
+      rdr <- catMaybes <$> mapM fromTType' riderDetails
       pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr (DBooking.riderName <$> b) (liftA2 (-) (DR.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
     Left err -> do
       logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
@@ -364,9 +362,9 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
   where
     mkBookingStatusVal ride =
       B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
-        B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. (B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.UPCOMING) $
-          B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. (B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.UPCOMING_6HRS) $
-            B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. (B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)))) (B.val_ Common.ONGOING) $
+        B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING) $
+          B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING_6HRS) $
+            B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
               B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS)
     fst' (x, _, _, _) = x
     snd' (_, y, _, _) = y
@@ -375,8 +373,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     mkBookingStatus now' ride
       | ride.status == Ride.COMPLETED = Common.COMPLETED
       | ride.status == Ride.NEW && (ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING
-      | ride.status == Ride.NEW && ride.createdAt <= (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.UPCOMING_6HRS
-      | ride.status == Ride.INPROGRESS && ((ride.tripStartTime) > (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
+      | ride.status == Ride.NEW && ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING_6HRS
+      | ride.status == Ride.INPROGRESS && ride.tripStartTime > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.CANCELLED
       | otherwise = Common.ONGOING_6HRS
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) =
@@ -454,24 +452,12 @@ instance FromTType' BeamR.Ride Ride where
             bookingId = Id bookingId,
             shortId = ShortId shortId,
             merchantId = Id <$> merchantId,
-            status = status,
             driverId = Id driverId,
-            otp = otp,
-            trackingUrl = tUrl,
-            fare = fare,
-            traveledDistance = traveledDistance,
-            chargeableDistance = chargeableDistance,
-            driverArrivalTime = driverArrivalTime,
-            tripStartTime = tripStartTime,
-            tripEndTime = tripEndTime,
             tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
             tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
-            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
             fareParametersId = Id <$> fareParametersId,
-            distanceCalculationFailed = distanceCalculationFailed,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            numberOfDeviation = numberOfDeviation
+            trackingUrl = tUrl,
+            ..
           }
 
 instance ToTType' BeamR.Ride Ride where
@@ -500,5 +486,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.distanceCalculationFailed = distanceCalculationFailed,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
-        BeamR.numberOfDeviation = numberOfDeviation
+        BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
+        BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls
       }
