@@ -27,7 +27,7 @@ import Control.Monad.Except (lift, runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (mapWithIndex)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -39,7 +39,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard, accessibilityHint)
 import Resources.Constants as RSRC
 import PrestoDOM.Animation as PrestoAnim
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
@@ -173,6 +173,7 @@ personalDetails state push =
                               [ height WRAP_CONTENT
                               , width MATCH_PARENT
                               , text item.title
+                              , clickable false
                               , color Color.black700
                               , margin $ MarginBottom 8
                               ] <> FontStyle.body3 LanguageStyle
@@ -188,6 +189,10 @@ personalDetails state push =
                                   ST.EMAILID_ ->  if state.data.emailId /= Nothing then const $ NoAction else const $ EditProfile $ Just ST.EMAILID_
                                   ST.GENDER_ -> if state.data.gender /= Nothing then const $ NoAction  else const $ EditProfile $ Just ST.GENDER_
                                   _ -> const $ NoAction
+                              , clickable case item.fieldType of
+                                  ST.EMAILID_ ->  not (isJust state.data.emailId)  
+                                  ST.GENDER_ -> not ( isJust state.data.gender) 
+                                  _ -> false
                               ] <> FontStyle.body6 LanguageStyle
                             ]
                       , horizontalLineView state (index /= 3)
@@ -266,6 +271,7 @@ headerView state push =
               , width WRAP_CONTENT
               , text (getString EDIT)
               , color Color.blueTextColor
+              , accessibilityHint "Edit Profile Button"
               , padding $ PaddingBottom (if state.data.config.profileEditGravity == "bottom" then 10 else 0)
               , onClick push (const $ EditProfile Nothing)
               ] <> FontStyle.subHeading1 LanguageStyle

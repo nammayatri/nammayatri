@@ -465,7 +465,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     polyStyle.setStrokeColor(Color.BLUE);
                     if (locationName.length() > 0) {
                         if (userPositionMarker == null) {
-                            upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
+                            upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f, "current location marker"); //TODO this function will be removed
                         } else {
                             userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null)));
                             userPositionMarker.setTitle("");

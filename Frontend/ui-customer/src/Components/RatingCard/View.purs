@@ -30,8 +30,8 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), map, (<$>), (||))
-import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard)
+import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), map, (<$>), (||),show)
+import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -72,6 +72,7 @@ currentRatingView push state =
   , orientation VERTICAL
   , padding $ Padding 16 24 16 30
   , background Color.white900
+  , accessibilityHint "Bottom Sheet Active"
   , cornerRadii $ Corners 20.0 true true false false
   , clickable true
   , adjustViewWithKeyboard "true"
@@ -216,7 +217,8 @@ rideRatingButtonConfig state = let
       }
   in primaryButtonConfig'
 
-------------------------starRatingView--------------------------
+------------------------
+--------------------------
 
 starRatingView :: forall w . RatingCardState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 starRatingView state push =
@@ -237,6 +239,7 @@ starRatingView state push =
     ,textView $
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
+        , accessibilityHint $ "Rate Your Ride With " <> state.data.driverName
         , text $ getString RATE_YOUR_RIDE_WITH <> state.data.driverName
         , color Color.black800
         , maxLines 2
@@ -256,6 +259,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 35
                               , width $ V 35
+                              , accessibilityHint ("Star" <> show item)
                               , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])

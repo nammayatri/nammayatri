@@ -27,7 +27,7 @@ import JBridge as JB
 import Screens.Types as ST
 import Styles.Colors as Color
 import Prelude (not, (&&), (+), (<>), (==), (||))
-import PrestoDOM (Length(..), Margin(..), Visibility(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..), Accessiblity(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
@@ -61,6 +61,7 @@ genericHeaderConfig state = let
       , width = (V 25)
       , margin = (Margin 10 17 16 15)
       , visibility = VISIBLE
+      , accessibilityImportance = DISABLE
       , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 
                     else if state.props.showSavePlaceView then if state.data.config.nyBrandingVisibility then "ny_ic_close,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
                       else  "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png" else config.prefixImageConfig.imageUrl

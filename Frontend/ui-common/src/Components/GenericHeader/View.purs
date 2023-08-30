@@ -20,7 +20,7 @@ import Effect (Effect)
 import Prelude (Unit, const, ($), (==), (<>))
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback, accessibilityHint, accessibilityImportance)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -32,11 +32,14 @@ view push config =
   , padding config.padding
   , orientation config.orientation
   , background config.background
+  , accessibilityImportance DISABLE
   , clickable config.isClickable
   ][  linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER
+      , accessibilityImportance config.prefixImageConfig.accessibilityImportance
+      , accessibilityHint config.prefixImageConfig.accessibilityHint
       , onClick push $ const PrefixImgOnClick
       ][ imageView
         [ imageWithFallback config.prefixImageConfig.imageUrl
@@ -52,6 +55,8 @@ view push config =
       , width WRAP_CONTENT 
       , text config.textConfig.text
       , margin config.textConfig.margin
+      , clickable false
+      , accessibilityHint config.textConfig.text
       , color config.textConfig.color
       ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
     , suffixImageLayout config push
@@ -70,6 +75,8 @@ suffixImageLayout config push =
         imageWithFallback config.suffixImageConfig.imageUrl
       , height config.suffixImageConfig.height
       , width config.suffixImageConfig.width
+      , accessibilityHint config.suffixImageConfig.accessibilityHint
+      , accessibilityImportance config.suffixImageConfig.accessibilityImportance
       , margin config.suffixImageConfig.margin
       , padding config.suffixImageConfig.padding
       , onClick push $ const SuffixImgOnClick
