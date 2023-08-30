@@ -17,14 +17,11 @@
 module Domain.Types.BlackListOrg where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
-import Servant.API
+import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data BlackListOrgType
@@ -36,10 +33,7 @@ data BlackListOrgType
 
 $(mkBeamInstancesForEnum ''BlackListOrgType)
 
-instance FromHttpApiData BlackListOrgType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+$(mkFromHttpInstanceForEnum ''BlackListOrgType)
 
 data BlackListOrgD (s :: UsageSafety) = BlackListOrg
   { id :: Id BlackListOrg,

@@ -16,14 +16,10 @@
 module Domain.Types.Mandate where
 
 import Data.Aeson
-import qualified Data.Bifunctor as BF
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
-import Servant.API
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Mandate = Mandate
@@ -47,12 +43,4 @@ data MandateStatus = ACTIVE | INACTIVE
 
 $(mkBeamInstancesForEnum ''MandateStatus)
 
-instance FromHttpApiData MandateStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData MandateStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''MandateStatus)

@@ -16,13 +16,9 @@
 module Domain.Types.Vehicle.Variant where
 
 import Data.Aeson
-import Data.Bifunctor
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Kernel.Prelude hiding (first)
 import Kernel.Utils.GenericPretty
-import Servant.API
+import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
@@ -43,7 +39,4 @@ data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
 
 $(mkBeamInstancesForEnum ''Variant)
 
-instance FromHttpApiData Variant where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+$(mkFromHttpInstanceForEnum ''Variant)

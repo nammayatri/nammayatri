@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.ProviderPlatform.Merchant
   ( module Dashboard.ProviderPlatform.Merchant,
@@ -22,11 +23,8 @@ where
 import qualified Dashboard.Common as Common
 import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
-import qualified Data.Bifunctor as BF
-import Data.ByteString.Lazy as BSL
 import Data.OpenApi hiding (description, name, password, url)
 import Data.Text as T
-import Data.Text.Encoding as DT
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -35,6 +33,7 @@ import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Types.Value
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 import Servant
 
@@ -531,15 +530,7 @@ data DocumentType = RC | DL | RCInsurance
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-instance FromHttpApiData DocumentType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData DocumentType where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''DocumentType)
 
 ---------------------------------------------------------
 -- merchant onboarding document config update -----------

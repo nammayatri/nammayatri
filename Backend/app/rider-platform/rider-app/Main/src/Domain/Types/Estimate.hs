@@ -17,9 +17,6 @@
 module Domain.Types.Estimate where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -29,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Servant.API
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Estimate = Estimate
@@ -164,15 +161,7 @@ data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOT
 
 $(mkBeamInstancesForEnum ''EstimateStatus)
 
-instance FromHttpApiData EstimateStatus where
-  parseUrlPiece = parseHeader.DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData EstimateStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''EstimateStatus)
 
 isCancelled ::
   EstimateStatus ->
