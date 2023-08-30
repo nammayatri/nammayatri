@@ -993,14 +993,10 @@ chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    quoteList = (sortBy (\a b -> compare (getMaxFare a.price) (getMaxFare b.price)) (state.data.specialZoneQuoteList)),
+    quoteList = state.data.specialZoneQuoteList,
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText
   }
 
-getMaxFare :: String -> Int 
-getMaxFare fareString = do 
-  let specialCharRemovedString = ((DS.split (DS.Pattern("-")) (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") fareString)) DA.!! 0)
-  (fromMaybe 0 (INT.fromString (DS.trim (fromMaybe "0" specialCharRemovedString ))))
 
 specialLocationIcons :: ZoneType -> String
 specialLocationIcons tag =
