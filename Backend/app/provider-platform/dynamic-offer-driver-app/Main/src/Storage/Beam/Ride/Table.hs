@@ -54,7 +54,8 @@ data RideT f = RideT
     updatedAt :: B.C f Time.UTCTime,
     driverDeviatedFromRoute :: B.C f (Maybe Bool),
     numberOfSnapToRoadCalls :: B.C f (Maybe Int),
-    numberOfDeviation :: B.C f (Maybe Bool)
+    numberOfDeviation :: B.C f (Maybe Bool),
+    driverGoHomeRequestId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -94,9 +95,10 @@ rideTMod =
       updatedAt = B.fieldNamed "updated_at",
       driverDeviatedFromRoute = B.fieldNamed "driver_deviated_from_route",
       numberOfSnapToRoadCalls = B.fieldNamed "number_of_snap_to_road_calls",
-      numberOfDeviation = B.fieldNamed "number_of_deviation"
+      numberOfDeviation = B.fieldNamed "number_of_deviation",
+      driverGoHomeRequestId = B.fieldNamed "driver_go_home_req_id"
     }
 
-$(enableKVPG ''RideT ['id] [['bookingId], ['driverId]])
+$(enableKVPG ''RideT ['id] [['bookingId], ['driverId], ['driverGoHomeRequestId]])
 
 $(mkTableInstances ''RideT "ride" "atlas_driver_offer_bpp")

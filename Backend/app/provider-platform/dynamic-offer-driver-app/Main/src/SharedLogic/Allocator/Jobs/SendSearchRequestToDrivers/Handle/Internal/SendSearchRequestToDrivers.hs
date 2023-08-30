@@ -28,9 +28,10 @@ import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, addUTCTime, logInfo)
+import Kernel.Utils.Common (addUTCTime, logInfo)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
@@ -73,11 +74,12 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
         validTill = validTill,
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
+
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   _ <- QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
-  forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
+  forM_ searchRequestsForDrivers $ \sReqFD -> do
     QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
@@ -132,6 +134,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 driverSpeed = dpwRes.intelligentScores.driverSpeed,
                 keepHiddenForSeconds = dpwRes.keepHiddenForSeconds,
                 mode = dpRes.mode,
+                goHomeRequestId = dpwRes.goHomeReqId,
                 ..
               }
       pure searchRequestForDriver

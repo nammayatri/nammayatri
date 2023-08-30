@@ -12,6 +12,8 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as Busine
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.DriverFlowStatus as DriverFlowStatus
+import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
+import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
@@ -44,6 +46,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Fe
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
+import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as IssueOption
@@ -161,6 +164,9 @@ data DBCreateObject
   | FeedbackBadgeObject FeedbackBadge.FeedbackBadge
   | BecknRequestObject BecknRequest.BecknRequest
   | RegistryMapFallbackObject RegistryMapFallback.RegistryMapFallback
+  | DriverGoHomeRequestObject DriverGoHomeRequest.DriverGoHomeRequest
+  | DriverHomeLocationObject DriverHomeLocation.DriverHomeLocation
+  | GoHomeConfigObject GoHomeConfig.GoHomeConfig
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types
@@ -245,3 +251,6 @@ modelName (FeedbackObject _) = "FeedBack"
 modelName (FeedbackBadgeObject _) = "FeedBackBadge"
 modelName (BecknRequestObject _) = "BecknRequest"
 modelName (RegistryMapFallbackObject _) = "RegistryMapFallback"
+modelName (DriverGoHomeRequestObject _) = "DriverGoHomeRequest"
+modelName (DriverHomeLocationObject _) = "DriverHomeLocation"
+modelName (GoHomeConfigObject _) = "GoHomeConfig"

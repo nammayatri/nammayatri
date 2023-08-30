@@ -38,6 +38,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
@@ -67,8 +68,8 @@ handler merchant sReq estimate = do
 
   searchTry <- createNewSearchTry farePolicy searchReq
   driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
-  let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-
+  goHomeCfg <- CQGHC.findByMerchantId merchantId
+  let inTime = fromIntegral goHomeCfg.goHomeBatchDelay
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds
   case res of
