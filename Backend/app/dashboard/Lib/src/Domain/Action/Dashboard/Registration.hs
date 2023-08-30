@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Registration where
 
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantAccess as DMerchantAccess
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import qualified EulerHS.Language as L
@@ -65,6 +66,12 @@ data LoginRes = LoginRes
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
+data SwitchMerchantReq = SwitchMerchantReq
+  { merchantId :: ShortId DMerchant.Merchant,
+    otp :: Maybe Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -83,16 +90,51 @@ login LoginReq {..} = do
   unless (merchant.serverName `elem` (availableServers <&> (.name))) $
     throwError $ InvalidRequest "Server for this merchant is not available"
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
+  generateLoginRes person merchant otp
+
+switchMerchant ::
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    EncFlow m r
+  ) =>
+  TokenInfo ->
+  SwitchMerchantReq ->
+  m LoginRes
+switchMerchant authToken SwitchMerchantReq {..} = do
+  availableServers <- asks (.dataServers)
+  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
+    throwError $ InvalidRequest "Server for this merchant is not available"
+  person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
+  generateLoginRes person merchant otp
+
+generateLoginRes ::
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    EncFlow m r
+  ) =>
+  DP.Person ->
+  DMerchant.Merchant ->
+  Maybe Text ->
+  m LoginRes
+generateLoginRes person merchant otp = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
-  if merchant.is2faMandatory && not _merchantAccess.is2faEnabled
-    then pure $ LoginRes "" merchant.is2faMandatory _merchantAccess.is2faEnabled "2 Factor authentication is not enabled, it is mandatory for this merchant"
-    else do
-      (isToken, msg) <-
-        if merchant.is2faMandatory && _merchantAccess.is2faEnabled
-          then handle2FA _merchantAccess.secretKey otp
-          else pure (True, "Logged in successfully")
-      token <- if isToken then generateToken person.id merchant.id else pure ""
-      pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg
+  (isToken, msg) <- check2FA _merchantAccess merchant otp
+  token <-
+    if isToken
+      then generateToken person.id merchant.id
+      else pure ""
+  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg
+
+check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Maybe Text -> m (Bool, Text)
+check2FA merchantAccess merchant otp =
+  case (DMerchant.is2faMandatory merchant, DMerchantAccess.is2faEnabled merchantAccess) of
+    (True, True) -> handle2FA merchantAccess.secretKey otp
+    (True, False) -> pure (False, "2 Factor authentication is not enabled, it is mandatory for this merchant")
+    _ -> pure (True, "Logged in successfully")
 
 handle2FA ::
   ( EncFlow m r
@@ -137,13 +179,17 @@ generateToken ::
   Id DMerchant.Merchant ->
   m Text
 generateToken personId merchantId = do
-  regToken <- buildRegistrationToken personId merchantId
-  -- this function uses tokens from db, so should be called before transaction
-  Auth.cleanCachedTokensByMerchantId personId merchantId
-  DB.runTransaction $ do
-    QR.deleteAllByPersonIdAndMerchantId personId merchantId
-    QR.create regToken
-  pure $ regToken.token
+  findPreviousToken <- QR.findByPersonIdAndMerchantId personId merchantId
+  case findPreviousToken of
+    Just regToken -> pure $ regToken.token
+    Nothing -> do
+      regToken <- buildRegistrationToken personId merchantId
+      -- this function uses tokens from db, so should be called before transaction
+      Auth.cleanCachedTokensByMerchantId personId merchantId
+      DB.runTransaction $ do
+        QR.deleteAllByPersonIdAndMerchantId personId merchantId
+        QR.create regToken
+      pure $ regToken.token
 
 logout ::
   ( EsqDBFlow m r,
