@@ -70,7 +70,7 @@ data Slot = Slot
     endTime :: TimeOfDay,
     slot :: Int
   }
-  deriving stock (Generic, Show, Read, Eq)
+  deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be [Slot] where
@@ -86,5 +86,3 @@ instance FromBackendRow Postgres [Slot] where
         Right val -> pure val
         Left err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
       A.Error err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
-
-deriving stock instance Ord Slot

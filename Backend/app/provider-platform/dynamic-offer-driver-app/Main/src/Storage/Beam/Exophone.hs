@@ -12,10 +12,6 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# HLINT ignore "Use newtype instead of data" #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Storage.Beam.Exophone where
 

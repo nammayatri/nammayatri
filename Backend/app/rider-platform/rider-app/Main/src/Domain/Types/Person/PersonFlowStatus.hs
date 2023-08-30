@@ -90,7 +90,7 @@ data FlowStatus
         trackingUrl :: Maybe BaseUrl,
         driverArrivalTime :: Maybe UTCTime
       }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance FromField FlowStatus where
   fromField = fromFieldJSON
@@ -104,8 +104,6 @@ instance FromBackendRow Postgres FlowStatus
 
 instance IsString FlowStatus where
   fromString = show
-
-deriving stock instance Ord FlowStatus
 
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =

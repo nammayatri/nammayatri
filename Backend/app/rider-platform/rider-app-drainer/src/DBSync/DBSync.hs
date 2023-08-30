@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module DBSync.DBSync where
 
@@ -74,13 +73,13 @@ parseDBCommand dbStreamKey entries =
 
     getActionAndModelName dbCommandByteString = do
       case A.decode $ BL.fromStrict dbCommandByteString of
-        Just decodedDBCommandObject@(A.Object o) ->
+        Just _decodedDBCommandObject@(A.Object o) ->
           let mbAction = case HM.lookup "tag" o of
                 Just (A.String actionTag) -> return actionTag
                 _ -> Nothing
               mbModel = case HM.lookup "contents" o of
-                Just commandArray@(A.Array a) -> case V.last a of
-                  commandObject@(A.Object command) -> case HM.lookup "tag" command of
+                Just _commandArray@(A.Array a) -> case V.last a of
+                  A.Object command -> case HM.lookup "tag" command of
                     Just (A.String modelTag) -> return modelTag
                     _ -> Nothing
                   _ -> Nothing
@@ -179,7 +178,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
 
 process :: Text -> Integer -> Flow Int
 process dbStreamKey count = do
-  beforeProcess <- EL.getCurrentDateInMillis
+  _beforeProcess <- EL.getCurrentDateInMillis
 
   commands <- peekDBCommand dbStreamKey count
   case commands of

@@ -11,9 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use forM_" #-}
 
 module Domain.Action.UI.DriverOnboarding.Status
   ( ResponseStatus (..),

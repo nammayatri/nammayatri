@@ -1,8 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Beam.Invoice where
 
@@ -14,6 +11,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import EulerHS.Prelude (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Sequelize
 

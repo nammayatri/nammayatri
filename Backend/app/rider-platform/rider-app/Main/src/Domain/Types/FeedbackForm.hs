@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,16 +12,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+--TODO remove
 {-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Domain.Types.FeedbackForm where
 
 import Data.List (groupBy)
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Ride (Ride)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -50,19 +49,6 @@ data FeedbackFormAPIEntity = FeedbackFormAPIEntity
 data Category = RIDE | DRIVER | VEHICLE
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read, Ord)
 
-instance FromField Category where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Category
-
-instance FromBackendRow Postgres Category
-
-instance IsString Category where
-  fromString = show
-
 data FeedbackFormItem = FeedbackFormItem
   { id :: Id FeedbackFormItem,
     rating :: Maybe Int,
@@ -74,19 +60,6 @@ data FeedbackFormItem = FeedbackFormItem
 
 data AnswerType = Text | Checkbox | Radio
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read, Ord)
-
-instance FromField AnswerType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerType
-
-instance FromBackendRow Postgres AnswerType
-
-instance IsString AnswerType where
-  fromString = show
 
 data FeedbackFormRes = FeedbackFormRes
   { categoryName :: Category,
@@ -131,3 +104,7 @@ makeFeedbackFormAPIEntity response = map convertGroup groupedEntities
           answer = res.answer,
           answerType = res.answerType
         }
+
+$(mkBeamInstancesForEnum ''Category)
+
+$(mkBeamInstancesForEnum ''AnswerType)

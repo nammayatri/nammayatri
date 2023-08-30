@@ -14,13 +14,9 @@
 
 module Domain.Types.Exophone where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DM
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data Exophone = Exophone
@@ -30,7 +26,6 @@ data Exophone = Exophone
     backupPhone :: Text,
     isPrimaryDown :: Bool,
     exophoneType :: ExophoneType,
-    -- isBackupDown Bool -- do we need this?
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -39,12 +34,4 @@ data Exophone = Exophone
 data ExophoneType = CALL_RIDE | END_RIDE
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-instance FromField ExophoneType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExophoneType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be ExophoneType
-
-instance FromBackendRow Postgres ExophoneType
+$(mkBeamInstancesForEnum ''ExophoneType)

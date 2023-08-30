@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Estimate where
 
@@ -19,14 +20,11 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -164,18 +162,7 @@ mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
 data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOTE | DRIVER_QUOTE_CANCELLED | COMPLETED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance FromField EstimateStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be EstimateStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be EstimateStatus
-
-instance FromBackendRow Postgres EstimateStatus
-
-instance IsString EstimateStatus where
-  fromString = show
+$(mkBeamInstancesForEnum ''EstimateStatus)
 
 instance FromHttpApiData EstimateStatus where
   parseUrlPiece = parseHeader.DT.encodeUtf8

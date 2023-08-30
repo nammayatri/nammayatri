@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,16 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.DriverOnboarding.Error where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (sqlValueSyntax), autoSqlValueSyntax)
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Error.BaseError.HTTPError
 
 data DriverOnboardingError
@@ -48,24 +43,12 @@ data DriverOnboardingError
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
   | RCActivationFailedPaymentDue Text
-  deriving (Generic, Eq, Show, Read, IsBecknAPIError, ToSchema, ToJSON, FromJSON)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
-instance FromField DriverOnboardingError where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DriverOnboardingError where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DriverOnboardingError
-
-instance FromBackendRow Postgres DriverOnboardingError
-
-instance IsString DriverOnboardingError where
-  fromString = show
-
-deriving stock instance Ord DriverOnboardingError
+$(mkBeamInstancesForEnum ''DriverOnboardingError)
 
 instance IsBaseError DriverOnboardingError where
   toMessage = \case

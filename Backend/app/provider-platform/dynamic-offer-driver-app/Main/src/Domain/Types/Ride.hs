@@ -19,15 +19,12 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps.Types
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
@@ -41,18 +38,7 @@ data RideStatus
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, BP.ToParamSchema)
 
-instance FromField RideStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideStatus
-
-instance FromBackendRow Postgres RideStatus
-
-instance IsString RideStatus where
-  fromString = show
+$(mkBeamInstancesForEnum ''RideStatus)
 
 instance FromHttpApiData RideStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

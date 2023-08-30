@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,6 +12,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.BlackListOrg where
 
@@ -18,13 +20,9 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Servant.API
@@ -33,20 +31,10 @@ data BlackListOrgType
   = PROVIDER
   | APP
   | GATEWAY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Ord)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField BlackListOrgType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be BlackListOrgType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be BlackListOrgType
-
-instance FromBackendRow Postgres BlackListOrgType
-
-instance IsString BlackListOrgType where
-  fromString = show
+$(mkBeamInstancesForEnum ''BlackListOrgType)
 
 instance FromHttpApiData BlackListOrgType where
   parseUrlPiece = parseHeader . DT.encodeUtf8

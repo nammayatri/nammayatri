@@ -19,14 +19,11 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -56,29 +53,9 @@ data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchTryStatus
 
-instance FromField SearchTryStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchTryStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SearchTryStatus
-
-instance FromBackendRow Postgres SearchTryStatus
-
 data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRepeatType
-
-instance FromField SearchRepeatType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRepeatType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be SearchRepeatType
-
-instance FromBackendRow Postgres SearchRepeatType
 
 instance FromHttpApiData SearchTryStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -89,3 +66,7 @@ instance ToHttpApiData SearchTryStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
+
+$(mkBeamInstancesForEnum ''SearchTryStatus)
+
+$(mkBeamInstancesForEnum ''SearchRepeatType)

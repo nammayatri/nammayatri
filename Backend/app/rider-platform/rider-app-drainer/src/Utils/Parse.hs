@@ -1,6 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-
 module Utils.Parse where
 
 import Data.Aeson as A

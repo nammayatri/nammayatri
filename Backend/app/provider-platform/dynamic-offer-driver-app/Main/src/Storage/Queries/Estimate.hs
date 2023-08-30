@@ -15,6 +15,8 @@
 
 module Storage.Queries.Estimate where
 
+import Data.Coerce (coerce)
+import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Estimate as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -42,7 +44,7 @@ instance FromTType' BeamE.Estimate Estimate where
             vehicleVariant = vehicleVariant,
             minFare = minFare,
             maxFare = maxFare,
-            estimateBreakupList = estimateBreakupList,
+            estimateBreakupList = coerce @[EstimateBreakupD 'Unsafe] @[EstimateBreakup] estimateBreakupList,
             nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart' <*> nightShiftEnd',
             waitingCharges = WaitingCharges waitingChargePerMin waitingOrPickupCharges,
             specialLocationTag = specialLocationTag,
@@ -64,7 +66,7 @@ instance ToTType' BeamE.Estimate Estimate where
         vehicleVariant = vehicleVariant,
         minFare = minFare,
         maxFare = maxFare,
-        estimateBreakupList = estimateBreakupList,
+        estimateBreakupList = coerce @[EstimateBreakup] @[EstimateBreakupD 'Unsafe] estimateBreakupList,
         nightShiftCharge = nightShiftCharge <$> nightShiftInfo,
         oldNightShiftCharge = oldNightShiftCharge <$> nightShiftInfo,
         nightShiftStart = BeamE.TimeOfDayText . nightShiftStart <$> nightShiftInfo,

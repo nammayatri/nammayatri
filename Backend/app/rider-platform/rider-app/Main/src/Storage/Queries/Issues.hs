@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-identities #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -13,9 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use tuple-section" #-}
 
 module Storage.Queries.Issues where
 
@@ -36,8 +32,8 @@ insertIssue = createWithKV
 
 findByCustomerId :: MonadFlow m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
-  let limitVal = min (maybe 10 fromIntegral mbLimit) 10
-      offsetVal = maybe 0 fromIntegral mbOffset
+  let limitVal = min (fromMaybe 10 mbLimit) 10
+      offsetVal = fromMaybe 0 mbOffset
   issues <-
     findAllWithOptionsKV
       [ Se.And
@@ -58,8 +54,8 @@ findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
 -- Finding issues over non-Id; do it through DB
 findAllIssue :: MonadFlow m => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
-  let limitVal = min (maybe 10 fromIntegral mbLimit) 10
-      offsetVal = maybe 0 fromIntegral mbOffset
+  let limitVal = min (fromMaybe 10 mbLimit) 10
+      offsetVal = fromMaybe 0 mbOffset
   issues <-
     findAllWithDb
       [ Se.And

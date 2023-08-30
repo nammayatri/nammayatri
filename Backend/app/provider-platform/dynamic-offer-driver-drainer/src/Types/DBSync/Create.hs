@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Types.DBSync.Create where
 

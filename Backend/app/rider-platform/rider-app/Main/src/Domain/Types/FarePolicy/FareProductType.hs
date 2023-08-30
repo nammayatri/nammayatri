@@ -11,34 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.FarePolicy.FareProductType where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (fromFieldEnum)
 
 data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
 derivePersistField "FareProductType"
 
-instance FromField FareProductType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be FareProductType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be FareProductType
-
-instance FromBackendRow Postgres FareProductType
-
-instance IsString FareProductType where
-  fromString = show
+$(mkBeamInstancesForEnum ''FareProductType)
