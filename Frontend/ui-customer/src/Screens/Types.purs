@@ -524,6 +524,9 @@ data Stage = HomeScreen
            | EduNammaSafetyMeasures
            | EduNammaSafetyGuidelines
            | EduNammaSafetyAboutSOS
+           | ActivateNammaSafety
+           | TriggeredNammaSafety
+           | NammaSafetyVideoRecord
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -1222,7 +1225,7 @@ type NammaSafetyScreenState = {
 
 type NammaSafetyScreenData =  {
   emergencyContacts :: Array Contacts,
-  shareEmergencyContacts :: Boolean,
+  shareToEmergencyContacts :: Boolean,
   nightTimeSafety :: Boolean,
   triggerNYSupport :: Boolean,
   hasCompletedSafetySetup :: Boolean

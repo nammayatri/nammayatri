@@ -465,7 +465,10 @@ getScreenFromStage stage = case stage of
   EduNammaSafetyMeasures -> "namma_safety_onboard_screen"
   EduNammaSafetyGuidelines -> "namma_safety_onboard_screen"
   EduNammaSafetyAboutSOS -> "namma_safety_onboard_screen"
-
+  ActivateNammaSafety -> "namma_safety_onboard_screen"
+  TriggeredNammaSafety -> "namma_safety_onboard_screen"
+  NammaSafetyVideoRecord -> "namma_safety_onboard_screen"
+  
 getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
 getGlobalPayload _ = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (getWindowVariable "__payload" Just Nothing)

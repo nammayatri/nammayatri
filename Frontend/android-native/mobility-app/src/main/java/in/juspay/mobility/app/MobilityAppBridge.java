@@ -514,85 +514,85 @@ public class MobilityAppBridge extends HyperBridge {
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
-    @JavascriptInterface
-    public void recordVideo() {
-        cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-        cameraProviderFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                startCameraX(cameraProvider);
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//    @JavascriptInterface
+//    public void recordVideo() {
+//        cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//                startCameraX(cameraProvider);
+//            } catch (ExecutionException e) {
+//                e.printStackTrace();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//
+//        }, getExecutor());
+//        if (videoCapture != null) {
+//            long timeStamp = System.currentTimeMillis();
+//            ContentValues contentValues = new ContentValues();
+//            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, timeStamp);
+//            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
+//
+//
+//            if (ActivityCompat.checkSelfPermission(, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+//                // TODO: Consider calling
+//                //    ActivityCompat#requestPermissions
+//                // here to request the missing permissions, and then overriding
+//                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+//                //                                          int[] grantResults)
+//                // to handle the case where the user grants the permission. See the documentation
+//                // for ActivityCompat#requestPermissions for more details.
+//                requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, MY_CAMERA_REQUEST_CODE);
+//                return;
+//            }
+//            videoCapture.startRecording(
+//                    new VideoCapture.OutputFileOptions.Builder(
+//                            getContentResolver(),
+//                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+//                            contentValues
+//                    ).build(),
+//                    getExecutor(),
+//                    new VideoCapture.OnVideoSavedCallback() {
+//                        @Override
+//                        public void onVideoSaved(@NonNull VideoCapture.OutputFileResults outputFileResults) {
+//                            Toast.makeText(MainActivity.this,"Saving...",Toast.LENGTH_SHORT).show();
+//                        }
+//
+//                        @Override
+//                        public void onError(int videoCaptureError, @NonNull String message, @Nullable Throwable cause) {
+//                            Toast.makeText(MainActivity.this,"Error: "+ message ,Toast.LENGTH_SHORT).show();
+//                        }
+//                    }
+//
+//            );
+//
+//
+//        }
+//    }
 
-        }, getExecutor());
-        if (videoCapture != null) {
-            long timeStamp = System.currentTimeMillis();
-            ContentValues contentValues = new ContentValues();
-            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, timeStamp);
-            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
+//    private Executor getExecutor() {
+//        return ContextCompat.getMainExecutor(this);
+//    }
 
-
-            if (ActivityCompat.checkSelfPermission(, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                requestPermissions(new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, MY_CAMERA_REQUEST_CODE);
-                return;
-            }
-            videoCapture.startRecording(
-                    new VideoCapture.OutputFileOptions.Builder(
-                            getContentResolver(),
-                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                            contentValues
-                    ).build(),
-                    getExecutor(),
-                    new VideoCapture.OnVideoSavedCallback() {
-                        @Override
-                        public void onVideoSaved(@NonNull VideoCapture.OutputFileResults outputFileResults) {
-                            Toast.makeText(MainActivity.this,"Saving...",Toast.LENGTH_SHORT).show();
-                        }
-
-                        @Override
-                        public void onError(int videoCaptureError, @NonNull String message, @Nullable Throwable cause) {
-                            Toast.makeText(MainActivity.this,"Error: "+ message ,Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-            );
-
-
-        }
-    }
-
-    private Executor getExecutor() {
-        return ContextCompat.getMainExecutor(this);
-    }
-
-    @SuppressLint("RestrictedApi")
-    private void startCameraX(ProcessCameraProvider cameraProvider) {
-
-        cameraProvider.unbindAll();
-
-        CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                .build();
-
-        Preview preview = new Preview.Builder().build();
-
-        preview.setSurfaceProvider(previewView.getSurfaceProvider());
-
-        videoCapture = new VideoCapture.Builder()
-                .setVideoFrameRate(30)
-                .build();
-
-        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, videoCapture);
-    }
+//    @SuppressLint("RestrictedApi")
+//    private void startCameraX(ProcessCameraProvider cameraProvider) {
+//
+//        cameraProvider.unbindAll();
+//
+//        CameraSelector cameraSelector = new CameraSelector.Builder()
+//                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                .build();
+//
+//        Preview preview = new Preview.Builder().build();
+//
+//        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//        videoCapture = new VideoCapture.Builder()
+//                .setVideoFrameRate(30)
+//                .build();
+//
+//        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, videoCapture);
+//    }
 
 }

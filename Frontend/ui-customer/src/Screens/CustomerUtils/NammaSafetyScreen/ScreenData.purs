@@ -15,14 +15,14 @@
 
 module Screens.NammaSafetyScreen.ScreenData where
 
-import Screens.Types (NammaSafetyScreenState, Stage(..))
 import PrestoDOM (LetterSpacing(..))
+import Screens.Types (NammaSafetyScreenState, Stage(..))
 
 initData :: NammaSafetyScreenState
 initData = {
     data: {
       emergencyContacts : [{name : "A B", number : "95645645"}],
-      shareEmergencyContacts : false,
+      shareToEmergencyContacts : false,
       nightTimeSafety : false,
       triggerNYSupport : false,
       hasCompletedSafetySetup : false

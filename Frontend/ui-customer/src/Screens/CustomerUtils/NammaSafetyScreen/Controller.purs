@@ -15,26 +15,27 @@
 
 module Screens.NammaSafetyScreen.Controller where
 
+import Common.Types.App (LazyCheck(..)) as Lazy
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
+import Data.Lens.Lens.Product (_1)
 import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
-import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader, minimizeApp, firebaseLogEvent)
+import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, showDialer, toast, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, void)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
+import Prelude (class Show, bind, discard, not, pure, show, unit, void, ($), (&&), (-), (<=), (==), (>), (||))
+import PrestoDOM (Eval, LetterSpacing(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (NammaSafetyScreenState, Stage(..))
 import Storage (KeyStore(..), setValueToLocalNativeStore)
-import Common.Types.App (LazyCheck(..)) as Lazy
 
 instance showAction :: Show Action where
     show _ = ""
@@ -70,8 +71,11 @@ data Action = BackPressed
              | GoToNextStep PrimaryButtonController.Action
              | SkipToNextStep PrimaryButtonController.Action
              | EditEmergencyContacts PrimaryButtonController.Action
-             | GoToEducation Stage
              | ShowAboutNammaSafety
+             | SwitchToStage Stage
+             | ToggleSwitch Stage
+             | ActivateSOS PrimaryButtonController.Action
+             | CallForSupport String
              
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
@@ -83,15 +87,28 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   _ <- pure $ spy "calll1" ""
   exit $ GoBack
 
+eval (ToggleSwitch stage) state = do
+  _ <- pure $ spy "modify" stage
+  case stage of
+    SetTriggerCustomerSupport   -> continue state{data{triggerNYSupport = not state.data.triggerNYSupport}}
+    SetNightTimeSafetyAlert     -> continue state{data{nightTimeSafety = not state.data.nightTimeSafety}}
+    SetDefaultEmergencyContacts -> continue state{data{shareToEmergencyContacts = not state.data.shareToEmergencyContacts}}
+    _                           -> continue state
 eval (GenericHeaderACEdu (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props {currentStage = AboutNammaSafety}}
 
 eval AfterRender state = continue state
+
+eval (ActivateSOS PrimaryButtonController.OnClick) state = continue state{props{currentStage = TriggeredNammaSafety}}
 
 eval (StartNammaSafetyOnboarding PrimaryButtonController.OnClick) state = continue state {props {currentStage = SetTriggerCustomerSupport}}
 
 eval (EditEmergencyContacts PrimaryButtonController.OnClick) state = continue state {props {currentStage = SetTriggerCustomerSupport}}
 
-eval (GoToEducation stage) state = continue state {props {currentStage = stage}}
+eval (SwitchToStage stage) state = continue state {props {currentStage = stage}}
+
+eval (CallForSupport callTo) state = do
+  void <- pure $ showDialer (if callTo == "police" then "112" else "123232") false
+  continue state
 
 eval (ShowAboutNammaSafety) state = continue state {props {currentStage = AboutNammaSafety, showOnboarding = false}}
 
@@ -101,7 +118,7 @@ eval (GoToNextStep PrimaryButtonController.OnClick) state = do
     SetTriggerCustomerSupport ->  continue state {props {currentStage = SetNightTimeSafetyAlert}}
     SetNightTimeSafetyAlert ->  continue state {props {currentStage = SetDefaultEmergencyContacts}}
     SetDefaultEmergencyContacts ->  continue state {props {currentStage = SetPersonalSafetySettings}}
-    SetPersonalSafetySettings -> continue state{props {currentStage = NammaSafetyDashboard, showOnboarding = false}}
+    SetPersonalSafetySettings -> continue state{props {currentStage = NammaSafetyDashboard}, data{hasCompletedSafetySetup = true}}
     _ -> continue state
 
 eval (SkipToNextStep PrimaryButtonController.OnClick) state = do
