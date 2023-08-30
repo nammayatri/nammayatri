@@ -1963,13 +1963,12 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
           (PayPayload innerpayload) = sdk_payload.payload
           finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
-      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
       setValueToLocalStore DISABLE_WIDGET "true"
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
       _ <- paymentPageUI sdkPayload
       pure $ toggleBtnLoader "" false
-      setValueToLocalStore DISABLE_WIDGET "false"
       liftFlowBT $ runEffectFn1 consumeBP unit
+      setValueToLocalStore DISABLE_WIDGET "false"
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId
       case orderStatus of
         Right (OrderStatusRes statusResp) ->
@@ -2095,7 +2094,6 @@ subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN"}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-  liftFlowBT $ runEffectFn1 initiatePP unit
   uiAction <- UI.subscriptionScreen
   case uiAction of
     NAV HomeScreenNav -> homeScreenFlow
