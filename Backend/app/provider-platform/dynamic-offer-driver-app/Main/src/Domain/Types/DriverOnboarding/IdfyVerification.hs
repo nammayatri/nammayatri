@@ -22,7 +22,6 @@ import Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data VerificationStatus = PENDING | VALID | INVALID

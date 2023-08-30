@@ -8,7 +8,6 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.DriverFee as DF
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Servant.API
 

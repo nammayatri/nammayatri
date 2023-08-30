@@ -6,7 +6,6 @@ import Domain.Types.Person (Person)
 import Domain.Types.Ride (Ride)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data Sos = Sos

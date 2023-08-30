@@ -24,7 +24,7 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney, Money, fromFieldEnum)
+import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API

@@ -19,7 +19,6 @@ module Domain.Types.VehicleVariant where
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Utils.GenericPretty
 
 data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS

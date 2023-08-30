@@ -22,7 +22,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney, fromFieldEnum)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Servant.API
 

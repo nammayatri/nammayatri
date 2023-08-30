@@ -17,7 +17,6 @@ module Domain.Types.DriverOnboarding.Error where
 
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Error.BaseError.HTTPError
 
 data DriverOnboardingError

@@ -26,7 +26,6 @@ import qualified Domain.Types.Person as DPers
 import Domain.Types.Vehicle.Variant as Reexport
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API

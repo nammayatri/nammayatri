@@ -18,7 +18,6 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle (Variant)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show, Ord, Eq)

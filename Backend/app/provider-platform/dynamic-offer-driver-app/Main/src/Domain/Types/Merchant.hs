@@ -25,7 +25,6 @@ import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Servant.API

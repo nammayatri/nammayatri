@@ -19,7 +19,6 @@ import Data.Aeson
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data Medium

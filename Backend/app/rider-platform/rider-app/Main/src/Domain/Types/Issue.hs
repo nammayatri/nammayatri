@@ -19,7 +19,6 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data IssueStatus

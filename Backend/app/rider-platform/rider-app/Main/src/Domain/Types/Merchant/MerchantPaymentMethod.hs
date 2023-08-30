@@ -22,7 +22,6 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import qualified Text.Show
 

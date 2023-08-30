@@ -18,7 +18,6 @@ module Domain.Types.Feedback.FeedbackForm where
 import Domain.Types.Ride (Ride)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data FeedbackFormReq = FeedbackFormReq

@@ -22,7 +22,6 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Lib.Types.SpecialLocation (SpecialLocation (..))

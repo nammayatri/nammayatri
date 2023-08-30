@@ -22,37 +22,6 @@ fromFieldMoney f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just _ -> Money <$> fromField f mbValue
 
--- fromFieldJSON ::
---   (Typeable a, FromJSON a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldJSON f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' -> case A.decode $ fromStrict value' of
---     Just res -> pure res
---     Nothing -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
-
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case readMaybe (unpackChars value') of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
-
--- fromFieldEnumDbHash ::
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion DbHash
--- fromFieldEnumDbHash f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' -> pure $ DbHash value'
-
 -- getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point
 -- getPoint (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
 

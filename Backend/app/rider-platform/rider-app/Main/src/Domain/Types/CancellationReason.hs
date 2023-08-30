@@ -27,7 +27,6 @@ import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Servant
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign

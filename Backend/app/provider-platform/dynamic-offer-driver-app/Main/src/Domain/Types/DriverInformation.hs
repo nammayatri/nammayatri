@@ -28,7 +28,7 @@ import EulerHS.Prelude
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.Common (Money, fromFieldEnum)
+import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API

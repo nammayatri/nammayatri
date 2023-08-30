@@ -23,7 +23,6 @@ import qualified Data.Text.Encoding as DT
 import Domain.Types.Common
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Servant.API

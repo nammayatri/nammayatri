@@ -17,7 +17,6 @@ module Domain.Types.RegistrationToken where
 
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data Medium

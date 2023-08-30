@@ -17,7 +17,6 @@ module Domain.Types.MediaFile where
 
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink

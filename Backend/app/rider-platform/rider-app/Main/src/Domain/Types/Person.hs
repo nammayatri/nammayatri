@@ -27,7 +27,6 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (maskText)

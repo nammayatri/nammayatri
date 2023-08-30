@@ -221,23 +221,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInf
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
 
--- instance IsString HighPrecMeters where
---   fromString = show
-
--- instance IsString Meters where
---   fromString = show
-
--- fromFieldJSON ::
---   (Typeable a, Read a, FromJSON a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldJSON f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' -> case A.decode $ fromStrict value' of
---     Just res -> pure res
---     Nothing -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField DomainFP.NightShiftCharge where
   fromField = fromFieldJSON
 
@@ -247,26 +230,6 @@ instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DomainFP.NightShiftCh
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.NightShiftCharge
 
 instance FromBackendRow Postgres DomainFP.NightShiftCharge
-
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case readMaybe (unpackChars value') of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f ("Could not 'read' for: " <> unpackChars value')
-
--- fromFieldEnumDbHash ::
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion DbHash
--- fromFieldEnumDbHash f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' -> pure $ DbHash value'
 
 -- getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point
 -- getPoint (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))

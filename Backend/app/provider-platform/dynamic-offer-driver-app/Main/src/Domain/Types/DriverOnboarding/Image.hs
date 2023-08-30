@@ -19,7 +19,6 @@ import Domain.Types.Merchant
 import Domain.Types.Person
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data ImageType = DriverLicense | VehicleRegistrationCertificate

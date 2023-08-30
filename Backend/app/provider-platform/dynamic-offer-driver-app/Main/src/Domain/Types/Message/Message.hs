@@ -21,7 +21,6 @@ import Domain.Types.Merchant (Merchant)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data MessageType = Action Text | Read

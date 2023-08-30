@@ -28,7 +28,6 @@ import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Person (Driver)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 type MessageDynamicFieldsType = M.Map Text Text
