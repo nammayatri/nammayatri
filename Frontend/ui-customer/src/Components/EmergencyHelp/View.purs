@@ -354,6 +354,7 @@ showEmergencyContact state push =
     ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
+        , accessibilityImportance DISABLE_DESCENDANT
         ][  textView (
             [ text $ getString CALL_EMERGENCY_CONTACTS
             , color Color.black800
@@ -400,18 +401,16 @@ allContactsView state push =
     , stroke ("1," <> Color.borderColorLight)
     , padding $ Padding 13 11 13 11
     , cornerRadius 8.0
-    , accessibilityHint $ "Call " <> item.name <> " Button" 
-    , accessibilityImportance ENABLE
     ][  linearLayout
         [ height WRAP_CONTENT
         , width  MATCH_PARENT
         , gravity CENTER
-        , accessibilityImportance DISABLE_DESCENDANT
         ][  linearLayout
             [ height $ V 24
             , width $ V 24
             , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
             , cornerRadius 12.0
+            , accessibilityImportance DISABLE_DESCENDANT
             , gravity CENTER
             ][  textView
                 [ text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
@@ -428,6 +427,7 @@ allContactsView state push =
             , ellipsize true
             , singleLine true
             , padding $ PaddingLeft 8
+            , accessibilityImportance DISABLE_DESCENDANT
             , fontStyle $ FontStyle.semiBold LanguageStyle
             ]
           , linearLayout
@@ -436,7 +436,9 @@ allContactsView state push =
             , gravity RIGHT
             , onClick push $ const $ CallContactPopUp item
             ][  textView
-                [ text $ getString CALL
+                [ accessibilityHint $ "Call " <> item.name <> " : Button" 
+                , accessibilityImportance ENABLE  
+                , text $ getString CALL
                 , color Color.green900
                 , width WRAP_CONTENT
                 , textSize FontSize.a_14

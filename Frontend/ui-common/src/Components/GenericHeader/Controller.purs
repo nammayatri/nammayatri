@@ -79,7 +79,7 @@ config = {
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE
     , accessibilityImportance : ENABLE
-    , accessibilityHint : "Back Button"
+    , accessibilityHint : "Back : Button"
     }
   , textConfig : {
       text : ""
@@ -119,7 +119,7 @@ merchantConfig = {
     , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE
     , accessibilityImportance : ENABLE 
-    , accessibilityHint : "Back Button"
+    , accessibilityHint : "Back : Button"
     }
   , textConfig : {
       text : ""

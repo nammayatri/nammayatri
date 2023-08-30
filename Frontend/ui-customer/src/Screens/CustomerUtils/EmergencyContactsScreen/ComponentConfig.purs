@@ -57,7 +57,7 @@ primaryButtonConfig state =
       config
         { textConfig
           { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)
-          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)) <> " Button"
+          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)) <> " : Button"
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)

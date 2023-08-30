@@ -238,7 +238,7 @@ termsAndConditionsView state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString TERMS_AND_CONDITIONS)
-        , accessibilityHint "Terms and Conditions Button"
+        , accessibilityHint "Terms and Conditions : Button"
         , accessibilityImportance ENABLE
         , color Color.blue900
         , onClick (\action -> do
@@ -266,7 +266,7 @@ privacyPolicyView state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString PRIVACY_POLICY)
-        , accessibilityHint "Privacy Policy"
+        , accessibilityHint "Privacy Policy : Button"
         , accessibilityImportance ENABLE
         , color Color.blue900
         , margin (Margin 0 20 0 0)

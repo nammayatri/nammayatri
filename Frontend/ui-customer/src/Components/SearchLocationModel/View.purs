@@ -106,7 +106,7 @@ view push state =
                   [ imageView
                       [ height $ V 25
                       , width $ V 25
-                      , accessibilityHint "Back Button"
+                      , accessibilityHint "Back : Button"
                       , accessibilityImportance ENABLE
                       , imageWithFallback state.homeScreenConfig.searchLocationConfig.backArrow
                       ]
@@ -254,6 +254,7 @@ sourceDestinationEditTextView state push =
             , lineHeight "24"
             , cursorColor state.homeScreenConfig.primaryBackground
             , accessibilityHint "Pickup Location Editable field"
+            , accessibilityImportance ENABLE
             , hint (getString START_)
             , hintColor "#A7A7A7"
             , id $ getNewIDWithTag "SourceEditText"
@@ -264,7 +265,6 @@ sourceDestinationEditTextView state push =
                                             Nothing    -> ""
                   pure unit
                     ) (const NoAction)
-            -- , accessibilityImportance if state.isSource == Just false then DISABLE else ENABLE
             , onChange
                 ( \action -> do
                     _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
@@ -286,7 +286,7 @@ sourceDestinationEditTextView state push =
                         _ <- push action
                         pure unit
                       )(const $ SourceClear)
-            , accessibilityHint "Clear Source Text Button"
+            , accessibilityHint "Clear Source Text : Button"
             , accessibilityImportance ENABLE
             , visibility if state.source /= "" then VISIBLE else GONE
             ]
@@ -331,17 +331,17 @@ sourceDestinationEditTextView state push =
               , hintColor "#A7A7A7"
               , singleLine true
               , ellipsize true
+              , accessibilityHint "Destination Location Editable field"
+              , accessibilityImportance ENABLE
+              , cursorColor state.homeScreenConfig.primaryBackground
+              , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
                   _ <- pure $ requestKeyboardShow case state.isSource of
-                                            Just true  -> (getNewIDWithTag "SourceEditText")
-                                            Just false -> (getNewIDWithTag "DestinationEditText")
+                                            Just true  -> (getNewIDWithTag "DestinationEditText")
+                                            Just false -> (getNewIDWithTag "SourceEditText")
                                             Nothing    -> ""
                   pure unit
                     ) (const NoAction)
-              -- , accessibilityImportance if state.isSource == Just true then DISABLE else ENABLE
-              , accessibilityHint "Destination Location Editable field"
-              , cursorColor state.homeScreenConfig.primaryBackground
-              , id $ getNewIDWithTag "DestinationEditText"
               , onChange
                   ( \action -> do
                       _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
@@ -362,7 +362,7 @@ sourceDestinationEditTextView state push =
             , padding (PaddingHorizontal 5 5)
             , visibility if state.destination /= "" then VISIBLE else GONE
             , onClick push (const $ DestinationClear)
-            , accessibilityHint "Clear Destination Text Button"
+            , accessibilityHint "Clear Destination Text : Button"
             , accessibilityImportance ENABLE
             ]
             [ imageView

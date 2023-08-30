@@ -62,7 +62,7 @@ carouselView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , id $ getNewIDWithTag "CarouselView"
-    , accessibilityImportance DISABLE_DESCENDANT
+    , accessibilityImportance ENABLE
     , gravity CENTER
     , weight 1.0
     , margin $ MarginBottom 20

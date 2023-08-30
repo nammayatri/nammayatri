@@ -73,7 +73,7 @@ chatHeaderView config push =
          ][ imageView
             [ imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
             , height $ V 24
-            , accessibilityHint "Back Button"
+            , accessibilityHint "Back : Button"
             , accessibilityImportance ENABLE
             , width $ V 24
             ]
@@ -131,7 +131,7 @@ headerActionView config push =
      ][ imageView
         [ imageWithFallback $ "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
         , height $ V 18
-        , accessibilityHint "Call Button"
+        , accessibilityHint "Call : Button"
         , accessibilityImportance ENABLE
         , width $ V 18
         ]
@@ -149,7 +149,7 @@ headerActionView config push =
     ][ imageView
        [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "ic_phone.png"
        , height $ V 20
-       , accessibilityHint "Call Button"
+       , accessibilityHint "Call : Button"
        , accessibilityImportance ENABLE
        , width $ V 20
        ]
@@ -257,7 +257,7 @@ chatFooterView config push =
          , width $ V 36
          , gravity CENTER
          , onClick push (const (SendMessage))
-         , accessibilityHint "Send Message Button"
+         , accessibilityHint "Send Message : Button"
          , accessibilityImportance ENABLE
          ][ imageView
             [ imageWithFallback $ if config.sendMessageActive then "ic_send_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send_blue.png" else "ic_send," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send.png"

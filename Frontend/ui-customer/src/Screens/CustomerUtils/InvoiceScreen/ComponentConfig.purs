@@ -57,7 +57,7 @@ primaryButtonConfig state = let
    config = PrimaryButton.config
    primaryButtonConfig' = config
      { textConfig{ text = (getString DOWNLOAD_PDF)
-      , accessibilityHint = ((getString DOWNLOAD_PDF) <> " Button" )
+      , accessibilityHint = ((getString DOWNLOAD_PDF) <> " : Button" )
       , color = state.data.config.primaryTextColor }
       , background = state.data.config.primaryBackground
      }

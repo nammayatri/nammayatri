@@ -38,6 +38,7 @@ import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>), show)
 import Data.Maybe(fromMaybe, isJust)
+import Data.String as DS
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -183,10 +184,10 @@ tripIdView push state =
       , width WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const Copy)
+      , accessibilityImportance DISABLE_DESCENDANT
       , gravity CENTER_VERTICAL
       ][ textView $
           [ text state.data.tripId
-          , accessibilityImportance DISABLE
           , width WRAP_CONTENT
           , color Color.black900
           ] <> FontStyle.paragraphText LanguageStyle
@@ -289,7 +290,7 @@ tripDetailsView state =
       , orientation VERTICAL
       ][  textView $
           [ text (state.data.totalAmount)
-          , accessibilityHint $  (state.data.totalAmount) <> "Rupees"
+          , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
           , accessibilityImportance ENABLE
           , color Color.black
           ] <> FontStyle.h2 LanguageStyle
@@ -370,7 +371,7 @@ invoiceView state push =
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][  textView $
         [ text (getString VIEW_INVOICE)
-        , accessibilityHint "View Invoice Button"
+        , accessibilityHint "View Invoice : Button"
         , accessibilityImportance ENABLE
         , color Color.darkDescriptionText
         ] <> FontStyle.body1 LanguageStyle
@@ -404,7 +405,7 @@ reportIssueView state push =
         , margin (MarginBottom 16)
         ][  textView $
             [ text (getString REPORT_AN_ISSUE)
-            , accessibilityHint "Report an Issue Button"
+            , accessibilityHint "Report an Issue : Button"
             , accessibilityImportance ENABLE
             , color Color.darkDescriptionText
             ] <> FontStyle.body1 LanguageStyle

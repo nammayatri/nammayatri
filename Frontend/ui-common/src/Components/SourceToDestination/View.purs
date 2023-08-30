@@ -29,8 +29,6 @@ import Engineering.Helpers.Utils (defaultSeparatorCount, getSeparatorFactor)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
 import JBridge (getLayoutBounds)
-import Data.String (replaceAll, Pattern(..), Replacement(..))
-import Debug
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -77,7 +75,7 @@ sourceLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , accessibilityImportance ENABLE
-      , accessibilityHint $ "PickUp Location Is " <> (replaceAll (Pattern ",") (Replacement " : ") config.sourceTextConfig.text)
+      , accessibilityHint $ "PickUp Location Is " <> config.sourceTextConfig.text
       , gravity CENTER_VERTICAL
       ] <> case config.id of
         Just layoutId -> [id $ getNewIDWithTag $ "source_layout_" <> layoutId]
@@ -128,7 +126,7 @@ destinationLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      , accessibilityHint $ "Drop Location is : " <> (replaceAll (Pattern ",") (Replacement " : ") config.destinationTextConfig.text)
+      , accessibilityHint $ "Drop Location is : " <> config.destinationTextConfig.text
       , accessibilityImportance ENABLE
       ][  textView $
           [ text config.destinationTextConfig.text

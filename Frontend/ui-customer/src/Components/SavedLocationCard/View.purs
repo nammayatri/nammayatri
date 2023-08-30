@@ -31,6 +31,7 @@ import Data.Maybe(Maybe(..), fromMaybe)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -96,12 +97,12 @@ savedLocationView state push =
               , maxLines 2
               , color Color.black800
               , accessibilityImportance ENABLE
-              , accessibilityHint ((case (getCardType (fromMaybe "" state.cardType)) of 
+              , accessibilityHint ( (DS.replaceAll (DS.Pattern " : ") (DS.Replacement ",") state.savedLocation )<> " is Saved as" <> (case (getCardType (fromMaybe "" state.cardType)) of 
                     Just tag -> case tag of 
                       HOME_TAG -> (getString HOME)
                       WORK_TAG -> (getString WORK)
                       OTHER_TAG -> state.tagName
-                    Nothing -> state.tagName) <> " is saved as " <> state.savedLocation)
+                    Nothing -> state.tagName))
               ] <> FontStyle.subHeading1 LanguageStyle
             ]
         , linearLayout
@@ -119,7 +120,7 @@ savedLocationView state push =
             , margin (MarginRight 12)
             ][  textView $
                 [ text (getString EDIT)
-                , accessibilityHint "Edit Button"
+                , accessibilityHint "Edit : Button"
                 , accessibilityImportance ENABLE
                 , color Color.blue900
                 ] <> FontStyle.body1 LanguageStyle
@@ -133,7 +134,7 @@ savedLocationView state push =
             ][  textView $
                 [ text (getString REMOVE)
                 , color Color.blue900
-                , accessibilityHint "Remove Button"
+                , accessibilityHint "Remove : Button"
                 , accessibilityImportance ENABLE
                 ] <> FontStyle.body1 LanguageStyle
               ]

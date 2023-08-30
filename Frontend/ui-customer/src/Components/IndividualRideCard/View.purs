@@ -201,7 +201,8 @@ sourceAndDestination push =
       ][  imageView
           [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
           , height $ V 15
-          , accessibilityImportance DISABLE
+          , accessibilityImportance ENABLE 
+          , accessibilityHint "Source Location is :"
           , width $ V 15
           , margin (MarginTop 2)
           ]
@@ -226,7 +227,8 @@ sourceAndDestination push =
           [ imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
           , height $ V 16
           , width $ V 16
-          , accessibilityImportance DISABLE
+          , accessibilityImportance ENABLE 
+          , accessibilityHint "Destination Location is : "
           , margin (MarginTop 2)
           ]
         , textView (
@@ -368,7 +370,7 @@ viewDetailsAndRepeatRide push state =
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ getString VIEW_DETAILS
-      , accessibilityHint $ "View Details Button"
+      , accessibilityHint $ "View Details : Button"
       , accessibilityImportance ENABLE
       , color Color.blue900
       , padding $ Padding 26 18 50 3
@@ -384,7 +386,7 @@ viewDetailsAndRepeatRide push state =
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ getString REPEAT_RIDE
-      , accessibilityHint $ "Repeat Ride Button"
+      , accessibilityHint $ "Repeat Ride : Button"
       , accessibilityImportance ENABLE
       , color Color.blue900
       , PrestoList.alphaHolder "alpha"

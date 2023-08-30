@@ -354,7 +354,7 @@ addTipView state push =
                         , height WRAP_CONTENT
                         , accessibilityImportance ENABLE
                         , padding (Padding 20 10 20 10)
-                        , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " Button")
+                        , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
                         , fontStyle $ FontStyle.bold LanguageStyle
                         , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index))
                         , background $ if state.tipViewProps.activeIndex == index then Color.blue600 else Color.white900
@@ -485,7 +485,7 @@ quoteListTopSheetView state push =
                   [ height $ V 40
                   , width $ V 40
                   , onClick push $ const GoBack
-                  , accessibilityHint "Cancel Search Button"
+                  , accessibilityHint "Cancel Search : Button"
                   , accessibilityImportance ENABLE
                   ][  imageView
                       [ height $ V 24
@@ -609,7 +609,7 @@ continueWithTipButtonConfig state = let
     continueWithTipButtonConfig' = config
       { textConfig
         { text = state.tipViewProps.primaryButtonText
-        , accessibilityHint = state.tipViewProps.primaryButtonText <> " Button" 
+        , accessibilityHint = state.tipViewProps.primaryButtonText <> " : Button" 
         }
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 10

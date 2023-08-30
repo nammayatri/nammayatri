@@ -379,7 +379,7 @@ genderCaptureView state push =
           , height WRAP_CONTENT
           , width WRAP_CONTENT
           , accessibilityImportance ENABLE
-          , accessibilityHint $ if state.props.genderOptionExpanded then "Double Tap To Close DropDown" else "Gender Drop Down Menu : Double Tap To Change Gender"
+          , accessibilityHint $ if state.data.editedGender == Nothing then "Select your gender : Drop-Down menu" else "Gender Selected : " <> RSRC.getGender state.data.editedGender (getString SELECT_YOUR_GENDER) <> " : " <>  if state.props.genderOptionExpanded then "Double Tap To Collapse DropDown" else " Double Tap To Expand DropDown"--if state.props.genderOptionExpanded then "Double Tap To Close DropDown" else "Gender Drop Down Menu : Double Tap To Change Gender"
           , color if state.data.editedGender == Nothing then Color.black600 else Color.black800
           ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout

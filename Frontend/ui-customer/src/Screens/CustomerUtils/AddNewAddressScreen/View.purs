@@ -314,7 +314,7 @@ addNewScreenView state push =
             [ height $ V 16
             , width $ V 16
             , imageWithFallback $ "ny_ic_clear," <> (getAssetStoreLink FunctionCall) <> "ny_ic_clear.png"
-            , accessibilityHint "Clear Text Button"
+            , accessibilityHint "Clear Text : Button"
             , accessibilityImportance ENABLE
             ]
           ]
@@ -527,7 +527,7 @@ savePlaceView state push =
               ] <> if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT])
               [  textView $
                 [ text (getString EDIT)
-                , accessibilityHint "Edit Button"
+                , accessibilityHint "Edit : Button"
                 , accessibilityImportance ENABLE
                 , color Color.blue900
                 , width MATCH_PARENT
@@ -592,7 +592,7 @@ tagView state push =
           , margin (MarginRight 12)
           , cornerRadius 6.0
           , accessibilityImportance ENABLE
-          , accessibilityHint if (Just index) == state.data.activeIndex then (item.text <> ":  Selected") else (item.text <> ": Un Selected")
+          , accessibilityHint if (Just index) == state.data.activeIndex then (item.text <> ":  Selected") else if (validTag state.data.savedTags item.tag state.data.placeName) then (item.text <> ": Un Selected") else (item.text <> " : Already Saved")
           , alpha case item.tag of
                       "FAVOURITE"     -> 1.0
                       _               -> if (validTag state.data.savedTags item.tag state.data.placeName) || (Just index == state.data.activeIndex) then 1.0 else 0.5

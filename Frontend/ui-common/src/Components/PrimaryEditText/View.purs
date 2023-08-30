@@ -96,7 +96,7 @@ editTextView push config =
   , singleLine config.editText.singleLine
   , hintColor config.editText.placeholderColor
   , accessibilityImportance ENABLE
-  , accessibilityHint if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text))
+  , accessibilityHint if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
   , margin config.editText.margin
   , background config.background
   , padding config.editText.padding

@@ -283,7 +283,7 @@ expiryTimeView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , accessibilityHint $ "O.T.P : Is :" <> (replaceAll (Pattern "") (Replacement ":")  state.data.otp)
+              , accessibilityHint $ "O.T.P is :" <> (replaceAll (Pattern "") (Replacement " ")  state.data.otp)
               , accessibilityImportance ENABLE
               , text $ getString OTP <> ":"
               , color Color.black700
@@ -337,7 +337,7 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 4
-      , accessibilityHint "Share Ride Button"
+      , accessibilityHint "Share Ride : Button"
       , accessibilityImportance ENABLE
       , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
       , onClick push $ const ShareRide
@@ -354,7 +354,7 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 12 10 10
-      , accessibilityHint "Contact Customer Support Button"
+      , accessibilityHint "Contact Customer Support : Button"
       , accessibilityImportance ENABLE
       , onClick push $ const Support
       ]
@@ -402,7 +402,7 @@ sosView push state =
         [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
-        , accessibilityHint $ "S-O-S Button, Select to view S-O-S options"
+        , accessibilityHint $ "S O S Button, Select to view S O S options"
         , accessibilityImportance ENABLE
         , onClick push $ const OpenEmergencyHelp
         ]
@@ -561,7 +561,7 @@ otpAndWaitView push state =
           ][ textView (
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , accessibilityHint $ "O.T.P  Is :" <>  (replaceAll (Pattern "") (Replacement " : ")  state.data.otp)
+              , accessibilityHint $ "O.T.P is :" <>  (replaceAll (Pattern "") (Replacement " ")  state.data.otp)
               , accessibilityImportance ENABLE
               , text $ getString OTP <> ":"
               , color state.data.config.quoteListModel.otpTitleColor
@@ -671,7 +671,7 @@ driverInfoView push state =
               , height $ V 4
               , width $ V 34
               , accessibilityImportance ENABLE
-              , accessibilityHint "Bottom Sheet : Double tap to Expand or Collapse Button"
+              , accessibilityHint "Bottom Sheet : Swipe Up Or Down : To Expand Or Collapse : Button"
               , margin (MarginTop 8)
               , onClick push $ const ExpandBottomSheet
               , cornerRadius 4.0
@@ -709,7 +709,7 @@ cancelRideLayout push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , padding $ Padding 5 5 5 5
-  , accessibilityHint "Cancel Ride Button"
+  , accessibilityHint "Cancel Ride : Button"
   , accessibilityImportance ENABLE
   , margin $ MarginBottom if os == "IOS" then 24 else 0
   , onClick push $ const $ CancelRide state
@@ -779,7 +779,7 @@ contactView push state =
               , stroke state.data.config.driverInfoConfig.callButtonStroke
               , afterRender push $ const $ LoadMessages
               , onClick push $ const $ MessageDriver
-              , accessibilityHint "Chat With Driver Button"
+              , accessibilityHint "Chat or Call : Button"
               , accessibilityImportance ENABLE
               ][ imageView
                   [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
@@ -956,7 +956,7 @@ paymentMethodView push state title shouldShowIcon =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , accessibilityHint $ "Ride Fare : " <> show state.data.price  <> " Rupees" <> " : Pick Up Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.source) <> " : Destination Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.destination) <> " : Ride Distacnce is : " <> state.data.estimatedDistance <> " Km"
+  , accessibilityHint $ "Ride Fare : " <> (replaceAll (Pattern "₹") (Replacement "") (show state.data.price))  <> " Rupees" <> " : Pick Up Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.source) <> " : Destination Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.destination) <> " : Ride Distacnce is : " <> state.data.estimatedDistance <> " Km"
   , accessibilityImportance ENABLE
   ][  linearLayout
       [ orientation VERTICAL

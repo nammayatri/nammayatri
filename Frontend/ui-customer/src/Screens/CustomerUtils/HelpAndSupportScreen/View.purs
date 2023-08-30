@@ -112,7 +112,7 @@ view push state =
             [ text (getString VIEW_ALL_RIDES)
             , alignParentRight "true,-1"
             , margin (Margin 0 14 16 14)
-            , accessibilityHint "View All Rides"
+            , accessibilityHint "View All Rides : Button"
             , accessibilityImportance ENABLE
             , width MATCH_PARENT
             , gravity RIGHT
@@ -180,6 +180,8 @@ recentRideView state push=
     ][
     textView $
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
+        , accessibilityHint "Report An Issue With This Trip : Button"
+        , accessibilityImportance ENABLE 
         , color Color.blue900
         ] <> FontStyle.tags LanguageStyle
      ,  linearLayout
@@ -288,7 +290,9 @@ allTopicsView state push =
                 , width $ V 17
                 ]
               , textView $
-                [ text item.title
+                [ accessibilityHint $ item.title <> " : Button"
+                , accessibilityImportance ENABLE
+                , text item.title
                 , color Color.darkDescriptionText
                 , margin (MarginLeft 13)
                 ] <> FontStyle.paragraphText LanguageStyle

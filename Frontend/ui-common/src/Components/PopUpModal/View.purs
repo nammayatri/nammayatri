@@ -212,7 +212,7 @@ view push state =
                         , height WRAP_CONTENT
                         , accessibilityImportance ENABLE
                         , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
-                        , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " Button"
+                        , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
                         , color $ state.option1.color
                         , gravity CENTER
                         ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
@@ -244,7 +244,7 @@ view push state =
                         , height WRAP_CONTENT
                         , accessibilityImportance ENABLE
                         , text $ if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else state.option2.text
-                        , accessibilityHint $ (if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option2.text)) <> " Button"
+                        , accessibilityHint $ (if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option2.text)) <> " : Button"
                         , color state.option2.color
                         , gravity CENTER
                         ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)

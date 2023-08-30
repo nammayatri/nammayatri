@@ -38,6 +38,7 @@ import Storage (KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
 import Storage(getValueToLocalStore, KeyStore(..))
+import Data.String as DS
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
@@ -45,7 +46,7 @@ mobileNumberButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = (getString CONTINUE) 
                   ,  color = state.data.config.primaryTextColor 
-                  , accessibilityHint = if state.props.btnActiveMobileNumber then "Continue Button" else "Enter a valid Mobile Number to continue"
+                  , accessibilityHint = if state.props.btnActiveMobileNumber then "Continue : Button" else "Enter a valid Mobile Number to continue"
                   }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActiveMobileNumber
@@ -86,7 +87,7 @@ verifyOTPButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig{ text = (getString CONTINUE) 
                   , color = state.data.config.primaryTextColor
-                  , accessibilityHint = if state.props.btnActiveOTP then "Continue Button" else "Enter a valid OTP to continue" }
+                  , accessibilityHint = if state.props.btnActiveOTP then "Continue : Button" else "Enter a valid OTP to continue" }
       , id = "PrimaryButtonOTP"
       , isClickable = state.props.btnActiveOTP 
       , alpha = if state.props.btnActiveOTP  then 1.0 else 0.4
@@ -108,6 +109,7 @@ mobileNumberEditTextConfig state = let
           , margin = MarginHorizontal 10 10
           , focused = state.props.mNumberEdtFocused
           , text = state.props.editTextVal
+          , accessibilityHint = (DS.replaceAll (DS.Pattern "") (DS.Replacement " ") state.data.mobileNumber)
           , placeholder = (getString ENTER_MOBILE_NUMBER)
         }
       , background = Color.white900

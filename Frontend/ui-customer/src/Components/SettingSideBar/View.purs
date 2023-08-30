@@ -162,7 +162,7 @@ profileView state push =
   ][ imageView
       [ width ( V 48 )
       , height ( V 48 )
-      , accessibilityHint "Double Tap To Close Menu Bar : Button"
+      , accessibilityHint "Double Tap To Close Menu Bar"
       , accessibilityImportance ENABLE
       , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
       , onClick push $ (const OnClose)
@@ -242,7 +242,7 @@ settingsMenuView item push  =
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
   , padding (Padding 0 16 16 16 )
-  , accessibilityHint $ item.text <> " Button"
+  , accessibilityHint $ item.text <> " : Button"
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
                               SETTINGS_FAVOURITES     -> GoToFavourites

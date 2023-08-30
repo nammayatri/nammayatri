@@ -56,7 +56,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth)
+import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
@@ -273,15 +273,21 @@ view push state =
                 , accessibilityImportance DISABLE
                 , clickable true
                 ]
-                [ linearLayout
+                [  linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , background Color.transparent
+                  , accessibilityImportance ENABLE
+                  , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
+                  ][
+                  linearLayout
                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
-                    , accessibilityImportance if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && not ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))  then DISABLE else DISABLE_DESCENDANT
+                    , accessibilityImportance if (state.props.currentStage == RideStarted) && not ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))  then DISABLE else DISABLE_DESCENDANT
                     , clickable false
-                    , accessibilityHint $ show state.props.currentStage
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
-                    []
+                    []]
                 , linearLayout
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
@@ -570,7 +576,6 @@ buttonLayoutParentView push state =
   , width MATCH_PARENT
   , alignParentBottom "true,-1"
   , orientation VERTICAL
-  , accessibilityFocusable false
   ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -650,6 +655,7 @@ liveStatsDashboardView push state =
     , visibility if (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
     , stroke $ "1," <> Color.blue900
     , margin (MarginHorizontal 16 13)
+    , accessibilityImportance DISABLE_DESCENDANT
     , cornerRadius 20.0
     , background Color.white900
     , gravity RIGHT
@@ -912,7 +918,7 @@ homeScreenTopIconView push state =
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
                     , accessibilityImportance if state.props.emergencyHelpModal || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
-                    , accessibilityHint "Home Screen : Menu Button"
+                    , accessibilityHint "Navigation : Button"
                     ]
                 ]
             , linearLayout
@@ -1134,7 +1140,7 @@ completedRideDetails state push =
           [ height $ V 40
           , width $ V 40
           , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
-          , accessibilityHint "Contact Support Button"
+          , accessibilityHint "Contact Support : Button"
           , imageWithFallback $ "ny_ic_headphone_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_headphone_white.png"
           , onClick push $ const Support
           ]
@@ -1196,7 +1202,7 @@ completedRideDetails state push =
       , gravity CENTER_VERTICAL
       , onClick push $ const RideDetails
       , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
-      , accessibilityHint "Ride Details Button"
+      , accessibilityHint "Ride Details : Button"
       ][  textView
           [ height WRAP_CONTENT
           , text $ getString RIDE_DETAILS
@@ -1353,7 +1359,7 @@ topLeftIconView state push =
           , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain , RideCompleted, RideRating]) then GONE else VISIBLE
           , clickable true
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
-          , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back Button" else "Menu Button"
+          , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back : Button" else "Menu : Button"
           , accessibilityImportance ENABLE
           ]
           [ imageView
@@ -1430,7 +1436,7 @@ suggestedPriceView push state =
           , textSize FontSize.a_22
           , color Color.black800
           , accessibilityImportance ENABLE
-          , accessibilityHint $ "PickUp Location Is " <>( DS.replaceAll (DS.Pattern ",") (DS.Replacement " : ") state.data.source) <> " : And Destination Location Is : "  <> (DS.replaceAll (DS.Pattern ",") (DS.Replacement " : ") state.data.destination)
+          , accessibilityHint $ "PickUp Location Is : " <> state.data.source <> " . And Destination Location Is : "  <> state.data.destination
           , gravity CENTER_HORIZONTAL
           , height WRAP_CONTENT
           , width MATCH_PARENT
@@ -1896,6 +1902,8 @@ loaderView push state =
         [ PrestoAnim.animationSet [ translateYAnimFromTopWithAlpha $ translateFullYAnimWithDurationConfig 300 ]
             $ textView $
                 [ text (getString CANCEL_SEARCH)
+                , accessibilityHint "Cancel Search : Button"
+                , accessibilityImportance ENABLE
                 , lineHeight "18"
                 , width MATCH_PARENT
                 , height WRAP_CONTENT

@@ -1,7 +1,6 @@
 import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
-const { JBridge } = window;
-const { MobilityCommonBridge } = window;
+const { JBridge, MobilityCommonBridge } = window;
 var mainFiber = null;
 let suggestions = require("../Engineering.Helpers.Suggestions")
 var timer;

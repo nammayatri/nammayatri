@@ -135,7 +135,7 @@ feedbackPillView state push =
                       , textSize FontSize.a_12
                       , fontStyle $ FontStyle.medium LanguageStyle
                       , text item.text
-                      , accessibilityHint $ item.text <> if isSelected then " Selected" else " Un Selected"
+                      , accessibilityHint $ item.text <> if isSelected then " : Selected" else " : Un Selected"
                       , accessibilityImportance ENABLE
                       , color if isSelected then Color.blue900 else Color.black800
                       , padding $ Padding 12 12 12 12
@@ -262,7 +262,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 35
                               , width $ V 35
-                              , accessibilityHint (show item <> " Star " <> (if item <= state.data.rating then "Selected" else "Un Selected") )
+                              , accessibilityHint (show item <> " Star : " <> (if item <= state.data.rating then "Selected" else "Un Selected") )
                               , accessibilityImportance ENABLE
                               , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                               ]

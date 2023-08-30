@@ -40,7 +40,7 @@ primaryButtonConfigConfirmLoc state = let
   primaryButtonConfig' = config
     { textConfig
       { text = (getString CONFIRM_LOCATION)
-      , accessibilityHint = "Confirm Location Button"
+      , accessibilityHint = "Confirm Location : Button"
       , color = state.data.config.primaryTextColor
       }
     , background = state.data.config.primaryBackground
@@ -61,7 +61,7 @@ genericHeaderConfig state = let
         height = (V 25)
       , width = (V 25)
       , margin = (Margin 10 17 16 15)
-      , accessibilityHint = if state.props.showSavePlaceView then "Close Button" else "Back Button"
+      , accessibilityHint = if state.props.showSavePlaceView then "Close : Button" else "Back : Button"
       , visibility = VISIBLE
       , accessibilityImportance = ENABLE
       , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 

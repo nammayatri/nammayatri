@@ -180,6 +180,7 @@ skipButtonConfig state =
       config
         { textConfig
           { text = getString DONE
+          , accessibilityHint = "Done : Button"
           , color = state.data.config.primaryTextColor
           }
         , background = Color.black900
@@ -231,7 +232,7 @@ whereToButtonConfig state =
         , width = MATCH_PARENT
         , gravity = LEFT
         , color = state.data.config.primaryTextColor 
-        , accessibilityHint = "Where To Button"
+        , accessibilityHint = "Where To : Button"
         }
       , height = V 60
       , gravity = CENTER_VERTICAL
@@ -259,7 +260,7 @@ primaryButtonRequestRideConfig state =
         { textConfig
           { text = (getString REQUEST_RIDE)
           , color = state.data.config.primaryTextColor
-          , accessibilityHint = "Request Ride Button"
+          , accessibilityHint = "Request Ride : Button"
           }
         , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (Margin 0 32 0 0)
@@ -279,7 +280,7 @@ primaryButtonConfirmPickupConfig state =
         { textConfig
           { text = (getString CONFIRM_LOCATION)
           , color = state.data.config.primaryTextColor
-          , accessibilityHint = "Confirm PickUp Location Button"
+          , accessibilityHint = "Confirm PickUp Location : Button"
           }
         , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (MarginTop 8)

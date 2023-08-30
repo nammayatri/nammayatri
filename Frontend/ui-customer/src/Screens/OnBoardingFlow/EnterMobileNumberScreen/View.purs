@@ -138,7 +138,7 @@ enterMobileNumberView  state lang push =
             , margin (Margin 0 8 0 12)
             , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false false ""
-            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true (getString BY_TAPPING_CONTINUE <> " Terms and conditions" )
+            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true ( " By Clicking Continue: You Agree To Our Terms And Conditions" )
               ]
         , PrestoAnim.animationSet
           [ Anim.fadeIn $ not state.props.enterOTP 
@@ -223,7 +223,7 @@ enterOTPView state lang push =
           , clickable state.props.resendEnable
           , color Color.blue900
           , accessibilityImportance ENABLE
-          , accessibilityHint if state.props.resendEnable then "Resend Button" else ("Resend in " <> show state.data.timer <> "seconds")
+          , accessibilityHint if state.props.resendEnable then "Resend : Button" else ("Resend in " <> show state.data.timer <> "seconds")
           , onClick push (const Resend)
           ] <> FontStyle.body9 TypoGraphy
         , linearLayout

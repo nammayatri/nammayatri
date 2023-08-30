@@ -673,7 +673,6 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (isLocationPermissionEnabled()) {
                     googleMap.setMyLocationEnabled(isEnableCurrentLocation);
                 }
-                googleMap.setContentDescription(getKeyInNativeSharedPrefKeys("LOCAL_STAGE"));
                 markers = new JSONObject();
                 markersElement.put(pureScriptId, markers);
                 googleMap.setOnMarkerClickListener(marker -> {

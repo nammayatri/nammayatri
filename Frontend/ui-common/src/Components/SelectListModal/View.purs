@@ -393,7 +393,7 @@ primaryButtonConfig config = let
     config'
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
-      , accessibilityHint = config.primaryButtonTextConfig.firstText <> " Button"
+      , accessibilityHint = config.primaryButtonTextConfig.firstText <> " : Button"
       , color = config.config.primaryBackground}
       , background = Color.white900
       , isGradient = false
@@ -412,7 +412,7 @@ secondaryButtonConfig config = let
     config'
        {textConfig
         { text = config.primaryButtonTextConfig.secondText
-        , accessibilityHint = config.primaryButtonTextConfig.secondText <> " Button" <> (if config.isSelectButtonActive then "" else "Disabled : Select A Reason To Enable Button")
+        , accessibilityHint = config.primaryButtonTextConfig.secondText <> " : Button" <> (if config.isSelectButtonActive then "" else "Disabled : Select A Reason To Enable : Button")
         , color =  if (not config.isSelectButtonActive) && getValueFromConfig "isGradient" == "true" then "#696A6F" else config.config.primaryTextColor}
         , width = if config.primaryButtonVisibility then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
         , isGradient = if (not config.isSelectButtonActive) then false else if getValueFromConfig "isGradient" == "true" then true else false

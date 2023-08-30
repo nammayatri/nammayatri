@@ -152,7 +152,7 @@ contactListView listItemm push state =
         , imageView
             [ height $ V 17
             , width $ V 17
-            , accessibilityHint "Cancel Search Button"
+            , accessibilityHint "Cancel Search : Button"
             , accessibilityImportance ENABLE
             , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
             , gravity CENTER
@@ -226,7 +226,7 @@ contactListPrimaryButtonConfig count =
       config'
         { textConfig
           { text = if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
-          , accessibilityHint =  (if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " Button"
+          , accessibilityHint =  (if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
           , color = if (count > 0) then Color.yellow900 else Color.yellow800
           }
         , background = if (count > 0) then Color.black900 else Color.black600
@@ -352,7 +352,7 @@ contactCardView push state contact index =
         [ height $ WRAP_CONTENT
         , width $ WRAP_CONTENT
         , text (getString REMOVE)
-        , accessibilityHint "Remove"
+        , accessibilityHint "Remove : Button"
         , accessibilityImportance ENABLE
         , color Color.blue900
         , textSize 14
