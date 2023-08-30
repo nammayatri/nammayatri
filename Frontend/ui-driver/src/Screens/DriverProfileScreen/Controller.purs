@@ -174,10 +174,10 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToNotifications
                     | GoToAboutUsScreen
                     | OnBoardingFlow
-                    | GoToHomeScreen
+                    | GoToHomeScreen DriverProfileScreenState
                     | GoToReferralScreen
                     | GoToLogout
-                    | GoBack
+                    | GoBack DriverProfileScreenState
                     | ActivatingOrDeactivatingRC DriverProfileScreenState
                     | DeletingRc DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
@@ -243,7 +243,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
                                 else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
-                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit GoBack else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
+                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit (GoBack state) else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
                                 else if state.props.alreadyActive then continue $ state {props { alreadyActive = false}}
                                 else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
                                 else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}
@@ -257,12 +257,12 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
                                 else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
-                                else exit GoBack
+                                else exit (GoBack state)
 
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
-    "Home" -> exit $ GoToHomeScreen
+    "Home" -> exit $ GoToHomeScreen state
     "Rides" -> exit $ GoToDriverHistoryScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
@@ -343,7 +343,7 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
   else continue state{ props { openSettings = false }}
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit GoBack else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
+eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit (GoBack state) else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do

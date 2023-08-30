@@ -62,7 +62,9 @@ driverProfileScreen = do
     GoToHelpAndSupportScreen state -> do 
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure HELP_AND_SUPPORT_SCREEN
-    GoToHomeScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_PROFILE
+    GoToHomeScreen state-> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_PROFILE
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
     GoToDriverHistoryScreen state -> do 
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
@@ -87,6 +89,6 @@ driverProfileScreen = do
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
       App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
-    GoBack -> do
-      modifyScreenState $ DriverProfileScreenStateType (\driverDetailsScreen -> DriverProfileScreenData.initData{ data {driverVehicleType = driverDetailsScreen.data.driverVehicleType, capacity = driverDetailsScreen.data.capacity, downgradeOptions = driverDetailsScreen.data.downgradeOptions, vehicleSelected = driverDetailsScreen.data.vehicleSelected}})
+    GoBack state-> do
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ pure App.GoBack

@@ -402,6 +402,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , subscribed            :: Boolean
     , mediaUrl              :: Maybe String
     , autoPayStatus         :: Maybe String  
+    , aadhaarCardPhoto      :: Maybe String
     }
 
 
