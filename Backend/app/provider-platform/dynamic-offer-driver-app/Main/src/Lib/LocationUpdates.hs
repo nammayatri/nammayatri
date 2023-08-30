@@ -68,7 +68,7 @@ updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
       if checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
         then do
           logInfo $ "Deviation detected for rideId: " <> show rideId
-          QRide.updateNumDeviation rideId True
+          QRide.updateDriverDeviatedFromRoute rideId True
         else do
           logInfo $ "No deviation detected for rideId: " <> show rideId
     Nothing -> logInfo $ "Ride route points not found for rideId: " <> show rideId
