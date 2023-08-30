@@ -15,6 +15,8 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as Busine
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.DriverFlowStatus as DriverFlowStatus
+import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
+import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
@@ -47,6 +49,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Fe
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
+import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as IssueOption
@@ -167,6 +170,9 @@ data UpdateModel
   | FeedbackBadgeUpdate
   | BecknRequestUpdate
   | RegistryMapFallbackUpdate
+  | DriverGoHomeRequestUpdate
+  | DriverHomeLocationUpdate
+  | GoHomeConfigUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -248,6 +254,9 @@ getTagUpdate FeedbackUpdate = "FeedbackOptions"
 getTagUpdate FeedbackBadgeUpdate = "FeedbackBadgeOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 getTagUpdate RegistryMapFallbackUpdate = "RegistryMapFallbackOptions"
+getTagUpdate DriverGoHomeRequestUpdate = "DriverGoHomeRequestOptions"
+getTagUpdate DriverHomeLocationUpdate = "DriverHomeLocationOptions"
+getTagUpdate GoHomeConfigUpdate = "GoHomeConfigOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "BapMetadataOptions" = return BapMetadataUpdate
@@ -328,6 +337,9 @@ parseTagUpdate "FeedbackOptions" = return FeedbackUpdate
 parseTagUpdate "FeedbackBadgeOptions" = return FeedbackBadgeUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate "RegistryMapFallbackOptions" = return RegistryMapFallbackUpdate
+parseTagUpdate "DriverGoHomeRequestOptions" = return DriverGoHomeRequestUpdate
+parseTagUpdate "DriverHomeLocationOptions" = return DriverHomeLocationUpdate
+parseTagUpdate "GoHomeConfigOptions" = return GoHomeConfigUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -409,6 +421,9 @@ data DBUpdateObject
   | FeedbackBadgeOptions UpdateModel [Set Postgres FeedbackBadge.FeedbackBadgeT] (Where Postgres FeedbackBadge.FeedbackBadgeT)
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
   | RegistryMapFallbackOptions UpdateModel [Set Postgres RegistryMapFallback.RegistryMapFallbackT] (Where Postgres RegistryMapFallback.RegistryMapFallbackT)
+  | DriverGoHomeRequestOptions UpdateModel [Set Postgres DriverGoHomeRequest.DriverGoHomeRequestT] (Where Postgres DriverGoHomeRequest.DriverGoHomeRequestT)
+  | DriverHomeLocationOptions UpdateModel [Set Postgres DriverHomeLocation.DriverHomeLocationT] (Where Postgres DriverHomeLocation.DriverHomeLocationT)
+  | GoHomeConfigOptions UpdateModel [Set Postgres GoHomeConfig.GoHomeConfigT] (Where Postgres GoHomeConfig.GoHomeConfigT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -654,3 +669,12 @@ instance FromJSON DBUpdateObject where
       RegistryMapFallbackUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ RegistryMapFallbackOptions updateModel updVals whereClause
+      DriverGoHomeRequestUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ DriverGoHomeRequestOptions updateModel updVals whereClause
+      DriverHomeLocationUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ DriverHomeLocationOptions updateModel updVals whereClause
+      GoHomeConfigUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ GoHomeConfigOptions updateModel updVals whereClause

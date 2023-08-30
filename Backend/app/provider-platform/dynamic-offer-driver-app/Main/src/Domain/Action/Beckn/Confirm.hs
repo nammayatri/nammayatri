@@ -48,6 +48,8 @@ import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
+import Storage.CachedQueries.GoHomeConfig as QGHC
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
@@ -120,7 +122,9 @@ handler transporter req quote = do
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          ride <- buildRide driver.id booking req.customerPhoneNumber
+          cfg <- QGHC.findByMerchantId transporter.id
+          ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id transporter.id (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
+          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
@@ -211,7 +215,7 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking customerPhoneNumber = do
+    buildRide driverId booking ghrId customerPhoneNumber = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       let otp = T.takeEnd 4 customerPhoneNumber
@@ -242,7 +246,8 @@ handler transporter req quote = do
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing
+            numberOfDeviation = Nothing,
+            driverGoHomeRequestId = ghrId
           }
 
     buildTrackingUrl rideId = do

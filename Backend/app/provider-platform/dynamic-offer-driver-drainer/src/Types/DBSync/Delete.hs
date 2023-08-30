@@ -15,6 +15,8 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as Busine
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.DriverFlowStatus as DriverFlowStatus
+import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
+import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
@@ -47,6 +49,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.Feedback as Fe
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackBadge as FeedbackBadge
 import qualified "dynamic-offer-driver-app" Storage.Beam.Feedback.FeedbackForm as FeedbackForm
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
+import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
 import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as IssueOption
@@ -165,6 +168,9 @@ data DeleteModel
   | FeedbackBadgeDelete
   | BecknRequestDelete
   | RegistryMapFallbackDelete
+  | DriverGoHomeRequestDelete
+  | DriverHomeLocationDelete
+  | GoHomeConfigDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -246,6 +252,9 @@ getTagDelete FeedbackDelete = "FeedbackOptions"
 getTagDelete FeedbackBadgeDelete = "FeedbackBadgeOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
 getTagDelete RegistryMapFallbackDelete = "RegistryMapFallbackOptions"
+getTagDelete DriverGoHomeRequestDelete = "DriverGoHomeRequestOptions"
+getTagDelete DriverHomeLocationDelete = "DriverHomeLocationOptions"
+getTagDelete GoHomeConfigDelete = "GoHomeConfigOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
@@ -323,6 +332,9 @@ parseTagDelete "FeedbackOptions" = return FeedbackDelete
 parseTagDelete "FeedbackBadgeOptions" = return FeedbackBadgeDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete "RegistryMapFallbackOptions" = return RegistryMapFallbackDelete
+parseTagDelete "DriverGoHomeRequestOptions" = return DriverGoHomeRequestDelete
+parseTagDelete "DriverHomeLocationOptions" = return DriverHomeLocationDelete
+parseTagDelete "GoHomeConfigOptions" = return GoHomeConfigDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -404,6 +416,9 @@ data DBDeleteObject
   | FeedbackBadgeDeleteOptions DeleteModel (Where Postgres FeedbackBadge.FeedbackBadgeT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
   | RegistryMapFallbackDeleteOptions DeleteModel (Where Postgres RegistryMapFallback.RegistryMapFallbackT)
+  | DriverGoHomeRequestDeleteOptions DeleteModel (Where Postgres DriverGoHomeRequest.DriverGoHomeRequestT)
+  | DriverHomeLocationDeleteOptions DeleteModel (Where Postgres DriverHomeLocation.DriverHomeLocationT)
+  | GoHomeConfigDeleteOptions DeleteModel (Where Postgres GoHomeConfig.GoHomeConfigT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -647,3 +662,12 @@ instance FromJSON DBDeleteObject where
       RegistryMapFallbackDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RegistryMapFallbackDeleteOptions deleteModel whereClause
+      DriverGoHomeRequestDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ DriverGoHomeRequestDeleteOptions deleteModel whereClause
+      DriverHomeLocationDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ DriverHomeLocationDeleteOptions deleteModel whereClause
+      GoHomeConfigDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ GoHomeConfigDeleteOptions deleteModel whereClause

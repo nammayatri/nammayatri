@@ -67,6 +67,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverSpeed :: B.C f (Maybe Double),
     keepHiddenForSeconds :: B.C f Seconds,
     mode :: B.C f (Maybe D.DriverMode),
+    goHomeRequestId :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
@@ -109,6 +110,7 @@ searchRequestForDriverTMod =
       driverSpeed = B.fieldNamed "driver_speed",
       keepHiddenForSeconds = B.fieldNamed "keep_hidden_for_seconds",
       mode = B.fieldNamed "mode",
+      goHomeRequestId = B.fieldNamed "go_home_request_id",
       createdAt = B.fieldNamed "created_at"
     }
 

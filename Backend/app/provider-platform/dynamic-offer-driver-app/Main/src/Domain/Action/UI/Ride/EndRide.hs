@@ -25,7 +25,9 @@ module Domain.Action.UI.Ride.EndRide
 where
 
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
+import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
@@ -40,6 +42,8 @@ import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
+import qualified Kernel.External.Maps.Interface.Types as Maps
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -53,10 +57,13 @@ import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
+import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -126,7 +133,7 @@ buildEndRideHandle merchantId = do
 type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool)
 
 driverEndRide ::
-  EndRideFlow m r =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -137,7 +144,7 @@ driverEndRide handle rideId req = do
     $ DriverReq req
 
 callBasedEndRide ::
-  EndRideFlow m r =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -145,7 +152,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  EndRideFlow m r =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -156,7 +163,7 @@ dashboardEndRide handle rideId req =
     $ DashboardReq req
 
 endRide ::
-  EndRideFlow m r =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -193,6 +200,22 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           pure $ getCoordinates booking.toLocation
     CallBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
+
+  goHomeConfig <- CQGHC.findByMerchantId booking.providerId
+  ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
+
+  when (ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome) $ do
+    case ghInfo.driverGoHomeRequestId of
+      Nothing -> logError "DriverGoHomeRequestId not present even though status is active."
+      Just ghrId -> do
+        mbDriverGoHomeReq <- QDGR.findById ghrId
+        whenJust mbDriverGoHomeReq $ \driverGoHomeReq -> do
+          let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
+          routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
+          let driverHomeDists = mapMaybe (.distance) routesResp
+          if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
+            then CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo
+            else CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo
 
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
@@ -240,6 +263,13 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         _ -> pure ()
 
   return APISuccess.Success
+  where
+    buildRoutesReq tripEndPoint driverHomeLocation =
+      Maps.GetRoutesReq
+        { waypoints = tripEndPoint :| [driverHomeLocation],
+          mode = Nothing,
+          calcPoints = True
+        }
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do

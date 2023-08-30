@@ -50,7 +50,7 @@ driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateChe
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive' (negate (fromIntegral locationDelay) `addUTCTime` now)
+    drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now)
     let driverDetails = map fetchPersonIdAndMobileNumber drivers
     flip map driverDetails \case
       (driverId, Nothing) -> Left driverId
@@ -88,7 +88,7 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverMakingInactiveService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive' (negate (fromIntegral delay) `addUTCTime` now)
+    drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
     logPretty INFO ("Drivers to make inactive: " <> show (length drivers)) ((.id) <$> drivers)
     mapM_ fetchPersonIdAndMobileNumber drivers
   threadDelay (secondsToMcs delay).getMicroseconds

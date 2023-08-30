@@ -93,6 +93,9 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("FeedbackBadge" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (FeedbackBadgeObject obj), val) <- cmds]
     |::| runCreate dbConf ("BecknRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
     |::| runCreate dbConf ("RegistryMapFallback" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistryMapFallbackObject obj), val) <- cmds]
+    |::| runCreate dbConf ("DriverGoHomeRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverGoHomeRequestObject obj), val) <- cmds]
+    |::| runCreate dbConf ("DriverHomeLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (DriverHomeLocationObject obj), val) <- cmds]
+    |::| runCreate dbConf ("GoHomeConfig" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (GoHomeConfigObject obj), val) <- cmds]
   where
     runCreate dbConf model object = do
       let dbObjects = map (\(dbObject, _, _) -> dbObject) object
