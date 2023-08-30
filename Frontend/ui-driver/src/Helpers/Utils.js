@@ -743,7 +743,7 @@ export const initiatePP = function () {
       }
     }
   }
-  if (JOS && !window.isPPInitiated) {
+  if (JOS) {
     try {
       JOS.startApp("in.juspay.hyperpay")(window.__payload)(cb)();
     } catch (err) {
