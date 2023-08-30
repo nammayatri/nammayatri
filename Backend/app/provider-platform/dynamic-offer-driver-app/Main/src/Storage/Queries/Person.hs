@@ -1,4 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,10 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# HLINT ignore "Use tuple-section" #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Storage.Queries.Person where
 
@@ -359,7 +356,7 @@ fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbD
     L.findRows $
       B.select $
         B.filter_'
-          ( \(person, driverInfo, vehicle, driverLicense, driverRCAssociation, vehicleRegistrationCertificate) ->
+          ( \(person, _driverInfo, vehicle, driverLicense, _driverRCAssociation, vehicleRegistrationCertificate) ->
               person.merchantId B.==?. B.val_ merchantId
                 B.&&?. person.role B.==?. B.val_ Person.DRIVER
                 B.&&?. maybe

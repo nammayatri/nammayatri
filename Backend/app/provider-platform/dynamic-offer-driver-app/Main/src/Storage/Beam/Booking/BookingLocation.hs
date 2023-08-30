@@ -12,34 +12,18 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Beam.Booking.BookingLocation where
 
-import Data.ByteString.Internal (ByteString, unpackChars)
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (Generic)
 import Sequelize
-
-fromFieldEnum ::
-  (Typeable a, Read a) =>
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion a
-fromFieldEnum f mbValue = case mbValue of
-  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
-  Just value' ->
-    case readMaybe (unpackChars value') of
-      Just val -> pure val
-      _ -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
 
 data BookingLocationT f = BookingLocationT
   { id :: B.C f Text,

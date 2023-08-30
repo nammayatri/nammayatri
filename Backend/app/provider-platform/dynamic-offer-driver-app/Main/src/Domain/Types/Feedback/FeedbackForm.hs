@@ -15,14 +15,9 @@
 
 module Domain.Types.Feedback.FeedbackForm where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax, autoSqlValueSyntax)
-import Database.Beam.Backend.SQL.SQL2003 (HasSqlValueSyntax (sqlValueSyntax))
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Ride (Ride)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 data FeedbackFormReq = FeedbackFormReq
@@ -47,22 +42,8 @@ data FeedbackFormAPIEntity = FeedbackFormAPIEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data Category = RIDE | DRIVER | VEHICLE
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read)
-
-instance FromField Category where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Category
-
-instance FromBackendRow Postgres Category
-
-instance IsString Category where
-  fromString = show
-
-deriving stock instance Ord Category
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data FeedbackFormItem = FeedbackFormItem
   { id :: Id FeedbackFormItem,
@@ -74,22 +55,8 @@ data FeedbackFormItem = FeedbackFormItem
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data AnswerType = Text | Checkbox | Radio
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq, Read)
-
-instance FromField AnswerType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerType
-
-instance FromBackendRow Postgres AnswerType
-
-instance IsString AnswerType where
-  fromString = show
-
-deriving stock instance Ord AnswerType
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data FeedbackFormRes = FeedbackFormRes
   { categoryName :: Category,
@@ -100,3 +67,7 @@ data FeedbackFormRes = FeedbackFormRes
     answerType :: AnswerType
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
+
+$(mkBeamInstancesForEnum ''AnswerType)
+
+$(mkBeamInstancesForEnum ''Category)

@@ -24,14 +24,10 @@ data WaitingChargeInfo = WaitingChargeInfo
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
-deriving stock instance Ord WaitingCharge
-
-deriving stock instance Ord WaitingChargeInfo
-
-deriving stock instance Ord NightShiftCharge
-
 data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)

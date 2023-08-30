@@ -12,12 +12,9 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Beam.SearchRequestForDriver where
 
-import qualified Data.Aeson as A
 import Data.ByteString
 import Data.Serialize
 import qualified Data.Time as Time
@@ -41,26 +38,6 @@ extractValue _ = []
 
 searchReqestForDriverkey :: Text -> Text
 searchReqestForDriverkey prefix = "searchRequestForDriver_" <> prefix
-
-instance FromField Domain.DriverSearchRequestStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DriverSearchRequestStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverSearchRequestStatus
-
-instance FromBackendRow Postgres Domain.DriverSearchRequestStatus
-
-instance FromField Domain.SearchRequestForDriverResponse where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchRequestForDriverResponse where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRequestForDriverResponse
-
-instance FromBackendRow Postgres Domain.SearchRequestForDriverResponse
 
 data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,

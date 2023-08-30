@@ -15,7 +15,6 @@
 
 module Domain.Types.Estimate where
 
-import Data.Coerce (coerce)
 import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -61,69 +60,42 @@ data EstimateBreakupD (s :: UsageSafety) = EstimateBreakup
   { title :: Text,
     price :: EstimateBreakupPriceD s
   }
-  deriving (Generic, Show)
+  deriving stock (Show, Eq, Read, Ord, Generic)
 
 type EstimateBreakup = EstimateBreakupD 'Safe
 
-instance FromBackendRow Postgres [EstimateBreakup]
+instance FromBackendRow Postgres [EstimateBreakupD 'Unsafe]
 
-instance FromField [EstimateBreakup] where
+instance FromField [EstimateBreakupD 'Unsafe] where
   fromField f mbValue = V.toList <$> fromField f mbValue
 
-instance FromField EstimateBreakup where
+instance FromField (EstimateBreakupD 'Unsafe) where
   fromField = fromFieldJSON
 
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [EstimateBreakup] where
-  sqlValueSyntax estimateBreakupList =
-    let unsafeEstimateBreakupList = coerce @[EstimateBreakup] @[EstimateBreakupD 'Unsafe] $ estimateBreakupList
-        x = encodeToText <$> unsafeEstimateBreakupList
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [EstimateBreakupD 'Unsafe] where
+  sqlValueSyntax unsafeEstimateBreakupList =
+    let x = encodeToText <$> unsafeEstimateBreakupList
      in sqlValueSyntax (V.fromList x)
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [EstimateBreakup]
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [EstimateBreakupD 'Unsafe]
 
 instance IsString EstimateBreakup where
   fromString = show
 
+-- We shouldn't define JSON instances for 'Safe version
 deriving instance FromJSON (EstimateBreakupD 'Unsafe)
 
-deriving instance FromJSON (EstimateBreakupD 'Safe)
-
-deriving instance Read EstimateBreakup
-
 deriving instance ToJSON (EstimateBreakupD 'Unsafe)
-
-deriving instance ToJSON (EstimateBreakupD 'Safe)
-
-deriving stock instance Ord (EstimateBreakupD 'Unsafe)
-
-deriving stock instance Ord (EstimateBreakupD 'Safe)
-
-deriving stock instance Eq (EstimateBreakupD 'Unsafe)
-
-deriving stock instance Eq (EstimateBreakupD 'Safe)
 
 data EstimateBreakupPriceD (s :: UsageSafety) = EstimateBreakupPrice
   { currency :: Text,
     value :: Money
   }
-  deriving (Generic, Show)
+  deriving stock (Generic, Show, Read, Eq, Ord)
 
 type EstimateBreakupPrice = EstimateBreakupPriceD 'Safe
 
+-- We shouldn't define JSON instances for 'Safe version
 deriving instance FromJSON (EstimateBreakupPriceD 'Unsafe)
 
 deriving instance ToJSON (EstimateBreakupPriceD 'Unsafe)
-
-deriving instance Read EstimateBreakupPrice
-
-deriving instance FromJSON (EstimateBreakupPriceD 'Safe)
-
-deriving instance ToJSON (EstimateBreakupPriceD 'Safe)
-
-deriving instance Ord (EstimateBreakupPriceD 'Safe)
-
-deriving instance Ord (EstimateBreakupPriceD 'Unsafe)
-
-deriving instance Eq (EstimateBreakupPriceD 'Safe)
-
-deriving instance Eq (EstimateBreakupPriceD 'Unsafe)

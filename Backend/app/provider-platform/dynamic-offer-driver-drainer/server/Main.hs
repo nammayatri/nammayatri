@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Main where
 
 -- import Config.Config as Config

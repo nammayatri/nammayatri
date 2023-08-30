@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -13,8 +11,10 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -Wno-deriving-defaults #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.CancellationReason where
 
@@ -24,23 +24,15 @@ import qualified Data.Text as T
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import Database.PostgreSQL.Simple.FromField (FromField)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Servant
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Ord)
 
-instance FromField CancellationStage where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationStage where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationStage
-
-instance FromBackendRow Postgres CancellationStage
+$(mkBeamInstancesForEnum ''CancellationStage)
 
 deriving newtype instance FromField CancellationReasonCode
 
@@ -50,16 +42,14 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationReasonCode
 
 instance FromBackendRow Postgres CancellationReasonCode
 
-instance IsString CancellationStage where
-  fromString = show
-
 instance FromHttpApiData CancellationStage where
   parseUrlPiece = parseHeader . encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
 newtype CancellationReasonCode = CancellationReasonCode Text
-  deriving (Generic, Show, Eq, Read, ToJSON, FromJSON, ToSchema, Ord)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data CancellationReason = CancellationReason
   { reasonCode :: CancellationReasonCode,

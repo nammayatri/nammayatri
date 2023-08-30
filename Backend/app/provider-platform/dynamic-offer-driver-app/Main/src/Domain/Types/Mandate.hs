@@ -20,12 +20,9 @@ import qualified Data.Bifunctor as BF
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney, fromFieldEnum)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Servant.API
 
@@ -43,19 +40,11 @@ data Mandate = Mandate
   }
   deriving (Generic, Show)
 
-data MandateStatus = ACTIVE | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+data MandateStatus = ACTIVE | INACTIVE
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
 
-instance FromBackendRow Postgres MandateStatus
-
-instance FromField MandateStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be MandateStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-deriving stock instance Ord MandateStatus
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be MandateStatus
+$(mkBeamInstancesForEnum ''MandateStatus)
 
 instance FromHttpApiData MandateStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

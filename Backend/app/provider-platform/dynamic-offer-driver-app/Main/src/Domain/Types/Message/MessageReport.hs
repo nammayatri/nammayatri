@@ -19,7 +19,6 @@ module Domain.Types.Message.MessageReport where
 import qualified Data.Aeson as A
 import Data.ByteString
 import qualified Data.Map as M
-import Data.OpenApi
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
@@ -27,51 +26,40 @@ import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Person (Driver)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
 type MessageDynamicFieldsType = M.Map Text Text
 
-fromFieldmessageDynamicFields ::
+fromFieldMessageDynamicFields ::
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion MessageDynamicFieldsType
-fromFieldmessageDynamicFields f mbValue = do
+fromFieldMessageDynamicFields f mbValue = do
   value' <- fromField f mbValue
   case A.fromJSON value' of
     A.Success a -> pure a
     _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
 
 instance FromField MessageDynamicFieldsType where
-  fromField = fromFieldmessageDynamicFields
+  fromField = fromFieldMessageDynamicFields
 
 instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be MessageDynamicFieldsType where
   sqlValueSyntax = sqlValueSyntax . A.toJSON
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be MessageDynamicFieldsType
 
-instance FromField (Text, Text) => FromBackendRow Postgres MessageDynamicFieldsType
+instance FromBackendRow Postgres MessageDynamicFieldsType
 
 instance IsString MessageDynamicFieldsType where
   fromString = show
 
-data DeliveryStatus = Success | Failed | Queued | Sending deriving (Generic, ToSchema, Show, Read, ToJSON, FromJSON, Eq)
+data DeliveryStatus = Success | Failed | Queued | Sending
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField DeliveryStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DeliveryStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DeliveryStatus
-
-instance FromBackendRow Postgres DeliveryStatus
-
-instance IsString DeliveryStatus where
-  fromString = show
-
-deriving stock instance Ord DeliveryStatus
+$(mkBeamInstancesForEnum ''DeliveryStatus)
 
 data MessageReport = MessageReport
   { messageId :: Id Msg.Message,

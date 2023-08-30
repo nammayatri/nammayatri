@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Event.Event where
 
@@ -21,14 +20,14 @@ mkDBSyncMetric = do
       DrainerQueryExecutes action count -> add (metrics </> #driver_drainer_query_executes) count action
       QueryDrainLatency action latency -> observe (metrics </> #driver_query_drain_latency) latency action
       DrainerStopStatus status -> setGauge (metrics </> #driver_drainer_stop_status) status
-
-collectionDBSyncMetric =
-  driver_peek_db_command_error
-    .> driver_drop_db_command_error
-    .> driver_parse_db_command_error
-    .> driver_query_execution_failure_error
-    .> driver_duplicate_entry_create
-    .> driver_drainer_query_executes
-    .> driver_query_drain_latency
-    .> driver_drainer_stop_status
-    .> MNil
+  where
+    collectionDBSyncMetric =
+      driver_peek_db_command_error
+        .> driver_drop_db_command_error
+        .> driver_parse_db_command_error
+        .> driver_query_execution_failure_error
+        .> driver_duplicate_entry_create
+        .> driver_drainer_query_executes
+        .> driver_query_drain_latency
+        .> driver_drainer_stop_status
+        .> MNil

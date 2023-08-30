@@ -16,18 +16,17 @@ module Domain.Types.Merchant.OnboardingDocumentConfig where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle (Variant)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
 
 data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show, Ord, Eq)
 
-instance IsString VehicleClassCheckType where
-  fromString = show
+$(mkBeamInstancesForEnum ''VehicleClassCheckType)
 
 data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
 
-instance IsString DocumentType where
-  fromString = show
+$(mkBeamInstancesForEnum ''DocumentType)
 
 data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap] deriving (Generic, ToJSON, FromJSON, Show)
 

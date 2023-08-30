@@ -13,8 +13,6 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Storage.Beam.Estimate where
 
@@ -22,10 +20,8 @@ import qualified Data.Aeson as A
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -39,15 +35,7 @@ import Sequelize
 newtype TimeOfDayText = TimeOfDayText TimeOfDay
   deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)
 
-instance FromField TimeOfDayText where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be TimeOfDayText where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres TimeOfDayText
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be TimeOfDayText
+$(mkBeamInstancesForEnum ''TimeOfDayText)
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,
@@ -55,7 +43,7 @@ data EstimateT f = EstimateT
     vehicleVariant :: B.C f Variant.Variant,
     minFare :: B.C f Money,
     maxFare :: B.C f Money,
-    estimateBreakupList :: B.C f [Domain.EstimateBreakup],
+    estimateBreakupList :: B.C f [Domain.EstimateBreakupD 'Unsafe],
     nightShiftCharge :: B.C f (Maybe Money),
     oldNightShiftCharge :: B.C f (Maybe Centesimal),
     nightShiftStart :: B.C f (Maybe TimeOfDayText),

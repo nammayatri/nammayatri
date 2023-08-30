@@ -60,7 +60,7 @@ data FlowStatus
       { rideId :: Id DRide.Ride
       }
   | PAYMENT_OVERDUE
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Read, Ord, Generic)
 
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =
@@ -103,10 +103,6 @@ instance FromBackendRow Postgres FlowStatus
 
 instance IsString FlowStatus where
   fromString = show
-
-deriving stock instance Ord FlowStatus
-
-deriving stock instance Read FlowStatus
 
 data DriverFlowStatus = DriverFlowStatus
   { personId :: Id DP.Person,

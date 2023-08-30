@@ -21,35 +21,19 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Servant.API
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField Status where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Status
-
-instance FromBackendRow Postgres Status
-
-instance IsString Status where
-  fromString = show
-
-deriving stock instance Ord Status
+$(mkBeamInstancesForEnum ''Status)
 
 instance FromHttpApiData Status where
   parseUrlPiece = parseHeader . DT.encodeUtf8

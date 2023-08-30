@@ -12,11 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use newtype instead of data" #-}
 
 module Storage.Beam.DriverLocation where
 
@@ -69,11 +65,9 @@ instance ModelMeta DriverLocationT where
 
 type DriverLocation = DriverLocationT Identity
 
-instance FromJSON DriverLocation where
-  parseJSON = A.genericParseJSON A.defaultOptions
+deriving anyclass instance FromJSON DriverLocation
 
-instance ToJSON DriverLocation where
-  toJSON = A.genericToJSON A.defaultOptions
+deriving anyclass instance ToJSON DriverLocation
 
 deriving stock instance Show DriverLocation
 
@@ -101,6 +95,7 @@ driverLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLocationToPSModifiers =
   M.empty
 
+-- FIXME add signature
 toRowExpression personId latLong updateTime now merchantId =
   DriverLocationT
     (B.val_ personId)

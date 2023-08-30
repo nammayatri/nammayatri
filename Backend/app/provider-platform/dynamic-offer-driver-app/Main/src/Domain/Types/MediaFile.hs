@@ -15,32 +15,15 @@
 
 module Domain.Types.MediaFile where
 
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Types.Common (fromFieldEnum)
 import Kernel.Types.Id
 
-data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink deriving (Read, Show, Generic, ToSchema, ToJSON, FromJSON)
+data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance FromField MediaType where
-  fromField = fromFieldEnum
-
-deriving stock instance Ord MediaType
-
-deriving stock instance Eq MediaType
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be MediaType
-
-instance FromBackendRow Postgres MediaType
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be MediaType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance IsString MediaType where
-  fromString = show
+$(mkBeamInstancesForEnum ''MediaType)
 
 data MediaFile = MediaFile
   { id :: Id MediaFile,
