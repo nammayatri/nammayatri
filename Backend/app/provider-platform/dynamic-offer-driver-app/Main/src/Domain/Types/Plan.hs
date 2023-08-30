@@ -16,17 +16,14 @@
 module Domain.Types.Plan where
 
 import Data.Aeson
-import qualified Data.Bifunctor as BF
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Servant.API
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -109,36 +106,6 @@ instance Show PlanBaseAmount where
   show (WEEKLY_BASE amount) = "WEEKLY_" <> T.unpack (show amount)
   show (MONTHLY_BASE amount) = "MONTHLY_" <> T.unpack (show amount)
 
-instance FromHttpApiData Frequency where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData Frequency where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
-instance FromHttpApiData PaymentMode where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData PaymentMode where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
-instance FromHttpApiData PlanType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData PlanType where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
 $(mkBeamInstancesForEnum ''PaymentMode)
 
 $(mkBeamInstancesForEnum ''Frequency)
@@ -146,3 +113,9 @@ $(mkBeamInstancesForEnum ''Frequency)
 $(mkBeamInstancesForEnum ''PlanType)
 
 $(mkBeamInstancesForEnum ''PlanBaseAmount)
+
+$(mkHttpInstancesForEnum ''Frequency)
+
+$(mkHttpInstancesForEnum ''PaymentMode)
+
+$(mkHttpInstancesForEnum ''PlanType)

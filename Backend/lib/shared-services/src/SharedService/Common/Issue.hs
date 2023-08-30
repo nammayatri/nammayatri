@@ -1,5 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskellQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module SharedService.Common.Issue
   ( module SharedService.Common.Issue,
@@ -8,17 +8,15 @@ module SharedService.Common.Issue
 where
 
 import Data.Aeson
-import qualified Data.Bifunctor as BF
-import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
 import Data.Text as T hiding (map)
-import Data.Text.Encoding as DT
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language)
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant
 import SharedService.Common as Reexport
 import Text.Read (read)
@@ -67,15 +65,7 @@ data IssueStatus = OPEN | PENDING | RESOLVED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-instance FromHttpApiData IssueStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData IssueStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''IssueStatus)
 
 -------------------------------------------------------------------------
 

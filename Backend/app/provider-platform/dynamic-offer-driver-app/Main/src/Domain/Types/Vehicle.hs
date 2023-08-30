@@ -16,10 +16,7 @@
 module Domain.Types.Vehicle (module Domain.Types.Vehicle, module Reexport) where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
@@ -27,7 +24,7 @@ import Domain.Types.Vehicle.Variant as Reexport
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Servant.API
+import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
@@ -37,10 +34,7 @@ data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
 
 $(mkBeamInstancesForEnum ''Category)
 
-instance FromHttpApiData Category where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+$(mkFromHttpInstanceForEnum ''Category)
 
 ----
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
@@ -50,10 +44,7 @@ data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
 
 $(mkBeamInstancesForEnum ''RegistrationCategory)
 
-instance FromHttpApiData RegistrationCategory where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+$(mkFromHttpInstanceForEnum ''RegistrationCategory)
 
 data Vehicle = Vehicle
   { driverId :: Id DPers.Person,

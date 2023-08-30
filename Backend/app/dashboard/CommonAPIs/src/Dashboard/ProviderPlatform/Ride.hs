@@ -24,9 +24,6 @@ import Dashboard.Common as Reexport
 import Dashboard.Common.Booking as Reexport (CancellationReasonCode (..))
 import Dashboard.Common.Ride as Reexport
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
@@ -35,6 +32,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 import Servant hiding (Summary)
 
@@ -83,16 +81,7 @@ data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLET
 
 derivePersistField "BookingStatus"
 
--- TODO move similar instances to Lib
-instance FromHttpApiData BookingStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData BookingStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''BookingStatus)
 
 ---------------------------------------------------------
 -- ride start -------------------------------------------

@@ -19,20 +19,16 @@
 module Domain.Types.CancellationReason where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField)
 import Kernel.Prelude
-import Servant
+import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Ord)
-
-$(mkBeamInstancesForEnum ''CancellationStage)
 
 deriving newtype instance FromField CancellationReasonCode
 
@@ -41,11 +37,6 @@ deriving newtype instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Canc
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationReasonCode
 
 instance FromBackendRow Postgres CancellationReasonCode
-
-instance FromHttpApiData CancellationStage where
-  parseUrlPiece = parseHeader . encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
 newtype CancellationReasonCode = CancellationReasonCode Text
   deriving stock (Show, Eq, Read, Ord, Generic)
@@ -71,3 +62,6 @@ data CancellationReasonAPIEntity = CancellationReasonAPIEntity
 makeCancellationReasonAPIEntity :: CancellationReason -> CancellationReasonAPIEntity
 makeCancellationReasonAPIEntity CancellationReason {..} =
   CancellationReasonAPIEntity {..}
+
+$(mkBeamInstancesForEnum ''CancellationStage)
+$(mkFromHttpInstanceForEnum ''CancellationStage)

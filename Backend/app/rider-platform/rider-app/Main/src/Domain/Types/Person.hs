@@ -17,9 +17,6 @@
 module Domain.Types.Person where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.External.Encryption
@@ -29,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (Centesimal, maskText)
-import Servant.API
+import Kernel.Utils.TH (mkFromHttpInstanceForEnum, mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
 data Role
@@ -39,15 +36,7 @@ data Role
 
 $(mkBeamInstancesForEnum ''Role)
 
-instance FromHttpApiData Role where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData Role where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''Role)
 
 -------------------------------------------------------------------------------------------
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
@@ -55,15 +44,7 @@ data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL
 
 $(mkBeamInstancesForEnum ''IdentifierType)
 
-instance FromHttpApiData IdentifierType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData IdentifierType where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''IdentifierType)
 
 --------------------------------------------------------------------------------------------------
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
@@ -71,10 +52,7 @@ data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY
 
 $(mkBeamInstancesForEnum ''Gender)
 
-instance FromHttpApiData Gender where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+$(mkFromHttpInstanceForEnum ''Gender)
 
 --------------------------------------------------------------------------------------------------
 

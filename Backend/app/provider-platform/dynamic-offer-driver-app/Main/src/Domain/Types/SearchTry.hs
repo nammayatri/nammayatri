@@ -16,9 +16,6 @@
 module Domain.Types.SearchTry where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
@@ -27,7 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Servant hiding (throwError)
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data SearchTry = SearchTry
@@ -57,16 +54,8 @@ data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
   deriving (PrettyShow) via Showable SearchRepeatType
 
-instance FromHttpApiData SearchTryStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData SearchTryStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
 $(mkBeamInstancesForEnum ''SearchTryStatus)
 
 $(mkBeamInstancesForEnum ''SearchRepeatType)
+
+$(mkHttpInstancesForEnum ''SearchTryStatus)

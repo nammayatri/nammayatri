@@ -16,10 +16,7 @@
 module Domain.Types.Merchant where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
@@ -27,7 +24,7 @@ import Kernel.Prelude (BaseUrl)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
-import Servant.API
+import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
@@ -36,10 +33,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED
 
 $(mkBeamInstancesForEnum ''Status)
 
-instance FromHttpApiData Status where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
+$(mkFromHttpInstanceForEnum ''Status)
 
 --------------------------------------------------------------------------------------
 

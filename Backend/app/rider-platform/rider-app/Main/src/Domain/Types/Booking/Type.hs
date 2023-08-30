@@ -16,9 +16,6 @@
 module Domain.Types.Booking.Type where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -30,7 +27,7 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Servant.API
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
 activeBookingStatus :: [BookingStatus]
@@ -48,16 +45,7 @@ data BookingStatus
 
 $(mkBeamInstancesForEnum ''BookingStatus)
 
--- TODO use TH
-instance FromHttpApiData BookingStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData BookingStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''BookingStatus)
 
 data BPPBooking
 

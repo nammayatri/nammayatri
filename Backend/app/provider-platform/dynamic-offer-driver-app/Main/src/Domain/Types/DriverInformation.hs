@@ -17,10 +17,7 @@
 module Domain.Types.DriverInformation where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (Person)
@@ -30,7 +27,7 @@ import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import Servant.API
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
 data DriverMode
@@ -44,15 +41,7 @@ derivePersistField "DriverMode"
 
 $(mkBeamInstancesForEnum ''DriverMode)
 
-instance FromHttpApiData DriverMode where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData DriverMode where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''DriverMode)
 
 data DriverAutoPayStatus
   = PENDING
@@ -69,15 +58,7 @@ derivePersistField "DriverAutoPayStatus"
 
 $(mkBeamInstancesForEnum ''DriverAutoPayStatus)
 
-instance FromHttpApiData DriverAutoPayStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData DriverAutoPayStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
 data DriverInformationE e = DriverInformation
   { driverId :: Id Person,

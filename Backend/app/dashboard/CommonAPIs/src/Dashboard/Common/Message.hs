@@ -22,17 +22,15 @@ where
 
 import Dashboard.Common as Reexport
 import Data.Aeson
-import qualified Data.Bifunctor as BF
-import Data.ByteString.Lazy as BSL
 import Data.OpenApi hiding (description, name, password, summary, title, url)
 import Data.Text as T
-import Data.Text.Encoding as DT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
@@ -294,15 +292,7 @@ data MessageDeliveryStatus = Failed | Success | Queued | Sending
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-instance FromHttpApiData MessageDeliveryStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData MessageDeliveryStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''MessageDeliveryStatus)
 
 -- validateUpdatePhoneNumberReq :: Validate UpdatePhoneNumberReq
 -- validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =

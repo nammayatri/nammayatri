@@ -15,10 +15,7 @@
 module Domain.Types.Ride where
 
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FareParameters as DFare
@@ -29,7 +26,7 @@ import Kernel.External.Maps.Types
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant.API
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data RideStatus
@@ -41,15 +38,7 @@ data RideStatus
 
 $(mkBeamInstancesForEnum ''RideStatus)
 
-instance FromHttpApiData RideStatus where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData RideStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(mkHttpInstancesForEnum ''RideStatus)
 
 data Ride = Ride
   { id :: Id Ride,
