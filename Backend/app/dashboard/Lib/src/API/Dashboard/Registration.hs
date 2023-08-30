@@ -35,6 +35,10 @@ type API =
            :<|> "enable2Fa"
              :> ReqBody '[JSON] DReg.Enable2FAReq
              :> Post '[JSON] DReg.Enable2FARes
+           :<|> "switchMerchant"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> ReqBody '[JSON] DReg.SwitchMerchantReq
+             :> Post '[JSON] DReg.LoginRes
        )
 
 handler :: FlowServer API
@@ -43,6 +47,7 @@ handler =
     :<|> logout
     :<|> logoutAllMerchants
     :<|> enable2fa
+    :<|> switchMerchant
 
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI . DReg.login
@@ -55,3 +60,6 @@ logoutAllMerchants = withFlowHandlerAPI . DReg.logoutAllMerchants
 
 enable2fa :: DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
 enable2fa = withFlowHandlerAPI . DReg.enable2fa
+
+switchMerchant :: TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
+switchMerchant token = withFlowHandlerAPI . DReg.switchMerchant token
