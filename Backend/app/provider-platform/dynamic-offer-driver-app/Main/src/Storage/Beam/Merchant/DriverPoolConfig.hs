@@ -45,7 +45,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     poolSortingType :: B.C f PoolSortingType,
     singleBatchProcessTime :: B.C f Seconds,
     tripDistance :: B.C f Meters,
-    radiusShrinkValueForDriversOnRide :: B.C f Int,
+    radiusShrinkValueForDriversOnRide :: B.C f Meters,
     driverToDestinationDistanceThreshold :: B.C f Meters,
     driverToDestinationDuration :: B.C f Seconds,
     createdAt :: B.C f Time.UTCTime,

@@ -14,6 +14,8 @@
 
 module API.UI.Driver
   ( DDriver.DriverInformationRes (..),
+    DDriver.AddHomeLocationReq (..),
+    DDriver.GetHomeLocationsRes (..),
     DDriver.ListDriverRes (..),
     DDriver.DriverEntityRes (..),
     DDriver.OnboardDriverReq (..),
@@ -39,6 +41,7 @@ where
 
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
+import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as Merchant
@@ -77,6 +80,30 @@ type API =
              :> MandatoryQueryParam "active" Bool
              :> QueryParam "mode" DI.DriverMode
              :> Post '[JSON] APISuccess
+             :<|> "goHome"
+               :> ( "activate" :> TokenAuth
+                      :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
+                      :> Post '[JSON] APISuccess
+                      :<|> "deactivate"
+                      :> TokenAuth
+                      :> Post '[JSON] APISuccess
+                      :<|> "add"
+                      :> TokenAuth
+                      :> ReqBody '[JSON] DDriver.AddHomeLocationReq
+                      :> Post '[JSON] APISuccess
+                      :<|> "get"
+                      :> TokenAuth
+                      :> Get '[JSON] DDriver.GetHomeLocationsRes
+                      :<|> "delete"
+                      :> TokenAuth
+                      :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
+                      :> Delete '[JSON] APISuccess
+                      :<|> "update"
+                      :> TokenAuth
+                      :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
+                      :> ReqBody '[JSON] DDriver.UpdateHomeLocationReq
+                      :> Post '[JSON] APISuccess
+                  )
              :<|> "nearbyRideRequest"
                :> ( TokenAuth
                       :> Get '[JSON] DDriver.GetNearbySearchRequestsRes
@@ -151,6 +178,13 @@ handler =
       :<|> deleteDriver
   )
     :<|> ( setActivity
+             :<|> ( activateGoHomeFeature
+                      :<|> deactivateGoHomeFeature
+                      :<|> addHomeLocation
+                      :<|> getHomeLocations
+                      :<|> deleteHomeLocation
+                      :<|> updateHomeLocation
+                  )
              :<|> getNearbySearchRequests
              :<|> offerQuote
              :<|> respondQuote
@@ -176,7 +210,25 @@ getInformation :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.Dr
 getInformation = withFlowHandlerAPI . DDriver.getInformation
 
 setActivity :: (Id SP.Person, Id Merchant.Merchant) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
-setActivity (personId, driverId) mode = withFlowHandlerAPI . DDriver.setActivity (personId, driverId) mode
+setActivity (personId, driverId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId) isActive
+
+activateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> FlowHandler APISuccess
+activateGoHomeFeature (personId, driverId) = withFlowHandlerAPI . DDriver.activateGoHomeFeature (personId, driverId)
+
+deactivateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
+deactivateGoHomeFeature = withFlowHandlerAPI . DDriver.deactivateGoHomeFeature
+
+addHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.AddHomeLocationReq -> FlowHandler APISuccess
+addHomeLocation (personId, driverId) = withFlowHandlerAPI . DDriver.addHomeLocation (personId, driverId)
+
+updateHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> DDriver.UpdateHomeLocationReq -> FlowHandler APISuccess
+updateHomeLocation (personId, driverId) homeLocationId = withFlowHandlerAPI . DDriver.updateHomeLocation (personId, driverId) homeLocationId
+
+getHomeLocations :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.GetHomeLocationsRes
+getHomeLocations = withFlowHandlerAPI . DDriver.getHomeLocations
+
+deleteHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> FlowHandler APISuccess
+deleteHomeLocation (personId, driverId) = withFlowHandlerAPI . DDriver.deleteHomeLocation (personId, driverId)
 
 listDriver :: SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DDriver.ListDriverRes
 listDriver admin mbSearchString mbLimit = withFlowHandlerAPI . DDriver.listDriver admin mbSearchString mbLimit

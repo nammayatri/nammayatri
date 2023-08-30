@@ -167,6 +167,8 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
+      Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+      Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
       Domain.Types.DriverInformation
@@ -198,6 +200,7 @@ library
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.Geometry
+      Domain.Types.GoHomeConfig
       Domain.Types.Invoice
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -290,6 +293,8 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Common
       Storage.Beam.Driver.DriverFlowStatus
+      Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
+      Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
@@ -323,6 +328,7 @@ library
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
       Storage.Beam.Geometry
+      Storage.Beam.GoHomeConfig
       Storage.Beam.Invoice
       Storage.Beam.Issue.Comment
       Storage.Beam.Issue.IssueCategory
@@ -367,11 +373,13 @@ library
       Storage.Beam.SearchTry
       Storage.Beam.Vehicle
       Storage.CachedQueries.BapMetadata
+      Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
+      Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.KioskLocation
@@ -395,15 +403,22 @@ library
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
+      Storage.Queries.Booking.BookingLocation.Internal
+      Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Driver.DriverFlowStatus
+      Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
+      Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
+      Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
+      Storage.Queries.DriverInformation.Internal
       Storage.Queries.DriverLocation
+      Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverOnboarding.AadhaarOtp
       Storage.Queries.DriverOnboarding.AadhaarVerification
       Storage.Queries.DriverOnboarding.DriverLicense
@@ -415,6 +430,7 @@ library
       Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Queries.DriverPlan
       Storage.Queries.DriverQuote
+      Storage.Queries.DriverQuote.Internal
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
       Storage.Queries.Estimate
@@ -432,7 +448,9 @@ library
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.Geometry
+      Storage.Queries.GoHomeConfig
       Storage.Queries.Instances.DriverInformation
+      Storage.Queries.Instances.Person
       Storage.Queries.Invoice
       Storage.Queries.Issue.Comment
       Storage.Queries.Issue.IssueCategory
@@ -460,6 +478,10 @@ library
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.MetaData
       Storage.Queries.Person
+      Storage.Queries.Person.GetNearestDrivers
+      Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
+      Storage.Queries.Person.GetNearestGoHomeDrivers
+      Storage.Queries.Person.Internal
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
       Storage.Queries.QuoteSpecialZone
@@ -475,6 +497,7 @@ library
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
+      Storage.Queries.Vehicle.Internal
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Call

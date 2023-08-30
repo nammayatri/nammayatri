@@ -51,6 +51,8 @@ data DriverEndpoint
   | ExemptCashEndpoint
   | SetRCStatusEndpoint
   | DeleteRCEndpoint
+  | UpdateDriverHomeLocationEndpoint
+  | IncrementDriverGoToCountEndPoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -83,6 +85,25 @@ data DriverListRes = DriverListRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+----------------------------------------- go to home-----------------------------------------
+
+data DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
+  { id :: Id DriverHomeLocation,
+    lat :: Double,
+    lon :: Double,
+    address :: Text,
+    tag :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets DriverHomeLocationAPIEntity where
+  hideSecrets = identity
+
+type GetHomeLocationsRes = [DriverHomeLocationAPIEntity]
+
+type UpdateDriverHomeLocationReq = DriverHomeLocationAPIEntity
 
 data DriverListItem = DriverListItem
   { driverId :: Id Driver,
@@ -680,3 +701,19 @@ newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type GetDriverHomeLocationAPI =
+  Capture "driverId" (Id Driver)
+    :> "getHomeLocation"
+    :> Get '[JSON] GetHomeLocationsRes
+
+type UpdateDriverHomeLocationAPI =
+  Capture "driverId" (Id Driver)
+    :> "updateHomeLocation"
+    :> ReqBody '[JSON] UpdateDriverHomeLocationReq
+    :> Post '[JSON] APISuccess
+
+type IncrementDriverGoToCountAPI =
+  Capture "driverId" (Id Driver)
+    :> "incrementGoToCount"
+    :> Post '[JSON] APISuccess

@@ -3,14 +3,8 @@
 
 module Lib.Utils where
 
--- import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
--- import Data.ByteString.Lazy (fromStrict)
 import Data.Fixed (Centi)
--- import Kernel.External.AadhaarVerification.Types
-
--- import qualified Data.Serialize as Serialize
--- import qualified Data.Vector as V
 import Database.Beam
 import qualified Database.Beam as B
 import Database.Beam.Backend hiding (tableName)
@@ -20,28 +14,10 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
--- import Kernel.External.Encryption
--- import Kernel.External.Types
-
--- import Kernel.Storage.Esqueleto.Types
--- import qualified Domain.Types.DriverOnboarding.IdfyVerification as DomainIdfy
--- import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.FarePolicy as DomainFP
--- import EulerHS.CachedSqlDBQuery (SqlReturning)
--- import qualified EulerHS.KVConnector.Flow as KV
--- import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
--- import qualified EulerHS.Language as L
--- import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn, OptionEntity)
--- import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
--- import Kernel.Types.Error
 import Kernel.Utils.Common (encodeToText)
-
--- import Kernel.Utils.Error (throwError)
--- import Lib.Mesh as Mesh
--- import Sequelize (Model, ModelMeta (modelTableName), OrderBy, Set, Where)
--- import System.Random
 
 fromFieldCenti ::
   DPSF.Field ->

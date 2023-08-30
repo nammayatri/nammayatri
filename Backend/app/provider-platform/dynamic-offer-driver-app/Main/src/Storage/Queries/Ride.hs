@@ -29,6 +29,7 @@ import qualified Database.Beam.Backend as BeamBackend
 import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -84,7 +85,10 @@ findAllRidesByDriverId ::
   m [Ride]
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
 
-findActiveByRBId :: MonadFlow m => Id Booking -> m (Maybe Ride)
+findCompletedRideByGHRId :: (MonadFlow m) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
+findCompletedRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+
+findActiveByRBId :: (MonadFlow m) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
 findAllRidesWithSeConditionsCreatedAtDesc :: MonadFlow m => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
@@ -443,6 +447,7 @@ instance FromTType' BeamR.Ride Ride where
             tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
             tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
             fareParametersId = Id <$> fareParametersId,
+            driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
             trackingUrl = tUrl,
             ..
           }
@@ -475,5 +480,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.updatedAt = updatedAt,
         BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
         BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
-        BeamR.numberOfDeviation = numberOfDeviation
+        BeamR.numberOfDeviation = numberOfDeviation,
+        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId
       }

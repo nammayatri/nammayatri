@@ -86,7 +86,7 @@ type API =
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "cancel"
                     :> ReqBody '[JSON] CancelRideReq
-                    :> Post '[JSON] APISuccess
+                    :> Post '[JSON] RideCancel.CancelRideResp
                 )
          )
 
@@ -146,7 +146,7 @@ endRide (requestorId, merchantId) rideId EndRideReq {point} = withFlowHandlerAPI
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
-cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess
+cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
 cancelRide (personId, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq

@@ -14,11 +14,14 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.Person where
+module Storage.Queries.Person
+  ( module Storage.Queries.Person,
+    module Reexport,
+  )
+where
 
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Maybe as Mb
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
@@ -26,6 +29,7 @@ import qualified Domain.Types.Booking as Booking
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
+import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.MediaFile
 import Domain.Types.Merchant
@@ -35,20 +39,14 @@ import Domain.Types.Vehicle as DV
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.External.Maps as Maps
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
-import Kernel.Utils.GenericPretty
-import Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
-import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
@@ -59,30 +57,27 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride.Table as BeamR
 import qualified Storage.Beam.Vehicle as BeamV
 import Storage.Queries.Booking ()
+import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation as QueriesDL
 import qualified Storage.Queries.DriverOnboarding.DriverLicense ()
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 import Storage.Queries.DriverQuote ()
 import Storage.Queries.Instances.DriverInformation ()
+import Storage.Queries.Instances.Person ()
+import Storage.Queries.Person.GetNearestDrivers as Reexport
+import Storage.Queries.Person.GetNearestDriversCurrentlyOnRide as Reexport
+import Storage.Queries.Person.GetNearestGoHomeDrivers as Reexport
+import qualified Storage.Queries.Person.Internal as Int
 import Storage.Queries.Ride ()
 import Storage.Queries.Vehicle ()
+import qualified Storage.Queries.Vehicle.Internal as Int
 
 create :: MonadFlow m => Person.Person -> m ()
 create = createWithKV
 
 findById :: MonadFlow m => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
-
-data FullDriver = FullDriver
-  { person :: Person,
-    location :: DriverLocation,
-    info :: DriverInformation,
-    vehicle :: Vehicle
-  }
-
-mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriver
-mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDriversWithInfoAndVehicle ::
   MonadFlow m =>
@@ -164,13 +159,12 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
   driverInfos <- getDriverInformations driverLocations
   getDriversList driverInfos
 
-getDriversWithOutdatedLocationsToMakeInactive' :: MonadFlow m => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive' before = do
-  driverLocations <- QueriesDL.getDriverLocations before
-  driverInfos <- getDriverInfos driverLocations
-  drivers <- getDriversList driverInfos
-  logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
-  return drivers
+data FullDriver = FullDriver
+  { person :: Person,
+    location :: DriverLocation,
+    info :: DriverInformation,
+    vehicle :: Vehicle
+  }
 
 findAllDriversByIdsFirstNameAsc ::
   (Functor m, MonadFlow m) =>
@@ -179,104 +173,28 @@ findAllDriversByIdsFirstNameAsc ::
   m [FullDriver]
 findAllDriversByIdsFirstNameAsc merchantId driverIds = do
   driverLocs <- QueriesDL.getDriverLocs driverIds merchantId
-  driverInfos <- getDriverInfos driverLocs
-  vehicle <- getVehicles driverInfos
-  drivers <- getDrivers vehicle
+  driverInfos <- Int.getDriverInfos $ map ((.getId) . DDL.driverId) driverLocs
+  vehicle <- Int.getVehicles driverInfos
+  drivers <- Int.getDrivers vehicle
   return (linkArrays driverLocs driverInfos vehicle drivers)
-
-linkArrays :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> [FullDriver]
-linkArrays driverLocations driverInformations vehicles persons =
-  let personHashMap = buildPersonHashMap persons
-      vehicleHashMap = buildVehicleHashMap vehicles
-      driverInfoHashMap = buildDriverInfoHashMap driverInformations
-   in mapMaybe (buildFullDriver personHashMap vehicleHashMap driverInfoHashMap) driverLocations
-
-linkArrayList :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)]
-linkArrayList driverLocations driverInformations vehicles persons LatLong {..} mbVariant =
-  let personHashMap = buildPersonHashMap persons
-      driverInfoHashMap = buildDriverInfoHashMap driverInformations
-      vehicleHashMap = buildVehicleHashMap vehicles
-   in mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant) driverLocations
-
-buildLocationHashMap :: [DriverLocation] -> HashMap.HashMap Text DriverLocation
-buildLocationHashMap driverLocations =
-  HashMap.fromList $ map (\loc -> (loc.driverId.getId, loc)) driverLocations
-
-buildPersonHashMap :: [Person] -> HashMap.HashMap Text Person
-buildPersonHashMap persons =
-  HashMap.fromList $ map (\p -> (p.id.getId, p)) persons
-
-buildVehicleHashMap :: [Vehicle] -> HashMap.HashMap Text Vehicle
-buildVehicleHashMap vehicles =
-  HashMap.fromList $ map (\v -> (v.driverId.getId, v)) vehicles
-
-buildFullDriver :: HashMap.HashMap Text Person -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> DriverLocation -> Maybe FullDriver
-buildFullDriver personHashMap vehicleHashMap driverInfoHashMap location = do
-  let driverId' = location.driverId.getId
-  person <- HashMap.lookup driverId' personHashMap
-  vehicle <- HashMap.lookup driverId' vehicleHashMap
-  info <- HashMap.lookup driverId' driverInfoHashMap
-  Just $ mkFullDriver (person, location, info, vehicle)
-
-getDriverInfos ::
-  MonadFlow m =>
-  [DriverLocation] ->
-  m [DriverInformation]
-getDriverInfos driverLocs = do
-  findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
   where
-    personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
+    linkArrays driverLocations driverInformations vehicles persons =
+      let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
+          vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
+          driverInfoHashMap = HashMap.fromList $ (\di -> (di.driverId, di)) <$> driverInformations
+       in mapMaybe (buildFullDriver personHashMap vehicleHashMap driverInfoHashMap) driverLocations
 
-getOnRideStuckDriverIds :: MonadFlow m => m [DriverInformation]
+    buildFullDriver personHashMap vehicleHashMap driverInfoHashMap location = do
+      let driverId' = location.driverId
+      person <- HashMap.lookup driverId' personHashMap
+      vehicle <- HashMap.lookup driverId' vehicleHashMap
+      info <- HashMap.lookup driverId' driverInfoHashMap
+      Just $ FullDriver person location info vehicle
+
+getOnRideStuckDriverIds :: (MonadFlow m, Log m) => m [DriverInformation]
 getOnRideStuckDriverIds = do
   driverIds <- findAllWithDb [Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]] <&> (Ride.driverId <$>)
   findAllWithKV [Se.And [Se.Is BeamDI.onRide $ Se.Eq True, Se.Is BeamDI.driverId $ Se.Not $ Se.In (getId <$> driverIds)]]
-
-getVehicles ::
-  MonadFlow m =>
-  [DriverInformation] ->
-  m [Vehicle]
-getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
-  where
-    personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
-
-getDrivers ::
-  MonadFlow m =>
-  [Vehicle] ->
-  m [Person]
-getDrivers vehicles = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In personKeys, Se.Is BeamP.role $ Se.Eq Person.DRIVER]]
-  where
-    personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
-
-getDriverQuote ::
-  MonadFlow m =>
-  [Person] ->
-  m [DriverQuote]
-getDriverQuote persons =
-  findAllWithKV
-    [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
-    ]
-  where
-    personKeys = getId <$> fetchDriverIDsFromPersons persons
-
-getBookingInfo ::
-  MonadFlow m =>
-  [DriverQuote] ->
-  m [Booking.Booking]
-getBookingInfo driverQuote =
-  findAllWithKV
-    [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
-    ]
-  where
-    personsKeys = fetchDriverIDsTextFromQuote driverQuote
-
-getBookingLocs ::
-  MonadFlow m =>
-  [Booking.Booking] ->
-  m [BookingLocation]
-getBookingLocs bookings = findAllWithKV [Se.Is BeamBL.id $ Se.In bookingKeys]
-  where
-    bookingKeys = getId <$> fetchToLocationIDFromBooking bookings
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
@@ -287,22 +205,13 @@ fetchToLocationIDFromBooking = map (.toLocation.id)
 fetchQuoteIdFromDriverQuotes :: [DriverQuote] -> [Text]
 fetchQuoteIdFromDriverQuotes = map (.id.getId)
 
-fetchDriverIDsFromPersons :: [Person] -> [Id Person]
-fetchDriverIDsFromPersons = map (.id)
-
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId
 
 fetchDriverIDsFromInfo :: [DriverInformation] -> [Id Person]
 fetchDriverIDsFromInfo = map DriverInfo.driverId
 
-fetchDriverIDsFromVehicle :: [Vehicle] -> [Id Person]
-fetchDriverIDsFromVehicle = map (.driverId)
-
-fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
-fetchDriverIDsTextFromQuote = map (.driverId.getId)
-
-findAllDriverInformationWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
+findAllDriverInformationWithSeConditions :: (MonadFlow m, Log m) => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
 findAllDriverInformationWithSeConditions = findAllWithKV
 
 findAllVehiclesWithSeConditions :: MonadFlow m => [Se.Clause Postgres BeamV.VehicleT] -> m [Vehicle]
@@ -570,234 +479,7 @@ updateAverageRating (Id personId) newAverageRating = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-data NearestDriversResult = NearestDriversResult
-  { driverId :: Id Driver,
-    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
-    language :: Maybe Maps.Language,
-    onRide :: Bool,
-    distanceToDriver :: Meters,
-    variant :: DV.Variant,
-    lat :: Double,
-    lon :: Double,
-    mode :: Maybe DriverInfo.DriverMode
-  }
-  deriving (Generic, Show, PrettyShow, HasCoordinates)
-
-getNearestDrivers ::
-  MonadFlow m =>
-  Maybe Variant ->
-  LatLong ->
-  Int ->
-  Id Merchant ->
-  Bool ->
-  Maybe Seconds ->
-  m [NearestDriversResult]
-getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
-  res <- do
-    driverLocs <- QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
-    driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
-    vehicle <- getVehiclesWithCond driverInfos
-    drivers <- getDrivers vehicle
-    return (linkArrayList driverLocs driverInfos vehicle drivers LatLong {..} mbVariant)
-
-  return (makeNearestDriversResult =<< res)
-  where
-    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode) -> [NearestDriversResult]
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dist, dlat, dlon, variant, mode) = do
-      case mbVariant of
-        Nothing -> do
-          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
-              suvResult = getResult SUV $ variant == SUV
-              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
-              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
-              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || ((variant == TAXI_PLUS || variant == SUV || variant == SEDAN || variant == HATCHBACK) && canDowngradeToTaxi)
-          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
-        Just poolVariant -> getResult poolVariant True
-      where
-        getResult var cond = [NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon mode | cond]
-
-buildFullDriverList :: HashMap.HashMap Text Person -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> LatLong -> Maybe Variant -> DriverLocation -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)
-buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant location = do
-  let driverId' = location.driverId.getId
-  person <- HashMap.lookup driverId' personHashMap
-  vehicle <- HashMap.lookup driverId' vehicleHashMap
-  info <- HashMap.lookup driverId' driverInfoHashMap
-  let dist = realToFrac $ distanceBetweenInMeters LatLong {..} LatLong {lat = location.lat, lon = location.lon}
-  if Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
-    || ( case mbVariant of
-           Just SEDAN ->
-             info.canDowngradeToSedan
-               && vehicle.variant == SUV
-           Just HATCHBACK ->
-             info.canDowngradeToHatchback
-               && (vehicle.variant == SUV || vehicle.variant == SEDAN)
-           Just TAXI ->
-             info.canDowngradeToTaxi
-               && (vehicle.variant == TAXI_PLUS || vehicle.variant == HATCHBACK || vehicle.variant == SEDAN || vehicle.variant == SUV)
-           _ -> False
-       )
-    then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, dist, location.lat, location.lon, vehicle.variant, info.mode)
-    else Nothing
-
-getDriverLocsWithCond ::
-  (MonadFlow m, MonadTime m) =>
-  Id Merchant ->
-  Maybe Seconds ->
-  LatLong ->
-  Int ->
-  m [DriverLocation]
-getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
-
-getDriverInfosWithCond :: MonadFlow m => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
-  findAllWithKV
-    [ Se.And
-        ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
-            Se.Or
-              [ Se.And
-                  [ Se.Is BeamDI.mode $ Se.Eq Nothing,
-                    Se.Is BeamDI.active $ Se.Eq True
-                  ],
-                Se.And
-                  [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
-                    Se.Or
-                      [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
-                        Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
-                      ]
-                  ]
-              ],
-            Se.Is BeamDI.blocked $ Se.Eq False,
-            Se.Is BeamDI.subscribed $ Se.Eq True
-          ]
-            <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
-        )
-    ]
-  where
-    personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
-
-getVehiclesWithCond ::
-  MonadFlow m =>
-  [DriverInformation] ->
-  m [Vehicle]
-getVehiclesWithCond driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personsKeys]
-  where
-    personsKeys = getId <$> fetchDriverIDsFromInfo driverInfo
-
-data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
-  { driverId :: Id Driver,
-    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
-    language :: Maybe Maps.Language,
-    onRide :: Bool,
-    lat :: Double,
-    lon :: Double,
-    variant :: DV.Variant,
-    destinationLat :: Double,
-    destinationLon :: Double,
-    distanceToDriver :: Meters,
-    distanceFromDriverToDestination :: Meters,
-    mode :: Maybe DriverInfo.DriverMode
-  }
-  deriving (Generic, Show, PrettyShow, HasCoordinates)
-
-getNearestDriversCurrentlyOnRide ::
-  MonadFlow m =>
-  Maybe Variant ->
-  LatLong ->
-  Int ->
-  Id Merchant ->
-  Maybe Seconds ->
-  Int ->
-  m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
-  let onRideRadius = fromIntegral (radiusMeters - reduceRadiusValue) :: Double
-  res <- do
-    driverLocs <- QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
-    driverInfos <- getDriverInfosWithCond driverLocs False True
-    vehicles <- getVehicles driverInfos
-    drivers <- getDrivers vehicles
-    driverQuote <- getDriverQuote drivers
-    bookingInfo <- getBookingInfo driverQuote
-    bookingLocation <- getBookingLocs bookingInfo
-
-    return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
-
-  return (makeNearestDriversResult =<< res)
-  where
-    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
-      case mbVariant of
-        Nothing -> do
-          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
-              suvResult = getResult SUV $ variant == SUV
-              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
-              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
-              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || ((variant == TAXI_PLUS || variant == SUV || variant == SEDAN || variant == HATCHBACK) && canDowngradeToTaxi)
-          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
-        Just poolVariant -> getResult poolVariant True
-      where
-        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
-
-linkArrayListForOnRide :: [DriverQuote] -> [Booking.Booking] -> [BookingLocation] -> [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Double -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)]
-linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverInformations vehicles persons LatLong {..} onRideRadius mbVariant =
-  let locationHashMap = buildLocationHashMap driverLocations
-      personHashMap = buildPersonHashMap persons
-      quotesHashMap = buildQuotesHashMap driverQuotes
-      bookingHashMap = buildBookingHashMap bookings
-      bookingLocsHashMap = buildBookingLocsHashMap bookingLocs
-      driverInfoHashMap = buildDriverInfoHashMap driverInformations
-   in mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap LatLong {..} onRideRadius mbVariant) vehicles
-
-buildDriverInfoHashMap :: [DriverInformation] -> HashMap.HashMap Text DriverInformation
-buildDriverInfoHashMap driverInfo =
-  HashMap.fromList $ map (\info -> (info.driverId.getId, info)) driverInfo
-
-buildQuotesHashMap :: [DriverQuote] -> HashMap.HashMap Text DriverQuote
-buildQuotesHashMap driverQuote =
-  HashMap.fromList $ map (\quote -> (quote.driverId.getId, quote)) driverQuote
-
-buildBookingHashMap :: [Booking.Booking] -> HashMap.HashMap Text Booking.Booking
-buildBookingHashMap bookings =
-  HashMap.fromList $ map (\booking -> (booking.quoteId, booking)) bookings
-
-buildBookingLocsHashMap :: [BookingLocation] -> HashMap.HashMap Text BookingLocation
-buildBookingLocsHashMap bookinglocs =
-  HashMap.fromList $ map (\loc -> (loc.id.getId, loc)) bookinglocs
-
-buildFullDriverListOnRide :: HashMap.HashMap Text DriverQuote -> HashMap.HashMap Text Booking.Booking -> HashMap.HashMap Text BookingLocation -> HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text DriverInformation -> HashMap.HashMap Text Person -> LatLong -> Double -> Maybe Variant -> Vehicle -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)
-buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap latLon onRideRadius mbVariant vehicle = do
-  let driverId' = vehicle.driverId.getId
-  location <- HashMap.lookup driverId' locationHashMap
-  quote <- HashMap.lookup driverId' quotesHashMap
-  booking <- HashMap.lookup quote.id.getId bookingHashMap
-  bookingLocation <- HashMap.lookup booking.toLocation.id.getId bookingLocsHashMap
-  info <- HashMap.lookup driverId' driverInfoHashMap
-  person <- HashMap.lookup driverId' personHashMap
-  let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
-      destinationPoint = LatLong {lat = bookingLocation.lat, lon = bookingLocation.lon}
-      distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
-      distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters latLon destinationPoint
-      onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
-  if onRideRadiusValidity
-    && ( Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
-           || ( case mbVariant of
-                  Just SEDAN ->
-                    info.canDowngradeToSedan
-                      && vehicle.variant == SUV
-                  Just HATCHBACK ->
-                    info.canDowngradeToHatchback
-                      && (vehicle.variant == SUV || vehicle.variant == SEDAN)
-                  Just TAXI ->
-                    info.canDowngradeToTaxi
-                      && (vehicle.variant == TAXI_PLUS || vehicle.variant == SEDAN || vehicle.variant == HATCHBACK || vehicle.variant == SUV)
-                  _ -> False
-              )
-       )
-    then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
-    else Nothing
-
-updateAlternateMobileNumberAndCode :: MonadFlow m => Person -> m ()
+updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -813,80 +495,3 @@ findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is Be
 
 updateMediaId :: MonadFlow m => Id Person -> Maybe (Id MediaFile) -> m ()
 updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
-
-instance FromTType' BeamP.Person Person where
-  fromTType' :: MonadFlow m => BeamP.Person -> m (Maybe Person)
-  fromTType' BeamP.PersonT {..} = do
-    bundleVersion' <- forM bundleVersion readVersion
-    clientVersion' <- forM clientVersion readVersion
-    pure $
-      Just
-        Person
-          { id = Id id,
-            firstName = firstName,
-            middleName = middleName,
-            lastName = lastName,
-            role = role,
-            gender = gender,
-            hometown = hometown,
-            languagesSpoken = languagesSpoken,
-            identifierType = identifierType,
-            email = email,
-            unencryptedMobileNumber = unencryptedMobileNumber,
-            mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-            onboardedFromDashboard = onboardedFromDashboard,
-            mobileCountryCode = mobileCountryCode,
-            passwordHash = passwordHash,
-            identifier = identifier,
-            rating = rating,
-            isNew = isNew,
-            merchantId = Id merchantId,
-            deviceToken = deviceToken,
-            whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-            language = language,
-            description = description,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            bundleVersion = bundleVersion',
-            clientVersion = clientVersion',
-            unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
-            faceImageId = Id <$> faceImageId,
-            alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
-          }
-
-instance ToTType' BeamP.Person Person where
-  toTType' Person {..} = do
-    BeamP.PersonT
-      { BeamP.id = getId id,
-        BeamP.firstName = firstName,
-        BeamP.middleName = middleName,
-        BeamP.lastName = lastName,
-        BeamP.role = role,
-        BeamP.gender = gender,
-        BeamP.hometown = hometown,
-        BeamP.languagesSpoken = languagesSpoken,
-        BeamP.identifierType = identifierType,
-        BeamP.email = email,
-        BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
-        BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-        BeamP.onboardedFromDashboard = onboardedFromDashboard,
-        BeamP.mobileNumberHash = mobileNumber <&> (.hash),
-        BeamP.mobileCountryCode = mobileCountryCode,
-        BeamP.passwordHash = passwordHash,
-        BeamP.identifier = identifier,
-        BeamP.rating = rating,
-        BeamP.isNew = isNew,
-        BeamP.merchantId = getId merchantId,
-        BeamP.deviceToken = deviceToken,
-        BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-        BeamP.language = language,
-        BeamP.description = description,
-        BeamP.createdAt = createdAt,
-        BeamP.updatedAt = updatedAt,
-        BeamP.bundleVersion = versionToText <$> bundleVersion,
-        BeamP.clientVersion = versionToText <$> clientVersion,
-        BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
-        BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
-        BeamP.faceImageId = getId <$> faceImageId,
-        BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
-      }

@@ -64,6 +64,9 @@ type API =
            :<|> SetRCStatusAPI
            :<|> DeleteRCAPI
            :<|> ClearOnRideStuckDriversAPI
+           :<|> GetDriverHomeLocationAPI
+           :<|> UpdateDriverHomeLocationAPI
+           :<|> IncrementDriverGoToCountAPI
            --
        )
 
@@ -179,6 +182,18 @@ type ClearOnRideStuckDriversAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS
     :> Common.ClearOnRideStuckDriversAPI
 
+type GetDriverHomeLocationAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'GET_DRIVER_HOME_LOCATION
+    :> Common.GetDriverHomeLocationAPI
+
+type UpdateDriverHomeLocationAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_HOME_LOCATION
+    :> Common.UpdateDriverHomeLocationAPI
+
+type IncrementDriverGoToCountAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'INCREMENT_DRIVER_GO_TO_COUNT
+    :> Common.IncrementDriverGoToCountAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -209,6 +224,9 @@ handler merchantId =
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
     :<|> clearOnRideStuckDrivers merchantId
+    :<|> getDriverHomeLocation merchantId
+    :<|> updateDriverHomeLocation merchantId
+    :<|> incrementDriverGoToCount merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -410,3 +428,22 @@ clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Co
 clearOnRideStuckDrivers merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.clearOnRideStuckDrivers)
+
+getDriverHomeLocation :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.GetHomeLocationsRes
+getDriverHomeLocation merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.getDriverHomeLocation) driverId
+
+updateDriverHomeLocation :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> FlowHandler APISuccess
+updateDriverHomeLocation merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UpdateDriverHomeLocationEndpoint apiTokenInfo driverId $ Just req
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.updateDriverHomeLocation) driverId req
+
+incrementDriverGoToCount :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+incrementDriverGoToCount merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.IncrementDriverGoToCountEndPoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.incrementDriverGoToCount) driverId

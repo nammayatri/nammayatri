@@ -15,6 +15,7 @@
 
 module Domain.Types.DriverQuote where
 
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Estimate
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.Merchant as DMerchant
@@ -54,6 +55,7 @@ data DriverQuote = DriverQuote
     fareParams :: Params.FareParameters,
     providerId :: Id DMerchant.Merchant,
     specialLocationTag :: Maybe Text,
+    goHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

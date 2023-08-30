@@ -20,6 +20,7 @@ import "dynamic-offer-driver-app" API.UI.Location as LocationAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
 import Data.Time
+import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
@@ -41,7 +42,7 @@ data UIAPIs = UIAPIs
 data RideAPIs = RideAPIs
   { rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess,
     rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM APISuccess,
-    rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
+    rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM DCR.CancelRideResp
   }
 
 data DriverAPIs = DriverAPIs
@@ -92,6 +93,7 @@ ui = do
         :<|> _
       )
       :<|> ( setDriverOnline
+               :<|> _
                :<|> getNearbySearchRequests
                :<|> offerQuote
                :<|> respondQuote

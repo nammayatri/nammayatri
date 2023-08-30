@@ -16,6 +16,7 @@
 module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.BapMetadata as DSM
+import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
@@ -75,7 +76,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     parallelSearchRequestCount :: Maybe Int,
     driverSpeed :: Maybe Double,
     keepHiddenForSeconds :: Seconds,
-    mode :: Maybe DI.DriverMode
+    mode :: Maybe DI.DriverMode,
+    goHomeRequestId :: Maybe (Id DriverGoHomeRequest)
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -100,6 +102,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     specialLocationTag :: Maybe Text,
     disabilityTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds,
+    goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: Variant.Variant
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
@@ -131,5 +134,6 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       specialLocationTag = searchRequest.specialLocationTag,
       disabilityTag = searchRequest.disabilityTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
+      goHomeRequestId = nearbyReq.goHomeRequestId,
       ..
     }

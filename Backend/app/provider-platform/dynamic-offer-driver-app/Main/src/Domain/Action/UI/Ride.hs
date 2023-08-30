@@ -30,6 +30,7 @@ import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
@@ -56,6 +57,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
@@ -103,7 +105,8 @@ data DriverRideRes = DriverRideRes
     updatedAt :: UTCTime,
     customerExtraFee :: Maybe Money,
     disabilityTag :: Maybe Text,
-    requestedVehicleVariant :: DVeh.Variant
+    requestedVehicleVariant :: DVeh.Variant,
+    driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -135,7 +138,8 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
-    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata
+    let goHomeReqId = ride.driverGoHomeRequestId
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
@@ -145,8 +149,9 @@ mkDriverRideRes ::
   Maybe DExophone.Exophone ->
   (DRide.Ride, DRB.Booking) ->
   Maybe DSM.BapMetadata ->
+  Maybe (Id DDGR.DriverGoHomeRequest) ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -184,7 +189,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       bapName = bapMetadata <&> (.name),
       bapLogo = bapMetadata <&> (.logoUrl),
       disabilityTag = booking.disabilityTag,
-      requestedVehicleVariant = booking.vehicleVariant
+      requestedVehicleVariant = booking.vehicleVariant,
+      driverGoHomeRequestId = goHomeReqId
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -232,7 +238,8 @@ otpRideCreate driver otpCode booking = do
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
-  ride <- buildRide otpCode driver.id (Just transporter.id)
+  ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id booking.providerId) Nothing <&> (.driverGoHomeRequestId)
+  ride <- buildRide otpCode driver.id (Just transporter.id) ghrId
   rideDetails <- buildRideDetails ride
   triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
   _ <- QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
@@ -249,7 +256,7 @@ otpRideCreate driver otpCode booking = do
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata
+  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -260,7 +267,7 @@ otpRideCreate driver otpCode booking = do
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide otp driverId merchantId = do
+    buildRide otp driverId merchantId ghrId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -290,7 +297,8 @@ otpRideCreate driver otpCode booking = do
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing
+            numberOfDeviation = Nothing,
+            driverGoHomeRequestId = ghrId
           }
 
     buildTrackingUrl rideId = do

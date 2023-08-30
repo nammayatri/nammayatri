@@ -20,6 +20,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
@@ -74,6 +75,7 @@ data Ride = Ride
     updatedAt :: UTCTime,
     driverDeviatedFromRoute :: Maybe Bool,
     numberOfSnapToRoadCalls :: Maybe Int,
-    numberOfDeviation :: Maybe Bool
+    numberOfDeviation :: Maybe Bool,
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

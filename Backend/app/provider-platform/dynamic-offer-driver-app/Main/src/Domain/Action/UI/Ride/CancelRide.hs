@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Ride.CancelRide
   ( CancelRideReq (..),
+    CancelRideResp (..),
     ServiceHandle (..),
     cancelRideHandle,
     driverCancelRideHandler,
@@ -25,6 +26,7 @@ import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverLocation as DDriverLocation
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
@@ -39,7 +41,10 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as QDrLoc
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -72,51 +77,86 @@ data CancelRideReq = CancelRideReq
     additionalInfo :: Maybe Text
   }
 
+data CancelRideResp = CancelRideResp
+  { result :: Text,
+    goHomeCancellationCount :: Maybe Int,
+    isGoHomeDisabled :: Maybe Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
 
-driverCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+driverCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m CancelRideResp
 driverCancelRideHandler shandle personId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
     cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
-dashboardCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+dashboardCancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId rideId req =
-  withLogTag ("merchantId-" <> merchantId.getId) $
-    cancelRideHandler shandle (DashboardRequestorId merchantId) rideId req
+  withLogTag ("merchantId-" <> merchantId.getId) $ do
+    void $ cancelRideImpl shandle (DashboardRequestorId merchantId) rideId req
+    return APISuccess.Success
 
-cancelRideHandler :: MonadHandler m => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
-cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
+cancelRideHandler :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m CancelRideResp
+cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
+  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req
+  pure $ buildCancelRideResp cancellationCnt isGoToDisabled
+  where
+    buildCancelRideResp cancelCnt isGoToDisabled =
+      CancelRideResp
+        { result = "success",
+          goHomeCancellationCount = cancelCnt,
+          isGoHomeDisabled = isGoToDisabled
+        }
+
+cancelRideImpl :: (MonadHandler m, CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m (Maybe Int, Maybe Bool)
+cancelRideImpl ServiceHandle {..} requestorId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
   let driverId = ride.driverId
 
-  rideCancelationReason <- case requestorId of
+  (rideCancelationReason, cancellationCnt, isGoToDisabled) <- case requestorId of
     PersonRequestorId personId -> do
       authPerson <-
         findById personId
           >>= fromMaybeM (PersonNotFound personId.getId)
       driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      case authPerson.role of
+      (rideCancellationReason, mbCancellationCnt, isGoToDisabled) <- case authPerson.role of
         DP.ADMIN -> do
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId)
+          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
+          goHomeConfig <- CQGHC.findByMerchantId authPerson.merchantId
+          dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId driver.merchantId (Just goHomeConfig)
+          (cancellationCount, isGoToDisabled) <-
+            if dghInfo.status == Just DDGR.ACTIVE
+              then do
+                dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
+                driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
+                let cancelCnt = driverGoHomeReq.numCancellation + 1
+                QDGR.updateCancellationCount driverGoHomeReq.id cancelCnt
+                when (cancelCnt == goHomeConfig.cancellationCnt) $
+                  CQDGR.deactivateDriverGoHomeRequest driver.merchantId driverId DDGR.SUCCESS dghInfo
+                return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt)
+              else do
+                return (Nothing, Nothing)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- findDriverLocationId driver.merchantId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
-          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId)
+          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled)
+      return (rideCancellationReason, mbCancellationCnt, isGoToDisabled)
     DashboardRequestorId reqMerchantId -> do
       driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) -- is it correct DBCR.ByMerchant?
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing) -- is it correct DBCR.ByMerchant?
   cancelRide rideId rideCancelationReason
-  pure APISuccess.Success
+  pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride =
       ride.status == DRide.NEW

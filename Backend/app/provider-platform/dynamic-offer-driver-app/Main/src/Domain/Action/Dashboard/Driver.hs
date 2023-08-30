@@ -41,6 +41,9 @@ module Domain.Action.Dashboard.Driver
     updateByPhoneNumber,
     setRCStatus,
     deleteRC,
+    getDriverHomeLocation,
+    updateDriverHomeLocation,
+    incrementDriverGoToCount,
   )
 where
 
@@ -48,10 +51,12 @@ import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
+import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DrInfo
@@ -80,11 +85,13 @@ import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import Storage.Queries.DriverFee (findPendingFeesByDriverId)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
@@ -836,7 +843,41 @@ clearOnRideStuckDrivers merchantShortId = do
   return Common.ClearOnRideStuckDriversRes {driverIds = driverIds}
 
 ---------------------------------------------------------------------
+getDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.GetHomeLocationsRes
+getDriverHomeLocation merchantShortId driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  dghLocs <- DDriver.getHomeLocations (cast driverId, cast merchant.id)
+  return (buildDriverHomeLocationAPIEntity <$> dghLocs.locations)
+  where
+    buildDriverHomeLocationAPIEntity dghLocs =
+      Common.DriverHomeLocationAPIEntity
+        { id = cast dghLocs.id,
+          address = dghLocs.address,
+          lat = dghLocs.lat,
+          lon = dghLocs.lon,
+          tag = dghLocs.tag
+        }
 
+updateDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> Flow APISuccess
+updateDriverHomeLocation _ _ req = do
+  QDHL.updateHomeLocationById (cast req.id) buildDriverHomeLocationEntity
+  return Success
+  where
+    buildDriverHomeLocationEntity =
+      DDHL.UpdateDriverHomeLocation
+        { address = req.address,
+          lat = req.lat,
+          lon = req.lon,
+          tag = req.tag
+        }
+
+incrementDriverGoToCount :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+incrementDriverGoToCount merchantShortId driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  CQDGR.increaseDriverGoHomeRequestCount merchant.id (cast driverId)
+  return Success
+
+---------------------------------------------------------------------
 driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoByPhoneReq
 driverAadhaarInfoByPhone merchantShortId phoneNumber = do
   merchant <- findMerchantByShortId merchantShortId
