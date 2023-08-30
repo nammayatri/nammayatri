@@ -41,12 +41,15 @@ view push config =
       , accessibilityImportance config.prefixImageConfig.accessibilityImportance
       , accessibilityHint config.prefixImageConfig.accessibilityHint
       , onClick push $ const PrefixImgOnClick
+      , accessibilityHint config.prefixImageConfig.accessibilityHint
+      , accessibilityImportance ENABLE
       ][ imageView
         [ imageWithFallback config.prefixImageConfig.imageUrl
         , height config.prefixImageConfig.height
         , width config.prefixImageConfig.width
         , margin config.prefixImageConfig.margin
         , padding config.prefixImageConfig.padding
+        , accessibilityImportance DISABLE
         , visibility config.prefixImageConfig.visibility
         ]
     ]
@@ -56,7 +59,8 @@ view push config =
       , text config.textConfig.text
       , margin config.textConfig.margin
       , clickable false
-      , accessibilityHint config.textConfig.text
+      , accessibilityImportance ENABLE
+      , accessibilityHint if config.textConfig.accessibilityHint == "" then config.textConfig.text else config.textConfig.accessibilityHint
       , color config.textConfig.color
       ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
     , suffixImageLayout config push
@@ -79,6 +83,8 @@ suffixImageLayout config push =
       , accessibilityImportance config.suffixImageConfig.accessibilityImportance
       , margin config.suffixImageConfig.margin
       , padding config.suffixImageConfig.padding
+      , accessibilityHint config.suffixImageConfig.accessibilityHint
+      , accessibilityImportance ENABLE
       , onClick push $ const SuffixImgOnClick
       , visibility config.suffixImageConfig.visibility
       ]

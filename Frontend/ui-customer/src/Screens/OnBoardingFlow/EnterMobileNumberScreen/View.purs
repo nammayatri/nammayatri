@@ -43,7 +43,7 @@ import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width, textFromHtml, accessibilityImportance, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -187,6 +187,8 @@ commonTextView state textValue isLink link push isTextFromHtml=
     , height WRAP_CONTENT
     , (if isTextFromHtml then textFromHtml else text) textValue
     , color if isLink then Color.blue900 else Color.black700
+    , accessibilityImportance $ if enableAccessibilityHint then ENABLE else DISABLE
+    , accessibilityHint accessibilityText
     , onClick (\action -> do
                 when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                 pure unit
@@ -219,8 +221,9 @@ enterOTPView state lang push =
           , height WRAP_CONTENT
           , text (getString RESEND)
           , clickable state.props.resendEnable
-          , clickable state.props.resendEnable
           , color Color.blue900
+          , accessibilityImportance ENABLE
+          , accessibilityHint if state.props.resendEnable then "Resend Button" else ("Resend in " <> show state.data.timer <> "seconds")
           , onClick push (const Resend)
           ] <> FontStyle.body9 TypoGraphy
         , linearLayout
@@ -234,6 +237,7 @@ enterOTPView state lang push =
         , height WRAP_CONTENT
         , text if lang == "HI_IN" then ("  "<> show state.data.timer <> "s  "<> getString IN) else ("  " <> getString IN <> "  "<> show state.data.timer <> "  s")
         , color Color.blue900
+        , accessibilityImportance DISABLE
         , visibility if state.props.resendEnable then GONE else VISIBLE
         ] <> FontStyle.body9 TypoGraphy]
     , linearLayout

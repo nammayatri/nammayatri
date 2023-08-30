@@ -36,14 +36,14 @@ import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
-import Prelude (Unit, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard, show)
+import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
-import Data.String (Pattern(..), Replacement(..), replaceAll)
+import Data.String (replaceAll, Pattern(..), Replacement(..))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -51,11 +51,13 @@ view push state =
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
+  , accessibilityImportance DISABLE
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
+       , accessibilityImportance DISABLE
       , clickable true
       ][ quoteListTopSheetView state push
         , selectRideAndConfirmView state push
@@ -91,6 +93,7 @@ paymentView state =
           , width MATCH_PARENT
           , visibility if state.showProgress then VISIBLE else GONE
           , accessibilityHint "Booking Status: Looking for rides"
+          , accessibilityImportance ENABLE
           ]
     , linearLayout
         [ background Color.grey900
@@ -112,6 +115,7 @@ paymentView state =
           , width imageData.width
           , accessibilityImportance DISABLE
           , margin $ MarginRight 8
+          , accessibilityImportance DISABLE 
           ]
         , textView $
           [ width WRAP_CONTENT
@@ -119,7 +123,8 @@ paymentView state =
           , text $ if (getPaymentMethod unit) == "cash" then (getString PAY_DRIVER_USING_CASH_OR_UPI) else (getString PAY_DRIVER_USING_WALLET)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
-          , accessibilityHint "Payment Method Cash or U  P  I"
+          , accessibilityHint "Payment Method Cash or UPI"
+          , accessibilityImportance ENABLE
           ] <> FontStyle.body1 TypoGraphy
         ]
     ]
@@ -184,7 +189,7 @@ sourceDestinationView state push =
         , text state.source
         , accessibilityImportance ENABLE
         , color state.appConfig.quoteListModel.textColor
-        , accessibilityHint $ "Pickup Location is " <> (replaceAll (Pattern ",") (Replacement " ") state.source)
+        , accessibilityHint $ "Pickup Location is " <> (replaceAll (Pattern ",") (Replacement " : ") state.source)
         , ellipsize true
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
@@ -207,7 +212,7 @@ sourceDestinationView state push =
         , text state.destination
         , margin $ MarginLeft 12
         , color state.appConfig.quoteListModel.textColor
-        , accessibilityHint $ "Drop Location is " <>  (replaceAll (Pattern ",") (Replacement " ") state.destination)
+        , accessibilityHint $ "Destination Location is " <>  (replaceAll (Pattern ",") (Replacement " : ") state.destination)
         , accessibilityImportance ENABLE
         , ellipsize true
         , singleLine true
@@ -223,6 +228,7 @@ quotesView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , visibility VISIBLE
+    , accessibilityImportance DISABLE
     ][  quoteListView state push
       , noQuotesErrorModel state
       , findingRidesView state push
@@ -287,6 +293,7 @@ addTipView state push =
     , orientation VERTICAL
     , height WRAP_CONTENT
     , visibility if state.tipViewProps.isVisible then VISIBLE else GONE
+    , accessibilityImportance DISABLE
     ]
     [
       linearLayout
@@ -298,8 +305,7 @@ addTipView state push =
         , margin $ MarginHorizontal 16 16
         , cornerRadius 12.0
         , padding $ Padding 20 16 20 16
-        , accessibilityImportance ENABLE
-        , accessibilityHint if state.tipViewProps.onlyPrimaryText then state.tipViewProps.primaryText else "Label It seems to be taking longer than usual. you can add a tip to find a ride quicker"
+        , accessibilityImportance DISABLE
         ]
         [
           textView
@@ -310,6 +316,7 @@ addTipView state push =
           , gravity CENTER
           , textSize $ FontSize.a_12
           , accessibilityImportance ENABLE
+          , accessibilityHint state.tipViewProps.secondaryText
           , fontStyle $ FontStyle.regular LanguageStyle
           , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
           ]
@@ -320,6 +327,7 @@ addTipView state push =
           , color Color.black800
           , gravity CENTER
           , accessibilityImportance ENABLE
+          , accessibilityHint state.tipViewProps.primaryText
           , textSize $ FontSize.a_14
           , fontStyle $ FontStyle.bold LanguageStyle
           ]
@@ -345,10 +353,9 @@ addTipView state push =
                         , width WRAP_CONTENT
                         , height WRAP_CONTENT
                         , accessibilityImportance ENABLE
-                        , accessibilityHint $ item <> " Selector, Select to confirm amount"
                         , padding (Padding 20 10 20 10)
+                        , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " Button")
                         , fontStyle $ FontStyle.bold LanguageStyle
-                        , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index))
                         , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index))
                         , background $ if state.tipViewProps.activeIndex == index then Color.blue600 else Color.white900
                         ]
@@ -462,6 +469,7 @@ quoteListTopSheetView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , background state.appConfig.quoteListModel.backgroundColor
+      , accessibilityImportance DISABLE
       , padding $ PaddingTop safeMarginTop
       ][  linearLayout
           [ height WRAP_CONTENT
@@ -478,6 +486,7 @@ quoteListTopSheetView state push =
                   , width $ V 40
                   , onClick push $ const GoBack
                   , accessibilityHint "Cancel Search Button"
+                  , accessibilityImportance ENABLE
                   ][  imageView
                       [ height $ V 24
                       , width $ V 24

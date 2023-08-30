@@ -41,7 +41,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
@@ -100,13 +100,14 @@ view push state =
                   , width $ V 35
                   , onClick push (const GoBack)
                   , disableClickFeedback true
-                  , accessibilityHint "Back Button"
                   , margin (Margin 16 10 16 0)
                   , gravity CENTER
                   ]
                   [ imageView
                       [ height $ V 25
                       , width $ V 25
+                      , accessibilityHint "Back Button"
+                      , accessibilityImportance ENABLE
                       , imageWithFallback state.homeScreenConfig.searchLocationConfig.backArrow
                       ]
                   ]
@@ -233,13 +234,7 @@ sourceDestinationEditTextView state push =
     , orientation VERTICAL
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 15 15 0)
     , height $ V 136
-    , afterRender (\action -> do
-      _ <- requestKeyboardShow case state.isSource of
-                                Just true  -> (getNewIDWithTag "SourceEditText")
-                                Just false -> (getNewIDWithTag "DestinationEditText")
-                                Nothing    -> ""
-      pure unit
-      ) (const NoAction)
+  
     ][linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -258,10 +253,18 @@ sourceDestinationEditTextView state push =
             , padding (Padding 5 0 5 0)
             , lineHeight "24"
             , cursorColor state.homeScreenConfig.primaryBackground
+            , accessibilityHint "Pickup Location Editable field"
             , hint (getString START_)
             , hintColor "#A7A7A7"
             , id $ getNewIDWithTag "SourceEditText"
-            , accessibilityHint "Pickup Location Editable field"
+            , afterRender (\action -> do
+                  _ <- pure $ requestKeyboardShow case state.isSource of
+                                            Just true  -> (getNewIDWithTag "SourceEditText")
+                                            Just false -> (getNewIDWithTag "DestinationEditText")
+                                            Nothing    -> ""
+                  pure unit
+                    ) (const NoAction)
+            -- , accessibilityImportance if state.isSource == Just false then DISABLE else ENABLE
             , onChange
                 ( \action -> do
                     _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
@@ -284,6 +287,7 @@ sourceDestinationEditTextView state push =
                         pure unit
                       )(const $ SourceClear)
             , accessibilityHint "Clear Source Text Button"
+            , accessibilityImportance ENABLE
             , visibility if state.source /= "" then VISIBLE else GONE
             ]
             [ imageView
@@ -327,7 +331,15 @@ sourceDestinationEditTextView state push =
               , hintColor "#A7A7A7"
               , singleLine true
               , ellipsize true
-              , accessibilityHint "Drop Location Editable field"
+              , afterRender (\action -> do
+                  _ <- pure $ requestKeyboardShow case state.isSource of
+                                            Just true  -> (getNewIDWithTag "SourceEditText")
+                                            Just false -> (getNewIDWithTag "DestinationEditText")
+                                            Nothing    -> ""
+                  pure unit
+                    ) (const NoAction)
+              -- , accessibilityImportance if state.isSource == Just true then DISABLE else ENABLE
+              , accessibilityHint "Destination Location Editable field"
               , cursorColor state.homeScreenConfig.primaryBackground
               , id $ getNewIDWithTag "DestinationEditText"
               , onChange
@@ -351,6 +363,7 @@ sourceDestinationEditTextView state push =
             , visibility if state.destination /= "" then VISIBLE else GONE
             , onClick push (const $ DestinationClear)
             , accessibilityHint "Clear Destination Text Button"
+            , accessibilityImportance ENABLE
             ]
             [ imageView
                 [ height $ V 16
@@ -433,6 +446,7 @@ savedLocationBar state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , margin $ MarginBottom 10
+  , accessibilityImportance DISABLE_DESCENDANT
   , visibility if state.homeScreenConfig.searchLocationConfig.enableLocationTagbar == "true" then VISIBLE else GONE
   ][ linearLayout
      [ width MATCH_PARENT
@@ -487,6 +501,7 @@ bottomBtnsView state push =
     , padding (PaddingBottom if os == "IOS" then 10 else 0)
     , alignParentBottom "true,-1"
     , background Color.white900
+    , accessibilityImportance DISABLE_DESCENDANT
     , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE
     , adjustViewWithKeyboard "true"
     ][  linearLayout

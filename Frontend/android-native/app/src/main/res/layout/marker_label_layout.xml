@@ -44,7 +44,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ny_ic_dest_marker"
-            android:importantForAccessibility="no"
+            android:importantForAccessibility="noHideDescendants"
             android:accessibilityHeading="false"
             android:clickable="false"
             android:id="@+id/pointer_img" />
