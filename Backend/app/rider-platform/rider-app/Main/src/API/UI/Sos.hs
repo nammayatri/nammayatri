@@ -64,7 +64,7 @@ createSosDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> F
 createSosDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId merchantId
 
 updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
-updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId
+updateSosDetails sosId (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId (personId, merchantId)
 
 addSosVideo :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler APISuccess.APISuccess
 addSosVideo sosId (personId, _merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.addSosVideo sosId personId

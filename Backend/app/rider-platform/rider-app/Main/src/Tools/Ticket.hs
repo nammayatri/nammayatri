@@ -14,6 +14,7 @@
 
 module Tools.Ticket
   ( createTicket,
+    updateTicket,
   )
 where
 
@@ -31,6 +32,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 
 createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Ticket.CreateTicketReq -> m Ticket.CreateTicketResp
 createTicket = runWithServiceConfig TI.createTicket
+
+updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
+updateTicket = runWithServiceConfig TI.updateTicket
 
 runWithServiceConfig ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

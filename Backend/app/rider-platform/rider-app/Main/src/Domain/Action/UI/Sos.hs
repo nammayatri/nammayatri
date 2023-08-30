@@ -82,7 +82,7 @@ import qualified Storage.Queries.SosMedia as SQSM
 import qualified Text.Read as Read
 import Tools.Error
 import Tools.SMS as Sms
-import Tools.Ticket
+import Tools.Ticket as Ticket
 
 -- import Kernel.External.Ticket.Kapture.Types (IssueDetails(IssueDetails))
 -- import Domain.Action.UI.Profile (getDefaultEmergencyNumbers)
@@ -123,8 +123,9 @@ instance ToMultipart Tmp SOSVideoUploadReq where
       [Input "fileType" (show sosVideoUploadReq.fileType)]
       [FileData "video" (T.pack sosVideoUploadReq.video) "" (sosVideoUploadReq.video)]
 
-newtype SosFeedbackReq = SosFeedbackReq
-  { status :: DSos.SosStatus
+data SosFeedbackReq = SosFeedbackReq
+  { status :: DSos.SosStatus,
+    comment :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -156,7 +157,7 @@ createSosDetails personId merchantId req = do
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound req.rideId.getId)
   toLocation <- case booking.bookingDetails of
     OneWayDetails bDetails -> pure $ mkAddressEntity bDetails.toLocation.address
-    RentalDetails _ -> pure $ ""
+    RentalDetails _ -> pure ""
     DriverOfferDetails bDetails -> pure $ mkAddressEntity bDetails.toLocation.address
     OneWaySpecialZoneDetails bDetails -> pure $ mkAddressEntity bDetails.toLocation.address
 
@@ -212,13 +213,15 @@ createSosDetails personId merchantId req = do
               addField addr.area "Area"
             ]
 
-updateSosDetails :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r) => Id DSos.Sos -> Id Person.Person -> SosFeedbackReq -> m APISuccess.APISuccess
-updateSosDetails sosId personId req = do
+updateSosDetails :: -- (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  Id DSos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> SosFeedbackReq -> Flow APISuccess.APISuccess
+updateSosDetails sosId (personId, merchantId) req = do
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
 
   unless (personId == sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
 
   void $ QSos.updateStatus sosId (req.status)
+  _ <- Ticket.updateTicket merchantId (Ticket.UpdateTicketReq req.comment sosId.getId "" (show req.status) "" "" "")
   pure APISuccess.Success
 
 buildSosDetails :: (EncFlow m r) => Id Person.Person -> SosReq -> m DSos.Sos
@@ -252,6 +255,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
+      _ <- Ticket.updateTicket person.merchantId (Ticket.UpdateTicketReq fileUrl sosId.getId "" "PENDING" "" "" "")
       createMediaEntry sosId Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
     validateContentType = do
@@ -351,19 +355,19 @@ mkTicket person phoneNumber trackingUrl info = do
     }
 
 markRideAsSafe ::
-  ( EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EncFlow m r,
-    CacheFlow m r
-  ) =>
+  -- ( EsqDBReplicaFlow m r,
+  --   EsqDBFlow m r,
+  --   HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+  --   EncFlow m r,
+  --   CacheFlow m r
+  -- ) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Id DSos.Sos ->
-  m APISuccess.APISuccess
-markRideAsSafe (personId, merchantId) _sosId = do
+  Flow APISuccess.APISuccess
+markRideAsSafe (personId, merchantId) sosId = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   smsCfg <- asks (.smsCfg)
-  -- updateTicket
+  _ <- Ticket.updateTicket merchantId (Ticket.UpdateTicketReq "Mark Ride as Safe" sosId.getId "" "PENDING" "" "" "")
   emergencyContacts <- getDefaultEmergencyNumbers (personId, merchantId)
   let sender = smsCfg.sender
   withLogTag ("perosnId" <> getId personId) $ do
