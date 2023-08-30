@@ -77,6 +77,7 @@ type EditTextConfig =
   , textStyle :: Style
   , separatorRepeat :: String
   , separator :: String
+  , accessibilityHint :: String
   }
 
 type TextConfig =
@@ -121,6 +122,7 @@ config = {
     , focused : false
     , separatorRepeat : ""
     , separator : ""
+    , accessibilityHint : ""
     }
   , visibility : VISIBLE
   , background : Color.white900

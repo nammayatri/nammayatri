@@ -58,6 +58,7 @@ type TextConfig =
   , margin :: Margin
   , color :: String
   , textStyle :: Style
+  , accessibilityHint :: String
   }
 
 config :: Config
@@ -85,6 +86,7 @@ config = {
     , textStyle : Heading3
     , margin : (Margin 0 0 0 0)
     , color : Color.black800
+    , accessibilityHint : ""
     }
   , suffixImageConfig : {
       height : V 25
@@ -124,6 +126,7 @@ merchantConfig = {
     , textStyle : Heading0
     , margin : (Margin 16 0 16 10)
     , color : "#101010"
+    , accessibilityHint : ""
     }
   , suffixImageConfig : {
       height : V 25

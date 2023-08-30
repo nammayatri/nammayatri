@@ -34,7 +34,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, accessibilityImportance, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width, accessibilityHint)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
@@ -62,6 +62,8 @@ view push state =
     , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
     , gravity CENTER_HORIZONTAL
     , afterRender push (const AfterRender)
+    , accessibilityImportance ENABLE
+    , accessibilityHint $ "App Version : " <>  (getValueToLocalStore VERSION_NAME) <> " Bundle Version : " <> (getValueToLocalStore BUNDLE_VERSION)
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , if (not state.appConfig.nyBrandingVisibility) then
                   linearLayout
@@ -192,6 +194,7 @@ bottomLinksView state =
           , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
           , color "#354052"
           , margin (Margin 0 20 0 10)
+          , accessibilityImportance DISABLE
           ]
         <> FontStyle.body6 LanguageStyle
     ]

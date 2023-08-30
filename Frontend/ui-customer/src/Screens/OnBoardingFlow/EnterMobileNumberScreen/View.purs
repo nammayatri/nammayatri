@@ -41,7 +41,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width, textFromHtml, accessibilityImportance, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -140,8 +140,8 @@ enterMobileNumberView  state lang push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin (Margin 11 0 0 10)
-        ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false
-        , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
+        ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false false "" 
+        , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true $ (getString BY_TAPPING_CONTINUE) <> " Terms & Conditions Button"
           ]
     , PrestoAnim.animationSet
       [ Anim.fadeIn $ not state.props.enterOTP
@@ -153,13 +153,15 @@ enterMobileNumberView  state lang push =
         ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
     ]
 
-commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
-commonTextView state textValue isLink link push isTextFromHtml=
+commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> Boolean -> Boolean -> String -> forall w . PrestoDOM (Effect Unit) w
+commonTextView state textValue isLink link push isTextFromHtml enableAccessibilityHint accessibilityText =
   textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , (if isTextFromHtml then textFromHtml else text) textValue
     , color if isLink then Color.blue900 else Color.black700
+    , accessibilityImportance $ if enableAccessibilityHint then ENABLE else DISABLE
+    , accessibilityHint accessibilityText
     , onClick (\action -> do
                 when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                 pure unit

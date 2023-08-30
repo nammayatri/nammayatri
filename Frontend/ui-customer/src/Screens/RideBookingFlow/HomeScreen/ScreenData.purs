@@ -27,6 +27,7 @@ import Prelude(negate)
 import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import PrestoDOM (BottomSheetState(..))
 
 initData :: HomeScreenState
 initData = {
@@ -213,6 +214,7 @@ initData = {
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
+    , sheetState : COLLAPSED
     }
 }
 

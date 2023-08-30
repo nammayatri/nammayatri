@@ -114,6 +114,7 @@ callConfirmationPopup state = let
       primaryText {
           text = (getString CONTACT_SUPPORT)
       , margin = (Margin 0 20 0 20)
+      , accessibilityHint = "Do you wish to contact support?"
         },
       secondaryText {
         visibility = GONE

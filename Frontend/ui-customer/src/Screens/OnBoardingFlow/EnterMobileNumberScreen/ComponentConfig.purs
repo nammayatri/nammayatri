@@ -32,6 +32,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Storage(getValueToLocalStore, KeyStore(..))
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
@@ -39,6 +40,7 @@ mobileNumberButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = (getString CONTINUE) 
                   ,  color = state.data.config.primaryTextColor 
+                  , accessibilityHint = "Continue Button"
                   }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActiveMobileNumber
@@ -54,7 +56,8 @@ verifyOTPButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = (getString CONTINUE) 
-                  , color = state.data.config.primaryTextColor }
+                  , color = state.data.config.primaryTextColor
+                  , accessibilityHint = "Continue Button" }
       , id = "PrimaryButtonOTP"
       , isClickable = state.props.btnActiveOTP
       , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
@@ -76,6 +79,7 @@ mobileNumberEditTextConfig state = let
           , margin = MarginHorizontal 10 10
           , focused = state.props.mNumberEdtFocused
           , text = state.props.editTextVal
+          , placeholder = "Enter your Mobile Number"
         }
       , background = Color.white900
       , topLabel
@@ -119,7 +123,7 @@ otpEditTextConfig state = let
       , background = Color.white900
       , margin = (Margin 0 30 0 20)
       , topLabel
-        { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> state.data.mobileNumber
+        { text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> (getValueToLocalStore MOBILE_NUMBER)
         , color = Color.black800
         , alpha = 0.8
         } 

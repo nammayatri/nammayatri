@@ -35,6 +35,7 @@ data Action = NoAction
             | OnNavigate
             | RemoveNotification
             | CallDriver
+            | ExpandBottomSheet
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

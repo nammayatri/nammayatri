@@ -322,11 +322,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         path.add(tempPoint);
                     }
                     Marker currMarker = (Marker) markers.get("ny_ic_vehicle_nav_on_map");
+                    currMarker.setTitle("Vehicle Icon On Map");
                     Marker destMarker = (Marker) markers.get(dest);
+                    destMarker.setTitle("Driver is " + eta);
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
 
                     destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon))));
+
                     if (polyline != null) {
                         polyline.setEndCap(new ButtCap());
                         if (path.size() == 0) {
@@ -465,7 +468,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     polyStyle.setStrokeColor(Color.BLUE);
                     if (locationName.length() > 0) {
                         if (userPositionMarker == null) {
-                            upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f, "current location marker"); //TODO this function will be removed
+                            upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
                         } else {
                             userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null)));
                             userPositionMarker.setTitle("");

@@ -26,7 +26,7 @@ import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
-import PrestoDOM (LetterSpacing)
+import PrestoDOM (LetterSpacing, BottomSheetState(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
@@ -657,6 +657,7 @@ type HomeScreenStateProps =
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
+  , sheetState :: BottomSheetState
   }
 
 type RouteEndPoints = {

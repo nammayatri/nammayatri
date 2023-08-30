@@ -83,7 +83,8 @@ type TextConfig = {
   padding :: Padding,
   margin :: Margin,
   visibility :: Visibility,
-  textStyle :: Style
+  textStyle :: Style,
+  accessibilityHint :: String
 }
 type ButtonConfig = {
   background :: String,
@@ -145,7 +146,8 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 0),
       visibility : VISIBLE,
-      textStyle : Heading2
+      textStyle : Heading2,
+      accessibilityHint : ""
     }
   , secondaryText : {
       text : "Text2",
@@ -154,7 +156,8 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       visibility : VISIBLE,
-      textStyle : ParagraphText
+      textStyle : ParagraphText,
+      accessibilityHint : ""
     }
   , tipButton: {
      background : Color.white900

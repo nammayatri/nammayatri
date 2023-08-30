@@ -44,6 +44,7 @@ primaryButtonConfigSubmit state = let
       { textConfig
         { text = (getString SUBMIT)
         , color = state.data.config.primaryTextColor
+        , accessibilityHint = if state.props.btnActive then "Submit Button" else "Submit Button Is Disabled"
         }
       , cornerRadius = 0.0
       , background = state.data.config.primaryBackground
@@ -124,6 +125,7 @@ primaryEditTextConfig state = let
         , pattern = Just "[a-zA-Z0-9 ]*,100"
         , padding = (Padding 0 0 0 0)
         , singleLine = false
+        , accessibilityHint = "For example Actual fare was higher than what was shown"
         }
       , height = (V 54)
       , margin = (Margin 10 32 10 0)
