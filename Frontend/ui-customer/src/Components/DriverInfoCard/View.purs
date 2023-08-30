@@ -953,7 +953,7 @@ paymentMethodView push state title shouldShowIcon =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , accessibilityHint $ "Ride Fare : " <> show state.data.price  <> " Rupees" <> " : Pick Up Location is " <> state.data.source <> " : Destination Location is " <> state.data.destination <> " : Ride Distacnce is : " <> state.data.estimatedDistance <> " Km"
+  , accessibilityHint $ "Ride Fare : " <> show state.data.price  <> " Rupees" <> " : Pick Up Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.source) <> " : Destination Location is " <> (replaceAll (Pattern ",") (Replacement ":") state.data.destination) <> " : Ride Distacnce is : " <> state.data.estimatedDistance <> " Km"
   , accessibilityImportance ENABLE
   ][  linearLayout
       [ orientation VERTICAL

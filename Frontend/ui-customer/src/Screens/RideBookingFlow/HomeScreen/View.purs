@@ -279,6 +279,7 @@ view push state =
                     , width MATCH_PARENT
                     , accessibilityImportance if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && not ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))  then DISABLE else DISABLE_DESCENDANT
                     , clickable false
+                    , accessibilityHint $ show state.props.currentStage
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []
@@ -912,7 +913,7 @@ homeScreenTopIconView push state =
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
                     , accessibilityImportance if state.props.emergencyHelpModal || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
-                    , accessibilityHint "Menu Button"
+                    , accessibilityHint "Home Screen : Menu Button"
                     ]
                 ]
             , linearLayout
@@ -1046,7 +1047,7 @@ rateExperienceView state push =
           ][imageView
               [ height $ V 30
               , width $ V 30
-              , accessibilityHint (show item <> "star" )
+              , accessibilityHint $ (show item <> "star" ) <> if item <= state.data.ratingViewState.selectedRating then " : Selected " else " : Un Selected "
               , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
               , imageWithFallback if item <= state.data.ratingViewState.selectedRating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
                                       else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
@@ -1221,6 +1222,8 @@ rideCompletedCardView state push =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , accessibilityHint "Ride Completed"
+      , accessibilityImportance ENABLE
       ][ completedRideDetails state push
       , issueFacedAndRateView state push
       ]
@@ -2425,7 +2428,7 @@ currentLocationView push state =
             , cornerRadius 5.0
             , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
             , accessibilityImportance ENABLE
-            , accessibilityHint $ "Pickup Location is " <> state.data.source
+            , accessibilityHint $ "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " : ") state.data.source)
             ]
             [ imageView
                 [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
