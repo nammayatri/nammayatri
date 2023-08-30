@@ -229,9 +229,9 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
   console.log("onEvent Payload", jsonPayload);
   if ((JSON.parse(jsonPayload)).event == "initiate_result"){
     window.isPPInitiated = true;
-    if (window.ppInitiateCallback) {
-      window.ppInitiateCallback()();
-    }
+    // if (window.ppInitiateCallback) { TODO fix the red screen in PP
+    //   window.ppInitiateCallback()();
+    // }
   }
 }
 
