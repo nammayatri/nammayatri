@@ -322,11 +322,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         path.add(tempPoint);
                     }
                     Marker currMarker = (Marker) markers.get("ny_ic_vehicle_nav_on_map");
+                    currMarker.setTitle("Vehicle Icon On Map");
                     Marker destMarker = (Marker) markers.get(dest);
+                    destMarker.setTitle("Driver is " + eta);
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
 
                     destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon))));
+
                     if (polyline != null) {
                         polyline.setEndCap(new ButtCap());
                         if (path.size() == 0) {

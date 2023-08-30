@@ -20,7 +20,7 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Padding(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Padding(..), Accessiblity(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, accessibilityHint, accessibilityImportance)
 import Common.Types.App
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -56,6 +56,8 @@ titleView config =
     , text config.titleConfig.text
     , color if config.isSelected then Color.black900 else config.titleConfig.color
     , gravity LEFT
+    , accessibilityHint $ config.accessibilityHint <>( if config.isSelected then " : Selected" else " : Un Selected")
+    , accessibilityImportance ENABLE
     , singleLine config.titleConfig.singleLine
     , lineHeight "24"
     , visibility config.titleConfig.visibility
@@ -72,6 +74,7 @@ subTitleView config =
     , color config.subTitleConfig.color
     , gravity LEFT
     , lineHeight "23"
+    , accessibilityImportance DISABLE
     , singleLine config.subTitleConfig.singleLine
     , visibility if config.subTitleConfig.text /= "" then VISIBLE else GONE
     ] <> (FontStyle.getFontStyle config.subTitleConfig.selectedTextStyle LanguageStyle)
