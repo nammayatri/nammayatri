@@ -739,7 +739,11 @@ export const initiatePP = function () {
   }
   if (JOS) {
     try {
-      JOS.startApp("in.juspay.hyperpay")(window.__payload)(cb)();
+      var innerPayload = window.__payload.payload;
+      var initiatePayload = window.__payload;
+      innerPayload["action"] = "initiate";
+      initiatePayload["payload"] = innerPayload;
+      JOS.startApp("in.juspay.hyperpay")(initiatePayload)(cb)();
     } catch (err) {
       console.error("Hyperpay initiate Request not sent : ", err);
     }
