@@ -358,7 +358,8 @@ data DriverStatsRes = DriverStatsRes
 data DriverPhotoUploadReq = DriverPhotoUploadReq
   { image :: FilePath,
     fileType :: Common.FileType,
-    reqContentType :: Text
+    reqContentType :: Text,
+    brisqueFeatures :: [Double]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -369,6 +370,7 @@ instance FromMultipart Tmp DriverPhotoUploadReq where
       <$> fmap fdPayload (lookupFile "image" form)
       <*> (lookupInput "fileType" form >>= (Read.readEither . T.unpack))
       <*> fmap fdFileCType (lookupFile "image" form)
+      <*> (lookupInput "brisqueFeatures" form >>= (Read.readEither . T.unpack))
 
 instance ToMultipart Tmp DriverPhotoUploadReq where
   toMultipart driverPhotoUploadReq =
@@ -1086,7 +1088,7 @@ driverPhotoUpload (driverId, merchantId) DriverPhotoUploadReq {..} = do
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
   encImage <- L.runIO $ base64Encode <$> BS.readFile image
   imageExtension <- validateContentType
-  let req = IF.FaceValidationReq {file = encImage}
+  let req = IF.FaceValidationReq {file = encImage, brisqueFeatures}
   _ <- validateFaceImage merchantId req
   filePath <- createFilePath (getId driverId) fileType imageExtension
   transporterConfig <- CQTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
