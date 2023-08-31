@@ -39,11 +39,12 @@ type PlanData = {
 
 getMultiLanguagePlanData :: Boolean -> PlanData -> PlanData
 getMultiLanguagePlanData isLocalized planData = do
+    let dailyUnlimited = getString DAILY_UNLIMITED
     if isLocalized then planData
     else do
-        case planData.title of 
-            "DAILY UNLIMITED" ->  {title : getString DAILY_UNLIMITED, description : getString DAILY_UNLIMITED_PLAN_DESC}
-            _                 ->  {title : getString DAILY_PER_RIDE, description : getString DAILY_PER_RIDE_PLAN_DESC} 
+        if planData.title ==  dailyUnlimited 
+            then {title : getString DAILY_UNLIMITED, description : getString DAILY_UNLIMITED_PLAN_DESC}
+            else {title : getString DAILY_PER_RIDE, description : getString DAILY_PER_RIDE_PLAN_DESC} 
 
 getPromoConfig :: Array OfferEntity -> Array PromoConfig
 getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {     
@@ -58,7 +59,7 @@ getPromoConfig offerEntityArr = (map (\ (OfferEntity item) ->  {
 
 myPlanListTransformer :: PlanEntity -> Maybe Boolean -> PlanCardConfig
 myPlanListTransformer planEntity isLocalized' = do 
-    let isLocalized = fromMaybe false isLocalized' 
+    let isLocalized = fromMaybe false isLocalized'
     getPlanCardConfig planEntity isLocalized
 
 
@@ -66,7 +67,7 @@ myPlanListTransformer planEntity isLocalized' = do
 planListTransformer :: UiPlansResp -> Array PlanCardConfig
 planListTransformer (UiPlansResp planResp) =
     let planEntityArray = planResp.list
-        plansplit = DA.partition (\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray
+        plansplit = DA.partition (\(PlanEntity item) -> item.name == getString DAILY_UNLIMITED) planEntityArray
         sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
         isLocalized = fromMaybe false planResp.isLocalized 
     in map (\ planEntity -> getPlanCardConfig planEntity isLocalized ) sortedPlanEntityList
@@ -163,7 +164,7 @@ getFrequencyText constructor =
 getSelectedId :: UiPlansResp -> Maybe String
 getSelectedId (UiPlansResp planResp) = do
     let planEntityArray = planResp.list
-    let dailyPerRidePlan = (DA.find(\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray)
+    let dailyPerRidePlan = (DA.find(\(PlanEntity item) -> item.name == getString DAILY_UNLIMITED) planEntityArray)
     case dailyPerRidePlan of 
         Just (PlanEntity plan) -> Just plan.id
         Nothing -> Nothing
@@ -171,7 +172,7 @@ getSelectedId (UiPlansResp planResp) = do
 getSelectedPlan :: UiPlansResp -> Maybe PlanCardConfig
 getSelectedPlan (UiPlansResp planResp) = do
     let planEntityArray = planResp.list
-        planEntity' = (DA.find(\(PlanEntity item) -> item.name == "DAILY UNLIMITED") planEntityArray)
+        planEntity' = (DA.find(\(PlanEntity item) -> item.name == getString DAILY_UNLIMITED) planEntityArray)
     case planEntity' of 
         Just entity  -> let (PlanEntity planEntity) = entity
                             isLocalized = fromMaybe false planResp.isLocalized
@@ -187,9 +188,9 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized =
             title : planData.title ,
             description : planData.description ,
             isSelected : false ,
-            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig Language] else if (planEntity.name == "DAILY PER RIDE") then [noChargesOfferConfig Language] else []) <> getPromoConfig planEntity.offers ,
+            offers : (if planEntity.freeRideCount > 0 then [freeRideOfferConfig Language] else if (planEntity.name == getString DAILY_PER_RIDE) then [noChargesOfferConfig Language] else []) <> getPromoConfig planEntity.offers ,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
             freeRideCount : planEntity.freeRideCount,
-            showOffer : planEntity.name /= "DAILY PER RIDE"
+            showOffer : planEntity.name /= getString DAILY_PER_RIDE
         }
