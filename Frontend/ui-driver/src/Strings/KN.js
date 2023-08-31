@@ -708,7 +708,7 @@ const kannadaStrings = {
   YARLY : "ವಾರ್ಷಿಕ",
   ASPRESENTED: "ಯಾವಾಗ ಪ್ರಸ್ತುತಪಡಿಸಿದರೂ",
   FIRST_FREE_RIDE : "ಮೊದಲ ಉಚಿತ ಸವಾರಿ",
-  DAILY_PER_RIDE_DESC : "ಆಗಸ್ಟ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕವಿಲ್ಲ",
+  DAILY_PER_RIDE_DESC : "ಸೆಪ್ಟೆಂಬರ್ 19 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕವಿಲ್ಲ",
   FIRST_FREE_RIDE : "ಮೊದಲ ಉಚಿತ ಸವಾರಿ",
   JOIN_THE_UNLIMITED_PLAN : "ಈಗಲೇ ₹5/ದಿನಕ್ಕೆ UNLIMITED ಯೋಜನೆಗೆ ಸೇರಿ ಮತ್ತು 96% ಉಳಿಸಿ!!",
   MAYBE_LATER : "ಬಹುಶಃ ನಂತರ",

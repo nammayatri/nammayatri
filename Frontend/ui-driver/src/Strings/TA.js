@@ -706,7 +706,7 @@ const tamilStrings = {
   YEARLY : "ஆண்டு",
   ASPRESENTED : "எப்போது வழங்கினாலும்",
   FIRST_FREE_RIDE : "முதல் இலவச சவாரி",
-  DAILY_PER_RIDE_DESC : "ஆகஸ்ட் 31 வரை கட்டணம் இல்லை",
+  DAILY_PER_RIDE_DESC : "செப்டம்பர் 19 வரை கட்டணம் இல்லை",
   FIRST_FREE_RIDE : "முதல் இலவச சவாரி",
   JOIN_THE_UNLIMITED_PLAN : "ஒரு நாளைக்கு ₹5 கட்டணத்தில் UNLIMITED திட்டத்தில் சேர்ந்து 96% சேமிக்கவும்!!",
   MAYBE_LATER : "ஒருவேளை பின்னர்",

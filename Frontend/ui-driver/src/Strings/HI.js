@@ -737,7 +737,7 @@ const hindiStrings = {
   YEARLY : "वार्षिक",
   ASPRESENTED: "जब भी प्रस्तुत किया जाए",
   FIRST_FREE_RIDE : "पहली मुफ़्त सवारी",
-  DAILY_PER_RIDE_DESC : "31 अगस्त तक कोई शुल्क नहीं",
+  DAILY_PER_RIDE_DESC : "19 सितम्बर तक कोई शुल्क नहीं",
   FIRST_FREE_RIDE : "पहली मुफ़्त सवारी",
   JOIN_THE_UNLIMITED_PLAN : "अभी ₹5/दिन पर अनलिमिटेड प्लान से जुड़ें और 96% बचाएं!!",
   MAYBE_LATER : "शायद बाद में",

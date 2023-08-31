@@ -296,7 +296,7 @@ optionsMenuConfig state =
     {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : state.props.subView == ST.MyPlan},
     {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : false},
     {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible : true},
-    {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true},
+    -- {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true}, -- TODO:: Removed for some time
     {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : true}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,

@@ -431,6 +431,12 @@ green200 = "#2053BB6F"
 green600 :: Color
 green600 = "#269574"
 
+greenDull :: Color
+greenDull = "#5FAF9E"
+
+greenDisabled :: Color
+greenDisabled = "#B2D6D5"
+
 transparentWhite :: Color
 transparentWhite = "#30FFFFFF"
 
