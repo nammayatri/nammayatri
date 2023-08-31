@@ -45,6 +45,7 @@ testInterpolationHandler batchSize =
       clearLocationUpdates = clearLocationUpdatesImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
+      getAllWaypoints = getAllWaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
       addInterpolatedPoints = addInterpolatedPointsImplementation,
       clearInterpolatedPoints = clearInterpolatedPointsImplementation,
@@ -157,7 +158,7 @@ processPointsGroup ih driverId pointsGroup = do
   pointsBefore <- run $ ih.getWaypointsNumber driverId
   let currentLength = fromIntegral $ length pointsGroup :: Integer
 
-  run $ processWaypoints ih driverId False $ NE.fromList pointsGroup
+  run $ processWaypoints ih driverId False 0 True $ NE.fromList pointsGroup
 
   distanceAfter <- run $ checkTraveledDistance driverId
   pointsAfter <- run $ ih.getWaypointsNumber driverId
