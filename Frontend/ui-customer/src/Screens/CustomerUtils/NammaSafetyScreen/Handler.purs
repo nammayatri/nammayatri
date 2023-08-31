@@ -15,28 +15,51 @@
 
 module Screens.NammaSafetyScreen.Handler where
 
+import Components.NewContact.View as NewContact
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
+import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.Commons (liftFlow)
+import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), pure, (<$>))
+import PrestoDOM (getPushFn)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.List as PrestoList
 import Screens.NammaSafetyScreen.Controller (ScreenOutput(..))
 import Screens.NammaSafetyScreen.View as NammaSafetyScreen
-import Types.App (GlobalState(..), FlowBT, ScreenType(..),defaultGlobalState)
-import ModifyScreenState (modifyScreenState)
+import Screens.Types (NewContacts)
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), defaultGlobalState)
 
 
 nammaSafetyScreen ::FlowBT String ScreenOutput
 nammaSafetyScreen = do
   (GlobalState state') <- getState
   let (GlobalState defaultGlobalState') = defaultGlobalState
-  act <- lift $ lift $ runScreen $ NammaSafetyScreen.screen state'.nammaSafetyScreen
+  push <- lift $ lift $ liftFlow $ getPushFn Nothing "NammaSafetyScreen"
+  listItemm <- lift $ lift $ PrestoList.preComputeListItem $ NewContact.view push listItem1
+  act <- lift $ lift $ runScreen $ NammaSafetyScreen.screen state'.nammaSafetyScreen listItemm
   case act of
     GoBack -> do
-                    _ <- pure $ spy "calll" ""
-                    -- modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyOnBoard ->  state{ data { showOnboarding = true }})
-                    App.BackT  $ App.BackPoint <$> pure act
+      _ <- pure $ spy "calll" ""
+      -- modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyOnBoard ->  state{ data { showOnboarding = true }})
+      App.BackT  $ App.NoBack <$> pure act
+    PostContacts updatedState -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> updatedState)
+      App.BackT $ App.NoBack <$> pure act
+    GetContacts updatedState -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> updatedState)
+      App.BackT $ App.NoBack <$> pure act
+    Refresh updatedState -> App.BackT $ App.NoBack <$> pure act
 
 -- REFERENCE TO UPDATE STATE GLOBALLY
 -- modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen ->  state)
+
+
+listItem1 :: NewContacts
+listItem1 = {
+  name: "",
+  number: "",
+  isSelected: false
+}

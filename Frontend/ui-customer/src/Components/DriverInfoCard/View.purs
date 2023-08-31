@@ -16,12 +16,15 @@
 module Components.DriverInfoCard.View where
 
 import Common.Types.App
+
 import Animation (fadeIn)
+import Common.Styles.Colors as CommonColor
 import Common.Types.App (LazyCheck(..))
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
+import Data.Maybe (Maybe(..))
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, toLower, contains)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
@@ -30,6 +33,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
+import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber)
@@ -38,17 +42,14 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..))
+import Storage (KeyStore(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
-import Common.Styles.Colors as CommonColor
-import Storage (KeyStore(..))
-import Data.Maybe (Maybe(..))
-import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
@@ -386,14 +387,23 @@ sosView push state =
     [ height MATCH_PARENT
     , width WRAP_CONTENT
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
-    , orientation VERTICAL
-    , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL 
+    , background Color.white900
+    , stroke $ "1," <> Color.blue900
+    , cornerRadius 40.0
+    , padding $ Padding 12 5 12 8
+    , onClick push $ const OpenEmergencyHelp
     ][ imageView
         [ imageWithFallback $ "ny_ic_sos," <> (getAssetStoreLink FunctionCall) <> "ny_ic_sos.png"
-        , height $ V 50
-        , width $ V 50
-        , onClick push $ const OpenEmergencyHelp
+        , height $ V 24
+        , width $ V 24
+        , margin $ MarginRight 8
         ]
+       , textView $ [
+          text "Namma Safety"
+          , color Color.blue900
+       ] <> FontStyle.body1 TypoGraphy
     ]
 
 messageNotificationView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w

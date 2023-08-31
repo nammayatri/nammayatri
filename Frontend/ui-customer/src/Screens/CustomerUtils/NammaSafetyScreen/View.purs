@@ -19,45 +19,55 @@ module Screens.NammaSafetyScreen.View
 import Common.Types.App
 import Screens.NammaSafetyScreen.ComponentConfig
 
+import Animation (screenAnimation)
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
+import Components.NewContact.View as NewContact
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (take, (!!), mapWithIndex, any)
+import Data.Array (any, length, mapWithIndex, null, take, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Profunctor.Split (split)
+import Data.String (Pattern(..))
 import Data.String as DS
+import Data.Tuple (Tuple(..))
+import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (startOtpReciever)
+import Helpers.Utils (getAssetStoreLink, setRefreshing, startOtpReciever, storeCallBackContacts)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), map)
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), map, (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, getPushFn, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, pattern, relativeLayout, scrollView, singleLine, stroke, swipeRefreshLayout, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Elements.Keyed as Keyed
+import PrestoDOM.List as PrestoList
 import Screens.EmergencyContactsScreen.Controller (contactColorsList)
 import Screens.NammaSafetyScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (Contacts, NammaSafetyScreenState, Stage(..), StepsHeaderModelState)
+import Screens.Types (Contacts, NammaSafetyScreenState, NewContacts, Stage(..), StepsHeaderModelState)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
-screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
-screen initialState =
+screen :: NammaSafetyScreenState -> PrestoList.ListItem -> Screen Action NammaSafetyScreenState ScreenOutput
+screen initialState listItemm =
   { initialState
-  , view
+  , view : view listItemm
   , name : "NammaSafetyScreen"
   , globalEvents : [ (\push ->
     do
@@ -88,14 +98,21 @@ screen initialState =
         pure (pure unit)
         ) ] 
   , eval : \action state -> do
-      let _ = printLog  "NammasafetyOnboard state -----" state
+      let _ = spy "NammaSafety action " action
+      let _ = spy "NammaSafety state " state
       eval action state
   }
 
+listItem1 :: NewContacts
+listItem1 = {
+  name: "",
+  number: "",
+  isSelected: false
+}
+
 view
-  :: forall w
-  . (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-view push state = let
+  :: forall w. PrestoList.ListItem ->  (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+view listItemm push state = let
   lang = getValueToLocalStore LANGUAGE_KEY
    in
    linearLayout
@@ -117,6 +134,7 @@ view push state = let
     ][  
         headerView state push
         , if state.props.currentStage == NammaSafetyDashboard then dashboardView state push 
+        else if state.props.currentStage == EmergencyContactsStage then emergencyContactsView listItemm push state
         else if state.props.currentStage == AboutNammaSafety then aboutNammaSafetyView state push
         else if state.props.currentStage == SetTriggerCustomerSupport || state.props.currentStage == SetNightTimeSafetyAlert || state.props.currentStage == SetDefaultEmergencyContacts || state.props.currentStage == SetPersonalSafetySettings then settingUpView state push 
         else if state.props.currentStage == EduNammaSafetyMeasures || state.props.currentStage == EduNammaSafetyGuidelines || state.props.currentStage == EduNammaSafetyAboutSOS  then educationView state push 
@@ -140,118 +158,6 @@ view push state = let
     --         ]
       ]
     ]
-
--- ---------------------------------- enterMobileNumberView -----------------------------------
--- enterMobileNumberView:: ST.EnterMobileNumberScreenState  -> String -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
--- enterMobileNumberView  state lang push =
---   linearLayout
---     [ height MATCH_PARENT
---     , width MATCH_PARENT
---     , visibility  if state.props.enterOTP then GONE else VISIBLE
---     , alpha if state.props.enterOTP then 0.0 else 1.0
---     , orientation VERTICAL
---     ][PrestoAnim.animationSet
---       [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
---       ] $ PrimaryEditText.view (push <<< MobileNumberEditTextAction) (mobileNumberEditTextConfig state)
---     , linearLayout
---       [ height WRAP_CONTENT
---       , width MATCH_PARENT
---       , weight 1.0
---       ][]
---     , PrestoAnim.animationSet
---       ( if EHC.os == "IOS" then [] else [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 400 15 0 0 true PrestoAnim.Linear -- Temporary fix for iOS
---       ]) $ linearLayout
---         [ height WRAP_CONTENT
---         , width MATCH_PARENT
---         , margin (Margin 11 0 0 10)
---         ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false
---         , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
---           ]
---     , PrestoAnim.animationSet
---       [ Anim.fadeIn $ not state.props.enterOTP
---       , Anim.fadeOut state.props.enterOTP
---       ] $
---       linearLayout
---         [ height WRAP_CONTENT
---         , width MATCH_PARENT
---         ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
---     ]
-
--- commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
--- commonTextView state textValue isLink link push isTextFromHtml =
---   textView
---     [ width WRAP_CONTENT
---     , height WRAP_CONTENT
---     , (if isTextFromHtml then textFromHtml else text) textValue
---     , color if isLink then Color.blue900 else Color.black700
---     , textSize FontSize.a_12
---     , fontStyle $ FontStyle.medium LanguageStyle
---     , onClick (\action -> do
---                 when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
---                 pure unit
---               ) (const TermsAndConditions)
---     ]
-
--- ------------------------------------- enterOTPView --------------------------------------------
--- enterOTPView:: ST.EnterMobileNumberScreenState -> String -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
--- enterOTPView state lang push =
---   linearLayout
---     [ height MATCH_PARENT
---     , width MATCH_PARENT
---     , alpha if state.props.enterOTP then 1.0 else 0.0
---     , orientation VERTICAL
---     ][PrestoAnim.animationSet
---       [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig{ifAnim = state.props.enterOTP} --400 15 0 0 state.props.enterOTP PrestoAnim.Linear
---       ] $ PrimaryEditText.view (push <<< OTPEditTextAction) (otpEditTextConfig state)
---     ,  linearLayout
---       [ height WRAP_CONTENT
---       , width WRAP_CONTENT
---       , orientation HORIZONTAL
---       , clickable state.props.resendEnable
---       ][linearLayout
---       [ width WRAP_CONTENT
---       , height WRAP_CONTENT
---       , orientation VERTICAL
---       , alpha if state.props.resendEnable then 1.0 else 0.5
---       ][  textView
---         [ width WRAP_CONTENT
---         , height WRAP_CONTENT
---         , text (getString RESEND)
---         , textSize FontSize.a_12
---         , clickable state.props.resendEnable
---         , fontStyle $ FontStyle.semiBold LanguageStyle
---         , color Color.blue900
---         , onClick push (const Resend)
---         ]
---         , linearLayout
---           [ width MATCH_PARENT
---           , height (V 1)
---           , background Color.blue900
---           ][]
---       ]
---       , textView
---         [ width WRAP_CONTENT
---         , height WRAP_CONTENT
---         , text if lang == "HI_IN" then ("  "<> show state.data.timer <> "s  "<> getString IN) else ("  " <> getString IN <> "  "<> show state.data.timer <> "  s")
---         , textSize FontSize.a_12
---         , lineHeight "22"
---         , fontStyle $ FontStyle.semiBold LanguageStyle
---         , color Color.blue900
---         , visibility if state.props.resendEnable then GONE else VISIBLE
---         ]]
---     , linearLayout
---       [ height WRAP_CONTENT
---       , width MATCH_PARENT
---       , weight 1.0
---       ][]
---     , PrestoAnim.animationSet
---       [ Anim.fadeIn state.props.enterOTP
---       ] $
---       linearLayout
---       [ height WRAP_CONTENT
---       , width MATCH_PARENT
---       ][PrimaryButton.view (push <<< VerifyOTPButtonAction) (verifyOTPButtonConfig state)]
---     ]
 
 -- ---------------------------------- dashboardView -----------------------------------
 
@@ -284,12 +190,12 @@ headerView state push =
         height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , visibility if any (_ == state.props.currentStage)[SetTriggerCustomerSupport, SetNightTimeSafetyAlert, SetDefaultEmergencyContacts, SetPersonalSafetySettings] then GONE else VISIBLE
     ][
         linearLayout[
             height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER_VERTICAL
-            , visibility if any (_ /= state.props.currentStage)[SetTriggerCustomerSupport, SetNightTimeSafetyAlert, SetDefaultEmergencyContacts, SetPersonalSafetySettings] then VISIBLE else GONE
         ][
             linearLayout[
                 height WRAP_CONTENT
@@ -301,7 +207,7 @@ headerView state push =
             , textView [
                 text "Learn More"
                 , visibility if (state.props.currentStage == NammaSafetyDashboard && state.data.hasCompletedSafetySetup == true || state.props.currentStage == ActivateNammaSafety) then VISIBLE else GONE
-                , color Color.blue800
+                , color Color.blue900
                 , gravity RIGHT
                 , margin $ MarginRight 16
                 , onClick push $ const $ SwitchToStage AboutNammaSafety
@@ -383,22 +289,24 @@ featuresView state push =
                 , margin $ Margin 16 20 16 20
                 , color if state.props.currentStage == ActivateNammaSafety then Color.white900 else Color.black800
             ] <> FontStyle.subHeading1 TypoGraphy
-        , imageWithTextView "ny_ic_tick, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Share location and ride details with Namma Yatri Support Team" true state.props.currentStage
-        , imageWithTextView "ny_ic_tick, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Share location and ride details with Namma Yatri Support Team" true state.props.currentStage
-        , imageWithTextView "ny_ic_tick, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Share location and ride details with Namma Yatri Support Team" true state.props.currentStage
-        , imageWithTextView "ny_ic_tick, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Share location and ride details with Namma Yatri Support Team" true state.props.currentStage
+        , imageWithTextView "ny_ic_check, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Share location and ride details with Namma Yatri Support Team" true state.props.currentStage
+        , imageWithTextView "ny_ic_check, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Activate live video recording features" true state.props.currentStage
+        , imageWithTextView "ny_ic_check, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Get options to directly call support / Police" true state.props.currentStage
+        , imageWithTextView "ny_ic_check, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" "Share location and ride details with your emergency contacts" true state.props.currentStage
         , linearLayout [
             height $ V 1
             , width MATCH_PARENT
             , margin $ Margin 16 0 16 16
             , background Color.white900
         ][]
-        , textView $ [
-            textFromHtml "<u>Learn More</u>"
+        , linearLayout [][
+            textView $ [
+            textFromHtml if state.props.currentStage == ActivateNammaSafety then "<u>Edit Actions</u>" else "<u>Learn More</u>"
             , color Color.blue800
             , margin $ MarginBottom 20
-            , onClick push $ const $ SwitchToStage AboutNammaSafety
+            , onClick push $ const $ SwitchToStage $ if state.props.currentStage == ActivateNammaSafety then NammaSafetyDashboard else AboutNammaSafety
         ] <> FontStyle.body1 TypoGraphy
+        ]
     ]
 
 imageWithTextView :: String -> String -> Boolean -> Stage -> forall w . PrestoDOM (Effect Unit) w
@@ -411,7 +319,7 @@ imageWithTextView image text' isActive stage =
             , margin $ MarginVertical 0 16
         ][
             imageView [
-                imageWithFallback "ny_ic_tick, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png"
+                imageWithFallback if isActive then "ny_ic_check, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png" else "ny_ic_ellipse_outline_grey, https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png"
                 , height $ V 20
                 , width $ V 20
                 , margin $ MarginRight 8
@@ -528,7 +436,7 @@ userSettingsView state push=
                 , margin $ MarginRight 8   
                 , gravity CENTER
                 , fontStyle $ FontStyle.medium LanguageStyle ] 
-                , linearLayout [](mapWithIndex (\index item -> contactCircleView state push item index) state.data.emergencyContacts)
+                , linearLayout [](mapWithIndex (\index item -> contactCircleView state push item index) state.data.emergencyContactsData.contactsList)
                 , PrimaryButton.view (push <<< EditEmergencyContacts) (editEmergencyContactsBtnConfig state)
                 
             ]
@@ -556,7 +464,7 @@ toggleSwitchViewLayout stage isActive text' push =
     , toggleSwitchView isActive stage push
   ]
 
-contactCircleView ::  NammaSafetyScreenState -> (Action -> Effect Unit) -> Contacts -> Int -> forall w. PrestoDOM (Effect Unit) w
+contactCircleView ::  NammaSafetyScreenState -> (Action -> Effect Unit) -> NewContacts -> Int -> forall w. PrestoDOM (Effect Unit) w
 contactCircleView state push contact index =
   linearLayout
     [ height $ V 32
@@ -585,7 +493,7 @@ getLastChar name = DS.take 1 (fromMaybe "" ((getNameInitials name) !! 1))
 -- ---------------------------------- settingUpView -----------------------------------
 settingUpView:: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 settingUpView state push=
-  Anim.screenAnimation $ linearLayout
+  Anim.screenAnimation $ relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.white900
@@ -595,6 +503,8 @@ settingUpView state push=
   ][  PrestoAnim.animationSet
         [ Anim.fadeIn true
         ] $ settingUpContentView (settingUpContentViewData state) state push
+        , if (state.props.emergencyContactsProps.showInfoPopUp == true) then removeContactPopUpView push state else emptyTextView state
+    
   ]
 
 settingUpContentView :: ContentViewDataType -> NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -650,6 +560,47 @@ settingUpContentView config state push =
                 , textSize FontSize.a_16
                 , fontStyle $ FontStyle.semiBold LanguageStyle
             ]
+            , linearLayout [
+                width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                , visibility if state.props.currentStage == SetDefaultEmergencyContacts then VISIBLE else GONE
+                , afterRender
+                    ( \action -> do
+                        _ <- push action
+                        _ <- storeCallBackContacts push ContactsCallback
+                        if ((getValueToLocalStore CONTACTS == "__failed") || (getValueToLocalStore CONTACTS == "(null)")) then do
+                            _ <- push FetchContacts
+                            pure unit
+                        else do
+                            pure unit
+                        _ <- push CheckingContactList
+                        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
+                        pure unit
+                    )
+                    (const NoAction)
+            ](mapWithIndex (\index item -> contactCardView push state item index) state.data.emergencyContactsData.contactsList)
+            , linearLayout [
+                width MATCH_PARENT
+                , height WRAP_CONTENT
+                , stroke $ "1,"<> Color.grey900
+                , padding $ Padding 16 16 16 16
+                , visibility if state.props.currentStage == SetDefaultEmergencyContacts && length state.data.emergencyContactsData.contactsList /= 3 then VISIBLE else GONE
+                , cornerRadius 8.0
+                , margin $ MarginTop 12
+                , onClick push $ const $ AddContacts
+            ][
+                imageView [
+                    imageWithFallback "ny_ic_add_filled,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png"
+                    , height $ V 24
+                    , width $ V 24
+                    , margin $ MarginRight 12
+                ]
+                , textView $ [
+                    text "Add a contact"
+                    , color Color.blue900
+                ] <> FontStyle.subHeading1 TypoGraphy
+            ]
 
         ]
     ]
@@ -681,15 +632,13 @@ type ContentViewDataType = {
   isActive :: Boolean
 }
 
-
-
 settingUpContentViewData :: NammaSafetyScreenState -> ContentViewDataType
 settingUpContentViewData state = case state.props.currentStage of
-    SetTriggerCustomerSupport ->  {title: "Trigger alert to NammaYatri support", desc: "We have 24*7 dedicated support who will be alerted automatically", image: "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png", step : 0, isActive : state.data.triggerNYSupport}
-    SetNightTimeSafetyAlert ->  {title: "Enable night time safety alerts?", desc: "To ensure your safety, from 9 PM-6AM, \nwe would send safety check alerts basis anomaly detection. In cases of route-deviation or when vehicle is not moving", image: "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png", step : 1, isActive : state.data.nightTimeSafety}
-    SetDefaultEmergencyContacts ->  {title: "Share Info with emergency contacts?", desc: "On SOS, the ride information will be auto shared with the below emergency contacts.", image: "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png", step : 2, isActive : state.data.shareToEmergencyContacts}
+    SetDefaultEmergencyContacts ->  {title: "Share Info with emergency contacts?", desc: "On SOS, the ride information will be auto shared with the below emergency contacts.", image: "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png", step : 0, isActive : state.data.shareToEmergencyContacts && length state.data.emergencyContactsData.contactsList /= 0}
+    SetTriggerCustomerSupport ->  {title: "Trigger alert to NammaYatri support", desc: "We have 24*7 dedicated support who will be alerted automatically", image: "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png", step : 1, isActive : state.data.triggerNYSupport}
+    SetNightTimeSafetyAlert ->  {title: "Enable night time safety alerts?", desc: "To ensure your safety, from 9 PM-6AM, \nwe would send safety check alerts basis anomaly detection. In cases of route-deviation or when vehicle is not moving", image: "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png", step : 2, isActive : state.data.nightTimeSafety}
     SetPersonalSafetySettings ->  {title: "Almost Done!", desc: "During SOS, based on criticality of situation, any of these options can be selected\n\n \t• Call 112\n \t• Call NammaYatri support\n \t• Record video", image: "", step : 3, isActive : state.data.triggerNYSupport}
-    _ -> {title:"", desc:"", image:"", step : 0, isActive : false}
+    _ -> {title:"", desc:"", image:"", step : 5, isActive : false}
 
 ------------------- separator -------------------
 separatorView ::  forall w . PrestoDOM (Effect Unit) w
@@ -918,13 +867,11 @@ sosActiveView state push =
                     , fontStyle $ FontStyle.bold LanguageStyle
                     , color $ Color.white900
             ]
-            , textView [
+            , textView $ [
                 text "Please stay calm, Your real time location is being shared with your emergency contacts and our support team"
-                    , textSize FontSize.a_14
                     , margin $ MarginBottom 12
-                    , fontStyle $ FontStyle.semiBold LanguageStyle
                     , color $ Color.white900
-            ]
+            ] <> FontStyle.body1 TypoGraphy
             , imageView [
                 height $ V 280
                 , width MATCH_PARENT
@@ -1026,57 +973,43 @@ videoRecordSOSView state push =
   , orientation VERTICAL
   , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
 --   , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
-  ][  linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      ][
-        linearLayout
-        [ height WRAP_CONTENT
+  ][  
+    linearLayout[
+        height WRAP_CONTENT
         , width MATCH_PARENT
-        , margin $ Margin 16 16 16 16
         , orientation VERTICAL
-        ][
-            linearLayout [
-                height $ V 300
-                , width MATCH_PARENT
-                , background $ Color.red
-                , margin $ MarginTop 37
-                , id $ EHC.getNewIDWithTag "VideoCamView"
-                -- , gravity CENTER
-            ][]
-            , linearLayout[
-                width MATCH_PARENT
-                , margin $ MarginTop 24
-                , gravity CENTER
-                , orientation HORIZONTAL
-            ][
-                linearLayout[
-                orientation VERTICAL
-                , gravity CENTER
-                , margin $ MarginHorizontal 5 5
-                ][
-                    imageView [
-                        imageWithFallback "ny_ic_help,https://assets.juspay.in/nammayatri/images/user/ny_ic_help.png"
-                        , height $ V 55
-                        , width $ V 55
-                        , background $ Color.white900
-                        , cornerRadius 87.0
-                        , padding $ Padding 15 15 15 15
-                    ]
-                    , textView [
-                        text "Call Police (112)"
-                        , color Color.white900
-                        , textSize FontSize.a_12
-                        , fontStyle $ FontStyle.semiBold LanguageStyle 
-                    ]
-                ]
-                
-            ]
-            , PrimaryButton.view (push <<< GoToNextStep) (cancelSOSBtnConfig state)
+    ][
+        linearLayout [
+            height $ V 300
+            , width MATCH_PARENT
+            , background $ Color.red
+            , margin $ MarginTop 37
+            , id $ EHC.getNewIDWithTag "VideoCamView"
+            -- , gravity CENTER
+        ][]
+        , textView $ [
+            text "The video will be recorded for 15 sec only and will be shared as per your settings"
+            , color "#B9BABE"
+        ] <> FontStyle.body3 TypoGraphy
+    ]
+    , linearLayout[
+        width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , gravity CENTER
+        , alignParentBottom "true,-1"
+    ][
+        imageView [
+            imageWithFallback "ny_ic_start_record,https://assets.juspay.in/nammayatri/images/user/ny_ic_help.png"
+            , height $ V 45
+            , width $ V 45
         ]
-      ]
-  ]
+        , textView $ [
+            text "Start Recording"
+            , color Color.white900
+        ] <> FontStyle.tags TypoGraphy
+    ]
+]
 
 toggleSwitchView :: Boolean -> Stage -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 toggleSwitchView isActive stage push = 
@@ -1101,3 +1034,283 @@ getHeaderTitle stage =
         EduNammaSafetyAboutSOS   -> "About SOS"
         NammaSafetyVideoRecord   -> "Emergency Video"
         _                        -> getString NAMMA_SAFETY
+
+
+emergencyContactsView :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+emergencyContactsView listItemm push state =
+  screenAnimation
+    $ relativeLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , onBackPressed push (const BackPressed)
+        , background Color.white900
+        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 (if safeMarginBottom == 0 && os == "IOS" then 16 else safeMarginBottom)) else (Padding 0 0 0 0)
+        , gravity CENTER
+        , afterRender
+            ( \action -> do
+                _ <- push action
+                _ <- storeCallBackContacts push ContactsCallback
+                if ((getValueToLocalStore CONTACTS == "__failed") || (getValueToLocalStore CONTACTS == "(null)")) then do
+                  _ <- push FetchContacts
+                  pure unit
+                else do
+                  pure unit
+                _ <- push CheckingContactList
+                _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
+                pure unit
+            )
+            (const NoAction)
+        ]
+        [ linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            [ 
+            --     GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
+            -- , 
+            linearLayout
+                [ height $ V 1
+                , width $ V (screenWidth unit)
+                , background Color.greySmoke
+                ]
+                []
+            , linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                , gravity CENTER
+                , padding (Padding 16 0 16 0)
+                , visibility if state.props.emergencyContactsProps.showContactList then GONE else VISIBLE
+                ]
+                [ emergencyContactsSelectView push state
+                , PrimaryButton.view (push <<< AddEmergencyContacts) (addContactButtonConfig state)
+                ]
+            ]
+        , if state.props.emergencyContactsProps.showContactList then (contactListView listItemm push state) else emptyTextView state
+        ]
+------------------------ EmptyTextView ---------------------------
+emptyTextView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+emptyTextView state = textView []
+
+------------------------ ContactsListView ---------------------------
+contactListView :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+contactListView listItemm push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ 
+    --     linearLayout
+    --     [ height WRAP_CONTENT
+    --     , width MATCH_PARENT
+    --     , orientation VERTICAL
+    --     , background Color.white900
+    --     ]
+    --     [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
+    --     , horizontalLine
+    --     ]
+    -- , 
+    linearLayout
+        [ width MATCH_PARENT
+        , height $ V 44
+        , orientation HORIZONTAL
+        , cornerRadius 8.0
+        , padding (Padding 2 2 2 2)
+        , margin (Margin 16 16 16 16)
+        , gravity LEFT
+        , stroke ("1," <> Color.borderColorLight)
+        ]
+        [ editText
+            [ height MATCH_PARENT
+            , width WRAP_CONTENT
+            , weight 1.0
+            , textSize FontSize.a_16
+            , padding (Padding 14 10 0 10)
+            , color Color.black800
+            , gravity LEFT
+            , id (getNewIDWithTag "contactEditText")
+            , background Color.white900
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , text ""
+            , hint $ getString SEARCH_CONTACTS
+            , pattern "[^\n]*,255"
+            , onChange push $ ContactTextChanged
+            ]
+        , imageView
+            [ height $ V 17
+            , width $ V 17
+            , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
+            , gravity CENTER
+            , margin (Margin 10 10 10 10)
+            , onClick push $ const ContactListClearText
+            ]
+        ]
+    , showEmergencyContact listItemm push state
+    , linearLayout
+        [ height if os == "IOS" then (V 84) else WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , background Color.white900
+        , padding (Padding 16 16 16 24)
+        , stroke $ "1," <> Color.grey900
+        , alignParentBottom "true,-1"
+        , margin (Margin 0 0 0 0)
+        ]
+        [ linearLayout
+            [ width MATCH_PARENT
+            , height if os == "IOS" then (V 52) else WRAP_CONTENT
+            , gravity BOTTOM
+            , alignParentBottom "true,-1"
+            ]
+            [ PrimaryButton.view (push <<< ContactListPrimaryButtonActionController) (contactListPrimaryButtonConfig state.data.emergencyContactsData.contactsCount)
+            ]
+        ]
+    ]
+
+showEmergencyContact :: forall w. PrestoList.ListItem ->  (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+showEmergencyContact listitemm push config =
+  swipeRefreshLayout
+    ([ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blue600
+    , weight 1.0
+    , onRefresh push (const RefreshScreen)
+    ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "EmergencyContactTag"] )
+    [ showEmergencyContactData listitemm push config
+    ]
+
+showEmergencyContactData :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+showEmergencyContactData listItemm push state =
+  Keyed.linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ]
+  [ Tuple "contacts"
+    $ PrestoList.list
+    [ height MATCH_PARENT
+    -- , scrollBarY false
+    , width MATCH_PARENT
+    , onScroll "contacts" "EmergencyContactsScreen" push (ContactListScroll)
+    , onScrollStateChange push (ContactListScrollStateChanged)
+    , PrestoList.listItem listItemm
+    , background Color.white900
+    , PrestoList.listDataV2  $ state.data.emergencyContactsData.prestoListArrayItems
+    ]
+  ]
+
+startsWith :: String -> String -> Boolean
+startsWith prefix str = DS.take (DS.length prefix) str == prefix
+
+
+
+
+horizontalLine :: forall w. PrestoDOM (Effect Unit) w
+horizontalLine =
+  linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    ][]
+
+
+--------------------------------------------------- emergencyContactsSelectView -----------------------------------------------------
+emergencyContactsSelectView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+emergencyContactsSelectView push state = 
+  linearLayout
+    [ width $ MATCH_PARENT
+    , orientation VERTICAL
+    , weight 1.0
+    ]
+    [ emergencyContactsListView push state
+    ]
+
+
+--------------------------------------------------- emergencyContactsListView -----------------------------------------------------
+emergencyContactsListView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+emergencyContactsListView push state =
+  linearLayout
+    [ height $ WRAP_CONTENT
+    , width $ MATCH_PARENT
+    , orientation VERTICAL
+    , padding (Padding 0 10 0 10)
+    , visibility if (null state.data.emergencyContactsData.contactsList) then GONE else VISIBLE
+    , weight 1.0
+    ]
+    [ textView $ 
+        [ height $ WRAP_CONTENT
+        , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
+        , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
+        , color Color.black700
+        , padding (Padding 0 10 0 10)
+        ] <> FontStyle.paragraphText LanguageStyle
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ]
+        (mapWithIndex (\index item -> contactCardView push state item index) state.data.emergencyContactsData.contactsList)
+    ]
+
+--------------------------------------------------- emergencyContactsListView -----------------------------------------------------
+contactCardView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> NewContacts -> Int -> PrestoDOM (Effect Unit) w
+contactCardView push state contact index =
+  linearLayout
+    [ height $ WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding $ Padding 18 18 18 18
+    , margin $ Margin 0 5 0 5
+    , cornerRadius 8.0
+    , stroke ("1," <> Color.grey900)
+    ]
+    [ linearLayout
+        [ height $ V 24
+        , width $ V 24
+        , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
+        , cornerRadius 12.0
+        , gravity CENTER
+        , margin (MarginRight 10)
+        ]
+        [ textView $
+            [ text (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
+            , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
+            ] <> FontStyle.body3 TypoGraphy
+        ]
+    , textView $
+        [ height $ WRAP_CONTENT
+        , width $ WRAP_CONTENT
+        , weight 1.0
+        , text contact.name
+        , color Color.black800
+        ] <> FontStyle.subHeading1 LanguageStyle
+    , textView
+        [ height $ WRAP_CONTENT
+        , width $ WRAP_CONTENT
+        , text (getString REMOVE)
+        , color Color.blue900
+        , textSize 14
+        , onClick push (const (RemoveButtonClicked contact))
+        ]
+    ]
+
+
+removeContactPopUpView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+removeContactPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< PopUpModalAction) (removeContactPopUpModelConfig state) ]
+
+videoSharedView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+videoSharedView push state = 
+    linearLayout [
+        orientation VERTICAL
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+    ][
+
+    ]

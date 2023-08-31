@@ -25,10 +25,30 @@ initData = {
       shareToEmergencyContacts : false,
       nightTimeSafety : false,
       triggerNYSupport : false,
-      hasCompletedSafetySetup : false
+      hasCompletedSafetySetup : false,
+      emergencyContactsData : {
+        contactInfoState : []
+        , contactsCount : 0
+        , contactsList : []
+        , contactsNewList : []
+        , contactsUpdatedNewList: []
+        , prestoListArrayItems: []
+        , loadMoreDisabled: true
+        , offsetForEmergencyContacts : 0
+        , limitForEmergencyContacts : 20
+        , removedContactDetail : { isSelected :false
+                                  , name : ""
+                                  , number : ""
+                                  }
+        , editedText : ""
+      }
     },
     props: {
       showOnboarding : true,
-      currentStage : NammaSafetyDashboard
+      currentStage : NammaSafetyDashboard,
+      emergencyContactsProps : {
+        showContactList : false
+        , showInfoPopUp : false  
+      }
     }
 }

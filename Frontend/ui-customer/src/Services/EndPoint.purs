@@ -144,3 +144,9 @@ callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
 
 bookingFeedback :: String -> String
 bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"
+
+getEmergencySettings :: String -> String
+getEmergencySettings dummy = (getBaseUrl "40") <> "/profile/getEmergencySettings"
+
+updateEmergencySettings :: String -> String
+updateEmergencySettings dummy = (getBaseUrl "41") <> "/profile/updateEmergencySettings"

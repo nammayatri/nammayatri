@@ -527,6 +527,7 @@ data Stage = HomeScreen
            | ActivateNammaSafety
            | TriggeredNammaSafety
            | NammaSafetyVideoRecord
+           | EmergencyContactsStage
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -678,6 +679,7 @@ type HomeScreenStateProps =
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
+  , sosActive :: Boolean
   }
 
 type RouteEndPoints = {
@@ -1228,10 +1230,31 @@ type NammaSafetyScreenData =  {
   shareToEmergencyContacts :: Boolean,
   nightTimeSafety :: Boolean,
   triggerNYSupport :: Boolean,
-  hasCompletedSafetySetup :: Boolean
+  hasCompletedSafetySetup :: Boolean,
+  emergencyContactsData :: EmergencyContactsData
  }
 
 type NammaSafetyScreenProps =  {
   showOnboarding :: Boolean,
-  currentStage :: Stage
- }
+  currentStage :: Stage,
+  emergencyContactsProps :: EmergencyContactsProps
+}
+
+type EmergencyContactsData = {
+  contactInfoState :: Array Contacts,
+  contactsCount :: Int,
+  contactsList :: Array NewContacts,
+  contactsNewList :: Array NewContacts,
+  contactsUpdatedNewList :: Array NewContacts,
+  prestoListArrayItems :: Array NewContactsProp,
+  loadMoreDisabled :: Boolean,
+  removedContactDetail :: NewContacts,
+  offsetForEmergencyContacts :: Int,
+  limitForEmergencyContacts :: Int,
+  editedText :: String
+}
+
+type EmergencyContactsProps = {
+  showContactList :: Boolean,
+  showInfoPopUp :: Boolean
+}

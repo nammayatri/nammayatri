@@ -15,28 +15,29 @@
 
 module Services.API where
 
+import Data.Maybe
+
+import Common.Types.App (Version(..))
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
-import Common.Types.App (Version(..))
+import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
+import Data.Either (Either(..))
+import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
-import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
+import Data.Show.Generic (genericShow)
+import Debug (spy)
 import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
-import Prelude (class Show,class Eq, show, ($), (<$>), (>>=))
+import Foreign.Generic.EnumEncoding (GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
+import Foreign.Index (readProp)
+import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
-import Foreign.Index (readProp)
-import Control.Monad.Except (runExcept)
-import Data.Either (Either(..))
-import Foreign.Generic.EnumEncoding (GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
-import Data.Eq.Generic (genericEq)
-import Debug (spy)
-import Data.Maybe
 
 
 
@@ -1874,7 +1875,8 @@ data UserSosStatusReq = UserSosStatusReq String SosStatus
 
 newtype SosStatus = SosStatus
   {
-    status :: String
+    status :: String,
+    comment :: String
   }
 
 newtype UserSosStatusRes = UserSosStatusRes
@@ -1906,6 +1908,70 @@ instance standardEncodeSosStatus :: StandardEncode SosStatus where standardEncod
 instance showSosStatus :: Show SosStatus where show = genericShow
 instance decodeSosStatus:: Decode SosStatus where decode = defaultDecode
 instance encodeSosStatus :: Encode SosStatus where encode = defaultEncode
+
+----------------------------------------------------------------------- userGetEmergencySettings api -------------------------------------------------------------------
+
+data GetEmergencySettingsReq = GetEmergencySettingsReq
+
+newtype GetEmergencySettingsRes = GetEmergencySettingsRes
+  {
+    shareEmergencyContacts :: Boolean,
+    triggerNYSupport :: Boolean,
+    nightTimeSafety :: Boolean,
+    hasCompletedSafetySetup :: Boolean,
+    defaultEmergencyNumbers :: Array ContactDetails
+  }
+
+
+newtype UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
+  {
+    shareEmergencyContacts :: Maybe Boolean,
+    triggerNYSupport :: Maybe Boolean,
+    nightTimeSafety :: Maybe Boolean,
+    hasCompletedSafetySetup :: Maybe Boolean
+  }
+
+
+newtype UpdateEmergencySettingsRes = UpdateEmergencySettingsRes
+  {
+    result :: String
+  }
+
+instance makeGetEmergencySettingsReq :: RestEndpoint GetEmergencySettingsReq GetEmergencySettingsRes where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.getEmergencySettings "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+instance makeUpdateEmergencySettingsReq :: RestEndpoint UpdateEmergencySettingsReq UpdateEmergencySettingsRes where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.updateEmergencySettings "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetEmergencySettingsRes :: Generic GetEmergencySettingsRes _
+derive instance newtypeGetEmergencySettingsRes :: Newtype GetEmergencySettingsRes _
+instance standardEncodeGetEmergencySettingsRes :: StandardEncode GetEmergencySettingsRes where standardEncode (GetEmergencySettingsRes body) = standardEncode body
+instance showGetEmergencySettingsRes :: Show GetEmergencySettingsRes where show = genericShow
+instance decodeGetEmergencySettingsRes :: Decode GetEmergencySettingsRes where decode = defaultDecode
+instance encodeGetEmergencySettingsRes  :: Encode GetEmergencySettingsRes where encode = defaultEncode
+
+derive instance genericUpdateEmergencySettingsRes :: Generic UpdateEmergencySettingsRes _
+instance standardEncodeUpdateEmergencySettingsRes :: StandardEncode UpdateEmergencySettingsRes where standardEncode (UpdateEmergencySettingsRes body) = standardEncode body
+instance showUpdateEmergencySettingsRes :: Show UpdateEmergencySettingsRes where show = genericShow
+instance decodeUpdateEmergencySettingsRes :: Decode UpdateEmergencySettingsRes where decode = defaultDecode
+instance encodeUpdateEmergencySettingsRes  :: Encode UpdateEmergencySettingsRes where encode = defaultEncode
+
+derive instance genericGetEmergencySettingsReq :: Generic GetEmergencySettingsReq _
+instance standardEncodeGetEmergencySettingsReq :: StandardEncode GetEmergencySettingsReq where standardEncode (GetEmergencySettingsReq) = standardEncode {}
+instance showGetEmergencySettingsReq :: Show GetEmergencySettingsReq where show = genericShow
+instance decodeGetEmergencySettingsReq :: Decode GetEmergencySettingsReq where decode = defaultDecode
+instance encodeGetEmergencySettingsReq  :: Encode GetEmergencySettingsReq where encode = defaultEncode
+
+derive instance genericUpdateEmergencySettingsReq :: Generic UpdateEmergencySettingsReq _
+derive instance newtypeUpdateEmergencySettingsReq :: Newtype UpdateEmergencySettingsReq _
+instance standardEncodeUpdateEmergencySettingsReq :: StandardEncode UpdateEmergencySettingsReq where standardEncode (UpdateEmergencySettingsReq body) = standardEncode body
+instance showUpdateEmergencySettingsReq :: Show UpdateEmergencySettingsReq where show = genericShow
+instance decodeUpdateEmergencySettingsReq :: Decode UpdateEmergencySettingsReq where decode = defaultDecode
+instance encodeUpdateEmergencySettingsReq  :: Encode UpdateEmergencySettingsReq where encode = defaultEncode
 
 ----------------------------------------------------------------------- onCall api -------------------------------------------------------------------
 

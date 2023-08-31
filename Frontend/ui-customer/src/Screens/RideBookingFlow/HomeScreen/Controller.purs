@@ -1183,7 +1183,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = do
   _ <- pure $ performHapticFeedback unit
-  continue state{props{emergencyHelpModal = true}}
+  exit $ GoToNammaSafety state { props { sosActive = true }}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
   continueWithCmd state

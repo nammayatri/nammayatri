@@ -468,6 +468,7 @@ getScreenFromStage stage = case stage of
   ActivateNammaSafety -> "namma_safety_onboard_screen"
   TriggeredNammaSafety -> "namma_safety_onboard_screen"
   NammaSafetyVideoRecord -> "namma_safety_onboard_screen"
+  EmergencyContactsStage -> "namma_safety_onboard_screen"
   
 getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
 getGlobalPayload _ = do

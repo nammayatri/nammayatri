@@ -18,7 +18,7 @@ import Data.Maybe
 import Screens.Types(NewContacts)
 import Engineering.Helpers.Commons (os)
 import PrestoDOM.List as PrestoList
-import Screens.EmergencyContactsScreen.Controller (Action(..)) as Screen
+import Screens.NammaSafetyScreen.Controller (Action(..)) as Screen
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..), fromMaybe)
 

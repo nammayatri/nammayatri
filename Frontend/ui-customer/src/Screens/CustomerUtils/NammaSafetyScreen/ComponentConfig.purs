@@ -13,37 +13,29 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.NammaSafetyScreen.ComponentConfig where
+module Screens.NammaSafetyScreen.ComponentConfig
+  where
 
 import Common.Types.App
 
 import Components.GenericHeader as GenericHeader
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Data.Array (any, length, null)
 import Data.Maybe (Maybe(..))
+import Engineering.Helpers.Commons (os)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (not, (<>), ($), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), padding, textFromHtml)
+import Prelude (not, show, ($), (<>), (==), (>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), padding, textFromHtml, visibility)
 import Screens.Types (NammaSafetyScreenState, Stage(..))
 import Styles.Colors as Color
-
--- mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
--- mobileNumberButtonConfig state = let 
---     config = PrimaryButton.config
---     primaryButtonConfig' = config 
---       { textConfig{ text = (getString CONTINUE) }
---       , id = "PrimaryButtonMobileNumber"
---       , isClickable = state.props.btnActiveMobileNumber
---       , alpha = if state.props.btnActiveMobileNumber then 1.0 else 0.4
---       , margin = (Margin 0 0 0 0 )
---       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
---       }
---   in primaryButtonConfig'
 
 startNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startNSOnboardingButtonConfig state = 
@@ -51,10 +43,7 @@ startNSOnboardingButtonConfig state =
     { textConfig{ text = (getButtonString state.props.currentStage) }
     , isClickable = true
     , visibility = if state.props.showOnboarding == true then VISIBLE else GONE
-    -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (Margin 16 0 16 0 )
-    -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
-    -- , layoutGravity = BOTTOM
     }
   
 skipNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -62,37 +51,28 @@ skipNSOnboardingButtonConfig state =
   PrimaryButton.config
     { textConfig{ text = (getString SKIP) , color = Color.black700}
     , isClickable = true
-    -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (Margin 16 8 16 0 )
-    -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
-    -- , gravity = CENTER_BOTTOM
     , background = Color.white900
     , stroke = ("1," <> Color.black700)
     }
 continueNextStepButtonConfig:: NammaSafetyScreenState -> PrimaryButton.Config
 continueNextStepButtonConfig state = 
   PrimaryButton.config
-    { textConfig{ text = "Continue" }
+    { textConfig{ text = if state.props.currentStage == SetPersonalSafetySettings then "Finish Setup" else "Continue" }
     , isClickable = true
     , visibility = if state.props.showOnboarding == true then VISIBLE else GONE
-    -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (Margin 16 0 16 0 )
-    -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
-    -- , layoutGravity = BOTTOM
     }
 
 editEmergencyContactsBtnConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 editEmergencyContactsBtnConfig state = 
   PrimaryButton.config
     { textConfig{ text = (getString EDIT) , color = Color.blue900
-    -- , textSize = FontSize.a_14, fontStyle = FontStyle.semiBold LanguageStyle
     }
     , isClickable = true
     , height = MATCH_PARENT
     , width = WRAP_CONTENT
-    -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (MarginLeft 9)
-    -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
     , gravity = CENTER
     , background = Color.white900
     }
@@ -101,14 +81,11 @@ cancelSOSBtnConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 cancelSOSBtnConfig state = 
   PrimaryButton.config
     { textConfig{ text = "Mark Ride As Safe" , color = Color.black900
-    -- , textSize = FontSize.a_16, fontStyle = FontStyle.bold LanguageStyle
     }
     , isClickable = true
     , height = MATCH_PARENT
     , width = MATCH_PARENT
-    -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (MarginTop 20)
-    -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
     , gravity = CENTER
     , background = Color.white900
     }
@@ -121,109 +98,31 @@ getButtonString stage = case stage of
   SetPersonalSafetySettings ->  "Finish Setup"
   _ ->  "Start Namma Safety Setup"
 
--- mobileNumberEditTextConfig :: ST.EnterMobileNumberScreenState -> PrimaryEditText.Config
--- mobileNumberEditTextConfig state = let 
---     config = PrimaryEditText.config
---     primaryEditTextConfig' = config
---       { editText
---         {
---             color = Color.black800
---           , singleLine = true
---           , pattern = Just "[0-9]*,10"
---           , fontStyle = FontStyle.bold LanguageStyle
---           , textSize = FontSize.a_16
---           , margin = MarginHorizontal 10 10
---           , focused = state.props.mNumberEdtFocused
---           , text = state.props.editTextVal
---         }
---       , background = Color.white900
---       , topLabel
---         { textSize = FontSize.a_12
---         , text = (getString ENTER_YOUR_MOBILE_NUMBER)
---         , color = Color.black800
---         , fontStyle = FontStyle.semiBold LanguageStyle
---         , alpha = 0.8
---         }
---       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
---       , type = "number"
---       , height = V 54
---       , margin = MarginTop 30
---       , showErrorLabel = (not state.props.isValidMobileNumber)
---       , errorLabel
---         { text = (getString INVALID_MOBILE_NUMBER)
---         }
---       , showConstantField = true
---       , constantField { 
---           color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
---         , textSize = FontSize.a_16
---         , padding = PaddingBottom 1
---         }
---       }
---     in primaryEditTextConfig'
-
--- otpEditTextConfig :: ST.EnterMobileNumberScreenState -> PrimaryEditText.Config
--- otpEditTextConfig state = let 
---     config = PrimaryEditText.config
---     primaryEditTextConfig' = config
---       { editText
---         { color = Color.black800
---         , placeholder = (getString ENTER_4_DIGIT_OTP)
---         , singleLine = true
---         , pattern = Just "[0-9]*,4"
---         , margin = MarginHorizontal 10 10
---         , fontStyle = FontStyle.bold LanguageStyle
---         , textSize = FontSize.a_16
---         , letterSpacing = state.props.letterSpacing
---         , text = ""
---         , focused = state.props.otpEdtFocused
---         , gravity = LEFT
---         }
---       , background = Color.white900
---       , margin = (Margin 0 30 0 20)
---       , topLabel
---         { textSize = FontSize.a_12
---         , text = (getString LOGIN_USING_THE_OTP_SENT_TO) <> " +91 " <> state.data.mobileNumber
---         , color = Color.black800
---         , fontStyle = FontStyle.regular LanguageStyle
---         , alpha = 0.8
---         } 
---       , id = (EHC.getNewIDWithTag "EnterOTPNumberEditText")
---       , type = "number"
---       , height = V 54
---       , errorLabel {
---             text = (getString WRONG_OTP),
---             visibility = VISIBLE,
---             textSize = FontSize.a_12,
---             fontStyle = FontStyle.bold LanguageStyle,
---             alpha = 0.8
---       },
---       width = MATCH_PARENT,
---       showErrorLabel = state.props.wrongOTP, 
---       stroke = if state.props.wrongOTP then ("1," <> Color.warningRed) else ("1," <> Color.borderColorLight)
---       }
---     in primaryEditTextConfig'
-
 genericHeaderConfig :: String -> NammaSafetyScreenState -> GenericHeader.Config 
 genericHeaderConfig title state = 
   GenericHeader.config
     {
       height = WRAP_CONTENT
-    , width = WRAP_CONTENT
+    , width = MATCH_PARENT
     , background = Color.transparent
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = if any (_ == state.props.currentStage)[ActivateNammaSafety, TriggeredNammaSafety] then "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
       , margin = (Margin 12 14 12 12)
+      , visibility = if state.props.currentStage == NammaSafetyVideoRecord then GONE else VISIBLE
       } 
     , textConfig {
         text = title
-      -- , textSize = FontSize.a_18
-      , color = if state.props.currentStage == ActivateNammaSafety then Color.white900 else Color.black800
-      -- , fontStyle = FontStyle.semiBold LanguageStyle
+      , color = if any (_ == state.props.currentStage)[ActivateNammaSafety, TriggeredNammaSafety, NammaSafetyVideoRecord] then Color.white900 else Color.black800
+      , margin = if state.props.currentStage == NammaSafetyVideoRecord then MarginLeft 16 else Margin 0 0 0 0
       }
     , suffixImageConfig {
-        visibility = GONE
+        height = V 25
+      , width = V 25
+      , imageUrl = "ny_ic_close_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_close_white.png"
+      , margin = (Margin 12 14 12 12)
+      , visibility = if state.props.currentStage == NammaSafetyVideoRecord then VISIBLE else GONE
       }
     , padding = (Padding 0 5 0 5)
     }
@@ -236,10 +135,7 @@ activateSoSButtonConfig state =
   PrimaryButton.config
     { textConfig{ text = "Activate SOS" , color = Color.black900}
     , isClickable = true
-    -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (Margin 16 0 16 16 )
-    -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
-    -- , gravity = CENTER_BOTTOM
     , background = Color.white900
     }
 
@@ -248,16 +144,98 @@ dismissSoSButtonConfig state =
   PrimaryButton.config
     { textConfig{ text = "Dismiss" , color = Color.white900}
     , isClickable = true
-    -- , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
     , margin = (Margin 16 8 16 0 )
-    -- , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
-    -- , gravity = CENTER_BOTTOM
     , background = Color.black900
     , stroke = ("1," <> Color.white900)
     }
 
+contactListPrimaryButtonConfig :: Int -> PrimaryButton.Config
+contactListPrimaryButtonConfig count =
+  let
+    config' = PrimaryButton.config
+
+    primaryButtonConfig' =
+      config'
+        { textConfig
+          { text = if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
+          , color = if (count > 0) then Color.yellow900 else Color.yellow800
+          }
+        , background = if (count > 0) then Color.black900 else Color.black600
+        , isClickable = if (count > 0) then true else false
+        }
+  in
+    primaryButtonConfig'
+
+-- genericHeaderConfig :: NammaSafetyScreenState -> GenericHeader.Config
+-- genericHeaderConfig state =
+--   let
+--     config = GenericHeader.config
+
+--     genericHeaderConfig' =
+--       config
+--         { height = WRAP_CONTENT
+--         , prefixImageConfig
+--           { height = V 25
+--           , width = V 25
+--           , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+--           , margin = (Margin 12 12 12 12)
+--           }
+--         , padding = (Padding 0 5 0 5)
+--         , textConfig
+--           { text = if state.props.emergencyContactsProps.showContactList then (show (length state.data.emergencyContactsData.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
+--           , color = Color.darkDescriptionText
+--           }
+--         , suffixImageConfig
+--           { visibility = GONE
+--           }
+--         }
+--   in
+--     genericHeaderConfig'
+
+--------------------------------------------------- primaryButtonConfig -----------------------------------------------------
+addContactButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
+addContactButtonConfig state =
+  let
+    config = PrimaryButton.config
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = if null state.data.emergencyContactsData.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)
+          }
+        , isClickable = true
+        , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
+        , margin = (MarginBottom 24)
+        , visibility = if ((length state.data.emergencyContactsData.contactsList) == 3) then GONE else VISIBLE
+        }
+  in
+    primaryButtonConfig'
 
 
+--------------------------------------------------- removeContactPopUpModelConfig -----------------------------------------------------
+removeContactPopUpModelConfig :: NammaSafetyScreenState -> PopUpModal.Config
+removeContactPopUpModelConfig state =
+  let
+    config' = PopUpModal.config
 
+    popUpConfig' =
+      config'
+        { primaryText { text = (getString REMOVE) <> " " <> state.data.emergencyContactsData.removedContactDetail.name }
+        , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_REMOVE_CONTACT) }
+        , option1
+          { text = (getString CANCEL_)
+          , strokeColor = Color.black700
+          }
+        , option2
+          { text = (getString YES_REMOVE)
+          , background = Color.red
+          , color = Color.white900
+          , strokeColor = Color.red
+          }
+        , backgroundClickable = false
+        , buttonLayoutMargin = MarginBottom if os == "IOS" then 0 else 24
+        }
+  in
+    popUpConfig'
 
   
