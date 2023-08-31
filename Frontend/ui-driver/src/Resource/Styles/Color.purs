@@ -168,9 +168,6 @@ selectedItemBG = "#F4F6F9"
 selectedItemDarkBG :: Color
 selectedItemDarkBG = "#4DDADADA"
 
-darkDescriptionText :: Color
-darkDescriptionText = "#333333"
-
 lightGreen :: Color
 lightGreen = "#68D08D"
 
@@ -395,9 +392,6 @@ lightShadeGrey = "#EEEEEE"
 greySmoke :: Color
 greySmoke = "#E6E6E6"
 
-blackLessTrans :: Color
-blackLessTrans = "#99000000"
-
 blackLightGrey :: Color
 blackLightGrey = "#949494"
 
@@ -421,9 +415,6 @@ greenGrey = "#268C6E"
 
 transparentGrey :: Color
 transparentGrey = "#66888888"
-
-transparent :: Color
-transparent = "#00FFFFFF"
 
 green200 :: Color
 green200 = "#2053BB6F"
@@ -451,3 +442,9 @@ lightPurple = "#F4ECFF"
 
 purple :: Color
 purple = "#9747FF"
+
+peacoat :: Color 
+peacoat = "#33394A"
+
+mangolia :: Color 
+mangolia = "#F4ECFF"

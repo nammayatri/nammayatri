@@ -42,7 +42,6 @@ import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
 import Screens.PermissionsScreen.ScreenData as PermissionsScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.RideDetailScreen.ScreenData as RideDetailScreenData
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.EditBankDetailsScreen.ScreenData as EditBankDetailsScreenData
 import Screens.EditAadhaarDetailsScreen.ScreenData as EditAadhaarDetailsScreenData
@@ -83,7 +82,6 @@ newtype GlobalState = GlobalState {
   , writeToUsScreen :: WriteToUsScreenState
   , permissionsScreen :: PermissionsScreenState
   , homeScreen :: HomeScreenState
-  , rideDetailScreen :: RideDetailScreenState
   , editBankDetailsScreen :: EditBankDetailsScreenState
   , editAadhaarDetailsScreen :: EditAadhaarDetailsScreenState
   , noInternetScreen :: NoInternetScreenState
@@ -126,7 +124,6 @@ defaultGlobalState = GlobalState{
 , writeToUsScreen : WriteToUsScreenData.initData
 , permissionsScreen : PermissionsScreenData.initData
 , homeScreen : HomeScreenData.initData
-, rideDetailScreen : RideDetailScreenData.initData
 , editBankDetailsScreen : EditBankDetailsScreenData.initData
 , editAadhaarDetailsScreen : EditAadhaarDetailsScreenData.initData
 , noInternetScreen : {}
@@ -170,7 +167,6 @@ data ScreenType =
   | WriteToUsScreenStateType (WriteToUsScreenState -> WriteToUsScreenState)
   | BankDetailScreenStateType (BankDetailScreenState -> BankDetailScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
-  | RideDetailScreenStateType (RideDetailScreenState -> RideDetailScreenState)
   | RideHistoryScreenStateType (RideHistoryScreenState -> RideHistoryScreenState)
   | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
   | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
@@ -301,6 +297,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | OPEN_PAYMENT_PAGE HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
+                          | GO_TO_RIDE_DETAILS_SCREEN 
+                          | POST_RIDE_FEEDBACK HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

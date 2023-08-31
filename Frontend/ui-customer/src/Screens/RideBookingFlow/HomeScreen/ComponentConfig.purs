@@ -32,7 +32,6 @@ import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
-import Components.FareBreakUp as FareBreakUp
 import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
@@ -40,6 +39,7 @@ import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
+import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
@@ -48,6 +48,7 @@ import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Int (toNumber)
 import Data.Int as INT
 import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -61,11 +62,12 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, parseFloat)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
+import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
@@ -175,6 +177,7 @@ getDistanceString currDistance initDistance zoneType
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
+    issueFaced =  state.data.ratingViewState.issueFacedView
     config = PrimaryButton.config
     primaryButtonConfig' =
       config
@@ -187,40 +190,12 @@ skipButtonConfig state =
         , margin = MarginTop 22
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
+        , visibility = if not issueFaced || state.data.ratingViewState.doneButtonVisibility then VISIBLE else GONE
+        , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0
+        , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) then 1.0 else 0.4
         }
   in
     primaryButtonConfig'
-
-fareBreakUpConfig :: ST.HomeScreenState -> FareBreakUp.Config
-fareBreakUpConfig state =
-  let
-    config = FareBreakUp.config
-    fareBreakUpConfig' =
-      config
-        { fareDetails = []
-        , headingText = (getString VIEW_BREAKDOWN)
-        , totalAmount { text = ""
-          , color= Color.black800
-          , margin= (Margin 0 0 0 20)
-          , visibility= GONE
-          , priceDetails
-              { text = 0
-              , offeredFare = state.data.driverInfoCardState.price
-              , distanceDifference = state.data.rideRatingState.distanceDifference
-              }
-          }
-        , rideDetails
-          { destination= state.data.driverInfoCardState.destination
-          , destinationTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.destination)) DA.!! 0))
-          , source = state.data.driverInfoCardState.source
-          , sourceTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
-          , rideStartTime = state.data.startedAt
-          , rideStartDate = ((fromMaybe "" ((DS.split (DS.Pattern ",") (EHC.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (EHC.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
-          , estimatedDistance = state.props.estimatedDistance
-          }
-        }
-  in
-    fareBreakUpConfig'
 
 whereToButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 whereToButtonConfig state =
@@ -856,8 +831,27 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 , config : state.data.config
                                 }
 
-ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { data: state.data.rideRatingState {rating = state.data.ratingViewState.selectedRating, feedbackList = state.data.rideRatingState.feedbackList}}
+ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardConfig
+ratingCardViewState state = {
+   data: state.data.rideRatingState {
+    rating = state.data.ratingViewState.selectedRating, 
+    feedbackList = state.data.rideRatingState.feedbackList
+  } 
+  , feedbackPillData : customerFeedbackPillData FunctionCall
+  , primaryButtonConfig : PrimaryButton.config {
+    textConfig{
+      text = getString SUBMIT_FEEDBACK
+    },
+    isClickable = if state.data.ratingViewState.selectedRating == 0 then false else true,
+    alpha = if not (state.data.ratingViewState.selectedRating< 1) then 1.0 else 0.4
+  }
+  , showProfileImg : true
+  , title : getString RATE_YOUR_RIDE_WITH <> state.data.rideRatingState.driverName
+  , feedbackPlaceHolder : getString HELP_US_WITH_YOUR_FEEDBACK_OPTIONAL
+  , showFeedbackPill : true
+  , overallFeedbackArray : [(getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE),(getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING)]
+  , accessibility : ENABLE
+}
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
@@ -1132,3 +1126,112 @@ reportIssueOptions state =
     , subtext : Nothing
     }
   ]
+
+
+rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
+rideCompletedCardConfig state = let
+  config  = RideCompletedCard.config 
+  config' = config{
+        customerIssueCard{
+          reportIssueView = state.data.ratingViewState.openReportIssue,
+          issueFaced = state.data.ratingViewState.issueFacedView,
+          selectedYesNoButton = state.data.ratingViewState.selectedYesNoButton,
+          reportIssuePopUpConfig = reportIssuePopUpConfig state,
+          title = (getString DID_YOU_FACE_ANY_ISSUE),
+          subTitle = (getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY),
+          option1Text = getString REPORT_ISSUE_,
+          option2Text = getString GET_CALLBACK_FROM_US,
+          yesText = getString YES,
+          noText = getString NO
+        },
+        topCard {
+          title =  getString RIDE_COMPLETED,
+          finalAmount = state.data.finalAmount,
+          initalAmount = state.data.driverInfoCardState.price,
+          fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
+          infoPill {
+            text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
+            image = "ny_ic_parallel_arrows," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_parallel_arrows.png",
+            imageVis = VISIBLE
+          },
+          bottomText =  getString RIDE_DETAILS
+        },
+        customerBottomCard {
+          title = (getString RATE_YOUR_RIDE_WITH) <> state.data.driverInfoCardState.driverName,
+          subTitle = (getString YOUR_FEEDBACK_HELPS_US),
+          selectedRating = state.data.ratingViewState.selectedRating,
+          visible = true
+        },
+        primaryButtonConfig = skipButtonConfig state
+      }
+  in config'
+
+
+customerFeedbackPillData :: LazyCheck -> Array (Array (Array RatingCard.FeedbackItem)) 
+customerFeedbackPillData lazyCheck = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 Language, feedbackPillDataWithRating4 Language, feedbackPillDataWithRating5 Language]
+
+feedbackPillDataWithRating1 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating1 lazycheck = [
+  [{id : "6", text : getString RUDE_DRIVER},
+  {id : "1", text : getString FELT_UNSAFE},
+  {id : "1", text : getString TOO_MANY_CALLS}],
+  [{id : "6", text : getString RECKLESS_DRIVING},
+  {id : "6", text : getString DRIVER_CHARGED_MORE}],
+  [{id : "1", text : getString LATE_DROP_OFF},
+  {id : "1", text : getString LATE_PICK_UP}]
+]
+
+feedbackPillDataWithRating2 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating2 lazycheck = [
+  [{id : "7", text : getString RUDE_DRIVER},
+  {id : "2", text : getString FELT_UNSAFE},
+  {id : "2", text : getString TOO_MANY_CALLS}],
+  [{id : "7", text : getString RECKLESS_DRIVING},
+  {id : "7", text : getString DRIVER_CHARGED_MORE}],
+  [{id : "2", text : getString LATE_DROP_OFF},
+  {id : "2", text : getString LATE_PICK_UP}]
+]
+
+feedbackPillDataWithRating3 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating3 lazycheck = [
+  [{id : "8", text : getString UNPROFESSIONAL_DRIVER},
+  {id : "8", text : getString RASH_DRIVING}],
+  [{id : "8", text : getString DRIVER_CHARGED_MORE},
+  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  [{id : "3", text : getString TRIP_GOT_DELAYED},
+  {id : "3", text : getString FELT_UNSAFE}]
+]
+
+feedbackPillDataWithRating4 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating4 lazycheck = [
+  [{id : "9", text : getString POLITE_DRIVER},
+  {id : "9", text : getString EXPERT_DRIVING}],
+  [{id : "9", text : getString ASKED_FOR_EXTRA_FARE},
+  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  [{id : "4", text : getString TRIP_GOT_DELAYED},
+  {id : "4", text : getString SAFE_RIDE}]
+]
+
+feedbackPillDataWithRating5 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating5 lazyCheck = [
+  [{id : "10", text : getString POLITE_DRIVER},
+  {id : "5", text : getString EXPERT_DRIVING}],
+  [{id : "12", text : getString CLEAN_AUTO},
+  {id : "10", text : getString ON_TIME}],
+  [{id : "10", text : getString SKILLED_NAVIGATOR},
+  {id : "5", text : getString SAFE_RIDE}]
+]
+
+getFareUpdatedString :: Int -> String
+getFareUpdatedString diffInDist = do
+  let dist = if diffInDist > 0 then (parseFloat (toNumber diffInDist / 1000.0) 2) else (parseFloat (toNumber (-diffInDist) / 1000.0) 2)
+  if diffInDist > 0 then ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of
+                                                        "HI_IN" -> "आपकी सवारी  "<> dist <> "किमी कम थी"
+                                                        "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಕಡಿಮೆಯಾಗಿದೆ"
+                                                        "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കുറവായിരുന്നു"
+                                                        _       -> "your ride was " <> dist <> " km shorter" )
+    else ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of
+                                                        "HI_IN" -> "आपकी सवारी  "<> dist <> "किमी लंबी थी"
+                                                        "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಉದ್ದವಾಗಿದೆ"
+                                                        "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കൂടുതലായിരുന്നു"
+                                                        _       -> "your ride was " <> dist <> " km longer")

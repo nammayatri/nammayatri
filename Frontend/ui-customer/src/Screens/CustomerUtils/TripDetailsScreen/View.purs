@@ -149,7 +149,7 @@ lostAndFoundView push state =
   , onClick push $ (const ShowPopUp)
   ][  textView $
       [ text (getString LOST_SOMETHING)
-      , color Color.darkDescriptionText
+      , color Color.darkCharcoal
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
@@ -253,7 +253,7 @@ tripDetailsView state =
           [ text state.data.driverName
           , accessibilityHint $ "Driver : " <> state.data.driverName
           , accessibility ENABLE
-          , color Color.darkDescriptionText
+          , color Color.darkCharcoal
           ] <> FontStyle.body1 LanguageStyle
         , linearLayout
           [ height WRAP_CONTENT
@@ -373,7 +373,7 @@ invoiceView state push =
         [ text (getString VIEW_INVOICE)
         , accessibilityHint "View Invoice : Button"
         , accessibility ENABLE
-        , color Color.darkDescriptionText
+        , color Color.darkCharcoal
         ] <> FontStyle.body1 LanguageStyle
      ,  linearLayout
         [ height WRAP_CONTENT
@@ -407,7 +407,7 @@ reportIssueView state push =
             [ text (getString REPORT_AN_ISSUE)
             , accessibilityHint "Report an Issue : Button"
             , accessibility ENABLE
-            , color Color.darkDescriptionText
+            , color Color.darkCharcoal
             ] <> FontStyle.body1 LanguageStyle
           , linearLayout
             [ height WRAP_CONTENT

@@ -13,9 +13,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Styles.Colors where
+module Styles.Colors ( module Styles.Colors
+    , module Common.Styles.Colors
+    ) where
 
 import Styles.Types
+import Common.Styles.Colors
 
 import MerchantConfig.Utils (getValueFromConfig)
 
@@ -87,10 +90,6 @@ primaryBG = "#204480"
 primaryBGDisable :: Color
 primaryBGDisable = "#BAC5D8"
 
-
-black :: Color
-black = "#000000"
-
 greyLight :: Color
 greyLight = "#ECECEC"
 
@@ -117,9 +116,6 @@ greyDarker = "#D6D6D6"
 
 borderListItem :: Color
 borderListItem = "#33484848"
-
-borderColorLight :: Color
-borderColorLight = "#e4e4e4"
 
 notificationColor :: Color
 notificationColor = "#F3454545"
@@ -163,9 +159,6 @@ selectedItemBG = "#F4F6F9"
 selectedItemDarkBG :: Color
 selectedItemDarkBG = "#4DDADADA"
 
-darkDescriptionText :: Color
-darkDescriptionText = "#333333"
-
 lightGreen :: Color
 lightGreen = "#68D08D"
 
@@ -183,9 +176,6 @@ yellowText = "#FDD836"
 
 tripDetailTime :: Color
 tripDetailTime = "#313644"
-
-primaryButtonColor :: Color
-primaryButtonColor = "#FDD836"
 
 paymentDescriptionColor :: Color
 paymentDescriptionColor = "#363636"
@@ -210,9 +200,6 @@ blueViolet = "#6200ee"
 
 blueViolet38 :: Color
 blueViolet38 = "#C39EF9"
-
-blueGrey :: Color
-blueGrey = "#9899a1"
 
 filterBorder :: Color
 filterBorder = "#cbcbcf"
@@ -250,8 +237,6 @@ lightGrey = "#E1E1E1"
 charcoalReyBorder :: Color
 charcoalReyBorder = "#1e323643"
 
-warningRed :: Color
-warningRed  = "#f04c31"
 
 leftSizeBlack :: Color
 leftSizeBlack = "#212121"
@@ -298,11 +283,6 @@ greenCircleColor = "#2CBC1D"
 redCircleColor :: Color
 redCircleColor = "#E94040"
 
-black800 :: Color
-black800 = getValueFromConfig "black800"
-
-black900 :: Color
-black900 = getValueFromConfig "black900"
 
 blackLightGrey :: Color
 blackLightGrey = "#949494"
@@ -312,12 +292,6 @@ catskillWhite = "#F7F9FB"
 
 yellowRadler :: Color
 yellowRadler = "#FFD058"
-
-black700 :: Color
-black700 = "#6D7280"
-
-blue900 :: Color
-blue900 = "#0066FF"
 
 lightGreyShade :: Color
 lightGreyShade = "#DDDDDD"
@@ -331,21 +305,6 @@ greyishBlue = "#738299"
 whiteFloral :: Color
 whiteFloral = "#F8F5EE"
 
-grey900 :: Color
-grey900 = "#E5E7EB"
-
-blackLessTrans :: Color
-blackLessTrans = "#99000000"
-
-black9000 :: Color
-black9000 = "#CC2C2F3A"
-
-yellow900 :: Color
-yellow900 = "#FCC32C"
-
-blue600 :: Color
-blue600 = "#F4F7FF"
-
 purplePantone :: Color
 purplePantone = "#5F259F"
 
@@ -355,26 +314,16 @@ whiteSmoke = "#F6F6F6"
 greySmoke :: Color
 greySmoke = "#E6E6E6"
 
-grey800 :: Color
-grey800 = "#F1F1F1"
-
 purpleSirocco :: Color
 purpleSirocco = "#788889"
-
-greyDavy :: Color
-greyDavy = "#555555"
 
 pinkPantone :: Color
 pinkPantone = "#f5c6c6"
 
-red :: Color
-red = getValueFromConfig "red"
+
 
 yellow800 :: Color
 yellow800 = "#FEEBB9"
-
-black600 :: Color
-black600 = "#A7A7A7"
 
 lightWhite :: Color
 lightWhite = "#f7f5f5"
@@ -392,17 +341,11 @@ textPrimary = "#323643"
 buttonTextPrimary :: Color
 buttonTextPrimary = "#FDD836"
 
-textSecondary :: Color
-textSecondary = "#5B5E69"
-
 primaryButtonBg :: Color
 primaryButtonBg = "#323643"
 
 mainBlack :: Color
 mainBlack = "#323643"
-
-white900 :: Color
-white900 = "#FFFFFF"
 
 warning :: Color
 warning = "#F2A673"
@@ -422,14 +365,8 @@ inactiveButtonTextPrimary = "#FEF2BD"
 hintText :: Color
 hintText =  "#E5E7E8"
 
-transparent :: Color
-transparent = "#00FFFFFF"
-
 transparentGrey :: Color
 transparentGrey = "#66888888"
-
-blue800 :: Color
-blue800 = "#2194FF"
 
 golden :: Color
 golden = "#E9BE4D"
@@ -440,14 +377,9 @@ cancelledBg = "#17E55454"
 lightBlack900 :: Color
 lightBlack900 = "#992C2F3A"
 
-black500 :: Color
-black500 = "#B9BABE"
-
 mint :: Color
 mint = "#1A53BB6F"
 
-lightMaroon :: Color
-lightMaroon = "#E45454"
 blue700' :: Color
 blue700' = "#80B2FF"
 
@@ -459,11 +391,6 @@ grey = "#D0D5DD"
 
 orange800 :: Color
 orange800 = "#FFA666"
-grey700 :: Color
-grey700 = "#F4F4F6"
-
-black650 :: Color
-black650 = "#868B98"
 
 green200 :: Color
 green200 = "#2053BB6F"
@@ -477,8 +404,6 @@ linearGradient = [
   , ["#D075FE", "#D17EF5", "#D286EB", "#D38FE2", "#D498D8", "#D5A0CF", "#D6A9C5", "#D7B1BC", "#D8BAB2", "#D9C3A9", "#DACB9F", "#DBD496", "#DCDD8C", "#DDE583" , "#DEEE79", "#DFF670", "#E0FF66"]
   , ["#ADB2FE", "#9CBAFF", "#87C3FF", "#6DCCFF", "#4DD4FF", "#18DCFF", "#00E3FF" , "#00EAFF", "#00EFF4", "#00F5E4", "#00F9D2", "#33FDBF", "#5FFFAB", "#82FF97", "#A2FF85", "#C1FF74", "#E0FF66"]
 ]
-green900 :: Color
-green900 = "#53BB6F"
 
 lightMintGreen :: Color
 lightMintGreen = "#F0FAF0"
@@ -491,9 +416,6 @@ transparentBlue = "#100066FF"
 
 pink :: Color
 pink = "#FEF1E5"
-
-pickledBlue :: Color 
-pickledBlue = "#29334A"
 
 aliceBlue :: Color 
 aliceBlue = "#F1F3F4"

@@ -101,7 +101,17 @@ initData = {
           blockedDueToPayment : false,
           laterButtonVisibility : false
         },
-        profileImg : Nothing
+        profileImg : Nothing,
+        endRideData : {
+          rideId : "",
+          zeroCommision : 0,
+          tip : Nothing,
+          finalAmount : 0, 
+          riderName : "",
+          rating : 0,
+          feedback : "",
+          disability : Nothing
+        }
     },
     props: {
         statusOnline : true,
@@ -143,6 +153,9 @@ initData = {
         rcActive : false, 
         rcDeactivePopup : false,
         autoPayBanner : false,
-        showAccessbilityPopup : false
+        showAccessbilityPopup : false,
+        showRideCompleted : false,
+        showRideRating : false,
+        showContackSupportPopUp : false
     }
 }

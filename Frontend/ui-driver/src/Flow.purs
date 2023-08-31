@@ -28,7 +28,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last)
 import Data.Either (Either(..))
 import Data.Functor (map)
-import Data.Int (round, toNumber, ceil, fromString)
+import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, fromJust)
 import Data.Number (fromString) as Number
@@ -1885,24 +1885,23 @@ homeScreenFlow = do
         Just (RidesInfo response) -> do
           _ <- pure $ printLog "ride history response" response
           _ <- pure $ printLog "fromLocation lat" (response.fromLocation ^._lat)
-          modifyScreenState $ RideDetailScreenStateType (\rideDetailScreen -> rideDetailScreen { data {customerName = fromMaybe "" (response.riderName),
-            sourceAddress {
-              place = (decodeAddress response.fromLocation false),
-              lat = (response.fromLocation ^._lat),
-              lon = (response.fromLocation ^._lon)
-            },
-            destAddress {
-              place = (decodeAddress response.toLocation false),
-              lat = (response.toLocation ^._lat),
-              lon = (response.toLocation ^._lon)
-            },
-            rideStartTime = convertUTCtoISC (fromMaybe " " response.tripStartTime) "h:mm a",
-            rideEndTime = convertUTCtoISC (fromMaybe " " response.tripEndTime) "h:mm a",
-            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/YYYY  hh:mm a",
-            totalAmount = fromMaybe response.estimatedBaseFare response.computedFare}})
-      void $ lift $ lift $ toggleLoader false
+          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
+              tripId = response.shortRideId,
+              date =  (convertUTCtoISC (response.createdAt) "ddd, Do MMM"),
+              time = (convertUTCtoISC (fromMaybe (response.createdAt) response.tripStartTime ) "h:mm A"),
+              source = (decodeAddress response.fromLocation false),
+              destination = (decodeAddress response.toLocation false),
+              totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
+              distance = show $ (toNumber response.estimatedDistance) / 1000.0,
+              status = response.status,
+              rider = (fromMaybe "" response.riderName)
+            }})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag}}})
+        
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showRideCompleted = true}})
       _ <- updateStage $ HomeScreenStage RideCompleted
-      rideDetailFlow
+      void $ lift $ lift $ toggleLoader false
+      homeScreenFlow
     GO_TO_CANCEL_RIDE {id, info , reason} -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_CANCEL_RIDE" "."
       cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
@@ -2011,6 +2010,13 @@ homeScreenFlow = do
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
       aadhaarVerificationFlow
+    GO_TO_RIDE_DETAILS_SCREEN -> do 
+      tripDetailsScreenFlow
+    POST_RIDE_FEEDBACK state-> do 
+      resp <- lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
+      _ <- updateStage $ HomeScreenStage HomeScreen 
+      homeScreenFlow
+      
   pure unit
 
 nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
@@ -2268,20 +2274,6 @@ constructLatLong lat lng =
 
 updateCustomerMarker :: Location -> Effect Unit
 updateCustomerMarker loc = pure unit
-
-rideDetailFlow :: FlowBT String Unit
-rideDetailFlow = do
-  logField_ <- lift $ lift $ getLogFields
-  action <- UI.rideDetail
-  case action of
-    GO_TO_HOME_FROM_RIDE_DETAIL -> do
-      liftFlowBT $ logEvent logField_ "ny_driver_cash_collected"
-      _ <- updateStage $ HomeScreenStage HomeScreen
-      currentRideFlow
-    SHOW_ROUTE_IN_RIDE_DETAIL -> do
-      void $ lift $ lift $ toggleLoader false
-      modifyScreenState $ RideDetailScreenStateType (\rideDetail -> rideDetail { props { cashCollectedButton = true } } )
-      rideDetailFlow
 
 editBankDetailsFlow :: FlowBT String Unit
 editBankDetailsFlow = do

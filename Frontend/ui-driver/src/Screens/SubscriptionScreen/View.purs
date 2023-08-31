@@ -525,7 +525,7 @@ headerView push state =
       [ text config.title
       , textSize if state.props.isSelectedLangTamil then FontSize.a_16 else FontSize.a_18
       , fontStyle $ FontStyle.semiBold LanguageStyle
-      , color Color.darkDescriptionText
+      , color Color.darkCharcoal
       , padding $ PaddingBottom 4
       , weight 1.0
       ]

@@ -101,7 +101,7 @@ genericHeaderConfig state = let
       } 
     , textConfig {
         text = (getString MY_RIDES)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE

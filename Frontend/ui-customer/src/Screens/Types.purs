@@ -17,7 +17,7 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (OptionButtonList, RateCardType, CountryCodeObj, OTPChannel)
+import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer)
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
@@ -33,7 +33,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
+import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes)
 
 type Contacts = {
   name :: String,
@@ -979,7 +979,6 @@ type RatingCard =
   , distanceDifference :: Int
   , feedback :: String
   , feedbackList :: Array FeedbackAnswer
-  , appConfig :: AppConfig
   }
 
 type Address =

@@ -104,7 +104,7 @@ view push state =
         , background Color.catskillWhite
         ][  textView $
             [ text (getString YOUR_RECENT_RIDE)
-            , color Color.darkDescriptionText
+            , color Color.darkCharcoal
             , width WRAP_CONTENT
             , margin (Margin 16 12 0 12)
             ] <> FontStyle.subHeading2 LanguageStyle
@@ -239,7 +239,7 @@ driverRatingView state =
   , margin (Margin 0 13 0 10)
   ][  textView $
       [ text (getString YOU_RATED)
-      , color Color.darkDescriptionText
+      , color Color.darkCharcoal
       , accessibilityHint $ "You Rated : " <> (show state.data.rating) <> " stars"
       , accessibility ENABLE
       ] <> FontStyle.body3 LanguageStyle
@@ -292,7 +292,7 @@ allTopicsView state push =
                 [ accessibilityHint $ item.title <> " : Button"
                 , accessibility ENABLE
                 , text item.title
-                , color Color.darkDescriptionText
+                , color Color.darkCharcoal
                 , margin (MarginLeft 13)
                 ] <> FontStyle.paragraphText LanguageStyle
               , linearLayout
@@ -419,7 +419,7 @@ headingView state title =
     , height WRAP_CONTENT
     , padding (Padding 16 12 0 12)
     , background Color.catskillWhite
-    , color Color.darkDescriptionText
+    , color Color.darkCharcoal
     ] <> FontStyle.body5 LanguageStyle
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.HelpAndSupportScreenState ->  Flow GlobalState Unit

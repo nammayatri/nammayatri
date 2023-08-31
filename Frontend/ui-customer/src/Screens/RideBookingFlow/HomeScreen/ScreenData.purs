@@ -273,7 +273,6 @@ dummyPreviousRiderating = {
 , distanceDifference : 0
 , feedback : ""
 , feedbackList : []
-, appConfig : DC.config
 }
 
 

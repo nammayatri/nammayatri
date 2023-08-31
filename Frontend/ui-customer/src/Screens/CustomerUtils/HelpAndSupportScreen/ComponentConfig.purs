@@ -57,7 +57,7 @@ sourceToDestinationConfig state = let
         text = state.data.source
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       , textStyle = FontStyle.Body1
       , ellipsize = true
       , maxLines = 1
@@ -70,7 +70,7 @@ sourceToDestinationConfig state = let
         text = state.data.destination
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       , textStyle = FontStyle.Body1
       , maxLines = 1
       , ellipsize = true
@@ -148,7 +148,7 @@ genericHeaderConfig state = let
       } 
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE

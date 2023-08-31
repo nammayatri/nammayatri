@@ -808,5 +808,22 @@ const hindiStrings = {
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "ग्राहक की कम दृष्टि है. कृपया चैट की बजाय उन्हें कॉल करें.",
 	PLEASE_HELP_THEM_AS_YOU_CAN: "कृपया यथासंभव उनकी मदद करें",
   LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE : "जानें कि आप विशेष सहायता की आवश्यकता वाले सवारों की मदद कैसे कर सकते हैं",
-  ASSISTANCE_REQUIRED : "सहायता आवश्यक है"
+  ASSISTANCE_REQUIRED : "सहायता आवश्यक है",
+	SETUP_NOW : "अभी सेटअप करें",
+	NEED_HELP_JOINING_THE_PLAN : "योजना में शामिल होने में सहायता चाहिए? संपर्क करें",
+  NEED_HELP_CALL_SUPPORT : "मदद की ज़रूरत है? <span style='color:#2194FF'>सहायता को कॉल करें</span>",
+  SAVED_DUE_TO_ZERO_COMMISSION : "शून्य कमीशन के कारण बच गया", 
+  TIP_EARNED_FROM_CUSTOMER : "ग्राहक से टिप अर्जित की गई",
+  COLLECT_VIA_CASE_UPI : "नकद/यूपीआई के माध्यम से एकत्र करें",
+  FARE_COLLECTED :  "किराया एकत्र किया गया",
+  RATE_YOUR_RIDE_WITH1 : "",
+  RATE_YOUR_RIDE_WITH2 : "के साथ अपनी सवारी को रेटिंग दें" ,
+  HELP_US_WITH_YOUR_FEEDBACK : "आपकी प्रतिक्रिया से हमें सहायता मिलती है (वैकल्पिक)",
+  COLLECT_CASH : "नकद इकट्ठा करें",
+  ONLINE_PAYMENT : "ऑनलाइन भुगतान",
+  RIDE_COMPLETED : "सवारी पूरी हुई",
+  SUBMIT_FEEDBACK : "प्रतिपुष्टि दें",
+  BADGE_EARNED : "बैज अर्जित",
+  PURPLE_RIDE_CHAMPION : "पर्पल राइड चैंपियन",
+  PURPLE_RIDE : "बैंगनी सवारी"
 }
