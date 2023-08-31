@@ -1,99 +1,99 @@
-import { callbackMapper } from 'presto-ui';
+import { callbackMapper } from "presto-ui";
 
 var timerIdDebounce = null;
-var driverWaitingTimerId = null;
-var zoneOtpExpiryTimerId = null;
+const driverWaitingTimerId = null;
+let zoneOtpExpiryTimerId = null;
 var inputForDebounce;
-var timerIdForTimeout;
-var tracking_id = 0;
+let timerIdForTimeout;
+let tracking_id = 0;
 export const getNewTrackingId = function (unit) {
   tracking_id += 1;
   return JSON.stringify(tracking_id);
 };
 
 export const getKeyInSharedPrefKeysConfigEff = function (key) {
-    return JBridge.getFromSharedPrefs(key);
-  };
+  return JBridge.getFromSharedPrefs(key);
+};
 
 export const validateInputPattern = function (input, pattern){
-    const reg = new RegExp(pattern,'g');
-    var result = reg.test(input);
-    console.log("validateInputPattern " + result + " Values :- " + input + " Pattern :- " + pattern);
-    return (result);
+  const reg = new RegExp(pattern,"g");
+  const result = reg.test(input);
+  console.log("validateInputPattern " + result + " Values :- " + input + " Pattern :- " + pattern);
+  return (result);
 }
 
 export const getLocationName = function(cb){
-    return function (lat) {
-        return function (lng){
-            return function (defaultText) {
-                return function (action) {
-                    return function(){
-                        var callback = callbackMapper.map(function (lat,lon,result){
-                            var decodedString = decodeURIComponent(result).replace(/\+/g, ' ');
-                            cb(action(parseFloat(lat))(parseFloat(lon))(decodedString))();
-                        });
-                        return window.JBridge.getLocationName(lat, lng, defaultText, callback);
-                    }
-                }
-            }
+  return function (lat) {
+    return function (lng){
+      return function (defaultText) {
+        return function (action) {
+          return function(){
+            const callback = callbackMapper.map(function (lat,lon,result){
+              const decodedString = decodeURIComponent(result).replace(/\+/g, " ");
+              cb(action(parseFloat(lat))(parseFloat(lon))(decodedString))();
+            });
+            return window.JBridge.getLocationName(lat, lng, defaultText, callback);
+          }
         }
+      }
     }
+  }
 }
 
 export const getCurrentDate = function (string) {
-  var today = new Date();
-  var dd = String(today.getDate()).padStart(2, '0');
-  var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
-  var yyyy = today.getFullYear();
+  let today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = today.getFullYear();
 
-  today = dd + '/' + mm + '/' + yyyy;
+  today = dd + "/" + mm + "/" + yyyy;
   return today;
 }
 
 export const validateEmail = function (email){
-    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(String(email).toLowerCase());
+  const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
 }
 
 export const factoryResetApp = function (str) {
-    console.log("HERE IN RESET ===--->>")
-    window.JBridge.factoryResetApp()
+  console.log("HERE IN RESET ===--->>")
+  window.JBridge.factoryResetApp()
 }
 
 export const secondsToHms = function (d) {
-    d = Number(d);
-    var h = Math.floor(d / 3600);
-    var m = Math.floor(d % 3600 / 60);
-    // var s = Math.floor(d % 3600 % 60);
+  d = Number(d);
+  const h = Math.floor(d / 3600);
+  const m = Math.floor(d % 3600 / 60);
+  // var s = Math.floor(d % 3600 % 60);
 
-    var hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
-    var mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "";
-    // var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
-    return hDisplay + mDisplay; //+ sDisplay;
+  const hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
+  const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "";
+  // var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
+  return hDisplay + mDisplay; //+ sDisplay;
 }
 
 export const getUTCDay = function (date){
-    return date.getUTCDay();
+  return date.getUTCDay();
 }
 
 export const getTime = function (unit){
-    return Date.now();
+  return Date.now();
 }
 
 export const requestKeyboardShow = function(id) {
-    return function() {
-        var delayInMilliseconds = 100;
-        setTimeout(function() {
-            window.JBridge.requestKeyboardShow(id);
-        }, delayInMilliseconds);
-    }
+  return function() {
+    const delayInMilliseconds = 100;
+    setTimeout(function() {
+      window.JBridge.requestKeyboardShow(id);
+    }, delayInMilliseconds);
   }
+}
 
 export const storeCallBackLocateOnMap = function (cb) {
   try {
-  return function (action) {
+    return function (action) {
       return function () {
-        var callback = callbackMapper.map(function (key, lat, lon) {
+        const callback = callbackMapper.map(function (key, lat, lon) {
           console.log("in show storeCallBackLocateOnMap",action);
           if(timerIdDebounce){
             clearTimeout(timerIdDebounce);
@@ -104,32 +104,32 @@ export const storeCallBackLocateOnMap = function (cb) {
             cb(action (key) (lat) (lon))();
           }, 200);
         });
-          console.log("In storeCallBackLocateOnMap ---------- + " + action);
-          window.JBridge.storeCallBackLocateOnMap(callback);
+        console.log("In storeCallBackLocateOnMap ---------- + " + action);
+        window.JBridge.storeCallBackLocateOnMap(callback);
       }
-  }}
+    }}
   catch (error){
-      console.log("Error occurred in storeCallBackLocateOnMap ------", error);
+    console.log("Error occurred in storeCallBackLocateOnMap ------", error);
   }
 }
 
 export const storeCallBackCustomer = function (cb) {
 
-    return function (action) {
-        return function () {
-          try {
-            var callback = callbackMapper.map(function (notificationType) {
-                cb(action (notificationType))();
-            });
-            var notificationCallBack = function (notificationType) {
-              cb(action (notificationType))();
-          };
-            window.callNotificationCallBack = notificationCallBack;
-            console.log("In storeCallBackCustomer ---------- + " + action);
-            JBridge.storeCallBackCustomer(callback);
-        }
-        catch (error){
-          console.log("Error occurred in storeCallBackCustomer ------", error);
+  return function (action) {
+    return function () {
+      try {
+        const callback = callbackMapper.map(function (notificationType) {
+          cb(action (notificationType))();
+        });
+        const notificationCallBack = function (notificationType) {
+          cb(action (notificationType))();
+        };
+        window.callNotificationCallBack = notificationCallBack;
+        console.log("In storeCallBackCustomer ---------- + " + action);
+        JBridge.storeCallBackCustomer(callback);
+      }
+      catch (error){
+        console.log("Error occurred in storeCallBackCustomer ------", error);
       }
     }}
 
@@ -139,8 +139,8 @@ export const storeCallBackContacts = function (cb) {
   return function (action) {
     return function () {
       try {
-        var callback = callbackMapper.map(function (contact) {
-          var json = JSON.parse(contact);
+        const callback = callbackMapper.map(function (contact) {
+          const json = JSON.parse(contact);
           console.log("storeCallBackContacts js " + json);
           cb(action(json))();
         });
@@ -155,26 +155,26 @@ export const storeCallBackContacts = function (cb) {
 }
 
 export const parseNewContacts = function (String) {
-    return JSON.parse(String);
+  return JSON.parse(String);
 }
 
 
 export const makePascalCase = function (str){
-    var changeToUpperCase = str[0].toUpperCase();
-    for(var i = 1; i < str.length; i++){
-        if(str[i-1] == " " || str[i-1] == ","){
-            changeToUpperCase += str[i].toUpperCase();
-        }else{
-            changeToUpperCase += str[i].toLowerCase();
-        }
+  let changeToUpperCase = str[0].toUpperCase();
+  for(let i = 1; i < str.length; i++){
+    if(str[i-1] == " " || str[i-1] == ","){
+      changeToUpperCase += str[i].toUpperCase();
+    }else{
+      changeToUpperCase += str[i].toLowerCase();
     }
-    return changeToUpperCase;
+  }
+  return changeToUpperCase;
 }
 
 export const decodeError = function (er) {
   return function (key){
     try {
-      var errorPayload = JSON.parse(er)[key];
+      const errorPayload = JSON.parse(er)[key];
       if(errorPayload === null)
         return "";
       return  errorPayload.toString();
@@ -183,10 +183,10 @@ export const decodeError = function (er) {
       return "";
     }
   }
-  };
+};
 
 export const toString = function (attr) {
-return JSON.stringify(attr);
+  return JSON.stringify(attr);
 };
 
 export const zoneOtpExpiryTimer = function (startingTime) {
@@ -198,7 +198,7 @@ export const zoneOtpExpiryTimer = function (startingTime) {
             cb(action(zoneOtpExpiryTimerId)("")(0))();
           } else {
             var callback = callbackMapper.map(function () {
-              var sec = endingTime - startingTime;
+              let sec = endingTime - startingTime;
               if (zoneOtpExpiryTimerId) clearInterval(zoneOtpExpiryTimerId);
               zoneOtpExpiryTimerId = setInterval(
                 convertInMinutesFromat,
@@ -206,9 +206,9 @@ export const zoneOtpExpiryTimer = function (startingTime) {
               );
               function convertInMinutesFromat() {
                 sec--;
-                var minutes = getTwoDigitsNumber(Math.floor(sec / 60));
-                var seconds = getTwoDigitsNumber(sec - minutes * 60);
-                var timeInMinutesFormat = minutes + " : " + seconds;
+                const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
+                const seconds = getTwoDigitsNumber(sec - minutes * 60);
+                const timeInMinutesFormat = minutes + " : " + seconds;
                 cb(action(zoneOtpExpiryTimerId)(timeInMinutesFormat)(sec))();
               }
             });
@@ -247,40 +247,40 @@ function getTwoDigitsNumber(number) {
 }
 
 export const setRefreshing = function (id){
-    return function (bool){
-      if (window.__OS == "ANDROID") {
-        var cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
-        window.Android.runInUI(cmd,null)
-      }
-    }
-  }
-
-export const setEnabled = function (id){
   return function (bool){
     if (window.__OS == "ANDROID") {
-      var cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
+      const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
       window.Android.runInUI(cmd,null)
     }
   }
 }
 
-  // exports ["debounceFunction"] = function (delay) { NEED TO HANDLE DEBOUNCING IN LOCATEONMAP
-  //   return function (cb){
-  //     return function (action){
-  //       return function(){
-  //         console.logs("debounceFunctiondebounceFunction");
-  //         var callback = callbackMapper.map(function () {
-  //           if (timerIdDebounce) clearTimeout(timerIdDebounce);
-  //           timerIdDebounce = setTimeout(() => {
-  //             timerIdDebounce = "MAKEAPICALL";
-  //             cb(action (inputForDebounce))();
-  //           },delay);
-  //         });
-  //         window.callUICallback(callback);
-  //       }
-  //     }
-  //   }
-  // }
+export const setEnabled = function (id){
+  return function (bool){
+    if (window.__OS == "ANDROID") {
+      const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
+      window.Android.runInUI(cmd,null)
+    }
+  }
+}
+
+// exports ["debounceFunction"] = function (delay) { NEED TO HANDLE DEBOUNCING IN LOCATEONMAP
+//   return function (cb){
+//     return function (action){
+//       return function(){
+//         console.logs("debounceFunctiondebounceFunction");
+//         var callback = callbackMapper.map(function () {
+//           if (timerIdDebounce) clearTimeout(timerIdDebounce);
+//           timerIdDebounce = setTimeout(() => {
+//             timerIdDebounce = "MAKEAPICALL";
+//             cb(action (inputForDebounce))();
+//           },delay);
+//         });
+//         window.callUICallback(callback);
+//       }
+//     }
+//   }
+// }
 
 var inputForDebounce;
 export const updateInputString = function (a){
@@ -294,7 +294,7 @@ export const debounceFunction = function (delay) {
     return function (action) {
       return function (isSource) {
         return function () {
-          var callback = callbackMapper.map(function () {
+          const callback = callbackMapper.map(function () {
             if (timerIdDebounce) clearTimeout(timerIdDebounce);
             timerIdDebounce = setTimeout(() => {
               timerIdDebounce = "MAKEAPICALL";
@@ -309,62 +309,62 @@ export const debounceFunction = function (delay) {
 }
 
 export const fetchFromLocalStoreImpl = function(key) {
-    return function (just) {
-        return function (nothing) {
-          return function () {
-            var state = JBridge.getFromSharedPrefs(key);
-            if (state != "__failed" && state != "(null)") {
-              return just(state);
-            }
-            return nothing;
-          };
-        };
+  return function (just) {
+    return function (nothing) {
+      return function () {
+        const state = JBridge.getFromSharedPrefs(key);
+        if (state != "__failed" && state != "(null)") {
+          return just(state);
+        }
+        return nothing;
       };
+    };
+  };
 }
 
 export const fetchFromLocalStoreTempImpl = function(key) {
   return function (just) {
-      return function (nothing) {
-        return function () {
-          var state = JBridge.getFromSharedPrefs(key);
-          var newState = JSON.parse(state);
-          var predictionArray = newState.predictionArray;
-          try {
-                for(var i = 0; i < predictionArray.length; i++) {
-                  if (!predictionArray[i].hasOwnProperty("fullAddress"))
-                    {
-                      predictionArray[i].fullAddress = {};
-                    }
-                }
+    return function (nothing) {
+      return function () {
+        const state = JBridge.getFromSharedPrefs(key);
+        const newState = JSON.parse(state);
+        const predictionArray = newState.predictionArray;
+        try {
+          for(let i = 0; i < predictionArray.length; i++) {
+            if (!predictionArray[i].hasOwnProperty("fullAddress"))
+            {
+              predictionArray[i].fullAddress = {};
             }
-          catch(e) {
-            console.log(e);
           }
+        }
+        catch(e) {
+          console.log(e);
+        }
 
-          newState["predictionArray"] = predictionArray;
-          if (state != "__failed" && state != "(null)") {
-            return just(JSON.stringify(newState));
-          }
-          return nothing;
-        };
+        newState["predictionArray"] = predictionArray;
+        if (state != "__failed" && state != "(null)") {
+          return just(JSON.stringify(newState));
+        }
+        return nothing;
       };
     };
+  };
 }
 
 export const saveToLocalStoreImpl = function(key) {
-    return function (state) {
-        console.log("==------>>>>>> SAVE SCREEN");
-        console.log(key);
-        console.log(state);
-        window.JBridge.setKeysInSharedPrefs(key, state);
-        return function () {
-          console.log("==------>>>>>> SAVED SCREEN");
-        };
-      };
+  return function (state) {
+    console.log("==------>>>>>> SAVE SCREEN");
+    console.log(key);
+    console.log(state);
+    window.JBridge.setKeysInSharedPrefs(key, state);
+    return function () {
+      console.log("==------>>>>>> SAVED SCREEN");
+    };
+  };
 }
 
 export const seperateByWhiteSpaces = function(string) {
-    return string.replace(/\s+/g, ' ').trim();
+  return string.replace(/\s+/g, " ").trim();
 };
 
 // function uuidv4() {
@@ -379,7 +379,7 @@ export const seperateByWhiteSpaces = function(string) {
 // }
 
 export const shuffle = function (array) {
-  var shuffled = array
+  const shuffled = array
     .map(value => ({ value, sort: Math.random() }))
     .sort((a, b) => a.sort - b.sort)
     .map(({ value }) => value)
@@ -391,7 +391,7 @@ export const withinTimeRange = function (startTime) {
     return function(timeStr){
       try {
         return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
-     }catch (err){
+      }catch (err){
         return false;
       }
     }
@@ -414,12 +414,12 @@ export const fetchAndUpdateCurrentLocation = function (cb) {
     return function (fallbackAction) {
       return function () {
         if (window.JBridge.fetchAndUpdateCurrentLocation) {
-          var callback = callbackMapper.map(function (lat, lng) {
+          const callback = callbackMapper.map(function (lat, lng) {
             cb(action(lat)(lng))();
           });
           return window.JBridge.fetchAndUpdateCurrentLocation(callback);
         } else {  // fallback for previous release
-          var fallBackCallback = callbackMapper.map(function(){
+          const fallBackCallback = callbackMapper.map(function(){
             cb(fallbackAction)();
           });
           window.callUICallback(fallBackCallback);
@@ -436,7 +436,7 @@ export const contactPermission = function () {
 
 export const performHapticFeedback = function () {
   if(window.JBridge.performHapticFeedback ){
-      return window.JBridge.performHapticFeedback();
+    return window.JBridge.performHapticFeedback();
   }
 }
 
@@ -444,11 +444,11 @@ export const storeOnResumeCallback = function (cb) {
   return function (action) {
     return function () {
       try {
-        var callback = function () {
+        const callback = function () {
           cb(action)();
         }
         if (window.onResumeListeners){
-        window.onResumeListeners.push(callback);
+          window.onResumeListeners.push(callback);
         }
       }
       catch (error) {
@@ -477,7 +477,7 @@ export const removeLabelFromMarker = function(unit){
 }
 export const addCarousel = function (modelArray) {
   return function (id) {
-    var stringifyModelArray = JSON.stringify(modelArray)
+    const stringifyModelArray = JSON.stringify(modelArray)
     if(JBridge.addCarousel){
       return JBridge.addCarousel(stringifyModelArray, id);
     }
@@ -486,16 +486,16 @@ export const addCarousel = function (modelArray) {
 
 export const strLenWithSpecificCharacters = function(input) {
   return function(pattern){
-  const regex = new RegExp(pattern, 'g');
-  const matches = input.match(regex);
-  return matches ? matches.length : 0;
+    const regex = new RegExp(pattern, "g");
+    const matches = input.match(regex);
+    return matches ? matches.length : 0;
   }
 }
 
 export const getMobileNumber = function (signatureAuthData, maskedNumber) {
   try {
     const re = /^[6-9][)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
-    var mobileNumber = JSON.parse(signatureAuthData).mobileNumber;
+    const mobileNumber = JSON.parse(signatureAuthData).mobileNumber;
     if (re.test(mobileNumber)) {
       return mobileNumber;
     } else {
