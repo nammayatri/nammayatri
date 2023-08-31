@@ -174,21 +174,22 @@ updateLocationHandler ::
   m APISuccess
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
+    let driverId = driver.id
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
     when (thresholdConfig.subscription) $ do
       -- window end time over - still ongoing - sendPaymentReminder
       -- payBy is also over - still ongoing/pending - unsubscribe
-      handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
-    driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
+      handleDriverPayments driverId thresholdConfig.timeDiffFromUtc
+    driverInfo <- DInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
     when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
-    logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
-    checkLocationUpdatesRateLimit driver.id
+    logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
+    checkLocationUpdatesRateLimit driverId
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-    LocUpd.whenWithLocationUpdatesLock driver.id $ do
+    LocUpd.whenWithLocationUpdatesLock driverId $ do
       mbOldLoc <- findDriverLocation
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter (filterFunction thresholdConfig.driverLocationAccuracyBuffer oldLoc) sortedWaypoint) mbOldLoc
+          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
       mbRideIdAndStatus <- getAssignedRide
 
       case filteredWaypoint of
@@ -203,16 +204,17 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
                 Just (_, DRide.INPROGRESS) -> pure ON_RIDE
                 Just (_, DRide.NEW) -> pure ON_PICKUP
                 _ -> pure IDLE
-              streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts point.acc status driverInfo.active driverInfo.mode
+              streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driverId point.pt point.ts point.acc status driverInfo.active driverInfo.mode
 
       let filteredWaypointWithAccuracy = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) filteredWaypoint
-      case filteredWaypointWithAccuracy of
+      let filteredNearPoints = maybe filteredWaypointWithAccuracy (\oldLoc -> filter (filterVeryNearPoints thresholdConfig.driverLocationAccuracyBuffer oldLoc) filteredWaypointWithAccuracy) mbOldLoc
+      case filteredNearPoints of
         [] -> logWarning "Accuracy of the points is low, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
           fork "update driver speed in redis" $
             forM_ (a : ax) $ \point -> do
-              updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
+              updateDriverSpeedInRedis driver.merchantId driverId point.pt point.ts
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
@@ -237,8 +239,6 @@ checkLocationUpdatesRateLimit personId = do
 locationUpdatesHitsCountKey :: Id Person.Person -> Text
 locationUpdatesHitsCountKey personId = "BPP:DriverLocationUpdates:" <> getId personId <> ":hitsCount"
 
-filterFunction :: Meters -> DriverLocation -> Waypoint -> Bool
-filterFunction thresholdDistance oldLoc currwpt =
-  do
-    highPrecMetersToMeters (distanceBetweenInMeters (LatLong oldLoc.lat oldLoc.lon) (currwpt.pt)) > thresholdDistance
-    && oldLoc.coordinatesCalculatedAt < currwpt.ts
+filterVeryNearPoints :: Meters -> DriverLocation -> Waypoint -> Bool
+filterVeryNearPoints thresholdDistance oldLoc currwpt =
+  highPrecMetersToMeters (distanceBetweenInMeters (LatLong oldLoc.lat oldLoc.lon) (currwpt.pt)) > thresholdDistance
