@@ -738,7 +738,7 @@ const englishStrings = {
   YEARLY : "Yearly",
   ASPRESENTED : "As and when presented",
   FIRST_FREE_RIDE : "First Free Ride",
-  DAILY_PER_RIDE_DESC : "No charges till Aug 31",
+  DAILY_PER_RIDE_DESC : "No charges till Sep 19",
   FIRST_FREE_RIDE : "First Ride FREE",
   JOIN_THE_UNLIMITED_PLAN : "Join the UNLIMITED plan now at ₹5/day and save 96%!!",
   MAYBE_LATER : "Maybe Later",

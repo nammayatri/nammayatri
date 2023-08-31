@@ -580,7 +580,7 @@ myPlanBodyview push state =
           , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
           , fontStyle $ FontStyle.semiBold LanguageStyle
           , color Color.white900
-          , background Color.green600
+          , background if state.data.myPlanData.autoPayStatus == PENDING && state.data.orderId /= Nothing then Color.greenDisabled else Color.greenDull
           , cornerRadius 4.0
           , width MATCH_PARENT
           , height WRAP_CONTENT
@@ -700,6 +700,7 @@ duesView push state =
       , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
       , weight 1.0
       , fontStyle $ FontStyle.semiBold LanguageStyle
+      , gravity CENTER_VERTICAL
       , color Color.black800
       ]
       , textView
