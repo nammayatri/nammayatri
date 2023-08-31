@@ -242,42 +242,32 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
-        try {
-            MapsInitializer.initialize(getApplicationContext());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        boolean isMigrated = migrateLocalStore(getApplicationContext());
-        mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
-        String clientId = getApplicationContext().getResources().getString(R.string.client_id);
-        CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(getApplicationContext());
-        CleverTapAPI.createNotificationChannel(getApplicationContext(),clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
-        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
-        cleverTap.enableDeviceNetworkInfoReporting(true);
+        boolean isMigrated = migrateLocalStore(context);
+        String clientId = context.getResources().getString(R.string.client_id);
         activity = this;
-        sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
-        sharedPref.registerOnSharedPreferenceChangeListener(mListener);
-        String key = getResources().getString(R.string.service);
-        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
-        sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
-        Bundle params = new Bundle();
-        params.putString("id", androidId);
-        mFirebaseAnalytics.logEvent("device_id", params);
-        widgetService = new Intent(this, WidgetService.class);
-        FirebaseDynamicLinks.getInstance()
-                .getDynamicLink(getIntent())
-                .addOnSuccessListener(this, pendingDynamicLinkData -> {
-                    // Get deep link from result (may be null if no link is found)
-                    if (pendingDynamicLinkData != null) {
-                        pendingDynamicLinkData.getLink();
-                    }
-                })
-                .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
+
+//        String key = getResources().getString(R.string.service);
+//        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
+
+//        Bundle params = new Bundle(); TODO:: Do we want these anymore??
+//        params.putString("id", androidId);
+//        mFirebaseAnalytics.logEvent("device_id", params);
+
+//        FirebaseDynamicLinks.getInstance() TODO:: This is deprecated and not suggested to use in projects. What was the intent of adding it??
+//                .getDynamicLink(getIntent())
+//                .addOnSuccessListener(this, pendingDynamicLinkData -> {
+//                    // Get deep link from result (may be null if no link is found)
+//                    if (pendingDynamicLinkData != null) {
+//                        pendingDynamicLinkData.getLink();
+//                    }
+//                })
+//                .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
+        
         WebView.setWebContentsDebuggingEnabled(true);
-        registerCallBack();
-        setContentView(R.layout.activity_main);
+        sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+
         if (MERCHANT_TYPE.equals("DRIVER")) {
+            widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             MobilityCommonBridge.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
         } else {
@@ -288,33 +278,27 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     splashLottieView.addAnimatorListener(new Animator.AnimatorListener() {
                         @Override
-                        public void onAnimationStart(Animator animation) {
-
-                        }
-
-                        @Override
                         public void onAnimationEnd(Animator animation) {
-                            if (isHideSplashEventCalled) {
-                                hideSplash();
-                            } else {
-                                splashLottieView.playAnimation();
-                            }
+                            if (isHideSplashEventCalled) hideSplash();
+                                else splashLottieView.playAnimation();
                         }
 
                         @Override
-                        public void onAnimationCancel(Animator animation) {
-                        }
-
+                        public void onAnimationCancel(Animator animation) {}
                         @Override
-                        public void onAnimationRepeat(Animator animation) {
-
-                        }
+                        public void onAnimationRepeat(Animator animation) {}
+                        @Override
+                        public void onAnimationStart(Animator animation) {}
                     });
                 }
             } catch (Settings.SettingNotFoundException e) {
                 isSystemAnimEnabled = false;
             }
         }
+
+        updateConfigURL();
+        initApp();
+
         appUpdateManager = AppUpdateManagerFactory.create(this);
         // Returns an intent object that you use to check for an update.
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
@@ -342,8 +326,25 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(LOG_TAG, "No Update available");
             }
         });
-        updateConfigURL();
-        initApp();
+
+        mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
+        CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(context);
+        CleverTapAPI.createNotificationChannel(context,clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
+        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
+        cleverTap.enableDeviceNetworkInfoReporting(true);
+
+
+        sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
+        sharedPref.registerOnSharedPreferenceChangeListener(mListener);
+        sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onCreate").apply();
+
+        try {
+            MapsInitializer.initialize(getApplicationContext());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        registerCallBack();
+        setContentView(R.layout.activity_main);
         inAppNotification = new InAppNotification(this);
         initNotificationChannel();
         if (BuildConfig.DEBUG) {
