@@ -479,5 +479,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
         BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
-        BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls
+        BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
+        BeamR.numberOfDeviation = numberOfDeviation
       }

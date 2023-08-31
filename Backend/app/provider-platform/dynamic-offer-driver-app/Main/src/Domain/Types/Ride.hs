@@ -73,6 +73,7 @@ data Ride = Ride
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     driverDeviatedFromRoute :: Maybe Bool,
-    numberOfSnapToRoadCalls :: Maybe Int
+    numberOfSnapToRoadCalls :: Maybe Int,
+    numberOfDeviation :: Maybe Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
