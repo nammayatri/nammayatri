@@ -776,5 +776,22 @@ const tamilStrings = {
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "வாடிக்கையாளரின் தசை மோசமான பார்வை குறைந்துவருகின்றது. அழைக்கும் போது அவர்களுக்கு அழைப்பு செய்யுங்கள்.",
 	PLEASE_HELP_THEM_AS_YOU_CAN: "நீங்கள் செய்யலாகவே அவர்களுக்கு உதவுங்கள்",
   LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE: "சிறப்பு உதவி தேவைப்படும் ரைடர்களுக்கு நீங்கள் எப்படி உதவலாம் என்பதை அறிக",
-  ASSISTANCE_REQUIRED : "உதவி தேவை"
+  ASSISTANCE_REQUIRED : "உதவி தேவை",
+	SETUP_NOW : "இப்போதே அமைக்கவும்",
+	NEED_HELP_JOINING_THE_PLAN : "திட்டத்தில் சேர உதவி வேண்டுமா?எங்களை தொடர்பு கொள்ளவும்",
+  NEED_HELP_CALL_SUPPORT : "திட்டத்தில் சேர உதவி வேண்டுமா? <span style='color:#2194FF'>எங்களை தொடர்பு கொள்ளவும்</span>",
+  SAVED_DUE_TO_ZERO_COMMISSION : "ஜீரோ கமிஷன் காரணமாக சேமிக்கப்பட்டது", 
+  TIP_EARNED_FROM_CUSTOMER : "வாடிக்கையாளரிடமிருந்து பெறப்பட்ட Tip",
+  COLLECT_VIA_CASE_UPI : "பணம்/UPI மூலம் சேகரிக்கவும்",
+  FARE_COLLECTED :  "கட்டணம் வசூலிக்கப்பட்டது",
+  RATE_YOUR_RIDE_WITH1 : "" ,
+  RATE_YOUR_RIDE_WITH2 : "உங்கள் பயணத்தை மதிப்பிடுங்கள்",
+  HELP_US_WITH_YOUR_FEEDBACK : "உங்கள் கருத்தை வழங்குவதன் மூலம் எங்களுக்கு உதவுங்கள் (விரும்பினால்)",
+  COLLECT_CASH : "பணத்தை சேகரிக்கவும்",
+  ONLINE_PAYMENT : "ஆன்லைன் கட்டணம்",
+  RIDE_COMPLETED : "சவாரி முடிந்தது",
+  SUBMIT_FEEDBACK : "கருத்தைச் சமர்ப்பிக்கவும்",
+  BADGE_EARNED : "பேட்ஜ் பெற்றுள்ளீர்கள்",
+  PURPLE_RIDE_CHAMPION : "பர்பிள் ரைடு சாம்பியன்",
+  PURPLE_RIDE : "பர்பிள் சவாரி"
 }

@@ -34,7 +34,6 @@ import Screens.NoInternetScreen.Handler (noInternetScreen) as UI
 import Screens.PermissionsScreen.Handler (permissions) as UI
 import Screens.PopUpScreen.Handler (popUpScreen) as UI
 import Screens.RegistrationScreen.Handler (registration) as UI
-import Screens.RideDetailScreen.Handler (rideDetail) as UI
 import Screens.RideHistoryScreen.Handler (rideHistory) as UI
 import Screens.ReferralScreen.Handler (referralScreen) as UI
 import Screens.SelectLanguageScreen.Handler (selectLanguageScreen) as UI

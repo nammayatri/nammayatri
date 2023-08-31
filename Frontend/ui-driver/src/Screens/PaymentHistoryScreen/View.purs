@@ -477,7 +477,7 @@ genericHeaderConfig state = let
                   PaymentHistory -> (getString PAYMENT_HISTORY)
                   TransactionDetails -> (getString TRANSACTION_DETAILS)
                   RideDetails -> (getString RIDE_DETAILS)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE

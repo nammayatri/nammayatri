@@ -76,7 +76,7 @@ genericHeaderConfig state = let
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = (getString SETTINGS)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE

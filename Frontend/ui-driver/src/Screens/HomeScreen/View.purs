@@ -30,8 +30,10 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.MakePaymentModal as MakePaymentModal
 import Components.PopUpModal as PopUpModal
 import Components.RateCard as RateCard
+import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
+import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Control.Monad.Except (runExceptT)
@@ -66,6 +68,7 @@ import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -208,6 +211,7 @@ view push state =
         ]
       , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
+      , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.data.paymentState.makePaymentModal then makePaymentModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
@@ -221,6 +225,7 @@ view push state =
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
+      , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]

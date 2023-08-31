@@ -50,7 +50,6 @@ modifyScreenState st =
     WriteToUsScreenStateType  a -> modifyState (\(GlobalState state) -> GlobalState $ state {writeToUsScreen = a state.writeToUsScreen})
     PermissionsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {permissionsScreen = a state.permissionsScreen})
     HomeScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { homeScreen = a state.homeScreen})
-    RideDetailScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { rideDetailScreen = a state.rideDetailScreen})
     EditBankDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { editBankDetailsScreen = a state.editBankDetailsScreen})
     EditAadhaarDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { editAadhaarDetailsScreen = a state.editAadhaarDetailsScreen})
     TripDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { tripDetailsScreen = a state.tripDetailsScreen})
@@ -128,6 +127,7 @@ updateStage stage = do
                     rideActionModal = false,
                     enterOtpModal = false,
                     routeVisible = false,
+                    showRideCompleted = true,
                     currentStage = stage'
                   }
                 })

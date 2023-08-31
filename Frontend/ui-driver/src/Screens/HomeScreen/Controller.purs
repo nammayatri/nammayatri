@@ -15,19 +15,23 @@
 
 module Screens.HomeScreen.Controller where
 
+import Common.Styles.Colors as Color
 import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..)) as Common
-import Components.BottomNavBar as BottomNavBar
-import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
+import Components.BottomNavBar as BottomNavBar
+import Components.ChatView as ChatView
 import Components.ChatView as ChatView
 import Components.InAppKeyboardModal as InAppKeyboardModal
+import Components.MakePaymentModal as MakePaymentModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
-import Components.RideActionModal as RideActionModal
-import Components.MakePaymentModal as MakePaymentModal
-import Components.ChatView as ChatView
-import Components.StatsModel.Controller as StatsModelController
+import Components.RateCard as RateCard
+import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
+import Components.RideActionModal as RideActionModal
+import Components.RideCompletedCard as RideCompletedCard
+import Components.SelectListModal as SelectListModal
+import Components.StatsModel.Controller as StatsModelController
 import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
@@ -37,13 +41,18 @@ import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
 import Effect (Effect)
 import Effect.Class (liftEffect)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
+import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat, setText, getTime, differenceBetweenTwoUTC, getCurrentUTC)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams, sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=),(>=), when)
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -55,11 +64,7 @@ import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
-import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
-import Effect.Unsafe (unsafePerformEffect)
-import Components.RateCard as RateCard
-import Common.Styles.Colors as Color
+import Services.Config (getSupportNumber)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -185,6 +190,7 @@ instance loggableAction :: Loggable Action where
     RemovePaymentBanner -> pure unit
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
+    _ -> pure unit
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -210,6 +216,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
                     | SubscriptionScreen ST.HomeScreenState 
                     | GoToVehicleDetailScreen ST.HomeScreenState
+                    | GoToRideDetailsScreen ST.HomeScreenState
+                    | PostRideFeedback ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -265,6 +273,8 @@ data Action = NoAction
             | AutoPayBanner Banner.Action
             | RCDeactivatedAC PopUpModal.Action
             | PopUpModalAccessibilityAction PopUpModal.Action
+            | RideCompletedAC RideCompletedCard.Action
+            | RatingCardAC RatingCard.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -689,6 +699,22 @@ eval (PaymentStatusAction status) state =
                   bannerTitleColor = Color.dustyRed,
                   banneActionText = getString CONTACT_SUPPORT,
                   bannerImage = "ny_ic_payment_failed_banner," }}}
+  
+eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContackSupportPopUp = true}}
+
+eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContackSupportPopUp = false}}
+eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton2Click)) state =  do
+                                                                                                      _ <- pure $ showDialer (getSupportNumber "") false 
+                                                                                                      continue state
+eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.DismissPopup)) state = continue state {props {showContackSupportPopUp = false}}
+
+eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ GoToRideDetailsScreen state
+eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = continue state {props {showRideRating = true}}
+
+eval (RatingCardAC (RatingCard.Rating selectedRating)) state = continue state {data {endRideData { rating = selectedRating}}}
+eval (RatingCardAC (RatingCard.FeedbackChanged feedback)) state = continue state {data {endRideData {feedback = feedback}}}
+eval (RatingCardAC (RatingCard.BackPressed)) state = continue state {props {showRideRating = false}}
+eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = exit $ PostRideFeedback state {props {showRideRating = false, showRideCompleted = false}}
 
 eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetailScreen state 
 
@@ -841,3 +867,6 @@ updateMessagesWithCmd state =
       pure unit
     pure NoAction
     ]
+
+  
+  

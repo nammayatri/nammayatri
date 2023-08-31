@@ -17,27 +17,27 @@ module Services.Backend where
 
 import Data.Maybe
 import Services.API
+import Services.API
 
 import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Either (Either(..), either)
-import Data.String as DS
 import Data.Int as INT
+import Data.String as DS
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (liftFlow, bundleVersion)
+import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import Helpers.Utils (decodeErrorCode, getTime, toString, decodeErrorMessage)
+import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
-import Types.ModifyScreenState(modifyScreenState)
-import Types.App (GlobalState, FlowBT, ScreenType(..))
-import Services.API
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>))
-import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse(..))
+import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (DriverStatus)
 import Services.Config as SC
@@ -46,11 +46,10 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, g
 import Storage (getValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
-import Engineering.Helpers.Utils (toggleLoader)
 import Tracker.Types as Tracker
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-import Helpers.Utils(decodeErrorCode, getTime, toString, decodeErrorMessage)
+import Types.ModifyScreenState (modifyScreenState)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -1062,3 +1061,16 @@ suspendMandate _ = do
     withAPIResult (EP.suspendMandate "") unwrapResponse $ callAPI headers (SuspendMandateReq "")
     where
         unwrapResponse (x) = x
+
+postRideFeedback :: String ->  Int -> String -> Flow GlobalState (Either ErrorResponse PostRideFeedbackResp)
+postRideFeedback rideId rating feedback = do 
+    headers <- getHeaders "" false 
+    withAPIResult (EP.postRideFeedback "") unwrapResponse $ callAPI headers $ makeReq rideId rating feedback
+    where
+        makeReq :: String -> Int -> String -> PostRideFeedbackReq
+        makeReq rideId rating feedback = PostRideFeedbackReq {
+            rideId : rideId,
+            feedbackDetails : feedback,
+            ratingValue : rating
+        }
+        unwrapResponse (x) = x 

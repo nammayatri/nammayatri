@@ -21,12 +21,15 @@ import Common.Types.App (LazyCheck(..))
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
 import Components.ChatView as ChatView
+import Components.ErrorModal (primaryButtonConfig)
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.MakePaymentModal as MakePaymentModal
 import Components.PopUpModal as PopUpModal
 import Components.RateCard as RateCard
+import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
+import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Data.Array as DA
@@ -42,15 +45,14 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>))
-import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map, (&&), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
+import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding)
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Font.Style (Style(..))
+import Font.Style (Style (..))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -319,7 +321,7 @@ driverRCPopUpConfig state = let
     cornerRadius = (PTD.Corners 16.0 true true true true), 
     padding = Padding 16 24 16 16,
     optionButtonOrientation = "VERTICAL",
-    margin = (Margin 24 164 24 164), 
+    margin = MarginHorizontal 24 24, 
     primaryText {
       text =  getString RC_DEACTIVATED, 
       margin = MarginTop 16 
@@ -775,3 +777,95 @@ getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then
                           Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
                           Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
                           Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : "ny_ic_disability_purple," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_purple.png"}
+getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
+getRideCompletedConfig state = let 
+  config = RideCompletedCard.config
+  config' = config{
+    primaryButtonConfig {
+      textConfig {
+        text = getString FARE_COLLECTED
+      }
+    },
+    topCard {
+      title = getString RIDE_COMPLETED,
+      finalAmount = state.data.endRideData.finalAmount,
+      initalAmount = state.data.endRideData.finalAmount,
+      infoPill {
+        text = getString COLLECT_VIA_CASE_UPI,
+        color = Color.white900,
+        cornerRadius = 100.0,
+        padding = Padding 16 16 16 16,
+        margin = MarginTop 16,
+        background = Color.peacoat,
+        stroke = "1," <> Color.peacoat,
+        alpha = 0.8,
+        fontStyle = Body1
+      },
+      topPill{
+        visible = (state.data.endRideData.disability /= Nothing),
+        text = getString PURPLE_RIDE,
+        textColor = Color.white900,
+        background = Color.blueMagenta
+    },
+      bottomText = getString RIDE_DETAILS
+    },
+    driverBottomCard {
+      visible =state.data.endRideData.tip /= Nothing ,
+      savedMoney =  (case state.data.endRideData.tip of 
+                            Just val -> [{amount : val, reason : getString TIP_EARNED_FROM_CUSTOMER}]
+                            Nothing -> [])
+    },
+    contactSupportPopUpConfig{
+      gravity = CENTER,
+      cornerRadius = PTD.Corners 15.0 true true true true,
+      margin = MarginHorizontal 16 16,
+      padding = PaddingTop 24,
+      buttonLayoutMargin = Margin 0 0 0 0,
+      primaryText {
+        text = getString CONTACT_SUPPORT <> "?",
+        margin = MarginBottom 12
+      },
+      secondaryText {
+        text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT,
+        margin = MarginBottom 16
+      },
+      option1 {
+        text = getString CANCEL
+      },
+      option2 {
+        text = getString CALL_SUPPORT
+      }
+    },
+    badgeCard{
+      visible = (state.data.endRideData.disability /= Nothing),
+      image = "ny_ic_disability_confetti_badge," <> (getAssetStoreLink FunctionCall) <> "ny_ic_disability_confetti_badge.png",
+      imageWidth = V 152, 
+      imageHeight = V 106,
+      text1 = getString BADGE_EARNED,
+      text2 = getString PURPLE_RIDE_CHAMPION,
+      background = Color.mangolia
+    },
+    showContackSupportPopUp = state.props.showContackSupportPopUp,
+    accessibility = DISABLE
+  }
+  in config'
+
+getRatingCardConfig :: ST.HomeScreenState -> RatingCard.RatingCardConfig
+getRatingCardConfig state = let 
+  config = RatingCard.ratingCardConfig 
+  config' = config {
+    data {
+      rating = state.data.endRideData.rating
+    },
+    primaryButtonConfig {
+      textConfig {
+        text = getString SUBMIT_FEEDBACK
+      },
+      isClickable = if state.data.endRideData.rating > 0 then true else false,
+      alpha = if state.data.endRideData.rating > 0 then 1.0 else 0.4,
+      id = "RatingCardPrimayButton"
+    },
+    title = getString RATE_YOUR_RIDE_WITH1 <> " " <> state.data.endRideData.riderName <> " " <>  getString RATE_YOUR_RIDE_WITH2,
+    feedbackPlaceHolder = getString HELP_US_WITH_YOUR_FEEDBACK
+  }
+  in config'

@@ -16,7 +16,7 @@
 module Screens.HomeScreen.Controller where
 
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..))
 import Components.Banner as Banner
 import Components.ChatView as ChatView
 import Components.ChatView.Controller as ChatView
@@ -26,13 +26,13 @@ import Components.ChooseYourRide.Controller as ChooseYourRideController
 import Components.DriverInfoCard.Controller as DriverInfoCardController
 import Components.EmergencyHelp as EmergencyHelpController
 import Components.ErrorModal.Controller as ErrorModalController
-import Components.FareBreakUp as FareBreakUp
 import Components.FavouriteLocationModel as FavouriteLocationModelController
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
 import Components.MenuButton as MenuButton
 import Components.MenuButton as MenuButton
+import Components.RideCompletedCard.Controller as RideCompletedCard
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
@@ -92,7 +92,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), FeedbackAnswer(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -558,7 +558,6 @@ data Action = NoAction
             | UpdateCurrentLocation String String
             | UpdateCurrentStage String
             | GoBackToSearchLocationModal
-            | FareBreakUpActionController FareBreakUp.Action
             | SkipButtonActionController PrimaryButtonController.Action
             | SearchExpireCountDown Int String String String
             | EstimatesTryAgain GetQuotesRes
@@ -621,6 +620,7 @@ data Action = NoAction
             | ZoneTimerExpired PopUpModal.Action
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
+            | RideCompletedAC RideCompletedCard.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -673,9 +673,9 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-eval (SelectButton index) state = continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1}}}
+eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1}}}
 
-eval (RateClick index) state = do
+eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
   _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
   continue
     state
@@ -692,15 +692,15 @@ eval (RateClick index) state = do
         }
       }
 
-eval (IssueReportIndex index) state =
+eval ( RideCompletedAC (RideCompletedCard.IssueReportIndex index)) state =
   case index of
     0 -> continue state { data { ratingViewState { openReportIssue = true }}}
     1 -> exit $ ReportIssue state { data {  ratingViewState { issueReason = Nothing }}}
     _ -> continue state
 
-eval Support state = continue state {props {callSupportPopUp = true}}
+eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {callSupportPopUp = true}}
 
-eval RideDetails state = exit $ RideDetailsScreen state -- TODO needs to fill the data
+eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ RideDetailsScreen state -- TODO needs to fill the data
 
 ------------------------------- ChatService - Start --------------------------
 
@@ -972,12 +972,6 @@ eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
 
-eval (RatingCardAC (RatingCard.FareBreakUpAC FareBreakUp.ShowInvoice)) state = exit $ GoToInvoice state
-
-eval (RatingCardAC (RatingCard.SkipButtonAC PrimaryButtonController.OnClick)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_skip_feedback"
-  updateAndExit state GoToHome
-
 eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { data { rideRatingState { feedback = value } } }
 
 eval (RatingCardAC (RatingCard.BackPressed)) state = do
@@ -1073,7 +1067,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       _            -> continue state
 
 
-eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
+eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state =
   case state.data.ratingViewState.issueFacedView of
     true -> do
             _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
@@ -1085,7 +1079,6 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
                     dummyRideRatingState
                       { driverName = state.data.driverInfoCardState.driverName
                       , rideId = state.data.driverInfoCardState.rideId
-                      , appConfig = state.data.config
                       }
                   }
                 }
@@ -1274,13 +1267,13 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
                       else exit $ CancelRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }}
       Nothing    -> continue state
 
-eval (IssueReportPopUpAC (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = continue state { data { ratingViewState { openReportIssue = false } } }
+eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button1 PrimaryButtonController.OnClick))) state = continue state { data { ratingViewState { openReportIssue = false } } }
 
-eval (IssueReportPopUpAC (CancelRidePopUp.OnGoBack)) state = continue state { data { ratingViewState { openReportIssue = false } } }
+eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.OnGoBack))) state = continue state { data { ratingViewState { openReportIssue = false } } }
 
-eval (IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index)) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
+eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index))) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
 
-eval (IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
+eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick))) state = do
   let issue = (reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
   let reason = (fromMaybe dummyCancelReason issue).description
   exit $ ReportIssue state { data {
@@ -2034,8 +2027,7 @@ dummyRideRatingState = {
   offeredFare         : 0,
   distanceDifference  : 0,
   feedback            : "",
-  feedbackList        : [],
-  appConfig : DC.config
+  feedbackList        : []
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

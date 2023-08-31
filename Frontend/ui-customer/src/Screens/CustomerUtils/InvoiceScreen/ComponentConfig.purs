@@ -43,7 +43,7 @@ genericHeaderConfig state = let
        }
     , textConfig
       { text = (getString INVOICE)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig
       { visibility = GONE
