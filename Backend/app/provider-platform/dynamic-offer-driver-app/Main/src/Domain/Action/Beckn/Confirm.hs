@@ -241,7 +241,8 @@ handler transporter req quote = do
             createdAt = now,
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
-            numberOfSnapToRoadCalls = Nothing
+            numberOfSnapToRoadCalls = Nothing,
+            numberOfDeviation = Nothing
           }
 
     buildTrackingUrl rideId = do

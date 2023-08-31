@@ -53,7 +53,8 @@ data RideT f = RideT
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
     driverDeviatedFromRoute :: B.C f (Maybe Bool),
-    numberOfSnapToRoadCalls :: B.C f (Maybe Int)
+    numberOfSnapToRoadCalls :: B.C f (Maybe Int),
+    numberOfDeviation :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
@@ -92,7 +93,8 @@ rideTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
       driverDeviatedFromRoute = B.fieldNamed "driver_deviated_from_route",
-      numberOfSnapToRoadCalls = B.fieldNamed "number_of_snap_to_road_calls"
+      numberOfSnapToRoadCalls = B.fieldNamed "number_of_snap_to_road_calls",
+      numberOfDeviation = B.fieldNamed "number_of_deviation"
     }
 
 $(enableKVPG ''RideT ['id] [['bookingId], ['driverId]])
