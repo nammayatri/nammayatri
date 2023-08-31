@@ -141,7 +141,8 @@ cancelRideTransaction ::
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r
+    EsqLocRepDBFlow m r,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   Id SRB.Booking ->
   DRide.Ride ->

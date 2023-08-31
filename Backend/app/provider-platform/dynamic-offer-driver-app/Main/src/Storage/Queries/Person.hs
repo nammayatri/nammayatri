@@ -40,6 +40,7 @@ import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -47,6 +48,8 @@ import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
 import qualified Sequelize as Se
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import qualified Storage.Beam.Common as BeamCommon
@@ -158,13 +161,13 @@ getDriverInformations driverLocations =
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
 
-getDriversWithOutdatedLocationsToMakeInactive :: MonadFlow m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- QueriesDL.getDriverLocations before
   driverInfos <- getDriverInformations driverLocations
   getDriversList driverInfos
 
-getDriversWithOutdatedLocationsToMakeInactive' :: MonadFlow m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive' :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive' before = do
   driverLocations <- QueriesDL.getDriverLocations before
   driverInfos <- getDriverInfos driverLocations
@@ -173,12 +176,19 @@ getDriversWithOutdatedLocationsToMakeInactive' before = do
   return drivers
 
 findAllDriversByIdsFirstNameAsc ::
-  (Functor m, MonadFlow m) =>
+  (Functor m, MonadFlow m, MonadFlow m, HasField "enableLocationTrackingService" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], CoreMetrics m) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
 findAllDriversByIdsFirstNameAsc merchantId driverIds = do
-  driverLocs <- QueriesDL.getDriverLocs driverIds merchantId
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  driverLocs <- do
+    if enableLocationTrackingService
+      then do
+        ltsCfg <- asks (.ltsCfg)
+        driverLocations <- LF.driversLocation ltsCfg driverIds
+        return $ mapMaybe (LF.findByDriverId driverLocations) driverIds
+      else QueriesDL.getDriverLocs driverIds merchantId
   driverInfos <- getDriverInfos driverLocs
   vehicle <- getVehicles driverInfos
   drivers <- getDrivers vehicle
@@ -639,7 +649,7 @@ buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} 
     else Nothing
 
 getDriverLocsWithCond ::
-  (MonadFlow m, MonadTime m) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
@@ -699,7 +709,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  MonadFlow m =>
+  (MonadFlow m, HasField "enableLocationTrackingService" r Bool, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], CoreMetrics m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -709,8 +719,14 @@ getNearestDriversCurrentlyOnRide ::
   m [NearestDriversResultCurrentlyOnRide]
 getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
   let onRideRadius = fromIntegral (radiusMeters - reduceRadiusValue) :: Double
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
   res <- do
-    driverLocs <- QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
+    driverLocs <- do
+      if enableLocationTrackingService
+        then do
+          ltsCfg <- asks (.ltsCfg)
+          LF.nearBy ltsCfg lat lon True mbVariant radiusMeters merchantId
+        else QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
     driverInfos <- getDriverInfosWithCond driverLocs False True
     vehicles <- getVehicles driverInfos
     drivers <- getDrivers vehicles

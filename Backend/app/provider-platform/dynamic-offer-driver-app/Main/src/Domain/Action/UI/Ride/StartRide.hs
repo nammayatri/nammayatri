@@ -147,18 +147,23 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
-          driverLocation <- findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
+          enableLocationTrackingService <- asks (.enableLocationTrackingService)
+          driverLocation <- do
+            if enableLocationTrackingService
+              then do
+                ltsCfg <- asks (.ltsCfg)
+                driverLocations <- LF.driversLocation ltsCfg [driverId]
+                LF.findByDriverId driverLocations driverId & fromMaybeM LocationNotFound
+              else findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
   enableLocationTrackingService <- asks (.enableLocationTrackingService)
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
-    if enableLocationTrackingService
-      then do
-        ltsCfg <- asks (.ltsCfg)
-        ltsRes <- LF.rideStart ltsCfg rideId point.lat point.lon booking.providerId driverId
-        logTagInfo "ltsRes" (show ltsRes)
-      else do
-        withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
+    when enableLocationTrackingService $ do
+      ltsCfg <- asks (.ltsCfg)
+      ltsRes <- LF.rideStart ltsCfg rideId point.lat point.lon booking.providerId driverId
+      logTagInfo "ltsRes" (show ltsRes)
+    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
   pure APISuccess.Success
   where

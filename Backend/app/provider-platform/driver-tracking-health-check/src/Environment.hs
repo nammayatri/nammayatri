@@ -58,7 +58,8 @@ data AppCfg = AppCfg
     driverInactiveSmsTemplate :: Text,
     cacheConfig :: CacheConfig,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    enableLocationTrackingService :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -91,7 +92,8 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    enableLocationTrackingService :: Bool
   }
   deriving (Generic)
 

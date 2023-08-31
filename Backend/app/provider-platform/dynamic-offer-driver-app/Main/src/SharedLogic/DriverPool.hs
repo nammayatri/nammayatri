@@ -500,7 +500,7 @@ getNearestDriversLocs mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRi
     if enableLocationTrackingService
       then do
         ltsCfg <- asks (.ltsCfg)
-        LF.nearBy ltsCfg lat lon mbVariant radiusMeters merchantId
+        LF.nearBy ltsCfg lat lon False mbVariant radiusMeters merchantId
       else getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
   QP.getNearestDrivers
     mbVariant
@@ -548,7 +548,10 @@ calculateDriverPoolCurrentlyOnRide ::
     EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
-    HasCoordinates a
+    HasCoordinates a,
+    HasField "enableLocationTrackingService" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    CoreMetrics m
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -599,7 +602,10 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    HasField "enableLocationTrackingService" r Bool,
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    CoreMetrics m
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->

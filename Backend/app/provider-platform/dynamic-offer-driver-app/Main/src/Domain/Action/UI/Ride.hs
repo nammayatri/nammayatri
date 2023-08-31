@@ -54,6 +54,8 @@ import qualified Lib.DriverScore.Types as DST
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
@@ -209,6 +211,8 @@ otpRideCreate ::
     EsqLocDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
+    HasFlowEnv m r '["enableLocationTrackingService" ::: Bool],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasHttpClientOptions r c,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
@@ -233,6 +237,11 @@ otpRideCreate driver otpCode booking = do
   ride <- buildRide otpCode driver.id (Just transporter.id)
   rideDetails <- buildRideDetails ride
   triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
+  ltsCfg <- asks (.ltsCfg)
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  when enableLocationTrackingService $ do
+    _ <- LF.rideDetails ltsCfg ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+    return ()
   _ <- QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
   _ <- QRide.create ride
   _ <- QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}

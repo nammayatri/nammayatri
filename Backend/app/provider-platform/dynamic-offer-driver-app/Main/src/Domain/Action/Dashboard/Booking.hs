@@ -37,6 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.DriverLocation as SDrLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SyncRide as SyncRide
@@ -71,7 +72,16 @@ stuckBookingsCancel merchantShortId req = do
   let stuckPersonIds = stuckRideItems <&> (.driverId)
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
-  driverLocations <- catMaybes <$> traverse (SDrLoc.findById merchant.id) stuckPersonIds
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  driverLocations <-
+    if enableLocationTrackingService
+      then do
+        ltsCfg <- asks (.ltsCfg)
+        driverLocations <- LF.driversLocation ltsCfg stuckPersonIds
+        return $ mapMaybe (LF.findByDriverId driverLocations) stuckPersonIds
+      else do
+        catMaybes <$> traverse (SDrLoc.findById merchant.id) stuckPersonIds
+
   _ <- QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
   _ <- QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert

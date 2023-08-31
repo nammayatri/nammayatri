@@ -74,7 +74,8 @@ cancel ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   -- Id DM.Merchant ->
   -- SignatureAuthResult ->

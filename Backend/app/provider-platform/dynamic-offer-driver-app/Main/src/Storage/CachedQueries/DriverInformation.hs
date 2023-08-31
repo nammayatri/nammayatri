@@ -116,7 +116,7 @@ findAllWithLimitOffsetByMerchantId = Queries.findAllWithLimitOffsetByMerchantId
 -- getDriversWithOutdatedLocationsToMakeInactive :: Esq.Transactionable m => UTCTime -> m [Person]
 -- getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
 
-getDriversWithOutdatedLocationsToMakeInactive :: MonadFlow m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive = QueriesPerson.getDriversWithOutdatedLocationsToMakeInactive
 
 addReferralCode :: (CacheFlow m r, MonadFlow m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()

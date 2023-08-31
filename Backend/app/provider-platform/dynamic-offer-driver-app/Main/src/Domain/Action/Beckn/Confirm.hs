@@ -322,7 +322,8 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -379,7 +380,8 @@ validateRequest ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

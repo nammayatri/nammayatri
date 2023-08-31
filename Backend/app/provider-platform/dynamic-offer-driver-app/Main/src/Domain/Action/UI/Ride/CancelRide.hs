@@ -34,11 +34,14 @@ import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as QDrLoc
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -74,17 +77,17 @@ data CancelRideReq = CancelRideReq
 
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
 
-driverCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+driverCancelRideHandler :: (MonadHandler m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "enableLocationTrackingService" r Bool, CoreMetrics m) => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 driverCancelRideHandler shandle personId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
     cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
-dashboardCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+dashboardCancelRideHandler :: (MonadHandler m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "enableLocationTrackingService" r Bool, CoreMetrics m) => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $
     cancelRideHandler shandle (DashboardRequestorId merchantId) rideId req
 
-cancelRideHandler :: MonadHandler m => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+cancelRideHandler :: (MonadHandler m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "enableLocationTrackingService" r Bool, CoreMetrics m) => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
@@ -104,7 +107,14 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          mbLocation <- findDriverLocationId driver.merchantId driverId
+          enableLocationTrackingService <- asks (.enableLocationTrackingService)
+          mbLocation <- do
+            if enableLocationTrackingService
+              then do
+                ltsCfg <- asks (.ltsCfg)
+                driverLocations <- LF.driversLocation ltsCfg [driverId]
+                return $ LF.findByDriverId driverLocations driverId
+              else findDriverLocationId driver.merchantId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)

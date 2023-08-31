@@ -44,7 +44,7 @@ data GetLocationRes = GetLocationRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-getLocation :: (EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id SRide.Ride -> m GetLocationRes
+getLocation :: (EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, EsqLocRepDBFlow m r, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => Id SRide.Ride -> m GetLocationRes
 getLocation rideId = do
   ride <-
     runInReplica $

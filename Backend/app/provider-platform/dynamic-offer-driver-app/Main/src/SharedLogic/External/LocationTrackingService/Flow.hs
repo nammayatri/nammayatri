@@ -30,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.DriverDetails as DriverDetailsAPI
+import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.EndRide as EndRideAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearBy as NearByAPI
 import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as RideDetailsAPI
@@ -62,17 +63,14 @@ rideEnd rsCfg rideId lat lon merchantId driverId = do
   callAPI url (EndRideAPI.endRide rideId req) "rideEnd" EndRideAPI.locationTrackingServiceAPI
     >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_END_RIDE_API") url)
 
-nearBy :: (CoreMetrics m, MonadFlow m) => LocationTrackingeServiceConfig -> Double -> Double -> Maybe Variant -> Int -> Id DM.Merchant -> m [DriverLocation]
-nearBy rsCfg lat lon vt radius merchantId = do
+nearBy :: (CoreMetrics m, MonadFlow m) => LocationTrackingeServiceConfig -> Double -> Double -> Bool -> Maybe Variant -> Int -> Id DM.Merchant -> m [DriverLocation]
+nearBy rsCfg lat lon onRide vt radius merchantId = do
   let url = rsCfg.url
-  -- let vehicleType = T.pack . show <$> vehicle_typ
-  -- let vt = case vehicleType of
-  --       Just v -> v
-  --       _ -> ""
   let req =
         NearByReq
           { lat,
             lon,
+            onRide,
             radius,
             vehicleType = vt,
             merchantId = merchantId
@@ -105,3 +103,16 @@ rideDetails rsCfg rideId rideStatus merchantId driverId lat lon = do
           }
   callAPI url (RideDetailsAPI.rideDetails req) "rideDetails" RideDetailsAPI.locationTrackingServiceAPI
     >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_RIDE_DETAILS_API") url)
+
+driversLocation :: (CoreMetrics m, MonadFlow m) => LocationTrackingeServiceConfig -> [Id DP.Person] -> m [DriverLocation]
+driversLocation rsCfg driverIds = do
+  let url = rsCfg.url
+  let req =
+        DriversLocationReq
+          { driverIds
+          }
+  callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
+    >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
+
+findByDriverId :: [DriverLocation] -> Id DP.Person -> Maybe DriverLocation
+findByDriverId driverLocations driverId = find (\driverLocation -> driverId == driverLocation.driverId) driverLocations

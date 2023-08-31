@@ -84,7 +84,8 @@ endRideTransaction ::
     EsqLocRepDBFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasField "maxShards" r Int,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "enableLocationTrackingService" r Bool
   ) =>
   Id DP.Driver ->
   SRB.Booking ->

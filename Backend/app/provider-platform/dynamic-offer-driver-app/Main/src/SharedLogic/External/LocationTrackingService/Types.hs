@@ -43,6 +43,7 @@ data EndRideReq = EndRideReq
 data NearByReq = NearByReq
   { lat :: Double,
     lon :: Double,
+    onRide :: Bool,
     vehicleType :: Maybe Variant,
     radius :: Int,
     merchantId :: Id DM.Merchant
@@ -74,5 +75,10 @@ data RideDetailsReq = RideDetailsReq
     driverId :: Id DP.Person,
     lat :: Double,
     lon :: Double
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype DriversLocationReq = DriversLocationReq
+  { driverIds :: [Id DP.Person]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
