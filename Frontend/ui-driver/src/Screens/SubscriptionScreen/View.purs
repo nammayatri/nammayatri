@@ -700,6 +700,7 @@ duesView push state =
       , textSize if state.props.isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
       , weight 1.0
       , fontStyle $ FontStyle.semiBold LanguageStyle
+      , gravity CENTER_VERTICAL
       , color Color.black800
       ]
       , textView
