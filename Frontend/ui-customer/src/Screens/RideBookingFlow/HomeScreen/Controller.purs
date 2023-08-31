@@ -625,6 +625,7 @@ data Action = NoAction
             | RepeatRide Int Trip
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
+            | RideCompletedAC RideCompletedCard.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
