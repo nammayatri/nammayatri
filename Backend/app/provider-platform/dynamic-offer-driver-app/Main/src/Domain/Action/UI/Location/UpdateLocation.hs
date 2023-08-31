@@ -50,6 +50,7 @@ import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
+import qualified Kernel.Utils.Time as Time
 import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.DriverFee (mergeDriverFee)
 import qualified SharedLogic.DriverLocation as DrLoc
@@ -164,6 +165,7 @@ updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
+    HasFlowEnv m r '["driverTimeDifferenceToleranceSeconds" ::: Int],
     MonadTime m,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -188,12 +190,14 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driverId $ do
       mbOldLoc <- findDriverLocation
+      timeDifference <- Time.Seconds <$> asks (.driverTimeDifferenceToleranceSeconds)
+      currentTime <- getCurrentTime
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-          filteredWaypoint = maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+          filteredWaypoint = filter (validateByTime timeDifference currentTime) sortedWaypoint
       mbRideIdAndStatus <- getAssignedRide
 
       case filteredWaypoint of
-        [] -> logWarning "Incoming points are older than current one, ignoring"
+        [] -> logWarning "Calculated time of incoming points are not similar to current server time (have greater than 'driverTimeDifferenceToleranceSeconds' time difference), ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
@@ -242,3 +246,9 @@ locationUpdatesHitsCountKey personId = "BPP:DriverLocationUpdates:" <> getId per
 filterVeryNearPoints :: Meters -> DriverLocation -> Waypoint -> Bool
 filterVeryNearPoints thresholdDistance oldLoc currwpt =
   highPrecMetersToMeters (distanceBetweenInMeters (LatLong oldLoc.lat oldLoc.lon) (currwpt.pt)) > thresholdDistance
+
+validateByTime :: Time.Seconds -> UTCTime -> Waypoint -> Bool
+validateByTime timeDifference currentTime currentWaypoint =
+  let timeDiff = Time.secondsToNominalDiffTime timeDifference
+      ordering = Time.compareTimeWithInterval timeDiff currentTime currentWaypoint.ts
+   in (ordering == EQ)
