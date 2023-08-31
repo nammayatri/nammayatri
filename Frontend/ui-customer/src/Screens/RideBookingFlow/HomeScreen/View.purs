@@ -325,7 +325,7 @@ view push state =
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
-            , if state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true") then (shareAppPopUp push state) else emptyTextView state
+            --TODO when shareApp needed over Share ride, if state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true") then (shareAppPopUp push state) else emptyTextView state
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
@@ -333,7 +333,7 @@ view push state =
             , rideCompletedCardView state push
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
-            -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
+            , if state.props.shareRidePopUp then shareRidePopUpView push state else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             ]
         ]
@@ -345,6 +345,13 @@ callSupportPopUpView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view (push <<< CallSupportAction) (callSupportConfig state)]
+
+shareRidePopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+shareRidePopUpView push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< ShareRidePopUpAction) (shareRideConfig state)]
 
 cancelSearchPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelSearchPopUp push state =

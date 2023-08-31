@@ -590,5 +590,9 @@ const hindiStrings = {
   "LETS_GET_YOU_TRIP_READY" : "आइए हम आपको यात्रा के लिए तैयार करें!",
   "GOT_AN_OTP" : "एक OTP मिला?",
   "JUST_ONE_LAST_THING" : "बस एक आखिरी चीज़",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "टोल/पार्किंग शुल्क अतिरिक्त होगा",
+  "SHARE_THIS_RIDE" : "इस सवारी को साझा करें",
+  "SHARE_RIDE_DESCRIPTION" : "अब एक बटन के टैप पर अपनी सवारी को अपने दोस्तों और परिवार के साथ साझा करें।",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "अपनी सवारी साझा करना अब पहले से कहीं अधिक आसान है!"
 }

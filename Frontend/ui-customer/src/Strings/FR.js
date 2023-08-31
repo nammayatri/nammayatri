@@ -497,5 +497,8 @@ export function getStringValue(key) {
     "LETS_GET_YOU_TRIP_READY": "Préparons-nous pour le voyage!",
     "GOT_AN_OTP": "Vous avez un OTP?",
     "JUST_ONE_LAST_THING": "Juste une dernière chose",
-    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément"
+    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément",
+    "SHARE_THIS_RIDE" : "Partager cette balade",
+    "SHARE_RIDE_DESCRIPTION" : "Partagez maintenant votre trajet avec vos amis et votre famille en appuyant simplement sur un bouton.",
+    "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "Partager votre trajet est désormais plus facile que jamais !"
   }

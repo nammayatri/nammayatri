@@ -216,6 +216,7 @@ initData = {
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
     , canSendSuggestion : true
+    , shareRidePopUp : false
     }
 }
 

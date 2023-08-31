@@ -590,5 +590,8 @@ const englishStrings = {
   "GOT_AN_OTP" : "Got an OTP?",
   "JUST_ONE_LAST_THING" : "Just one last thing",
   "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri Sathi experience",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "Toll/Parking charges will be additional",
+  "SHARE_THIS_RIDE" : "Share this ride",
+  "SHARE_RIDE_DESCRIPTION" : "Now share your ride with your friends and family at the tap of a button.",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "Sharing your ride is now easier than ever!"
 }

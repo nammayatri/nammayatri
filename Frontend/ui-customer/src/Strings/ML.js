@@ -604,5 +604,9 @@ const malayalamStrings = {
   "LETS_GET_YOU_TRIP_READY" : "നിങ്ങളെ യാത്ര-തയ്യാറാക്കാം!",
   "GOT_AN_OTP" : "ഒരു OTP കിട്ടിയോ?",
   "JUST_ONE_LAST_THING" : "അവസാനമായി ഒരു കാര്യം മാത്രം",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "ടോൾ/പാർക്കിംഗ് നിരക്കുകൾ അധികമായിരിക്കും"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ടോൾ/പാർക്കിംഗ് നിരക്കുകൾ അധികമായിരിക്കും",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ടോൾ/പാർക്കിംഗ് നിരക്കുകൾ അധികമായിരിക്കും",
+  "SHARE_THIS_RIDE" : "ഈ റൈഡ് പങ്കിടുക",
+  "SHARE_RIDE_DESCRIPTION" : "ഇപ്പോൾ ഒരു ബട്ടണിന്റെ ടാപ്പിലൂടെ നിങ്ങളുടെ റൈഡ് സുഹൃത്തുക്കളുമായും കുടുംബാംഗങ്ങളുമായും പങ്കിടുക.",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "നിങ്ങളുടെ റൈഡ് പങ്കിടുന്നത് ഇപ്പോൾ എന്നത്തേക്കാളും എളുപ്പമാണ്!"
 }

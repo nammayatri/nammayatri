@@ -586,5 +586,9 @@ const kannadaStrings = {
   "LETS_GET_YOU_TRIP_READY" : "ನಿಮ್ಮನ್ನು ಪ್ರವಾಸಕ್ಕೆ ಸಿದ್ಧಗೊಳಿಸೋಣ!",
   "GOT_AN_OTP" : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
   "JUST_ONE_LAST_THING" : "ಕೇವಲ ಒಂದು ಕೊನೆಯ ವಿಷಯ",
-  "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ"
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ",
+  "TOLL_CHARGES_WILL_BE_EXTRA" : "ಟೋಲ್/ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಹೆಚ್ಚುವರಿಯಾಗಿರುತ್ತದೆ",
+  "SHARE_THIS_RIDE" : "ಈ ಸವಾರಿಯನ್ನು ಹಂಚಿಕೊಳ್ಳಿ",
+  "SHARE_RIDE_DESCRIPTION" : "ಈಗ ನಿಮ್ಮ ರೈಡ್ ಅನ್ನು ನಿಮ್ಮ ಸ್ನೇಹಿತರು ಮತ್ತು ಕುಟುಂಬದೊಂದಿಗೆ ಬಟನ್ ಟ್ಯಾಪ್ ಮಾಡುವ ಮೂಲಕ ಹಂಚಿಕೊಳ್ಳಿ.",
+  "SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER" : "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಹಂಚಿಕೊಳ್ಳುವುದು ಈಗ ಹಿಂದೆಂದಿಗಿಂತಲೂ ಸುಲಭವಾಗಿದೆ!"
 }

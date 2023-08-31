@@ -930,6 +930,56 @@ callSupportConfig state = let
   }
   in popUpConfig'
 
+shareRideConfig :: ST.HomeScreenState ->  PopUpModal.Config
+shareRideConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , dismissPopup = true
+  , cornerRadius = (Corners 15.0 true true true true)
+  , padding = (Padding 16 16 16 16)
+  , margin = (MarginHorizontal 16 16)
+  , optionButtonOrientation = "VERTICAL"
+  , primaryText {
+     visibility = GONE
+    }
+  , title {
+    text = getString SHARING_YOUR_RIDE_NOW_IS_EASIER_THAN_EVER,
+    visibility = VISIBLE
+  }
+  , coverImageConfig {
+    imageUrl = "ny_ic_share_ride," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_ride"
+    , visibility = VISIBLE
+    , width =  MATCH_PARENT
+    , height = V 201
+    , margin =  MarginTop 22
+    }
+  , secondaryText {
+     text = getString SHARE_RIDE_DESCRIPTION
+    , margin = (Margin 24 12 24 32)
+    , color = Color.black700
+    }
+
+  , option2 {
+      text =  getString MAYBE_LATER
+    , background = state.data.config.popupBackground
+    , strokeColor = state.data.config.primaryBackground
+    , color = state.data.config.primaryBackground
+    , width = MATCH_PARENT
+    , margin = (Margin 0 10 0 0)
+    }
+  , option1 {
+     text =  getString SHARE_THIS_RIDE
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , background = state.data.config.primaryBackground
+    , margin = (Margin 0 0 0 0)
+        , width = MATCH_PARENT
+    }
+
+  }
+  in popUpConfig'
+
 
 zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
 zoneTimerExpiredConfig state = let
