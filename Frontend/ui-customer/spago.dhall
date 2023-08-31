@@ -13,6 +13,9 @@ to generate this file without the comments in this block.
 { name = "ui-customer"
 , dependencies =
   [ "aff"
+  , "argonaut-codecs"
+  , "argonaut-core"
+  , "argonaut-generic"
   , "arrays"
   , "backtrack"
   , "beckn-common"
@@ -36,6 +39,7 @@ to generate this file without the comments in this block.
   , "monoid-extras"
   , "newtype"
   , "numbers"
+  , "ordered-collections"
   , "otp-reader"
   , "prelude"
   , "presto"
@@ -47,6 +51,7 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
+  , "unfoldable"
   , "unsafe-coerce"
   , "lite-decode"
   ]

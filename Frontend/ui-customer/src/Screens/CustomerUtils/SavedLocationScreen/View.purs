@@ -178,6 +178,10 @@ savedLocationsView push state =
               , locationItemType : Just ST.SAVED_LOCATION
               , distance : Nothing
               , showDistance : Just false
+              , frequencyCount : Just 0
+              , recencyDate : Just ""
+              , locationScore : Just 0.0
+
             }))state.data.savedLocations)
         , linearLayout
           [ height $ V 100

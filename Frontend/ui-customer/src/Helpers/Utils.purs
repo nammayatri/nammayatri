@@ -20,7 +20,6 @@ module Helpers.Utils
     where
 
 import Accessor (_distance_meters)
-import Accessor (_distance_meters)
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
@@ -34,7 +33,6 @@ import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Function.Uncurried (runFn3)
 import Data.Generic.Rep (class Generic)
-import Data.Lens ((^.))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString, pi, sin, cos, sqrt, asin, abs)
@@ -65,17 +63,20 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
+import Screens.Types (RecentlySearchedObject,SuggestedDestinations, SuggestedTrips(..), SuggestedDestinationsObj(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
-import Services.API (Prediction)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel, SuggestedDestinations, SuggestedDestinationsObj(..))
 import Services.API (Prediction)
 import Types.App (GlobalState(..))
-import Types.App (GlobalState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Unsafe.Coerce (unsafeCoerce)
 
+import Data.Argonaut.Core
+import Data.Argonaut.Decode.Class as Decode
+import Data.Argonaut.Encode.Class as Encode
+import Data.Argonaut.Decode.Error
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
 --   arrayWithRandom <- addRandom array
@@ -119,6 +120,7 @@ foreign import secondsToHms :: Int -> String
 foreign import getTime :: Unit -> Int
 
 foreign import drawPolygon :: String -> String -> Effect Unit
+foreign import getDifferenceBetweenDates :: String -> String -> Int
 
 foreign import removeLabelFromMarker :: Unit -> Effect Unit
 -- foreign import generateSessionToken :: String -> String
@@ -150,6 +152,8 @@ foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
 saveToLocalStore' :: String -> String -> EffectFnAff Unit
 saveToLocalStore' = saveToLocalStoreImpl
 
+foreign import storeInLocal :: SuggestedDestinationsObj -> EffectFnAff Unit
+
 foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
 fetchFromLocalStore' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
 fetchFromLocalStore' = fetchFromLocalStoreImpl
@@ -173,6 +177,8 @@ foreign import clearCountDownTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
+foreign import encodeGeohash :: Number -> Number -> Int -> String
+
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
@@ -504,3 +510,20 @@ fetchDefaultPickupPoint locations lati longi =
   case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
     [foundLocation] -> foundLocation.place
     _ -> ""
+
+foreign import mapSetSuggestedDestinationsJson :: Json -> Json
+
+foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
+
+fetchSuggestionsFromLocal :: String -> Either JsonDecodeError SuggestedDestinations
+fetchSuggestionsFromLocal key = Decode.decodeJson $ getSuggestedDestinationsJsonFromLocal key
+
+
+mapSetSuggestedDestinations :: SuggestedDestinations -> Either JsonDecodeError SuggestedDestinations
+mapSetSuggestedDestinations destinations = Decode.decodeJson $ mapSetSuggestedDestinationsJson $ Encode.encodeJson destinations
+
+-- fetchSuggestionsFromLocal :: String -> Either JsonDecodeError SuggestedTrips
+-- fetchSuggestionsFromLocal key = Decode.decodeJson $ getSuggestedDestinationsJsonFromLocal key
+
+-- mapSetSuggestedTrips :: SuggestedTrips -> Either JsonDecodeError SuggestedTrips
+-- mapSetSuggestedTrips destinations = Decode.decodeJson $ mapSetSuggestedDestinationsJson $ Encode.encodeJson destinations

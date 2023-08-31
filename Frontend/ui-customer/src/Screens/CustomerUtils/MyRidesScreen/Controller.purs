@@ -47,7 +47,7 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
-
+import Debug (spy)
 instance showAction :: Show Action where
   show _ = ""
 
@@ -151,6 +151,7 @@ eval (IndividualRideCardActionController (IndividualRideCardController.RepeatRid
   let selectedCard = state.itemsRides !! index
   case selectedCard of
     Just selectedRide -> do
+      _ <- pure $ spy "selectedRide log " selectedRide
       exit $ RepeatRide state { data { selectedItem = selectedRide}}
     Nothing -> continue state
 

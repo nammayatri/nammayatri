@@ -259,6 +259,7 @@ dependencies {
     implementation 'androidx.core:core:1.4.0'
     implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
     implementation 'com.android.installreferrer:installreferrer:2.2'
+    implementation 'ch.hsr:geohash:1.4.0'
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 }
 

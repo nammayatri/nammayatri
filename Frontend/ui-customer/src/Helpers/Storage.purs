@@ -33,6 +33,7 @@ data KeyStore
   | USER_NAME
   | LOCAL_STAGE
   | RECENT_SEARCHES
+  | SUGGESTED_DESTS
   | CUSTOMER_ID
   | TRACKING_DRIVER
   | TRACKING_ENABLED
@@ -77,6 +78,8 @@ data KeyStore
   | LAST_LOGIN
   | SELECTED_VARIANT
   | COUNTRY_CODE
+  | LAST_KNOWN_LAT
+  | LAST_KNOWN_LON
 
 derive instance genericKeyStore :: Generic KeyStore _
 
