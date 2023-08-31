@@ -113,7 +113,8 @@ data AppCfg = AppCfg
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
-    locationTrackingServiceKey :: Text
+    locationTrackingServiceKey :: Text,
+    driverTimeDifferenceToleranceSeconds :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -182,7 +183,8 @@ data AppEnv = AppEnv
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     locationTrackingServiceKey :: Text,
-    eventRequestCounter :: EventCounterMetric
+    eventRequestCounter :: EventCounterMetric,
+    driverTimeDifferenceToleranceSeconds :: Int
   }
   deriving (Generic)
 
@@ -219,6 +221,7 @@ buildAppEnv cfg@AppCfg {..} = do
   clickhouseEnv <- createConn clickhouseCfg
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
+      driverTimeDifferenceToleranceSeconds = cfg.driverTimeDifferenceToleranceSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   return AppEnv {..}

@@ -218,4 +218,5 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , driverTimeDifferenceToleranceSeconds = +300
     }
