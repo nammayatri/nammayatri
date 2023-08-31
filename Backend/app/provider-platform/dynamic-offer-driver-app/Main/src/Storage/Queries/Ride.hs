@@ -207,20 +207,15 @@ updateStatusByIds rideIds status = do
     ]
     [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
-updateDistance :: MonadFlow m => Id Person -> HighPrecMeters -> m ()
-updateDistance driverId distance
-  | distance == 0 = return ()
-  | otherwise = do
-    now <- getCurrentTime
-    ride <- getInProgressByDriverId driverId
-    let distance' = maybe distance ((distance +) . (.traveledDistance)) ride
-    let snapAPICalls = maybe 1 (1 +) (ride >>= (.numberOfSnapToRoadCalls))
-    updateWithKV
-      [ Se.Set BeamR.traveledDistance distance',
-        Se.Set BeamR.numberOfSnapToRoadCalls (Just snapAPICalls),
-        Se.Set BeamR.updatedAt now
-      ]
-      [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+updateDistance :: MonadFlow m => Id Person -> HighPrecMeters -> Int -> m ()
+updateDistance driverId distance snapCalls = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamR.traveledDistance distance,
+      Se.Set BeamR.numberOfSnapToRoadCalls (Just snapCalls),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
 updateAll :: MonadFlow m => Id Ride -> Ride -> m ()
 updateAll rideId ride = do

@@ -18,6 +18,7 @@ module Lib.LocationUpdates.Internal
     addPointsImplementation,
     getWaypointsNumberImplementation,
     getFirstNwaypointsImplementation,
+    getAllWaypointsImplementation,
     deleteFirstNwaypointsImplementation,
     interpolatePointsAndCalculateDistanceImplementation,
     clearLocationUpdatesImplementation,
@@ -49,6 +50,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     clearLocationUpdates :: Id person -> m (),
     getWaypointsNumber :: Id person -> m Integer,
     getFirstNwaypoints :: Id person -> Integer -> m [LatLong],
+    getAllWaypoints :: Id person -> m [LatLong],
     deleteFirstNwaypoints :: Id person -> Integer -> m (),
     addInterpolatedPoints :: Id person -> NonEmpty LatLong -> m (),
     clearInterpolatedPoints :: Id person -> m (),
@@ -57,8 +59,8 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong]),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
-    updateDistance :: Id person -> HighPrecMeters -> m (),
-    updateRouteDeviation :: Id person -> [LatLong] -> m ()
+    updateDistance :: Id person -> HighPrecMeters -> Int -> m (),
+    updateRouteDeviation :: Id person -> [LatLong] -> m Bool
   }
 
 --------------------------------------------------------------------------------
@@ -84,40 +86,46 @@ processWaypoints ::
   RideInterpolationHandler person m ->
   Id person ->
   Bool ->
+  Meters ->
+  Bool ->
   NonEmpty LatLong ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist pickupDropOutsideThreshold waypoints = do
   calculationFailed <- ih.isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
     else ih.wrapDistanceCalculation driverId $ do
       addPoints driverId waypoints
-      recalcDistanceBatches ih ending driverId
+      when ending $ recalcDistanceBatches ih ending driverId estDist pickupDropOutsideThreshold
 
 recalcDistanceBatches ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Bool ->
   Id person ->
+  Meters ->
+  Bool ->
   m ()
-recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId = do
-  distanceToUpdate <- recalcDistanceBatches' 0
-  updateDistance driverId distanceToUpdate
+recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pickupDropOutsideThreshold = do
+  waypoints <- getAllWaypoints driverId
+  routeDeviation <- updateRouteDeviation driverId (toList waypoints)
+  if routeDeviation || pickupDropOutsideThreshold
+    then do
+      (distanceToUpdate, snapToRoadCalls) <- recalcDistanceBatches' 0 0
+      updateDistance driverId distanceToUpdate snapToRoadCalls
+    else updateDistance driverId (metersToHighPrecMeters estDist) 0
   where
-    atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
+    -- atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
-    continueCondition =
-      if ending
-        then pointsRemaining
-        else atLeastBatchPlusOne
+    continueCondition = if ending then pointsRemaining else return False
 
-    recalcDistanceBatches' acc = do
+    recalcDistanceBatches' acc numberOfCalls = do
       batchLeft <- continueCondition
       if batchLeft
         then do
           dist <- recalcDistanceBatchStep h driverId
-          recalcDistanceBatches' (acc + dist)
-        else pure acc
+          recalcDistanceBatches' (acc + dist) (numberOfCalls + 1)
+        else pure (acc, numberOfCalls)
 
 recalcDistanceBatchStep ::
   (Monad m, Log m) =>
@@ -126,7 +134,6 @@ recalcDistanceBatchStep ::
   m HighPrecMeters
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  updateRouteDeviation driverId (toList batchWaypoints)
   (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps
@@ -146,8 +153,8 @@ mkRideInterpolationHandler ::
   ) =>
   Bool ->
   MapsServiceConfig ->
-  (Id person -> HighPrecMeters -> m ()) ->
-  (Id person -> [LatLong] -> m ()) ->
+  (Id person -> HighPrecMeters -> Int -> m ()) ->
+  (Id person -> [LatLong] -> m Bool) ->
   RideInterpolationHandler person m
 mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation =
   RideInterpolationHandler
@@ -156,6 +163,7 @@ mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation
       clearLocationUpdates = clearLocationUpdatesImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
+      getAllWaypoints = getAllWaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
       addInterpolatedPoints = addInterpolatedPointsImplementation,
       clearInterpolatedPoints = clearInterpolatedPointsImplementation,
@@ -190,6 +198,9 @@ getWaypointsNumberImplementation = lLen . makeWaypointsRedisKey
 
 getFirstNwaypointsImplementation :: (HedisFlow m env) => Id person -> Integer -> m [LatLong]
 getFirstNwaypointsImplementation driverId num = lRange (makeWaypointsRedisKey driverId) 0 (num - 1)
+
+getAllWaypointsImplementation :: (HedisFlow m env) => Id person -> m [LatLong]
+getAllWaypointsImplementation driverId = lRange (makeWaypointsRedisKey driverId) 0 (-1)
 
 deleteFirstNwaypointsImplementation :: (HedisFlow m env) => Id person -> Integer -> m ()
 deleteFirstNwaypointsImplementation driverId numToDel = lTrim (makeWaypointsRedisKey driverId) numToDel (-1)

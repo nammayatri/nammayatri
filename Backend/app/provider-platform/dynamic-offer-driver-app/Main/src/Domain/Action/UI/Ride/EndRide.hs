@@ -88,7 +88,7 @@ data ServiceHandle m = ServiceHandle
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     findDriverLoc :: Id DM.Merchant -> Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> Meters -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: m (Maybe DTConf.TransporterConfig),
@@ -196,15 +196,17 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
-    withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint
+    thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
+    pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
+    withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoint booking.estimatedDistance pickupDropOutsideOfThreshold
+
     ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
     now <- getCurrentTime
 
     distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
     when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
-    thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
-    pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig
+
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if distanceCalculationFailed
         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig

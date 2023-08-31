@@ -57,8 +57,10 @@ checkForDeviation routeDeviationThreshold estimatedRoute (pt : batchWaypoints) d
       then checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
       else checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints (deviationCount + 1)
 
-updateDeviation :: (HedisFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Meters -> Maybe (Id Ride) -> [LatLong] -> m ()
-updateDeviation _ Nothing _ = logInfo "No ride found to check deviation"
+updateDeviation :: (HedisFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Meters -> Maybe (Id Ride) -> [LatLong] -> m Bool
+updateDeviation _ Nothing _ = do
+  logInfo "No ride found to check deviation"
+  return False
 updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
   logWarning "Updating Deviation"
   let key = searchRequestKey (getId rideId)
@@ -69,9 +71,13 @@ updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
         then do
           logInfo $ "Deviation detected for rideId: " <> show rideId
           QRide.updateDriverDeviatedFromRoute rideId True
+          return True
         else do
           logInfo $ "No deviation detected for rideId: " <> show rideId
-    Nothing -> logInfo $ "Ride route points not found for rideId: " <> show rideId
+          return False
+    Nothing -> do
+      logWarning $ "Ride route points not found for rideId: " <> show rideId
+      return False
 
 buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId isEndRide = do
@@ -86,10 +92,10 @@ buildRideInterpolationHandler merchantId isEndRide = do
         mkRideInterpolationHandler
           isEndRide
           cfg
-          (\driverId dist -> void (QRide.updateDistance driverId dist))
+          (\driverId dist snapCalls -> void (QRide.updateDistance driverId dist snapCalls))
           ( \driverId batchWaypoints -> do
               mRide <- SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
-              void (updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints)
+              updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
           )
     _ -> throwError $ InternalError "Unknown Service Config"
 
