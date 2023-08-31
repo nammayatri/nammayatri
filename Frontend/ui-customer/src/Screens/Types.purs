@@ -22,6 +22,7 @@ import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
+import Data.Map (Map, insert, update, lookup, member)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
@@ -30,10 +31,14 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, bind,pure,class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
+import PrestoDOM (LetterSpacing, BottomSheetState(..))
 
 type Contacts = {
   name :: String,
@@ -562,6 +567,7 @@ type HomeScreenStateData =
   , locationList :: Array LocationListItemState
   , savedLocations :: Array LocationListItemState
   , recentSearchs :: RecentlySearchedObject
+  , destinationSuggestions :: Array LocationListItemState
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard
@@ -597,6 +603,7 @@ type HomeScreenStateData =
   , logField :: Object Foreign
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
+  , suggestedDestinations :: SuggestedDestinationsObj
   }
 
 type DisabilityT = 
@@ -1151,15 +1158,52 @@ type LocationListItemState = {
   , locationItemType :: Maybe LocationItemType
   , distance :: Maybe String
   , showDistance :: Maybe Boolean
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
 }
 
-data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
+type SuggestedDestinations = Map SourceGeoHash Suggestions-- (Array LocationListItemState)
+type SuggestedTrips = Map SourceGeoHash (Array Trip)
+type SourceGeoHash = String
+type DestinationGeoHash = String
+
+type Suggestions = {
+    destinationSuggestions :: Array LocationListItemState
+  , tripSuggestions :: Array Trip
+}
+
+type Trip = {
+    sourceLat :: Number
+  , source :: String 
+  , destination :: String
+  , sourceAddress :: Address 
+  , destinationAddress :: Address
+  , sourceLong :: Number
+  , destLat :: Number
+  , destLong :: Number
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
+  , isSpecialZone :: Boolean
+}
+type SuggestedDestinationsObj =  {
+    suggestedDestinationsMap :: SuggestedDestinations
+  , suggestedTripsMap :: SuggestedTrips
+}
+
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION | SUGGESTED_DESTINATIONS
 
 derive instance genericLocationItemType :: Generic LocationItemType _
 instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
 instance showLocationItemType :: Show LocationItemType where show = genericShow
 instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
 instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
+instance encodeJsonLocationItemType :: EncodeJson LocationItemType where
+  encodeJson = genericEncodeJson
+instance decodeJsonLocationItemType :: DecodeJson LocationItemType where
+  decodeJson = genericDecodeJson
+  
 
 type SaveFavouriteCardState =
   {

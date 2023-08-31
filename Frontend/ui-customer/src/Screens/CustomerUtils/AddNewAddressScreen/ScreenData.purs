@@ -50,6 +50,10 @@ initData = {
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
+      , frequencyCount : Just 0
+  , recencyDate : Just ""
+  , locationScore : Just 0.0
+
   }
   , address : ""
   , activeIndex : (Just 2)

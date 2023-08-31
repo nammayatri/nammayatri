@@ -315,6 +315,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             lastLongitudeValue = lng;
                             setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                             setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                            setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                             if (callback != null) {
                                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
                                         callback, lat, lng);

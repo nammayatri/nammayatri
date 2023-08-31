@@ -45,7 +45,7 @@ import Components.SettingSideBar as SettingSideBar
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!), head)
+import Data.Array (any, length, mapWithIndex, null,take, (!!),head)
 import Data.Either (Either(..))
 import Data.Int (toNumber, fromString, ceil, floor)
 import Data.Lens ((^.))
@@ -91,7 +91,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Data.String as DS
 import Data.Function.Uncurried (runFn1)
 import Components.CommonComponentConfig as CommonComponentConfig
-
+import SuggestedDestinations (getSuggestedDestinations)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -103,7 +103,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
-            _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
+            -- _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -338,7 +338,7 @@ view push state =
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , rideTrackingView push state
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
-            , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
+            , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (false && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
@@ -825,7 +825,7 @@ recentSearchesView state push =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 16
-    , visibility if state.data.recentSearchs.predictionArray == [] then GONE else VISIBLE
+    , visibility if state.data.destinationSuggestions == [] then GONE else VISIBLE
     ]
     [ linearLayout
         [ height MATCH_PARENT
@@ -847,12 +847,12 @@ recentSearchesView state push =
                       [ height $ V 1
                       , width MATCH_PARENT
                       , background Color.lightGreyShade
-                      , visibility if (index == (length state.data.recentSearchs.predictionArray) - 1) || (state.props.isBanner) then GONE else VISIBLE
+                      , visibility if (index == (length state.data.destinationSuggestions) - 1) || (state.props.isBanner) then GONE else VISIBLE
                       ]
                       []
                   ]
             )
-            state.data.recentSearchs.predictionArray
+            (take 2 state.data.destinationSuggestions)
         )
     ]
 

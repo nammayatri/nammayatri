@@ -335,7 +335,8 @@ newtype PlaceName = PlaceName {
  formattedAddress :: String,
  location :: LatLong,
  plusCode :: Maybe String,
- addressComponents :: Array AddressComponents
+ addressComponents :: Array AddressComponents,
+ placeId :: Maybe String
 }
 
 newtype AddressComponents =  AddressComponents {

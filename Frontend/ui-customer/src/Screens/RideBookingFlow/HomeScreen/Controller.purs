@@ -638,7 +638,7 @@ eval TerminateApp state = do
 eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state{props{isMockLocation = val}}
+  continue state
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
@@ -1042,7 +1042,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
   let newState = state{props{isSource = Just false, sourceSelectedOnMap = if (state.props.isSource == Just true) then true else state.props.sourceSelectedOnMap, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false}}
-  updateAndExit newState $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false newState
+  updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (if state.props.isSource == Just false then true else false) newState
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
     _ <- pure $ spy "state homeScreen" state
@@ -1294,7 +1294,9 @@ eval (PredictionClickedAction (LocationListItemController.FavClick item)) state 
   if (length state.data.savedLocations >= 20) then do
     void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
-    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
+    else do 
+      _ <- pure $  spy "check ghi " "log" 
+      exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
 
 eval (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose)) state = continue state{props{isSaveFavourite = false},data{selectedLocationListItem = Nothing, saveFavouriteCard {address = "" , tag = "", isBtnActive = false}}}
 
@@ -1380,7 +1382,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continueWithCmd state { props { isSource = Just false }}
+    continueWithCmd state { props { isSource = Just false},data{ locationList = state.data.destinationSuggestions } }
       [ do
           if state.props.isSearchLocation /= LocateOnMap then do
             _ <- (pure $ setText (getNewIDWithTag "DestinationEditText") state.data.destination)
@@ -1389,7 +1391,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
             pure $ NoAction
       ]
   else
-    continueWithCmd state { props { isSource = Just true}}
+    continueWithCmd state { props { isSource = Just true}, data{ locationList = state.data.recentSearchs.predictionArray } }
       [ do
           if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
             _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source)
@@ -2059,6 +2061,9 @@ dummyListItem = {
   , locationItemType : Nothing
   , distance : Nothing
   , showDistance : Just false
+  , frequencyCount : Just 0
+  , recencyDate : Just ""
+  , locationScore : Just 0.0
 }
 
 tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
