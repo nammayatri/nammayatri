@@ -754,5 +754,22 @@ const mlStrings = {
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "ഗ്രാഹകൻ കുറഞ്ഞ ദർശനം ഉണ്ട്. അവർക്ക് ചാറ്റിംഗ് അയയ്ക്കാൻ അല്ലെങ്കിൽ അവരുടെ ഫോൺ അയയ്ക്കുക.",
 	PLEASE_HELP_THEM_AS_YOU_CAN: "നിങ്ങൾ ചെയ്യാനാകുന്നത് പ്രകാരം അവർക്ക് സഹായിക്കുക",
   LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE: "പ്രത്യേക സഹായം ആവശ്യമുള്ള റൈഡർമാരെ നിങ്ങൾക്ക് എങ്ങനെ സഹായിക്കാമെന്ന് അറിയുക",
-  ASSISTANCE_REQUIRED : "സഹായം ആവശ്യമാണ്"
+  ASSISTANCE_REQUIRED : "സഹായം ആവശ്യമാണ്",
+	SETUP_NOW : "ഇപ്പോൾ സജ്ജീകരണം",
+	NEED_HELP_JOINING_THE_PLAN : "പ്ലാനിൽ ചേരുന്നതിന് സഹായം ആവശ്യമുണ്ടോ? ഞങ്ങളെ സമീപിക്കുക",
+  NEED_HELP_CALL_SUPPORT : "സഹായം ആവശ്യമുണ്ട്? <span style='color:#2194FF'>പിന്തുണയെ വിളിക്കുക</span>",
+  SAVED_DUE_TO_ZERO_COMMISSION : "പൂജ്യം കമ്മീഷൻ കാരണം സംരക്ഷിച്ചു",
+  TIP_EARNED_FROM_CUSTOMER : "ഉപഭോക്താവിൽ നിന്ന് ലഭിച്ച നുറുങ്ങ്",
+  COLLECT_VIA_CASE_UPI : "പണം/UPI വഴി ശേഖരിക്കുക",
+  FARE_COLLECTED : "ക്കൂലി ശേഖരിച്ചു",
+  RATE_YOUR_RIDE_WITH1 : "",
+  RATE_YOUR_RIDE_WITH2 : "ഉപയോഗിച്ച് നിങ്ങളുടെ യാത്ര റേറ്റ്",
+  HELP_US_WITH_YOUR_FEEDBACK : "നിങ്ങളുടെ ഫീഡ്‌ബാക്കിൽ ഞങ്ങളെ സഹായിക്കുന്നു (ഓപ്ഷണൽ)",
+  COLLECT_CASH : "പണം ശേഖരിക്കുക",
+  ONLINE_PAYMENT : "ഓൺലൈൻ പേയ്‌മെന്റ്",
+  RIDE_COMPLETED : "റൈഡ് പൂർത്തിയായി",
+  SUBMIT_FEEDBACK : "ഫീഡ്‌ബാക്ക് സമർപ്പിക്കുക",
+  BADGE_EARNED : "ബാഡ്ജ് സമ്പാദിച്ചു",
+  PURPLE_RIDE_CHAMPION : "പർപ്പിൾ റൈഡ് ചാമ്പ്യൻ",
+  PURPLE_RIDE : "പർപ്പിൾ റൈഡ്"
 }

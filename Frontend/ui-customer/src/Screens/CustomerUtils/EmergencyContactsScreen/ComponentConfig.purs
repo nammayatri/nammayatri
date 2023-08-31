@@ -38,7 +38,7 @@ genericHeaderConfig state =
         , textConfig
           { text = if state.props.showContactList then (show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
           , accessibilityHint = if state.props.showContactList then (show (length state.data.contactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
-          , color = Color.darkDescriptionText
+          , color = Color.darkCharcoal
           }
         , suffixImageConfig
           { visibility = GONE

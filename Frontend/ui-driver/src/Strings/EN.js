@@ -808,5 +808,23 @@ const englishStrings = {
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING : "Customer has poor vision. Please call them instead of chatting.",
   PLEASE_HELP_THEM_AS_YOU_CAN : "Please help them as you can",
   LEARN_HOW_YOU_CAN_HELP_RIDERS_REQUIRING_SPECIAL_ASSISTANCE : "Learn how you can help riders requiring special assistance",
-  ASSISTANCE_REQUIRED : "Assistance Required"
-}
+  ASSISTANCE_REQUIRED : "Assistance Required",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
+	SETUP_NOW : "Setup Now",
+	NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan? Contact us",
+  NEED_HELP_CALL_SUPPORT : "Need Help? <span style='color:#2194FF'>Call Support</span>",
+  SAVED_DUE_TO_ZERO_COMMISSION : "Saved due to Zero Commission", 
+  TIP_EARNED_FROM_CUSTOMER : "Tip earned from customer",
+  COLLECT_VIA_CASE_UPI : "Collect via Cash/UPI",
+  FARE_COLLECTED :  "Fare Collected",
+  RATE_YOUR_RIDE_WITH1 : "Rate your ride with" ,
+  RATE_YOUR_RIDE_WITH2 : "",
+  HELP_US_WITH_YOUR_FEEDBACK : "Helps us with your feedback (Optional)",
+  COLLECT_CASH : "Collect Cash",
+  ONLINE_PAYMENT : "Online Payment",
+  RIDE_COMPLETED : "Ride Completed",
+  SUBMIT_FEEDBACK : "Submit Feedback",
+  BADGE_EARNED : "Badge Earned",
+  PURPLE_RIDE_CHAMPION : "Purple Ride Champion",
+  PURPLE_RIDE : "Purple Ride"
+} 

@@ -1,6 +1,7 @@
 module Common.Styles.Colors where
 
 import Styles.Types
+import MerchantConfig.Utils (getValueFromConfig)
 
 -- General Colors
 black :: Color
@@ -17,12 +18,6 @@ black650 = "#868B98"
 
 black700 :: Color
 black700 = "#6D7280"
-
-black800 :: Color
-black800 = "#454545"
-
-black900 :: Color
-black900 = "#2C2F3A"
 
 black9000 :: Color
 black9000 = "#CC2C2F3A"
@@ -56,9 +51,6 @@ greyDavy = "#555555"
 
 lightMaroon :: Color
 lightMaroon = "#E45454"
-
-red :: Color
-red = "#E55454"
 
 red100 :: Color
 red100 = "#FEF8F8"
@@ -106,3 +98,40 @@ floralWhite = "#FFFAEE"
 
 orange900 :: Color
 orange900 = "#FF8533"
+
+pickledBlue :: Color
+pickledBlue = "#29334A"
+
+linen :: Color 
+linen = "#FEF1E5" 
+
+pigmentGreen :: Color 
+pigmentGreen = "#40AA5C" 
+
+almond :: Color 
+almond = "#F0DCCA"
+
+frenchSkyBlue :: Color 
+frenchSkyBlue = "#80B2FF"
+
+blackLessTrans :: Color
+blackLessTrans = "#99000000"
+
+transparent :: Color
+transparent = "#00FFFFFF"
+
+
+black800 :: Color
+black800 = getValueFromConfig "black800"
+
+black900 :: Color
+black900 = getValueFromConfig "black900"
+
+red :: Color
+red = getValueFromConfig "red"
+
+blueMagenta :: Color 
+blueMagenta = "#9747FF"
+
+darkCharcoal :: Color
+darkCharcoal = "#333333"

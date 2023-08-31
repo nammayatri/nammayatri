@@ -21,22 +21,22 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..))
 import Effect.Aff (Error, makeAff, nonCanceler)
 import Engineering.Helpers.BackTrack (getState)
+import Helpers.Utils (getCurrentLocation, LatLon(..))
 import Helpers.Utils (getDistanceBwCordinates, LatLon(..), getCurrentLocation)
 import JBridge (getCurrentPosition, getCurrentPositionWithTimeout)
 import Log (printLog)
 import Presto.Core.Types.Language.Flow (doAff)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
+import Screens.Types (KeyboardModalType(..))
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
-import Screens.Types (KeyboardModalType(..))
-import Data.Maybe (Maybe(..))
-import Presto.Core.Types.Language.Flow (getLogFields)
-import Helpers.Utils (getCurrentLocation, LatLon(..))
 
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
@@ -73,7 +73,7 @@ homeScreen = do
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon})
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon})
     SelectListModal updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : updatedState.data.activeRide.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode})
@@ -112,7 +112,13 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
+      App.BackT $  App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
+    GoToRideDetailsScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_DETAILS_SCREEN)
+    PostRideFeedback updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ POST_RIDE_FEEDBACK updatedState)
 -- DTHS.GoToStart screenState -> do
 --       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
 --       _ <- pure $ spy "lat handler" startRideCurrentLat

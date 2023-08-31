@@ -73,10 +73,10 @@ window.getMerchantConfig = function () {
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
     , "navigationAppConfig" : {
-      "query" : "google.navigation:q=%f,%f"
-    , "packageName" : "com.google.android.apps.maps"
-    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
+        "query" : "google.navigation:q=%f,%f"
+      , "packageName" : "com.google.android.apps.maps"
+      , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
+    }
     , "autoPayBanner" : false
-  }
   })
 }

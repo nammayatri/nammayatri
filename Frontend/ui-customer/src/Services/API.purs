@@ -17,7 +17,7 @@ module Services.API where
 
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
-import Common.Types.App (Version(..))
+import Common.Types.App (Version(..), FeedbackAnswer)
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -1950,10 +1950,6 @@ newtype RideFeedbackReq = RideFeedbackReq
     feedback :: Array FeedbackAnswer
   }
 
-type FeedbackAnswer =  {
-    questionId :: String,
-    answer :: Array String
-  }
 
 data RideFeedbackRes = RideFeedbackRes
 

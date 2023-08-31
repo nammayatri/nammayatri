@@ -41,7 +41,7 @@ genericHeaderConfig state = let
       } 
     , textConfig {
         text = (getString ABOUT)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE

@@ -271,7 +271,6 @@ tripDataView push state =
             , width WRAP_CONTENT
             , orientation VERTICAL
             , weight 0.25
-            , visibility GONE
             ][ textView $
                 [ text (getString RIDER)
                 , color Color.black700
@@ -342,7 +341,7 @@ reportIssueView state push =
         , onClick push $ const ReportIssue 
         ][  textView
             ([ text (getString REPORT_AN_ISSUE)
-            , color Color.darkDescriptionText
+            , color Color.darkCharcoal
             ] <> FontStyle.body1 TypoGraphy)
           , linearLayout
             [ height WRAP_CONTENT

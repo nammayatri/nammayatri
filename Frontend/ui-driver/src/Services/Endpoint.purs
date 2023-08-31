@@ -15,9 +15,9 @@
 
 module Services.EndPoints where
 
+import Data.Maybe (Maybe(..))
 import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
-import Data.Maybe(Maybe(..))
 
 
 triggerOTP :: String -> String
@@ -218,4 +218,7 @@ selectPlan :: String -> String
 selectPlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/select"
 
 suspendMandate :: String -> String 
-suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend"
+suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend" 
+
+postRideFeedback :: String -> String 
+postRideFeedback _ = (getBaseUrl "") <> "/feedback/rateRide"

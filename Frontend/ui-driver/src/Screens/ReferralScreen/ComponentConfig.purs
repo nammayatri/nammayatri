@@ -99,7 +99,7 @@ genericHeaderConfig state = let
     , padding = if state.props.stage == ST.ReferralFlow then (Padding 0 5 0 5) else (Padding 16 16 0 16)
     , textConfig {
         text = if state.props.stage == ST.LeaderBoard then (getString RANKINGS) else if state.props.stage == ST.ReferralFlow then (getString REFERRAL_ENROLMENT) else (getString REFERRALS)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE

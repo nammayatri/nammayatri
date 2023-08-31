@@ -460,7 +460,7 @@ genericHeaderConfig state = let
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = getString EMERGENCY_HELP
-      , color = Color.darkDescriptionText }
+      , color = Color.darkCharcoal }
     , prefixImageConfig {
         height = V 25
       , width = V 25

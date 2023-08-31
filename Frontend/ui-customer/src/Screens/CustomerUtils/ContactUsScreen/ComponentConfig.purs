@@ -172,7 +172,7 @@ genericHeaderConfig state = let
     , padding = (Padding 0 5 0 5)
     , textConfig {
         text = (getString WRITE_TO_US)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE

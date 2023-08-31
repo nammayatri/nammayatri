@@ -493,6 +493,7 @@ newtype RidesInfo = RidesInfo
       exoPhone :: String,
       specialLocationTag :: Maybe String,
       requestedVehicleVariant :: Maybe String,
+      customerExtraFee :: Maybe Int,
       disabilityTag :: Maybe String
   }
 
@@ -2553,3 +2554,34 @@ instance standardEncodeKioskLocationResp :: StandardEncode KioskLocationResp whe
 instance showKioskLocationResp :: Show KioskLocationResp where show = genericShow
 instance decodeKioskLocationResp :: Decode KioskLocationResp where decode = defaultDecode
 instance encodeKioskLocationResp :: Encode KioskLocationResp where encode = defaultEncode
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Post Driver Feedback 
+
+
+newtype PostRideFeedbackReq = PostRideFeedbackReq {
+  rideId :: String,
+  feedbackDetails:: String,
+  ratingValue :: Int
+}
+
+newtype PostRideFeedbackResp = PostRideFeedbackResp ApiSuccessResult
+
+instance makePostRideFeedbackReq :: RestEndpoint PostRideFeedbackReq PostRideFeedbackResp where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.postRideFeedback "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+
+derive instance genericPostRideFeedbackReq :: Generic PostRideFeedbackReq _
+derive instance newtypePostRideFeedbackReq :: Newtype PostRideFeedbackReq _
+instance standardEncodePostRideFeedbackReq :: StandardEncode PostRideFeedbackReq where standardEncode (PostRideFeedbackReq reqBody) = standardEncode reqBody
+instance showPostRideFeedbackReq :: Show PostRideFeedbackReq where show = genericShow
+instance decodePostRideFeedbackReq :: Decode PostRideFeedbackReq where decode = defaultDecode
+instance encodePostRideFeedbackReq :: Encode PostRideFeedbackReq where encode = defaultEncode
+
+derive instance genericPostRideFeedbackResp :: Generic PostRideFeedbackResp _
+derive instance newtypePostRideFeedbackResp :: Newtype PostRideFeedbackResp _
+instance standardEncodePostRideFeedbackResp :: StandardEncode PostRideFeedbackResp where standardEncode (PostRideFeedbackResp resp) = standardEncode resp
+instance showPostRideFeedbackResp :: Show PostRideFeedbackResp where show = genericShow
+instance decodePostRideFeedbackResp :: Decode PostRideFeedbackResp where decode = defaultDecode
+instance encodePostRideFeedbackResp :: Encode PostRideFeedbackResp where encode = defaultEncode

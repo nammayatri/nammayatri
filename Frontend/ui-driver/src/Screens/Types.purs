@@ -761,9 +761,20 @@ type HomeScreenData =  {
   driverAlternateMobile :: Maybe String,
   logField :: Object Foreign,
   paymentState :: PaymentState,
-  profileImg :: Maybe String
+  profileImg :: Maybe String, 
+  endRideData :: EndRideData
  }
 
+type EndRideData = {
+    rideId :: String,
+    zeroCommision :: Int,
+    tip :: Maybe Int,
+    finalAmount :: Int, 
+    riderName :: String,
+    rating :: Int,
+    feedback :: String,
+    disability :: Maybe String
+  }
 type PaymentState = {
   rideCount :: Int,
   totalMoneyCollected :: Int,
@@ -892,7 +903,10 @@ type HomeScreenProps =  {
   autoPayBanner :: Boolean,
   rcActive :: Boolean, 
   rcDeactivePopup :: Boolean,
-  showAccessbilityPopup :: Boolean
+  showAccessbilityPopup :: Boolean,
+  showRideCompleted :: Boolean,
+  showRideRating :: Boolean,
+  showContackSupportPopUp :: Boolean
  }
 
 data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY

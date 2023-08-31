@@ -47,7 +47,7 @@ genericHeaderConfig state= let
       }
     , textConfig {
         text = if state.props.issueReported then "" else (getString RIDE_DETAILS)
-      , color = Color.darkDescriptionText
+      , color = Color.darkCharcoal
       }
     , suffixImageConfig {
         visibility = GONE
