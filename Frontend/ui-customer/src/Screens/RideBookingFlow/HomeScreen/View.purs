@@ -93,7 +93,7 @@ import Data.Function.Uncurried (runFn1)
 import Components.CommonComponentConfig as CommonComponentConfig
 import SuggestedDestinations (getSuggestedDestinations)
 import Components.CommonComponentConfig as CommonComponentConfig
-
+import SuggestedDestinations (getSuggestedDestinations)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =

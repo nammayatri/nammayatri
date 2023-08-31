@@ -84,6 +84,8 @@ data KeyStore
   | LAST_KNOWN_LON
   | DISABILITY_UPDATED
   | DISABILITY_POPUP_TRIGGERED
+  | LAST_KNOWN_LAT
+  | LAST_KNOWN_LON
 
 derive instance genericKeyStore :: Generic KeyStore _
 
