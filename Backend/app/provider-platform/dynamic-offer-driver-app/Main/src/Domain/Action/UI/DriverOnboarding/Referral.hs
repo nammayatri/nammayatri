@@ -25,7 +25,7 @@ import Kernel.Types.Id
 import Kernel.Types.Validation (Validate)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation, validateField)
-import qualified Storage.CachedQueries.DriverInformation as DriverInformation
+import qualified Storage.Queries.DriverInformation as DriverInformation
 
 newtype ReferralReq = ReferralReq
   {value :: Text}

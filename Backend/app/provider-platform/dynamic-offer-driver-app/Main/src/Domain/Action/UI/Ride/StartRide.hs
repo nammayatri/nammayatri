@@ -45,8 +45,8 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.DriverInformation as QDI
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error

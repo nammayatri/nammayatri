@@ -34,10 +34,10 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, Log (withLogTag), MonadTime (g
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee
-import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee
+import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
 

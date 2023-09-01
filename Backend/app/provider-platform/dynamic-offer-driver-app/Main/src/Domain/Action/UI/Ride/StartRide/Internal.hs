@@ -20,11 +20,11 @@ import qualified Domain.Types.Merchant as Dmerch
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Kernel.External.Maps.Types (LatLong)
+import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Lib.SessionizerMetrics.Types.Event
-import qualified SharedLogic.Ride as CQRide
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as DrLoc
@@ -34,10 +34,9 @@ import Tools.Event
 startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r) => Id SP.Person -> SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> m ()
 startRideTransaction driverId ride bookingId firstPoint merchantId = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
-  _ <- QRide.updateStatus ride.id SRide.INPROGRESS
-  _ <- QRide.updateStartTimeAndLoc ride.id firstPoint
+  QRide.updateStatus ride.id SRide.INPROGRESS
+  QRide.updateStartTimeAndLoc ride.id firstPoint
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id
-  _ <- QDFS.updateStatus driverId DDFS.ON_RIDE {rideId = ride.id}
+  QDFS.updateStatus driverId DDFS.ON_RIDE {rideId = ride.id}
   now <- getCurrentTime
-  _ <- DrLoc.upsertGpsCoord driverId firstPoint now merchantId
-  CQRide.clearCache driverId
+  void $ DrLoc.upsertGpsCoord driverId firstPoint now merchantId

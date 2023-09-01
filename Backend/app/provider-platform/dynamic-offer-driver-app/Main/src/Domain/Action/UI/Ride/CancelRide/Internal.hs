@@ -45,8 +45,6 @@ import qualified SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import qualified SharedLogic.Ride as SRide
-import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
@@ -152,14 +150,12 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction bookingId ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
-  driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  _ <- QDI.updateOnRide driverId False
-  _ <- QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
-  DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
-  _ <- QRB.updateStatus bookingId SRB.CANCELLED
+  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  void $ DLoc.updateOnRide merchantId ride.driverId False
+  void $ QRide.updateStatus ride.id DRide.CANCELLED
   QBCR.upsert bookingCReason
-  _ <- QRide.updateStatus ride.id DRide.CANCELLED
-  SRide.clearCache ride.driverId
+  void $ QRB.updateStatus bookingId SRB.CANCELLED
+  void $ QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
 
 repeatSearch ::
