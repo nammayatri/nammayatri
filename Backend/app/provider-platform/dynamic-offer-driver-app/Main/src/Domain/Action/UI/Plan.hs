@@ -287,6 +287,7 @@ planResume (driverId, _merchantId) = do
   mandate <- validateInActiveMandateExists driverId driverPlan
   Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
     QM.updateStatus mandate.id DM.ACTIVE
+    QDPlan.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) AUTOPAY
     CDI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)
   return Success
