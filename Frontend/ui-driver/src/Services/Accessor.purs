@@ -73,3 +73,6 @@ _lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) {lon = n
 
 _certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b 
 _certificateNumber = lens (unwrap >>> _.certificateNumber) (\oldRec newVal -> wrap (unwrap oldRec) {certificateNumber = newVal})
+
+_distance :: forall a b c. Newtype a {distance :: c | b} => Lens' a c
+_distance = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))

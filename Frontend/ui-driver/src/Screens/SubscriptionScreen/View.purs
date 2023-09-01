@@ -51,19 +51,23 @@ import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), (||), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, maxLines, ellipsize)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getPlanPrice, getAllFareFromArray)
-import Screens.Types (AutoPayStatus(..), GlobalProps, MyPlanData, PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..))
+import Screens.Types (AutoPayStatus(..), GlobalProps, MyPlanData, PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..), KioskLocation(..))
+import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..), KioskLocationResp(..), KioskLocationRes(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
+import Data.Number (fromString) as Number
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Trans.Class (lift)
+import Control.Transformers.Back.Trans (runBackT)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -71,7 +75,7 @@ screen initialState globalState =
   , view
   , name: "SubscriptionScreen"
   , globalEvents: [(\push -> do
-      void $ launchAff $ flowRunner defaultGlobalState $ loadData push LoadPlans LoadAlternatePlans LoadMyPlans ShowError initialState globalState
+      void $ launchAff $ flowRunner defaultGlobalState $ loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre ShowError initialState globalState
       case initialState.data.orderId of 
         Just id -> void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling id 7 2 1 initialState push PaymentStatusAction
         Mb.Nothing -> pure unit
@@ -85,8 +89,8 @@ screen initialState globalState =
       )
   }
 
-loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
-loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (GlobalState globalState) = do
+loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (Number -> Number -> Array KioskLocationRes -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
+loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorAction state (GlobalState globalState) = do
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
     let globalProp = globalState.globalProps
     let (GetDriverInfoResp driverInfo) = globalProp.driverInformation
@@ -107,7 +111,13 @@ loadData push loadPlans loadAlternatePlans loadMyPlans errorAction state (Global
                 Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
                 Left err -> doAff do liftEffect $ push $ errorAction err
             Just _ -> doAff do liftEffect $ push $ loadMyPlans resp'
-        Left err -> doAff do liftEffect $ push $ errorAction err 
+        Left err -> doAff do liftEffect $ push $ errorAction err
+  else if (state.props.subView == FindHelpCentre) then do
+    locations <- Remote.getKioskLocations ""
+    case locations of
+      Right (KioskLocationResp locationsResp) -> doAff do liftEffect $ push $ loadHelpCentre state.props.currentLat state.props.currentLon locationsResp
+      Left err -> if err.code /= 404 then doAff do liftEffect $ push $ errorAction err
+                  else doAff do liftEffect $ push $ loadHelpCentre state.props.currentLat state.props.currentLon []
   else pure unit
 
 paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
@@ -158,6 +168,7 @@ view push state =
                 , managePlanView push state (state.props.subView == ManagePlan)
                 , myPlanView push state (state.props.subView == MyPlan)
                 , autoPayDetailsView push state (state.props.subView == PlanDetails)
+                , findHelpCentreView push state (state.props.subView == FindHelpCentre)
                 , if state.props.optionsMenuExpanded then 
                       OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) 
                   else linearLayout[][]
@@ -1361,7 +1372,7 @@ errorView push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , visibility if state.props.showError then VISIBLE else GONE
-  ][ linearLayout
+  ]([ linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation VERTICAL
@@ -1386,7 +1397,7 @@ errorView push state =
       , height WRAP_CONTENT
       , alignParentBottom "true,-1"
       ][PrimaryButton.view (push <<< TryAgainButtonAC) (tryAgainButtonConfig state)]
-  ]
+  ] <> if state.props.subView == FindHelpCentre then [headerView push state] else [] )
   
 shimmerView :: forall w. SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state = linearLayout
@@ -1485,6 +1496,142 @@ planPriceView fares frequency isSelectedLangTamil =
       ]
    ]
 
+findHelpCentreView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+findHelpCentreView push state visibility' = 
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+  relativeLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , visibility if visibility' then VISIBLE else GONE
+  , gravity CENTER
+  ][ linearLayout
+     [ height $ WRAP_CONTENT
+     , width MATCH_PARENT
+     ][ findHelpCentreBodyView push state 
+      , findHelpCentreNoDataView push state]
+  ]
+
+findHelpCentreBodyView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+findHelpCentreBodyView push state = 
+  scrollView
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , scrollBarY false
+  , visibility $ if state.props.noKioskLocation then GONE else VISIBLE
+  ][ linearLayout
+     [ height MATCH_PARENT
+     , width MATCH_PARENT
+     , padding $ PaddingTop 24
+     , margin $ MarginHorizontal 16 16
+     , orientation VERTICAL
+     , background Color.white900
+     ](map  (\item -> helpCentreCardView push item) state.props.kioskLocation)
+  ]
+
+findHelpCentreNoDataView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+findHelpCentreNoDataView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , gravity CENTER
+  , margin $ MarginHorizontal 24 24
+  , visibility $ if state.props.noKioskLocation then VISIBLE else GONE
+  ][  commonImageView "ny_ic_location_unserviceable" 150 141 (MarginBottom 24) (Padding 0 0 0 0)
+    , textView
+      [ text $ getString NO_HELP_CENTER_IS_ACTIVE_NOW
+      , textSize FontSize.a_18
+      , color Color.black900
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , maxLines 3
+      ]
+    , textView
+      [ text $ getString HELP_CENTERS_LOCATION_WILL_APPEAR_HERE_ONCE_THEY_ARE_ACTIVE
+      , textSize FontSize.a_14
+      , color Color.black700
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , maxLines 3
+      , margin $ MarginTop 10
+      , gravity CENTER
+      ]
+  ]
+
+
+helpCentreCardView :: forall w. (Action -> Effect Unit) -> KioskLocation -> PrestoDOM (Effect Unit) w
+helpCentreCardView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , stroke $ "1," <> Color.grey900
+  , padding $ Padding 14 16 14 0
+  , margin $ MarginBottom 16
+  , cornerRadius 8.0
+  , orientation VERTICAL
+  ][  textView
+      [ text state.landmark
+      , color Color.black800
+      , textSize FontSize.a_14
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , weight 1.0
+      ]
+    , textView
+      [ text state.address
+      , color Color.black700
+      , textSize FontSize.a_14
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , weight 1.0
+      , maxLines 2
+      , margin $ MarginVertical 3 3
+      , ellipsize true
+      ]
+    , linearLayout
+      [ height $ WRAP_CONTENT
+      , width $ MATCH_PARENT
+      , orientation $ HORIZONTAL
+      , margin $ MarginVertical 15 15
+      , gravity CENTER_VERTICAL
+      , onClick push $ const $ OpenGoogleMap state.latitude state.longitude
+      ][  commonImageView "ny_ic_loc_grey" 24 24 (MarginLeft 4) (Padding 2 2 2 2)
+        , textView
+          [ text $ getString GO_TO_LOCATION
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , margin $ MarginLeft 8
+          , weight 1.0
+          , color Color.black800
+          ]
+        , commonImageView "ny_ic_chevron_right" 24 24 (MarginLeft 4) (Padding 2 2 2 2)
+      ]
+    , linearLayout
+      [ height $ V 1
+      , width $ MATCH_PARENT
+      , padding $ PaddingHorizontal 5 5
+      , background Color.grey700
+      ][]
+    , linearLayout
+      [ height $ WRAP_CONTENT
+      , width $ MATCH_PARENT
+      , orientation $ HORIZONTAL
+      , margin $ MarginVertical 15 15
+      , gravity CENTER_VERTICAL
+      , onClick push $ const $ CallHelpCenter (fromMaybe "" state.contact)
+      , visibility $ case state.contact of 
+                      Just _ -> VISIBLE
+                      Nothing -> GONE
+      ][  commonImageView "ny_ic_phone_unfilled" 24 24 (MarginLeft 4) (Padding 2 2 2 2)
+        , textView
+          [ text $ getString CONTACT
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , color Color.black800
+          , margin $ MarginLeft 8
+          , weight 1.0
+          ]
+        , commonImageView "ny_ic_chevron_right" 24 24 (MarginLeft 4) (Padding 2 2 2 2)
+      ]
+  ]
+
 textView' :: forall w. (Action -> Effect Unit) -> Maybe Action -> String -> String -> FontStyle.Style -> Maybe Padding -> Maybe Margin -> PrestoDOM (Effect Unit) w
 textView' push action txt txtColor style padding' margin' =  
   textView $
@@ -1525,3 +1672,13 @@ showOfferApplicable state =
   let currentPlanOffers = length $ filter (\item -> not item.addedFromUI) state.data.managePlanData.currentPlan.offers
       selectedPlanOffers = length $ filter (\item -> not item.addedFromUI) state.props.managePlanProps.selectedPlanItem.offers
   in state.props.managePlanProps.selectedPlanItem.id /= state.data.managePlanData.currentPlan.id && selectedPlanOffers < currentPlanOffers
+
+commonImageView :: String -> Int -> Int -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
+commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPadding =
+  imageView $
+      [ imageWithFallback $ imageName <> "," <> (getAssetStoreLink FunctionCall) <> imageName
+      , height $ V imageHeight
+      , width $ V imageWidth
+      , margin imageViewMargin
+      , padding imageViewPadding
+      ]

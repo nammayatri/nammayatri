@@ -62,8 +62,6 @@ myPlanListTransformer planEntity isLocalized' = do
     let isLocalized = fromMaybe false isLocalized'
     getPlanCardConfig planEntity isLocalized
 
-
-
 planListTransformer :: UiPlansResp -> Array PlanCardConfig
 planListTransformer (UiPlansResp planResp) =
     let planEntityArray = planResp.list

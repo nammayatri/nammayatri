@@ -77,7 +77,14 @@ initData = {
             selectedPlanItem : dummyPlanConfig
         },
         optionsMenuExpanded : false,
-        redirectToNav : ""
+        redirectToNav : "",
+        currentLat : 0.0,
+        currentLon : 0.0,
+        destLat : 0.0,
+        destLon : 0.0,
+        kioskLocation : [],
+        prevSubView : NoSubView,
+        noKioskLocation : false
     }
 }
 

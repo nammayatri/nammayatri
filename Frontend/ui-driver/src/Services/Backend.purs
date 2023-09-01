@@ -997,6 +997,13 @@ unVerifiedAadhaarData driverName driverGender driverDob = do
     unwrapResponse x = x
 
 
+getKioskLocations :: String -> Flow GlobalState (Either ErrorResponse KioskLocationResp)
+getKioskLocations dummy = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getKioskLocations "") unwrapResponse $ callAPI headers (KioskLocationReq "")
+    where
+        unwrapResponse (x) = x
+
 getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
 getUiPlans dummy = do
     headers <- getHeaders "" false
