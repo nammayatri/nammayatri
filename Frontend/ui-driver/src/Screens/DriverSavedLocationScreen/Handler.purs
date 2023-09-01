@@ -33,6 +33,9 @@ driverSavedLocationScreen = do
     DeleteLocation updatedState placeId -> do
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> pure (DELETE_PLACE updatedState placeId)
+    UpdateHomeLocation updateState placeId -> do
+      modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updateState)
+      App.BackT $ App.NoBack <$> pure (UPDATE_HOME_LOCATION updateState placeId)
     ChangeView updatedState -> do
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> pure (CHANGE_VIEW)

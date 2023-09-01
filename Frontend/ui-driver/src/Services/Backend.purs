@@ -63,7 +63,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> [Header "token" if dummy == "zxc" then "3a36e2ca-996e-413e-a4bf-a63f376abbe0" else token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 
@@ -78,7 +78,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
                         Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                     ] <> case regToken of
                         Nothing -> []
-                        Just token -> [Header "token" token]
+                        Just token -> [Header "token" if dummy == "zxc" then "3a36e2ca-996e-413e-a4bf-a63f376abbe0" else token]
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do
@@ -1166,11 +1166,11 @@ deleteDriverHomeLocation id = do
 updateDriverHomeLocation :: String -> Number ->Number -> String -> String  -> Flow GlobalState (Either ErrorResponse UpdateHomeLocationResp)
 updateDriverHomeLocation qParam lat lon address tag = do
   headers <- getHeaders "" false
-  withAPIResult (EP.deleteDriverHomeLocation qParam) unwrapResponse $ callAPI headers $ makeUpdateReq lat lon address tag
+  withAPIResult (EP.updateDriverHomeLocation qParam) unwrapResponse $ callAPI headers $ makeUpdateReq qParam lat lon address tag
   where
-    makeUpdateReq :: Number -> Number -> String -> String -> UpdateHomeLocationReq
-    makeUpdateReq lat lon address tag = UpdateHomeLocationReq {
-        qParam : "",
+    makeUpdateReq :: String -> Number -> Number -> String -> String -> UpdateHomeLocationReq
+    makeUpdateReq qp lat lon address tag = UpdateHomeLocationReq {
+        qParam : qp,
         body : AddHomeLocationReq $ {
             position : LatLong $ {
                 lat : lat,

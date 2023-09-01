@@ -3,6 +3,7 @@ module Screens.DriverSavedLocationScreen.Controller where
 import Components.GoToLocationModal as GoToLocationModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number as NUM
@@ -63,6 +64,7 @@ data ScreenOutput
   | SaveLocation DriverSavedLocationScreenState
   | GetPlaceNameAPI DriverSavedLocationScreenState String
   | DeleteLocation DriverSavedLocationScreenState String
+  | UpdateHomeLocation DriverSavedLocationScreenState String
   | ChangeView DriverSavedLocationScreenState
 
 eval :: Action -> DriverSavedLocationScreenState -> Eval Action ScreenOutput DriverSavedLocationScreenState
@@ -92,7 +94,7 @@ eval LocateOnMap state = do
   _ <- pure $ toggleBtnLoader "" false
   exit $ ChangeView state { props { viewType = LOCATE_ON_MAP } }
 
-eval (ConfirmLocEDT val) state = continue state { data { saveLocationObject { position { place = val } } } }
+eval (ConfirmLocEDT val) state = continue state { data { saveLocationObject { tag = val } } }
 
 eval (OnTextChanged textVal) state =
   if length (trim textVal) < 3 then
@@ -114,17 +116,24 @@ eval (MAPREADY key latitude longitude) state =
     ]
 
 eval (PrimaryButtonAC PrimaryButton.OnClick) state = case state.props.viewType of
+  NO_GO_TO_ADDED -> continue state { props { viewType = ADD_GO_TO_LOCATION } }
   GO_TO_LIST -> continue state { props { viewType = ADD_GO_TO_LOCATION } }
   LOCATE_ON_MAP -> continue state { props { viewType = CONFIRM_LOCATION, fromEditButton = false } }
   _ -> continue state
 
 eval (ConfirmChangesAC PrimaryButton.OnClick) state =
-  if state.props.fromEditButton then
-    continue state -- TODO :: Call edit API
-  else
+  if state.props.fromEditButton
+    then do
+    let id = state.props.selectedLocation
+    exit $ UpdateHomeLocation state id -- TODO :: Call edit API
+  else do
+    _ <- pure $ spy "Location tag state" state
     exit $ SaveLocation state
 
-eval (GoToLocationModalAC (GoToLocationModal.EditLocation loc)) state =
+eval (GoToLocationModalAC (GoToLocationModal.EditLocation loc)) state = do
+  _ <- pure $ spy "gotolocationitem1" state
+  _ <- pure $ spy "goToLocationItem2" loc
+  _ <- pure $ setText (getNewIDWithTag "ConfirmLocEDT") loc.tag
   continue
     state
       { props { viewType = CONFIRM_LOCATION, selectedLocation = loc.id, fromEditButton = true }
@@ -160,7 +169,9 @@ eval (SuggestionClick pred) state = do
     Just id -> exit $ GetPlaceNameAPI state { props { selectedPrediction = pred } } id
     Nothing -> continue state
 
-eval (Respones resp) state = continue state { data { savedLocationsArray = getLocationArray resp } }
+eval (Respones resp) state = do
+  let tempArray = getLocationArray resp
+  continue state { data { savedLocationsArray = tempArray } , props {viewType = if tempArray == [] then NO_GO_TO_ADDED else GO_TO_LIST } }
 
 eval _ state = continue state
 

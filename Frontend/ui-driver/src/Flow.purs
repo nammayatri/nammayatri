@@ -89,7 +89,7 @@ import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), KeyboardModalType(..), Location, ReferralType(..), SubscribePopupType(..), SubscriptionSubview(..), UpdatePopupType(..), PlanCardConfig, SavedLocationScreenType(..))
 import Screens.Types as ST
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..),  AutoCompleteResp(..),  DriverActiveInactiveResp(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PayPayload(..), PaymentDetailsEntity(..), PaymentPagePayload(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..),  AutoCompleteResp(..),  DriverActiveInactiveResp(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..), CachedGoHomeRequest(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
@@ -279,6 +279,7 @@ driverRegistrationStatus = do
 
 getDriverInfoFlow :: FlowBT String Unit
 getDriverInfoFlow = do
+  GlobalState globalState <- getState
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
@@ -355,16 +356,18 @@ getDriverInfoFlow = do
           pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
+        let (CachedGoHomeRequest goToHomeInfo) = getDriverInfoResp.driverGoHomeInfo
         let optionArr = genders FunctionCall
             element = fromMaybe "UNKNOWN" getDriverInfoResp.gender
             reqIndex = getGenderIndex element optionArr
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile = getDriverInfoResp.alternateNumber, driverGotoState {gotoCount = goToHomeInfo.cnt} }
                                                                            , props {statusOnline =  if (isJust getDriverInfoResp.mode) then
                                                                                                         (any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent])
                                                                                                     else getDriverInfoResp.active
                                                                                     }
                                                                             }
                                                 )
+
         modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen
          {data = driverDetailsScreen.data { driverName = getDriverInfoResp.firstName,
         driverVehicleType = linkedVehicle.variant,
@@ -1241,7 +1244,7 @@ goToLocationFlow = do
         Just (PlaceName placeName) -> do
           let (LatLong latLong) = placeName.location
           modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> state { data {
-            saveLocationObject { address = placeName.formattedAddress, position { lat = latLong.lat , lon = latLong.lon } }
+            saveLocationObject { address = placeName.formattedAddress, position { lat = latLong.lat , lon = latLong.lon }, tag = state.data.saveLocationObject.tag}
           },  props { viewType = LOCATE_ON_MAP}} )
         Nothing -> pure unit
       goToLocationFlow
@@ -1249,7 +1252,7 @@ goToLocationFlow = do
     SAVE_LOCATION state -> do
       addDriverHomeLocationResp <- lift $ lift $ Remote.addDriverHomeLocation state.data.saveLocationObject.position.lat state.data.saveLocationObject.position.lon state.data.saveLocationObject.address state.data.saveLocationObject.tag
       case addDriverHomeLocationResp of
-        Right resp -> do 
+        Right resp -> do
           _ <- pure $ toast $ "Go-To Location  Added Successfully"
           let (GlobalState defaultEpassState') = defaultGlobalState
           modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
@@ -1275,6 +1278,14 @@ goToLocationFlow = do
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> state { props { confirmDelete = false}} )
       goToLocationFlow
     
+    UPDATE_HOME_LOCATION state placeId-> do
+      updateResp <- lift $ lift $ Remote.updateDriverHomeLocation placeId state.data.saveLocationObject.position.lat state.data.saveLocationObject.position.lon state.data.saveLocationObject.address state.data.saveLocationObject.tag
+      case updateResp of
+        Right resp -> pure $ toast $ "Go-To Location  Updated Successfully"
+        Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+      let (GlobalState defaultEpassState') = defaultGlobalState
+      modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
+      goToLocationFlow
     CHANGE_VIEW -> goToLocationFlow
 
   goToLocationFlow
@@ -1778,12 +1789,14 @@ homeScreenFlow = do
 
   _  <- pure $ spy "DRIVERRRR___STATUs" (getValueToLocalNativeStore DRIVER_STATUS)
   _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
+  let (CachedGoHomeRequest goToHomeInfo) = getDriverInfoResp.driverGoHomeInfo
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = if (isJust getDriverInfoResp.mode) then
                                                                                                 (any( _ == (updateDriverStatus (getDriverInfoResp.active)))[Online, Silent])
                                                                                              else getDriverInfoResp.active
                                                                             , driverStatusSet = getDriverStatus "" }
-                                                                      , data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber, profileImg = getDriverInfoResp.aadhaarCardPhoto}})
-  modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp), profileImg = getDriverInfoResp.aadhaarCardPhoto}})
+                                                                      , data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber, profileImg = getDriverInfoResp.mediaUrl}})
+
+  modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp), profileImg = getDriverInfoResp.mediaUrl}})
   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
   let currdate = getcurrentdate ""

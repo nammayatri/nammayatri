@@ -25,6 +25,7 @@ primaryButtonConfig state =
         { textConfig
           { text =
             case state.props.viewType of
+              ST.NO_GO_TO_ADDED -> " Add New Go To Location "
               ST.GO_TO_LIST -> " Add Another Location  "
               ST.ADD_GO_TO_LOCATION -> " Select on Map "
               ST.LOCATE_ON_MAP -> "Confirm Location"

@@ -24,6 +24,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
+import Data.DateTime (DateTime)
 import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
@@ -401,11 +402,19 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , paymentPending        :: Boolean
     , subscribed            :: Boolean
     , mediaUrl              :: Maybe String
-    , autoPayStatus         :: Maybe String  
+    , driverGoHomeInfo      :: CachedGoHomeRequest
+    , autoPayStatus         :: Maybe String
     , aadhaarCardPhoto      :: Maybe String
     }
 
-
+newtype CachedGoHomeRequest = CachedGoHomeRequest
+    {   status :: Maybe String
+      , cnt :: Int
+      , validTill :: Maybe String
+      , driverGoHomeRequestId :: Maybe String
+      , isOnRide :: Boolean
+      , goHomeReferenceTime :: String
+    }
 
 newtype  OrganizationInfo = OrganizationInfo
     {   name          :: String,
@@ -451,6 +460,13 @@ instance standardEncodeVehicle :: StandardEncode Vehicle where standardEncode (V
 instance showVehicle :: Show Vehicle where show = genericShow
 instance decodeVehicle :: Decode Vehicle where decode = defaultDecode
 instance encodeVehicle :: Encode Vehicle where encode = defaultEncode
+
+derive instance genericCachedGoHomeRequest :: Generic CachedGoHomeRequest _
+derive instance newtypeCachedGoHomeRequest :: Newtype CachedGoHomeRequest _
+instance standardEncodeCachedGoHomeRequest :: StandardEncode CachedGoHomeRequest where standardEncode (CachedGoHomeRequest req) = standardEncode req
+instance showCachedGoHomeRequest :: Show CachedGoHomeRequest where show = genericShow
+instance decodeCachedGoHomeRequest :: Decode CachedGoHomeRequest where decode = defaultDecode
+instance encodeCachedGoHomeRequest :: Encode CachedGoHomeRequest where encode = defaultEncode
 
 derive instance genericGetDriverInfoResp :: Generic GetDriverInfoResp _
 derive instance newtypeGetDriverInfoResp :: Newtype GetDriverInfoResp _

@@ -221,28 +221,28 @@ suspendMandate :: String -> String
 suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend"
 
 autoComplete :: String -> String
-autoComplete _ = (getBaseUrl "") <> "/maps/autoComplete"
+autoComplete _ = getBaseUrl "" <> "maps/autoComplete"
 
 placeDetails :: String -> String
 placeDetails _ =  (getBaseUrl "") <> "/maps/getPlaceDetails"
 
 getPlaceName :: String -> String 
-getPlaceName _ = (getBaseUrl "") <> "/maps/getPlaceName"
+getPlaceName _ = getBaseUrl "" <> "maps/getPlaceName"
 
 activateDriverGoTo :: String -> String
-activateDriverGoTo homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/activate?homeLocationId=" <> homeLocationId
+activateDriverGoTo homeLocationId = getBaseUrl "" <> "/driver/goHome/activate?homeLocationId=" <> homeLocationId
 
 deactivateDriverGoTo :: String -> String
-deactivateDriverGoTo _ = getBaseUrl "" <> "/driver/goHomeFeature/deactivate"
+deactivateDriverGoTo _ = getBaseUrl "" <> "/driver/goHome/deactivate"
 
 addDriverHomeLocation :: String -> String
-addDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHomeFeature/add"
+addDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHome/add"
 
 getDriverHomeLocation :: String -> String
-getDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHomeFeature/get"
+getDriverHomeLocation _ = getBaseUrl "" <> "/driver/goHome/get"
 
 deleteDriverHomeLocation :: String -> String
-deleteDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/delete?driverHomeLocationId=" <> homeLocationId
+deleteDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/delete?homeLocationId=" <> homeLocationId
 
 updateDriverHomeLocation :: String -> String
-updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHomeFeature/update?driverHomeLocationId=" <> homeLocationId
+updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/update?homeLocationId=" <> homeLocationId

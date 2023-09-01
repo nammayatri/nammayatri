@@ -39,6 +39,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
+import Data.Array (length)
 import Data.Either (Either(..))
 import Data.Int (ceil, toNumber)
 import Data.Int (toNumber, ceil)
@@ -848,6 +849,46 @@ gotoTimerConfig timer
   | timer = {bgColor : Color.green900, imageString : "ny_ic_goto_icon_map_pin_check,https://assets.juspay.in/nammayatri/images/common/ic_report_help.png", textColor : Color.white900}
   | otherwise = {bgColor : Color.white900, imageString : "ny_ic_disabled_goto,https://assets.juspay.in/nammayatri/images/common/ic_report_help.png", textColor : Color.black800}
 
+-- this is the view
+savedLocationDefaultView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+savedLocationDefaultView push state =
+  relativeLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , visibility if state.data.driverGotoState.savedLocationsArray == [] then VISIBLE else GONE
+    , gravity CENTER
+    ][ linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginTop 100
+        ][ imageView
+            [ height $ V 200
+            , width MATCH_PARENT
+            , imageWithFallback "ny_ic_banner_gender_feat,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+            , margin $ Margin 10 20 10 0
+            ]
+        , textView
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , text "No Go-To locations added yet"
+            , gravity CENTER
+            , color Color.black900
+            , margin $ Margin 10 20 10 0
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            ]
+        , textView
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , text "Go-To location helps you find rides in and around your preferred locations"
+            , gravity CENTER
+            , color Color.black800
+            , margin $ Margin 10 20 10 0
+            ]
+        ]
+    ]
+
 enableGotoModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
 enableGotoModal push state = 
   Anim.screenAnimation $
@@ -864,6 +905,7 @@ enableGotoModal push state =
      , width MATCH_PARENT
      , background Color.grey900
      ] [ ]
+   , savedLocationDefaultView push state
    , linearLayout
      [ height $ V 50  
      , width MATCH_PARENT
@@ -890,7 +932,7 @@ enableGotoModal push state =
           , background Color.blue600
           , stroke $ "1,"<>Color.blue600
           , margin $ Margin 17 0 17 20 
-          , text "You have only __ left for today "
+          , text $ "You have only " <> (show $ 5 - length state.data.driverGotoState.savedLocationsArray) <> " left for today "
           , cornerRadius 6.0 
           , color Color.black900
           ]

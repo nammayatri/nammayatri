@@ -1731,7 +1731,7 @@ type DriverSavedLocationScreenProps = {
   fromEditButton :: Boolean
 }
 
-data SavedLocationScreenType = GO_TO_LIST | ENABLE_GO_TO | ADD_GO_TO_LOCATION | LOCATE_ON_MAP | CONFIRM_LOCATION
+data SavedLocationScreenType = NO_GO_TO_ADDED | GO_TO_LIST | ENABLE_GO_TO | ADD_GO_TO_LOCATION | LOCATE_ON_MAP | CONFIRM_LOCATION
 
 derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
 instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where eq = genericEq

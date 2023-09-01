@@ -11,6 +11,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (length)
 import Data.Array as DA
+import Data.Show
 import Data.Either (Either(..))
 import Debug (spy)
 import Effect (Effect)
@@ -23,7 +24,7 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, void, ($), (-), (<<<), (<>), (==), (>))
+import Prelude (Unit, bind, const, discard, map, pure, unit, void, ($), (-), (<<<), (<>), (==), (>), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.DriverSavedLocationScreen.ComponentConfig (confirmDeletePopupConfig, locationListItemConfig, primaryButtonConfig)
@@ -79,7 +80,7 @@ view push state =
         , onBackPressed push $ const BackPressed
         , background Color.white900
         ]
-        [ gotoLocationsList state push (state.props.viewType == GO_TO_LIST)
+        [ gotoLocationsList state push (state.props.viewType == GO_TO_LIST || state.props.viewType == NO_GO_TO_ADDED)
         , searchLocation state push (state.props.viewType == ADD_GO_TO_LOCATION)
         , locationAndMap state push (state.props.viewType == LOCATE_ON_MAP)
         , confirmLocation state push (state.props.viewType == CONFIRM_LOCATION)
@@ -108,7 +109,15 @@ gotoLocationsList state push visibility' =
         , margin (Margin 0 15 0 0)
         ]
         [ header state push
+        , linearLayout
+            [ width MATCH_PARENT
+            , height $ V 1
+            , orientation VERTICAL
+            , background Color.grey900
+            , margin $ MarginTop 5
+            ][]
         , savedLocationListView push state
+        , savedLocationDefaultView push state
         , linearLayout
             [ width MATCH_PARENT
             , orientation VERTICAL
@@ -120,7 +129,7 @@ gotoLocationsList state push visibility' =
                 $ [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , gravity CENTER
-                  , text "Go-To locations left: "
+                  , text $ "Go-To locations left: " <> (show $ 5 - length state.data.savedLocationsArray)
                   , color Color.black900
                   ]
             , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
@@ -431,7 +440,7 @@ confirmLocation state push visibility' =
                     , color Color.blue900
                     , textSize FontSize.a_16
                     , onClick push $ const BackPressed
-                    , visibility if state.props.fromEditButton then GONE else VISIBLE
+                    , visibility if state.props.fromEditButton then VISIBLE else GONE
                     ]
                 ]
             , textView
@@ -493,7 +502,7 @@ confirmLocation state push visibility' =
                     , weight 1.0
                     , cornerRadius 8.0
                     , background Color.white900
-                    , text state.data.address
+                    , text ""
                     , id $ EHC.getNewIDWithTag "ConfirmLocEDT"
                     , ellipsize true
                     , textSize FontSize.a_16
@@ -626,7 +635,8 @@ savedLocationListView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , scrollBarY true
-    ]
+    , visibility if state.data.savedLocationsArray == [] then GONE else VISIBLE
+     ]
     [ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -635,6 +645,61 @@ savedLocationListView push state =
         ]
         (map (\item -> GoToLocationModal.view (push <<< GoToLocationModalAC) (locationListItemConfig item)) state.data.savedLocationsArray)
     ]
+
+savedLocationDefaultView :: forall w. (Action -> Effect Unit) -> DriverSavedLocationScreenState -> PrestoDOM (Effect Unit) w
+savedLocationDefaultView push state =
+  relativeLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , visibility if state.data.savedLocationsArray == [] then VISIBLE else GONE
+    , gravity CENTER
+    ][ linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginTop 100
+        ][ imageView
+            [ height $ V 200
+            , width MATCH_PARENT
+            , imageWithFallback "ny_ic_banner_gender_feat,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+            , margin $ Margin 10 20 10 0
+            ]
+        , textView
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , text "No Go-To locations added yet"
+            , gravity CENTER
+            , color Color.black900
+            , margin $ Margin 10 20 10 0
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            ]
+        , textView
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , text "Go-To location helps you find rides in and around your preferred locations"
+            , gravity CENTER
+            , color Color.black800
+            , margin $ Margin 10 20 10 0
+            ]
+        ]
+
+        , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , alignParentBottom "true,-1"
+            , orientation VERTICAL
+            ][ textView
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , text "You have only 5 left for today."
+                , gravity CENTER
+                , color Color.black900
+                ]
+                , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+            ]
+    ]
+
 
 textBox' :: forall w. (Action -> Effect Unit) -> DriverSavedLocationScreenState -> PrestoDOM (Effect Unit) w
 textBox' push state =

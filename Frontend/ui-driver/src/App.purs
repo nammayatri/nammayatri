@@ -376,4 +376,5 @@ data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
                                   | SAVE_LOCATION DriverSavedLocationScreenState
                                   | GET_PLACE_NAME DriverSavedLocationScreenState String
                                   | DELETE_PLACE DriverSavedLocationScreenState String
+                                  | UPDATE_HOME_LOCATION DriverSavedLocationScreenState String
                                   | CHANGE_VIEW 
