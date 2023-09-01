@@ -1862,20 +1862,25 @@ export const askNotificationPermission = function () {
 
 export const scrollViewFocus = function (parentID) {
   return function (index) {
-    if (window.__OS == "ANDROID") {
-      try {
+    try {
+      if (window.__OS == "ANDROID") {
         let cmd = "set_scrollView=ctx->findViewById:i_" + parentID + ";"
-            cmd += "set_childView=get_scrollView->getChildAt:i_0;"
-            cmd += "set_focusChildView=get_childView->getChildAt:i_" + JSON.stringify(index) + ";"
-            cmd += "get_btm=get_focusChildView->getTop;"
-            cmd += "get_scrollView->smoothScrollTo:i_0,get_btm;"
+        cmd += "set_childView=get_scrollView->getChildAt:i_0;"
+        cmd += "set_focusChildView=get_childView->getChildAt:i_" + JSON.stringify(index) + ";"
+        cmd += "get_btm=get_focusChildView->getTop;"
+        cmd += "get_scrollView->smoothScrollTo:i_0,get_btm;"
         setTimeout(function () {
           window.Android.runInUI(cmd, null);
         }, 200)
         return true;
-      } catch (err) {
-        console.log("error in scrollViewFocus : " + err);
+      } else {
+        if (window.JBridge.scrollViewFocus) {
+          window.JBridge.scrollViewFocus(parentID, JSON.stringify(index));
+          return true;
+        }
       }
+    } catch (err) {
+      console.log("error in scrollViewFocus : " + err);
     }
     return false;
   }
