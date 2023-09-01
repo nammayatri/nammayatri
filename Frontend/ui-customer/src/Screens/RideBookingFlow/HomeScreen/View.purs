@@ -273,10 +273,11 @@ view push state =
                 , accessibilityImportance DISABLE
                 , clickable true
                 ]
-                [  linearLayout
+                [ linearLayout
                   [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                   , width MATCH_PARENT
                   , background Color.transparent
+                  , clickable false
                   , accessibilityImportance ENABLE
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][
@@ -284,7 +285,6 @@ view push state =
                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                     , width MATCH_PARENT
                     , accessibilityImportance if (state.props.currentStage == RideStarted) && not ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))  then DISABLE else DISABLE_DESCENDANT
-                    , clickable false
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     ]
                     []]
@@ -942,7 +942,7 @@ homeScreenTopIconView push state =
                 , height WRAP_CONTENT
                 , disableClickFeedback true
                 , onClick push (const $ OpenSearchLocation)
-                , accessibilityImportance if state.props.currentStage == RideRating then DISABLE else ENABLE
+                , accessibilityImportance if any (_ == state.props.currentStage) [RideRating , RideCompleted] then DISABLE else ENABLE
                 , accessibilityHint "Pickup Location is Current Location"
                 , accessibilityImportance ENABLE
                 ]
@@ -1233,8 +1233,6 @@ rideCompletedCardView state push =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , accessibilityHint "Ride Completed"
-      , accessibilityImportance ENABLE
       ][ completedRideDetails state push
       , issueFacedAndRateView state push
       ]

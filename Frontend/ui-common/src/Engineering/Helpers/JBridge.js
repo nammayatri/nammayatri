@@ -1,6 +1,6 @@
 import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
-const { JBridge, MobilityCommonBridge } = window;
+const { JBridge } = window;
 var mainFiber = null;
 let suggestions = require("../Engineering.Helpers.Suggestions")
 var timer;
@@ -1401,10 +1401,11 @@ export const copyToClipboard = function(str) {
 }
 
 export const requestKeyboardShow = function(id) {
-  if (window.__OS == "IOS") {
     JBridge.requestKeyboardShow(id);
-  } else {
-    MobilityCommonBridge.requestKeyboardShow(id);}
+}
+
+export const showKeyboard = function(id){
+    JBridge.showKeyboard(id); // imeOptions is set to IME_ACTION_SEARCH and IME_ACTION_DONE
 }
 
 export const locateOnMap = function (str, lat, lon, geoJson, coodinates) {
