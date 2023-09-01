@@ -271,7 +271,7 @@ public class MainActivity extends AppCompatActivity {
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
         activity = this;
-
+        setContentView(R.layout.activity_main);
 //        String key = getResources().getString(R.string.service);
 //        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
 
@@ -370,7 +370,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         registerCallBack();
-        setContentView(R.layout.activity_main);
         inAppNotification = new InAppNotification(this);
         initNotificationChannel();
         if (BuildConfig.DEBUG) {
