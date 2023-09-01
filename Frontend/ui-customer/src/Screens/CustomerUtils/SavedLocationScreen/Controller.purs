@@ -40,6 +40,9 @@ import Screens (ScreenName(..), getScreen)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Engineering.Helpers.Utils as EHU
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.LogEvent (logEvent)
+import Foreign.Object (empty)
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -127,9 +130,13 @@ eval (PrimaryButtonAC (PrimaryButtonController.OnClick)) state = do
     _ <- pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     _ <- pure $ toggleBtnLoader "" false
     continue state
-    else updateAndExit state $ AddLocation state 
+    else do
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_add_favourite_click"
+      updateAndExit state $ AddLocation state 
 
-eval (ErrorModalAC (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick))state = updateAndExit state $ AddLocation state
+eval (ErrorModalAC (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick))state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_add_favourite_click_error_model"
+  updateAndExit state $ AddLocation state
 
 eval _ state = continue state
 

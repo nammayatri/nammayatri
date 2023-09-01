@@ -1688,7 +1688,7 @@ export const setCleverTapUserData = function (key) {
 
 export const cleverTapCustomEvent = function(event){
     if (window.JBridge.cleverTapCustomEvent){
-      window.JBridge.cleverTapCustomEvent(event);
+      return JBridge.cleverTapCustomEvent(event);
     }
 }
 
@@ -1758,6 +1758,14 @@ export const waitingCountdownTimer = function (startingTime) {
     };
   };
 };
+
+export const cleverTapEvent = function(event){
+  return function (param){
+    if (window.JBridge.cleverTapEvent){
+        return JBridge.cleverTapEvent(event, JSON.stringify(param));
+    }
+  }
+}
 
 export const emitJOSEvent = function (mapp,eventType,payload) {
   console.log("payload" , payload);

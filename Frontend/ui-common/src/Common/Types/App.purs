@@ -216,6 +216,11 @@ type FareList = {
   val :: String
 }
 
+type ClevertapEventParams = {
+  key :: String ,
+  value :: String
+}
+
 data PaymentStatus = Success | Pending | Failed
 
 derive instance genericPaymentStatus :: Generic PaymentStatus _

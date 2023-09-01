@@ -334,7 +334,18 @@ eval (DriverSummary response) state = do
   let (DriverProfileSummaryRes resp) = response
   continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = (fromMaybe [] resp.languagesSpoken), languageList = updateLanguageList state (fromMaybe [] resp.languagesSpoken)}}
 
-eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
+eval (ChangeScreen screenType) state = do
+  case screenType of
+    ST.DRIVER_DETAILS -> do
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_personal_click"
+      pure unit
+    ST.VEHICLE_DETAILS -> do
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_vehicle_click"
+      pure unit
+    _ -> do
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_settings_click"
+      pure unit
+  continue state{props{ screenType = screenType }}
 
 eval OpenSettings state = continue state{props{openSettings = true}}
 

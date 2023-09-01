@@ -71,7 +71,7 @@ window.getMerchantConfig = function () {
       "EARNED_ON_APP" : "NY இல் பெறப்பட்ட விலை",
       "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்"
     },
-    "logs": ["JUSPAY","FIREBASE"]
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
