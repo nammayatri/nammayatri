@@ -35,7 +35,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion, getSearchType)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
+import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -259,7 +259,7 @@ sourceDestinationEditTextView state push =
             , hintColor "#A7A7A7"
             , id $ getNewIDWithTag "SourceEditText"
             , afterRender (\action -> do
-                  _ <- pure $ requestKeyboardShow case state.isSource of
+                  _ <- pure $ showKeyboard case state.isSource of
                                             Just true  -> (getNewIDWithTag "SourceEditText")
                                             Just false -> (getNewIDWithTag "DestinationEditText")
                                             Nothing    -> ""
@@ -336,7 +336,7 @@ sourceDestinationEditTextView state push =
               , cursorColor state.homeScreenConfig.primaryBackground
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
-                  _ <- pure $ requestKeyboardShow case state.isSource of
+                  _ <- pure $ showKeyboard case state.isSource of
                                             Just true  -> (getNewIDWithTag "DestinationEditText")
                                             Just false -> (getNewIDWithTag "SourceEditText")
                                             Nothing    -> ""
