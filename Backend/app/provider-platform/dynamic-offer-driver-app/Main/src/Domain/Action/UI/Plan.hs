@@ -40,11 +40,11 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
-import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
 import Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
@@ -145,7 +145,7 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
 -- This API is for listing current driver plan
 currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
 currentPlan (driverId, _merchantId) = do
-  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (getDriverPaymentMode driverInfo.autoPayStatus)) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
@@ -191,7 +191,7 @@ currentPlan (driverId, _merchantId) = do
 -- This API is to create a mandate order if the driver has not subscribed to Mandate even once or has Cancelled Mandate from PSP App.
 planSubscribe :: Id Plan -> Bool -> (Id SP.Person, Id DM.Merchant) -> Flow PlanSubscribeRes
 planSubscribe planId isDashboard (driverId, merchantId) = do
-  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driverInfo.autoPayStatus `elem` [Nothing, Just DI.CANCELLED_PSP, Just DI.PAUSED_PSP, Just DI.PENDING]) $ throwError InvalidAutoPayStatus
   plan <- QPD.findByIdAndPaymentMode planId MANUAL >>= fromMaybeM (PlanNotFound planId.getId)
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
@@ -202,7 +202,7 @@ planSubscribe planId isDashboard (driverId, merchantId) = do
       fork "Cancelling paused Mandate" $ do
         void $ Payment.mandateRevoke merchantId (Payment.MandateRevokeReq {mandateId = mandateId.getId})
 
-  unless (driverInfo.autoPayStatus == Just DI.PENDING) $ CDI.updateAutoPayStatus (Just DI.PENDING) (cast driverId)
+  unless (driverInfo.autoPayStatus == Just DI.PENDING) $ DI.updateAutoPayStatus (Just DI.PENDING) (cast driverId)
   when (isNothing driverPlan) $ do
     newDriverPlan <- mkDriverPlan plan
     QDPlan.create newDriverPlan
@@ -251,7 +251,7 @@ planSubscribe planId isDashboard (driverId, merchantId) = do
 planSelect :: Id Plan -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 planSelect planId (driverId, _) = do
   void $ B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
-  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   void $ QPD.findByIdAndPaymentMode planId (getDriverPaymentMode driverInfo.autoPayStatus) >>= fromMaybeM (PlanNotFound planId.getId)
   QDPlan.updatePlanIdByDriverId driverId planId
   return Success
@@ -267,21 +267,21 @@ planSelect planId (driverId, _) = do
 planSuspend :: Bool -> (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 planSuspend isDashboard (driverId, _merchantId) = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driverInfo.autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateActiveMandateExists driverId driverPlan
   Redis.whenWithLockRedis (DF.mandateProcessingLockKey mandate.id.getId) 60 $ do
     QM.updateStatus mandate.id DM.INACTIVE
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) MANUAL
-    CDI.updateAutoPayStatus (Just DI.SUSPENDED) (cast driverId)
+    DI.updateAutoPayStatus (Just DI.SUSPENDED) (cast driverId)
   when isDashboard $ notifyPaymentModeManualOnSuspend _merchantId driverId driver.deviceToken
   return Success
 
 -- This API is to make Mandate Active and switch to Autopay plan type. If an only if an Auto Pay plan was paused/cancelled by driver from App.
 planResume :: (Id SP.Person, Id DM.Merchant) -> Flow APISuccess
 planResume (driverId, _merchantId) = do
-  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driverInfo.autoPayStatus == Just DI.SUSPENDED) $ throwError InvalidAutoPayStatus
   driverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   mandate <- validateInActiveMandateExists driverId driverPlan
@@ -289,7 +289,7 @@ planResume (driverId, _merchantId) = do
     QM.updateStatus mandate.id DM.ACTIVE
     QDPlan.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
     QDPlan.updatePaymentModeByDriverId (cast driverPlan.driverId) AUTOPAY
-    CDI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)
+    DI.updateAutoPayStatus (Just DI.ACTIVE) (cast driverId)
   return Success
 
 ---------------------------------------------------------------------------------------------------------

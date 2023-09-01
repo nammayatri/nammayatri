@@ -24,7 +24,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
+import qualified Storage.Queries.DriverInformation as QDriverInfo
 
 unblockDriver ::
   ( TranslateFlow m r,
@@ -37,5 +37,5 @@ unblockDriver ::
 unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let driverId = jobData.driverId
-  CQDriverInfo.updateBlockedState (cast driverId) False
+  QDriverInfo.updateBlockedState (cast driverId) False
   return Complete

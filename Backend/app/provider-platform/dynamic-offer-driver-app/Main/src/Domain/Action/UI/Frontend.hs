@@ -25,8 +25,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverMode as DMode
-import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as DI
 import Tools.Error
 
 data GetDriverFlowStatusRes = GetDriverFlowStatusRes
@@ -49,8 +49,8 @@ getDriverFlowStatus (personId, _) = do
       if now < driverStatus.validTill
         then return $ GetDriverFlowStatusRes Nothing driverStatus
         else do
-          driverInfo <- CDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+          driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
           let func status = do
-                _ <- QDFS.updateStatus personId status
+                QDFS.updateStatus personId status
                 return $ GetDriverFlowStatusRes (Just driverStatus) status
           func $ DMode.getDriverStatus driverInfo.mode driverInfo.active

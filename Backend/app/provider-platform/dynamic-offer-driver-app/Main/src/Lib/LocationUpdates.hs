@@ -34,7 +34,6 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
-import qualified SharedLogic.Ride as SRide
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
@@ -94,7 +93,7 @@ buildRideInterpolationHandler merchantId isEndRide = do
           cfg
           (\driverId dist snapCalls -> void (QRide.updateDistance driverId dist snapCalls))
           ( \driverId batchWaypoints -> do
-              mRide <- SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
+              mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
               updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
           )
     _ -> throwError $ InternalError "Unknown Service Config"

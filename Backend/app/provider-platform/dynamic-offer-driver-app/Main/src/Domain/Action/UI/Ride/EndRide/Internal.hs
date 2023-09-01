@@ -61,8 +61,6 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator
-import qualified SharedLogic.Ride as SRide
-import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -104,51 +102,63 @@ endRideTransaction ::
   Id Merchant ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+  DLoc.updateOnRide merchantId ride.driverId False
+  QRide.updateStatus ride.id Ride.COMPLETED
+  QRB.updateStatus booking.id SRB.COMPLETED
+  QRide.updateAll ride.id ride
+  whenJust mbFareParams QFare.create
+
+  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  if driverInfo.active
+    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+    else QDFS.updateStatus ride.driverId DDFS.IDLE
+  QDriverStats.updateIdleTime driverId
+  QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+
+  when (thresholdConfig.subscription) $ do
+    maxShards <- asks (.maxShards)
+    createDriverFee merchantId driverId ride.fare newFareParams maxShards
+
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
-  driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+
+  sendReferralFCM ride mbRiderDetailsId
+  updateLeaderboardZScore merchantId ride
+  DS.driverScoreEventHandler DST.OnRideCompletion {merchantId = merchantId, driverId = cast driverId, ride = ride}
+
+sendReferralFCM ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+  ) =>
+  Ride.Ride ->
+  Maybe (Id RD.RiderDetails) ->
+  m ()
+sendReferralFCM ride mbRiderDetailsId = do
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
           Nothing -> True
-  let referralMessage = "Congratulations!"
-  let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
   when shouldUpdateRideComplete $
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
       whenJust mbRiderDetails $ \riderDetails -> do
+        QRD.updateHasTakenValidRide riderDetails.id
         case riderDetails.referredByDriver of
           Just referredDriverId -> do
+            let referralMessage = "Congratulations!"
+            let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
           Nothing -> pure ()
 
-  nowUtc <- getCurrentTime
-  maxShards <- asks (.maxShards)
-  let rideDate = getCurrentDate nowUtc
-  _ <- QDI.updateOnRide driverId False
-  _ <- DLoc.updateOnRide driverId False merchantId
-  if driverInfo.active
-    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-    else QDFS.updateStatus ride.driverId DDFS.IDLE
-  DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
-  SRide.clearCache $ cast driverId
-  whenJust mbFareParams QFare.create
-  whenJust mbRiderDetails $ \riderDetails ->
-    when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
-  _ <- QRide.updateAll ride.id ride
-  _ <- QRide.updateStatus ride.id Ride.COMPLETED
-  _ <- QRB.updateStatus booking.id SRB.COMPLETED
-  QDriverStats.updateIdleTime driverId
-  _ <- QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-  _ <- QDI.updateOnRide driverId False
-  if driverInfo.active
-    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-    else QDFS.updateStatus ride.driverId DDFS.IDLE
-  _ <- DLoc.updateOnRide driverId False merchantId
-  when (thresholdConfig.subscription) $ createDriverFee merchantId driverId ride.fare newFareParams maxShards
+updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Ride.Ride -> m ()
+updateLeaderboardZScore merchantId ride = do
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
+    nowUtc <- getCurrentTime
+    let rideDate = getCurrentDate nowUtc
     driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate) $ ride.driverId.getId
     updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance merchantId
     let (_, currDayIndex) = sundayStartWeek rideDate
@@ -156,9 +166,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
     driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) $ ride.driverId.getId
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId
-  DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
-  DS.driverScoreEventHandler DST.OnRideCompletion {merchantId = merchantId, driverId = cast driverId, ride = ride}
-  SRide.clearCache $ cast driverId
 
 updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
 updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId = do

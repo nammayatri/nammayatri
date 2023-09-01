@@ -61,10 +61,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
-import qualified Storage.CachedQueries.DriverInformation as DriverInfo
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as SCO
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
-import Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverOnboarding.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -123,7 +122,7 @@ verifyRC isDashboard mbMerchant (personId, merchantId) req@DriverRCReq {..} mbVa
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
   runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefix) req
-  driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
@@ -268,7 +267,7 @@ compareRegistrationDates actualDate providedDate =
 
 linkRCStatus :: (Id Person.Person, Id DM.Merchant) -> RCStatusReq -> Flow APISuccess
 linkRCStatus (driverId, merchantId) req@RCStatusReq {..} = do
-  driverInfo <- DriverInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driverInfo.subscribed) $ throwError (RCActivationFailedPaymentDue driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Domain.VALID) $ throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")

@@ -51,10 +51,10 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
