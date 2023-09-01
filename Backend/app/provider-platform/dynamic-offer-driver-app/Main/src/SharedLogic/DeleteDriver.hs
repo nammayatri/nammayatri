@@ -22,7 +22,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
@@ -74,9 +73,7 @@ deleteDriver merchantShortId reqDriverId = do
   AadhaarOtp.deleteByPersonIdForVerify reqDriverId
   AV.deleteByPersonId reqDriverId
   QPerson.deleteById reqDriverId
-  -- runInLocationDB $ QDriverLocation.deleteById reqDriverId
   QDriverLocation.deleteById reqDriverId
-  CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
 
@@ -84,5 +81,5 @@ validateDriver :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DM.Merchant -> 
 validateDriver merchant driver = do
   let personId = driver.id
   ride <- QRide.findOneByDriverId personId
-  driverInformation <- CQDriverInfo.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  driverInformation <- QDriverInfo.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   return (merchant.id /= driver.merchantId || driver.role /= DP.DRIVER || isJust ride || driverInformation.enabled)

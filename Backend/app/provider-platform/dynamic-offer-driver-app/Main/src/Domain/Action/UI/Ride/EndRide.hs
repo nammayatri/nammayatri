@@ -93,7 +93,7 @@ data ServiceHandle m = ServiceHandle
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
-    findDriverLoc :: Id DM.Merchant -> Id DP.Person -> m (Maybe DrLoc.DriverLocation),
+    findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> Meters -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],

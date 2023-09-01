@@ -56,7 +56,7 @@ getLocation rideId = do
       SRide.INPROGRESS -> pure ActualRide
       _ -> throwError $ RideInvalidStatus "Cannot track this ride"
   driver <- runInReplica $ Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  currLocation <- DrLoc.findById driver.merchantId driver.id >>= fromMaybeM LocationNotFound
+  currLocation <- DrLoc.findById driver.id >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = realToFrac ride.traveledDistance.getHighPrecMeters
       currPoint = GoogleMaps.getCoordinates currLocation

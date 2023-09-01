@@ -38,7 +38,6 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
-import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
@@ -76,38 +75,26 @@ cancel ::
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r
   ) =>
-  -- Id DM.Merchant ->
-  -- SignatureAuthResult ->
   CancelReq ->
   DM.Merchant ->
   SRB.Booking ->
   m ()
 cancel req merchant booking = do
-  -- merchant <-
-  --   QM.findById merchantId
-  --     >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  -- booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  -- let merchantId' = booking.providerId
-  -- unless (merchantId' == merchantId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
-  whenJust mbRide $ \ride' -> do
-    void $ QDI.updateOnRide (cast ride'.driverId) False
-  bookingCR <- buildBookingCancellationReason
-  case mbRide of
-    Just ride -> do
-      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
-      triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
-    Nothing -> do
-      logDebug "No ride found for the booking."
-  QBCR.upsert bookingCR
-  _ <- QRB.updateStatus booking.id SRB.CANCELLED
+
   whenJust mbRide $ \ride -> do
-    _ <- QRide.updateStatus ride.id SRide.CANCELLED
     driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    DLoc.updateOnRide booking.providerId ride.driverId False
+    QRide.updateStatus ride.id SRide.CANCELLED
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
+
+  bookingCR <- buildBookingCancellationReason
+  QBCR.upsert bookingCR
+  QRB.updateStatus booking.id SRB.CANCELLED
+
   whenJust mbRide $ \ride -> do
-    SRide.clearCache $ cast ride.driverId
-    void (DLoc.updateOnRideCacheForCancelledOrEndRide (cast ride.driverId) booking.providerId)
+    triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+    triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do

@@ -54,13 +54,12 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.DriverFee (mergeDriverFee)
 import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
-import qualified SharedLogic.Ride as SRide
-import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
-import qualified Storage.CachedQueries.DriverInformation as DInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
+import qualified Storage.Queries.DriverInformation as DInfo
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
 
 type UpdateLocationReq = NonEmpty Waypoint
 
@@ -109,9 +108,9 @@ buildUpdateLocationHandle driverId = do
   pure $
     UpdateLocationHandle
       { driver,
-        findDriverLocation = DrLoc.findById driver.merchantId driverId,
+        findDriverLocation = DrLoc.findById driverId,
         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
-        getAssignedRide = SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
+        getAssignedRide = QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
         addIntermediateRoutePoints = \rideId ->
           LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
       }
@@ -148,17 +147,17 @@ handleDriverPayments driverId diffUtc = do
     case (ongoingAfterEndTime, overdueFee) of
       (Nothing, _) -> pure ()
       (Just df, Nothing) -> do
-        _ <- updateStatus PAYMENT_PENDING df.id now
-        updatePendingPayment True (cast driverId)
+        updateStatus PAYMENT_PENDING df.id now
+        DInfo.updatePendingPayment True (cast driverId)
       (Just dGFee, Just oDFee) -> mergeDriverFee oDFee dGFee now
 
     unpaidAfterdeadline <- findUnpaidAfterPayBy driverId now
     case unpaidAfterdeadline of
       Nothing -> pure ()
       Just df -> do
-        _ <- updateStatus PAYMENT_OVERDUE df.id now
+        updateStatus PAYMENT_OVERDUE df.id now
         QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
-        updateSubscription False (cast driverId)
+        DInfo.updateSubscription False (cast driverId)
 
 updateLocationHandler ::
   ( HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],

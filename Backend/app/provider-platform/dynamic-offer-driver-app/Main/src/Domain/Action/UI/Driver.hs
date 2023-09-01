@@ -153,7 +153,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
@@ -162,7 +161,7 @@ import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as QAV
 import qualified Storage.Queries.DriverPlan as QDPlan
@@ -621,7 +620,7 @@ activateGoHomeFeature (driverId, merchantId) driverHomeLocationId = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
-  driverLocation <- QDrLoc.findById driverId >>= fromMaybeM LocationNotFound
+  driverLocation <- QDriverLocation.findById driverId >>= fromMaybeM LocationNotFound
   let currPos = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
   let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}
@@ -844,9 +843,8 @@ updateDriver (personId, _) req = do
                   }
 
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
-  _ <- QPerson.updatePersonRec personId updPerson
-  _ <- QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
-  QDriverInformation.clearDriverInfoCache (cast personId)
+  QPerson.updatePersonRec personId updPerson
+  QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId

@@ -31,10 +31,10 @@ import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common (CacheFlow, Forkable (fork), Money (Money), fromMaybeM, getCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
-import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DSQ
 import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.Ride as RQ
@@ -73,7 +73,7 @@ eventPayloadHandler DST.OnDriverCancellation {..} = do
   cancellationRateExcedded <- overallCancellationRate driverStats merchantConfig
   when (driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExcedded) $ do
     logDebug $ "Blocking Driver: " <> driverId.getId
-    void $ CDI.updateBlockedState (cast driverId) True
+    QDI.updateBlockedState (cast driverId) True
   DP.incrementCancellationCount merchantId driverId
   where
     overallCancellationRate driverStats merchantConfig = do

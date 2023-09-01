@@ -138,13 +138,13 @@ resetDriver driver = runARDUFlow "" $ do
   rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True) Nothing Nothing
   activeQuotes <- TDQ.findActiveQuotesByDriverId (cast driver.driverId) 99999
   -- Esq.runTransaction $ do
-  _ <- forM rides $ \(ride, booking) -> do
-    _ <- TQRide.updateStatus ride.id TRide.CANCELLED
-    void $ TQRB.updateStatus booking.id TRB.CANCELLED
-  _ <- forM activeQuotes $ \activeQuote ->
+  forM_ rides $ \(ride, booking) -> do
+    TQRide.updateStatus ride.id TRide.CANCELLED
+    TQRB.updateStatus booking.id TRB.CANCELLED
+  forM_ activeQuotes $ \activeQuote ->
     TDQ.setInactiveBySTId activeQuote.searchTryId
-  void $ QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
-  void $ QTDrInfo.updateOnRide (cast driver.driverId) False
+  QTDrInfo.updateActivity (cast driver.driverId) False (Just TDrInfo.OFFLINE)
+  QTDrInfo.updateOnRide (cast driver.driverId) False
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)

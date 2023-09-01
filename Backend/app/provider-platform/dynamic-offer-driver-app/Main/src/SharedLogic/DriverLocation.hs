@@ -19,27 +19,23 @@ import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow, EsqLocRepDBFlow)
--- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.DriverInformation as CDI
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLocation as DLQueries
 
 upsertGpsCoord :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 upsertGpsCoord driverId latLong calculationTime merchantId = do
-  driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
-  -- then void $ runInLocationDB $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
     then void $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
     else do
-      mOldLocation <- findById merchantId driverId
+      mOldLocation <- findById driverId
       case mOldLocation of
         Nothing -> do
-          -- driverLocation <- runInLocationDB $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
           driverLocation <- DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
           cacheDriverLocation driverLocation
         Just oldLoc -> do
@@ -49,40 +45,11 @@ upsertGpsCoord driverId latLong calculationTime merchantId = do
 makeDriverLocationKey :: Id Person -> Text
 makeDriverLocationKey id = "DriverLocation:PersonId-" <> id.getId
 
-findById :: (CacheFlow m r, MonadFlow m, EsqLocRepDBFlow m r) => Id Merchant -> Id Person -> m (Maybe DriverLocation)
-findById merchantId id =
+findById :: (CacheFlow m r, MonadFlow m, EsqLocRepDBFlow m r) => Id Person -> m (Maybe DriverLocation)
+findById id =
   Hedis.safeGet (makeDriverLocationKey id) >>= \case
-    Just a ->
-      return $ Just a
-    Nothing -> do
-      location <- getDriverLocationWithoutMerchantId id
-      case location of
-        Just a ->
-          return $ Just $ mkDriverLocation a merchantId
-        Nothing ->
-          -- flip whenJust cacheDriverLocation /=<< DLQueries.findByIdInReplica id
-          flip whenJust cacheDriverLocation /=<< DLQueries.findById id
-
-getDriverLocationWithoutMerchantId :: (CacheFlow m r, MonadFlow m) => Id Person -> m (Maybe DriverLocationWithoutMerchantId)
-getDriverLocationWithoutMerchantId = Hedis.safeGet . makeDriverLocationKey
-
-mkDriverLocation :: DriverLocationWithoutMerchantId -> Id Merchant -> DriverLocation
-mkDriverLocation DriverLocationWithoutMerchantId {..} merchantId =
-  DriverLocation
-    { merchantId = merchantId,
-      ..
-    }
-
--- TODO: REMOVE DriverLocationWithoutMerchantId AS DONE FOR BACKWARD COMPATIBILITY
-data DriverLocationWithoutMerchantId = DriverLocationWithoutMerchantId
-  { driverId :: Id Person,
-    lat :: Double,
-    lon :: Double,
-    coordinatesCalculatedAt :: UTCTime,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic, FromJSON, ToJSON)
+    Just a -> return $ Just a
+    Nothing -> flip whenJust cacheDriverLocation /=<< DLQueries.findById id
 
 cacheDriverLocation :: (CacheFlow m r) => DriverLocation -> m ()
 cacheDriverLocation driverLocation = do
@@ -90,8 +57,9 @@ cacheDriverLocation driverLocation = do
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
   Hedis.setExp driverLocationKey driverLocation expTime
 
-updateOnRide :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person.Driver -> Bool -> Id Merchant -> m ()
-updateOnRide driverId onRide merchantId = do
+updateOnRide :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Merchant -> Id Person.Person -> Bool -> m ()
+updateOnRide merchantId driverId onRide = do
+  QDI.updateOnRide (cast driverId) onRide
   if onRide
     then do
       -- driver coming to ride, update location from db to redis
@@ -99,32 +67,11 @@ updateOnRide driverId onRide merchantId = do
       cacheDriverLocation driverLocation
     else do
       -- driver going out of ride, update location from redis to db
-      mDriverLocatation <- findById merchantId (cast driverId)
+      mDriverLocatation <- findById (cast driverId)
       maybe
         (pure ())
         ( \loc -> do
             let latLong = LatLong loc.lat loc.lon
-            -- void $ Esq.runInLocationDB $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
             void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
         )
         mDriverLocatation
-  CDI.updateOnRide driverId onRide
-
-updateOnRideCache :: (CacheFlow m r, Esq.EsqDBFlow m r, EsqLocDBFlow m r) => Id Person.Driver -> m ()
-updateOnRideCache driverId = do
-  driverLocation <- DLQueries.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  cacheDriverLocation driverLocation
-  CDI.clearDriverInfoCache driverId
-
-updateOnRideCacheForCancelledOrEndRide :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person.Driver -> Id Merchant -> m ()
-updateOnRideCacheForCancelledOrEndRide driverId merchantId = do
-  mbDriverLocation <- findById merchantId (cast driverId)
-  maybe
-    (pure ())
-    ( \loc -> do
-        let latLong = LatLong loc.lat loc.lon
-        -- void $ Esq.runInLocationDB $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
-        void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
-    )
-    mbDriverLocation
-  CDI.clearDriverInfoCache driverId

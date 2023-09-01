@@ -30,9 +30,8 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
-import qualified Storage.CachedQueries.DriverInformation as DriverInfo
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
+import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as Query
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q
 import qualified Storage.Queries.Person as Person
@@ -118,8 +117,8 @@ verifyAadhaarOtp mbMerchant personId req = do
         then do
           Redis.del key
           aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just res.image) True
-          _ <- Q.create aadhaarEntity
-          void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
+          Q.create aadhaarEntity
+          DriverInfo.updateAadhaarVerifiedState (cast personId) True
           Status.statusHandler (person.id, person.merchantId) Nothing
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res

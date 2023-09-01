@@ -38,14 +38,12 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.DriverLocation as SDrLoc
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SyncRide as SyncRide
-import qualified Storage.CachedQueries.DriverInformation as CQDrInfo
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverLocation as QDrLoc
-import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Ride as QRide
 
 ---------------------------------------------------------------------
@@ -71,20 +69,18 @@ stuckBookingsCancel merchantShortId req = do
   let stuckPersonIds = stuckRideItems <&> (.driverId)
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
-  driverLocations <- catMaybes <$> traverse (SDrLoc.findById merchant.id) stuckPersonIds
-  _ <- QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
-  _ <- QBooking.cancelBookings allStuckBookingIds now
+  driverLocations <- catMaybes <$> traverse SDrLoc.findById stuckPersonIds
+  QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
+  QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
-  _ <- CQDrInfo.updateNotOnRideMultiple stuckDriverIds
+  QDrInfo.updateNotOnRideMultiple stuckDriverIds
   for_ stuckRideItems $ \item -> do
     if item.driverActive
       then QDFS.updateStatus item.driverId DDFS.ACTIVE
       else QDFS.updateStatus item.driverId DDFS.IDLE
   for_ driverLocations $ \location -> do
     let latLong = LatLong location.lat location.lon
-    QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
-  for_ stuckDriverIds CQDrInfo.clearDriverInfoCache
-  for_ stuckPersonIds SRide.clearCache
+    void $ QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 
@@ -127,7 +123,7 @@ multipleBookingSync merchantShortId req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
   let reqBookingIds = cast @Common.Booking @DBooking.Booking . (.bookingId) <$> req.bookings
-  rideBookingsMap <- B.runInReplica $ QR.findRideBookingsById merchant.id reqBookingIds
+  rideBookingsMap <- B.runInReplica $ QRide.findRideBookingsById merchant.id reqBookingIds
   respItems <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId

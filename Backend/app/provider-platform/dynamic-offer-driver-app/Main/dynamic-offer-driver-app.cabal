@@ -281,7 +281,6 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
-      SharedLogic.Ride
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       Storage.Beam.BapMetadata
@@ -375,7 +374,6 @@ library
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason
-      Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct

@@ -360,12 +360,11 @@ makeSession SmsSessionConfig {..} entityId merchantId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, L.MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
-  void $ RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
-  when isNewPerson $
-    void $ Person.setIsNewFalse person.id
+  RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
+  when isNewPerson $ Person.setIsNewFalse person.id
   when isNewPerson $
     Notify.notifyOnRegistration regToken person deviceToken
   updPerson <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonDoesNotExist regToken.entityId)

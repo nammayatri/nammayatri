@@ -86,13 +86,12 @@ import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.DriverBlockReason as DBR
-import qualified Storage.CachedQueries.DriverInformation as CDI
-import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import Storage.Queries.DriverFee (findPendingFeesByDriverId)
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
@@ -264,7 +263,7 @@ driverAadhaarInfo merchantShortId driverId = do
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInf <- CQDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  driverInf <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
   unless (driverInf.aadhaarVerified) $ throwError $ InvalidRequest "Person aadhaar verification is pending"
   res <- AV.findByDriverId personId
   case res of
@@ -282,7 +281,7 @@ driverAadhaarInfo merchantShortId driverId = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> B.runInReplica (CQDriverInfo.countDrivers merchant.id)
+  Common.mkDriverActivityRes <$> B.runInReplica (QDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -304,7 +303,7 @@ enableDriver merchantShortId reqDriverId = do
   when (isNothing mVehicle && null linkedRCs) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
 
-  _ <- CQDriverInfo.updateEnabledState driverId True
+  QDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   fork "sending dashboard sms - onboarding" $ do
     Sms.sendDashboardSms merchant.id Sms.ONBOARDING Nothing personId Nothing 0
@@ -324,7 +323,7 @@ disableDriver merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  _ <- CQDriverInfo.updateEnabledState driverId False
+  QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -343,9 +342,9 @@ blockDriverWithReason merchantShortId reqDriverId req = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
-  CQDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
+  QDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
   maxShards <- asks (.maxShards)
   case req.blockTimeInHours of
     Just hrs -> do
@@ -372,8 +371,8 @@ blockDriver merchantShortId reqDriverId = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (not driverInf.blocked) (void $ CQDriverInfo.updateBlockedState driverId True)
+  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when (not driverInf.blocked) (void $ QDriverInfo.updateBlockedState driverId True)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -423,11 +422,11 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverFees <- findPendingFeesByDriverId driverId
   let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fromIntegral fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-  driverInfo_ <- CDI.findById driverId >>= fromMaybeM (PersonNotFound reqDriverId.getId)
+  driverInfo_ <- QDriverInfo.findById driverId >>= fromMaybeM (PersonNotFound reqDriverId.getId)
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  CDI.updatePendingPayment False driverId
-  CDI.updateSubscription True driverId
+  QDriverInfo.updatePendingPayment False driverId
+  QDriverInfo.updateSubscription True driverId
   mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
   QDFS.clearPaymentStatus (cast driverId) driverInfo_.active
   invoices <- (B.runInReplica . QINV.findByDriverFeeIdAndActiveStatus . (.id)) `mapM` driverFees
@@ -449,8 +448,8 @@ unblockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when driverInf.blocked (void $ CQDriverInfo.updateBlockedState driverId False)
+  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when driverInf.blocked (void $ QDriverInfo.updateBlockedState driverId False)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -610,8 +609,8 @@ unlinkVehicle merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC personId
-  _ <- QVehicle.deleteById personId
-  _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
+  QVehicle.deleteById personId
+  QDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -644,8 +643,8 @@ updatePhoneNumber merchantShortId reqDriverId req = do
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  _ <- QPerson.updateMobileNumberAndCode updDriver
-  _ <- QR.deleteByPersonId personId
+  QPerson.updateMobileNumberAndCode updDriver
+  QR.deleteByPersonId personId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
   pure Success
 
@@ -668,7 +667,7 @@ addVehicle merchantShortId reqDriverId req = do
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
 
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
-  _ <- QPerson.updatePersonRec personId updDriver
+  QPerson.updatePersonRec personId updDriver
 
   void $ try @_ @SomeException (runVerifyRCFlow personId merchant) -- ignore if throws error
   checkIfVehicleCreatedInRC <- QVehicle.findById personId
@@ -742,7 +741,7 @@ updateDriverName merchantShortId reqDriverId req = do
                lastName = if req.lastName == Just "" then Nothing else req.lastName <|> driver.lastName
               }
 
-  _ <- QPerson.updatePersonRec personId updDriver
+  QPerson.updatePersonRec personId updDriver
 
   logTagInfo "dashboard -> updateDriverName : " (show personId)
   pure Success
@@ -759,8 +758,8 @@ unlinkDL merchantShortId driverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  _ <- QDriverLicense.deleteByDriverId personId
-  _ <- CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+  QDriverLicense.deleteByDriverId personId
+  QDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
@@ -775,8 +774,8 @@ unlinkAadhaar merchantShortId driverId = do
   _ <- B.runInReplica $ AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
   AV.deleteByDriverId personId
-  CQDriverInfo.updateAadhaarVerifiedState driverId_ False
-  unless (transporterConfig.aadhaarVerificationRequired) $ CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+  QDriverInfo.updateAadhaarVerifiedState driverId_ False
+  unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
@@ -803,7 +802,7 @@ endRCAssociation merchantShortId reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  CQDriverInfo.updateEnabledVerifiedState driverId False False
+  QDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 
@@ -834,7 +833,7 @@ clearOnRideStuckDrivers merchantShortId = do
   driverIds <-
     mapM
       ( \driverInf -> do
-          _ <- DLoc.updateOnRide (cast driverInf.driverId) False merchant.id
+          void $ DLoc.updateOnRide merchant.id driverInf.driverId False
           return (cast driverInf.driverId)
       )
       driverInfos
@@ -910,5 +909,5 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
     Nothing -> do
       aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True
       AV.create aadhaarEntity
-  CQDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
+  QDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success

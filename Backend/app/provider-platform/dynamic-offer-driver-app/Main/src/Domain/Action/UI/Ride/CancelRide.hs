@@ -55,7 +55,7 @@ type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    findDriverLocationId :: Id Merchant -> Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
+    findDriverLocationId :: Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
     cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m Meters
@@ -143,7 +143,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
               else do
                 return (Nothing, Nothing)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          mbLocation <- findDriverLocationId driver.merchantId driverId
+          mbLocation <- findDriverLocationId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)

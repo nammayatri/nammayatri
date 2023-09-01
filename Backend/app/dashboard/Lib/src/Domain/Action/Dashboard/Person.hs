@@ -280,7 +280,7 @@ changePasswordByAdmin ::
   ChangePasswordByAdminReq ->
   m APISuccess
 changePasswordByAdmin _ personId req = do
-  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   newHash <- getDbHash req.newPassword
   Esq.runTransaction $
     QP.updatePersonPassword personId newHash
@@ -294,7 +294,7 @@ changeMobileNumberByAdmin ::
   m APISuccess
 changeMobileNumberByAdmin _ personId req = do
   runRequestValidation validateChangeMobileNumberReq req
-  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   encMobileNum <- encrypt req.newMobileNumber
   Esq.runTransaction $ QP.updatePersonMobile personId encMobileNum
   pure Success
@@ -306,7 +306,7 @@ changeEmailByAdmin ::
   ChangeEmailByAdminReq ->
   m APISuccess
 changeEmailByAdmin _ personId req = do
-  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   encEmail <- encrypt $ T.toLower req.newEmail
   Esq.runTransaction $ QP.updatePersonEmail personId encEmail
   pure Success
