@@ -58,7 +58,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus, getCurrentLocation, LatLon(..))
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
 import Language.Strings (getString)
@@ -2212,6 +2212,18 @@ subScriptionFlow = do
     GO_TO_MANAGE_PLAN state -> do
       uiPlans <- Remote.getUiPlansBT ""
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ data { managePlanData { alternatePlans = alternatePlansTransformer uiPlans state}}, props {subView = ManagePlan, showShimmer = false}})
+      subScriptionFlow
+    GO_TO_FIND_HELP_CENTRE state -> do
+      let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+      let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+      (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 750
+      modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props {subView = FindHelpCentre, showShimmer = false, currentLat = fromMaybe 0.0 $ Number.fromString lat, currentLon = fromMaybe 0.0 $ Number.fromString lon}})
+      subScriptionFlow
+    REFRESH_HELP_CENTRE state -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> state { props {subView = FindHelpCentre, showShimmer = true}})
+      subScriptionFlow
+    GO_TO_OPEN_GOOGLE_MAPS state -> do
+      _ <- lift $ lift $ fork $ liftFlow $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon
       subScriptionFlow
     _ -> subScriptionFlow
 

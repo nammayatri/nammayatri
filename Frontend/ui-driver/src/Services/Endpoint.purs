@@ -196,6 +196,9 @@ verifyAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/verifyAadhaarOtp"
 unVerifiedAadhaarData :: String -> String
 unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"
 
+getKioskLocations :: String -> String
+getKioskLocations _ = (getBaseUrl "") <> "/kioskLocation/list"
+
 getUiPlans :: String -> String 
 getUiPlans _ = (getBaseUrl "") <> "/plan/list"
 

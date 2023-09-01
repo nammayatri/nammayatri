@@ -348,8 +348,11 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | RESUME_AUTOPAY SubscriptionScreenState
                                   | CHECK_ORDER_STATUS SubscriptionScreenState String
                                   | GO_TO_MANAGE_PLAN SubscriptionScreenState
+                                  | GO_TO_FIND_HELP_CENTRE SubscriptionScreenState
+                                  | GO_TO_OPEN_GOOGLE_MAPS SubscriptionScreenState
                                   | REFRESH_SUSCRIPTION
                                   | RETRY_PAYMENT_AC SubscriptionScreenState String
+                                  | REFRESH_HELP_CENTRE SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToRideHistory

@@ -2520,3 +2520,35 @@ instance standardEncodeMandateData :: StandardEncode MandateData where standardE
 instance showMandateData :: Show MandateData where show = genericShow
 instance decodeMandateData :: Decode MandateData where decode = defaultDecode
 instance encodeMandateData :: Encode MandateData where encode = defaultEncode
+
+---------------------------------------------- KioskLocations ---------------------------------------------------
+
+data KioskLocationReq = KioskLocationReq String
+
+newtype KioskLocationResp = KioskLocationResp (Array KioskLocationRes)
+
+type KioskLocationRes = {
+  longitude :: Number,
+  address :: String,
+  contact :: Maybe String,
+  latitude :: Number,
+  landmark :: String
+}
+
+instance makeKioskLocationReq :: RestEndpoint KioskLocationReq KioskLocationResp where
+    makeRequest reqBody headers = defaultMakeRequest GET (EP.getKioskLocations "" ) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericKioskLocationReq :: Generic KioskLocationReq _
+instance showKioskLocationReq :: Show KioskLocationReq where show = genericShow
+instance standardEncodeKioskLocationReq :: StandardEncode KioskLocationReq where standardEncode (KioskLocationReq req) = standardEncode req
+instance decodeKioskLocationReq :: Decode KioskLocationReq where decode = defaultDecode
+instance encodeKioskLocationReq :: Encode KioskLocationReq where encode = defaultEncode
+
+derive instance genericKioskLocationResp :: Generic KioskLocationResp _
+derive instance newtypeKioskLocationResp :: Newtype KioskLocationResp _
+instance standardEncodeKioskLocationResp :: StandardEncode KioskLocationResp where standardEncode (KioskLocationResp req) = standardEncode req
+instance showKioskLocationResp :: Show KioskLocationResp where show = genericShow
+instance decodeKioskLocationResp :: Decode KioskLocationResp where decode = defaultDecode
+instance encodeKioskLocationResp :: Encode KioskLocationResp where encode = defaultEncode
