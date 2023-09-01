@@ -206,6 +206,15 @@ android {
 }
 
 dependencies {
+    def cameraxVersion = "1.1.0-alpha05"
+    // CameraX View class
+    implementation 'androidx.camera:camera-view:1.0.0-alpha25'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.6.0'
+//    def cameraxVersion = "1.1.0-alpha05"
+    implementation "androidx.camera:camera-core:${cameraxVersion}"
+    implementation "androidx.camera:camera-camera2:${cameraxVersion}"
+    implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation 'in.juspay:hypersdk:2.1.13-nammayatri.33'
     implementation project(path: ':mobility-app')
@@ -254,7 +263,7 @@ dependencies {
     implementation 'androidx.core:core:1.4.0'
     implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
     implementation 'com.android.installreferrer:installreferrer:2.2'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+//    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 }
 
 def tmpSource = "/tmp/juspay"

@@ -46,6 +46,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getAssetStoreLink, setRefreshing, startOtpReciever, storeCallBackContacts)
+import JBridge (setupCamera)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -63,6 +64,7 @@ import Screens.Types (Contacts, NammaSafetyScreenState, NewContacts, Stage(..), 
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Types.EndPoint as Remote
 
 screen :: NammaSafetyScreenState -> PrestoList.ListItem -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState listItemm =
@@ -71,15 +73,14 @@ screen initialState listItemm =
   , name : "NammaSafetyScreen"
   , globalEvents : [ (\push ->
     do
-    --   _ <- JB.setFCMToken push $ SetToken
-    --   if not initialState.props.enterOTP then JB.detectPhoneNumbers push $ SetPhoneNumber else pure unit
-    --   if initialState.data.timerID == "" then pure unit else pure $ EHC.clearTimer initialState.data.timerID
-    --   if not initialState.props.resendEnable && initialState.data.attempts >= 0 && initialState.props.enterOTP then do
-    --       _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do 
-    --         if (EHC.os == "IOS") then liftEffect $ JB.startTimerWithTime (show initialState.data.timer) "otp" "1" push CountDown
-    --         else  liftEffect $ EHC.countDown initialState.data.timer "otp" push CountDown
-    --       pure unit
-    --     else pure unit
+        -- _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+        --                 lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+        --                 lift $ lift $ toggleLoader true
+        --                 response <- Remote.getEmergencySettings ""
+        --                 lift $ lift $ toggleLoader false
+        --                 lift $ lift $ doAff do liftEffect $ push $ UpdateEmergencySettings response
+        --                 pure unit
+        --               pure $ pure unit
         case initialState.props.currentStage of
             NammaSafetyDashboard -> do
                 pure unit
@@ -984,9 +985,17 @@ videoRecordSOSView state push =
             , width MATCH_PARENT
             , background $ Color.red
             , margin $ MarginTop 37
-            , id $ EHC.getNewIDWithTag "VideoCamView"
             -- , gravity CENTER
-        ][]
+        ][  linearLayout 
+            [afterRender (\action -> do
+                _ <- pure $ spy "VideoCamView" $ EHC.getNewIDWithTag "VideoCamViewfvdfv"
+                pure $ setupCamera (getNewIDWithTag "VideoCamViewfvdfv"))(const AfterRenderVideo)
+            , id $ EHC.getNewIDWithTag "VideoCamViewfvdfv"
+            , height MATCH_PARENT
+            , width MATCH_PARENT
+            , background $ Color.red
+            ][]
+        ]
         , textView $ [
             text "The video will be recorded for 15 sec only and will be shared as per your settings"
             , color "#B9BABE"

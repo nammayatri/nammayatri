@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout android:id="@+id/linearLayout"
+    android:layout_width="330dp"
+    android:layout_height="376dp"
+    android:orientation="vertical"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <FrameLayout
+        android:id="@+id/previewView"
+        android:layout_width="400dp"
+        android:name="androidx.camera.view.PreviewView"
+        android:layout_height="458dp"
+        />
+</LinearLayout>

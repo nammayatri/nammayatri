@@ -1798,3 +1798,18 @@ export const  horizontalScrollToPos = function (id, childId, focus) {
   function between(x, min, max) {
     return x >= min && x <= max;
   }
+
+  export const requestVideoPermission = function(){
+    if(window.JBridge.askVideoRelatedPermissions)
+      return window.JBridge.askVideoRelatedPermissions();
+  }
+
+  export const setupCamera = function(id){
+    if(window.JBridge.setupCamera)
+      return window.JBridge.setupCamera(id);
+  }
+
+  export const startRecord = function(){
+    if(window.JBridge.recordVideo)
+      return window.JBridge.recordVideo();
+  }

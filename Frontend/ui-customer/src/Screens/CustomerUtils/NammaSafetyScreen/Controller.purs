@@ -34,7 +34,7 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, setText)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Helpers.Utils (contactPermission, parseNewContacts, setEnabled, setRefreshing, toString)
-import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, showDialer, toast, toggleBtnLoader)
+import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, setupCamera, showDialer, toast, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -78,6 +78,7 @@ data ScreenOutput = GoBack
 
 data Action = BackPressed
              | AfterRender
+             | AfterRenderVideo
              | NoAction
              | RefreshScreen
              | StepsHeaderModelAC StepsHeaderModelController.Action
@@ -109,6 +110,7 @@ data Action = BackPressed
              | RemoveButtonClicked NewContacts
              | AddEmergencyContacts PrimaryButtonController.Action
              | AddContacts
+             | UpdateEmergencySettings
              
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
@@ -127,6 +129,10 @@ eval AddContacts state = continueWithCmd state{props{currentStage = EmergencyCon
         _ <- pure $ contactPermission unit
         pure NoAction
     ]
+
+-- eval AfterRenderVideo state = do
+--     _ <- pure $ spy "AfterRenderVideo" "VideoCamView"
+--     continue state
 
 eval (ContactsCallback allContacts) state = do
   let flag = case last allContacts of
