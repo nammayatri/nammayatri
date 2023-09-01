@@ -356,6 +356,7 @@ public class MobilityAppBridge extends HyperBridge {
                     //setting active inactive dots
                     for (int i = 0; i < dotsCount; i++) {
                         dots[i].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_inactive));
+                        dots[i].setContentDescription("Page Indicator, Page "  +( i+1) + " : Swipe or Tap To Go To Next Page\"");
                     }
                     dots[position].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_active));
                     super.onPageSelected(position);

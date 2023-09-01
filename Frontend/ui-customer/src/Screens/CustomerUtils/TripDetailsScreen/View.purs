@@ -22,7 +22,7 @@ import Effect (Effect)
 import Language.Types (STR(..))
 import Language.Strings (getString)
 import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor, adjustViewWithKeyboard)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), Accessiblity(..),PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor, adjustViewWithKeyboard, accessibilityHint, accessibilityImportance )
 import Screens.Types as ST 
 import Screens.Types (PaymentMode(..))
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -36,8 +36,9 @@ import Debug (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Prelude ((<>))
+import Prelude ((<>), show)
 import Data.Maybe(fromMaybe, isJust)
+import Data.String as DS
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -67,6 +68,7 @@ view push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , accessibilityImportance if state.props.showConfirmationPopUp then DISABLE_DESCENDANT else DISABLE
   ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
     , relativeLayout
       [ width MATCH_PARENT
@@ -173,6 +175,8 @@ tripIdView push state =
   , gravity LEFT
   ][  textView $
       [ text (getString RIDE_ID)
+      , accessibilityHint $ "Ride I-D :" <> state.data.tripId
+      , accessibilityImportance ENABLE
       , color Color.black700
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout
@@ -180,6 +184,7 @@ tripIdView push state =
       , width WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const Copy)
+      , accessibilityImportance DISABLE_DESCENDANT
       , gravity CENTER_VERTICAL
       ][ textView $
           [ text state.data.tripId
@@ -246,6 +251,8 @@ tripDetailsView state =
       , margin (MarginLeft 10)
       ][  textView $
           [ text state.data.driverName
+          , accessibilityHint $ "Driver : " <> state.data.driverName
+          , accessibilityImportance ENABLE
           , color Color.darkDescriptionText
           ] <> FontStyle.body1 LanguageStyle
         , linearLayout
@@ -283,11 +290,14 @@ tripDetailsView state =
       , orientation VERTICAL
       ][  textView $
           [ text (state.data.totalAmount)
+          , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
+          , accessibilityImportance ENABLE
           , color Color.black
           ] <> FontStyle.h2 LanguageStyle
         , textView $
           [ text $ if state.data.selectedItem.status == "CANCELLED" then (getString CANCELLED) else (getString PAID) <> " " <> if state.data.paymentMode == CASH then (getString BY_CASH) else (getString ONLINE_)
           , color if state.data.selectedItem.status == "CANCELLED" then Color.red else Color.greyShade
+          , accessibilityImportance DISABLE
           ] <> FontStyle.captions LanguageStyle
         ]
     ]
@@ -313,6 +323,8 @@ ratingAndInvoiceView state push =
   , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
   ][  textView $ 
       [ text $ (getString YOU_RATED)
+      , accessibilityHint $ "You Rated " <> (show state.data.rating) <> " Stars"
+      , accessibilityImportance ENABLE
       , color Color.greyDavy
       ] <> FontStyle.tags LanguageStyle
     , linearLayout
@@ -359,6 +371,8 @@ invoiceView state push =
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][  textView $
         [ text (getString VIEW_INVOICE)
+        , accessibilityHint "View Invoice : Button"
+        , accessibilityImportance ENABLE
         , color Color.darkDescriptionText
         ] <> FontStyle.body1 LanguageStyle
      ,  linearLayout
@@ -366,7 +380,7 @@ invoiceView state push =
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback $     "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+            [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , height (V 15)
             , width (V 15)
             ]
@@ -391,6 +405,8 @@ reportIssueView state push =
         , margin (MarginBottom 16)
         ][  textView $
             [ text (getString REPORT_AN_ISSUE)
+            , accessibilityHint "Report an Issue : Button"
+            , accessibilityImportance ENABLE
             , color Color.darkDescriptionText
             ] <> FontStyle.body1 LanguageStyle
           , linearLayout

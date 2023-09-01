@@ -18,7 +18,7 @@ module Components.SourceToDestination.View where
 import Prelude (Unit, ($), (<>), (/), (<), (>), (==))
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action,Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), Accessiblity(..), Visibility(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id, accessibilityHint, accessibilityImportance)
 import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -29,7 +29,6 @@ import Engineering.Helpers.Utils (defaultSeparatorCount, getSeparatorFactor)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
 import JBridge (getLayoutBounds)
-import Debug
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -63,9 +62,11 @@ sourceLayout config =
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , margin config.sourceMargin
+  , accessibilityImportance DISABLE
   ][  imageView
       [ width config.sourceImageConfig.width
       , height config.sourceImageConfig.height
+      , accessibilityImportance DISABLE
       , imageWithFallback config.sourceImageConfig.imageUrl
       , margin config.sourceImageConfig.margin
       ]
@@ -73,6 +74,8 @@ sourceLayout config =
       ([ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , accessibilityImportance ENABLE
+      , accessibilityHint $ "PickUp Location Is " <> config.sourceTextConfig.text
       , gravity CENTER_VERTICAL
       ] <> case config.id of
         Just layoutId -> [id $ getNewIDWithTag $ "source_layout_" <> layoutId]
@@ -80,6 +83,7 @@ sourceLayout config =
         $ [  textView $
           [ text config.sourceTextConfig.text
           , width MATCH_PARENT
+          , accessibilityImportance DISABLE
           , padding config.sourceTextConfig.padding
           , margin config.sourceTextConfig.margin
           , color config.sourceTextConfig.color
@@ -89,6 +93,7 @@ sourceLayout config =
         , textView $
           [ text config.rideStartedAtConfig.text
           , color config.rideStartedAtConfig.color
+          , accessibilityImportance DISABLE
           , visibility config.rideStartedAtConfig.visibility
           , margin config.rideStartedAtConfig.margin
           , padding config.rideStartedAtConfig.padding
@@ -121,6 +126,8 @@ destinationLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
+      , accessibilityHint $ "Drop Location is : " <> config.destinationTextConfig.text
+      , accessibilityImportance ENABLE
       ][  textView $
           [ text config.destinationTextConfig.text
           , layoutGravity "center_vertical"
@@ -129,6 +136,7 @@ destinationLayout config =
           , margin config.destinationTextConfig.margin
           , color config.destinationTextConfig.color
           , maxLines config.destinationTextConfig.maxLines
+          , accessibilityImportance DISABLE
           , ellipsize config.destinationTextConfig.ellipsize
           ] <> (FontStyle.getFontStyle config.destinationTextConfig.textStyle LanguageStyle)
         , textView $
@@ -138,6 +146,7 @@ destinationLayout config =
           , margin config.rideEndedAtConfig.margin
           , padding config.rideEndedAtConfig.padding
           , maxLines config.rideEndedAtConfig.maxLines
+          , accessibilityImportance DISABLE
           , ellipsize config.rideEndedAtConfig.ellipsize
           ] <> (FontStyle.getFontStyle config.rideEndedAtConfig.textStyle LanguageStyle)
         ]
@@ -163,6 +172,8 @@ distanceLayout config =
       , height MATCH_PARENT
       , gravity CENTER
       , text config.distanceConfig.distanceValue
+      , accessibilityImportance if config.distanceConfig.distanceVisibility == VISIBLE then ENABLE else DISABLE
+      , accessibilityHint $ "Distance Between PickUp And Destination Location : " <> config.distanceConfig.distanceValue
       , color Color.black900
       , padding $ Padding 6 4 6 4
       ] <> FontStyle.tags LanguageStyle

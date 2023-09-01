@@ -50,7 +50,8 @@ goToHomeButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 goToHomeButtonConfig state =
   PrimaryButton.config
     { textConfig { 
-        text = (getString GO_TO_HOME__)      
+        text = (getString GO_TO_HOME__)     
+      , accessibilityHint = "Go To Home : Button" 
       , color = state.config.primaryTextColor
       }
     , background = state.config.primaryBackground

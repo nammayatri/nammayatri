@@ -30,9 +30,9 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
+import PrestoDOM (LetterSpacing, BottomSheetState(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import PrestoDOM (LetterSpacing)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route, RideBookingRes, FeedbackAnswer)
 
 type Contacts = {
@@ -662,6 +662,7 @@ type HomeScreenStateProps =
   , zoneTimerExpired :: Boolean
   , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
+  , sheetState :: BottomSheetState
   }
 
 type RouteEndPoints = {

@@ -26,7 +26,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, unit, ($), (*), (-), (/), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, accessibilityImportance, accessibilityHint)
 import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -92,12 +92,15 @@ instructionView state =
   , visibility VISIBLE 
   ][  textView $
       [ text (getString NOTE)
+      , accessibilityImportance DISABLE
       , visibility $ if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then GONE else VISIBLE
       , color Color.black800
       ] <> FontStyle.tags LanguageStyle
     , textView $
       [ text (getString VISIT_MY_RIDES_SECTION_FOR_RIDE_SPECIFIC_COMPLAINTS)
       , gravity CENTER
+      , accessibilityHint $ (getString NOTE) <> " " <> (getString VISIT_MY_RIDES_SECTION_FOR_RIDE_SPECIFIC_COMPLAINTS)
+      , accessibilityImportance ENABLE
       , color Color.black800
       ] <> FontStyle.body3 LanguageStyle
     ]

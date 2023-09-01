@@ -117,6 +117,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { 
           text = if state.props.issueReported then (getString GO_HOME_) else (getString SUBMIT)
+        , accessibilityHint = if state.props.issueReported then (getString GO_HOME_) <> ": Button" else if state.props.activateSubmit then "Submit : Button" else "Submit Button Is Disabled : Please Enter A Description To Enable"
         , color = state.data.config.primaryTextColor
         }
       , height = V 48

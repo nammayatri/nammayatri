@@ -48,6 +48,7 @@ to generate this file without the comments in this block.
   , "transformers"
   , "tuples"
   , "unsafe-coerce"
+  , "lite-decode"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]

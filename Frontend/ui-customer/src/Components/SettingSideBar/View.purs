@@ -31,7 +31,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibilityImportance, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
@@ -162,8 +162,10 @@ profileView state push =
   ][ imageView
       [ width ( V 48 )
       , height ( V 48 )
-      ,imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
-      , onClick push $ (const GoToMyProfile)
+      , accessibilityHint "Double Tap To Close Menu Bar"
+      , accessibilityImportance ENABLE
+      , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
+      , onClick push $ (const OnClose)
       ]
     , linearLayout
       [ width WRAP_CONTENT
@@ -240,6 +242,7 @@ settingsMenuView item push  =
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
   , padding (Padding 0 16 16 16 )
+  , accessibilityHint $ item.text <> " : Button"
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
                               SETTINGS_FAVOURITES     -> GoToFavourites
@@ -250,6 +253,16 @@ settingsMenuView item push  =
                               SETTINGS_SHARE_APP      -> ShareAppLink
                               SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
                               SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
+  , accessibilityImportance case item.tag of
+                              SETTINGS_RIDES          -> ENABLE
+                              SETTINGS_FAVOURITES     -> ENABLE
+                              SETTINGS_HELP           -> ENABLE
+                              SETTINGS_LANGUAGE       -> ENABLE
+                              SETTINGS_ABOUT          -> ENABLE
+                              SETTINGS_LOGOUT         -> ENABLE
+                              SETTINGS_SHARE_APP      -> DISABLE_DESCENDANT
+                              SETTINGS_EMERGENCY_CONTACTS       -> ENABLE
+                              SETTINGS_LIVE_DASHBOARD -> DISABLE_DESCENDANT
   ][  imageView
       [ width ( V 25 )
       , height ( V 25 )

@@ -16,10 +16,7 @@
 module Screens.SavedLocationScreen.View where
 
 import Common.Types.App
-import Common.Types.App
 import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
-import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
-
 import Animation as Anim
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
@@ -49,7 +46,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibilityImportance)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (SavedLocationReq(..), SavedLocationsListRes(..))
@@ -84,10 +81,11 @@ view push state =
   , orientation VERTICAL
   , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
   , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
-  ][  linearLayout
+  ]([  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , accessibilityImportance if (state.props.showDeleteLocationModel) then DISABLE_DESCENDANT else DISABLE 
       ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , if (not state.data.config.nyBrandingVisibility) then 
         linearLayout
@@ -126,13 +124,13 @@ view push state =
           ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
         ]
       ]
-      , linearLayout
+      
+    ] <>  [linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , background Color.lightBlack900
           , visibility if (state.props.showDeleteLocationModel) then VISIBLE else GONE
-          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]
-    ]
+          ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]])
 
 savedLocationsView :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 savedLocationsView push state =

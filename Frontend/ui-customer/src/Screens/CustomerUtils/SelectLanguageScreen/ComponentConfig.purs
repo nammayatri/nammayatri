@@ -38,6 +38,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       {   textConfig
          { text = (getString UPDATE)
+         , accessibilityHint = if state.props.btnActive then "Update Button" else "Update Button Disabled: Change Language To Enable "
          , color = state.data.config.primaryTextColor
          } 
         , isClickable = state.props.btnActive
@@ -56,6 +57,7 @@ menuButtonConfig state language = MenuButton.config {
         , selectedTextStyle = FontStyle.ParagraphText
         , unselectedTextStyle = FontStyle.ParagraphText
        }
+      , accessibilityHint = language.subTitle
       ,subTitleConfig
       {
         text = language.subTitle

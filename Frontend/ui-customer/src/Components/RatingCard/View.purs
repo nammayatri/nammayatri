@@ -30,8 +30,8 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), map, (<$>), (||))
-import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard)
+import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), map, (<$>), (||),show)
+import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard, accessibilityHint, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -135,6 +135,8 @@ feedbackPillView state push =
                       , textSize FontSize.a_12
                       , fontStyle $ FontStyle.medium LanguageStyle
                       , text item.text
+                      , accessibilityHint $ item.text <> if isSelected then " : Selected" else " : Un Selected"
+                      , accessibilityImportance ENABLE
                       , color if isSelected then Color.blue900 else Color.black800
                       , padding $ Padding 12 12 12 12
                       ]
@@ -200,6 +202,7 @@ rideRatingButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
         { text = (getString SUBMIT_FEEDBACK)
+        , accessibilityHint = "You Rated " <> show state.data.rating <> " stars : Submit Feedback : Button"
         , color = if state.data.rating < 1 && state.data.appConfig.isGradient == "true" then "#696A6F" else state.data.appConfig.primaryTextColor
         , width = MATCH_PARENT
         }
@@ -216,7 +219,8 @@ rideRatingButtonConfig state = let
       }
   in primaryButtonConfig'
 
-------------------------starRatingView--------------------------
+------------------------
+--------------------------
 
 starRatingView :: forall w . RatingCardState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 starRatingView state push =
@@ -237,6 +241,8 @@ starRatingView state push =
     ,textView $
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
+        , accessibilityHint $ "Rate Your Ride With " <> state.data.driverName
+        , accessibilityImportance ENABLE
         , text $ getString RATE_YOUR_RIDE_WITH <> state.data.driverName
         , color Color.black800
         , maxLines 2
@@ -256,6 +262,8 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 35
                               , width $ V 35
+                              , accessibilityHint (show item <> " Star : " <> (if item <= state.data.rating then "Selected" else "Un Selected") )
+                              , accessibilityImportance ENABLE
                               , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])

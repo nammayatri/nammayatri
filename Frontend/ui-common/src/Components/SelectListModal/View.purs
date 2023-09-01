@@ -16,7 +16,7 @@
 module Components.SelectListModal.View where
 
 import Prelude
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback,onBackPressed)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), Accessiblity(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback,onBackPressed, accessibilityImportance, accessibilityHint)
 import Effect (Effect)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
@@ -57,11 +57,14 @@ view push config =
       , gravity BOTTOM
       , onClick push (const OnGoBack)
       , adjustViewWithKeyboard "true"
+      , accessibilityImportance DISABLE
       ][ linearLayout
           [ width MATCH_PARENT
           , alignParentBottom "true,-1"
           , height WRAP_CONTENT
           , clickable true
+          , accessibilityImportance DISABLE
+
           , disableClickFeedback true
           , onClick ( \action -> do
             _ <- pure $ hideKeyboardOnNavigation true
@@ -315,6 +318,7 @@ primaryButtons push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
+  , accessibilityImportance DISABLE
   , gravity CENTER
   ] [ PrimaryButton.view (push <<< Button1) (primaryButtonConfig config)
     , PrimaryButton.view (push <<< Button2) (secondaryButtonConfig config)]
@@ -357,11 +361,17 @@ radioButton config push index item =
       , margin $ MarginLeft 10
       ][ textView $
           [ text item.description
+          , accessibilityHint case config.activeIndex of 
+                            Just activeIndex' -> if (activeIndex' == index) then item.description else (item.description <> " : Un Selected")
+                            Nothing -> ""
           , padding $ PaddingBottom 5
+          , accessibilityImportance ENABLE
           , color Color.black900
           ] <> font config.activeIndex
         , textView $
           [ text $ fromMaybe "" item.subtext
+          , accessibilityHint $ fromMaybe "" item.subtext <> " : Selected"
+          , accessibilityImportance ENABLE
           , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
           , padding $ PaddingBottom 5
           , color Color.black650
@@ -383,6 +393,7 @@ primaryButtonConfig config = let
     config'
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
+      , accessibilityHint = config.primaryButtonTextConfig.firstText <> " : Button"
       , color = config.config.primaryBackground}
       , background = Color.white900
       , isGradient = false
@@ -401,6 +412,7 @@ secondaryButtonConfig config = let
     config'
        {textConfig
         { text = config.primaryButtonTextConfig.secondText
+        , accessibilityHint = config.primaryButtonTextConfig.secondText <> " : Button" <> (if config.isSelectButtonActive then "" else "Disabled : Select A Reason To Enable : Button")
         , color =  if (not config.isSelectButtonActive) && getValueFromConfig "isGradient" == "true" then "#696A6F" else config.config.primaryTextColor}
         , width = if config.primaryButtonVisibility then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
         , isGradient = if (not config.isSelectButtonActive) then false else if getValueFromConfig "isGradient" == "true" then true else false

@@ -24,10 +24,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName)
 import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), background, clickable, color, accessibilityHint, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback, accessibilityImportance)
 import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Data.Array(any)
 import Common.Types.App (LazyCheck(..))
 
 view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
@@ -38,6 +39,7 @@ view push config =
   , orientation VERTICAL
   , gravity CENTER
   , cornerRadius 20.0
+  , accessibilityImportance if config.tag == "Choose_On_Map" then DISABLE_DESCENDANT else DISABLE
   ][  linearLayout
         [ height $ V 70
         , width MATCH_PARENT
@@ -103,6 +105,8 @@ postfixImageView push config =
     , gravity CENTER
     , padding (Padding 12 22 16 22)
     , onClick push $ const $ FavClick config
+    , accessibilityHint "Add Favourite Button : Select to add this location to favourite"
+    , accessibilityImportance ENABLE
     , clickable (if config.postfixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then false else true)
     ][  imageView
         [ height $ V 20
@@ -120,6 +124,8 @@ titleView config =
     , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then config.tag else config.title
     , color Color.black800
     , lineHeight "18"
+    , accessibilityHint $ config.title <> " : " <> config.subTitle
+    , accessibilityImportance ENABLE
     , maxLines 1
     , ellipsize true
     , padding (PaddingRight 20)
@@ -132,6 +138,7 @@ subTitleView config =
     ([ height WRAP_CONTENT
     , width MATCH_PARENT
     , text config.subTitle
+    , accessibilityImportance DISABLE
     , color Color.black700
     , padding (PaddingRight 20)
     , maxLines 1

@@ -34,7 +34,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, accessibilityImportance, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width, accessibilityHint)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
@@ -62,6 +62,7 @@ view push state =
     , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
     , gravity CENTER_HORIZONTAL
     , afterRender push (const AfterRender)
+    
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , if (not state.appConfig.nyBrandingVisibility) then
                   linearLayout
@@ -109,7 +110,7 @@ topTextView push state =
         ] <> FontStyle.body5 LanguageStyle
       , linearLayout
         [ height WRAP_CONTENT
-        , width WRAP_CONTENT
+        , width MATCH_PARENT
         , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
         ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
       , linearLayout
@@ -189,9 +190,12 @@ bottomLinksView state =
     , textView
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
+          , accessibilityImportance ENABLE
+          , accessibilityHint $ "App Version : " <>  (getValueToLocalStore VERSION_NAME) <> " : Bundle Version : " <> (getValueToLocalStore BUNDLE_VERSION)
           , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
           , color "#354052"
           , margin (Margin 0 20 0 10)
+          , accessibilityImportance DISABLE
           ]
         <> FontStyle.body6 LanguageStyle
     ]
@@ -234,6 +238,8 @@ termsAndConditionsView state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString TERMS_AND_CONDITIONS)
+        , accessibilityHint "Terms and Conditions : Button"
+        , accessibilityImportance ENABLE
         , color Color.blue900
         , onClick (\action -> do
             _ <- pure action
@@ -260,6 +266,8 @@ privacyPolicyView state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString PRIVACY_POLICY)
+        , accessibilityHint "Privacy Policy : Button"
+        , accessibilityImportance ENABLE
         , color Color.blue900
         , margin (Margin 0 20 0 0)
         , onClick (\action -> do

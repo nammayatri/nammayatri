@@ -27,7 +27,7 @@ import Control.Monad.Except (lift, runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (mapWithIndex)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -39,7 +39,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard, accessibilityHint, accessibilityImportance)
 import Resources.Constants as RSRC
 import PrestoDOM.Animation as PrestoAnim
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
@@ -49,6 +49,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Engineering.Helpers.Utils (toggleLoader, loaderText)
+import Data.String as DS
 
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
@@ -173,6 +174,7 @@ personalDetails state push =
                               [ height WRAP_CONTENT
                               , width MATCH_PARENT
                               , text item.title
+                              , clickable false
                               , color Color.black700
                               , margin $ MarginBottom 8
                               ] <> FontStyle.body3 LanguageStyle
@@ -180,6 +182,10 @@ personalDetails state push =
                               [ height WRAP_CONTENT
                               , width MATCH_PARENT
                               , text item.text
+                              , accessibilityHint $ case item.fieldType of
+                                 ST.MOBILE ->  (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") item.text) 
+                                 _ -> item.text
+                              , accessibilityImportance ENABLE
                               , color case item.fieldType of
                                   ST.EMAILID_ ->  if state.data.emailId /= Nothing then Color.black900 else Color.blue900
                                   ST.GENDER_ -> if state.data.gender /= Nothing then Color.black900 else Color.blue900
@@ -188,6 +194,10 @@ personalDetails state push =
                                   ST.EMAILID_ ->  if state.data.emailId /= Nothing then const $ NoAction else const $ EditProfile $ Just ST.EMAILID_
                                   ST.GENDER_ -> if state.data.gender /= Nothing then const $ NoAction  else const $ EditProfile $ Just ST.GENDER_
                                   _ -> const $ NoAction
+                              , clickable case item.fieldType of
+                                  ST.EMAILID_ ->  not (isJust state.data.emailId)  
+                                  ST.GENDER_ -> not ( isJust state.data.gender) 
+                                  _ -> false
                               ] <> FontStyle.body6 LanguageStyle
                             ]
                       , horizontalLineView state (index /= 3)
@@ -265,6 +275,8 @@ headerView state push =
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , text (getString EDIT)
+              , accessibilityHint $ "Edit Profile : Button"
+              , accessibilityImportance ENABLE
               , color Color.blueTextColor
               , padding $ PaddingBottom (if state.data.config.profileEditGravity == "bottom" then 10 else 0)
               , onClick push (const $ EditProfile Nothing)
@@ -366,6 +378,8 @@ genderCaptureView state push =
           [ text $ RSRC.getGender state.data.editedGender (getString SELECT_YOUR_GENDER)
           , height WRAP_CONTENT
           , width WRAP_CONTENT
+          , accessibilityImportance ENABLE
+          , accessibilityHint $ if state.data.editedGender == Nothing then "Select your gender : Drop-Down menu" else "Gender Selected : " <> RSRC.getGender state.data.editedGender (getString SELECT_YOUR_GENDER) <> " : " <>  if state.props.genderOptionExpanded then "Double Tap To Collapse DropDown" else " Double Tap To Expand DropDown"--if state.props.genderOptionExpanded then "Double Tap To Close DropDown" else "Gender Drop Down Menu : Double Tap To Change Gender"
           , color if state.data.editedGender == Nothing then Color.black600 else Color.black800
           ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout
@@ -418,6 +432,8 @@ genderOptionsView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , onClick push $ const $ GenderSelected item.value
+        , accessibilityHint $ item.text <> " : Double Tap To Select"
+        , accessibilityImportance ENABLE
         , orientation VERTICAL
         ]
         [ textView $

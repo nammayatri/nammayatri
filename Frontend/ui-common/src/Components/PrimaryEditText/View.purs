@@ -15,14 +15,15 @@
 
 module Components.PrimaryEditText.View where
 
-import Prelude (Unit, ($), (<>), (==), (&&), not)
+import Prelude (Unit, ($), (<>), (==), (&&), not, bind, pure, unit)
 import Effect (Effect)
 import Data.Maybe (Maybe(..))
-import Engineering.Helpers.Commons (os)
+import Engineering.Helpers.Commons (os, setText)
 import Components.PrimaryEditText.Controller (Action(..), Config)
-import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat)
+import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat, accessibilityHint, accessibilityImportance)
 import Font.Style as FontStyle
 import Common.Types.App
+import Data.String as DS
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -48,6 +49,7 @@ topLabelView config =
     , singleLine true
     , margin config.topLabel.margin
     , alpha config.topLabel.alpha
+    , accessibilityImportance config.topLabel.accessibilityImportance
     , visibility config.topLabel.visibility
     ] <> (FontStyle.getFontStyle config.topLabel.textStyle LanguageStyle)
 
@@ -93,6 +95,8 @@ editTextView push config =
   , hint config.editText.placeholder
   , singleLine config.editText.singleLine
   , hintColor config.editText.placeholderColor
+  , accessibilityImportance ENABLE
+  , accessibilityHint if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
   , margin config.editText.margin
   , background config.background
   , padding config.editText.padding
@@ -100,7 +104,11 @@ editTextView push config =
   , gravity config.editText.gravity
   , letterSpacing config.editText.letterSpacing
   , alpha config.editText.alpha
-  , onFocus push $ FocusChanged
+  , onFocus (\action -> do 
+    _ <- push action 
+    _ <- pure $ setText config.id config.editText.text
+    pure unit
+    ) $ FocusChanged
   ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
     <> (case config.editText.pattern of 
         Just _pattern -> case config.type of 

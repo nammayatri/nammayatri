@@ -13,7 +13,7 @@
 -}
 module Components.ChatView.View where
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), scrollBarY, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback, adjustViewWithKeyboard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), scrollBarY, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback, adjustViewWithKeyboard, accessibilityHint, accessibilityImportance)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os)
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import PrestoDOM.Animation as PrestoAnim
@@ -43,6 +43,7 @@ view push config =
   , orientation VERTICAL
   , clickable true
   , background config.white900
+  , accessibilityImportance DISABLE
   ]
   [ chatHeaderView config push
   , chatBodyView config push
@@ -72,6 +73,8 @@ chatHeaderView config push =
          ][ imageView
             [ imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
             , height $ V 24
+            , accessibilityHint "Back : Button"
+            , accessibilityImportance ENABLE
             , width $ V 24
             ]
           ]
@@ -96,11 +99,15 @@ headerNameView config push =
     , color config.black800
     , ellipsize true
     , singleLine true
+    , accessibilityHint $ "Driver Name : " <> config.userConfig.userName
+    , accessibilityImportance ENABLE
     ] <> FontStyle.subHeading1 TypoGraphy)
    ,textView (
     [ text config.vehicleNo
     , visibility (getConfig config.userConfig.appType).customerVisibility
     , color config.black700
+    , accessibilityHint $ "Vehicle Number : " <> config.vehicleNo
+    , accessibilityImportance ENABLE
     , ellipsize true
     , singleLine true
     ] <> FontStyle.body3 TypoGraphy)
@@ -124,6 +131,8 @@ headerActionView config push =
      ][ imageView
         [ imageWithFallback $ "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
         , height $ V 18
+        , accessibilityHint "Call : Button"
+        , accessibilityImportance ENABLE
         , width $ V 18
         ]
      ]
@@ -140,6 +149,8 @@ headerActionView config push =
     ][ imageView
        [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "ic_phone.png"
        , height $ V 20
+       , accessibilityHint "Call : Button"
+       , accessibilityImportance ENABLE
        , width $ V 20
        ]
     ]
@@ -246,6 +257,8 @@ chatFooterView config push =
          , width $ V 36
          , gravity CENTER
          , onClick push (const (SendMessage))
+         , accessibilityHint "Send Message : Button"
+         , accessibilityImportance ENABLE
          ][ imageView
             [ imageWithFallback $ if config.sendMessageActive then "ic_send_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send_blue.png" else "ic_send," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send.png"
             , height $ V 20 
@@ -261,15 +274,18 @@ emptyChatView config push =
   [ height MATCH_PARENT
   , weight 1.0
   , width MATCH_PARENT
+  , accessibilityImportance DISABLE
   ]
   [ linearLayout
      [ height WRAP_CONTENT
      , width MATCH_PARENT
      , orientation VERTICAL
+     , accessibilityImportance DISABLE
      , background config.white900
      ]([ textView $
        [ text $ if config.userConfig.appType == "Customer" && null config.suggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
        , color config.black700
+       , accessibilityImportance ENABLE
        , width MATCH_PARENT
        , margin (Margin 16 16 16 20)
        , maxLines 2

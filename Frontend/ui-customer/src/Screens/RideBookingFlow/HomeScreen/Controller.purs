@@ -81,7 +81,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
@@ -104,7 +104,7 @@ import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
-
+import PrestoDOM.Properties (sheetState) as PP 
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
 import Data.Function (const)
 import Data.List ((:))
@@ -1187,6 +1187,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.ExpandBottomSheet)) state = continue state 
+  -- continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
   continueWithCmd state
         [ do

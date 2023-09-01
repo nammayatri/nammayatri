@@ -66,6 +66,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -80,6 +81,7 @@ import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.location.LocationManagerCompat;
+import androidx.core.view.ViewCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -520,6 +522,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     double longitude = lat.equals("9.9") ? lastLatitudeValue : Double.parseDouble(lng);
                     LatLng latLngObj = new LatLng(latitude, longitude);
                     Marker markerObject;
+
                     if (markers.has(title)) {
                         markerObject = (Marker) markers.get(title);
                         markerObject.setPosition(latLngObj);
@@ -537,6 +540,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 markerObject.setVisible(true);
                                 markerObject.setFlat(true);
                                 markerObject.hideInfoWindow();
+
                             }
                             if (title.equals(CURRENT_LOCATION)) {
                                 userPositionMarker = markerObject;
@@ -557,10 +561,13 @@ public class MobilityCommonBridge extends HyperBridge {
                     .position(new LatLng(lat, lng))
                     .title(title)
                     .anchor(anchorV, anchorV1);
+
             if (!title.equals(LOCATE_ON_MAP)) {
                 Bitmap smallMarker = constructBitmap(markerSize, title);
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(smallMarker));
+
             }
+
             return markerOptions;
         } catch (Exception e) {
             Log.e(MAPS, "MARKER obj creation", e);
@@ -672,6 +679,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     marker.hideInfoWindow();
                     return true;
                 });
+                
                 try {
                     if (mapType.equals(LOCATE_ON_MAP)) {
                         upsertMarker(LOCATE_ON_MAP, String.valueOf(lastLatitudeValue), String.valueOf(lastLongitudeValue), 160, 0.5f, 0.9f);
@@ -807,7 +815,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     String destinationSpecialTagIcon = mapRouteConfigObject.getString("destSpecialTagIcon");
 
                     polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
-
                     if (destMarker != null && !destMarker.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
@@ -906,8 +913,12 @@ public class MobilityCommonBridge extends HyperBridge {
         } else {
             if (locationName.length() <= 27) {
                 label.setText(locationName);
+                label.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
+                label.setContentDescription(locationName);
             } else {
                 label.setText(locationName.substring(0, 17) + "...");
+                label.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
+                label.setContentDescription(locationName.substring(0, 17) + "...");
             }
         }
         try {
@@ -935,6 +946,10 @@ public class MobilityCommonBridge extends HyperBridge {
                     ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                     layoutParams.height = 160;
                     layoutParams.width = 160;
+                    pointer.setImportantForAccessibility(2);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        pointer.setAccessibilityHeading(false);
+                    }
                     pointer.setLayoutParams(layoutParams);
                 }
             }
@@ -1470,16 +1485,20 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (bridgeComponents.getActivity() != null) {
                     int currentId = Integer.parseInt(id);
                     InputMethodManager inputMethodManager = (InputMethodManager) bridgeComponents.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    View editText = bridgeComponents.getActivity().findViewById(currentId);
-                    View prevEditText = null;
+                    EditText editText = bridgeComponents.getActivity().findViewById(currentId);
+                    EditText prevEditText = null;
                     if (lastFocusedEditView != -1) {
                         prevEditText = bridgeComponents.getActivity().findViewById(lastFocusedEditView);
                     }
                     if (inputMethodManager != null && editText != null) {
                         if (prevEditText != null && lastFocusedEditView != currentId) {
                             prevEditText.clearFocus();
+                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
                         }
                         editText.requestFocus();
+                        editText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+                        editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
                         inputMethodManager.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
                     }
                     if (currentId != lastFocusedEditView) {

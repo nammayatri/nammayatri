@@ -17,7 +17,7 @@ module Components.GenericHeader.Controller where
 
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), padding)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), Accessiblity(..), padding)
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Prelude ((<>))
@@ -48,6 +48,8 @@ type ImageConfig =
   , margin :: Margin
   , padding :: Padding
   , visibility :: Visibility
+  , accessibilityHint :: String
+  , accessibilityImportance :: Accessiblity
   }
 
 type TextConfig =
@@ -56,6 +58,7 @@ type TextConfig =
   , margin :: Margin
   , color :: String
   , textStyle :: Style
+  , accessibilityHint :: String
   }
 
 config :: Config
@@ -75,12 +78,15 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE
+    , accessibilityImportance : ENABLE
+    , accessibilityHint : "Back : Button"
     }
   , textConfig : {
       text : ""
     , textStyle : Heading3
     , margin : (Margin 0 0 0 0)
     , color : Color.black800
+    , accessibilityHint : ""
     }
   , suffixImageConfig : {
       height : V 25
@@ -89,6 +95,8 @@ config = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , visibility : GONE
+    , accessibilityImportance : DISABLE 
+    , accessibilityHint : ""
     }
 
 }
@@ -110,12 +118,15 @@ merchantConfig = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE
+    , accessibilityImportance : ENABLE 
+    , accessibilityHint : "Back : Button"
     }
   , textConfig : {
       text : ""
     , textStyle : Heading0
     , margin : (Margin 16 0 16 10)
     , color : "#101010"
+    , accessibilityHint : ""
     }
   , suffixImageConfig : {
       height : V 25
@@ -124,6 +135,8 @@ merchantConfig = {
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 0 0 0 0)
     , visibility : GONE
+    , accessibilityImportance : DISABLE 
+    , accessibilityHint : ""
     }
 
 }

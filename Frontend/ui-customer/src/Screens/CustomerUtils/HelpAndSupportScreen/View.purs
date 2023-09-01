@@ -41,9 +41,9 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
+import Prelude (Unit, bind, const, discard, map, pure, unit, show, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibilityImportance, accessibilityHint)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
@@ -91,6 +91,7 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
+    , accessibilityImportance if state.props.showDeleteAccountView || state.props.isCallConfirmation || DA.any (_ == state.data.accountStatus) [ ST.CONFIRM_REQ , ST.DEL_REQUESTED ] then DISABLE_DESCENDANT else DISABLE
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
     , onBackPressed push $ const BackPressed state.props.isCallConfirmation
     , afterRender push (const AfterRender)
@@ -111,6 +112,8 @@ view push state =
             [ text (getString VIEW_ALL_RIDES)
             , alignParentRight "true,-1"
             , margin (Margin 0 14 16 14)
+            , accessibilityHint "View All Rides : Button"
+            , accessibilityImportance ENABLE
             , width MATCH_PARENT
             , gravity RIGHT
             , color Color.blue900
@@ -177,6 +180,8 @@ recentRideView state push=
     ][
     textView $
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
+        , accessibilityHint "Report An Issue With This Trip : Button"
+        , accessibilityImportance ENABLE 
         , color Color.blue900
         ] <> FontStyle.tags LanguageStyle
      ,  linearLayout
@@ -236,6 +241,8 @@ driverRatingView state =
   ][  textView $
       [ text (getString YOU_RATED)
       , color Color.darkDescriptionText
+      , accessibilityHint $ "You Rated : " <> (show state.data.rating) <> " stars"
+      , accessibilityImportance ENABLE
       ] <> FontStyle.body3 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
@@ -283,7 +290,9 @@ allTopicsView state push =
                 , width $ V 17
                 ]
               , textView $
-                [ text item.title
+                [ accessibilityHint $ item.title <> " : Button"
+                , accessibilityImportance ENABLE
+                , text item.title
                 , color Color.darkDescriptionText
                 , margin (MarginLeft 13)
                 ] <> FontStyle.paragraphText LanguageStyle
@@ -316,6 +325,7 @@ deleteAccountView state push=
   , visibility if state.props.showDeleteAccountView then VISIBLE else GONE
   , padding $ PaddingTop EHC.safeMarginTop
   , background Color.white900
+  , accessibilityImportance if DA.any (_ == state.data.accountStatus) [ ST.CONFIRM_REQ , ST.DEL_REQUESTED ] then DISABLE_DESCENDANT else DISABLE
   , clickable true
   ][
     GenericHeader.view (push <<< DeleteGenericHeaderAC) (deleteGenericHeaderConfig state) 

@@ -12,7 +12,7 @@ import Font.Style as FontStyle
 import JBridge (getWidthFromPercent, openUrlInMailApp)
 import JBridge as JB
 import Prelude (Unit, bind, const, map, pure, unit, ($), (+), (<>))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, height, horizontalScrollView, linearLayout, margin, onClick, orientation, padding, scrollBarX, stroke, text, textFromHtml, textView, width)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Accessiblity(..), background, color, cornerRadius, height, horizontalScrollView, linearLayout, margin, onClick, orientation, padding, scrollBarX, stroke, text, textFromHtml, textView, width, accessibilityHint, accessibilityImportance)
 import Styles.Colors as Color
 
 view :: forall w. Config -> PrestoDOM (Effect Unit) w
@@ -38,6 +38,8 @@ infoComponentView item =
     , orientation VERTICAL
     , padding $ Padding 12 16 12 16
     , stroke $ "1," <> Color.grey900
+    , accessibilityHint $ item.title <> ":"<> item.subTitle <> ":" 
+    , accessibilityImportance ENABLE
     , cornerRadius 8.0
     , background Color.white900
     , margin $ MarginRight 12
@@ -46,6 +48,7 @@ infoComponentView item =
           $ [ height WRAP_CONTENT
             , width MATCH_PARENT
             , color Color.black900
+            , accessibilityImportance DISABLE
             , text item.title
             , margin $ MarginBottom 8
             ]
@@ -54,6 +57,7 @@ infoComponentView item =
           $ [ height WRAP_CONTENT
             , width MATCH_PARENT
             , textFromHtml item.subTitle
+            , accessibilityImportance DISABLE
             , color Color.black650
             ]
           <> (FontStyle.body3 TypoGraphy)
@@ -73,6 +77,7 @@ infoComponentView item =
             [ textView
                 $ [ height WRAP_CONTENT
                   , width MATCH_PARENT
+                  , accessibilityImportance DISABLE
                   , textFromHtml $ fromMaybe "" item.addtionalData
                   , color Color.black650
                   ]

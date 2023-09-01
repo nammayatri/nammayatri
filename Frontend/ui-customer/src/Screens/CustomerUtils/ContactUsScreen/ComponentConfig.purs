@@ -44,6 +44,7 @@ primaryButtonConfigSubmit state = let
       { textConfig
         { text = (getString SUBMIT)
         , color = state.data.config.primaryTextColor
+        , accessibilityHint = if state.props.btnActive then "Submit : Button" else "Submit Button Is Disabled"
         }
       , cornerRadius = 0.0
       , background = state.data.config.primaryBackground

@@ -7,7 +7,7 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, accessibilityHint, accessibilityImportance)
 import Screens.OnBoardingFlow.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
 import Screens.Types (WelcomeScreenState)
@@ -38,6 +38,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , accessibilityImportance DISABLE
         , gravity CENTER
         , onBackPressed push $ const BackPressed
         , afterRender push $ const AfterRender
@@ -46,6 +47,7 @@ view push state =
         ][  imageView
             [ height $ V 50
             , width $ V 147
+            , accessibilityHint "Namma Yatri : Logo"
             , margin $ MarginTop if os == "IOS" then 80 else 50
             , imageWithFallback "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png"   -- "ic_namma_yatri_logo"
             ]
@@ -60,6 +62,7 @@ carouselView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , id $ getNewIDWithTag "CarouselView"
+    , accessibilityImportance ENABLE
     , gravity CENTER
     , weight 1.0
     , margin $ MarginBottom 20
@@ -74,7 +77,8 @@ primaryButtonConfig :: WelcomeScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig { text = "Get Started" }
+      { textConfig { text = "Get Started"
+      , accessibilityHint = "Get Started : Button" }
       , id = "PrimaryButtonWelcomeScreen"
       }
   in primaryButtonConfig'

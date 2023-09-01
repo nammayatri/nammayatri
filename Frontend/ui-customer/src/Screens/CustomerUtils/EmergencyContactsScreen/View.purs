@@ -11,7 +11,7 @@ import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..),scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh, accessibilityImportance, accessibilityHint)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
@@ -74,10 +74,11 @@ view listItemm push state =
             )
             (const NoAction)
         ]
-        [ linearLayout
+        ([ linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
+            , accessibilityImportance if (state.props.showInfoPopUp == true) then DISABLE_DESCENDANT else DISABLE
             ]
             [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
             , linearLayout
@@ -99,8 +100,7 @@ view listItemm push state =
                 ]
             ]
         , if state.props.showContactList then (contactListView listItemm push state) else emptyTextView state
-        , if (state.props.showInfoPopUp == true) then removeContactPopUpView push state else emptyTextView state
-        ]
+        ] <>  if state.props.showInfoPopUp then [removeContactPopUpView push state] else [emptyTextView state])
 
 ------------------------ EmptyTextView ---------------------------
 emptyTextView :: forall w. EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
@@ -152,6 +152,8 @@ contactListView listItemm push state =
         , imageView
             [ height $ V 17
             , width $ V 17
+            , accessibilityHint "Cancel Search : Button"
+            , accessibilityImportance ENABLE
             , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
             , gravity CENTER
             , margin (Margin 10 10 10 10)
@@ -224,6 +226,7 @@ contactListPrimaryButtonConfig count =
       config'
         { textConfig
           { text = if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
+          , accessibilityHint =  (if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
           , color = if (count > 0) then Color.yellow900 else Color.yellow800
           }
         , background = if (count > 0) then Color.black900 else Color.black600
@@ -335,6 +338,7 @@ contactCardView push state contact index =
         [ textView $
             [ text (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
             , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
+            , accessibilityImportance DISABLE
             ] <> FontStyle.body3 TypoGraphy
         ]
     , textView $
@@ -348,6 +352,8 @@ contactCardView push state contact index =
         [ height $ WRAP_CONTENT
         , width $ WRAP_CONTENT
         , text (getString REMOVE)
+        , accessibilityHint "Remove : Button"
+        , accessibilityImportance ENABLE
         , color Color.blue900
         , textSize 14
         , onClick push (const (RemoveButtonClicked contact))
