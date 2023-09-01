@@ -258,6 +258,7 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.15.1'
     implementation 'androidx.core:core:1.4.0'
     implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
+    implementation 'com.clevertap.android:push-templates:1.0.9'
     implementation 'com.android.installreferrer:installreferrer:2.2'
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 }
