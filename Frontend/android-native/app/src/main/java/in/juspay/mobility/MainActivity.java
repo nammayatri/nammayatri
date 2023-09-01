@@ -51,6 +51,8 @@ import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.clevertap.android.sdk.CleverTapAPI;
+import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
+import com.clevertap.android.sdk.interfaces.NotificationHandler;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -368,6 +370,7 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.createNotificationChannel(context,clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
+        CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
 
 
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
