@@ -453,9 +453,13 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
         merchantId
         onlyNotOnRide
         driverPoolCfg.driverPositionInfoExpiry
+  logDebug $ "DRIVERPOOL : Before parallel search request filter" <> show approxDriverPool
+  parallelCount <- mapM (\x -> (x.driverId,) <$> getParallelSearchRequestCount now x) approxDriverPool
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
+  logDebug $ "DRIVERPOOL : Parallel Search Request Count" <> show parallelCount
+  logDebug $ "DRIVERPOOL : After parallel search request filter pool" <> show driversWithLessThanNParallelRequests
   pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
