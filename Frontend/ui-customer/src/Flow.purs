@@ -700,6 +700,9 @@ homeScreenFlow = do
         void $ lift $ lift $ toggleLoader true
         (GlobalState newState) <- getState
         let state = newState.homeScreen
+        if (state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0) then do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{isSearchLocation = SearchLocation}})
+        else pure unit
 
         case state.props.isSource of
           Just true -> do
