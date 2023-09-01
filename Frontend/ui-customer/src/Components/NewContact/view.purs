@@ -12,7 +12,7 @@ import Language.Strings (getString)
 import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
 import Storage (getValueToLocalStore, KeyStore(..))
-import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM,Gradient(..), gradient, weight, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback, relativeLayout)
+import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM,Gradient(..), Accessiblity(..), gradient, weight, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback, relativeLayout, accessibilityHint, accessibilityImportance)
 import Common.Types.App
 import Data.Maybe
 import Screens.Types(NewContacts)
@@ -79,12 +79,16 @@ view push item =
             ][ imageView
                 [ height $ V 24 
                 , width $ V 24 
+                , accessibilityImportance ENABLE
                 , PrestoList.imageUrlHolder "isSelectImage"
+                , accessibilityHint "Selected"
                 , PrestoList.visibilityHolder "visibilitySelectedImage"
                 ] 
             , imageView
                 [ height $ V 17
                 , width $ V 17
+                , accessibilityImportance ENABLE
+                , accessibilityHint "Un Selected"
                 , PrestoList.imageUrlHolder "isSelectImage"
                 , PrestoList.visibilityHolder "visibilityUnSelectedImage"
                 ]

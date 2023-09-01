@@ -46,6 +46,7 @@ type Config =
     , lng :: Number
     , layoutBg :: String 
     , layoutStroke :: String 
+    , accessibilityHint :: String
   }
 
 type TextConfig =
@@ -127,5 +128,6 @@ config =
     , lng : 0.0
     , layoutBg : "" 
     , layoutStroke : "0," <> Color.grey900
+    , accessibilityHint : ""
   }
 

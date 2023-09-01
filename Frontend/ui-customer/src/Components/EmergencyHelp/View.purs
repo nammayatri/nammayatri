@@ -21,11 +21,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind)
+import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind, (||))
 import Data.Array (take, (!!), drop, head, mapWithIndex, null)
 import Data.String as DS
 import Data.Array as DA
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback, stroke, afterRender, singleLine, ellipsize)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback, stroke, afterRender, singleLine, ellipsize, accessibilityImportance, accessibilityHint)
 import Styles.Colors as Color
 import Data.String (split, Pattern(..), indexOf, length)
 import Components.PopUpModal.Controller as PopUpModalConfig
@@ -48,12 +48,14 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , accessibilityImportance DISABLE
   , afterRender (\_ -> push StoreContacts) (const NoAction)
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
+      , accessibilityImportance if state.showContactSupportPopUp || state.showCallPolicePopUp || state.showCallContactPopUp || state.showCallSuccessfulPopUp then DISABLE_DESCENDANT else DISABLE
       , padding if os == "IOS" then (PaddingVertical safeMarginTop safeMarginBottom) else (PaddingBottom 10)
       ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
          , scrollView
@@ -108,10 +110,13 @@ supportButtonViewContent state push item index =  linearLayout
          ,  margin $ Margin 16 12 16 0
          , clickable true
          , onClick push $ const item.action
+         , accessibilityHint $ item.title <> " : " <> item.secondaryTitle
+         , accessibilityImportance ENABLE
         ][ linearLayout
            [ height WRAP_CONTENT
            , width WRAP_CONTENT
            , orientation VERTICAL
+           , accessibilityImportance DISABLE_DESCENDANT
            ][ textView (
               [ text item.title
               , color Color.black800
@@ -395,10 +400,13 @@ allContactsView state push =
     , stroke ("1," <> Color.borderColorLight)
     , padding $ Padding 13 11 13 11
     , cornerRadius 8.0
+    , accessibilityHint $ "Call " <> item.name <> " Button" 
+    , accessibilityImportance ENABLE
     ][  linearLayout
         [ height WRAP_CONTENT
         , width  MATCH_PARENT
         , gravity CENTER
+        , accessibilityImportance DISABLE_DESCENDANT
         ][  linearLayout
             [ height $ V 24
             , width $ V 24
