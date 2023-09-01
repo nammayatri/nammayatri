@@ -125,7 +125,7 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                       ]
                 else Nothing,
             customer =
-              if isJust customerLanguage
+              if isJust customerLanguage || isJust disabilityTag
                 then
                   Just $
                     Search.Customer

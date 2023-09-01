@@ -172,11 +172,11 @@ updateHasTakenValidRide (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updateHasDisability :: MonadFlow m => Id Person -> m ()
-updateHasDisability (Id personId) = do
+updateHasDisability :: MonadFlow m => Id Person -> Maybe Bool -> m ()
+updateHasDisability (Id personId) mbHasDisability = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamP.hasDisability True,
+    [ Se.Set BeamP.hasDisability mbHasDisability,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]

@@ -105,7 +105,7 @@ data PersonE e = Person
     referralCode :: Maybe Text,
     referredAt :: Maybe UTCTime,
     hasTakenValidRide :: Bool,
-    hasDisability :: Bool,
+    hasDisability :: Maybe Bool,
     blockedAt :: Maybe UTCTime,
     blockedByRuleId :: Maybe (Id DMC.MerchantConfig),
     createdAt :: UTCTime,
@@ -148,7 +148,7 @@ data PersonAPIEntity = PersonAPIEntity
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language,
-    hasDisability :: Bool,
+    hasDisability :: Maybe Bool,
     gender :: Gender,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version

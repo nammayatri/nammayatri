@@ -65,7 +65,7 @@ data PersonT f = PersonT
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
     hasTakenValidRide :: B.C f Bool,
-    hasDisability :: B.C f Bool,
+    hasDisability :: B.C f (Maybe Bool),
     referralCode :: B.C f (Maybe Text),
     referredAt :: B.C f (Maybe Time.UTCTime)
   }

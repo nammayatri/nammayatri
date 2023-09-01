@@ -16,8 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Person.PersonDisability
-  ( DisabilityItem (..),
-    PersonDisability (..),
+  ( PersonDisability (..),
   )
 where
 
@@ -33,12 +32,5 @@ data PersonDisability = PersonDisability
     tag :: Text,
     description :: Text,
     updatedAt :: UTCTime
-  }
-  deriving (Show, Eq, Generic, ToSchema, ToJSON, FromJSON)
-
-data DisabilityItem = DisabilityItem
-  { id :: Id DisabilityItem,
-    tag :: Text,
-    description :: Text
   }
   deriving (Show, Eq, Generic, ToSchema, ToJSON, FromJSON)

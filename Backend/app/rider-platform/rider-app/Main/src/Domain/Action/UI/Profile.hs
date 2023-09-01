@@ -68,11 +68,19 @@ data UpdateProfileReq = UpdateProfileReq
     gender :: Maybe Person.Gender,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
-    disability :: Maybe PersonDisability.DisabilityItem
+    disability :: Maybe DisabilityItem,
+    hasDisability :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 type UpdateProfileResp = APISuccess.APISuccess
+
+data DisabilityItem = DisabilityItem
+  { id :: Id DisabilityItem,
+    tag :: Text,
+    description :: Text
+  }
+  deriving (Show, Eq, Generic, ToSchema, ToJSON, FromJSON)
 
 newtype UpdateProfileDefaultEmergencyNumbersReq = UpdateProfileDefaultEmergencyNumbersReq
   { defaultEmergencyNumbers :: [PersonDefaultEmergencyNumber]
@@ -120,15 +128,7 @@ updatePerson personId req = do
   mbEncEmail <- encrypt `mapM` req.email
 
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
-  whenJust req.disability $ \disability -> do
-    customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
-    QPerson.updateHasDisability personId
-    when (isNothing customerDisability) $ do
-      newDisability <- makeDisability disability
-      PDisability.create newDisability
-    when (isJust customerDisability) $ do
-      let disabilityId = getId $ disability.id
-      PDisability.updateDisabilityByPersonId personId disabilityId disability.tag disability.description
+
   void $
     QPerson.updatePersonalInfo
       personId
@@ -143,6 +143,20 @@ updatePerson personId req = do
       req.gender
       req.clientVersion
       req.bundleVersion
+  case req.hasDisability of
+    Nothing -> logDebug "No disability"
+    Just True -> do
+      whenJust req.disability $ \disability -> do
+        customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
+        QPerson.updateHasDisability personId $ Just True
+        when (isNothing customerDisability) $ do
+          newDisability <- makeDisability disability
+          PDisability.create newDisability
+        when (isJust customerDisability) $ do
+          let disabilityId = getId $ disability.id
+          PDisability.updateDisabilityByPersonId personId disabilityId disability.tag disability.description
+    Just False -> do
+      QPerson.updateHasDisability personId $ Just False
   pure APISuccess.Success
   where
     makeDisability disability = do
