@@ -29,12 +29,13 @@ import Data.Semigroup ((<>))
 import Font.Style (Style(..))
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+))
+import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+), (*))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (SubscribePopupType(..), PlanCardConfig(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
+import Data.Int as DI
 import Common.Types.App (LazyCheck(..))
 import Data.Function.Uncurried (runFn1)
 
@@ -84,8 +85,8 @@ retryPaymentButtonConfig state =
       , id = "RetryPaymentPrimaryButton"
       , enableLoader = JB.getBtnLoader "RetryPaymentPrimaryButton"
       , lottieConfig
-        { width = V $ layouts.width
-        , height = V $ layouts.height
+        { width = V $ DI.ceil $ (DI.toNumber layouts.width) * 0.9
+        , height = V $ DI.ceil $ (DI.toNumber layouts.height) * 0.9
         , lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader_white.json"
         }
       }
