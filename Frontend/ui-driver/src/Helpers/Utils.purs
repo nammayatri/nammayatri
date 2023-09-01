@@ -75,6 +75,7 @@ import Storage (KeyStore)
 import JBridge (getCurrentPositionWithTimeout)
 import Effect.Uncurried(EffectFn1, EffectFn4)
 import Storage (KeyStore(..))
+import Styles.Colors as Color
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -343,3 +344,27 @@ getCurrentLocation currentLat currentLon sourceLat sourceLon timeOut = do
         case rideLat,rideLong of
           Just lat, Just lon -> pure (LatLon lat lon)
           _,_ -> pure (LatLon "0.0" "0.0")
+
+getRideTypeColor :: Maybe String -> String
+getRideTypeColor variant = case getCategorizedVariant variant of
+    "AC Taxi" -> Color.blue800
+    "Non AC" -> Color.orange900
+    _ -> Color.black800
+
+getCategorizedVariant :: Maybe String -> String
+getCategorizedVariant variant = case variant of
+  Just var -> case (getMerchant FunctionCall) of
+    YATRISATHI -> case var of
+      "SEDAN"  -> "AC Taxi"
+      "HATCHBACK"  -> "AC Taxi"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "AC Taxi"
+      _ -> "Non AC"
+    _ -> case var of
+      "SEDAN"  -> "Sedan"
+      "HATCHBACK"  -> "Hatchback"
+      "TAXI_PLUS"  -> "AC Taxi"
+      "SUV" -> "Suv"
+      "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      _ -> var
+  Nothing -> ""
