@@ -105,7 +105,8 @@
                 <data android:scheme="https"/>
                 <data android:scheme="http"/>
                 <data android:host="nammayatri.in"/>
-                <data android:pathPrefix="/p" />
+                <data android:path="/p" />
+                <data android:path="/u" />
             </intent-filter>
 
         </activity>

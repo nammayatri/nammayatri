@@ -456,7 +456,7 @@ const kannadaStrings = {
   MIN_AGO : "ನಿಮಿಷದ ಹಿಂದೆ",
   SEC_AGO : "ಎರಡನೇ ಹಿಂದೆ",
   APP_RELATED : "ಅಪ್ಲಿಕೇಶನ್ ಸಂಬಂಧಿತ",
-  FARE_RELATED : "ಶುಲ್ಕ ಸಂಬಂಧಿತ",
+  FARE : "ಶುಲ್ಕ ಸಂಬಂಧಿತ",
   RIDE_RELATED : "ಸವಾರಿ ಸಂಬಂಧಿತ",
   LOST_AND_FOUND : "ಕಳೆದು ಮತ್ತೆ ದೊರಕಿದ",
   REPORT_LOST_ITEM : "ಕಳೆದುಹೋದ ಐಟಂ ಅನ್ನು ವರದಿ ಮಾಡಿ",

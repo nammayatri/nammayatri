@@ -458,7 +458,7 @@ const englishStrings = {
   SEC_AGO : " sec ago",
   LOADING : "Loading",
   APP_RELATED : "App Related",
-  FARE_RELATED : "Fare Related",
+  FARE : "Fare Related",
   RIDE_RELATED : "Ride Related",
   LOST_AND_FOUND : "Lost and Found",
   REPORT_LOST_ITEM : "Report Lost Item",

@@ -116,7 +116,7 @@ baseAppFlow baseFlow event = do
       then case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
         Just e -> 
           case e.data of
-            "plans" -> do
+            "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
               lift $ lift $ doAff do liftEffect hideSplash
               setValueToLocalNativeStore REGISTERATION_TOKEN regToken
               let (GlobalState defGlobalState) = defaultGlobalState
@@ -834,7 +834,7 @@ driverProfileFlow = do
                          "TA_IN" -> "ta"
                          _       -> "en"
                      )
-      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let temp = (map (\(Category x) ->
@@ -1408,7 +1408,7 @@ issueReportChatScreenFlow = do
                          "TA_IN" -> "ta"
                          _       -> "en"
                      )
-      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let temp = (map (\(Category x) ->
@@ -1534,7 +1534,7 @@ tripDetailsScreenFlow = do
                          "TA_IN" -> "ta"
                          _       -> "en"
                      )
-      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let temp = (map (\(Category x) ->
@@ -1757,7 +1757,7 @@ homeScreenFlow = do
                          "TA_IN" -> "ta"
                          _       -> "en"
                      )
-      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE_RELATED"]
+      let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let temp = (map (\(Category x) ->
