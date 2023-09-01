@@ -3,6 +3,3 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN route_deviation
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_deviated_from_route boolean;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN number_of_snap_to_road_calls Int;
-
--- DROP
-ALTER TABLE atlas_driver_offer_bpp.ride DROP COLUMN number_of_deviation;
