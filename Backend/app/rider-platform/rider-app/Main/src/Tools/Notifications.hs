@@ -59,6 +59,17 @@ notifyPerson ::
   m ()
 notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
 
+notifyPersonWithMutableContent ::
+  ( ServiceFlow m r,
+    Default a,
+    ToJSON a,
+    ToJSON b
+  ) =>
+  Id Merchant ->
+  Notification.NotificationReq a b ->
+  m ()
+notifyPersonWithMutableContent = runWithServiceConfig Notification.notifyPersonWithMutableContent (.notifyPerson)
+
 runWithServiceConfig ::
   ServiceFlow m r =>
   (Notification.NotificationServiceConfig -> req -> m resp) ->
@@ -507,4 +518,4 @@ notifyOnNewMessage booking message = do
         unwords
           [ message
           ]
-  notifyPerson person.merchantId notificationData
+  notifyPersonWithMutableContent person.merchantId notificationData

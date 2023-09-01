@@ -43,7 +43,7 @@ notifyOnNewSearchRequestAvailable ::
   m ()
 notifyOnNewSearchRequestAvailable merchantId personId mbDeviceToken entityData = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.NEW_RIDE_AVAILABLE
     notificationData =
@@ -202,7 +202,7 @@ sendNotificationToDriver ::
   m ()
 sendNotificationToDriver merchantId displayOption priority notificationType notificationTitle message driverId mbToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority notificationData $ FCMNotificationRecipient driverId.getId mbToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     notificationData =
       FCM.FCMData
@@ -233,7 +233,7 @@ sendMessageToDriver ::
   m ()
 sendMessageToDriver merchantId displayOption priority notificationType notificationTitle message driverId messageId mbToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority notificationData $ FCMNotificationRecipient driverId.getId mbToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority False notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     notificationData =
       FCM.FCMData
@@ -259,7 +259,7 @@ notifyDriverNewAllocation ::
   m ()
 notifyDriverNewAllocation merchantId bookingId personId mbToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
@@ -346,7 +346,7 @@ notifyDriverClearedFare ::
   m ()
 notifyDriverClearedFare merchantId driverId sReqId fare mbToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient driverId.getId mbToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "Clearing Fare!"
     body =
@@ -376,7 +376,7 @@ notifyOnCancelSearchRequest ::
   m ()
 notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchTryId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.CANCELLED_SEARCH_REQUEST
     notificationData =
@@ -406,7 +406,7 @@ notifyPaymentFailed ::
   m ()
 notifyPaymentFailed merchantId personId mbDeviceToken orderId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_FAILED
     notificationData =
@@ -436,7 +436,7 @@ notifyPaymentPending ::
   m ()
 notifyPaymentPending merchantId personId mbDeviceToken orderId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_PENDING
     notificationData =
@@ -466,7 +466,7 @@ notifyPaymentSuccess ::
   m ()
 notifyPaymentSuccess merchantId personId mbDeviceToken orderId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_SUCCESS
     notificationData =
@@ -495,7 +495,7 @@ notifyPaymentModeManualOnCancel ::
   m ()
 notifyPaymentModeManualOnCancel merchantId personId mbDeviceToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_MODE_MANUAL
     notificationData =
@@ -524,7 +524,7 @@ notifyPaymentModeManualOnPause ::
   m ()
 notifyPaymentModeManualOnPause merchantId personId mbDeviceToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_MODE_MANUAL
     notificationData =
@@ -553,7 +553,7 @@ notifyPaymentModeManualOnSuspend ::
   m ()
 notifyPaymentModeManualOnSuspend merchantId personId mbDeviceToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.PAYMENT_MODE_MANUAL
     notificationData =
@@ -582,7 +582,7 @@ notifyLowAccountBalance ::
   m ()
 notifyLowAccountBalance merchantId personId mbDeviceToken = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.LOW_ACCOUNT_BALANCE
     notificationData =
