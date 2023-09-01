@@ -303,6 +303,7 @@ mapOptionsView push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
+  , visibility if state.data.isOffline then GONE else VISIBLE
   ][  if state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted then dummyView push else sosView push state
     , linearLayout
       [ height WRAP_CONTENT
@@ -326,7 +327,7 @@ supportButton push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+  , visibility if (not state.data.isOffline) && (not state.props.showChatNotification) then VISIBLE else GONE
   , background Color.white900
   , accessibility if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
   , stroke $ "1,"<> Color.grey900
@@ -733,12 +734,25 @@ contactView push state =
     , gravity CENTER_VERTICAL
     , padding $ Padding 16 20 16 16
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
-    ][  linearLayout
+    ][  linearLayout 
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility if state.data.isOffline then VISIBLE else GONE
+        , gravity CENTER_HORIZONTAL
+        ][ textView $ 
+            [ text $ getString RECONNECT_TO_UPDATE 
+            , color Color.black800
+            , singleLine true
+            , gravity CENTER_HORIZONTAL
+            ] <> FontStyle.subHeading1 TypoGraphy
+        ]
+        ,linearLayout
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
         , accessibilityHint $ "Ride Status : " <>  if state.data.distance > 1000 then (state.data.driverName <> " is " <> secondsToHms state.data.eta <> " Away ") else (state.data.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
         , accessibility ENABLE
         , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
+        , visibility if state.data.isOffline then GONE else VISIBLE
         ][  textView $
             [ text $ state.data.driverName <> " "
             , color Color.black800
@@ -821,6 +835,41 @@ driverDetailsView push state =
               , accessibility ENABLE
               , padding $ Padding 2 3 2 1
               , imageWithFallback $ "ny_ic_driver," <> (getAssetStoreLink FunctionCall) <> "ny_ic_driver.png"
+              ]  
+            ,linearLayout
+              [ height $ V 45
+              , width $ V 45
+              , gravity CENTER
+              , cornerRadius 25.0
+              , margin $ Margin 8 3 2 1
+              , background state.data.config.driverInfoConfig.callBackground
+              , stroke state.data.config.driverInfoConfig.callButtonStroke
+              , onClick push (const CallDriver)
+              ][ imageView
+                  [ imageWithFallback $ "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                  , height $ V state.data.config.driverInfoConfig.callHeight
+                  , width $ V state.data.config.driverInfoConfig.callWidth
+                  ]
+              ]
+            ,linearLayout
+              [ height $ V 45
+              , width $ V 45
+              , gravity CENTER
+              , cornerRadius 25.0
+              , margin $ Margin 2 3 2 1
+              , background state.data.config.driverInfoConfig.callBackground
+              , stroke state.data.config.driverInfoConfig.callButtonStroke
+              , visibility if state.data.isOffline then GONE else VISIBLE
+              , onClick (\action -> do
+                  if not state.props.isChatOpened then showAndHideLoader 5000.0 (getString LOADING) (getString PLEASE_WAIT) defaultGlobalState
+                  else pure unit
+                  push action
+              ) (const MessageDriver)
+              ][ imageView
+                  [ imageWithFallback $ if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png"
+                  , height $ V state.data.config.driverInfoConfig.callHeight
+                  , width $ V state.data.config.driverInfoConfig.callWidth
+                  ]
               ]
           ]
         , textView $

@@ -667,6 +667,7 @@ type HomeScreenStateProps =
   , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
+  , isOffline :: Boolean
   }
 
 type RouteEndPoints = {
@@ -923,6 +924,7 @@ type DriverInfoCard =
   , initDistance :: Maybe Int
   , config :: AppConfig
   , vehicleVariant :: String
+  , isOffline :: Boolean
   }
 
 type RatingCard =
@@ -1205,3 +1207,21 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
+
+type DriverInfoSchema = {
+   otp :: String
+ , userId :: String
+ , driverName :: String
+ , vehicleDetails :: String
+ , registrationNumber :: String
+ , rating :: Number
+ , source :: String
+ , destination :: String
+ , price :: Int
+ , distance :: Int
+ , estimatedDistance :: String
+ , driverNumber :: Maybe String
+ , merchantExoPhone :: String
+ , vehicleVariant :: String
+ , initDistance :: Maybe String
+}

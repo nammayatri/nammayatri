@@ -16,7 +16,7 @@
 module Resources.Constants where
 
 import Accessor (_description, _amount)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), SqlSchema(..))
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
@@ -296,3 +296,13 @@ getVehicleCapacity variant = case getMerchant FunctionCall of
           Just ST.SUV -> "6 " <> (getString SEATS)
           _ -> "4 " <> (getString SEATS)
   _ ->    ""
+
+
+dbName :: String
+dbName = "atlas-app"
+
+driverTableName :: String
+driverTableName = "DriverInfo"
+
+driverSchema :: Array (SqlSchema)
+driverSchema = [{"key" : "id", "type" : "integer primary key autoincrement"}, {"key": "userId", "type": "strings" }, {"key": "otp", "type": "string"}, {"key": "driverName", "type": "string"}, {"key": "vehicleDetails", "type": "string"}, {"key": "registrationNumber", "type": "string"}, {"key": "rating", "type": "string"}, {"key": "source", "type": "string"}, {"key": "destination", "type": "string"}, {"key": "price", "type": "string"}, {"key": "distance", "type": "string"}, {"key": "estimatedDistance", "type": "string"}, {"key": "driverNumber", "type": "string"}, {"key": "merchantExoPhone", "type": "string"}, {"key": "vehicleVariant", "type": "string"}]

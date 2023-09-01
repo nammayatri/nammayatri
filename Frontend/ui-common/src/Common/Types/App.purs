@@ -278,3 +278,8 @@ data OTPChannel = WHATSAPP | SMS
 derive instance genericOTPChannel :: Generic OTPChannel _
 instance showOTPChannel :: Show OTPChannel where show = genericShow
 instance encodeOTPChannel  :: Encode OTPChannel where encode = defaultEncode
+
+type SqlSchema = {
+  key :: String,
+  "type" :: String
+}

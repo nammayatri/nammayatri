@@ -93,4 +93,5 @@ type DriverInfoCardData =
   , lastMessage :: ChatView.ChatComponent
   , config :: AppConfig
   , vehicleVariant :: String
+  , isOffline :: Boolean
   }

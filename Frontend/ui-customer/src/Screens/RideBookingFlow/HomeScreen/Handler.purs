@@ -34,6 +34,9 @@ homeScreen = do
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   void $ lift $ lift $ toggleLoader false
   case act of
+    InternetCallBack updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure TURN_ON_INTERNET_)
     UpdateLocationName updatedState lat lng-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_LOCATION_NAME updatedState lat lng)

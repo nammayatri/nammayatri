@@ -69,6 +69,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -86,6 +87,9 @@ import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
+
+import in.juspay.mobility.customer.DatabaseHelper;
+import android.database.sqlite.SQLiteDatabase;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
@@ -133,6 +137,119 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             NotificationUtils.registerCallback(callBack);
         }
     }
+
+    //region SQLite
+    @JavascriptInterface
+    public void createDb(String dbName){
+        DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+    }
+
+    @JavascriptInterface
+    public void deleteDb(String dbName){
+        Context context = bridgeComponents.getContext();
+        DatabaseHelper dbHelper = new DatabaseHelper(context, dbName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        dbHelper.deleteDb(context);
+    }
+
+    @JavascriptInterface
+    public void createTable(String dbName, String tableName, String _columns){
+        try {
+            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+            JSONArray columns = new JSONObject(_columns).getJSONArray("columns");
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            dbHelper.createTable(db, tableName, columns);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error creating table : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public void deleteTable(String dbName, String tableName){
+        try {
+            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            db.delete(tableName, null, null);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Erro deleting table : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public int addToSqlite(String dbName, String tableName, String record){
+      try{
+          DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+          SQLiteDatabase db = dbHelper.getWritableDatabase();
+          JSONObject recordObj = new JSONObject(record);
+          return dbHelper.createRecord(db, tableName, recordObj);
+        } catch (Exception e){
+          Log.i("SQLiteLog", "Error writing to " + tableName + ":" + e);
+          return -1;
+        }
+    }
+
+    @JavascriptInterface
+    public String readFromSqlite(String dbName, String tableName, String selection, String _selectionArgs){
+        try{
+        DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
+        String[] selectionArgsArr = new String[selectionArgs.length()];
+        if (selection.equals("null")) {
+          selection = null; 
+          selectionArgsArr = null;
+        } else {
+          for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
+        }
+        return dbHelper.readRecord(db, tableName, selection, selectionArgsArr).toString();
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error reading from " + tableName + ": " + e);
+            return (new JSONObject()).toString();
+        }
+    }
+
+    @JavascriptInterface
+    public int updateInSqlite(String dbName, String tableName, String selection, String _selectionArgs, String _record){
+      try{
+          DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+          SQLiteDatabase db = dbHelper.getWritableDatabase();
+          JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
+          JSONObject record = new JSONObject(_record);
+          String[] selectionArgsArr = new String[selectionArgs.length()];
+          if (selection.equals("null")) {
+            selection = null; 
+            selectionArgsArr = null;
+          } else {
+            for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
+          }
+          return dbHelper.updateRecord(db, tableName, record, selection, selectionArgsArr);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error updating from " + tableName + ": " + e);
+            return -1;
+        }
+    }
+
+    @JavascriptInterface
+    public Boolean deleteFromSqlite(String dbName, String tableName, String selection, String _selectionArgs){
+      try{
+        DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
+        String[] selectionArgsArr = new String[selectionArgs.length()];
+        if (selection.equals("null")) {
+          selection = null; 
+          selectionArgsArr = null;
+        } else {
+          for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
+        }
+        return dbHelper.deleteRecord(db, tableName, selection, selectionArgsArr);
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error deleting from " + tableName + ": " + e);
+            return false;
+        }
+    }
+    // endregion
 
 
     //region Store and Trigger CallBack

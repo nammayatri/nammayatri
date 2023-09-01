@@ -13,3 +13,50 @@ export const getFromWindow = function (key) {
     return window[key];
   }
 }
+
+export const createTable = function(dbName, tableName, columns){
+  if(window.JBridge.createTable)
+    return window.JBridge.createTable(dbName, tableName, JSON.stringify({"columns": columns}));
+  else return
+}
+
+export const deleteTable = function(dbName, tableName){
+  if(window.JBridge.deleteTable)
+    window.JBridge.deleteTable(dbName, tableName);
+  else return
+}
+
+export const deleteDb = function(dbName){
+  if (window.JBridge.deleteDB)
+    return window.JBridge.deleteDB(dbName);
+  else return
+}
+
+export const addToSqlite = function(dbName, tableName, record){
+  if (window.JBridge.addToSqlite)
+    return window.JBridge.addToSqlite(dbName, tableName, JSON.stringify(record));
+  else return
+}
+
+export const readFromSqlite = function(dbName, tableName, selection, selectionArgs, just, nothing){
+  if (window.JBridge.readFromSqlite){
+      var jsonstr = window.JBridge.readFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}));
+      var obj = JSON.parse(jsonstr);
+      return just(obj);
+  }
+  else {
+      return nothing
+  }
+}
+
+export const deleteFromSqlite = function(dbName, tableName, selection, selectionArgs){
+  if (window.JBridge.deleteFromSqlite) 
+    return window.JBridge.deleteFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}));
+  else return false
+}
+
+export const updateInSqlite = function(dbName, tableName, selection, selectionArgs, record){
+  if (window.JBridge.updateInSqlite)
+    return window.JBridge.updateInSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}), JSON.stringify(record));
+  else return -1
+}

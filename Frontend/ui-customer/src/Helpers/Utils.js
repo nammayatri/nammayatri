@@ -505,3 +505,33 @@ export const getMobileNumber = function (signatureAuthData, maskedNumber) {
     console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
 }
+
+export const createTable = function(dbName, tableName, columns){
+  return window.JBridge.createTable(dbName, tableName, JSON.stringify({"columns": columns}));
+}
+
+export const deleteTable = function(dbName, tableName){
+  window.JBridge.deleteTable(dbName, tableName);
+}
+
+export const deleteDb = function(dbName){
+  return window.JBridge.deleteDB(dbName);
+}
+
+export const addToSqlite = function(dbName, tableName, record){
+  return window.JBridge.addToSqlite(dbName, tableName, JSON.stringify(record));
+}
+
+export const readFromSqlite = function(dbName, tableName, selection, selectionArgs){
+  var jsonstr = window.JBridge.readFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}));
+  var obj = JSON.parse(jsonstr);
+  return obj;
+}
+
+export const deleteFromSqlite = function(dbName, tableName, selection, selectionArgs){
+  return window.JBridge.deleteFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}));
+}
+
+export const updateInSqlite = function(dbName, tableName, selection, selectionArgs, record){
+  return window.JBridge.updateInSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}), JSON.stringify(record));
+}

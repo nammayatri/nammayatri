@@ -497,5 +497,12 @@ export function getStringValue(key) {
     "LETS_GET_YOU_TRIP_READY": "Préparons-nous pour le voyage!",
     "GOT_AN_OTP": "Vous avez un OTP?",
     "JUST_ONE_LAST_THING": "Juste une dernière chose",
-    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément"
+    "TOLL_CHARGES_WILL_BE_EXTRA" : "Les frais de péage/stationnement seront en supplément",
+    "LOOKS_OFFLINE": "On dirait que vous êtes hors ligne !",
+    "OFFLINE_DRIVER_ON_WAY": "Votre chauffeur est peut-être encore en route. Reconnectez-vous au réseau pour annuler le trajet.",
+    "BACK_TO_RIDE_DETAILS": "Retour aux détails du trajet",
+    "RECONNECT_TO_UPDATE": "Reconnectez-vous au réseau pour voir les mises à jour en direct",
+    "DRIVER_ON_WAY": "Ne t'inquiète pas! Votre chauffeur est peut-être encore en route.",
+    "RECONNECT_TO_UPDATE_2": "Reconnectez-vous pour voir les détails en direct.",
+    "RIDE_ACTIVE": "Ne t'inquiète pas! Votre trajet est toujours actif"
   }
