@@ -1,2 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN minimum_driver_rates_count int;
-UPDATE atlas_driver_offer_bpp.merchant SET minimum_driver_rates_count = 5

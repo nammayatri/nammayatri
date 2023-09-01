@@ -47,6 +47,7 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("Quote" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (QuoteObject obj), val) <- cmds]
     |::| runCreate dbConf ("RegistrationToken" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
     |::| runCreate dbConf ("RentalSlab" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RentalSlabObject obj), val) <- cmds]
+    |::| runCreate dbConf ("Rating" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RatingObject obj), val) <- cmds]
     |::| runCreate dbConf ("Ride" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RideObject obj), val) <- cmds]
     |::| runCreate dbConf ("SavedReqLocation" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SavedReqLocationObject obj), val) <- cmds]
     |::| runCreate dbConf ("SearchRequest" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchRequestObject obj), val) <- cmds]
