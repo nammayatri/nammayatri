@@ -143,7 +143,7 @@ updatePerson personId req = do
       req.gender
       req.clientVersion
       req.bundleVersion
-  when (req.hasDisability == Just True && req.disability == Nothing) $ throwError $ InvalidRequest "Field disability can't be null if hasDisability is True"
+  when (req.hasDisability == Just True && isNothing (req.disability)) $ throwError $ InvalidRequest "Field disability can't be null if hasDisability is True"
   case req.hasDisability of
     Nothing -> logDebug "No disability"
     Just True -> do
