@@ -66,7 +66,7 @@ createOrder :: (Id DP.Person, Id DM.Merchant) -> Id INV.Invoice -> Flow Payment.
 createOrder (driverId, merchantId) invoiceId = do
   invoices <- B.runInReplica $ QIN.findAllByInvoiceId invoiceId
   driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) (catMaybes driverFees) Nothing (getIdAndShortId <$> listToMaybe invoices)
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) (catMaybes driverFees) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices)
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)

@@ -59,6 +59,7 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
             invoiceShortId = invoiceShortId,
             driverFeeId = Id driverFeeId,
             invoiceStatus = invoiceStatus,
+            paymentMode = paymentMode,
             maxMandateAmount = maxMandateAmount,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -70,6 +71,7 @@ instance ToTType' BeamI.Invoice Domain.Invoice where
       { BeamI.id = id.getId,
         BeamI.invoiceShortId = invoiceShortId,
         BeamI.driverFeeId = getId driverFeeId,
+        BeamI.paymentMode = paymentMode,
         BeamI.invoiceStatus = invoiceStatus,
         BeamI.maxMandateAmount = maxMandateAmount,
         BeamI.createdAt = createdAt,

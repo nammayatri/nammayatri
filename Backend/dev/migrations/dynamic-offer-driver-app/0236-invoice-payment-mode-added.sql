@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.invoice ADD COLUMN payment_mode Text DEFAULT 'MANUAL_INVOICE';
