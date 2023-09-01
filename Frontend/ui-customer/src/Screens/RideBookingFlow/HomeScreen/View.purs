@@ -274,7 +274,7 @@ view push state =
                 , clickable true
                 ]
                 [  linearLayout
-                  [ height WRAP_CONTENT
+                  [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
                   , width MATCH_PARENT
                   , background Color.transparent
                   , accessibilityImportance ENABLE
