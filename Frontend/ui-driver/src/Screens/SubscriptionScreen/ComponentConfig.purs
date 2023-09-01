@@ -300,7 +300,8 @@ optionsMenuConfig state =
     {image : "ny_ic_calendar_black,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_black.png", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : false},
     {image : "ny_ic_phone_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_unfilled.png", textdata : getString CALL_SUPPORT, action : "call_support", isVisible : true},
     -- {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : true}, -- TODO:: Removed for some time
-    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : true}],
+    {image : "ny_ic_help_circle_transparent,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_help_circle_transparent.png", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : true},
+    {image : "ny_ic_loc_grey,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_loc_grey.png", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : true}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,
   gravity = RIGHT,
@@ -320,6 +321,7 @@ getHeaderConfig subView =
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
     ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
+    ST.FindHelpCentre -> {title : (getString FIND_HELP_CENTRE), actionText : "", backbutton : true}
     _           -> {title : (getString NAMMA_YATRI_PLANS), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}

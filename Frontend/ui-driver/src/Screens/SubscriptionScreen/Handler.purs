@@ -66,6 +66,15 @@ subscriptionScreen = do
     GotoManagePlan updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_MANAGE_PLAN updatedState)
+    GotoFindHelpCentre updatedState -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_FIND_HELP_CENTRE updatedState)
+    GoToOpenGoogleMaps updatedState -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_OPEN_GOOGLE_MAPS updatedState)
+    RefreshHelpCentre updatedState -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REFRESH_HELP_CENTRE updatedState)
     Refresh -> App.BackT $ App.NoBack <$> (pure $ REFRESH_SUSCRIPTION)
     RetryPayment updatedState planId -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)

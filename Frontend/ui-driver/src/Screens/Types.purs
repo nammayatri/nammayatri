@@ -1547,7 +1547,14 @@ type SubscriptionScreenProps = {
   confirmCancel :: Boolean,
   isSelectedLangTamil :: Boolean,
   optionsMenuExpanded :: Boolean,
-  redirectToNav :: String
+  redirectToNav :: String,
+  currentLat :: Number,
+  currentLon :: Number,
+  destLat :: Number,
+  destLon :: Number,
+  kioskLocation :: Array KioskLocation,
+  prevSubView :: SubscriptionSubview,
+  noKioskLocation :: Boolean
 }
 
 type JoinPlanData = {
@@ -1590,6 +1597,15 @@ type DueItem = {
   amount :: String
 }
 
+type KioskLocation = {
+  longitude :: Number,
+  address :: String,
+  contact :: Maybe String,
+  latitude :: Number,
+  landmark :: String,
+  distance :: Number
+}
+
 type PlanCardConfig = {
     id :: String
   , title :: String
@@ -1626,7 +1642,7 @@ derive instance genericAutoPayStatus:: Generic AutoPayStatus _
 instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
 instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
 
-data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | NoSubView
+data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | NoSubView 
 
 derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
 instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow

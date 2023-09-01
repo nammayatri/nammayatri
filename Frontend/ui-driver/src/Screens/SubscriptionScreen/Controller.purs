@@ -1,7 +1,6 @@
 module Screens.SubscriptionScreen.Controller where
 
 import Debug
-
 import Common.Types.App (APIPaymentStatus, LazyCheck(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.OptionsMenu as OptionsMenu
@@ -16,17 +15,26 @@ import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard)
+import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getPspIcon, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
-import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), PlanCardConfig)
-import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
+import Screens.Types (AutoPayStatus(..), SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), PlanCardConfig, KioskLocation(..))
+import Services.API (GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), KioskLocationRes(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
-import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore)
+import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
+import Foreign.Generic (decodeJSON)
+import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
+import Helpers.Utils (getDistanceBwCordinates)
+import Data.Number (fromString) as Number
+import Services.Accessor (_distance)
+import Data.Lens ((^.))
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -49,12 +57,14 @@ data Action = BackPressed
             | ToggleDueDetailsView
             | NoAction
             | ViewPaymentHistory
+            | ViewHelpCentre
             | PopUpModalAC PopUpModal.Action
             | HeaderRightClick
             | CancelAutoPayAC
             | ViewAutopayDetails
             | ResumeAutoPay PrimaryButton.Action
             | LoadPlans UiPlansResp
+            | LoadHelpCentre Number Number (Array KioskLocationRes)
             | LoadMyPlans GetCurrentPlanResp
             | ShowError ErrorResponse
             | PaymentStatusAction APIPaymentStatus
@@ -66,6 +76,8 @@ data Action = BackPressed
             | RefreshPage
             | OptionsMenuAction OptionsMenu.Action
             | CallSupport
+            | CallHelpCenter String
+            | OpenGoogleMap Number Number
 
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
@@ -79,7 +91,10 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | ResumeAutoPayPlan SubscriptionScreenState
                     | CheckOrderStatus SubscriptionScreenState String
                     | GotoManagePlan SubscriptionScreenState
+                    | GotoFindHelpCentre SubscriptionScreenState
+                    | GoToOpenGoogleMaps SubscriptionScreenState
                     | Refresh
+                    | RefreshHelpCentre SubscriptionScreenState
                     | RetryPayment SubscriptionScreenState String
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
@@ -90,6 +105,7 @@ eval BackPressed state =
   else if state.props.confirmCancel then continue state{props { confirmCancel = false}}
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
+  else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
@@ -112,6 +128,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
       "view_faq" -> do
           _ <- openUrlInApp "https://nammayatri.in/plans/"
           pure NoAction
+      "find_help_centre" -> pure ViewHelpCentre
       _ -> pure NoAction
   ]
 
@@ -192,6 +209,12 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuExpanded = false}}
 
+eval ViewHelpCentre state = do
+  let prevSubViewState = state.props.subView
+  updateAndExit state { props{showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false, prevSubView = prevSubViewState}} $ GotoFindHelpCentre state {props {showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false, prevSubView = prevSubViewState}}
+
+eval (OpenGoogleMap dstLt dstLn) state = updateAndExit state { props{showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false}} $ GoToOpenGoogleMaps state {props {showShimmer = true, subView = FindHelpCentre, optionsMenuExpanded = false, destLat = dstLt, destLon = dstLn}}
+
 eval RefreshPage state = exit $ Refresh
 
 eval (LoadPlans plans) state = do
@@ -202,6 +225,10 @@ eval (LoadPlans plans) state = do
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
             joinPlanProps { selectedPlanItem = if (isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans else state.props.joinPlanProps.selectedPlanItem}} }
+
+eval (LoadHelpCentre lat lon kioskLocationList) state = do
+  let transformedKioskList = transformKioskLocations kioskLocationList lat lon
+  continue state {props {showShimmer = false, subView = FindHelpCentre, kioskLocation = transformedKioskList, noKioskLocation = transformedKioskList == []}}
 
 eval (LoadMyPlans plans) state = do
   let (GetCurrentPlanResp currentPlanResp) = plans
@@ -247,13 +274,20 @@ eval (ShowError errorPayload )state = continue state{props{showError = true, sho
 
 eval (LoadAlternatePlans plansArray) state = continue state { data { managePlanData { alternatePlans = alternatePlansTransformer plansArray state}}, props {subView = ManagePlan, showShimmer = false}}
 
-eval (TryAgainButtonAC PrimaryButton.OnClick) state = updateAndExit state { props{showShimmer = true}} $ Refresh
+eval (TryAgainButtonAC PrimaryButton.OnClick) state = 
+  let updateState = state { props{showShimmer = true}}
+    in if state.props.subView == FindHelpCentre then updateAndExit updateState $ RefreshHelpCentre updateState
+      else updateAndExit updateState $ Refresh
 
 eval (RetryPaymentAC PrimaryButton.OnClick) state = if state.data.myPlanData.planEntity.id == "" then continue state else
   updateAndExit state $ RetryPayment state state.data.myPlanData.planEntity.id
 
 eval CallSupport state = do
   _ <- pure $ showDialer "08069490091" false
+  continue state
+
+eval (CallHelpCenter phone) state = do
+  _ <- pure $ showDialer phone false
   continue state
 
 eval _ state = continue state
@@ -284,3 +318,29 @@ getAutopayStatus autoPayStatus =
       "CANCELLED_PSP" ->  CANCELLED_PSP -- call subscribe
       "PENDING" -> PENDING
       _ -> NO_AUTOPAY
+
+parseKioskLocation :: String -> Array KioskLocationRes
+parseKioskLocation input = do
+  case runExcept (decodeJSON input :: _ (Array KioskLocationRes)) of
+    Right res -> res
+    Left err -> []
+
+transformKioskLocations :: Array KioskLocationRes -> Number -> Number -> Array KioskLocation
+transformKioskLocations arr lat lon = do
+  DA.sortBy compareByDistance $ map (\ec -> getItem ec lat lon) arr
+
+compareByDistance :: KioskLocation -> KioskLocation -> Ordering
+compareByDistance a b = compare a.distance b.distance
+
+getDistanceBetweenPoints :: Number -> Number -> Number -> Number -> Number
+getDistanceBetweenPoints lat1 lon1 lat2 lon2 = do
+  let distance = getDistanceBwCordinates lat1 lon1 lat2 lon2
+  distance
+
+getItem :: KioskLocationRes -> Number -> Number -> KioskLocation 
+getItem ec lat lon = {  longitude : ec.longitude,
+          address : ec.address,
+          contact : ec.contact,
+          latitude : ec.latitude,
+          landmark : ec.landmark,
+          distance : getDistanceBetweenPoints ec.latitude ec.longitude lat lon }
