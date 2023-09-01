@@ -115,7 +115,7 @@ baseAppFlow baseFlow event = do
       then case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
         Just e -> 
           case e.data of
-            "plans" -> do
+            "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" -> do
               lift $ lift $ doAff do liftEffect hideSplash
               setValueToLocalNativeStore REGISTERATION_TOKEN regToken
               let (GlobalState defGlobalState) = defaultGlobalState
