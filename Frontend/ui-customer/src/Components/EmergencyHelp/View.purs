@@ -21,11 +21,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind)
+import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind, (||))
 import Data.Array (take, (!!), drop, head, mapWithIndex, null)
 import Data.String as DS
 import Data.Array as DA
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback, stroke, afterRender, singleLine, ellipsize)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback, stroke, afterRender, singleLine, ellipsize, accessibilityImportance, accessibilityHint)
 import Styles.Colors as Color
 import Data.String (split, Pattern(..), indexOf, length)
 import Components.PopUpModal.Controller as PopUpModalConfig
@@ -48,12 +48,14 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , accessibilityImportance DISABLE
   , afterRender (\_ -> push StoreContacts) (const NoAction)
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
+      , accessibilityImportance if state.showContactSupportPopUp || state.showCallPolicePopUp || state.showCallContactPopUp || state.showCallSuccessfulPopUp then DISABLE_DESCENDANT else DISABLE
       , padding if os == "IOS" then (PaddingVertical safeMarginTop safeMarginBottom) else (PaddingBottom 10)
       ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
          , scrollView
@@ -108,10 +110,13 @@ supportButtonViewContent state push item index =  linearLayout
          ,  margin $ Margin 16 12 16 0
          , clickable true
          , onClick push $ const item.action
+         , accessibilityHint $ item.title <> " : " <> item.secondaryTitle
+         , accessibilityImportance ENABLE
         ][ linearLayout
            [ height WRAP_CONTENT
            , width WRAP_CONTENT
            , orientation VERTICAL
+           , accessibilityImportance DISABLE_DESCENDANT
            ][ textView (
               [ text item.title
               , color Color.black800
@@ -349,6 +354,7 @@ showEmergencyContact state push =
     ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
+        , accessibilityImportance DISABLE_DESCENDANT
         ][  textView (
             [ text $ getString CALL_EMERGENCY_CONTACTS
             , color Color.black800
@@ -404,6 +410,7 @@ allContactsView state push =
             , width $ V 24
             , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
             , cornerRadius 12.0
+            , accessibilityImportance DISABLE_DESCENDANT
             , gravity CENTER
             ][  textView
                 [ text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
@@ -420,6 +427,7 @@ allContactsView state push =
             , ellipsize true
             , singleLine true
             , padding $ PaddingLeft 8
+            , accessibilityImportance DISABLE_DESCENDANT
             , fontStyle $ FontStyle.semiBold LanguageStyle
             ]
           , linearLayout
@@ -428,7 +436,9 @@ allContactsView state push =
             , gravity RIGHT
             , onClick push $ const $ CallContactPopUp item
             ][  textView
-                [ text $ getString CALL
+                [ accessibilityHint $ "Call " <> item.name <> " : Button" 
+                , accessibilityImportance ENABLE  
+                , text $ getString CALL
                 , color Color.green900
                 , width WRAP_CONTENT
                 , textSize FontSize.a_14

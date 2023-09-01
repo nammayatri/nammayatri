@@ -36,13 +36,14 @@ import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
-import Prelude (Unit, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityImportance)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
+import Data.String (replaceAll, Pattern(..), Replacement(..))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -50,11 +51,13 @@ view push state =
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
+  , accessibilityImportance DISABLE
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
+       , accessibilityImportance DISABLE
       , clickable true
       ][ quoteListTopSheetView state push
         , selectRideAndConfirmView state push
@@ -79,6 +82,7 @@ paymentView state =
   , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) && (not state.findingRidesAgain) then GONE else VISIBLE
   , alignParentBottom "true,-1"
   , background Color.white900
+  , accessibilityImportance DISABLE
   , orientation VERTICAL
   ][  lottieAnimationView
           [ id (getNewIDWithTag "lottieLoaderAnimProgress")
@@ -88,10 +92,13 @@ paymentView state =
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , visibility if state.showProgress then VISIBLE else GONE
+          , accessibilityHint "Booking Status: Looking for rides"
+          , accessibilityImportance ENABLE
           ]
     , linearLayout
         [ background Color.grey900
         , height $ V 1
+        , accessibilityImportance DISABLE
         , width MATCH_PARENT
         , visibility if ( null state.quoteListModel ) then GONE else VISIBLE
         ][]
@@ -99,13 +106,16 @@ paymentView state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER
+      , accessibilityImportance DISABLE
       , padding $ PaddingVertical 15 (if safeMarginBottom == 0 then 17 else safeMarginBottom)
       , orientation HORIZONTAL
       ][  imageView
           [ imageWithFallback imageData.imageUrl
           , height imageData.height
           , width imageData.width
+          , accessibilityImportance DISABLE
           , margin $ MarginRight 8
+          , accessibilityImportance DISABLE 
           ]
         , textView $
           [ width WRAP_CONTENT
@@ -113,6 +123,8 @@ paymentView state =
           , text $ if (getPaymentMethod unit) == "cash" then (getString PAY_DRIVER_USING_CASH_OR_UPI) else (getString PAY_DRIVER_USING_WALLET)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
+          , accessibilityHint "Payment Method Cash or UPI"
+          , accessibilityImportance ENABLE
           ] <> FontStyle.body1 TypoGraphy
         ]
     ]
@@ -134,16 +146,19 @@ sourceDestinationImageView state =
     , width WRAP_CONTENT
     , margin $ MarginTop 7
     , gravity CENTER
+    , accessibilityImportance DISABLE
     , orientation VERTICAL
     ][ imageView
         [ height $ V 15
         , width $ V 15
+        , accessibilityImportance DISABLE
         , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
         ]
       , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 15
         , width $ V 15
+        , accessibilityImportance DISABLE
         , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
         ]
       ]
@@ -164,6 +179,7 @@ sourceDestinationView state push =
       imageView
         [ height $ V 15
         , width $ V 15
+        , accessibilityImportance DISABLE
         , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
         ] 
       , textView $
@@ -171,7 +187,9 @@ sourceDestinationView state push =
         , margin $ MarginLeft 12
         , weight 1.0
         , text state.source
+        , accessibilityImportance ENABLE
         , color state.appConfig.quoteListModel.textColor
+        , accessibilityHint $ "Pickup Location is " <> (replaceAll (Pattern ",") (Replacement " : ") state.source)
         , ellipsize true
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
@@ -185,6 +203,7 @@ sourceDestinationView state push =
         imageView
         [ height $ V 15
         , width $ V 15
+        , accessibilityImportance DISABLE
         , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
         ]
         , textView $
@@ -193,6 +212,8 @@ sourceDestinationView state push =
         , text state.destination
         , margin $ MarginLeft 12
         , color state.appConfig.quoteListModel.textColor
+        , accessibilityHint $ "Destination Location is " <>  (replaceAll (Pattern ",") (Replacement " : ") state.destination)
+        , accessibilityImportance ENABLE
         , ellipsize true
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
@@ -207,6 +228,7 @@ quotesView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , visibility VISIBLE
+    , accessibilityImportance DISABLE
     ][  quoteListView state push
       , noQuotesErrorModel state
       , findingRidesView state push
@@ -220,7 +242,8 @@ findingRidesView state push =
   , gravity CENTER_HORIZONTAL
   , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
   , clickable true
-  , margin $ MarginVertical state.appConfig.quoteListModel.topMargin $ if state.tipViewProps.onlyPrimaryText then 80 else if state.tipViewProps.isprimaryButtonVisible then 82 else  85
+  , accessibilityImportance DISABLE
+  , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 82 else  MarginBottom 85
   , orientation VERTICAL
   ][
     linearLayout
@@ -228,6 +251,7 @@ findingRidesView state push =
     , orientation VERTICAL
     , weight 1.0
     , gravity CENTER
+    , accessibilityImportance DISABLE
     ]
     [
       lottieAnimationView
@@ -236,6 +260,7 @@ findingRidesView state push =
                     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
                     pure unit)(const NoAction)
       , height $ V state.appConfig.quoteListModel.lottieHeight
+      , accessibilityImportance DISABLE
       , width $ V state.appConfig.quoteListModel.lottieWidth
       ]
     , textView 
@@ -243,7 +268,8 @@ findingRidesView state push =
       , color "#7C7C7C"
       , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
       , textSize FontSize.a_17
-      , margin $ MarginTop 22
+      , margin $ MarginTop if state.appConfig.showQuoteFindingText then 22 else 0
+      , accessibilityImportance DISABLE
       , lineHeight "25"
       , fontStyle $ FontStyle.regular LanguageStyle
       ]
@@ -252,6 +278,7 @@ findingRidesView state push =
       , color "#7C7C7C"
       , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
       , textSize FontSize.a_17
+      , accessibilityImportance DISABLE
       , lineHeight "25"
       , fontStyle $ FontStyle.regular LanguageStyle
       ]
@@ -264,7 +291,9 @@ addTipView state push =
   linearLayout
     [ width MATCH_PARENT
     , orientation VERTICAL
+    , height WRAP_CONTENT
     , visibility if state.tipViewProps.isVisible then VISIBLE else GONE
+    , accessibilityImportance DISABLE
     ]
     [
       linearLayout
@@ -276,6 +305,7 @@ addTipView state push =
         , margin $ MarginHorizontal 16 16
         , cornerRadius 12.0
         , padding $ Padding 20 16 20 16
+        , accessibilityImportance DISABLE
         ]
         [
           textView
@@ -285,6 +315,8 @@ addTipView state push =
           , color Color.black800
           , gravity CENTER
           , textSize $ FontSize.a_12
+          , accessibilityImportance ENABLE
+          , accessibilityHint state.tipViewProps.secondaryText
           , fontStyle $ FontStyle.regular LanguageStyle
           , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
           ]
@@ -294,6 +326,8 @@ addTipView state push =
           , text state.tipViewProps.primaryText
           , color Color.black800
           , gravity CENTER
+          , accessibilityImportance ENABLE
+          , accessibilityHint state.tipViewProps.primaryText
           , textSize $ FontSize.a_14
           , fontStyle $ FontStyle.bold LanguageStyle
           ]
@@ -318,7 +352,9 @@ addTipView state push =
                         , cornerRadius 8.0
                         , width WRAP_CONTENT
                         , height WRAP_CONTENT
+                        , accessibilityImportance ENABLE
                         , padding (Padding 20 10 20 10)
+                        , accessibilityHint $ "₹" <> show (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
                         , fontStyle $ FontStyle.bold LanguageStyle
                         , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index))
                         , background $ if state.tipViewProps.activeIndex == index then Color.blue600 else Color.white900
@@ -404,6 +440,7 @@ paymentMethodView push state =
           [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
           , height $ V 20
           , width $ V 20
+          , accessibilityImportance DISABLE
           ]
         , textView $
           [ text (getString PAYMENT_METHOD_STRING)
@@ -432,6 +469,7 @@ quoteListTopSheetView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , background state.appConfig.quoteListModel.backgroundColor
+      , accessibilityImportance DISABLE
       , padding $ PaddingTop safeMarginTop
       ][  linearLayout
           [ height WRAP_CONTENT
@@ -447,9 +485,12 @@ quoteListTopSheetView state push =
                   [ height $ V 40
                   , width $ V 40
                   , onClick push $ const GoBack
+                  , accessibilityHint "Cancel Search : Button"
+                  , accessibilityImportance ENABLE
                   ][  imageView
                       [ height $ V 24
                       , width $ V 24
+                      , accessibilityImportance DISABLE
                       , imageWithFallback state.appConfig.quoteListModel.closeIcon
                       , margin $ MarginTop 7
                       ]
@@ -467,6 +508,7 @@ noQuotesErrorModel state =
     , orientation VERTICAL
     , gravity CENTER
     , background Color.white900
+    , accessibilityImportance DISABLE
     , visibility if ( null state.quoteListModel) && isLocalStageOn QuoteList then VISIBLE else GONE
     , margin (MarginBottom 100)
     ][ linearLayout
@@ -477,7 +519,8 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 161
-        , imageWithFallback $ "ny_ic_no_quotes," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes.png"
+        , accessibilityImportance DISABLE
+        , imageWithFallback $ "ny_ic_no_quotes_color," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_color.png"
         ]
       , textView $
         [ height WRAP_CONTENT
@@ -509,6 +552,7 @@ quoteListView state push =
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
+        , accessibilityImportance DISABLE
         , orientation VERTICAL
         ](map (\item ->
             QuoteListItem.view (push <<< QuoteListItemActionController) item{appConfig = state.appConfig}) state.quoteListModel)
@@ -564,7 +608,9 @@ continueWithTipButtonConfig state = let
     config = PrimaryButton.config
     continueWithTipButtonConfig' = config
       { textConfig
-        { text = state.tipViewProps.primaryButtonText}
+        { text = state.tipViewProps.primaryButtonText
+        , accessibilityHint = state.tipViewProps.primaryButtonText <> " : Button" 
+        }
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 10
       }

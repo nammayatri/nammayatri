@@ -82,6 +82,7 @@ foreign import getCurrentTimeStamp :: Unit -> Number
 foreign import getDateFromObj :: Fn1 DateObj String
 foreign import getFormattedDate :: Fn1 DateObj String
 foreign import formatCurrencyWithCommas :: String -> String
+foreign import camelCaseToSentenceCase :: String -> String
 
 os :: String
 os = getOs unit
