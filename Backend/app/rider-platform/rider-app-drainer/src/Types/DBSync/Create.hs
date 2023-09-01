@@ -37,6 +37,7 @@ import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
+import qualified "rider-app" Storage.Beam.Rating as Rating
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
@@ -81,6 +82,7 @@ data DBCreateObject
   | QuoteObject Quote.Quote
   | RegistrationTokenObject RegistrationToken.RegistrationToken
   | RentalSlabObject RentalSlab.RentalSlab
+  | RatingObject Rating.Rating
   | RideObject Ride.Ride
   | SavedReqLocationObject SavedReqLocation.SavedReqLocation
   | SearchRequestObject SearchRequest.SearchRequest
@@ -127,6 +129,7 @@ modelName (PersonFlowStatusObject _) = "PersonFlowStatus"
 modelName (QuoteObject _) = "Quote"
 modelName (RegistrationTokenObject _) = "RegistrationToken"
 modelName (RentalSlabObject _) = "RentalSlab"
+modelName (RatingObject _) = "Rating"
 modelName (RideObject _) = "Ride"
 modelName (SavedReqLocationObject _) = "SavedReqLocation"
 modelName (SearchRequestObject _) = "SearchRequest"
