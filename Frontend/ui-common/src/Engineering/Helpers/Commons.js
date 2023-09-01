@@ -489,6 +489,6 @@ export function formatCurrencyWithCommas(amount) {
 }
 
 export function camelCaseToSentenceCase(string){
-  var result = string.replaceAll("([A-Z])", " $1");
+  var result = string.replaceAll(/([A-Z])/g, ' $1');
   return (result.substring(0, 1).toUpperCase() + result.substring(1).toLowerCase());
 }

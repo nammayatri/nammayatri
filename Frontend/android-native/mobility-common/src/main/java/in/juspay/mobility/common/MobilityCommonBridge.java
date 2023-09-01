@@ -190,6 +190,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String invoice;
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     private int lastFocusedEditView;
+    private int lastFocusedEditText;
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
@@ -1485,20 +1486,16 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (bridgeComponents.getActivity() != null) {
                     int currentId = Integer.parseInt(id);
                     InputMethodManager inputMethodManager = (InputMethodManager) bridgeComponents.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    EditText editText = bridgeComponents.getActivity().findViewById(currentId);
-                    EditText prevEditText = null;
+                    View editText = bridgeComponents.getActivity().findViewById(currentId);
+                    View prevEditText = null;
                     if (lastFocusedEditView != -1) {
                         prevEditText = bridgeComponents.getActivity().findViewById(lastFocusedEditView);
                     }
                     if (inputMethodManager != null && editText != null) {
                         if (prevEditText != null && lastFocusedEditView != currentId) {
                             prevEditText.clearFocus();
-                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
                         }
                         editText.requestFocus();
-                        editText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-                        editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
                         inputMethodManager.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
                     }
                     if (currentId != lastFocusedEditView) {
@@ -1510,6 +1507,40 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         });
     }
+
+    @JavascriptInterface
+    public void showKeyboard(final String id) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                if (bridgeComponents.getActivity() != null) {
+                    int currentId = Integer.parseInt(id);
+                    InputMethodManager inputMethodManager = (InputMethodManager) bridgeComponents.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    EditText editText = bridgeComponents.getActivity().findViewById(currentId);
+                    EditText prevEditText = null;
+                    if (lastFocusedEditText != -1) {
+                        prevEditText = bridgeComponents.getActivity().findViewById(lastFocusedEditText);
+                    }
+                    if (inputMethodManager != null && editText != null) {
+                        if (prevEditText != null && lastFocusedEditText != currentId) {
+                            prevEditText.clearFocus();
+                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+                            prevEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
+                        }
+                        editText.requestFocus();
+                        editText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+                        editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
+                        inputMethodManager.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                    if (currentId != lastFocusedEditText) {
+                        lastFocusedEditText = Integer.parseInt(id);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(UTILS, "Keyboard Exception" + e);
+            }
+        });
+    }
+
 
     @JavascriptInterface
     public void goBackPrevWebPage(String id) {
