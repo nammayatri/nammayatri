@@ -37,7 +37,7 @@ data PersonDisability = PersonDisability
   deriving (Show, Eq, Generic, ToSchema, ToJSON, FromJSON)
 
 data DisabilityItem = DisabilityItem
-  { disabilityId :: Id DisabilityItem,
+  { id :: Id DisabilityItem,
     tag :: Text,
     description :: Text
   }

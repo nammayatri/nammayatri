@@ -180,7 +180,7 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                   value = (Just . show) =<< customerLanguage
                 },
               Search.Tag
-                { display = (\_ -> Just False) =<< customerLanguage,
+                { display = (\_ -> Just False) =<< disabilityTag,
                   code = (\_ -> Just "customer_disability") =<< disabilityTag,
                   name = (\_ -> Just "Customer Disability") =<< disabilityTag,
                   value = (Just . show) =<< disabilityTag

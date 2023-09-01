@@ -122,14 +122,13 @@ updatePerson personId req = do
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
   whenJust req.disability $ \disability -> do
     customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
+    QPerson.updateHasDisability personId
     when (isNothing customerDisability) $ do
       newDisability <- makeDisability disability
       PDisability.create newDisability
-      QPerson.updateHasDisability personId
     when (isJust customerDisability) $ do
-      let disabilityId = getId $ disability.disabilityId
+      let disabilityId = getId $ disability.id
       PDisability.updateDisabilityByPersonId personId disabilityId disability.tag disability.description
-      QPerson.updateHasDisability personId
   void $
     QPerson.updatePersonalInfo
       personId
@@ -151,7 +150,7 @@ updatePerson personId req = do
       return $
         PersonDisability.PersonDisability
           { personId = personId,
-            disabilityId = getId $ disability.disabilityId,
+            disabilityId = getId $ disability.id,
             tag = disability.tag,
             description = disability.description,
             updatedAt = now
