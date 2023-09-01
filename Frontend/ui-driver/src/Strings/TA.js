@@ -453,7 +453,7 @@ const tamilStrings = {
   SEC_AGO : " இரண்டாவது முன்பு",
   LOADING : "ஏற்றுகிறது",
   APP_RELATED : "பயன்பாடு தொடர்பானது",
-  FARE_RELATED : "கட்டணம் தொடர்பானது",
+  FARE : "கட்டணம் தொடர்பானது",
   RIDE_RELATED : "சவாரி தொடர்பானது",
   LOST_AND_FOUND : "தொலைந்து போனது",
   REPORT_LOST_ITEM : "இழந்த பொருளைப் புகாரளிக்கவும",

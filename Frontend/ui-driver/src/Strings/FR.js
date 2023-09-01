@@ -455,7 +455,7 @@ const frenchStrings = {
   ISSUE_REMOVED: "Problème supprimé",
   LOADING: "Chargement",
   APP_RELATED: "En rapport avec l'application",
-  FARE_RELATED: "Lié au tarif",
+  FARE: "Lié au tarif",
   RIDE_RELATED: "En rapport avec la conduite",
   LOST_AND_FOUND: "Perdus et trouvés",
   REPORT_LOST_ITEM: "Signaler un article, perdu",
