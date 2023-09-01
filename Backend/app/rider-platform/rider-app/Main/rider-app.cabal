@@ -179,9 +179,9 @@ library
       Domain.Types.OnSearchEvent
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
+      Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Person.PersonStats
-      Domain.Types.PersonDisability
       Domain.Types.Quote
       Domain.Types.RegistrationToken
       Domain.Types.RentalSlab
