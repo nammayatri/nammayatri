@@ -43,6 +43,7 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
+import Helpers.Utils(getRideTypeColor, getCategorizedVariant)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -201,7 +202,7 @@ rideTypeView push config =
           , height WRAP_CONTENT
           , text $ getCategorizedVariant config.requestedVehicleVariant
           , margin $ MarginLeft 8
-          , color Color.black800
+          , color $ getRideTypeColor config.requestedVehicleVariant
           ] <> FontStyle.body1 TypoGraphy
       ]
   ]
@@ -670,21 +671,3 @@ separatorConfig =
   , layoutWidth : V 14
   , layoutHeight : V 16
   }
-
-getCategorizedVariant :: Maybe.Maybe String -> String
-getCategorizedVariant variant = case variant of
-  Maybe.Just var -> case (getMerchant FunctionCall) of
-    YATRISATHI -> case var of
-      "SEDAN"  -> "AC Taxi"
-      "HATCHBACK"  -> "AC Taxi"
-      "TAXI_PLUS"  -> "AC Taxi"
-      "SUV" -> "AC Taxi"
-      _ -> "Non AC"
-    _ -> case var of
-      "SEDAN"  -> "Sedan"
-      "HATCHBACK"  -> "Hatchback"
-      "TAXI_PLUS"  -> "AC Taxi"
-      "SUV" -> "Suv"
-      "AUTO_RICKSHAW" -> "Auto Rickshaw"
-      _ -> var
-  Maybe.Nothing -> ""
