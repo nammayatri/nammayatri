@@ -35,6 +35,9 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (UploadDrivingLicenseState)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
+import Data.String (length)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 
 
 instance showAction :: Show Action where
@@ -127,9 +130,17 @@ eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = do
   updateAndExit state $ (GoToAddVehicleDetailsScreen state)
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "EnterDrivingLicenseEditText")
+  if (length value == 16) then do 
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_dl_entry"
+    pure unit
+    else pure unit
   continue state {data = state.data { driver_license_number = value }}
 eval (PrimaryEditTextActionControllerReEnter (PrimaryEditText.TextChanged id value))state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "ReEnterDrivingLicenseEditText")
+  if (length value == 16) then do 
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_dl_re_entry"
+    pure unit
+    else pure unit
   continue state {data = state.data { reEnterDriverLicenseNumber = value }}
 eval DriverLicenseManual state = continue state{props{openLicenseManual = true}}
 eval (OnboardingHeaderAction (OnboardingHeaderController.BackPressed)) state = exit $ GoBack state
@@ -152,6 +163,7 @@ eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutA
 eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
 eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
 eval (UploadImage) state = continueWithCmd state [do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DL Photo Button Clicked"
   _ <- liftEffect $ uploadFile unit
   pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModal.PrimaryButtonActionController (PrimaryButton.OnClick))) state = exit AddVehicleDetailsScreen
@@ -167,7 +179,9 @@ eval (DatePicker (label) resp year month date) state = do
   let dateView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
   case resp of 
     "SELECTED" -> case label of
-                    "DATE_OF_BIRTH" -> continue state {data = state.data { dob = fullDate, dobView = dateView }
+                    "DATE_OF_BIRTH" -> do
+                      let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DOB"
+                      continue state {data = state.data { dob = fullDate, dobView = dateView }
                                                         , props {isDateClickable = true }}
                     "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}
                                                         , props {isDateClickable = true }} 

@@ -43,6 +43,8 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -179,6 +181,7 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
     exit $ ValidateImageAPICall newState
     else continue state{props{isValidState = false}}
 eval (UploadFile) state = continueWithCmd state [do
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_rc_photo_button_clicked"
         _ <- liftEffect $ uploadFile unit
         pure NoAction]
 eval (VehicleRCNumber val) state = do

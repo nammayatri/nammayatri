@@ -69,7 +69,7 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText, terminateApp, updateInputString, withinTimeRange, toString)
@@ -964,9 +964,7 @@ eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
       filterFeedbackList = filter (\item -> length item.answer > 0) newFeedbackList
   continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
 
-eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_give_feedback"
-  updateAndExit state $ SubmitRating state
+eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
 
 eval (RatingCardAC (RatingCard.FareBreakUpAC FareBreakUp.ShowInvoice)) state = exit $ GoToInvoice state
 
@@ -980,20 +978,27 @@ eval (RatingCardAC (RatingCard.BackPressed)) state = do
   _ <- pure $ updateLocalStage RideCompleted
   continue state {props {currentStage = RideCompleted}}
 
-eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = exit $ PastRides state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_myrides_click"
+  exit $ PastRides state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = exit $ ChangeLanguage state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_language"
+  exit $ ChangeLanguage state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_about"
+  exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
-
-eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contacts"
+  exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_share_app_menu"
     _ <- pure $ shareTextMessage (getValueFromConfig "shareAppTitle") (getValueFromConfig "shareAppContent")
     continue state
 
@@ -1025,6 +1030,7 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToMyProfile)) s
 
 eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboard)) state = do
   _ <- pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
   if os == "IOS" then do
     continueWithCmd state [do
       _ <- openUrlInApp state.data.config.dashboardUrl
@@ -1096,6 +1102,7 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
   continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SearchExpireCountDown seconds id status timerID) state = do
@@ -2100,11 +2107,16 @@ updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (from
 locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 locationSelected item addToRecents state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"
   if state.props.isSource == Just true then do
+    let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_pickup_select" $ [ {key : "Source", value : item.title},
+                                                                                                              {key : "Favourite", value : favClick}]
     let newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = (item.tag /= "") }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
     exit $ LocationSelected item addToRecents newState
     else do
+      let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : item.title},
+                                                                                                                    {key : "Favourite", value : favClick}]
       let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
       pure $ setText (getNewIDWithTag "DestinationEditText") item.title
       exit $ LocationSelected item addToRecents newState

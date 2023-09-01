@@ -96,7 +96,7 @@ window.getMerchantConfig = function () {
     },
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
-    "logs": ["JUSPAY","FIREBASE"],
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "quoteListModel": {
       "backgroundColor": "#2C2F3A",
       "textColor": "#FFFFFF",

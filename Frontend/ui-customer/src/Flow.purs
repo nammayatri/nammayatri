@@ -18,7 +18,7 @@ module Flow where
 import Engineering.Helpers.LogEvent
 
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..))
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams)
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
@@ -90,7 +90,7 @@ import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressS
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location)
 import Screens.Types (Gender(..)) as Gender
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..))
+import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..))
 import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
@@ -674,7 +674,6 @@ homeScreenFlow = do
     ON_RESUME_APP -> currentFlowStatus
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
-      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_myrides_click"
       myRidesScreenFlow true
     GO_TO_HELP -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> HelpAndSupportScreenData.initData)
@@ -742,6 +741,12 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader showLoader
       (GlobalState newState) <- getState
       let state = newState.homeScreen
+      liftFlowBT $ logEventWithParams logField_ "ny_user_tip_search" "Tip amount" ("₹ " <> (show $ state.props.customerTip.tipForDriver))
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_retry_request_quote" $ [ {key : "Request Type", value : if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
+                                                                                                      {key : "Estimate Fare", value : "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))},
+                                                                                                      {key : "Customer tip (Rs.)", value : "₹" <> (show $ state.props.customerTip.tipForDriver)},
+                                                                                                      {key : "Estimated Ride Distance" , value : state.data.rideDistance},
+                                                                                                      {key : "Night Ride", value : (show $ state.data.rateCard.nightCharges)}]
       if (not (isLocalStageOn QuoteList)) then do
         void $ pure $ firebaseLogEvent "ny_user_cancel_and_retry_request_quotes"
         cancelEstimate state.props.estimateId
@@ -869,7 +874,11 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore AUTO_SELECTING "false"
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-          _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_request_quotes"
+          liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote" $ [ {key : "Request Type", value : if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
+                                                                                                          {key : "Estimate Fare", value : "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))},
+                                                                                                          {key : "Estimated Ride Distance" , value : state.data.rideDistance},
+                                                                                                          {key : "Night Ride", value : (show $ state.data.rateCard.nightCharges)}]
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
             _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_auto_confirm"
             pure unit
@@ -940,6 +949,11 @@ homeScreenFlow = do
     CANCEL_RIDE_REQUEST state -> do
       _ <- pure $ currentPosition ""
       _ <- updateLocalStage HomeScreen
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : state.props.cancelReasonCode},
+                                                                                                      {key : "Additional info", value : state.props.cancelDescription},
+                                                                                                      {key : "Pickup", value : state.data.driverInfoCardState.source},
+                                                                                                      {key : "Estimated Ride Distance" , value : state.data.rideDistance},
+                                                                                                      {key : "Night Ride", value : (show $ state.data.rateCard.nightCharges)}]
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
@@ -998,6 +1012,7 @@ homeScreenFlow = do
                                         let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
                                         lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                         setValueToLocalStore PICKUP_DISTANCE "0"
+                                        liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, rideRatingState {distanceDifference = differenceOfDistance} , ratingViewState { rideBookingRes = (RideBookingRes resp)}, driverInfoCardState {initDistance = Nothing}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
                                         homeScreenFlow
                                         else homeScreenFlow
@@ -1037,6 +1052,7 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
+      liftFlowBT $ logEventWithParams logField_ "ny_user_ride_give_feedback" "Rating" (show $ state.data.rating)
       _ <- Remote.bookingFeedbackBT (Remote.makeRideFeedBackReq (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedbackList))
       _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
@@ -1490,6 +1506,7 @@ tripDetailsScreenFlow :: TripDetailsGoBackType ->  FlowBT String Unit
 tripDetailsScreenFlow fromMyRides = do
   (GlobalState state) <- getState
   config <- getAppConfig Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
   expiryTime <- pure $ (getExpiryTime state.tripDetailsScreen.data.selectedItem.rideEndTimeUTC isForLostAndFound)
   modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = fromMyRides, canConnectWithDriver = (expiryTime <= 86400)}, data{config = config}}) -- expiryTime < 24hrs or 86400 seconds
   flow <- UI.tripDetailsScreen
@@ -1499,10 +1516,17 @@ tripDetailsScreenFlow fromMyRides = do
       (GlobalState newState) <- getState
       myRidesScreenFlow newState.myRidesScreen.props.fromNavBar
     ON_SUBMIT state -> do
+      liftFlowBT $ logEventWithParams logField_ "ny_user_issue_reported" "Description" (state.data.message)
       _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  Nothing (Just state.data.selectedItem.bookingId) state.data.message state.data.message )
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = true}})
       tripDetailsScreenFlow state.props.fromMyRides
     GO_TO_INVOICE updatedState -> do
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_invoice_clicked" $ [ { key : "Pickup", value : updatedState.data.selectedItem.source},
+                                                                                                          { key : "Destination", value : updatedState.data.selectedItem.destination},
+                                                                                                          { key : "Fare", value : updatedState.data.selectedItem.totalAmount},
+                                                                                                          { key : "Status", value : updatedState.data.selectedItem.status},
+                                                                                                          { key : "Ride completion timestamp", value : updatedState.data.selectedItem.rideEndTime},
+                                                                                                          { key : "Rating", value : (show $ updatedState.data.selectedItem.rating)}]
       modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen = false},data{totalAmount = updatedState.data.totalAmount, date = updatedState.data.date, tripCharges = updatedState.data.totalAmount, selectedItem = updatedState.data.selectedItem, config = updatedState.data.config}})
       invoiceScreenFlow
     GO_TO_HOME state -> do
@@ -1569,11 +1593,19 @@ helpAndSupportScreenFlow = do
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit
 myRidesScreenFlow fromNavBar = do
   config <- getAppConfig Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}, data{config = config}})
   flow <- UI.myRidesScreen
   case flow of
     REFRESH state -> myRidesScreenFlow state.props.fromNavBar
     TRIP_DETAILS state -> do
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_my_rides_view_details" $ [ { key : "Pickup", value : state.data.selectedItem.source},
+                                                                                                                  { key : "Destination", value : state.data.selectedItem.destination},
+                                                                                                                  { key : "Fare", value : state.data.selectedItem.totalAmount},
+                                                                                                                  { key : "Status", value : state.data.selectedItem.status},
+                                                                                                                  { key : if state.data.selectedItem.status == "CANCELLED" then "Time" else "Ride completion timestamp",
+                                                                                                                    value : if state.data.selectedItem.status == "CANCELLED" then state.data.selectedItem.time else state.data.selectedItem.rideEndTime},
+                                                                                                                  { key : "Rating", value : (show $ state.data.selectedItem.rating)}]
       modifyScreenState $ TripDetailsScreenStateType (\tripDetails -> tripDetails{data{vehicleVariant = state.data.selectedItem.vehicleVariant}})
       tripDetailsScreenFlow MyRides
     LOADER_OUTPUT state -> do
@@ -1586,6 +1618,8 @@ myRidesScreenFlow fromNavBar = do
     GO_TO_HELP_SCREEN -> helpAndSupportScreenFlow
     REPEAT_RIDE_FLOW state -> do
       updateRideDetails state
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_my_rides_repeat_ride" $ [{ key : "Pickup", value : state.data.selectedItem.source},
+                                                                                                                {key : "Destination", value : state.data.selectedItem.destination}]
       let sourceLat = state.data.selectedItem.sourceLocation^._lat
       let sourceLong = state.data.selectedItem.sourceLocation^._lon
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq sourceLat sourceLong)
@@ -1611,6 +1645,8 @@ selectLanguageScreenFlow = do
   flow <- UI.selectLanguageScreen
   case flow of
     UPDATE_LANGUAGE state -> do
+                                liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_lang_selected" $[{ key : "Previous language", value : show $ getValueToLocalStore LANGUAGE_KEY},
+                                                                                                                          { key : "New language", value : state.props.selectedLanguage}]
                                 setValueToLocalStore LANGUAGE_KEY (state.props.selectedLanguage)
                                 _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_lang_selec" "language" (state.props.selectedLanguage)
                                 let langVal =  case (state.props.selectedLanguage) of
@@ -1813,6 +1849,7 @@ savedLocationFlow = do
 addNewAddressScreenFlow ::String -> FlowBT String Unit
 addNewAddressScreenFlow input = do
   config <- getAppConfig Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{data{config = config}})
   flow <- UI.addNewAddressScreen
   case flow of
@@ -1842,6 +1879,8 @@ addNewAddressScreenFlow input = do
         _ <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim state.data.placeName))
         pure unit
       else pure unit
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_favourite_added" $ [{ key : "Address", value : state.data.address},
+                                                                                                                { key : "Tag", value : show $ state.data.selectedTag}]
       (GetPlaceNameResp sourcePlace) <- getPlaceNameResp (state.data.selectedItem.placeId) (fromMaybe 0.0 state.data.selectedItem.lat) (fromMaybe 0.0 state.data.selectedItem.lon)  state.data.selectedItem
       let source = state.data.selectedItem.description
           (PlaceName sourceAddressGeometry) = (fromMaybe HomeScreenData.dummyLocationName (sourcePlace!!0))
@@ -2292,3 +2331,22 @@ checkAndUpdateLocations = do
     Nothing ->do
       _ <- pure $ spy "inside left" "err"
       pure unit
+
+rideCompletedDetails :: RideBookingRes -> Array ClevertapEventParams
+rideCompletedDetails (RideBookingRes resp) = do
+  let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+      (RideBookingDetails contents) = bookingDetails.contents
+      (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+      differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
+      finalAmount =  getFinalAmount (RideBookingRes resp)
+      timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
+      nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
+      
+  [ {key : "Estimate ride distance", value : (show $ fromMaybe 0 contents.estimatedDistance/1000) <> " km"},
+          {key : "Actual ride distance", value : (show $ (fromMaybe 0 ride.chargeableRideDistance)/1000) <> " km"},
+          {key : "Difference between estimated and actual ride distance" , value : (show $ differenceOfDistance/1000) <> " km"},
+          {key : "Total Estimated fare",value : "₹" <> (show $ resp.estimatedFare)},
+          {key : "Total Actual fare",value : "₹" <> (show $ finalAmount)},
+          {key : "Difference between estimated and actual fares",value : "₹" <> (show $ resp.estimatedFare - finalAmount)},
+          {key : "Driver pickup charges",value : "₹ 10"},
+          {key : "Night ride",value : show $ nightChargesVal}]

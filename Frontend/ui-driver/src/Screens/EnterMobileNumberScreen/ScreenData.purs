@@ -16,10 +16,13 @@
 module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
+import Foreign.Object (empty)
 
 initData :: EnterMobileNumberScreenState
 initData =  {
-  data:  { mobileNumber : "" },
+  data: { mobileNumber : "",
+          logField : empty
+        },
   props: {
     btnActive :false,
     isValid : false

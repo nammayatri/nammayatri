@@ -16,6 +16,8 @@
 module Screens.UploadDrivingLicenseScreen.ScreenData where
 import Data.Maybe
 import Screens.Types (UploadDrivingLicenseState)
+import Foreign.Object (empty)
+
 initData :: UploadDrivingLicenseState
 initData = {
       data: {
@@ -34,6 +36,7 @@ initData = {
       , dateOfIssue : Nothing
       , dateOfIssueView : ""
       , imageFrontUrl : ""
+      , logField : empty
       },
       props: {
         openRegistrationModal : false

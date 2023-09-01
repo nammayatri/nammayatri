@@ -30,6 +30,8 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types (ContactUsScreenState, ErrorType(..))
 import Storage (KeyStore(..), setValueToLocalStore)
 import Data.Maybe(Maybe(..))
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -84,6 +86,7 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_write_to_us"
     if (state.props.isSubmitted) then updateAndExit state  $  GoHome state
         else continue state{props{isSubmitted = true}}
 

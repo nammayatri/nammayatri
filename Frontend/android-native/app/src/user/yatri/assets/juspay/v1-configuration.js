@@ -46,7 +46,7 @@ window.getMerchantConfig = function () {
     "alertDialogPrimaryColor": "#2194FF",
     "isGradient" : "false",
     "quoteListModelBackground": "#2C2F3A",
-    "logs": ["JUSPAY","FIREBASE"],
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
     "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app",

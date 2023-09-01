@@ -269,7 +269,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         holder.rejectButton.setClickable(false);
                         handler.post(() -> {
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
-                            firebaseLogEvent(logEvent);
+                            Utils.logEvent (logEvent, getApplicationContext());
                             removeCard(position);
                             executor.shutdown();
                             Toast.makeText(getApplicationContext(), getApplicationContext().getResources().getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();

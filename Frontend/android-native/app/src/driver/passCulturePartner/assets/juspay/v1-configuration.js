@@ -44,7 +44,7 @@ window.getMerchantConfig = function () {
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "Vous êtes sur le point d'appeler l'équipe d'assistance Yatri. Voulez-vous poursuivre?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Votre emplacement aide notre système à cartographier tous les taxis à proximité et à vous offrir le trajet le plus rapide possible."
     },
-    "logs": ["JUSPAY","FIREBASE"]
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "Montserrat"
     , "fontKannada" : "Montserrat"
     , "showGenderBanner" : false

@@ -36,6 +36,8 @@ import Data.String (split, Pattern(..), Replacement(..), replaceAll)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Data.Ord (min)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -111,6 +113,7 @@ eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = continueWithCmd
                 pure unit
 
         _ <- pure $ contactPermission unit
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_add_emergency_contact_click"
         pure NoAction
       ]
 
@@ -293,6 +296,7 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
     updateAndExit state $ Refresh updatedPrestoList{data{contactsCount = length updatedPrestoList.data.contactsList}}
 
 eval (ContactListPrimaryButtonActionController PrimaryButton.OnClick) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contact_added"
   let selectedContacts = filter (\x -> x.isSelected) state.data.contactsNewList
   let validSelectedContacts = (map (\contact ->
     if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then

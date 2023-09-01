@@ -204,7 +204,7 @@ public class OverlayMessagingService extends Service {
                             intent.putExtra("entity_type", "");
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                             startActivity(intent);
-                            NotificationUtils.cleverTapCustomEvent("ny_driver_overlay_join_now", getApplicationContext());
+                            Utils.logEvent("ny_driver_overlay_join_now", getApplicationContext());
                             break;
                     }
                 }

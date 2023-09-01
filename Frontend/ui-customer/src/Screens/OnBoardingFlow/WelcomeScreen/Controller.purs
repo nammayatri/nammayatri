@@ -8,6 +8,8 @@ import PrestoDOM (Eval, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (WelcomeScreenState)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -32,7 +34,7 @@ eval BackPressed state = do
     continue state
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_get_started"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_get_started"
   exit MobileNumberScreen
 
 eval _ state = continue state

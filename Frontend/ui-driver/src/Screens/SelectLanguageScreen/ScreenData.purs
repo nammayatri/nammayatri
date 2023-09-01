@@ -17,12 +17,14 @@ module Screens.SelectLanguageScreen.ScreenData where
 
 import MerchantConfig.DefaultConfig as DC
 import Screens.Types (SelectLanguageScreenState)
+import Foreign.Object (empty)
 
 initData :: SelectLanguageScreenState
 initData = {
     data: {
     isSelected : true
   , config : DC.config
+  , logField : empty
     },
     props: {
       btnActive :false,
