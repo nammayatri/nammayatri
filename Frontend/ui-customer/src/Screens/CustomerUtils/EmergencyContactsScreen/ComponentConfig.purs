@@ -37,6 +37,7 @@ genericHeaderConfig state =
         , padding = (Padding 0 5 0 5)
         , textConfig
           { text = if state.props.showContactList then (show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
+          , accessibilityHint = if state.props.showContactList then (show (length state.data.contactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
           , color = Color.darkDescriptionText
           }
         , suffixImageConfig
@@ -56,6 +57,7 @@ primaryButtonConfig state =
       config
         { textConfig
           { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)
+          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)) <> " : Button"
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)

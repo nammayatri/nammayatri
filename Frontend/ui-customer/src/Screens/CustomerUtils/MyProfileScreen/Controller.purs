@@ -23,7 +23,7 @@ import Services.API (GetProfileRes(..))
 import Helpers.Utils (validateEmail)
 import Data.String(length,trim)
 import Storage(KeyStore(..), getValueToLocalStore)
-import Engineering.Helpers.Commons(getNewIDWithTag)
+import Engineering.Helpers.Commons(getNewIDWithTag, setText)
 import Effect.Unsafe 
 import Engineering.Helpers.LogEvent (logEvent)
 
@@ -85,6 +85,7 @@ eval (EditProfile fieldType) state = do
   case fieldType of
     Just EMAILID_ -> do
       _ <- pure $ requestKeyboardShow (getNewIDWithTag "EmailEditText")
+      _ <- pure $ setText (getNewIDWithTag "EmailEditText") (fromMaybe "" state.data.emailId)
       pure unit
     _ -> pure unit
   continue state { props { isBtnEnabled = false , updateProfile = true , isEmailValid = true}, data { editedName = state.data.name, editedEmailId = state.data.emailId, editedGender = state.data.gender} }

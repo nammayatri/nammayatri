@@ -20,7 +20,7 @@ import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
 import Components.MobileNumberEditor.Controller (Action(..), Config)
-import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Margin(..), Padding(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, relativeLayout, scrollView, onClick, onChange, onAnimationEnd, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat,imageWithFallback)
+import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Margin(..), Padding(..), Accessiblity(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, relativeLayout, scrollView, onClick, onChange, onAnimationEnd, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat,imageWithFallback, accessibilityImportance, accessibilityHint)
 import Font.Style as FontStyle
 import Common.Types.App
 import PrestoDOM.Animation as PrestoAnim
@@ -30,6 +30,7 @@ import Engineering.Helpers.Commons as EHC
 import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
 import Data.Array (mapWithIndex, length)
+import Data.String as DS
 import Components.MobileNumberEditor.CountryCodeConfig (getCountryCodesObj)
 import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
@@ -68,6 +69,7 @@ topLabelView config =
     , gravity config.topLabel.gravity
     , lineHeight "28"
     , singleLine true
+    , accessibilityImportance config.topLabel.accessibilityImportance
     , margin config.topLabel.margin
     , alpha config.topLabel.alpha
     , visibility config.topLabel.visibility
@@ -190,6 +192,8 @@ editTextView push config =
   , id config.id
   , weight 1.0
   , color config.editText.color
+  , accessibilityImportance ENABLE
+  , accessibilityHint $ if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
   , text config.editText.text
   , hint config.editText.placeholder
   , singleLine config.editText.singleLine

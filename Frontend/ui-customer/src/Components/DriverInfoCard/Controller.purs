@@ -37,6 +37,7 @@ data Action = NoAction
             | CallDriver
             | LoadMessages
             | OnNavigateToZone
+            | ExpandBottomSheet
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
