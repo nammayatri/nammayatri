@@ -243,7 +243,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
                                 else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
-                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit (GoBack state) else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
+                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit (GoBack state{ props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}) else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
                                 else if state.props.alreadyActive then continue $ state {props { alreadyActive = false}}
                                 else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
                                 else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}
