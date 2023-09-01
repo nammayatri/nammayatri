@@ -47,6 +47,9 @@ import Common.Types.App (LazyCheck(..))
 import Screens.HelpAndSupportScreen.ScreenData (initData)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (getValueFromConfig)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
+import Foreign.Object (empty)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -179,11 +182,15 @@ eval (BackPressed flag ) state = if state.props.isCallConfirmation
   else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else exit GoBack
 
-eval ContactUs state = exit $ GoToSupportScreen state.data.bookingId
+eval ContactUs state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_email"
+  exit $ GoToSupportScreen state.data.bookingId
 
 eval ReportIssue state = exit $ GoToTripDetails state
 
-eval CallSupport state = continue state{props{isCallConfirmation = true}}
+eval CallSupport state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_click"
+  continue state{props{isCallConfirmation = true}}
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed state.props.isCallConfirmation]
 
@@ -208,6 +215,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_performed"
   void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
@@ -267,7 +275,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           email : "",
           description : "",
           accountStatus : ACTIVE,
-          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)
+          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant),
+          logField : empty
           },
       props : {
         apiFailure : false

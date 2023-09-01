@@ -32,7 +32,7 @@ window.getMerchantConfig = function () {
     "confirmPickUpLocationBorder": "#E5E7EB",
     "currency": "₹",
     "alertDialogPrimaryColor": "#2194FF",
-    "logs": ["JUSPAY","FIREBASE"],
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
     "dashboardUrl" : "https://nammayatri.in/open?source=in-app",

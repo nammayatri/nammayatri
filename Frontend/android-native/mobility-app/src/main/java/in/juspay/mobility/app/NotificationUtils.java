@@ -51,7 +51,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
-import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONException;
@@ -362,36 +361,34 @@ public class NotificationUtils {
                 context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 
         if (TRIP_CHANNEL_ID.equals(notificationType)) {
-            Bundle params = new Bundle();
-            mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-            if (key.equals("USER"))
-                mFirebaseAnalytics.logEvent("ny_user_ride_started", params);
+            if (key.equals("USER")) {
+                Utils.logEvent ("ny_user_ride_started", context);
+            }
             else
-                mFirebaseAnalytics.logEvent("ride_started", params);
+                Utils.logEvent("ride_started", context);
         }
         if (TRIP_FINISHED.equals(notificationType)) {
-            Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             if (key.equals("USER")){
-                mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
+                Utils.logEvent("ny_user_ride_completed", context);
                 String rideTaken = sharedPref.getString("HAS_TAKEN_FIRST_RIDE", "false");
                 if(rideTaken.equals("false")){
-                    mFirebaseAnalytics.logEvent("ny_user_first_ride_completed",params);
+                    Utils.logEvent("ny_user_first_ride_completed", context);
                 }
             }
             else
-                mFirebaseAnalytics.logEvent("ride_completed",params);
+                Utils.logEvent("ride_completed",context);
         }
         if (CANCELLED_PRODUCT.equals(notificationType) ||REALLOCATE_PRODUCT.equals(notificationType)) {
-            Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             if (key.equals("USER"))
-            {if (CANCELLED_PRODUCT.equals(notificationType))
-                mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
+            {if (CANCELLED_PRODUCT.equals(notificationType)) {
+                Utils.logEvent ("ny_user_ride_cancelled", context);
+            }
             else
-                mFirebaseAnalytics.logEvent("ny_user_ride_reallocation",params);}
+                Utils.logEvent("ny_user_ride_reallocation", context);}
             else
-                mFirebaseAnalytics.logEvent("ride_cancelled", params);
+                Utils.logEvent("ride_cancelled", context);
             if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
                 startMediaPlayer(context, R.raw.ride_cancelled_media, true);
             } else {
@@ -399,12 +396,12 @@ public class NotificationUtils {
             }
         }
         if (DRIVER_ASSIGNMENT.equals(notificationType)) {
-            Bundle params = new Bundle();
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-            if (key.equals("USER"))
-                mFirebaseAnalytics.logEvent("ny_user_ride_assigned", params);
+            if (key.equals("USER")) {
+                Utils.logEvent ("ny_user_ride_assigned", context);
+            }
             else
-                mFirebaseAnalytics.logEvent("driver_assigned", params);
+                Utils.logEvent("driver_assigned", context);
             if (key.equals("DRIVER")) {
                 startMediaPlayer(context, R.raw.ride_assigned, true);
             }
@@ -579,13 +576,6 @@ public class NotificationUtils {
                     default : return NO_VARIANT;
                 }
             default:return NO_VARIANT;
-        }
-    }
-
-    public static void cleverTapCustomEvent(String event, Context context) {
-        CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
-        if (clevertapDefaultInstance != null){
-            clevertapDefaultInstance.pushEvent(event);
         }
     }
 }

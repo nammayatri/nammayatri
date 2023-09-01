@@ -16,6 +16,8 @@
 module Screens.AddVehicleDetailsScreen.ScreenData where
 import Data.Maybe
 import Screens.Types
+import Foreign.Object (empty)
+
 initData :: AddVehicleDetailsScreenState
 initData = {
     data: {
@@ -30,7 +32,8 @@ initData = {
       rcImageID : "",
       errorMessage : "",
       dateOfRegistration : Nothing,
-      dateOfRegistrationView : ""
+      dateOfRegistrationView : "",
+      logField : empty
     },
     props: {
       rcAvailable : false,

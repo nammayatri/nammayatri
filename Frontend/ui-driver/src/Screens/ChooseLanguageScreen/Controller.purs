@@ -26,6 +26,8 @@ import Storage (KeyStore(..), setValueToLocalStore)
 import JBridge(minimizeApp)
 import Screens (ScreenName(..), getScreen)
 import JBridge (setCleverTapUserProp)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -53,8 +55,11 @@ eval BackPressed state = do
   _ <- pure $ minimizeApp ""
   continue state
 eval AfterRender state = continue state
-eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
+eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_choose_language"
+  continue state { props { selectedLanguage = btnState.text.value }}
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
+  let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_choose_language_confirmation" "Language" state.props.selectedLanguage
   _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage
   _ <- pure $ setCleverTapUserProp "Preferred Language" state.props.selectedLanguage
   exit (GoToEnterMobileScreen state)

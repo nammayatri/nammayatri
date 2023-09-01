@@ -15,6 +15,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.theartofdev.edmodo.cropper.CropImage;
 
@@ -31,6 +32,7 @@ import in.juspay.mobility.app.callbacks.CallBack;
 public class Utils {
 
     private static final String UTILS = "UTILS";
+    private static FirebaseAnalytics mFirebaseAnalytics;
 
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
@@ -125,5 +127,15 @@ public class Utils {
 
     public static int getResIdentifier (Context context, String resName, String resType) {
         return context.getResources().getIdentifier(resName,resType,context.getPackageName());
+    }
+
+    public static void logEvent(String event, Context context) {
+        CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+        Bundle params = new Bundle();
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        mFirebaseAnalytics.logEvent(event, params);
+        if (clevertapDefaultInstance != null){
+            clevertapDefaultInstance.pushEvent(event);
+        }
     }
 }

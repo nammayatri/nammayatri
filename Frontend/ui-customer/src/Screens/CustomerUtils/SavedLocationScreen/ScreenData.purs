@@ -18,6 +18,7 @@ module Screens.SavedLocationScreen.ScreenData where
 import Screens.Types(SavedLocationScreenState)
 import Data.Maybe(Maybe(..))
 import MerchantConfig.DefaultConfig as DC
+import Foreign.Object (empty)
 
 initData :: SavedLocationScreenState
 initData = {
@@ -25,6 +26,7 @@ initData = {
     savedLocations : []
   , deleteTag : Nothing
   , config : DC.config
+  , logField : empty
   }
   , props : {
       showDeleteLocationModel : false

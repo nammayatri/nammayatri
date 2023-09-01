@@ -20,6 +20,7 @@ import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (DeleteStatus(..))
 import MerchantConfig.DefaultConfig as DC
 import Data.Maybe(Maybe(..))
+import Foreign.Object (empty)
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -44,7 +45,8 @@ initData = {
     description : "",
     accountStatus : ACTIVE,
     config : DC.config,
-    vehicleVariant : Nothing
+    vehicleVariant : Nothing,
+    logField : empty
   },
   props:{
     apiFailure : false

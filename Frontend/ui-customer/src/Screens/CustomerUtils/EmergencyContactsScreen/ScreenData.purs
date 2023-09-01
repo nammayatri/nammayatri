@@ -2,6 +2,7 @@ module Screens.EmergencyContactsScreen.ScreenData where
 
 import Prelude
 import Screens.Types (EmergencyContactsScreenState(..))
+import Foreign.Object (empty)
 
 initData :: EmergencyContactsScreenState
 initData = {
@@ -20,6 +21,7 @@ initData = {
                               , number : ""
                               }
     , editedText : ""
+    , logField : empty
     },
     props:{
         showContactList : false

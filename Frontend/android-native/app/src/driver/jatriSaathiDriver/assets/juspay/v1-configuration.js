@@ -86,7 +86,7 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "Yatri Sathitraல் பயணம்",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் பிரச்சினையை விவரிக்கவும். யாத்ரி சதி அதை 24 மணி நேரத்திற்குள் தீர்க்க முயற்சிப்பார்."
     },
-    "logs": ["JUSPAY","FIREBASE"]
+    "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
