@@ -303,5 +303,5 @@ getCategoryName categoryName = case categoryName of
   "LOST_AND_FOUND" -> (getString REPORT_LOST_ITEM)
   "RIDE_RELATED" -> (getString RIDE_RELATED_ISSUE)
   "APP_RELATED" -> (getString APP_RELATED_ISSUE)
-  "FARE_RELATED" -> (getString FARE_RELATED_ISSUE)
+  "FARE" -> (getString FARE_RELATED_ISSUE)
   _ -> ""

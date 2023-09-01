@@ -459,7 +459,7 @@ const hindiStrings = {
   LOADING :"लोड हो रहा है",
   MAX_IMAGES : "अधिकतम 3 चित्र अपलोड किए जा सकते हैं",
   APP_RELATED : "ऐप संबंधित",
-  FARE_RELATED : "किराया संबंधित",
+  FARE : "किराया संबंधित",
   RIDE_RELATED : "सवारी संबंधित",
   LOST_AND_FOUND : "लॉस्ट एंड फाउंड ",
   REPORT_LOST_ITEM : "खोई हुई वस्तु की सूचना दें",
