@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN person_disability_tag text;
