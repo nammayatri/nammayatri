@@ -137,6 +137,7 @@ initData = {
         isChatOpened : false,
         showAadharPopUp : true,
         canSendSuggestion : true,
-        showOffer : false
+        showOffer : false,
+        autoPayBanner : true
     }
 }

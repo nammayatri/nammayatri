@@ -717,6 +717,8 @@ const mlStrings = {
   CHAT_FOR_HELP : "സഹായത്തിനായി ചാറ്റ് ചെയ്യുക",
   VIEW_FAQs : "പതിവുചോദ്യങ്ങൾ കാണുക",
   SUPPORT : "പിന്തുണ",
-	NEED_HELP_JOINING_THE_PLAN : "പ്ലാനിൽ ചേരുന്നതിന് സഹായം ആവശ്യമുണ്ടോ? ഞങ്ങളെ സമീപിക്കുക",
-  NEED_HELP_CALL_SUPPORT : "സഹായം ആവശ്യമുണ്ട്? <span style='color:#2194FF'>പിന്തുണയെ വിളിക്കുക</span>"
+	NEED_HELP_JOINING_THE_PLAN : "പദ്ധതിയിലോ ഓട്ടോപേയ്യിലോ ചേരാൻ സഹായം ആവശ്യമുണ്ടോ?",
+  NEED_HELP_CALL_SUPPORT : "സഹായം ആവശ്യമുണ്ട്? <span style='color:#2194FF'>പിന്തുണയെ വിളിക്കുക</span>",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
+	SETUP_NOW : "Setup Now"
 }
