@@ -602,8 +602,10 @@ public class LocationUpdateService extends Service {
                     connection.setRequestProperty("x-device", deviceDetails);
                     String merchantId = getValueFromStorage("MERCHANT_ID");
                     String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
+                    String driverMode = getValueFromStorage("DRIVER_STATUS_N");
                     if (merchantId != null) connection.setRequestProperty("mId", merchantId);
                     if (vehicleVariant != null) connection.setRequestProperty("vt", vehicleVariant);
+                    if (driverMode != null) connection.setRequestProperty("dm", driverMode.toUpperCase());
                     connection.setDoOutput(true);
 
                     // Request Body for API call

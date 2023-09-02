@@ -966,7 +966,7 @@ addAlternateNumber push state =
   , padding (Padding 20 16 20 16)
   , gravity CENTER_VERTICAL
   , onClick push (const ClickAddAlternateButton)
-  , visibility (if ((state.data.driverAlternateMobile == Nothing || state.props.showlinkAadhaarPopup) && (state.props.statusOnline))  then VISIBLE else GONE)
+  , visibility $ if state.props.showlinkAadhaarPopup && state.props.statusOnline  then VISIBLE else GONE
   ][  imageView
       [ width $ V 20
       , height $ V 15
