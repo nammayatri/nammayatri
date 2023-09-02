@@ -1344,10 +1344,15 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
                     _,_,_                                 -> continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
-  if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then
+  _ <- pure $ spy "DebounceCallBack actCheck 1.1" isSource
+  _ <- pure $ spy "DebounceCallBack actCheck 1.2" state.props.isSource
+  if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then do 
+    _ <- pure $ spy "DebounceCallBack actCheck 2" "validateSearchInput "
     validateSearchInput state searchString
-  else
-    continue state{data{ locationList = state.data.recentSearchs.predictionArray }}
+  else do
+    -- let lcList =  if isSource then state.data.recentSearchs.predictionArray else state.data.destinationSuggestions 
+    -- _ <- pure $ spy "checking state in debounce actCheck" (state{data{ locationList = lcList }})
+    continue state -- {data{ locationList = lcList }}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
   let
@@ -1381,7 +1386,11 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
-  if textType == "D" then
+  _ <- pure $ spy "Action " "EditTextFocusChanged"
+  -- _ <- pure $ spy "state " state
+  if textType == "D" then do
+    -- _ <- pure $ spy "state.data.destinationSuggestions nl" state.data.destinationSuggestions
+    _ <- pure $ spy "state " state { props { isSource = Just false},data{ locationList = state.data.destinationSuggestions } }
     continueWithCmd state { props { isSource = Just false},data{ locationList = state.data.destinationSuggestions } }
       [ do
           if state.props.isSearchLocation /= LocateOnMap then do
@@ -1404,6 +1413,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.NoActio
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceClear)) state = do
   _ <- pure $ performHapticFeedback unit
+  _ <- pure $ spy "state isSource source clear actCheck 1" state.props.isSource
+  _ <- pure $ spy "state isSource source clear actCheck 2" true
   if (state.props.isSearchLocation /= LocateOnMap) then do
     _ <- pure $ requestKeyboardShow (getNewIDWithTag "SourceEditText")
     pure unit
@@ -1885,7 +1896,8 @@ eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
-  if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then
+  if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then do
+    _ <- pure $ spy "before " searchString
     callSearchLocationAPI
   else
     continue state

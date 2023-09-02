@@ -214,8 +214,9 @@ screen initialState =
       ]
   , eval:
       \action state -> do
-        let _ = spy "HomeScreen action " action
-        let _ = spy "HomeScreen state " state
+        let _ = spy "HomeScreen action actCheck BEFORE" action
+        let _ = spy "HomeScreen state BEFORE" state.data.locationList
+        let _ = spy "HomeScreen state BEFORE" state.props.isSource
         eval action state
   }
 

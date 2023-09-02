@@ -847,12 +847,14 @@ homeScreenFlow = do
         let updateScreenState = globalState.homeScreen
         if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1) && (updateScreenState.props.sourceLat /= 0.0 && updateScreenState.props.sourceLong /= 0.0)) then do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}})
+          _ <- pure $ spy "isSource actcheck " true
           homeScreenFlow
         else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
           if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
             _ <- pure $ toast (getString LOCATION_UNSERVICEABLE)
             pure unit
             else pure unit
+          _ <- pure $ spy "else if isSource actcheck " updateScreenState.props.isSource
           modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isDestServiceable = false, isRideServiceable = false,isSource = Just false, isSrcServiceable = true}})
           homeScreenFlow
          else modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{ isRideServiceable= true, isSrcServiceable = true, isDestServiceable = true}})
@@ -1605,7 +1607,7 @@ rideSearchFlow flowType = do
                 Nothing -> pure unit
     else do
       _ <- pure $ spy "im here updating is source abcd" finalState.data.destinationSuggestions
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = finalState.data.destinationSuggestions}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = finalState.data.recentSearchs.predictionArray}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
       pure unit 
   homeScreenFlow
 
