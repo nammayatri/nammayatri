@@ -59,6 +59,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-database'
     implementation 'androidx.browser:browser:1.2.0'
     implementation 'in.juspay:hypersdk:2.1.13-nammayatri.33'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

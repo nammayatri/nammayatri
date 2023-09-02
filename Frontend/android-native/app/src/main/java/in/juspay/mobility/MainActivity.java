@@ -55,6 +55,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.play.core.appupdate.AppUpdateInfo;
 import com.google.android.play.core.appupdate.AppUpdateManager;
@@ -62,14 +63,21 @@ import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.gson.Gson;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -253,6 +261,27 @@ public class MainActivity extends AppCompatActivity {
         return query_params;
     }
 
+    private void getFirebaseRealTimeDatabase(){
+        final FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference ref = database.getReference();
+        // Kiosk locations
+        ref.child("location").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                ArrayList<KioskLocation> kioskLocations =  (ArrayList<KioskLocation>) dataSnapshot.getValue();
+                JSONArray jsArray = new JSONArray(kioskLocations);
+                SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
+                        activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                sharedPref.edit().putString("KIOSK_LOCATIONS", "" + jsArray).apply();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(LOG_TAG,"The read failed: " + databaseError.getCode());
+            }
+        });
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -324,6 +353,10 @@ public class MainActivity extends AppCompatActivity {
 
         updateConfigURL();
         initApp(viewParam, deepLinkJson);
+
+        if (MERCHANT_TYPE.equals("DRIVER")) {
+            getFirebaseRealTimeDatabase();
+        }
 
         appUpdateManager = AppUpdateManagerFactory.create(this);
         // Returns an intent object that you use to check for an update.
@@ -833,5 +866,24 @@ public class MainActivity extends AppCompatActivity {
         payload.put("action", action);
         payload.put(PaymentConstants.ENV, "prod");
         return payload;
+    }
+}
+
+
+class KioskLocation{
+    public String address;
+    public String contact;
+    public String gmapLink;
+    public String landMark;
+    public String latitude;
+    public String longitude;
+
+    public KioskLocation(String address, String contact, String gmapLink, String landMark, String latitude, String longitude){
+        this.contact = contact;
+        this.address = address;
+        this.gmapLink = gmapLink;
+        this.landMark = landMark;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 }
