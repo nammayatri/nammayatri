@@ -436,10 +436,7 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", UUID.randomUUID());
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload.put("clientId", getResources().getString(R.string.client_id));
-            payload.put("action", "initiate");
-            payload.put("merchantId", getResources().getString(R.string.merchant_id));
-            payload.put(PaymentConstants.ENV, "prod");
+            payload = getInnerPayload("initiate");
             if (viewParam != null) payload.put("viewParam", viewParam);
             if (deepLinkJSON != null) payload.put("deepLinkJSON", deepLinkJSON);
             json.put(PaymentConstants.PAYLOAD, payload);
@@ -453,15 +450,15 @@ public class MainActivity extends AppCompatActivity {
                 String event = jsonObject.optString("event");
                 switch (event) {
                     case "initiate_result":
-                        if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
-                            try {
-                                JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
-                                innerPayload.put("action", "process");
+                        try {
+                            JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
+                            innerPayload.put("action", "process");
+                            if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
                                 innerPayload.put("notificationData", getNotificationDataFromIntent());
-                                json.put(PaymentConstants.PAYLOAD, innerPayload);
-                            } catch (JSONException e) {
-                                Log.e(LOG_TAG, e.toString());
                             }
+                            json.put(PaymentConstants.PAYLOAD, innerPayload);
+                        } catch (JSONException e) {
+                            Log.e(LOG_TAG, e.toString());
                         }
                         hyperServices.process(json);
                         break;
@@ -570,8 +567,8 @@ public class MainActivity extends AppCompatActivity {
             deepLinkJson = res.get(1);
         }
         JSONObject proccessPayloadDL = new JSONObject();
-        JSONObject innerPayloadDL = new JSONObject();
         try {
+            JSONObject innerPayloadDL = getInnerPayload("process");
             if (viewParam != null && deepLinkJson != null) {
                 innerPayloadDL.put("viewParamNewIntent", viewParam)
                         .put("deepLinkJSON", deepLinkJson);
@@ -592,17 +589,17 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject innerPayload = new JSONObject();
                 JSONObject jsonData = new JSONObject(data);
                 if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
+                    innerPayload = getInnerPayload("OpenChatScreen");
                     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                     notificationManager.cancel(NotificationUtils.chatNotificationId);
-                    innerPayload.put("action", "OpenChatScreen")
-                            .put("notification_type", "CHAT_MESSAGE");
+                    innerPayload.put("notification_type", "CHAT_MESSAGE");
                 }
                 if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");
                     if (type.equals("NEW_MESSAGE")) {
-                        innerPayload.put("action", "callDriverAlert")
-                                .put("id", id)
+                        innerPayload = getInnerPayload("callDriverAlert");
+                        innerPayload.put("id", id)
                                 .put("popType", type);
                     }
                 }
@@ -827,5 +824,14 @@ public class MainActivity extends AppCompatActivity {
         }
         oldSharedPref.edit().clear().apply();
         return true;
+    }
+
+    private JSONObject getInnerPayload(String action) throws JSONException{
+        JSONObject payload = new JSONObject();
+        payload.put("clientId", getResources().getString(R.string.client_id));
+        payload.put("merchantId", getResources().getString(R.string.merchant_id));
+        payload.put("action", action);
+        payload.put(PaymentConstants.ENV, "prod");
+        return payload;
     }
 }
