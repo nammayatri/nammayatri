@@ -31,6 +31,7 @@ import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
+import Domain.Action.UI.Ride.StartRide as SRide
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
@@ -49,6 +50,7 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
 import qualified Kernel.Storage.Clickhouse.Types as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -372,6 +374,8 @@ bookingWithVehicleNumberAndPhone merchantShortId req = do
   phoneNumberHash <- getDbHash req.phoneNumber
   person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
   mblinkedVehicle <- VQuery.findById person.id
+  mbRecentRide :: Maybe Text <- Redis.safeGet $ SRide.makeStartRideIdKey person.id
+  when (isJust mbRecentRide) $ throwError RecentActiveRide
   when req.endRideForVehicle do
     mbvehicle <- VQuery.findByRegistrationNo req.vehicleNumber
     whenJust mbvehicle $ \vehicle -> do

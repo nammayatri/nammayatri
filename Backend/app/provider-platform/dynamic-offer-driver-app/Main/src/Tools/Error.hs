@@ -252,6 +252,7 @@ data DriverQuoteError
   | QuoteAlreadyRejected
   | UnexpectedResponseValue
   | NoActiveRidePresent
+  | RecentActiveRide
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -264,6 +265,7 @@ instance IsBaseError DriverQuoteError where
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
   toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
+  toMessage RecentActiveRide = Just "Cannot End Ride before 60 seconds"
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
@@ -274,6 +276,8 @@ instance IsHTTPError DriverQuoteError where
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
     UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
     NoActiveRidePresent -> "NO_ACTIVE_RIDE_PRESENT"
+    RecentActiveRide -> "RECENT_ACTIVE_RIDE"
+
   toHttpCode = \case
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
@@ -282,6 +286,7 @@ instance IsHTTPError DriverQuoteError where
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400
     NoActiveRidePresent -> E400
+    RecentActiveRide -> E400
 
 instance IsAPIError DriverQuoteError
 
