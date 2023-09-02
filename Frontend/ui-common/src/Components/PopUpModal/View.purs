@@ -251,29 +251,35 @@ view push state =
                     ]
                 ]
             ]
-        , textView $
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , background state.optionWithHtml.background
-            , cornerRadius 8.0
-            , visibility if state.optionWithHtml.visibility then VISIBLE else GONE
-            , stroke ("1," <> state.optionWithHtml.strokeColor)
-            , margin state.optionWithHtml.margin
-            , color $ state.optionWithHtml.color
-            , gravity CENTER
-            , onClick
-                ( \action -> do
-                    _ <- push action
-                    clearTheTimer state
-                    pure unit
-                )
-                (const OptionWithHtmlClick)
-            , padding state.optionWithHtml.padding
-            , orientation VERTICAL
+        , linearLayout [
+            height WRAP_CONTENT
+            , width MATCH_PARENT
+            , margin $ MarginTop 5
             , clickable state.optionWithHtml.isClickable
-            , alpha (if state.optionWithHtml.isClickable then 1.0 else 0.5)
-            , textFromHtml state.optionWithHtml.text
-            ] <> (FontStyle.subHeading2 LanguageStyle)
+            , onClick
+                        ( \action -> do
+                            _ <- push action
+                            clearTheTimer state
+                            pure unit
+                        )
+                        (const OptionWithHtmlClick)
+          ][
+                textView $
+                    [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , background state.optionWithHtml.background
+                    , cornerRadius 8.0
+                    , visibility if state.optionWithHtml.visibility then VISIBLE else GONE
+                    , stroke ("1," <> state.optionWithHtml.strokeColor)
+                    , margin state.optionWithHtml.margin
+                    , color $ state.optionWithHtml.color
+                    , gravity CENTER
+                    , padding state.optionWithHtml.padding
+                    , orientation VERTICAL
+                    , alpha (if state.optionWithHtml.isClickable then 1.0 else 0.5)
+                    , textFromHtml state.optionWithHtml.text
+                    ] <> (FontStyle.subHeading2 LanguageStyle)
+            ]
         ]
     ]
 

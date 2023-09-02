@@ -131,6 +131,7 @@ instance loggableAction :: Loggable Action where
       -- SelectListModal.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "clear_options_onclick"
       -- SelectListModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "no_action"
     GenderBannerModal act -> pure unit
+    AutoPayBanner act -> pure unit
     RetryTimeUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "retry_time_update_onclick"
     RideActiveAction activeRide -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_active_action"
     StatsModelAction act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stats_model_action"
@@ -259,6 +260,7 @@ data Action = NoAction
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
             | OfferPopupAC PopUpModal.Action
+            | AutoPayBanner Banner.Action
 
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -638,6 +640,9 @@ eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
   exit $ GotoEditGenderScreen
+
+eval (AutoPayBanner (Banner.OnClick)) state = do
+  exit $ SubscriptionScreen state
 
 eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
 

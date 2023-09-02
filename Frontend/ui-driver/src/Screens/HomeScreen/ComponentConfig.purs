@@ -581,3 +581,19 @@ getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹
         "Platform Fee" -> getString PLATFORM_FEE
         _ -> item.component
     } ) paymentBreakUpArr
+
+autopayBannerConfig :: ST.HomeScreenState -> Banner.Config
+autopayBannerConfig state =
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = "#269574",
+        title = (getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS),
+        titleColor = Color.white900,
+        actionText = (getString SETUP_NOW),
+        actionTextColor = Color.white900,
+        imageUrl = "ny_ic_autopay_setup_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_autopay_setup_banner.png",
+        isBanner = state.props.autoPayBanner
+      }
+  in config'

@@ -740,7 +740,7 @@ const englishStrings = {
   FIRST_FREE_RIDE : "First Free Ride",
   DAILY_PER_RIDE_DESC : "No charges till Sep 19",
   FIRST_FREE_RIDE : "First Ride FREE",
-  JOIN_THE_UNLIMITED_PLAN : "Join the UNLIMITED plan now at ₹5/day and save 96%!!",
+  JOIN_THE_UNLIMITED_PLAN : "Join DAILY UNLIMITED plan now to get special discounts",
   MAYBE_LATER : "Maybe Later",
   DO_YOU_WANT_TO_CANCEL : "Do you want to cancel?",
   DO_YOU_WANT_TO_CANCEL_DESC : "You are about to cancel Autopay.\nYou will have to set up autopay again to resume automatic payments.",
@@ -771,6 +771,8 @@ const englishStrings = {
   CHAT_FOR_HELP : "Chat for Help",
   VIEW_FAQs : "View FAQs",
   SUPPORT : "Support",
-	NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan? Contact us",
-  NEED_HELP_CALL_SUPPORT : "Need Help? <span style='color:#2194FF'>Call Support</span>"
+	NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan or Autopay?",
+  NEED_HELP_CALL_SUPPORT : "Need Help? <span style='color:#2194FF'>Call Support</span>",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
+	SETUP_NOW : "Setup Now"
 } 

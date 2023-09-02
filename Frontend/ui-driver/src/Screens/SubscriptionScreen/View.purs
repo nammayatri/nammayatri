@@ -51,7 +51,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (+), (-), (/), (/=), (<<<), (<), (<>), (==), (>), (||), bind, pure, discard, void)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, frameLayout, fontStyle,  gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -152,7 +152,8 @@ view push state =
             , headerView push state
             , frameLayout [
               height MATCH_PARENT
-              , width MATCH_PARENT][
+              , width MATCH_PARENT
+              ][
                 joinPlanView push state (state.props.subView == JoinPlan)
                 , managePlanView push state (state.props.subView == ManagePlan)
                 , myPlanView push state (state.props.subView == MyPlan)
@@ -366,21 +367,8 @@ plansBottomView push state =
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          ][ textView $
-              [ height WRAP_CONTENT
-              , width $ V $ getWidthFromPercent 70
-              , gravity LEFT
-              , text ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨")
-              , color Color.black800
-              , visibility GONE
-              ] <> FontStyle.body1 TypoGraphy 
-            , textView $
-              [ weight 1.0
-              , height WRAP_CONTENT
-              , gravity RIGHT
-              , textFromHtml $ "<u>" <> (getString HOW_IT_WORKS) <> "</u>"
-              , color Color.blue900
-              , onClick (\action -> do
+          , gravity CENTER_VERTICAL
+          , onClick (\action -> do
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- JB.openUrlInApp $ case getValueToLocalNativeStore LANGUAGE_KEY of
@@ -389,6 +377,26 @@ plansBottomView push state =
                                           _ -> "https://youtu.be/3I3adSdYeX8"
                         pure unit
                         ) (const NoAction)
+          ][ textView $
+              [ height WRAP_CONTENT
+              , width $ V $ getWidthFromPercent 70
+              , gravity LEFT
+              , text ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨")
+              , color Color.black800
+              , visibility GONE
+              ] <> FontStyle.body1 TypoGraphy 
+            , imageView [
+                imageWithFallback "ny_ic_play_circle,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_play_circle.png"
+                , height $ V 16
+                , width $ V 16
+                , margin $ Margin 0 3 6 0
+            ]
+            , textView $
+              [ weight 1.0
+              , height WRAP_CONTENT
+              , gravity LEFT
+              , textFromHtml $ "<u>" <> (getString HOW_IT_WORKS) <> "</u>"
+              , color Color.blue900
               ] <> FontStyle.body1 TypoGraphy
           ]
         , linearLayout
@@ -1388,42 +1396,44 @@ shimmerView state = linearLayout
   , background Color.white900
   , visibility if state.props.showShimmer then VISIBLE else GONE
   ][ linearLayout
-  [ height $ V 55
-  , width MATCH_PARENT
-  , orientation HORIZONTAL
-  , gravity CENTER_VERTICAL
-  , padding $ PaddingHorizontal 16 16
-  , stroke $ "2," <> Color.grey900
-  ][  customTextView 26 80 10 false
-     ,  customTextView 26 60 220 false
-  ] 
-  , linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL 
-  ][
-    linearLayout
-      [ height WRAP_CONTENT
+      [ height $ V 55
       , width MATCH_PARENT
-      , margin $ MarginTop 30
-      , orientation HORIZONTAL][
-        customTextView 40 100 20 true
-      ,  customTextView 40 120 100 true
+      , orientation HORIZONTAL
+      , gravity CENTER_VERTICAL
+      , padding $ PaddingHorizontal 10 10
+      , stroke $ "2," <> Color.grey900
+      ][  customTextView 26 80 false
+        , linearLayout [weight 1.0][]
+        ,  customTextView 26 60 false
+      ] 
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL 
+        ][
+          linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , padding $ PaddingHorizontal 16 16
+            , margin $ MarginTop 30
+            , orientation HORIZONTAL][
+              customTextView 40 100 true
+              , linearLayout [weight 1.0][]
+              ,  customTextView 40 100 true
+            ]
+          , sfl 180 
+          , sfl 100
+          , sfl 100
+          , sfl 100
       ]
-    , sfl 180 
-    , sfl 100
-    , sfl 100
-    , sfl 100
-   ]
   ]
 
 
-customTextView :: forall w. Int -> Int -> Int  -> Boolean -> PrestoDOM (Effect Unit) w
-customTextView height' width' marginLeft showBorder =
+customTextView :: forall w. Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+customTextView height' width' showBorder =
   shimmerFrameLayout
     [ 
-    margin $ MarginLeft marginLeft
-    , cornerRadius 8.0
+    cornerRadius 8.0
     , stroke if showBorder then  "1," <> Color.grey900 else "0," <> Color.grey900
     ][
       linearLayout [

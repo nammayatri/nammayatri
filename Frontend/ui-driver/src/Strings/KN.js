@@ -710,7 +710,7 @@ const kannadaStrings = {
   FIRST_FREE_RIDE : "ಮೊದಲ ಉಚಿತ ಸವಾರಿ",
   DAILY_PER_RIDE_DESC : "ಸೆಪ್ಟೆಂಬರ್ 19 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕವಿಲ್ಲ",
   FIRST_FREE_RIDE : "ಮೊದಲ ಉಚಿತ ಸವಾರಿ",
-  JOIN_THE_UNLIMITED_PLAN : "ಈಗಲೇ ₹5/ದಿನಕ್ಕೆ UNLIMITED ಯೋಜನೆಗೆ ಸೇರಿ ಮತ್ತು 96% ಉಳಿಸಿ!!",
+  JOIN_THE_UNLIMITED_PLAN : "ವಿಶೇಷ ರಿಯಾಯಿತಿಗಳನ್ನು ಪಡೆಯಲು ಈಗಲೇ ಡೈಲಿ ಅನ್‌ಲಿಮಿಟೆಡ್ ಪ್ಲಾನ್‌ಗೆ ಸೇರಿಕೊಳ್ಳಿ",
   MAYBE_LATER : "ಬಹುಶಃ ನಂತರ",
   YOUR_DUES_DESCRIPTION_MANUAL : "ತಡೆರಹಿತ ರೈಡ್‌ಗಳನ್ನು ಮುಂದುವರಿಸಲು ಮಿತಿಯನ್ನು ತಲುಪುವ ಮೊದಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ. ನೀವು ಸುಲಭವಾಗಿ, ತೊಂದರೆ-ಮುಕ್ತ ಪಾವತಿಗಳಿಗಾಗಿ <b>UPI ಸ್ವಯಂ ಪಾವತಿಯನ್ನು ಹೊಂದಿಸಬಹುದು</b>.",
   DO_YOU_WANT_TO_CANCEL : "ನೀವು ರದ್ದುಗೊಳಿಸಲು ಬಯಸುವಿರಾ?",
@@ -742,6 +742,8 @@ const kannadaStrings = {
   CHAT_FOR_HELP : "ಚಾಟ್?",
   VIEW_FAQs : "ಎಫ್.ಎ.ಕ್ಯೂ ವೀಕ್ಷಿಸಿ",
   SUPPORT : "ಬೆಂಬಲ",
-	NEED_HELP_JOINING_THE_PLAN : "ಪ್ಲಾನ್ ಗೆ ಸೇರಲು ಸಹಾಯ ಬೇಕೇ? ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ",
-  NEED_HELP_CALL_SUPPORT : "ಸಹಾಯ ಬೇಕೇ? <span style='color:#2194FF'>ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ</span>"
+	NEED_HELP_JOINING_THE_PLAN : "ಯೋಜನೆ ಅಥವಾ ಆಟೋಪೇಗೆ ಸೇರಲು ಸಹಾಯ ಬೇಕೇ?",
+  NEED_HELP_CALL_SUPPORT : "ಸಹಾಯ ಬೇಕೇ? <span style='color:#2194FF'>ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ</span>",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
+	SETUP_NOW : "Setup Now"
 }
