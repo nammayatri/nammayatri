@@ -576,6 +576,7 @@ public class MainActivity extends AppCompatActivity {
                 innerPayloadDL.put("viewParamNewIntent", viewParam)
                         .put("deepLinkJSON", deepLinkJson);
                 proccessPayloadDL.put("service", getService())
+                        .put("merchantId", getResources().getString(R.string.merchant_id))
                         .put("requestId", UUID.randomUUID())
                         .put(PaymentConstants.PAYLOAD, innerPayloadDL);
                 {hyperServices.process(proccessPayloadDL);}
