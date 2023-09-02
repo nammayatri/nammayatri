@@ -157,7 +157,9 @@ view push state =
                 , managePlanView push state (state.props.subView == ManagePlan)
                 , myPlanView push state (state.props.subView == MyPlan)
                 , autoPayDetailsView push state (state.props.subView == PlanDetails)
-                , OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state)
+                , if state.props.optionsMenuExpanded then 
+                      OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) 
+                  else linearLayout[][]
               ]
           ]
         , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN)
