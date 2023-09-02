@@ -17,27 +17,28 @@ module Screens.SubscriptionScreen.ComponentConfig where
 
 import Language.Strings
 import PrestoDOM
-import Engineering.Helpers.Commons as EHC
+
+import Common.Types.App (LazyCheck(..))
 import Common.Types.App (PaymentStatus(..))
+import Components.OptionsMenu as OptionsMenuConfig
 import Components.PopUpModal as PopUpModalConfig
 import Components.PrimaryButton as PrimaryButton
-import Components.OptionsMenu as OptionsMenuConfig
 import Data.Array as DA
+import Data.Function.Uncurried (runFn1)
+import Data.Int as DI
 import Data.Maybe (isNothing)
 import Data.Maybe as Mb
 import Data.Semigroup ((<>))
+import Engineering.Helpers.Commons as EHC
 import Font.Style (Style(..))
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import Prelude (unit, (==), (/=), (&&), ($), (/), (>), (+), (*))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (SubscribePopupType(..), PlanCardConfig(..))
+import Screens.Types (PlanCardConfig(..), SubscribePopupType(..))
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils as HU
-import Data.Int as DI
-import Common.Types.App (LazyCheck(..))
-import Data.Function.Uncurried (runFn1)
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -142,7 +143,7 @@ popupModalConfig state = let
       , padding = Padding 16 16 16 16
       , gravity = CENTER
       , backgroundColor =  Color.black9000
-      , backgroundClickable = false
+      , backgroundClickable = DA.any (_ == state.props.popUpState) [Mb.Just SupportPopup, Mb.Just FailedPopup]
       , buttonLayoutMargin = MarginBottom 0
       , optionButtonOrientation = if state.props.popUpState == Mb.Just SupportPopup then "VERTICAL" else "HORIZONTAL"
     ,primaryText {
@@ -218,7 +219,8 @@ popupModalConfig state = let
       , color = Color.black650
       , margin = Margin 16 4 16 0
       , visibility = state.props.popUpState == Mb.Just FailedPopup
-    }
+    },
+    dismissPopup = DA.any (_ == state.props.popUpState) [Mb.Just SupportPopup, Mb.Just FailedPopup]
     }
   in popUpConf'
 

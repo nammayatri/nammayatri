@@ -18,10 +18,13 @@ module Flow where
 import Log
 
 import Common.Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
 import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event)
 import Components.ChatView.Controller (makeChatComponent')
+import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last)
 import Data.Either (Either(..))
 import Data.Functor (map)
@@ -43,15 +46,21 @@ import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
+import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount, getNegotiationUnit, initiatePP, killPP, checkPPInitiateStatus)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
@@ -88,15 +97,6 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..))
 import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
-import Common.Styles.Colors as Color
-import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.LogEvent (logEvent)
-import Engineering.Helpers.Commons (flowRunner)
-import JBridge as JB
-import Effect.Aff (makeAff, nonCanceler, launchAff)
-import Control.Monad.Except (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -289,6 +289,7 @@ getDriverInfoFlow = do
       setValueToLocalStore DRIVER_SUBSCRIBED if isNothing getDriverInfoResp.autoPayStatus then "false" else "true"
       let (OrganizationInfo organization) = getDriverInfoResp.organization
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{autoPayBanner = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"}})
       case getDriverInfoResp.mobileNumber of
           Just value -> do 
             _ <- pure $ setCleverTapUserData "Phone" ("+91" <> value)
@@ -1714,14 +1715,13 @@ homeScreenFlow = do
                                                                                              else getDriverInfoResp.active
                                                                             , driverStatusSet = getDriverStatus "" }
                                                                       , data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber, profileImg = getDriverInfoResp.aadhaarCardPhoto}})
-
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant, vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp), profileImg = getDriverInfoResp.aadhaarCardPhoto}})
   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverAlternateMobile =getDriverInfoResp.alternateNumber}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  {  driverName = getDriverInfoResp.firstName, driverMobile = getDriverInfoResp.mobileNumber,  vehicleRegNumber = linkedVehicle.registrationNo , referralCode = getDriverInfoResp.referralCode }}})
   let currdate = getcurrentdate ""
   (DriverProfileStatsResp resp) <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq currdate)
   lift $ lift $ doAff do liftEffect hideSplash
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning}, props{showGenderBanner = showGender}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning}, props{showGenderBanner = showGender, autoPayBanner = (isNothing getDriverInfoResp.autoPayStatus) || (getDriverInfoResp.autoPayStatus /= Just "ACTIVE")}})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit
   if not isGpsEnabled then noInternetScreenFlow "LOCATION_DISABLED" else pure unit

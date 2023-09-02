@@ -84,14 +84,14 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
-  if state.props.subView == JoinPlan && state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
+  if state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
   else if  ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
   else if state.props.optionsMenuExpanded then continue state{props{optionsMenuExpanded = false}}
   else if state.props.confirmCancel then continue state{props { confirmCancel = false}}
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == PlanDetails then continue state{props { subView = ManagePlan}}
-  else if state.props.subView == JoinPlan && state.props.popUpState /= Mb.Just SupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
-  else continue state
+  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
 
@@ -140,7 +140,7 @@ eval HeaderRightClick state =  continue state {props{ optionsMenuExpanded = not 
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
                   Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
-                  Mb.Just FailedPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
+                  Mb.Just FailedPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ RetryPayment state state.data.myPlanData.planEntity.id
                   Mb.Just DuesClearedPopup -> exit $ Refresh
                   Mb.Just SwitchedPlan -> exit $ Refresh
                   Mb.Just SupportPopup -> continueWithCmd state [pure CallSupport]
@@ -157,9 +157,11 @@ eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirec
             "Rankings" -> do
               _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
               exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            _ -> continue state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            _ -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
 
 eval (PopUpModalAC (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd state [pure CallSupport]
+
+eval (PopUpModalAC (PopUpModal.DismissPopup)) state = continue state{props { popUpState = Mb.Nothing}}
 
 eval (ConfirmCancelPopup (PopUpModal.OnButton1Click)) state = continue state { props { confirmCancel = false}}
 
@@ -174,18 +176,18 @@ eval CancelAutoPayAC state = continue state { props { confirmCancel = true}}
 eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  case state.props.subView of 
-    JoinPlan -> continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen}}
-    _ ->  case screen of
-            "Home" -> exit $ HomeScreen state
-            "Rides" -> exit $ RideHistory state
+  if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY then do 
+    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuExpanded = false}}
+  else do case screen of
+            "Home" -> exit $ HomeScreen state{props{optionsMenuExpanded = false}}
+            "Rides" -> exit $ RideHistory state{props{optionsMenuExpanded = false}}
             "Alert" -> do
               _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
               _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-              exit $ Alerts state
+              exit $ Alerts state{props{optionsMenuExpanded = false}}
             "Rankings" -> do
               _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-              exit $ Contest state
+              exit $ Contest state{props{optionsMenuExpanded = false}}
             _ -> continue state
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuExpanded = false}}

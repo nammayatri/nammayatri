@@ -600,6 +600,8 @@ const frenchStrings = {
   CHAT_FOR_HELP : "Chat for Help",
   VIEW_FAQs : "View FAQs",
   SUPPORT : "Support",
-	NEED_HELP_JOINING_THE_PLAN : "Besoin d'aide pour adhérer au plan ?Contactez-nous",
-  NEED_HELP_CALL_SUPPORT : "Besoin d'aide? <span style='color:#2194FF'>Appeler l'assistance</span>"
+	NEED_HELP_JOINING_THE_PLAN : "Besoin d'aide pour rejoindre le plan ou le automatique?",
+  NEED_HELP_CALL_SUPPORT : "Besoin d'aide? <span style='color:#2194FF'>Appeler l'assistance</span>",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
+	SETUP_NOW : "Setup Now"
 }

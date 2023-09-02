@@ -708,7 +708,7 @@ const tamilStrings = {
   FIRST_FREE_RIDE : "முதல் இலவச சவாரி",
   DAILY_PER_RIDE_DESC : "செப்டம்பர் 19 வரை கட்டணம் இல்லை",
   FIRST_FREE_RIDE : "முதல் இலவச சவாரி",
-  JOIN_THE_UNLIMITED_PLAN : "ஒரு நாளைக்கு ₹5 கட்டணத்தில் UNLIMITED திட்டத்தில் சேர்ந்து 96% சேமிக்கவும்!!",
+  JOIN_THE_UNLIMITED_PLAN : "சிறப்பு தள்ளுபடியைப் பெற இப்போது டெய்லி அன்லிமிட்டட்‌ திட்டத்தில் சேரவும்",
   MAYBE_LATER : "ஒருவேளை பின்னர்",
   YOUR_DUES_DESCRIPTION_MANUAL : "தடையின்றி சவாரிகளை தொடர வரம்பை அடையும் முன் உங்கள் நிலுவைத் தொகையைச் செலுத்தவும். எளிதாக, தொந்தரவு இல்லாத கட்டணங்களுக்கு, <b>UPI ஆட்டோபேவை அமைக்கவும்</b>.",
   DO_YOU_WANT_TO_CANCEL : "நீங்கள் ரத்து செய்ய விரும்புகிறீர்களா?",
@@ -739,6 +739,8 @@ const tamilStrings = {
   CHAT_FOR_HELP : "மெசேஜ்",
   VIEW_FAQs : "கேள்விகள்?",
   SUPPORT : "ஆதரவு",
-	NEED_HELP_JOINING_THE_PLAN : "திட்டத்தில் சேர உதவி வேண்டுமா?எங்களை தொடர்பு கொள்ளவும்",
-  NEED_HELP_CALL_SUPPORT : "திட்டத்தில் சேர உதவி வேண்டுமா? <span style='color:#2194FF'>எங்களை தொடர்பு கொள்ளவும்</span>"
+	NEED_HELP_JOINING_THE_PLAN : "திட்டம் அல்லது ஆட்டோ பே இல் சேர உதவி தேவையா?",
+  NEED_HELP_CALL_SUPPORT : "திட்டத்தில் சேர உதவி வேண்டுமா? <span style='color:#2194FF'>எங்களை தொடர்பு கொள்ளவும்</span>",
+  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
+	SETUP_NOW : "Setup Now"
 }
