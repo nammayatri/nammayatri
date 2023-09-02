@@ -19,6 +19,7 @@ module Domain.Action.UI.Ride.StartRide
     buildStartRideHandle,
     driverStartRide,
     dashboardStartRide,
+    makeStartRideIdKey,
   )
 where
 
@@ -33,6 +34,7 @@ import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
@@ -120,6 +122,8 @@ startRide ::
 startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
+  let driverKey = makeStartRideIdKey driverId
+  Redis.setExp driverKey ride.id 60
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -155,3 +159,6 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW
+
+makeStartRideIdKey :: Id DP.Person -> Text
+makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId
