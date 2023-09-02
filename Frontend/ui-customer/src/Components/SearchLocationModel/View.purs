@@ -267,6 +267,7 @@ sourceDestinationEditTextView state push =
                     ) (const NoAction)
             , onChange
                 ( \action -> do
+                    _ <- pure $ spy "SourceEditText " "actCheck"
                     _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
                     _ <- push action
                     pure unit
@@ -344,13 +345,14 @@ sourceDestinationEditTextView state push =
                     ) (const NoAction)
               , onChange
                   ( \action -> do
+                      _ <- pure $ spy "DestinationEditText " "actCheck"
                       _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
                       _ <- push action
                       pure unit
                   )
                   DestinationChanged
               , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-              , onFocus push $ const $ EditTextFocusChanged "D"
+              , onFocus push $ const $ (EditTextFocusChanged "D")
               , autoCorrectionType 1
               ]
                 <> FontStyle.subHeading1 TypoGraphy
