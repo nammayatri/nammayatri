@@ -103,6 +103,7 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
       - -Wincomplete-uni-patterns
+      - -fwhole-archive-hs-libs
     dependencies:
       - kafka-consumers
       - mobility-core

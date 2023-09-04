@@ -87,6 +87,7 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
       - -Wincomplete-uni-patterns
+      - -fwhole-archive-hs-libs
     dependencies:
       - mock-rider-platform
       - mobility-core

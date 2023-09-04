@@ -133,7 +133,7 @@ executable special-zone-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -fwhole-archive-hs-libs
   build-depends:
       aeson
     , base >=4.7 && <5

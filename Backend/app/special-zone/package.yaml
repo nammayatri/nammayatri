@@ -100,6 +100,7 @@ executables:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
+      - -fwhole-archive-hs-libs
     dependencies:
       - mobility-core
       - special-zone

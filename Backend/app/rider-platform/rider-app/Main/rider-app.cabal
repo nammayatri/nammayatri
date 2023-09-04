@@ -468,7 +468,7 @@ executable rider-app-exe
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -fwhole-archive-hs-libs
   build-depends:
       aeson
     , amazonka

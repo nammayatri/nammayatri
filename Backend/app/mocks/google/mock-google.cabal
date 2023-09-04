@@ -140,7 +140,7 @@ executable mock-google-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns -fwhole-archive-hs-libs
   build-depends:
       aeson
     , base >=4.7 && <5

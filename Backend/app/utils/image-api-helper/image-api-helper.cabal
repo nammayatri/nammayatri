@@ -152,7 +152,7 @@ executable image-api-helper-exe
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns -fwhole-archive-hs-libs
   build-depends:
       aeson
     , base >=4.7 && <5
