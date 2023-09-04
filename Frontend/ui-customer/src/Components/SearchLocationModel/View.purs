@@ -41,7 +41,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityImportance)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
@@ -65,7 +65,7 @@ view push state =
           [ height $ V ((screenHeight unit)/ 7)
           , width MATCH_PARENT
           , background state.homeScreenConfig.searchLocationConfig.searchLocationTheme
-          , accessibilityImportance DISABLE
+          , accessibility DISABLE
           , clickable case state.isSearchLocation of 
               LocateOnMap -> false 
               _ -> true 
@@ -80,7 +80,7 @@ view push state =
                 LocateOnMap -> false
                 _ -> true
             , onClick push (const NoAction)
-            , accessibilityImportance DISABLE
+            , accessibility DISABLE
             , width MATCH_PARENT
             , margin (MarginTop ((screenHeight unit) / 7))
             , padding (Padding 0 safeMarginTop 0 0)
@@ -107,7 +107,7 @@ view push state =
                       [ height $ V 25
                       , width $ V 25
                       , accessibilityHint "Back : Button"
-                      , accessibilityImportance ENABLE
+                      , accessibility ENABLE
                       , imageWithFallback state.homeScreenConfig.searchLocationConfig.backArrow
                       ]
                   ]
@@ -254,7 +254,7 @@ sourceDestinationEditTextView state push =
             , lineHeight "24"
             , cursorColor state.homeScreenConfig.primaryBackground
             , accessibilityHint "Pickup Location Editable field"
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             , hint (getString START_)
             , hintColor "#A7A7A7"
             , id $ getNewIDWithTag "SourceEditText"
@@ -287,7 +287,7 @@ sourceDestinationEditTextView state push =
                         pure unit
                       )(const $ SourceClear)
             , accessibilityHint "Clear Source Text : Button"
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             , visibility if state.source /= "" then VISIBLE else GONE
             ]
             [ imageView
@@ -332,7 +332,7 @@ sourceDestinationEditTextView state push =
               , singleLine true
               , ellipsize true
               , accessibilityHint "Destination Location Editable field"
-              , accessibilityImportance ENABLE
+              , accessibility ENABLE
               , cursorColor state.homeScreenConfig.primaryBackground
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
@@ -363,7 +363,7 @@ sourceDestinationEditTextView state push =
             , visibility if state.destination /= "" then VISIBLE else GONE
             , onClick push (const $ DestinationClear)
             , accessibilityHint "Clear Destination Text : Button"
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             ]
             [ imageView
                 [ height $ V 16
@@ -446,7 +446,7 @@ savedLocationBar state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , margin $ MarginBottom 10
-  , accessibilityImportance DISABLE_DESCENDANT
+  , accessibility DISABLE_DESCENDANT
   , visibility if state.homeScreenConfig.searchLocationConfig.enableLocationTagbar == "true" then VISIBLE else GONE
   ][ linearLayout
      [ width MATCH_PARENT
@@ -501,7 +501,7 @@ bottomBtnsView state push =
     , padding (PaddingBottom if os == "IOS" then 10 else 0)
     , alignParentBottom "true,-1"
     , background Color.white900
-    , accessibilityImportance DISABLE_DESCENDANT
+    , accessibility DISABLE_DESCENDANT
     , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE
     , adjustViewWithKeyboard "true"
     ][  linearLayout

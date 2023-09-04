@@ -22,7 +22,7 @@ import Effect (Effect)
 import Language.Types (STR(..))
 import Language.Strings (getString)
 import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), Accessiblity(..),PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor, adjustViewWithKeyboard, accessibilityHint, accessibilityImportance )
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), Accessiblity(..),PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor, adjustViewWithKeyboard, accessibilityHint, accessibility )
 import Screens.Types as ST 
 import Screens.Types (PaymentMode(..))
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -68,7 +68,7 @@ view push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , accessibilityImportance if state.props.showConfirmationPopUp then DISABLE_DESCENDANT else DISABLE
+      , accessibility if state.props.showConfirmationPopUp then DISABLE_DESCENDANT else DISABLE
   ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
     , relativeLayout
       [ width MATCH_PARENT
@@ -176,7 +176,7 @@ tripIdView push state =
   ][  textView $
       [ text (getString RIDE_ID)
       , accessibilityHint $ "Ride I-D :" <> state.data.tripId
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , color Color.black700
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout
@@ -184,7 +184,7 @@ tripIdView push state =
       , width WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const Copy)
-      , accessibilityImportance DISABLE_DESCENDANT
+      , accessibility DISABLE_DESCENDANT
       , gravity CENTER_VERTICAL
       ][ textView $
           [ text state.data.tripId
@@ -252,7 +252,7 @@ tripDetailsView state =
       ][  textView $
           [ text state.data.driverName
           , accessibilityHint $ "Driver : " <> state.data.driverName
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , color Color.darkDescriptionText
           ] <> FontStyle.body1 LanguageStyle
         , linearLayout
@@ -291,13 +291,13 @@ tripDetailsView state =
       ][  textView $
           [ text (state.data.totalAmount)
           , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
-          , accessibilityImportance ENABLE
+          , accessibility ENABLE
           , color Color.black
           ] <> FontStyle.h2 LanguageStyle
         , textView $
           [ text $ if state.data.selectedItem.status == "CANCELLED" then (getString CANCELLED) else (getString PAID) <> " " <> if state.data.paymentMode == CASH then (getString BY_CASH) else (getString ONLINE_)
           , color if state.data.selectedItem.status == "CANCELLED" then Color.red else Color.greyShade
-          , accessibilityImportance DISABLE
+          , accessibility DISABLE
           ] <> FontStyle.captions LanguageStyle
         ]
     ]
@@ -324,7 +324,7 @@ ratingAndInvoiceView state push =
   ][  textView $ 
       [ text $ (getString YOU_RATED)
       , accessibilityHint $ "You Rated " <> (show state.data.rating) <> " Stars"
-      , accessibilityImportance ENABLE
+      , accessibility ENABLE
       , color Color.greyDavy
       ] <> FontStyle.tags LanguageStyle
     , linearLayout
@@ -372,7 +372,7 @@ invoiceView state push =
     ][  textView $
         [ text (getString VIEW_INVOICE)
         , accessibilityHint "View Invoice : Button"
-        , accessibilityImportance ENABLE
+        , accessibility ENABLE
         , color Color.darkDescriptionText
         ] <> FontStyle.body1 LanguageStyle
      ,  linearLayout
@@ -406,7 +406,7 @@ reportIssueView state push =
         ][  textView $
             [ text (getString REPORT_AN_ISSUE)
             , accessibilityHint "Report an Issue : Button"
-            , accessibilityImportance ENABLE
+            , accessibility ENABLE
             , color Color.darkDescriptionText
             ] <> FontStyle.body1 LanguageStyle
           , linearLayout
