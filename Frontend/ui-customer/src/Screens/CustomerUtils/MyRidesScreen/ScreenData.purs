@@ -39,6 +39,7 @@ initData =
       , loadMoreText: "LoadMore"
       , config: DC.config
       , logField : empty
+      , isSrcServiceable: true
       }
   , prestoListArrayItems: []
   }
@@ -103,4 +104,5 @@ dummyIndividualCard = {
   , nightCharges : false
   , zoneType : NOZONE
   , vehicleVariant : Nothing
+  , isSrcServiceable : true
 }

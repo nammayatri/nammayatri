@@ -231,6 +231,7 @@
       "ny_ic_locomotor_arrival" : true,
       "ny_ic_logout" : true,
       "ny_ic_mail" : true,
+      "ny_ic_map_blur" : true,
       "ny_ic_message_square" : true,
       "ny_ic_metro_black" : true,
       "ny_ic_metro_blue" : true,
